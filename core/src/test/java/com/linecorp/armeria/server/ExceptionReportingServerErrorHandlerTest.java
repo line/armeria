@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Spy;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -67,9 +67,7 @@ class ExceptionReportingServerErrorHandlerTest {
                                     .build();
         try {
             server.start().join();
-
-            WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
-                     .aggregate().get();
+            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
             await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
                    .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
@@ -95,10 +93,9 @@ class ExceptionReportingServerErrorHandlerTest {
                                     .build();
         try {
             server.start().join();
-
-            WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
-                     .aggregate().get();
+            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
             Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+
             assertThat(logAppender.list).isEmpty();
         } finally {
             server.stop();
@@ -117,10 +114,9 @@ class ExceptionReportingServerErrorHandlerTest {
 
         try {
             server.start().join();
-
-            WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
-                     .aggregate().get();
+            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
             Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+
             assertThat(logAppender.list).isEmpty();
         } finally {
             server.stop();
@@ -135,9 +131,7 @@ class ExceptionReportingServerErrorHandlerTest {
                                     .build();
         try {
             server.start().join();
-
-            WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
-                     .aggregate().get();
+            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
             Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
 
             assertThat(logAppender.list).isEmpty();
