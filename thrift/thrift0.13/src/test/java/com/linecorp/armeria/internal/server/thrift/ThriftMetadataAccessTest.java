@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.Properties;
 
 import org.assertj.core.util.Lists;
-import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.Test;
 
 class ThriftMetadataAccessTest {
