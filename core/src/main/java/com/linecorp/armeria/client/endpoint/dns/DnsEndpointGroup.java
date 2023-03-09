@@ -161,7 +161,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                     try {
                         listener.onFailure(oldRecords, cause, logPrefix, delayMillis, attemptsSoFar);
                     } catch (Exception ex) {
-                        logger.warn("Unexpected exception while invoking {}", listener, ex);
+                        logger.warn("Unexpected exception while invoking listener.onFailure(). listener: {}",
+                                    listener, ex);
                     }
                 }
                 this.scheduledFuture = eventLoop.schedule(() -> sendQueries(questions, oldRecords),
@@ -173,7 +174,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                 try {
                     listener.onSuccess(oldRecords, newRecords, logPrefix);
                 } catch (Exception ex) {
-                    logger.warn("Unexpected exception while invoking {}", listener, ex);
+                    logger.warn("Unexpected exception while invoking listener.onSuccess(). listener: {}",
+                                listener, ex);
                 }
             }
 

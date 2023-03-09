@@ -30,7 +30,7 @@ enum DefaultDnsQueryListener implements DnsQueryListener {
 
     INSTANCE;
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger logger = LoggerFactory.getLogger(DefaultDnsQueryListener.class);
 
     @Override
     public void onSuccess(List<DnsRecord> oldRecords, List<DnsRecord> newRecords, String logPrefix) {}
