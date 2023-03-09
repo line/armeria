@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -370,6 +371,14 @@ public interface RequestContext extends Unwrappable {
      */
     @Nullable
     String query();
+
+    /**
+     * Returns the {@link URI} associated with the current {@link Request}.
+     *
+     * @see ServiceRequestContext#uri()
+     * @see ClientRequestContext#uri()
+     */
+    URI uri();
 
     /**
      * Returns the {@link RequestLogAccess} that provides the access to the {@link RequestLog}, which

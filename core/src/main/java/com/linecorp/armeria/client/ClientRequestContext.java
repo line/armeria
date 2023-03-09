@@ -304,6 +304,7 @@ public interface ClientRequestContext extends RequestContext {
      *
      * @throws IllegalStateException if the resulting URI is not valid.
      */
+    @Override
     URI uri();
 
     /**

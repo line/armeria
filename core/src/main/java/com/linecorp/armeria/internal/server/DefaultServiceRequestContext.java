@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
@@ -267,6 +268,13 @@ public final class DefaultServiceRequestContext
     @Override
     public String decodedMappedPath() {
         return routingResult.decodedPath();
+    }
+
+    @Override
+    public URI uri() {
+        final HttpRequest request = request();
+        assert request != null;
+        return request.uri();
     }
 
     @Nullable
