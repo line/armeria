@@ -14,7 +14,10 @@ dependencies {
     api libs.spring.boot3.starter.webflux
     api libs.jakarta.inject
     compileOnly libs.jakarta.validation
-    // We may remove jakarta.websocket dependencies if Armeria webflux module supports WebSocket.
+    // WebFlux uses `StandardWebSocketUpgradeStrategy`, which depends on Jakarta WebSocket API 2.1+, if no
+    // custom `RequestUpgradeStrategy` is detected. We may remove jakarta.websocket dependencies if
+    // Armeria WebFlux module supports WebSocket.
+    // https://github.com/spring-projects/spring-framework/blob/main/spring-webflux/src/main/java/org/springframework/web/reactive/socket/server/support/HandshakeWebSocketService.java#L272-L291
     implementation libs.jakarta.websocket
     implementation libs.jakarta.websocket.client
 

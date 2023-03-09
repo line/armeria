@@ -16,6 +16,7 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import org.springframework.core.io.buffer.DataBufferFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.lang.Nullable;
 
@@ -32,6 +33,10 @@ abstract class AbstractServerHttpResponseVersionSpecific extends AbstractServerH
         super(dataBufferFactory);
     }
 
+    /**
+     * Set the HTTP status code of the response.
+     * Note that this method is only valid for Spring 6. Spring 5 takes {@link HttpStatus} as the input type.
+     */
     @Override
     public boolean setStatusCode(@Nullable HttpStatusCode status) {
         if (state() == State.COMMITTED) {

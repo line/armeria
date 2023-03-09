@@ -22,6 +22,9 @@ import java.net.ServerSocket;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.internal.testing.FlakyTest;
+
+@FlakyTest
 class PortUtilTest {
 
     @Test

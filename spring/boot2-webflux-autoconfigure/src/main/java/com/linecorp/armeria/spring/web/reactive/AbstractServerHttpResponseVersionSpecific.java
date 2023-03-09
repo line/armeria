@@ -33,6 +33,11 @@ abstract class AbstractServerHttpResponseVersionSpecific extends AbstractServerH
         super(dataBufferFactory);
     }
 
+    /**
+     * Set the HTTP status code of the response.
+     * Note that this method is only valid for Spring 5. {@code HttpStatusCode} is used as the input type in
+     * Spring 6.
+     */
     @Override
     public boolean setStatusCode(@Nullable HttpStatus status) {
         if (state() == State.COMMITTED) {

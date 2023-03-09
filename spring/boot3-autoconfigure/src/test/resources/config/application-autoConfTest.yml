@@ -4,7 +4,6 @@ management:
       prometheus:
         enabled: true # In order to inject PrometheusMeterRegistry
 
-  # Spring Boot 3 has changed the property name for metrics.
   prometheus:
     metrics:
       export:

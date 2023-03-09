@@ -25,14 +25,13 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class PortUtil {
 
     private static final int PORT_MIN = 1024;
-    private static final int PORT_RANGE = 64511;
-    private static final int PORT_MAX = PORT_MIN + PORT_RANGE;
+    private static final int PORT_MAX = 65535;
+    private static final int PORT_RANGE = PORT_MAX - PORT_MIN;
 
     public static int unusedTcpPort() {
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < PORT_RANGE; i++) {
             final int candidatePort = random.nextInt(PORT_RANGE) + PORT_MIN;
-            System.out.println(candidatePort);
             try (ServerSocket ignored = new ServerSocket(candidatePort, 1,
                                                          InetAddress.getByName("127.0.0.1"))) {
                 return candidatePort;

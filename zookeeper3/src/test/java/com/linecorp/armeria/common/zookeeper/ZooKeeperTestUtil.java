@@ -42,7 +42,7 @@ public final class ZooKeeperTestUtil {
         return builder.build();
     }
 
-    public static int[] unusedTcpPorts(int numPorts) {
+    static int[] unusedTcpPorts(int numPorts) {
         final int[] ports = new int[numPorts];
         for (int i = 0; i < numPorts; i++) {
             int mayUnusedTcpPort;

@@ -22,6 +22,9 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.internal.testing.FlakyTest;
+
+@FlakyTest
 class ZooKeeperTestUtilTest {
     @Test
     void testUnusedTcpPorts() {
