@@ -18,12 +18,11 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -42,7 +41,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.util.AttributeMap;
 
 public class InitiateConnectionShutdownTest {
     @RegisterExtension
@@ -59,28 +57,45 @@ public class InitiateConnectionShutdownTest {
 
     final List<RequestLogAccess> requestLogAccesses = Lists.newCopyOnWriteArrayList();
     final AtomicBoolean completed = new AtomicBoolean();
-    final AtomicInteger connectionOpen = new AtomicInteger();
-    final AtomicInteger connectionClosed = new AtomicInteger();
-    final ConnectionPoolListener poolListener = new ConnectionPoolListener() {
-        @Override
-        public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                   InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-            connectionOpen.incrementAndGet();
-        }
-
-        @Override
-        public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
-                                     InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-            connectionClosed.incrementAndGet();
-        }
-    };
+    final List<Throwable> failedCompletions = Lists.newCopyOnWriteArrayList();
 
     @BeforeEach
     void resetVariables() {
         requestLogAccesses.clear();
         completed.set(false);
-        connectionOpen.set(0);
-        connectionClosed.set(0);
+        failedCompletions.clear();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "H1C, /ok",
+            "H1C, /delayed_ok",
+            "H2C, /ok",
+            "H2C, /delayed_ok",
+    })
+    void testConnectionIsNotAcquired(SessionProtocol protocol, String path) throws Exception {
+        final AtomicReference<Throwable> resCauseHolder = new AtomicReference<>();
+        final CountingConnectionPoolListener countingListener = new CountingConnectionPoolListener();
+        try (ClientFactory clientFactory = getClientFactory(countingListener)) {
+            final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
+                    (delegate, ctx, req) -> {
+                        initiateConnectionShutdown(ctx);
+                        throw new RuntimeException();
+                    }).build();
+
+            try {
+                client.blocking().get(path);
+            } catch (Throwable ex) {
+                resCauseHolder.set(ex);
+            }
+
+            assertNoConnectionNow(countingListener);
+
+            assertThat(resCauseHolder.get()).isOfAnyClassIn(RuntimeException.class);
+
+            assertThat(failedCompletions).hasSize(1);
+            assertThat(failedCompletions.get(0)).isOfAnyClassIn(IllegalStateException.class);
+        }
     }
 
     @ParameterizedTest
@@ -92,27 +107,30 @@ public class InitiateConnectionShutdownTest {
             "H2C, /ok,         BEFORE_SENDING_REQ",
             "H2C, /ok,         AFTER_SENDING_REQ",
             "H2C, /delayed_ok, BEFORE_SENDING_REQ",
-            "H2C, /delayed_ok, AFTER_SENDING_REQ"
+            "H2C, /delayed_ok, AFTER_SENDING_REQ",
     })
     void testConnectionShutdown(SessionProtocol protocol, String path, ConnectionShutdownTiming timing)
             throws Exception {
-        try (ClientFactory clientFactory = getClientFactory()) {
+        final CountingConnectionPoolListener countingListener = new CountingConnectionPoolListener();
+        try (ClientFactory clientFactory = getClientFactory(countingListener)) {
             final WebClient client = newWebClient(protocol, clientFactory, timing);
             final AggregatedHttpResponse res = client.blocking().get(path);
 
-            assertSingleConnection();
+            assertSingleConnection(countingListener);
+            assertThat(failedCompletions).isEmpty();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
             assertThat(requestLogAccesses.size()).isEqualTo(1);
             assertConnectionHeader(requestLogAccesses.get(0), timing);
         }
 
-        assertSingleConnectionNow();
+        assertSingleConnectionNow(countingListener);
     }
 
     @ParameterizedTest
     @CsvSource({ "H1C", "H2C" })
     void connectionShouldNotBeClosedIfThereArePendingRequests(SessionProtocol protocol) throws Exception {
-        try (ClientFactory clientFactory = getClientFactory()) {
+        final CountingConnectionPoolListener countingListener = new CountingConnectionPoolListener();
+        try (ClientFactory clientFactory = getClientFactory(countingListener)) {
             final WebClient client = newWebClient(protocol, clientFactory, ConnectionShutdownTiming.NEVER);
             final CompletableFuture<AggregatedHttpResponse> firstResFuture;
             final CompletableFuture<AggregatedHttpResponse> secondResFuture;
@@ -135,7 +153,9 @@ public class InitiateConnectionShutdownTest {
             final AggregatedHttpResponse firstRes = firstResFuture.get();
             final AggregatedHttpResponse secondRes = secondResFuture.get();
 
-            assertSingleConnection();
+            assertSingleConnection(countingListener);
+
+            assertThat(failedCompletions).isEmpty();
 
             assertThat(firstRes.status()).isEqualTo(HttpStatus.OK);
             assertThat(secondRes.status()).isEqualTo(HttpStatus.OK);
@@ -145,11 +165,11 @@ public class InitiateConnectionShutdownTest {
             assertHasNoConnectionHeader(requestLogAccesses.get(1));
         }
 
-        assertSingleConnectionNow();
+        assertSingleConnectionNow(countingListener);
     }
 
-    private ClientFactory getClientFactory() {
-        return ClientFactory.builder().connectionPoolListener(poolListener)
+    private static ClientFactory getClientFactory(CountingConnectionPoolListener countingListener) {
+        return ClientFactory.builder().connectionPoolListener(countingListener)
                             .workerGroup(1).useHttp1Pipelining(true)
                             .build();
     }
@@ -177,25 +197,41 @@ public class InitiateConnectionShutdownTest {
                 }).build();
     }
 
-    private void assertSingleConnection() throws InterruptedException {
+    private void assertSingleConnection(CountingConnectionPoolListener countingListener)
+            throws InterruptedException {
         // Wait until the future returned by ctx.initiateConnectionShutdown() is complete.
         await().until(completed::get);
 
         // Make sure open one connection was open and then closed.
-        await().untilAsserted(this::assertSingleConnectionNow);
+        await().untilAsserted(() -> assertSingleConnectionNow(countingListener));
     }
 
-    private void assertSingleConnectionNow() {
-        assertThat(connectionOpen.get())
-                .withFailMessage(() -> connectionOpen.get() + " connections were open.")
+    private static void assertSingleConnectionNow(CountingConnectionPoolListener countingListener) {
+        assertThat(countingListener.opened())
+                .withFailMessage(() -> countingListener.opened() + " connections were open.")
                 .isEqualTo(1);
-        assertThat(connectionClosed.get())
-                .withFailMessage(() -> connectionClosed.get() + " connections were closed.")
+        assertThat(countingListener.closed())
+                .withFailMessage(() -> countingListener.closed() + " connections were closed.")
                 .isEqualTo(1);
+    }
+
+    private static void assertNoConnectionNow(CountingConnectionPoolListener countingListener) {
+        assertThat(countingListener.opened())
+                .withFailMessage(() -> countingListener.opened() + " connections were open.")
+                .isEqualTo(0);
+        assertThat(countingListener.closed())
+                .withFailMessage(() -> countingListener.closed() + " connections were closed.")
+                .isEqualTo(0);
     }
 
     private void initiateConnectionShutdown(ClientRequestContext ctx) {
-        ctx.initiateConnectionShutdown().thenRun(() -> completed.set(true));
+        ctx.initiateConnectionShutdown().handle((ignore, ex) -> {
+            completed.set(true);
+            if (ex != null) {
+                failedCompletions.add(ex);
+            }
+            return null;
+        });
     }
 
     private static void assertConnectionHeader(RequestLogAccess logAccess, ConnectionShutdownTiming timing) {
