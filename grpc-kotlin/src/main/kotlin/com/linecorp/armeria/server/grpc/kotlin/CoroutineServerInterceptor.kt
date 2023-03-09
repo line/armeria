@@ -16,6 +16,7 @@ package com.linecorp.armeria.server.grpc.kotlin
  * under the License.
  */
 
+import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.internal.common.kotlin.ArmeriaRequestCoroutineContext
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall
 import com.linecorp.armeria.server.grpc.AsyncServerInterceptor
@@ -50,6 +51,7 @@ import java.util.concurrent.CompletableFuture
  * }
  * ```
  */
+@UnstableApi
 interface CoroutineServerInterceptor : AsyncServerInterceptor {
 
     @OptIn(DelicateCoroutinesApi::class)

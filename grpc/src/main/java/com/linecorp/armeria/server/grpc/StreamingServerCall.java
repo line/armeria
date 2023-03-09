@@ -225,7 +225,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public @Nullable O firstResponse() {
+    protected @Nullable O firstResponse() {
         return firstResponse;
     }
 

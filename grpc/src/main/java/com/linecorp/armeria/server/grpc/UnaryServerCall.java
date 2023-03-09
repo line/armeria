@@ -181,7 +181,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Nullable
     @Override
-    public O firstResponse() {
+    protected O firstResponse() {
         return responseMessage;
     }
 }
