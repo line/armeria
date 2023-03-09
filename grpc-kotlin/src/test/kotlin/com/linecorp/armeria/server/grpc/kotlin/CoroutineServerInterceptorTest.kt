@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc
+package com.linecorp.armeria.server.grpc.kotlin
 
 import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.common.RequestContext
@@ -28,6 +28,7 @@ import com.linecorp.armeria.internal.testing.AnticipatedException
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.auth.Authorizer
+import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import io.grpc.Status
 import io.grpc.StatusRuntimeException

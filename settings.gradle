@@ -21,7 +21,7 @@ includeWithFlags ':junit4',                              'java', 'publish', 'rel
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin'
-includeWithFlags ':kotlin-grpc',                         'java', 'publish', 'relocate', 'kotlin'
+includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate'

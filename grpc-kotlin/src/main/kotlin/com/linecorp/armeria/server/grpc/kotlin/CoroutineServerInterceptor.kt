@@ -1,4 +1,4 @@
-package com.linecorp.armeria.server.grpc
+package com.linecorp.armeria.server.grpc.kotlin
 
 /*
  * Copyright 2023 LINE Corporation
@@ -17,6 +17,8 @@ package com.linecorp.armeria.server.grpc
  */
 
 import com.linecorp.armeria.internal.common.kotlin.ArmeriaRequestCoroutineContext
+import com.linecorp.armeria.internal.server.grpc.AbstractServerCall
+import com.linecorp.armeria.server.grpc.AsyncServerInterceptor
 import io.grpc.Metadata
 import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
