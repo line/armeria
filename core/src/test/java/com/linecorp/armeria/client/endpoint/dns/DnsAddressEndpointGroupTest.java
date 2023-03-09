@@ -28,6 +28,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -518,6 +520,51 @@ class DnsAddressEndpointGroupTest {
             // fooGroup should not be updated.
             assertThat(fooGroup.endpoints())
                     .containsExactly(Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.2"));
+        }
+    }
+
+    @Test
+    void dnsQueryListener() {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("baz.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "1.1.1.1"))))) {
+            final AtomicInteger failureCount = new AtomicInteger(0);
+            final AtomicBoolean success = new AtomicBoolean(false);
+            final DnsQueryListener listener = new DnsQueryListener() {
+                @Override
+                public void onSuccess(List<DnsRecord> oldRecords,
+                                      List<DnsRecord> newRecords, String logPrefix) {
+                    success.set(true);
+                }
+
+                @Override
+                public void onFailure(List<DnsRecord> oldRecords,
+                                      Throwable cause, String logPrefix, long delayMillis, int attemptsSoFar) {
+                    failureCount.incrementAndGet();
+                }
+            };
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("notfound.com")
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .backoff(Backoff.fixed(500))
+                                                .dnsCache(NoopDnsCache.INSTANCE)
+                                                .addDnsQueryListeners(listener)
+                                                .build()) {
+
+                await().untilAsserted(() -> assertThat(failureCount.get()).isGreaterThan(3));
+                assertThat(group.attemptsSoFar).isGreaterThan(3);
+            }
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("baz.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .dnsCache(NoopDnsCache.INSTANCE)
+                                                .addDnsQueryListeners(listener)
+                                                .build()) {
+                await().timeout(Duration.ofSeconds(1))
+                        .untilAsserted(() -> assertThat(success.get()).isTrue());
+            }
         }
     }
 
