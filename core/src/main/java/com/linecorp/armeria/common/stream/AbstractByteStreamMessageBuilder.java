@@ -25,11 +25,8 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil;
 
-import io.netty.buffer.ByteBufAllocator;
-
 abstract class AbstractByteStreamMessageBuilder {
 
-    private ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
     private int bufferSize = InternalStreamMessageUtil.DEFAULT_FILE_BUFFER_SIZE;
 
     @Nullable
@@ -46,20 +43,6 @@ abstract class AbstractByteStreamMessageBuilder {
     AbstractByteStreamMessageBuilder executor(ExecutorService executor) {
         requireNonNull(executor, "executor");
         this.executor = executor;
-        return this;
-    }
-
-    final ByteBufAllocator alloc() {
-        return alloc;
-    }
-
-    /**
-     * Sets the specified {@link ByteBufAllocator}.
-     * If unspecified, {@link ByteBufAllocator#DEFAULT} is used by default.
-     */
-    AbstractByteStreamMessageBuilder alloc(ByteBufAllocator alloc) {
-        requireNonNull(alloc, "alloc");
-        this.alloc = alloc;
         return this;
     }
 
