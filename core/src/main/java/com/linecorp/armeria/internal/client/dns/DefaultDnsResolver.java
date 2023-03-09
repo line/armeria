@@ -154,8 +154,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
             results[order] = records;
         }
 
-        for (int i = 0; i < results.length; i++) {
-            final Object result = results[i];
+        for (Object result : results) {
             if (result == null) {
                 // A highly preferred question hasn't finished yet.
                 return;
@@ -166,11 +165,10 @@ public final class DefaultDnsResolver implements SafeCloseable {
                 continue;
             }
 
-            if (result instanceof List) {
-                // Found a successful result.
-                future.complete(Collections.unmodifiableList((List<DnsRecord>) result));
-                return;
-            }
+            // Found a successful result.
+            assert result instanceof List;
+            future.complete(Collections.unmodifiableList((List<DnsRecord>) result));
+            return;
         }
 
         // All queries are failed.

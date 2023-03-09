@@ -145,7 +145,7 @@ class DefaultDnsResolverTest {
                     DefaultDnsResolver.of(
                             new DnsNameResolverBuilder(eventLoop)
                                     .channelType(TransportType.datagramChannelType(eventLoop))
-                                    .queryTimeoutMillis(queryTimeoutMillis)
+                                    .queryTimeoutMillis(Long.MAX_VALUE)
                                     .nameServerProvider(
                                             name -> DnsServerAddresses.sequential(dnsServer.addr()).stream())
                                     .build(),
