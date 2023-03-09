@@ -155,12 +155,9 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
 
         // To make sure to close the inputStreamSubscription when this is aborted.
         if (completionFuture.isCompletedExceptionally()) {
-            completionFuture.whenComplete((unused, cause) -> {
-                if (cause != null) {
-                    abort(cause);
-                } else {
-                    abort();
-                }
+            completionFuture.exceptionally(cause -> {
+                inputStreamSubscription.close(cause);
+                return null;
             });
         }
     }
@@ -344,10 +341,10 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
             }
             downstream = NoopSubscriber.get();
             completionFuture.completeExceptionally(cause);
-            maybeCloseInputStream();
+            closeInputStream();
         }
 
-        private void maybeCloseInputStream() {
+        private void closeInputStream() {
             try {
                 inputStream.close();
             } catch (IOException e) {
@@ -376,7 +373,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                 downstream.onError(cause);
                 completionFuture.completeExceptionally(cause);
             }
-            maybeCloseInputStream();
+            closeInputStream();
         }
     }
 }
