@@ -17,7 +17,6 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
-import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -46,21 +45,21 @@ final class ConnectionPoolMetrics {
 
     void increaseConnOpened(SessionProtocol protocol, InetSocketAddress remoteAddr,
                             InetSocketAddress localAddr) {
-        Counter connOpenedCounter = meterRegistry.counter(name,
-                                                          PROTOCOL, protocol.name(),
-                                                          REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
-                                                          LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
-                                                          STATE, "open");
-        connOpenedCounter.increment();
+        meterRegistry.counter(name,
+                              PROTOCOL, protocol.name(),
+                              REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
+                              LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
+                              STATE, "open")
+                     .increment();
     }
 
     void increaseConnClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
                             InetSocketAddress localAddr) {
-        Counter connClosedCounter = meterRegistry.counter(name,
+        meterRegistry.counter(name,
                               PROTOCOL, protocol.name(),
                               REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
                               LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
-                              STATE, "closed");
-        connClosedCounter.increment();
+                              STATE, "closed")
+                     .increment();
     }
 }
