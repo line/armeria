@@ -30,12 +30,12 @@ import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.auth.Authorizer
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
-import io.grpc.Status
-import io.grpc.StatusRuntimeException
-import io.grpc.stub.StreamObserver
 import io.grpc.Metadata
 import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
+import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.future.await
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

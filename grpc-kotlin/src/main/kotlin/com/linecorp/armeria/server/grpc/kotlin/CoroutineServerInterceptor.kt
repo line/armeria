@@ -1,5 +1,3 @@
-package com.linecorp.armeria.server.grpc.kotlin
-
 /*
  * Copyright 2023 LINE Corporation
  *
@@ -16,6 +14,8 @@ package com.linecorp.armeria.server.grpc.kotlin
  * under the License.
  */
 
+package com.linecorp.armeria.server.grpc.kotlin
+
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.internal.common.kotlin.ArmeriaRequestCoroutineContext
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall
@@ -31,7 +31,7 @@ import kotlinx.coroutines.future.future
 import java.util.concurrent.CompletableFuture
 
 /**
- * A [ServerInterceptor] that is able to asynchronously execute the interceptor without blocking the
+ * A [ServerInterceptor] that is able to suspend the interceptor without blocking the
  * caller thread.
  * For example:
  * ```kotlin
@@ -61,7 +61,9 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
         next: ServerCallHandler<I, O>
     ): CompletableFuture<ServerCall.Listener<I>> {
         check(call is AbstractServerCall) {
-            throw IllegalArgumentException("Cannot use ${AsyncServerInterceptor::class.java.name} with a non-Armeria gRPC server")
+            throw IllegalArgumentException(
+                "Cannot use ${AsyncServerInterceptor::class.java.name} with a non-Armeria gRPC server"
+            )
         }
         val executor = call.blockingExecutor() ?: call.eventLoop()
 
@@ -71,8 +73,9 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
     }
 
     /**
-     * Suspends the current coroutine and intercepts a gRPC server call with the specified call object, headers, and
-     * next call handler.
+     * Suspends the current coroutine and intercepts a gRPC server call with the specified call object, headers,
+     * and next call handler.
+     *
      * @param call the [ServerCall] being intercepted
      * @param headers the [Metadata] of the call
      * @param next the next [ServerCallHandler]
