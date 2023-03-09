@@ -40,10 +40,6 @@ public final class PathStreamMessageBuilder extends AbstractByteStreamMessageBui
         this.path = path;
     }
 
-    ByteBufAllocator alloc() {
-        return alloc;
-    }
-
     /**
      * Sets the specified {@link ByteBufAllocator}.
      * If unspecified, {@link ByteBufAllocator#DEFAULT} is used by default.
@@ -56,7 +52,7 @@ public final class PathStreamMessageBuilder extends AbstractByteStreamMessageBui
 
     @Override
     public ByteStreamMessage build() {
-        return new PathStreamMessage(path, executor(), alloc(), bufferSize());
+        return new PathStreamMessage(path, executor(), alloc, bufferSize());
     }
 
     // Override the return type of the chaining methods in the superclass.
