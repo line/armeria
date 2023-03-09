@@ -80,6 +80,11 @@ class AsyncServerInterceptorTest {
         }
     };
 
+    @BeforeEach
+    void beforeEach() {
+        exceptionCounter.set(0);
+    }
+
     @ValueSource(strings = { "/non-blocking", "/blocking" })
     @ParameterizedTest
     void authorizedRequest(String path) {
@@ -91,12 +96,7 @@ class AsyncServerInterceptorTest {
                                                                       .setFillUsername(true)
                                                                       .build());
         assertThat(response.getUsername()).isEqualTo("Armeria");
-        assertEquals(0, exceptionCounter.get());
-    }
-
-    @BeforeEach
-    void beforeEach() {
-        exceptionCounter.set(0);
+        assertThat(exceptionCounter.get()).isEqualTo(0);
     }
 
     @ValueSource(strings = { "/non-blocking", "/blocking" })

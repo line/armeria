@@ -20,6 +20,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -36,6 +37,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class DeferredListener<I> extends ServerCall.Listener<I> {
 
     private static final List<?> NOOP_TASKS = ImmutableList.of();
+    private List<Consumer<Listener<I>>> TEMPORARY_TASKS = Collections.unmodifiableList(new ArrayList<>());
 
     @Nullable
     private final Executor blockingExecutor;
@@ -82,7 +84,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                     }
 
                     // New pending tasks could be added while invoking pending tasks.
-                    this.pendingTasks = new ArrayList<>();
+                    this.pendingTasks = TEMPORARY_TASKS;
                     try {
                         for (Consumer<Listener<I>> task : pendingTasks) {
                             task.accept(delegate);
@@ -172,7 +174,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
 
     private void maybeAddPendingTask(Consumer<ServerCall.Listener<I>> task) {
         if (eventLoop != null && eventLoop.inEventLoop()) {
-            pendingTasks.add(task);
+            addPendingTask(task);
         } else {
             // It is unavoidable to reschedule the task to ensure the execution order.
             sequentialExecutor().execute(() -> {
@@ -182,10 +184,17 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                 if (pendingTasks == NOOP_TASKS) {
                     task.accept(delegate);
                 } else {
-                    pendingTasks.add(task);
+                    addPendingTask(task);
                 }
             });
         }
+    }
+
+    private void addPendingTask(Consumer<ServerCall.Listener<I>> task) {
+        if (pendingTasks == TEMPORARY_TASKS) {
+            pendingTasks = new ArrayList<>();
+        }
+        pendingTasks.add(task);
     }
 
     private Executor sequentialExecutor() {
