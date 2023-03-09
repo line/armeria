@@ -154,8 +154,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
             results[order] = records;
         }
 
-        for (int i = 0; i < results.length; i++) {
-            final Object result = results[i];
+        for (Object result : results) {
             if (result == null) {
                 // A highly preferred question hasn't finished yet.
                 return;
