@@ -7,3 +7,10 @@ pull_request_rules:
     actions:
       merge:
         method: squash
+  - name: Delete head branch after merge
+    conditions:
+      - author=github-actions[bot]
+      - title=Update public suffix list
+      - merged
+    actions:
+      delete_head_branch:
