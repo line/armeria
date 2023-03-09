@@ -16,11 +16,15 @@
 
 package com.linecorp.armeria.internal.server.thrift;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
+import java.util.Properties;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.apache.thrift.TBase;
 import org.apache.thrift.TFieldIdEnum;
@@ -30,8 +34,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.util.Version;
-
 final class ThriftMetadataAccess {
 
     private static final Logger logger = LoggerFactory.getLogger(ThriftMetadataAccess.class);
@@ -40,46 +42,45 @@ final class ThriftMetadataAccess {
     private static final Pattern preInitializeTargetPattern =
             Pattern.compile("^armeria-thrift0\\.(\\d+)$");
 
+    private static final String filename =
+            "com/linecorp/armeria/internal/common/thrift-options.properties";
+
     static {
         try {
-            final Set<String> artifacts = Version.getAll(ThriftMetadataAccess.class.getClassLoader())
-                                                 .keySet().stream()
-                                                 .filter(name -> name.startsWith("armeria-thrift"))
-                                                 .collect(Collectors.toSet());
-            preInitializeThriftClass = needsPreInitialization(artifacts);
+            final Enumeration<URL> versionPropertiesUrls =
+                    ThriftMetadataAccess.class.getClassLoader().getResources(filename);
+            final List<Properties> propertiesList = new ArrayList<>();
+            while (versionPropertiesUrls.hasMoreElements()) {
+                final URL url = versionPropertiesUrls.nextElement();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
+                    final Properties props = new Properties();
+                    props.load(reader);
+                    propertiesList.add(props);
+                }
+            }
+            preInitializeThriftClass = needsPreInitialization(propertiesList);
         } catch (Exception e) {
-            logger.debug("Unexpected exception while determining the 'armeria-thrift' version: ", e);
+            logger.debug("Unexpected exception while extracting options: ", e);
         }
     }
 
     @VisibleForTesting
-    static boolean needsPreInitialization(Set<String> artifacts) {
-        if (artifacts.isEmpty()) {
+    static boolean needsPreInitialization(List<Properties> propertiesList) {
+        if (propertiesList.isEmpty()) {
             // versions.properties was not found
-            logger.trace("Unable to determine the 'armeria-thrift' version. Please consider " +
-                         "adding 'META-INF/com.linecorp.armeria.versions.properties' to the " +
-                         "classpath to avoid unexpected issues.");
+            logger.debug("Unable to find a '{}' file. You may want to consider " +
+                         "checking if the file has been omitted from the classpath to avoid " +
+                         "unexpected issues.", filename);
             return true;
         }
-        for (String artifact : artifacts) {
-            if (needsPreInitialization(artifact)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean needsPreInitialization(String artifactName) {
-        final Matcher matcher = preInitializeTargetPattern.matcher(artifactName);
-        if (!matcher.matches()) {
-            return false;
-        }
-        final int version = Integer.parseInt(matcher.group(1));
-        if (version <= 14) {
-            logger.trace("Pre-initializing thrift metadata due to 'armeria-thrift0.{}'", version);
+        if (propertiesList.size() > 1) {
+            logger.debug("More than one '{}' file has been found. You may want to consider " +
+                         "checking if more than one 'armeria-thrift' module has been added " +
+                         "to the classpath", filename);
             return true;
         }
-        return false;
+        final Properties properties = propertiesList.get(0);
+        return "true".equals(properties.getProperty("structPreinitRequired"));
     }
 
     @SuppressWarnings("unchecked")

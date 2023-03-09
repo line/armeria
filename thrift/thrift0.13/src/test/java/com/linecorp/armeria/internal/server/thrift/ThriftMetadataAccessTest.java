@@ -19,41 +19,40 @@ package com.linecorp.armeria.internal.server.thrift;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collections;
-import java.util.Set;
+import java.util.Properties;
 
+import org.assertj.core.util.Lists;
 import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.Test;
 
 class ThriftMetadataAccessTest {
 
     @Test
-    void emptyCase() {
-        // can't determine the thrift version used so just pre-initialize
-        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.emptySet())).isTrue();
+    void wrongCountCase() {
+        // empty properties
+        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.emptyList())).isTrue();
+
+        // more than one properties
+        assertThat(ThriftMetadataAccess.needsPreInitialization(
+                Lists.list(new Properties(), new Properties()))).isTrue();
     }
 
     @Test
     void basicCase() {
-        assertThat(ThriftMetadataAccess.needsPreInitialization(
-                Collections.singleton("armeria-thrift0.13"))).isTrue();
-        assertThat(ThriftMetadataAccess.needsPreInitialization(
-                Collections.singleton("armeria-thrift0.15"))).isFalse();
-
-        assertThat(ThriftMetadataAccess.needsPreInitialization(
-                Sets.set("armeria-thrift0.13", "armeria-thrift0.14", "armeria-thrift0.15"))).isTrue();
-        assertThat(ThriftMetadataAccess.needsPreInitialization(
-                Sets.set("armeria-thrift0.15", "armeria-thrift0.16", "armeria-thrift0.17"))).isFalse();
+        final Properties props = new Properties();
+        props.put("structPreinitRequired", "true");
+        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singletonList(props))).isTrue();
     }
 
     @Test
-    void withMalformed() {
-        Set<String> mixed = Sets.set("armeria-thrift0.13", "asdf", "armeria-thrif");
-        assertThat(ThriftMetadataAccess.needsPreInitialization(mixed)).isTrue();
+    void failingCase() {
+        final Properties props = new Properties();
+        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singletonList(props))).isFalse();
 
-        mixed = Sets.set("armeria-thrift0.15", "asdf", "armeria-thrif");
-        assertThat(ThriftMetadataAccess.needsPreInitialization(mixed)).isFalse();
+        props.put("structPreinitRequired", "false");
+        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singletonList(props))).isFalse();
 
-        mixed = Sets.set("asdf", "armeria-thrif");
-        assertThat(ThriftMetadataAccess.needsPreInitialization(mixed)).isFalse();
+        props.put("structPreinitRequired", "asdf");
+        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singletonList(props))).isFalse();
     }
 }
