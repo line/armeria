@@ -42,8 +42,8 @@ public class ConnectionPoolCollectingMetricTest {
 
     @Test
     void test() throws Exception {
-        final InetSocketAddress addressA = InetSocketAddress.createUnresolved("10.10.10.10", 3333);
-        final InetSocketAddress addressB = InetSocketAddress.createUnresolved("10.10.10.11", 3333);
+        final InetSocketAddress addressA = new InetSocketAddress("10.10.10.10", 3333);
+        final InetSocketAddress addressB = new InetSocketAddress("10.10.10.11", 3333);
 
         final String openABMetricKey =
                 "armeria.client.connections#count{local.ip=10.10.10.11,protocol=H1,remote.ip=10.10.10.10,state=open}";
@@ -57,7 +57,6 @@ public class ConnectionPoolCollectingMetricTest {
         final AttributeMap attributeMap = new DefaultAttributeMap();
 
         connectionPoolListener.connectionOpen(SessionProtocol.H1, addressA, addressB, attributeMap);
-
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 1.0));
 

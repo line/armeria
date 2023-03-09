@@ -48,8 +48,8 @@ final class ConnectionPoolMetrics {
                             InetSocketAddress localAddr) {
         Counter connOpenedCounter = meterRegistry.counter(name,
                                                           PROTOCOL, protocol.name(),
-                                                          REMOTE_ADDR, remoteAddr.getHostString(),
-                                                          LOCAL_ADDR, localAddr.getHostString(),
+                                                          REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
+                                                          LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
                                                           STATE, "open");
         connOpenedCounter.increment();
     }
@@ -58,8 +58,8 @@ final class ConnectionPoolMetrics {
                             InetSocketAddress localAddr) {
         Counter connClosedCounter = meterRegistry.counter(name,
                               PROTOCOL, protocol.name(),
-                              REMOTE_ADDR, remoteAddr.getHostString(),
-                              LOCAL_ADDR, localAddr.getHostString(),
+                              REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
+                              LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
                               STATE, "closed");
         connClosedCounter.increment();
     }
