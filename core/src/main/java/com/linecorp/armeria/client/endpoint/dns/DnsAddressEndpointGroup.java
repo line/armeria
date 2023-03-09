@@ -106,22 +106,23 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             }
         }
 
-        final ImmutableList.Builder<DnsQuestionWithoutTrailingDot> builder = ImmutableList.builder();
+        final DnsQuestionWithoutTrailingDot ipV4 = DnsQuestionWithoutTrailingDot.of(hostname,
+                                                                                    DnsRecordType.A);
+        final DnsQuestionWithoutTrailingDot ipV6 = DnsQuestionWithoutTrailingDot.of(hostname,
+                                                                                    DnsRecordType.AAAA);
         switch (resolvedAddressTypes) {
             case IPV4_ONLY:
-            case IPV4_PREFERRED:
-            case IPV6_PREFERRED:
-                builder.add(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.A));
-                break;
-        }
-        switch (resolvedAddressTypes) {
+                return ImmutableList.of(ipV4);
             case IPV6_ONLY:
+                return ImmutableList.of(ipV6);
             case IPV4_PREFERRED:
+                return ImmutableList.of(ipV4, ipV6);
             case IPV6_PREFERRED:
-                builder.add(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.AAAA));
-                break;
+                return ImmutableList.of(ipV6, ipV4);
         }
-        return builder.build();
+
+        // Never reach here.
+        throw new Error();
     }
 
     @Override
