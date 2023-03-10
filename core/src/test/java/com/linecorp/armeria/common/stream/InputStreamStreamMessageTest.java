@@ -270,13 +270,31 @@ class InputStreamStreamMessageTest {
     }
 
     @Test
-    void range_zeroLength() {
+    void range_negativeLength() {
         final InputStream inputStream = new ByteArrayInputStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         final ByteStreamMessage byteStreamMessage = StreamMessage.of(inputStream);
 
-        assertThatThrownBy(() -> byteStreamMessage.range(0, 0))
+        assertThatThrownBy(() -> byteStreamMessage.range(0, -1))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("length: 0 (expected: > 0)");
+                .hasMessageContaining("length: -1 (expected: >= 0)");
+    }
+
+    @Test
+    void range_zeroLength_emptyStream() {
+        final InputStream inputStream = new ByteArrayInputStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        final ByteStreamMessage byteStreamMessage = StreamMessage.of(inputStream).range(0, 0);
+
+        StepVerifier.create(byteStreamMessage)
+                    .verifyComplete();
+    }
+
+    @Test
+    void range_positiveOffset_zeroLength_emptyStream() {
+        final InputStream inputStream = new ByteArrayInputStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        final ByteStreamMessage byteStreamMessage = StreamMessage.of(inputStream).range(5, 0);
+
+        StepVerifier.create(byteStreamMessage)
+                    .verifyComplete();
     }
 
     @Test
@@ -383,7 +401,7 @@ class InputStreamStreamMessageTest {
 
     @Test
     void emptyInputStream() {
-        final InputStream inputStream = new ByteArrayInputStream(new byte[] { });
+        final InputStream inputStream = new ByteArrayInputStream(new byte[] {});
         final ByteStreamMessage byteStreamMessage = StreamMessage.of(inputStream);
 
         StepVerifier.create(byteStreamMessage)

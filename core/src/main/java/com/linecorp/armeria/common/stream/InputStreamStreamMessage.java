@@ -76,9 +76,9 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
     @Override
     public ByteStreamMessage range(long offset, long length) {
         checkArgument(offset >= 0, "offset: %s (expected: >= 0)", offset);
-        checkArgument(length > 0, "length: %s (expected: > 0)", length);
-        checkState(subscribed == 0, "cannot specify range(%s, %s) after this %s is subscribed",
-                   offset, length, InputStreamStreamMessage.class);
+        checkArgument(length >= 0, "length: %s (expected: >= 0)", length);
+        checkState(subscribed == 0, "cannot specify range(%s, %s) once this stream is subscribed",
+                   offset, length);
         this.offset = offset;
         this.length = length;
         return this;
@@ -232,6 +232,10 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
 
         private void request0(long n) {
             if (closed) {
+                return;
+            }
+            if (offset >= end) {
+                close(null);
                 return;
             }
 
