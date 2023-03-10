@@ -13,7 +13,7 @@ includeWithFlags ':brave',                               'java', 'publish', 'rel
 includeWithFlags ':core',                                'java', 'publish', 'shade', 'trim'
 includeWithFlags ':eureka',                              'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate'
-includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin'
+includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate'
 includeWithFlags ':graphql',                             'java', 'publish', 'relocate'
 includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate'
