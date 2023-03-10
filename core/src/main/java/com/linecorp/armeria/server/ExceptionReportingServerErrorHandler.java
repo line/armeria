@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
@@ -44,12 +45,16 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, ServerListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
+    private static final AtomicIntegerFieldUpdater<ExceptionReportingServerErrorHandler> scheduledUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(ExceptionReportingServerErrorHandler.class,
+                                                 "scheduled");
 
     private final Duration interval;
     private final ServerErrorHandler delegate;
     private final MicrometerCounter micrometerCounter;
     private final LongAdder counter;
     private long lastExceptionsCount;
+    private volatile int scheduled;
     @Nullable
     private Throwable thrownException;
     @Nullable
@@ -80,7 +85,7 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
                 cause.getCause() != null;
 
         if (ctx.shouldReportUnhandledExceptions() && !isExpectedException) {
-            if (reportingTaskFuture == null) {
+            if (scheduledUpdater.compareAndSet(this, 0, 1)) {
                 reportingTaskFuture = ctx.eventLoop().scheduleAtFixedRate(
                         this::reportException, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
             }
