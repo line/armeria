@@ -856,9 +856,10 @@ public final class DefaultClientRequestContext
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
 
         setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        log().whenRequestComplete().handle((ignore, ex) -> {
-            final Channel ch = channel();
+        log().whenRequestComplete().thenAccept(log -> {
+            final Channel ch = log.channel();
             if (ch == null) {
+                final Throwable ex = log.requestCause();
                 if (ex == null) {
                     completableFuture.completeExceptionally(new IllegalStateException(
                             "A request has failed before a connection is established."));
@@ -875,7 +876,6 @@ public final class DefaultClientRequestContext
                 });
                 HttpSession.get(ch).deactivate();
             }
-            return null;
         });
         return completableFuture;
     }
