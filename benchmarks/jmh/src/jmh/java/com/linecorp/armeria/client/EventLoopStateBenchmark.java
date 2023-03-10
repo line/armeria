@@ -3,7 +3,6 @@ package com.linecorp.armeria.client;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -21,10 +20,11 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
 @State(Scope.Benchmark)
-public class EventLoopStateReleaseBenchmark {
+public class EventLoopStateBenchmark {
+    private final int requestNumber = 100000;
     private AbstractEventLoopState state;
 
-    @Param({"16"})
+    @Param({"8, 16, 32, 64, 128"})
     private int maxNumEventLoops;
     @Param({"true", "false"})
     private boolean arrayBased;
@@ -45,6 +45,7 @@ public class EventLoopStateReleaseBenchmark {
                 state = new HeapBasedEventLoopState(eventLoops, maxNumEventLoops, s);
             }
 
+            // Allocate full entries in setup phase to reduce effect occurred when allocating new entry
             IntStream.rangeClosed(0, maxNumEventLoops - 1)
                      .forEach(i -> state.acquire());
         } catch (Throwable x) {
@@ -59,55 +60,19 @@ public class EventLoopStateReleaseBenchmark {
             field.setAccessible(true);
             field.set(state, null);
 
+            state.entries().clear();
+
         } catch (Throwable x) {
 
         }
     }
 
     @Benchmark
-    public void fifoAll() {
-        releaseAll(IntStream.rangeClosed(0, maxNumEventLoops - 1)
-                            .boxed()
-                            .collect(Collectors.toList()));
-    }
-
-    @Benchmark
-    public void lifoAll() {
-        releaseAll(IntStream.rangeClosed(0, maxNumEventLoops - 1)
-                            .map(x -> maxNumEventLoops - x - 1)
-                            .boxed()
-                            .collect(Collectors.toList()));
-    }
-
-    @Benchmark
-    public void randomAll() {
-        List<Integer> indices = IntStream.rangeClosed(0, maxNumEventLoops - 1)
-                                        .boxed()
-                                        .collect(Collectors.toList());
-        Collections.shuffle(indices, ThreadLocalRandom.current());
-        releaseAll(indices);
-    }
-
-    private void releaseAll(List<Integer> indices) {
-        indices.forEach(i -> state.entries().get(i).release());
-    }
-
-    @Benchmark
-    public void fifoOne() {
-        releaseOne(0);
-    }
-
-    @Benchmark
-    public void lifoOne() {
-        releaseOne(maxNumEventLoops - 1);
-    }
-
-    @Benchmark
-    public void randomOne() {
-        releaseOne(ThreadLocalRandom.current().nextInt(maxNumEventLoops));
-    }
-
-    private void releaseOne(int index) {
-        state.entries().get(index).release();
+    public void acquireAndRelease() {
+        List<AbstractEventLoopEntry> releaseOrder = IntStream.rangeClosed(1, requestNumber)
+                                                             .mapToObj(i -> state.acquire())
+                                                             .collect(Collectors.toList());
+        Collections.reverse(releaseOrder);
+        releaseOrder.forEach(AbstractEventLoopEntry::release);
     }
 }
