@@ -82,7 +82,8 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                 }
 
                 // New pending tasks could be added while invoking pending tasks.
-                this.pendingTasks = (List<Consumer<Listener<I>>>) this.TEMPORARY_TASKS;
+                //noinspection unchecked
+                this.pendingTasks = (List<Consumer<Listener<I>>>) TEMPORARY_TASKS;
                 try {
                     for (Consumer<Listener<I>> task : pendingTasks) {
                         task.accept(delegate);
