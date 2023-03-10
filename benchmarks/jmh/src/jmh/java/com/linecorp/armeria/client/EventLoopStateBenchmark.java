@@ -23,7 +23,7 @@ public class EventLoopStateBenchmark {
     private AbstractEventLoopState state;
     private AbstractEventLoopEntry[] acquired;
 
-    @Param({"8", "16", "32", "64", "128"})
+    @Param({"64", "128", "256"})
     private int maxNumEventLoops;
     @Param({"true", "false"})
     private boolean arrayBased;
@@ -33,7 +33,7 @@ public class EventLoopStateBenchmark {
         try {
             acquired = new AbstractEventLoopEntry[requestNumber];
 
-            final EventLoopGroup group = new DefaultEventLoopGroup(1024);
+            final EventLoopGroup group = new DefaultEventLoopGroup(maxNumEventLoops);
             final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group,
                                                                               maxNumEventLoops, maxNumEventLoops,
                                                                               ImmutableList.of());
@@ -69,11 +69,21 @@ public class EventLoopStateBenchmark {
     }
 
     @Benchmark
-    public void acquireAndRelease() {
+    public void lastInFirstOut() {
         for (int i = 0; i < requestNumber; ++i) {
             acquired[i] = state.acquire();
         }
         for (int i = requestNumber - 1; i >= 0; --i) {
+            acquired[i].release();
+        }
+    }
+
+    @Benchmark
+    public void firstInFirstOut() {
+        for (int i = 0; i < requestNumber; ++i) {
+            acquired[i] = state.acquire();
+        }
+        for (int i = 0; i < requestNumber; ++i) {
             acquired[i].release();
         }
     }
