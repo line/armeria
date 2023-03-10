@@ -18,8 +18,10 @@ package com.linecorp.armeria.client;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.linecorp.armeria.common.annotation.Nullable;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import io.netty.channel.EventLoop;
 
@@ -27,9 +29,6 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
 
     private final List<AbstractEventLoopEntry> entries = new ArrayList<>();
     private final int maxNumEventLoops;
-
-    @Nullable
-    private EventLoopAcquisitionIndex acquisitionIndex;
     private int allActiveRequests;
 
     ArrayBasedEventLoopState(List<EventLoop> eventLoops, int maxNumEventLoops,
@@ -39,15 +38,18 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
         if (eventLoops.size() == maxNumEventLoops) {
             // We use all event loops so initialize early.
             init(0);
+        } else {
+            init(scheduler().acquisitionStartIndex(maxNumEventLoops));
         }
     }
 
-    private void init(int acquisitionStartIndex) {
-        acquisitionIndex = new EventLoopAcquisitionIndex(
-                acquisitionStartIndex, maxNumEventLoops, eventLoops().size());
-        for (int i = 0; i < maxNumEventLoops; ++i) {
-            push(new Entry(this, eventLoops().get(acquisitionIndex.nextAcquirableIndex()), i));
-        }
+    private void init(final int acquisitionStartIndex) {
+        final int initialEventLoopOffset = ThreadLocalRandom.current().nextInt(maxNumEventLoops);
+        final Function<Integer, Integer> acquisitionIndex =
+                offset -> acquisitionStartIndex + (initialEventLoopOffset + offset) % maxNumEventLoops;
+        entries.addAll(IntStream.rangeClosed(0, maxNumEventLoops - 1)
+                                .mapToObj(i -> new Entry(this, eventLoops().get(acquisitionIndex.apply(i)), i))
+                                .collect(Collectors.toList()));
     }
 
     private AbstractEventLoopEntry targetEntry() {
@@ -71,10 +73,6 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
     AbstractEventLoopEntry acquire() {
         lock();
         try {
-            if (acquisitionIndex == null) {
-                init(scheduler().acquisitionStartIndex(maxNumEventLoops));
-            }
-
             final AbstractEventLoopEntry e = targetEntry();
             e.incrementActiveRequests();
             allActiveRequests++;
@@ -105,11 +103,6 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
     @Override
     int allActiveRequests() {
         return allActiveRequests;
-    }
-
-    private void push(ArrayBasedEventLoopState.Entry e) {
-        entries.add(e);
-        acquisitionIndex.moveOffset();
     }
 
     private static final class Entry extends AbstractEventLoopEntry {
