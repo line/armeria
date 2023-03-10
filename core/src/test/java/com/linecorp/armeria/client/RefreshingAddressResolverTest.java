@@ -344,8 +344,9 @@ class RefreshingAddressResolverTest {
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED);
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
-                final Future<InetSocketAddress> future = resolver.resolve(
-                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                final Future<InetSocketAddress> future = eventLoop.submit(() -> {
+                    return resolver.resolve(InetSocketAddress.createUnresolved("foo.com", 36462));
+                }).get();
                 assertHostAddress(future).isEqualTo("0:0:0:0:0:0:0:1");
             }
         }

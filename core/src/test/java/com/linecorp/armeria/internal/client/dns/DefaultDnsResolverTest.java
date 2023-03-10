@@ -167,7 +167,7 @@ class DefaultDnsResolverTest {
             }
 
             final CompletableFuture<List<DnsRecord>> result =
-                    resolver.resolveAll(ctx, questions, "");
+                    eventLoop.submit(() -> resolver.resolveAll(ctx, questions, "")).get();
 
             final List<DnsRecord> records = result.join();
 
@@ -182,8 +182,7 @@ class DefaultDnsResolverTest {
             assertThat(records.size()).isOne();
             final ByteArrayDnsRecord dnsRecord = (ByteArrayDnsRecord) records.get(0);
             assertThat(dnsRecord.type()).isEqualTo(DnsRecordType.A);
-            final ByteArrayDnsRecord dnsRawRecord = dnsRecord;
-            assertThat(NetUtil.bytesToIpAddress(dnsRawRecord.content())).isEqualTo("1.2.3.4");
+            assertThat(NetUtil.bytesToIpAddress(dnsRecord.content())).isEqualTo("1.2.3.4");
 
             resolver.close();
         }
