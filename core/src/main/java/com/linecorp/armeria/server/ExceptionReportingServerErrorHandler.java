@@ -85,7 +85,7 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
                 cause.getCause() != null;
 
         if (ctx.shouldReportUnhandledExceptions() && !isExpectedException) {
-            if (scheduledUpdater.compareAndSet(this, 0, 1)) {
+            if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
                 reportingTaskFuture = ctx.eventLoop().scheduleAtFixedRate(
                         this::reportException, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
             }
@@ -124,6 +124,8 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
             reportingTaskFuture.cancel(true);
             reportingTaskFuture = null;
         }
+
+
     }
 
     private void reportException() {
