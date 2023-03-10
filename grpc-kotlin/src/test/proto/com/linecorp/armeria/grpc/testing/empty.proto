@@ -56,4 +56,3 @@ option java_outer_classname = "EmptyProtos";
 //     rpc Bar (grpc.testing.Empty) returns (grpc.testing.Empty) { };
 //   };
 //
-message Empty {}
