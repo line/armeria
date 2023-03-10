@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.grpc.GrpcStatusFunction
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase
+import com.linecorp.armeria.grpc.testing.TestServiceGrpcKt
 import com.linecorp.armeria.internal.testing.AnticipatedException
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -35,7 +35,6 @@ import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
-import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.future.await
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -144,14 +143,13 @@ internal class CoroutineServerInterceptorTest {
             }
         }
 
-        private class TestService : TestServiceImplBase() {
-            override fun unaryCall(request: SimpleRequest, responseObserver: StreamObserver<SimpleResponse>) {
+        private class TestService : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
+            override suspend fun unaryCall(request: SimpleRequest): SimpleResponse {
                 if (request.fillUsername) {
-                    responseObserver.onNext(SimpleResponse.newBuilder().setUsername(username).build())
-                } else {
-                    responseObserver.onNext(SimpleResponse.getDefaultInstance())
+                    return SimpleResponse.newBuilder().setUsername(username).build()
                 }
-                responseObserver.onCompleted()
+
+                return SimpleResponse.getDefaultInstance()
             }
         }
     }
