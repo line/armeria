@@ -30,12 +30,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.TextFormatter;
-import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 
 /**
  * A {@link ServerErrorHandler} that wraps another {@link ServerErrorHandler}
@@ -51,24 +51,25 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
 
     private final Duration interval;
     private final ServerErrorHandler delegate;
-    private final MicrometerCounter micrometerCounter;
+    // Note: We keep both Micrometer Counter and our own counter because Micrometer Counter
+    //       doesn't count anything if the MeterRegistry is a CompositeMeterRegistry
+    //       without an actual MeterRegistry implementation.
+    private final Counter micrometerCounter;
     private final LongAdder counter;
     private long lastExceptionsCount;
     private volatile int scheduled;
-    @Nullable
-    private Throwable thrownException;
+
     @Nullable
     private ScheduledFuture<?> reportingTaskFuture;
+    @Nullable
+    private Throwable thrownException;
 
     ExceptionReportingServerErrorHandler(MeterRegistry meterRegistry, ServerErrorHandler serverErrorHandler,
                                          Duration interval) {
-        assert !interval.isNegative() && !interval.isZero();
+        assert !interval.isNegative() && !interval.isZero() : interval;
         this.interval = interval;
         delegate = serverErrorHandler;
-        micrometerCounter =
-                MicrometerUtil.register(meterRegistry,
-                                        new MeterIdPrefix("armeria.server.exceptions.unhandled"),
-                                        MicrometerCounter.class, MicrometerCounter::new);
+        micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unhandled", Tags.empty());
         counter = new LongAdder();
     }
 
@@ -80,23 +81,26 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        final boolean isExpectedException =
-                (cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
-                cause.getCause() != null;
-
-        if (ctx.shouldReportUnhandledExceptions() && !isExpectedException) {
-            if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
-                reportingTaskFuture = ctx.eventLoop().scheduleAtFixedRate(
-                        this::reportException, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
-            }
-
-            if (thrownException == null) {
-                thrownException = cause;
-            }
-
-            micrometerCounter.increment();
-            counter.increment();
+        if (!ctx.shouldReportUnhandledExceptions()) {
+            return delegate.onServiceException(ctx, cause);
         }
+
+        if ((cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
+            cause.getCause() != null) {
+            return delegate.onServiceException(ctx, cause);
+        }
+
+        if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
+            reportingTaskFuture = ctx.eventLoop().scheduleAtFixedRate(
+                    this::reportException, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
+        }
+
+        if (thrownException == null) {
+            thrownException = cause;
+        }
+
+        micrometerCounter.increment();
+        counter.increment();
 
         return delegate.onServiceException(ctx, cause);
     }
@@ -120,12 +124,12 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
 
     @Override
     public void serverStopped(Server server) throws Exception {
-        if (reportingTaskFuture != null) {
-            reportingTaskFuture.cancel(true);
-            reportingTaskFuture = null;
+        if (reportingTaskFuture == null) {
+            return;
         }
 
-
+        reportingTaskFuture.cancel(true);
+        reportingTaskFuture = null;
     }
 
     private void reportException() {
@@ -149,19 +153,5 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
         }
 
         lastExceptionsCount = totalExceptionsCount;
-    }
-
-    private static final class MicrometerCounter {
-
-        private final LongAdder counter;
-
-        MicrometerCounter(MeterRegistry registry, MeterIdPrefix idPrefix) {
-            counter = new LongAdder();
-            registry.more().counter(idPrefix.name(), idPrefix.tags(), counter);
-        }
-
-        void increment() {
-            counter.increment();
-        }
     }
 }

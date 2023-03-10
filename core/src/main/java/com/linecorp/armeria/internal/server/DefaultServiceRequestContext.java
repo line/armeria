@@ -101,6 +101,8 @@ public final class DefaultServiceRequestContext
 
     private final InetAddress clientAddress;
 
+    private boolean shouldReportUnhandledExceptions = true;
+
     private final RequestLogBuilder log;
 
     @Nullable
@@ -116,7 +118,6 @@ public final class DefaultServiceRequestContext
 
     @Nullable
     private String strVal;
-    private boolean shouldReportUnhandledExceptions = true;
 
     /**
      * Creates a new instance.
