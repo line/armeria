@@ -38,6 +38,7 @@ import com.linecorp.armeria.internal.testing.ServerRuleDelegate;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.junit5.client.WebTestClient;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
 import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
@@ -368,6 +369,24 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     public RestClient restClient(Consumer<WebClientBuilder> webClientCustomizer) {
         requireNonNull(webClientCustomizer, "webClientCustomizer");
         return delegate.restClient(webClientCustomizer);
+    }
+
+    /**
+     * Returns the {@link WebTestClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    @UnstableApi
+    public WebTestClient webTestClient() {
+        return WebTestClient.of(blockingWebClient());
+    }
+
+    /**
+     * Returns a newly created {@link WebTestClient} configured by
+     * {@link #configureWebClient(WebClientBuilder)} and then the specified customizer.
+     */
+    @UnstableApi
+    public WebTestClient webTestClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return WebTestClient.of(blockingWebClient(webClientCustomizer));
     }
 
     /**
