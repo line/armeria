@@ -39,10 +39,12 @@ import io.grpc.Metadata
 import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
 import io.grpc.Status
-import io.grpc.StatusRuntimeException
+import io.grpc.StatusException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
@@ -86,8 +88,8 @@ internal class CoroutineServerInterceptorTest {
             }.onSuccess {
                 assert(false) { "Expected exception to be thrown, but none was thrown" }
             }.onFailure { throwable ->
-                assert(throwable is StatusRuntimeException)
-                val exception = throwable as StatusRuntimeException
+                assert(throwable is StatusException)
+                val exception = throwable as StatusException
                 assert(exception.status == Status.UNAUTHENTICATED)
             }
         }
@@ -96,7 +98,7 @@ internal class CoroutineServerInterceptorTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @ValueSource(strings = ["/non-blocking", "/blocking"])
     @ParameterizedTest
-    fun authorizedStreamingRequest(path: String) {
+    fun authorizedStreamingOutputCall(path: String) {
         runTest {
             val client = GrpcClients.builder(server.httpUri())
                 .auth(AuthToken.ofOAuth2(token))
@@ -105,6 +107,101 @@ internal class CoroutineServerInterceptorTest {
 
             client.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance()).collect {
                 assertThat(it.payload.body.toStringUtf8()).isEqualTo(username)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @ValueSource(strings = ["/non-blocking", "/blocking"])
+    @ParameterizedTest
+    fun unauthorizedStreamingOutputCall(path: String) {
+        runTest {
+            val client = GrpcClients.builder(server.httpUri())
+                .pathPrefix(path)
+                .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
+            runCatching {
+                client.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance()).collect()
+            }.onSuccess {
+                assert(false) { "Expected exception to be thrown, but none was thrown" }
+            }.onFailure { throwable ->
+                assert(throwable is StatusException)
+                val exception = throwable as StatusException
+                assert(exception.status == Status.UNAUTHENTICATED)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @ValueSource(strings = ["/non-blocking", "/blocking"])
+    @ParameterizedTest
+    fun authorizedStreamingInputCall(path: String) {
+        runTest {
+            val client = GrpcClients.builder(server.httpUri())
+                .auth(AuthToken.ofOAuth2(token))
+                .pathPrefix(path)
+                .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
+
+            assertThat(
+                client.streamingInputCall(
+                    listOf(StreamingInputCallRequest.getDefaultInstance()).asFlow()
+                ).aggregatedPayloadSize
+            ).isEqualTo(1)
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @ValueSource(strings = ["/non-blocking", "/blocking"])
+    @ParameterizedTest
+    fun unauthorizedStreamingInputCall(path: String) {
+        runTest {
+            val client = GrpcClients.builder(server.httpUri())
+                .pathPrefix(path)
+                .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
+            runCatching {
+                client.streamingInputCall(listOf(StreamingInputCallRequest.getDefaultInstance()).asFlow())
+            }.onSuccess {
+                assert(false) { "Expected exception to be thrown, but none was thrown" }
+            }.onFailure { throwable ->
+                assert(throwable is StatusException)
+                val exception = throwable as StatusException
+                assert(exception.status == Status.UNAUTHENTICATED)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @ValueSource(strings = ["/non-blocking", "/blocking"])
+    @ParameterizedTest
+    fun authorizedFullDuplexCall(path: String) {
+        runTest {
+            val client = GrpcClients.builder(server.httpUri())
+                .auth(AuthToken.ofOAuth2(token))
+                .pathPrefix(path)
+                .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
+
+            client.fullDuplexCall(listOf(StreamingOutputCallRequest.getDefaultInstance()).asFlow()).collect {
+                assertThat(it.payload.body.toStringUtf8()).isEqualTo(username)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @ValueSource(strings = ["/non-blocking", "/blocking"])
+    @ParameterizedTest
+    fun unauthorizedFullDuplexCall(path: String) {
+        runTest {
+            val client = GrpcClients.builder(server.httpUri())
+                .pathPrefix(path)
+                .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
+            runCatching {
+                client.fullDuplexCall(listOf(StreamingOutputCallRequest.getDefaultInstance()).asFlow())
+                    .collect()
+            }.onSuccess {
+                assert(false) { "Expected exception to be thrown, but none was thrown" }
+            }.onFailure { throwable ->
+                assert(throwable is StatusException)
+                val exception = throwable as StatusException
+                assert(exception.status == Status.UNAUTHENTICATED)
             }
         }
     }
@@ -183,15 +280,14 @@ internal class CoroutineServerInterceptorTest {
             override fun streamingOutputCall(request: StreamingOutputCallRequest): Flow<StreamingOutputCallResponse> {
                 return flow {
                     for (i in 1..5) {
-                        delay(1000)
-                        emit(buildReply(username)) // emit next value
+                        delay(500)
+                        emit(buildReply(username))
                     }
                 }
             }
 
             override suspend fun streamingInputCall(requests: Flow<StreamingInputCallRequest>): StreamingInputCallResponse {
                 val names = requests.map { it.payload.body.toString() }.toList()
-                ServiceRequestContext.current()
 
                 return buildReply(names)
             }
@@ -199,7 +295,6 @@ internal class CoroutineServerInterceptorTest {
             override fun fullDuplexCall(requests: Flow<StreamingOutputCallRequest>): Flow<StreamingOutputCallResponse> {
                 return flow {
                     requests.collect {
-                        ServiceRequestContext.current()
                         emit(buildReply(username))
                     }
                 }
