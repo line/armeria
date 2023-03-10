@@ -1,10 +1,7 @@
 package com.linecorp.armeria.client;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -26,7 +23,7 @@ public class EventLoopStateBenchmark {
     private AbstractEventLoopState state;
     private AbstractEventLoopEntry[] acquired;
 
-    @Param({"8, 16, 32, 64, 128"})
+    @Param({"8", "16", "32", "64", "128"})
     private int maxNumEventLoops;
     @Param({"true", "false"})
     private boolean arrayBased;
