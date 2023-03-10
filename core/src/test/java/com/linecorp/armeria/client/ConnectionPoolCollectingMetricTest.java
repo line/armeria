@@ -46,14 +46,14 @@ class ConnectionPoolCollectingMetricTest {
         final InetSocketAddress addressA = new InetSocketAddress("10.10.10.10", 3333);
         final InetSocketAddress addressB = new InetSocketAddress("10.10.10.11", 3333);
 
-        final String openABMetricKey = "armeria.client.connections#count{local.ip=10.10.10.11,"
-                                       + "protocol=H1,remote.ip=10.10.10.10,state=open}";
-        final String closedABMetricKey = "armeria.client.connections#count{local.ip=10.10.10.11,"
-                                         + "protocol=H1,remote.ip=10.10.10.10,state=closed}";
-        final String openBAMetricKey = "armeria.client.connections#count{local.ip=10.10.10.10,"
-                                       + "protocol=H1,remote.ip=10.10.10.11,state=open}";
-        final String closedBAMetricKey = "armeria.client.connections#count{local.ip=10.10.10.10,"
-                                         + "protocol=H1,remote.ip=10.10.10.11,state=closed}";
+        final String openABMetricKey = "armeria.client.connections#count{local.ip=10.10.10.11," +
+                                       "protocol=H1,remote.ip=10.10.10.10,state=open}";
+        final String closedABMetricKey = "armeria.client.connections#count{local.ip=10.10.10.11," +
+                                         "protocol=H1,remote.ip=10.10.10.10,state=closed}";
+        final String openBAMetricKey = "armeria.client.connections#count{local.ip=10.10.10.10," +
+                                       "protocol=H1,remote.ip=10.10.10.11,state=open}";
+        final String closedBAMetricKey = "armeria.client.connections#count{local.ip=10.10.10.10," +
+                                         "protocol=H1,remote.ip=10.10.10.11,state=closed}";
 
         final AttributeMap attributeMap = new DefaultAttributeMap();
 
