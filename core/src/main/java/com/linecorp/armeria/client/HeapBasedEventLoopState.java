@@ -18,10 +18,9 @@ package com.linecorp.armeria.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.base.Joiner;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.EventLoop;
 
@@ -37,8 +36,8 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     private final List<AbstractEventLoopEntry> entries = new ArrayList<>();
     private final int maxNumEventLoops;
 
-    @Nullable
-    private EventLoopAcquisitionIndex acquisitionIndex;
+    private int acquisitionStartIndex = -1;
+    private int nextUnusedEventLoopOffset;
     private int allActiveRequests;
 
     HeapBasedEventLoopState(List<EventLoop> eventLoops, int maxNumEventLoops,
@@ -52,15 +51,17 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     private void init(int acquisitionStartIndex) {
-        acquisitionIndex = new EventLoopAcquisitionIndex(
-                acquisitionStartIndex, maxNumEventLoops, eventLoops().size());
+        this.acquisitionStartIndex = acquisitionStartIndex;
+        nextUnusedEventLoopOffset = ThreadLocalRandom.current().nextInt(maxNumEventLoops);
         addUnusedEventLoop();
     }
 
     private boolean addUnusedEventLoop() {
         if (entries.size() < maxNumEventLoops) {
-            push(new Entry(this, eventLoops().get(acquisitionIndex.nextAcquirableIndex()), entries.size()));
-            acquisitionIndex.moveOffset();
+            final int nextIndex = (acquisitionStartIndex + nextUnusedEventLoopOffset) %
+                                  eventLoops().size();
+            push(new Entry(this, eventLoops().get(nextIndex), entries.size()));
+            nextUnusedEventLoopOffset = (nextUnusedEventLoopOffset + 1) % maxNumEventLoops;
             return true;
         }
         return false;
@@ -80,7 +81,7 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     AbstractEventLoopEntry acquire() {
         lock();
         try {
-            if (acquisitionIndex == null) {
+            if (acquisitionStartIndex == -1) {
                 init(scheduler().acquisitionStartIndex(maxNumEventLoops));
             }
             AbstractEventLoopEntry e = entries.get(0);
