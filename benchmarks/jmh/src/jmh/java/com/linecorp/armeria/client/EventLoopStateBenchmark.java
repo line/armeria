@@ -1,6 +1,7 @@
 package com.linecorp.armeria.client;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ import io.netty.channel.EventLoopGroup;
 public class EventLoopStateBenchmark {
     private final int requestNumber = 100000;
     private AbstractEventLoopState state;
+    private AbstractEventLoopEntry[] acquired;
 
     @Param({"8, 16, 32, 64, 128"})
     private int maxNumEventLoops;
@@ -32,6 +34,8 @@ public class EventLoopStateBenchmark {
     @Setup
     public void setUp() {
         try {
+            acquired = new AbstractEventLoopEntry[requestNumber];
+
             final EventLoopGroup group = new DefaultEventLoopGroup(1024);
             final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group,
                                                                               maxNumEventLoops, maxNumEventLoops,
@@ -69,10 +73,11 @@ public class EventLoopStateBenchmark {
 
     @Benchmark
     public void acquireAndRelease() {
-        List<AbstractEventLoopEntry> releaseOrder = IntStream.rangeClosed(1, requestNumber)
-                                                             .mapToObj(i -> state.acquire())
-                                                             .collect(Collectors.toList());
-        Collections.reverse(releaseOrder);
-        releaseOrder.forEach(AbstractEventLoopEntry::release);
+        for (int i = 0; i < requestNumber; ++i) {
+            acquired[i] = state.acquire();
+        }
+        for (int i = requestNumber - 1; i >= 0; --i) {
+            acquired[i].release();
+        }
     }
 }

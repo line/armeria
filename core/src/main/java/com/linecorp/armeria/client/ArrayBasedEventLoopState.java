@@ -45,11 +45,10 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
 
     private void init(final int acquisitionStartIndex) {
         final int initialEventLoopOffset = ThreadLocalRandom.current().nextInt(maxNumEventLoops);
-        final Function<Integer, Integer> acquisitionIndex =
-                offset -> acquisitionStartIndex + (initialEventLoopOffset + offset) % maxNumEventLoops;
-        entries.addAll(IntStream.rangeClosed(0, maxNumEventLoops - 1)
-                                .mapToObj(i -> new Entry(this, eventLoops().get(acquisitionIndex.apply(i)), i))
-                                .collect(Collectors.toList()));
+        for (int i = 0; i < maxNumEventLoops; ++i) {
+            final int acquisitionIndex = acquisitionStartIndex + (initialEventLoopOffset + i) % maxNumEventLoops;
+            entries.add(new Entry(this, eventLoops().get(acquisitionIndex), i));
+        }
     }
 
     private AbstractEventLoopEntry targetEntry() {
