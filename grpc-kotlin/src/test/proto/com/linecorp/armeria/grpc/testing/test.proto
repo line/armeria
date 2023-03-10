@@ -45,7 +45,6 @@
 // of unary/streaming requests/responses.
 syntax = "proto3";
 
-import "com/linecorp/armeria/grpc/testing/empty.proto";
 import "com/linecorp/armeria/grpc/testing/messages.proto";
 import "google/api/annotations.proto";
 

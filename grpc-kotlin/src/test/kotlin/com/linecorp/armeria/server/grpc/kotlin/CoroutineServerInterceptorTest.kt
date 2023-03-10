@@ -49,8 +49,10 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -83,14 +85,10 @@ internal class CoroutineServerInterceptorTest {
                 .pathPrefix(path)
                 .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
-            runCatching {
-                client.unaryCall(SimpleRequest.newBuilder().setFillUsername(true).build())
-            }.onSuccess {
-                assert(false) { "Expected exception to be thrown, but none was thrown" }
-            }.onFailure { throwable ->
-                assert(throwable is StatusException)
-                val exception = throwable as StatusException
-                assert(exception.status == Status.UNAUTHENTICATED)
+            assertThatThrownBy {
+                runBlocking { client.unaryCall(SimpleRequest.newBuilder().setFillUsername(true).build()) }
+            }.isInstanceOfSatisfying(StatusException::class.java) {
+                assertThat(it.status.code).isEqualTo(Status.Code.UNAUTHENTICATED)
             }
         }
     }
@@ -119,14 +117,13 @@ internal class CoroutineServerInterceptorTest {
             val client = GrpcClients.builder(server.httpUri())
                 .pathPrefix(path)
                 .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
-            runCatching {
-                client.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance()).collect()
-            }.onSuccess {
-                assert(false) { "Expected exception to be thrown, but none was thrown" }
-            }.onFailure { throwable ->
-                assert(throwable is StatusException)
-                val exception = throwable as StatusException
-                assert(exception.status == Status.UNAUTHENTICATED)
+
+            assertThatThrownBy {
+                runBlocking {
+                    client.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance()).collect()
+                }
+            }.isInstanceOfSatisfying(StatusException::class.java) {
+                assertThat(it.status.code).isEqualTo(Status.Code.UNAUTHENTICATED)
             }
         }
     }
@@ -157,14 +154,13 @@ internal class CoroutineServerInterceptorTest {
             val client = GrpcClients.builder(server.httpUri())
                 .pathPrefix(path)
                 .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
-            runCatching {
-                client.streamingInputCall(listOf(StreamingInputCallRequest.getDefaultInstance()).asFlow())
-            }.onSuccess {
-                assert(false) { "Expected exception to be thrown, but none was thrown" }
-            }.onFailure { throwable ->
-                assert(throwable is StatusException)
-                val exception = throwable as StatusException
-                assert(exception.status == Status.UNAUTHENTICATED)
+
+            assertThatThrownBy {
+                runBlocking {
+                    client.streamingInputCall(listOf(StreamingInputCallRequest.getDefaultInstance()).asFlow())
+                }
+            }.isInstanceOfSatisfying(StatusException::class.java) {
+                assertThat(it.status.code).isEqualTo(Status.Code.UNAUTHENTICATED)
             }
         }
     }
@@ -193,15 +189,14 @@ internal class CoroutineServerInterceptorTest {
             val client = GrpcClients.builder(server.httpUri())
                 .pathPrefix(path)
                 .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
-            runCatching {
-                client.fullDuplexCall(listOf(StreamingOutputCallRequest.getDefaultInstance()).asFlow())
-                    .collect()
-            }.onSuccess {
-                assert(false) { "Expected exception to be thrown, but none was thrown" }
-            }.onFailure { throwable ->
-                assert(throwable is StatusException)
-                val exception = throwable as StatusException
-                assert(exception.status == Status.UNAUTHENTICATED)
+
+            assertThatThrownBy {
+                runBlocking {
+                    client.fullDuplexCall(listOf(StreamingOutputCallRequest.getDefaultInstance()).asFlow())
+                        .collect()
+                }
+            }.isInstanceOfSatisfying(StatusException::class.java) {
+                assertThat(it.status.code).isEqualTo(Status.Code.UNAUTHENTICATED)
             }
         }
     }
