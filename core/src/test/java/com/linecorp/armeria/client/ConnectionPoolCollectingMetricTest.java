@@ -25,35 +25,39 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 
-@SuppressWarnings("checkstyle:LineLength")
 class ConnectionPoolCollectingMetricTest {
     private ConnectionPoolListener connectionPoolListener;
-    final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+    private MeterRegistry registry;
 
     @BeforeEach
     void setUp() {
+        registry = new SimpleMeterRegistry();
         connectionPoolListener = ConnectionPoolListener.metricCollecting(registry);
     }
 
     @Test
-    void shouldCollectConnentionPoolEvents() throws Exception {
+    void shouldCollectConnectionPoolEvents() throws Exception {
         final InetSocketAddress addressA = new InetSocketAddress("10.10.10.10", 3333);
         final InetSocketAddress addressB = new InetSocketAddress("10.10.10.11", 3333);
 
         final String openABMetricKey =
-                "armeria.client.connections#count{local.ip=10.10.10.11,protocol=H1,remote.ip=10.10.10.10,state=open}";
+                "armeria.client.connections#count{local.ip=10.10.10.11,"
+                + "protocol=H1,remote.ip=10.10.10.10,state=open}";
         final String closedABMetricKey =
-                "armeria.client.connections#count{local.ip=10.10.10.11,protocol=H1,remote.ip=10.10.10.10,state=closed}";
+                "armeria.client.connections#count{local.ip=10.10.10.11,"
+                + "protocol=H1,remote.ip=10.10.10.10,state=closed}";
         final String openBAMetricKey =
-                "armeria.client.connections#count{local.ip=10.10.10.10,protocol=H1,remote.ip=10.10.10.11,state=open}";
+                "armeria.client.connections#count{local.ip=10.10.10.10,"
+                + "protocol=H1,remote.ip=10.10.10.11,state=open}";
         final String closedBAMetricKey =
-                "armeria.client.connections#count{local.ip=10.10.10.10,protocol=H1,remote.ip=10.10.10.11,state=closed}";
+                "armeria.client.connections#count{local.ip=10.10.10.10,"
+                + "protocol=H1,remote.ip=10.10.10.11,state=closed}";
 
         final AttributeMap attributeMap = new DefaultAttributeMap();
 
