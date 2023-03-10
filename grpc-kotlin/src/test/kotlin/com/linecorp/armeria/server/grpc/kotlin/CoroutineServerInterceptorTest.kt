@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.server.grpc.kotlin
 
+import com.google.protobuf.ByteString
 import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.auth.AuthToken
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction
+import com.linecorp.armeria.grpc.testing.Messages.Payload
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub
+import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallRequest
+import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallResponse
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse
 import com.linecorp.armeria.grpc.testing.TestServiceGrpcKt
 import com.linecorp.armeria.internal.testing.AnticipatedException
 import com.linecorp.armeria.server.ServerBuilder
@@ -35,9 +40,15 @@ import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -46,39 +57,56 @@ import java.util.concurrent.TimeUnit
 
 internal class CoroutineServerInterceptorTest {
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @ValueSource(strings = ["/non-blocking", "/blocking"])
     @ParameterizedTest
-    fun authorizedRequest(path: String) {
-        val client = GrpcClients.builder(server.httpUri())
-            .pathPrefix(path)
-            .auth(AuthToken.ofOAuth2(token))
-            .build(TestServiceBlockingStub::class.java)
-        val response = client.unaryCall(
-            SimpleRequest.newBuilder()
-                .setFillUsername(true)
-                .build()
-        )
+    fun authorizedUnaryRequest(path: String) {
+        runTest {
+            val client = GrpcClients.builder(server.httpUri())
+                .auth(AuthToken.ofOAuth2(token))
+                .pathPrefix(path)
+                .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
-        assertThat(response.username).isEqualTo(username)
+            assertThat(client.unaryCall(SimpleRequest.newBuilder().setFillUsername(true).build()).username)
+                .isEqualTo(username)
+        }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @ValueSource(strings = ["/non-blocking", "/blocking"])
     @ParameterizedTest
-    fun unauthorizedRequest(path: String) {
-        val client = GrpcClients.builder(server.httpUri())
-            .pathPrefix(path)
-            .build(TestServiceBlockingStub::class.java)
+    fun unauthorizedUnaryRequest(path: String) {
+        runTest {
+            val client = GrpcClients.builder(server.httpUri())
+                .pathPrefix(path)
+                .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
-        assertThatThrownBy {
-            client.unaryCall(
-                SimpleRequest.newBuilder()
-                    .setFillUsername(true)
-                    .build()
-            )
-        }.isInstanceOf(StatusRuntimeException::class.java)
-            .satisfies({ cause: Throwable ->
-                assertThat((cause as StatusRuntimeException).status).isEqualTo(Status.UNAUTHENTICATED)
-            })
+            runCatching {
+                client.unaryCall(SimpleRequest.newBuilder().setFillUsername(true).build())
+            }.onSuccess {
+                assert(false) { "Expected exception to be thrown, but none was thrown" }
+            }.onFailure { throwable ->
+                assert(throwable is StatusRuntimeException)
+                val exception = throwable as StatusRuntimeException
+                assert(exception.status == Status.UNAUTHENTICATED)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @ValueSource(strings = ["/non-blocking", "/blocking"])
+    @ParameterizedTest
+    fun authorizedStreamingRequest(path: String) {
+        runTest {
+            val client = GrpcClients.builder(server.httpUri())
+                .auth(AuthToken.ofOAuth2(token))
+                .pathPrefix(path)
+                .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
+
+            client.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance()).collect {
+                assertThat(it.payload.body.toStringUtf8()).isEqualTo(username)
+            }
+        }
     }
 
     companion object {
@@ -151,6 +179,44 @@ internal class CoroutineServerInterceptorTest {
 
                 return SimpleResponse.getDefaultInstance()
             }
+
+            override fun streamingOutputCall(request: StreamingOutputCallRequest): Flow<StreamingOutputCallResponse> {
+                return flow {
+                    for (i in 1..5) {
+                        delay(1000)
+                        emit(buildReply(username)) // emit next value
+                    }
+                }
+            }
+
+            override suspend fun streamingInputCall(requests: Flow<StreamingInputCallRequest>): StreamingInputCallResponse {
+                val names = requests.map { it.payload.body.toString() }.toList()
+                ServiceRequestContext.current()
+
+                return buildReply(names)
+            }
+
+            override fun fullDuplexCall(requests: Flow<StreamingOutputCallRequest>): Flow<StreamingOutputCallResponse> {
+                return flow {
+                    requests.collect {
+                        ServiceRequestContext.current()
+                        emit(buildReply(username))
+                    }
+                }
+            }
         }
+
+        private fun buildReply(message: String): StreamingOutputCallResponse =
+            StreamingOutputCallResponse.newBuilder()
+                .setPayload(
+                    Payload.newBuilder()
+                        .setBody(ByteString.copyFrom(message.toByteArray()))
+                )
+                .build()
+
+        private fun buildReply(message: List<String>): StreamingInputCallResponse =
+            StreamingInputCallResponse.newBuilder()
+                .setAggregatedPayloadSize(message.size)
+                .build()
     }
 }
