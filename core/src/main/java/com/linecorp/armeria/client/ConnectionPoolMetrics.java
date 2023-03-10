@@ -27,8 +27,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 final class ConnectionPoolMetrics {
     private static final String PROTOCOL = "protocol";
-    private static final String REMOTE_ADDR = "remote.ip";
-    private static final String LOCAL_ADDR = "local.ip";
+    private static final String REMOTE_IP = "remote.ip";
+    private static final String LOCAL_IP = "local.ip";
     private static final String STATE = "state";
     private MeterRegistry meterRegistry;
     private MeterIdPrefix idPrefix;

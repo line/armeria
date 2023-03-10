@@ -32,7 +32,7 @@ import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 
 @SuppressWarnings("checkstyle:LineLength")
-public class ConnectionPoolCollectingMetricTest {
+class ConnectionPoolCollectingMetricTest {
     private ConnectionPoolListener connectionPoolListener;
     final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
@@ -42,7 +42,7 @@ public class ConnectionPoolCollectingMetricTest {
     }
 
     @Test
-    void test() throws Exception {
+    void shouldCollectConnentionPoolEvents() throws Exception {
         final InetSocketAddress addressA = new InetSocketAddress("10.10.10.10", 3333);
         final InetSocketAddress addressB = new InetSocketAddress("10.10.10.11", 3333);
 
