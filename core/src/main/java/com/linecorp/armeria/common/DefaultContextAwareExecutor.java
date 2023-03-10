@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,25 +15,38 @@
  */
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Function;
+import java.util.concurrent.Executor;
+
+import javax.annotation.Nonnull;
 
 import com.google.common.base.MoreObjects;
 
-final class PropagatingContextAwareScheduledExecutorService
-        extends AbstractContextAwareScheduledExecutorService<ScheduledExecutorService> {
-    PropagatingContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
+final class DefaultContextAwareExecutor
+        extends AbstractContextAwareExecutor<Executor>
+        implements ContextAwareExecutor {
+
+    private final RequestContext context;
+
+    DefaultContextAwareExecutor(RequestContext context, Executor executor) {
         super(executor);
+        this.context = context;
     }
 
     @Override
+    public RequestContext context() {
+        return context;
+    }
+
+    @Override
+    @Nonnull
     RequestContext contextOrNull() {
-        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);
+        return context;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .add("context", context)
                           .add("executor", withoutContext())
                           .toString();
     }

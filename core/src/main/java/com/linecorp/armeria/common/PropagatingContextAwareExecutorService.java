@@ -34,7 +34,7 @@ final class PropagatingContextAwareExecutorService
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("executor", executor)
+                          .add("executor", withoutContext())
                           .toString();
     }
 }

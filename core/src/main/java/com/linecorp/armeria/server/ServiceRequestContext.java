@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -37,7 +36,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
+import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -51,6 +50,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -291,14 +291,14 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link ContextAwareScheduledExecutorService} that could be used for executing
-     * a potentially long-running task. The {@link ContextAwareScheduledExecutorService}
-     * sets this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
-     * If you want to use {@link ScheduledExecutorService} without setting this context,
-     * call {@link ContextAwareScheduledExecutorService#withoutContext()} and use the returned
-     * {@link ScheduledExecutorService}.
+     * Returns the {@link ContextAwareBlockingTaskExecutor} that could be used for executing
+     * a potentially long-running task. The {@link ContextAwareBlockingTaskExecutor} sets
+     * this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
+     * If you want to use {@link BlockingTaskExecutor} without setting this context,
+     * call {@link ContextAwareBlockingTaskExecutor#withoutContext()} and use the returned
+     * {@link BlockingTaskExecutor}.
      */
-    ContextAwareScheduledExecutorService blockingTaskExecutor();
+    ContextAwareBlockingTaskExecutor blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable

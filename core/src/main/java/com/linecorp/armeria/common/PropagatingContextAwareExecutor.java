@@ -15,14 +15,14 @@
  */
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
-final class PropagatingContextAwareScheduledExecutorService
-        extends AbstractContextAwareScheduledExecutorService<ScheduledExecutorService> {
-    PropagatingContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
+final class PropagatingContextAwareExecutor extends AbstractContextAwareExecutor<Executor> {
+
+    PropagatingContextAwareExecutor(Executor executor) {
         super(executor);
     }
 

@@ -15,14 +15,16 @@
  */
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
-final class PropagatingContextAwareScheduledExecutorService
-        extends AbstractContextAwareScheduledExecutorService<ScheduledExecutorService> {
-    PropagatingContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+
+final class PropagatingContextAwareBlockingTaskExecutor
+        extends AbstractContextAwareBlockingTaskExecutor {
+
+    PropagatingContextAwareBlockingTaskExecutor(BlockingTaskExecutor executor) {
         super(executor);
     }
 

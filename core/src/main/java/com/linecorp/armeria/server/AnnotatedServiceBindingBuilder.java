@@ -253,6 +253,13 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     }
 
     @Override
+    public AnnotatedServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                               boolean shutdownOnStop) {
+        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    @Override
     public AnnotatedServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()

@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -222,6 +223,12 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
 
     @Override
     public ServiceBindingBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                      boolean shutdownOnStop) {
+        return (ServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+    }
+
+    @Override
+    public ServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
                                                       boolean shutdownOnStop) {
         return (ServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
     }

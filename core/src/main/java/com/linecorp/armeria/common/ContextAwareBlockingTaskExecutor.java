@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,38 +18,41 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
-import io.netty.channel.EventLoop;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 /**
- * A delegating {@link EventLoop} that sets the {@link RequestContext} before executing any submitted tasks.
+ * A delegating {@link BlockingTaskExecutor} that sets the {@link RequestContext} before executing
+ * any submitted tasks.
  */
-public interface ContextAwareEventLoop extends EventLoop, ContextAwareScheduledExecutorService {
+public interface ContextAwareBlockingTaskExecutor
+        extends BlockingTaskExecutor, ContextAwareScheduledExecutorService {
 
     /**
      * Returns a new {@link ContextAwareEventLoop} that sets the specified {@link RequestContext}
      * before executing any submitted tasks.
      */
-    static ContextAwareEventLoop of(RequestContext context, EventLoop eventLoop) {
+    static ContextAwareBlockingTaskExecutor of(RequestContext context, BlockingTaskExecutor executor) {
         requireNonNull(context, "context");
-        requireNonNull(eventLoop, "eventLoop");
-        if (eventLoop instanceof ContextAwareEventLoop) {
-            ensureSameCtx(context, (ContextAwareEventLoop) eventLoop, ContextAwareEventLoop.class);
-            return (ContextAwareEventLoop) eventLoop;
+        requireNonNull(executor, "executor");
+        if (executor instanceof ContextAwareBlockingTaskExecutor) {
+            ensureSameCtx(context, (ContextAwareBlockingTaskExecutor) executor,
+                          ContextAwareBlockingTaskExecutor.class);
+            return (ContextAwareBlockingTaskExecutor) executor;
         }
-        return new DefaultContextAwareEventLoop(context, eventLoop);
+        return new DefaultContextAwareBlockingTaskExecutor(context, executor);
     }
 
     /**
      * Returns the {@link RequestContext} that was specified when creating
-     * this {@link ContextAwareEventLoop}.
+     * this {@link ContextAwareBlockingTaskExecutor}.
      */
     @Override
     RequestContext context();
 
     /**
-     * Returns the {@link EventLoop} that executes the submitted tasks without setting
-     * the {@link RequestContext}.
+     * Returns the {@link BlockingTaskExecutor} that executes the submitted tasks without setting the
+     * {@link RequestContext}.
      */
     @Override
-    EventLoop withoutContext();
+    BlockingTaskExecutor withoutContext();
 }

@@ -30,6 +30,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -126,6 +127,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
     @Override
     public AbstractServiceBindingBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                              boolean shutdownOnStop) {
+        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
                                                               boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
         return this;

@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
@@ -250,6 +251,14 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder blockingTaskExecutor(
             ScheduledExecutorService blockingTaskExecutor,
+            boolean shutdownOnStop) {
+        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder blockingTaskExecutor(
+            BlockingTaskExecutor blockingTaskExecutor,
             boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
         return this;

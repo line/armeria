@@ -35,6 +35,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -82,7 +83,7 @@ public final class VirtualHost {
     private final long maxRequestLength;
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
-    private final ScheduledExecutorService blockingTaskExecutor;
+    private final BlockingTaskExecutor blockingTaskExecutor;
     private final List<ShutdownSupport> shutdownSupports;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
@@ -95,7 +96,7 @@ public final class VirtualHost {
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
-                ScheduledExecutorService blockingTaskExecutor,
+                BlockingTaskExecutor blockingTaskExecutor,
                 List<ShutdownSupport> shutdownSupports) {
         originalDefaultHostname = defaultHostname;
         originalHostnamePattern = hostnamePattern;
@@ -348,7 +349,7 @@ public final class VirtualHost {
      *
      * @see ServiceConfig#blockingTaskExecutor()
      */
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public BlockingTaskExecutor blockingTaskExecutor() {
         return blockingTaskExecutor;
     }
 
