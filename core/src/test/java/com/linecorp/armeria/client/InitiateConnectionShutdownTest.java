@@ -90,11 +90,12 @@ public class InitiateConnectionShutdownTest {
     })
     void testConnectionShutdownCompletedExceptionallyWhenChannelNotAcquired(SessionProtocol protocol,
                                                                             String path) throws Exception {
+        final Throwable notAcquiredCause = new IllegalArgumentException();
         final CountingConnectionPoolListener countingListener = new CountingConnectionPoolListener();
         try (ClientFactory clientFactory = getClientFactory(countingListener)) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
                     (delegate, ctx, req) -> {
-                        ClientPendingThrowableUtil.setPendingThrowable(ctx, new IllegalArgumentException());
+                        ClientPendingThrowableUtil.setPendingThrowable(ctx, notAcquiredCause);
                         initiateConnectionShutdown(ctx);
                         return delegate.execute(ctx, req);
                     }).build();
@@ -106,7 +107,7 @@ public class InitiateConnectionShutdownTest {
 
             assertNoOpenedConnectionNow(countingListener);
             assertThat(completedResult.get().exception).isInstanceOf(UnprocessedRequestException.class);
-            assertThat(completedResult.get().exception.getCause()).isInstanceOf(IllegalArgumentException.class);
+            assertThat(completedResult.get().exception.getCause()).isSameAs(notAcquiredCause);
         }
     }
 
