@@ -25,7 +25,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
@@ -275,9 +274,10 @@ public interface ServerConfig {
     boolean isServerHeaderEnabled();
 
     /**
-     * Returns the {@link Supplier} that generates a {@link RequestId} for each {@link Request}.
+     * Returns the {@link Function} that generates a {@link RequestId} for each {@link Request}.
      */
-    Supplier<RequestId> requestIdGenerator();
+    @UnstableApi
+    Function<RoutingContext, RequestId> requestIdGenerator();
 
     /**
      * Returns the {@link ServerErrorHandler} that provides the error responses in case of unexpected
