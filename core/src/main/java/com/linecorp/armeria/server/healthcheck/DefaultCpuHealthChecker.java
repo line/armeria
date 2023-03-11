@@ -96,7 +96,7 @@ public class DefaultCpuHealthChecker implements HealthChecker {
     }
 
     @Nullable
-    private Class<?> getFirstClassFound(final List<String> classNames) {
+    private static Class<?> getFirstClassFound(final List<String> classNames) {
         for (String className : classNames) {
             try {
                 return Class.forName(className);
