@@ -58,7 +58,7 @@ public class DefaultCpuHealthChecker implements HealthChecker {
      * @param processCpuUsage the process cpu usage
      * @param processCpuIdle the process cpu idle
      */
-    public DefaultCpuHealthChecker(final int cpuUsage, final int cpuIdle,
+    public DefaultCpuHealthChecker(int cpuUsage, int cpuIdle,
                                    final int processCpuUsage, final int processCpuIdle) {
         this.targetCpuUsage = (double) cpuUsage / cpuIdle;
         this.targetProcessCpuLoad = (double) processCpuUsage / processCpuIdle;
