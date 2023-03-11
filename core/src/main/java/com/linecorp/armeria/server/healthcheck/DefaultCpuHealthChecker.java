@@ -99,7 +99,7 @@ public class DefaultCpuHealthChecker implements HealthChecker {
     private static Class<?> getFirstClassFound(final List<String> classNames) {
         for (String className : classNames) {
             try {
-                return Class.forName(className);
+                return Class.forName(className, false, getClass().getClassLoader());
             } catch (ClassNotFoundException ignore) {
             }
         }
