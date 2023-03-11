@@ -40,10 +40,12 @@ public class DefaultCpuHealthChecker implements HealthChecker {
 
     private final Class<?> operatingSystemBeanClass;
 
+    @Nullable
     private final Method systemCpuUsage;
 
     private final double targetCpuUsage;
 
+    @Nullable
     private final Method processCpuUsage;
 
     private final double targetProcessCpuLoad;
