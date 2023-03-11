@@ -85,7 +85,6 @@ public class DefaultCpuHealthChecker implements HealthChecker {
 
     @Nullable
     private Method detectMethod(final String name) {
-        requireNonNull(name);
         try {
             // ensure the Bean we have is actually an instance of the interface
             requireNonNull(operatingSystemBeanClass.cast(operatingSystemBean));
