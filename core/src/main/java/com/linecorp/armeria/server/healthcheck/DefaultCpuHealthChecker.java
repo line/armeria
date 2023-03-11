@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public class DefaultCpuHealthChecker implements HealthChecker {
 
-    private static final List<String> OPERATING_SYSTEM_BEAN_CLASS_NAMES = Arrays.asList(
+    private static final List<String> OPERATING_SYSTEM_BEAN_CLASS_NAMES = ImmutableList.of(
             "com.ibm.lang.management.OperatingSystemMXBean", // J9
             "com.sun.management.OperatingSystemMXBean" // HotSpot
     );
