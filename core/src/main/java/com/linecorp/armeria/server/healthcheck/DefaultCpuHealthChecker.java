@@ -64,8 +64,8 @@ public class DefaultCpuHealthChecker implements HealthChecker {
         this.targetProcessCpuLoad = (double) processCpuUsage / processCpuIdle;
         this.operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
         this.operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
-        this.systemCpuUsage = requireNonNull(detectMethod("getSystemCpuLoad"));
-        this.processCpuUsage = requireNonNull(detectMethod("getProcessCpuLoad"));
+        this.systemCpuUsage = detectMethod("getSystemCpuLoad");
+        this.processCpuUsage = detectMethod("getProcessCpuLoad");
     }
 
     @Override
