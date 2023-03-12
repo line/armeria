@@ -162,7 +162,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(),
+                                                      cfg.absoluteUriTransformer());
 
                     // Do not accept a CONNECT request.
                     if (headers.method() == HttpMethod.CONNECT) {

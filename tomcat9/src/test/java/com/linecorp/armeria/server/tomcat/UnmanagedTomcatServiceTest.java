@@ -28,10 +28,10 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -96,8 +96,7 @@ class UnmanagedTomcatServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/empty/"))) {
                 // as connector is not configured, TomcatServiceInvocationHandler will throw.
-                assertThat(res.getStatusLine().toString()).isEqualTo(
-                        "HTTP/1.1 503 Service Unavailable");
+                assertThat(res.getCode()).isEqualTo(503);
             }
         }
     }
@@ -109,8 +108,7 @@ class UnmanagedTomcatServiceTest {
                 // When no webapp is configured, Tomcat sends:
                 // - 400 Bad Request response for 9.0.10+
                 // - 404 Not Found for other versions
-                final String statusLine = res.getStatusLine().toString();
-                assertThat(statusLine).matches("^HTTP/1\\.1 (400 Bad Request|404 Not Found)$");
+                assertThat(res.getCode()).isIn(400, 404);
             }
         }
     }
@@ -119,7 +117,7 @@ class UnmanagedTomcatServiceTest {
     void ok() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/some-webapp/"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
             }
         }
     }
@@ -129,7 +127,7 @@ class UnmanagedTomcatServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(
                     server.httpUri() + "/some-webapp-nohostname/"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
             }
         }
     }

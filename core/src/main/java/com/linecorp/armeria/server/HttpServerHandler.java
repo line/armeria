@@ -123,6 +123,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         safeClose(ch);
     };
 
+    private static boolean warnedRequestIdGenerateFailure;
+
     private static boolean warnedNullRequestId;
 
     private static void logException(Channel ch, Throwable cause) {
@@ -350,7 +352,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                nextRequestId(serviceCfg), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
@@ -650,34 +652,30 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return new DefaultServiceRequestContext(
                 serviceConfig,
                 channel, NoopMeterRegistry.get(), protocol(),
-                nextRequestId(serviceConfig), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
-    private RequestId nextRequestId() {
-        final RequestId id = config.requestIdGenerator().get();
-        if (id == null) {
+    private RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {
+        try {
+            final RequestId id = serviceConfig.requestIdGenerator().apply(routingCtx);
+            if (id != null) {
+                return id;
+            }
+
             if (!warnedNullRequestId) {
                 warnedNullRequestId = true;
-                logger.warn("requestIdGenerator.get() returned null; using RequestId.random()");
+                logger.warn("requestIdGenerator.apply(routingCtx) returned null; using RequestId.random()");
             }
             return RequestId.random();
-        } else {
-            return id;
+        } catch (Exception e) {
+            if (!warnedRequestIdGenerateFailure) {
+                warnedRequestIdGenerateFailure = true;
+                logger.warn("requestIdGenerator.apply(routingCtx) threw an exception; using RequestId.random()",
+                            e);
+            }
+            return RequestId.random();
         }
     }
 
-    private RequestId nextRequestId(ServiceConfig serviceConfig) {
-        final RequestId id = serviceConfig.requestIdGenerator().get();
-        if (id == null) {
-            if (!warnedNullRequestId) {
-                warnedNullRequestId = true;
-                logger.warn("requestIdGenerator.get() returned null; using RequestId.random()");
-            }
-            return RequestId.random();
-        } else {
-            return id;
-        }
-    }
-}

@@ -244,7 +244,7 @@ final class PathStreamMessage implements ByteStreamMessage {
             this.downstream = downstream;
             this.executor = executor;
             this.bufferSize = bufferSize;
-            end = offset + length;
+            end = LongMath.saturatedAdd(offset, length);
 
             this.notifyCancellation = notifyCancellation;
             this.withPooledObjects = withPooledObjects;
