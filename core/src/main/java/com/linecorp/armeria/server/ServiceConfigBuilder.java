@@ -28,12 +28,14 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -68,6 +70,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
+    @Nullable
+    private Supplier<? extends RequestId> requestIdGenerator;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
@@ -182,6 +186,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigSetters requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
@@ -249,7 +259,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
-                        Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders) {
+                        Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders,
+                        Supplier<? extends RequestId> defaultRequestIdGenerator
+) {
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
@@ -262,7 +274,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 successFunction != null ? successFunction : defaultSuccessFunction,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
-                mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()));
+                mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
+                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator);
     }
 
     @Override

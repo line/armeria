@@ -350,7 +350,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                nextRequestId(), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
@@ -650,13 +650,26 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return new DefaultServiceRequestContext(
                 serviceConfig,
                 channel, NoopMeterRegistry.get(), protocol(),
-                nextRequestId(), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(serviceConfig), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
     private RequestId nextRequestId() {
         final RequestId id = config.requestIdGenerator().get();
+        if (id == null) {
+            if (!warnedNullRequestId) {
+                warnedNullRequestId = true;
+                logger.warn("requestIdGenerator.get() returned null; using RequestId.random()");
+            }
+            return RequestId.random();
+        } else {
+            return id;
+        }
+    }
+
+    private RequestId nextRequestId(ServiceConfig serviceConfig) {
+        final RequestId id = serviceConfig.requestIdGenerator().get();
         if (id == null) {
             if (!warnedNullRequestId) {
                 warnedNullRequestId = true;

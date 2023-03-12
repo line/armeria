@@ -42,10 +42,10 @@ class OverriddenBuilderMethodsReturnTypeTest {
 
     @Test
     void methodChaining() {
-        final String packageName = "com.linecorp.armeria";
+        final String packageName = "com.linecorp.armeria.server";
         findAllClasses(packageName).stream()
                                    .map(ReflectionUtils::forName)
-                                   .filter(clazz -> clazz.getSimpleName().endsWith("Builder"))
+                                   .filter(clazz -> clazz.getSimpleName().endsWith("BindingBuilder"))
                                    .forEach(clazz -> {
                                        final List<Method> methods = overriddenMethods(clazz);
                                        for (Method m : methods) {

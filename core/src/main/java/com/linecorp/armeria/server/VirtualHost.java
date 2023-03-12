@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -32,6 +33,7 @@ import org.slf4j.Logger;
 import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -83,6 +85,7 @@ public final class VirtualHost {
     private final AccessLogWriter accessLogWriter;
     private final ScheduledExecutorService blockingTaskExecutor;
     private final List<ShutdownSupport> shutdownSupports;
+    private final Supplier<? extends RequestId> requestIdGenerator;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
@@ -95,7 +98,8 @@ public final class VirtualHost {
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
                 ScheduledExecutorService blockingTaskExecutor,
-                List<ShutdownSupport> shutdownSupports) {
+                List<ShutdownSupport> shutdownSupports,
+                Supplier<? extends RequestId> requestIdGenerator) {
         originalDefaultHostname = defaultHostname;
         originalHostnamePattern = hostnamePattern;
         if (port > 0) {
@@ -114,6 +118,7 @@ public final class VirtualHost {
         this.accessLogWriter = accessLogWriter;
         this.blockingTaskExecutor = blockingTaskExecutor;
         this.shutdownSupports = shutdownSupports;
+        this.requestIdGenerator = requestIdGenerator;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(fallbackServiceConfig, "fallbackServiceConfig");
@@ -134,7 +139,8 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, shutdownSupports);
+                               accessLogWriter, blockingTaskExecutor, shutdownSupports,
+                               requestIdGenerator);
     }
 
     /**
@@ -458,7 +464,8 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, shutdownSupports);
+                               accessLogWriter, blockingTaskExecutor, shutdownSupports,
+                               requestIdGenerator);
     }
 
     @Override

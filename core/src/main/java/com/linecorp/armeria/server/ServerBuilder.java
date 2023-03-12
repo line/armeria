@@ -229,6 +229,7 @@ public final class ServerBuilder implements TlsSetters {
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
+        virtualHostTemplate.requestIdGenerator(requestIdGenerator);
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -1715,6 +1716,7 @@ public final class ServerBuilder implements TlsSetters {
      */
     public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
         this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        virtualHostTemplate.requestIdGenerator(requestIdGenerator);
         return this;
     }
 

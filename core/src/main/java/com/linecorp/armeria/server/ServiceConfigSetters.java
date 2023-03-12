@@ -23,9 +23,11 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -175,6 +177,13 @@ interface ServiceConfigSetters {
      */
     @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
+
+    /**
+     * Sets the {@link Supplier} which generates a {@link RequestId}.
+     *
+     * @param requestIdGenerator the {@link Supplier} that generates a request ID.
+     */
+    ServiceConfigSetters requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator);
 
     /**
      * Adds the default HTTP header for an {@link HttpResponse} served by this {@link Service}.

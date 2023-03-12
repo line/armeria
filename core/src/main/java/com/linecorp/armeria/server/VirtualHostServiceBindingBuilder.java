@@ -25,9 +25,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -291,6 +293,13 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (VirtualHostServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder requestIdGenerator(
+            Supplier<? extends RequestId> requestIdGenerator
+    ) {
+        return (VirtualHostServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
     }
 
     @Override

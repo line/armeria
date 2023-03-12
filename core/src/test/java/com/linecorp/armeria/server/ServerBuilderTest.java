@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.TransportType;
@@ -640,5 +641,49 @@ class ServerBuilderTest {
         assertThat(childChannelOptions)
                 .containsExactly(entry(TCP_USER_TIMEOUT, userDefinedValue),
                                  entry(SO_LINGER, lingerMillis));
+    }
+
+    @Test
+    void hierarchyRequestIdGeneratorConfiguration() {
+        final Server server = Server.builder()
+                                    .requestIdGenerator(() -> RequestId.of(1L))   // for default
+                                    .service("/default_virtual_host",
+                                             (ctx, req) -> HttpResponse.of(ctx.id().toString()))
+                                    .virtualHost("foo.com")
+                                        .requestIdGenerator(() -> RequestId.of(2L))  // for custom virtual host
+                                        .service("/custom_virtual_host",
+                                                 (ctx, req) -> HttpResponse.of(ctx.id().toString()))
+                                        .route()
+                                            .requestIdGenerator(() -> RequestId.of(3L)) // for service
+                                            .get("/service_config")
+                                            .build((ctx, req) -> HttpResponse.of(ctx.id().toString()))
+                                    .and()
+                                    .build();
+        server.start().join();
+
+        try {
+            final WebClient client = WebClient.builder("http://127.0.0.1:" + server.activeLocalPort())
+                                              .factory(clientFactory)
+                                              .build();
+            final WebClient fooClient = WebClient.builder("http://foo.com:" + server.activeLocalPort())
+                                                 .factory(clientFactory)
+                                                 .build();
+
+            // choose from default server config
+            assertThat(client.get("/default_virtual_host").aggregate().join().contentUtf8())
+                    .isEqualTo(RequestId.of(1L).text());
+
+            // choose from 'foo.com' virtual host
+            assertThat(fooClient.get("/default_virtual_host").aggregate().join().contentUtf8())
+                    .isEqualTo(RequestId.of(2L).text());
+            // choose from 'foo.com' virtual host
+            assertThat(fooClient.get("/custom_virtual_host").aggregate().join().contentUtf8())
+                    .isEqualTo(RequestId.of(2L).text());
+            // choose from 'foo.com/service_config' service
+            assertThat(fooClient.get("/service_config").aggregate().join().contentUtf8())
+                    .isEqualTo(RequestId.of(3L).text());
+        } finally {
+            server.stop();
+        }
     }
 }
