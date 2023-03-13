@@ -2,7 +2,8 @@
 akka = "2.6.20"
 akka-http-cors = "1.0.0"
 akka-grpc-runtime = "1.0.3"
-apache-httpclient = "4.5.14"
+apache-httpclient5 = "5.2.1"
+apache-httpclient4 = "4.5.14"
 assertj = "3.24.2"
 awaitility = "4.2.0"
 bouncycastle = "1.70"
@@ -153,9 +154,16 @@ version.ref = "akka"
 module = "com.typesafe.akka:akka-stream_2.13"
 version.ref = "akka"
 
-[libraries.apache-httpclient]
+[libraries.apache-httpclient5]
+module = "org.apache.httpcomponents.client5:httpclient5"
+version.ref = "apache-httpclient5"
+exclusions = "commons-logging:commons-logging"
+
+# needed to test thrift apis
+# https://github.com/apache/thrift/blob/master/lib/java/gradle.properties#L28
+[libraries.apache-httpclient4]
 module = "org.apache.httpcomponents:httpclient"
-version.ref = "apache-httpclient"
+version.ref = "apache-httpclient4"
 exclusions = "commons-logging:commons-logging"
 
 [libraries.assertj]

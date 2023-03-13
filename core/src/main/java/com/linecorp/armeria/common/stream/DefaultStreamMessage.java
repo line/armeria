@@ -68,7 +68,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @param <T> the type of element signaled
  */
 @UnstableApi
-public class DefaultStreamMessage<T> extends AbstractStreamMessageWriter<T> {
+public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultStreamMessage.class);
 
@@ -104,7 +104,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageWriter<T> {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link StreamMessage#streaming()} instead.
      */
+    @Deprecated
     public DefaultStreamMessage() {
         queue = new MpscChunkedArrayQueue<>(INITIAL_CAPACITY, 1 << 30);
     }

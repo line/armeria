@@ -33,7 +33,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
-    private final StreamWriter<HttpData> outputStreamWriter = new DefaultStreamMessage<>();
+    private final StreamWriter<HttpData> outputStreamWriter = StreamMessage.streaming();
     private final ByteStreamMessage delegate = ByteStreamMessage.of(outputStreamWriter);
 
     private final Consumer<? super OutputStream> outputStreamConsumer;

@@ -35,7 +35,7 @@ public class DeferredStreamMessageVerification extends StreamMessageVerification
     @Override
     public StreamMessage<Long> createFailedPublisher() {
         final DeferredStreamMessage<Long> stream = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Long> delegate = new DefaultStreamMessage<>();
+        final StreamWriter<Long> delegate = StreamMessage.streaming();
         delegate.subscribe(new NoopSubscriber<>());
         stream.delegate(delegate);
         return stream;

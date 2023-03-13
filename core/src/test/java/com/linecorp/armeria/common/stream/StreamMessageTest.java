@@ -387,7 +387,7 @@ class StreamMessageTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
-                    arguments(new DefaultStreamMessage<>(), TEN_INTEGERS),
+                    arguments(StreamMessage.streaming(), TEN_INTEGERS),
                     arguments(StreamMessage.of(), ImmutableList.of()),
                     arguments(StreamMessage.of(0), ImmutableList.of(0)),
                     arguments(StreamMessage.of(0, 1), ImmutableList.of(0, 1)),
@@ -400,7 +400,7 @@ class StreamMessageTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             final ByteBuf defaultBuf = newPooledBuffer();
             final HttpData defaultData = HttpData.wrap(defaultBuf).withEndOfStream();
-            final DefaultStreamMessage<HttpData> defaultStream = new DefaultStreamMessage<>();
+            final StreamWriter<HttpData> defaultStream = StreamMessage.streaming();
 
             final ByteBuf fixedBuf = newPooledBuffer();
             final HttpData fixedData = HttpData.wrap(fixedBuf).withEndOfStream();
