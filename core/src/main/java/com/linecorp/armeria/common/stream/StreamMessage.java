@@ -289,6 +289,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
+    @UnstableApi
     static ByteStreamMessage of(InputStream inputStream) {
         requireNonNull(inputStream, "inputStream");
         return builder(inputStream).build();
