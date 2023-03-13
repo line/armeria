@@ -290,6 +290,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
     @UnstableApi
+    @UnstableApi
     static ByteStreamMessage of(InputStream inputStream) {
         requireNonNull(inputStream, "inputStream");
         return builder(inputStream).build();
