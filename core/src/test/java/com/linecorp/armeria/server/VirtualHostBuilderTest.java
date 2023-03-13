@@ -340,6 +340,6 @@ class VirtualHostBuilderTest {
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .build(template, noopDependencyInjector);
-        assertThat(h2.multipartUploadsLocation()).isEqualTo(template.multipartUploadsLocation);
+        assertThat(h2.multipartUploadsLocation()).isEqualTo(template.multipartUploadsLocation());
     }
 }

@@ -56,7 +56,6 @@ import javax.net.ssl.KeyManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
@@ -147,9 +146,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     private ScheduledExecutorService blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
-    @VisibleForTesting
     @Nullable
-    Path multipartUploadsLocation;
+    private Path multipartUploadsLocation;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -1308,6 +1306,10 @@ public final class VirtualHostBuilder implements TlsSetters {
 
     boolean defaultVirtualHost() {
         return defaultVirtualHost;
+    }
+
+    Path multipartUploadsLocation() {
+        return multipartUploadsLocation;
     }
 
     @Override
