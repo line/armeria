@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -24,7 +23,7 @@ import io.netty.channel.EventLoop;
 
 final class ArrayBasedEventLoopState extends AbstractEventLoopState {
 
-    private final List<AbstractEventLoopEntry> entries = new ArrayList<>();
+    private final AbstractEventLoopEntry[] entries;
     private final int maxNumEventLoops;
     private int allActiveRequests;
 
@@ -32,6 +31,7 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
                              DefaultEventLoopScheduler scheduler) {
         super(eventLoops, scheduler);
         this.maxNumEventLoops = maxNumEventLoops;
+        entries = new AbstractEventLoopEntry[maxNumEventLoops];
         if (eventLoops.size() == maxNumEventLoops) {
             init(0);
         } else {
@@ -42,16 +42,17 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
     private void init(final int acquisitionStartIndex) {
         final int initialEventLoopOffset = ThreadLocalRandom.current().nextInt(maxNumEventLoops);
         for (int i = 0; i < maxNumEventLoops; ++i) {
-            final int acquisitionIndex = acquisitionStartIndex + (initialEventLoopOffset + i) % maxNumEventLoops;
-            entries.add(new Entry(this, eventLoops().get(acquisitionIndex), i));
+            final int nextIndex = (acquisitionStartIndex + (initialEventLoopOffset + i) % maxNumEventLoops) %
+                                  eventLoops().size();
+            entries[i] = new Entry(this, eventLoops().get(nextIndex), i);
         }
     }
 
     private AbstractEventLoopEntry targetEntry() {
         int minActiveRequest = Integer.MAX_VALUE;
         int targetIndex = 0;
-        for (int i = 0; i < entries.size(); ++i) {
-            final AbstractEventLoopEntry e = entries.get(i);
+        for (int i = 0; i < maxNumEventLoops; ++i) {
+            final AbstractEventLoopEntry e = entries[i];
             final int activeRequests = e.activeRequests();
             if (activeRequests == 0) {
                 return e;
@@ -61,7 +62,7 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
                 targetIndex = i;
             }
         }
-        return entries.get(targetIndex);
+        return entries[targetIndex];
     }
 
     @Override
@@ -91,7 +92,7 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
     }
 
     @Override
-    List<AbstractEventLoopEntry> entries() {
+    AbstractEventLoopEntry[] entries() {
         return entries;
     }
 

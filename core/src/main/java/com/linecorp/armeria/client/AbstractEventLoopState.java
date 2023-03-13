@@ -78,7 +78,7 @@ abstract class AbstractEventLoopState {
     abstract void release(AbstractEventLoopEntry e);
 
     @VisibleForTesting
-    abstract List<AbstractEventLoopEntry> entries();
+    abstract AbstractEventLoopEntry[] entries();
 
     abstract int allActiveRequests();
 }
