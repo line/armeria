@@ -33,7 +33,6 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
         super(eventLoops, scheduler);
         this.maxNumEventLoops = maxNumEventLoops;
         if (eventLoops.size() == maxNumEventLoops) {
-            // We use all event loops so initialize early.
             init(0);
         } else {
             init(scheduler().acquisitionStartIndex(maxNumEventLoops));
