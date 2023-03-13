@@ -134,7 +134,7 @@ public interface ServiceErrorHandler {
      * assert handler.onServiceException(ctx, new ThirdException()) == null;
      *
      * // The default handler never returns null.
-     * ServiceErrorHandler nonNullHandler = combinedHandler.orElse(ServiceErrorHandler.ofDefault());x
+     * ServiceErrorHandler nonNullHandler = combinedHandler.orElse(ServiceErrorHandler.ofDefault());
      * assert handler.onServiceException(ctx, new FirstException()) != null;
      * assert handler.onServiceException(ctx, new SecondException()) != null;
      * assert handler.onServiceException(ctx, new ThirdException()) != null;
