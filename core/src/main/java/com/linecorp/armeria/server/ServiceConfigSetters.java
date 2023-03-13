@@ -23,7 +23,6 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
@@ -179,9 +178,9 @@ interface ServiceConfigSetters {
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
 
     /**
-     * Sets the {@link Supplier} which generates a {@link RequestId}.
+     * Sets the {@link Function} which generates a {@link RequestId}.
      *
-     * @param requestIdGenerator the {@link Supplier} that generates a request ID.
+     * @param requestIdGenerator the {@link Function} that generates a request ID.
      */
     ServiceConfigSetters requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator);

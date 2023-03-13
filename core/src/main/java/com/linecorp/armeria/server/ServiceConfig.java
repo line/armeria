@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -402,7 +401,7 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the {@link Supplier} that generates a {@link RequestId}.
+     * Returns the {@link Function} that generates a {@link RequestId}.
      */
     public Function<? super RoutingContext, ? extends RequestId> requestIdGenerator() {
         return requestIdGenerator;

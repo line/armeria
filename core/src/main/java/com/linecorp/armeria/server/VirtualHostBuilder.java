@@ -1050,10 +1050,10 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the {@link Supplier} which generates a {@link RequestId}.
+     * Sets the {@link Function} which generates a {@link RequestId}.
      * If not set, the value set via {@link ServerBuilder#requestIdGenerator(Supplier)} is used.
      *
-     * @param requestIdGenerator the {@link Supplier} which generates a {@link RequestId}
+     * @param requestIdGenerator the {@link Function} which generates a {@link RequestId}
      * @see RequestContext#id()
      */
     public VirtualHostBuilder requestIdGenerator(
