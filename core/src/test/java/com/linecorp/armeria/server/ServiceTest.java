@@ -65,7 +65,7 @@ public class ServiceTest {
                                   CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (ctx) -> RequestId.of(1L));
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

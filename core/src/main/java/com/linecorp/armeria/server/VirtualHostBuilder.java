@@ -151,7 +151,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
-    private Supplier<? extends RequestId> requestIdGenerator;
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -1056,7 +1056,8 @@ public final class VirtualHostBuilder implements TlsSetters {
      * @param requestIdGenerator the {@link Supplier} which generates a {@link RequestId}
      * @see RequestContext#id()
      */
-    public VirtualHostBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+    public VirtualHostBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }
@@ -1164,7 +1165,7 @@ public final class VirtualHostBuilder implements TlsSetters {
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
 
-        final Supplier<? extends RequestId> requestIdGenerator =
+        final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
                 this.requestIdGenerator != null ?
                 this.requestIdGenerator : template.requestIdGenerator;
 

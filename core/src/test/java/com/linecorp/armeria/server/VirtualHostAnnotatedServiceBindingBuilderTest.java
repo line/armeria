@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
@@ -91,7 +91,8 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         final String defaultServiceName = "TestService";
         final String defaultLogName = "TestLog";
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
-        final Supplier<? extends RequestId> serviceRequestIdGenerator = () -> RequestId.of(101L);
+        final Function<? super RoutingContext, ? extends RequestId>
+                serviceRequestIdGenerator = (ctx) -> RequestId.of(101L);
 
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), false)
                 .annotatedService()

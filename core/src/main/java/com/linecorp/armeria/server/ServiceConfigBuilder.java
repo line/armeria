@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -71,7 +70,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
     @Nullable
-    private Supplier<? extends RequestId> requestIdGenerator;
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
@@ -186,7 +185,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+    public ServiceConfigSetters requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }
@@ -260,8 +260,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
                         Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders,
-                        Supplier<? extends RequestId> defaultRequestIdGenerator
-) {
+                        Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator
+    ) {
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,

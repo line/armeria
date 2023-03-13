@@ -25,7 +25,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -297,7 +296,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
 
     @Override
     public VirtualHostServiceBindingBuilder requestIdGenerator(
-            Supplier<? extends RequestId> requestIdGenerator
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator
     ) {
         return (VirtualHostServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
     }

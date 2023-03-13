@@ -678,4 +678,5 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return RequestId.random();
         }
     }
+}
 

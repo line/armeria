@@ -183,7 +183,8 @@ interface ServiceConfigSetters {
      *
      * @param requestIdGenerator the {@link Supplier} that generates a request ID.
      */
-    ServiceConfigSetters requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator);
+    ServiceConfigSetters requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator);
 
     /**
      * Adds the default HTTP header for an {@link HttpResponse} served by this {@link Service}.

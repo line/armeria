@@ -646,15 +646,15 @@ class ServerBuilderTest {
     @Test
     void hierarchyRequestIdGeneratorConfiguration() {
         final Server server = Server.builder()
-                                    .requestIdGenerator(() -> RequestId.of(1L))   // for default
+                                    .requestIdGenerator((ctx) -> RequestId.of(1L))   // for default
                                     .service("/default_virtual_host",
                                              (ctx, req) -> HttpResponse.of(ctx.id().toString()))
                                     .virtualHost("foo.com")
-                                        .requestIdGenerator(() -> RequestId.of(2L))  // for custom virtual host
+                                        .requestIdGenerator((ctx) -> RequestId.of(2L))  // for virtual host
                                         .service("/custom_virtual_host",
                                                  (ctx, req) -> HttpResponse.of(ctx.id().toString()))
                                         .route()
-                                            .requestIdGenerator(() -> RequestId.of(3L)) // for service
+                                            .requestIdGenerator((ctx) -> RequestId.of(3L)) // for service
                                             .get("/service_config")
                                             .build((ctx, req) -> HttpResponse.of(ctx.id().toString()))
                                     .and()

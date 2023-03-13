@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,8 @@ class VirtualHostServiceBindingBuilderTest {
     @Test
     void serviceBindingBuilder() {
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
-        final Supplier<? extends RequestId> requestIdGenerator = () -> RequestId.of(100L);
+        final Function<? super RoutingContext, ? extends RequestId>
+                requestIdGenerator = (ctx) -> RequestId.of(100L);
         final ServerBuilder sb = Server.builder();
 
         sb.virtualHost("example.com")
@@ -73,7 +74,8 @@ class VirtualHostServiceBindingBuilderTest {
     @Test
     void withRoute() {
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
-        final Supplier<? extends RequestId> requestIdGenerator = () -> RequestId.of(100L);
+        final Function<? super RoutingContext, ? extends RequestId>
+                requestIdGenerator = (ctx) -> RequestId.of(100L);
         final ServerBuilder sb = Server.builder();
 
         sb.virtualHost("example.com").withRoute(builder -> {

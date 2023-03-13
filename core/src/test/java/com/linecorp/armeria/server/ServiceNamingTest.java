@@ -44,7 +44,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(HealthCheckService.class.getName());
@@ -59,7 +59,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName)
@@ -75,7 +75,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName() + "$TrailingDollarSign");
@@ -90,7 +90,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName() + "$TrailingDollarSign");
@@ -105,7 +105,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName());
@@ -120,7 +120,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(HealthCheckService.class.getSimpleName());
@@ -135,7 +135,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName)
@@ -151,7 +151,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
@@ -166,7 +166,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
@@ -181,7 +181,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName());
@@ -196,7 +196,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName).isEqualTo("c.l.a.s.h." + HealthCheckService.class.getSimpleName());
@@ -211,7 +211,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName).isEqualTo("c.l.a.s." + ServiceNamingTest.class.getSimpleName() + '$' +
@@ -227,7 +227,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
@@ -243,7 +243,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
@@ -259,7 +259,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
-                                  () -> RequestId.of(1L));
+                                  (routingCtx) -> RequestId.of(1L));
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)

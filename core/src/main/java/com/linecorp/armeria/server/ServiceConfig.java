@@ -76,7 +76,7 @@ public final class ServiceConfig {
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
     private final HttpHeaders defaultHeaders;
-    private final Supplier<? extends RequestId> requestIdGenerator;
+    private final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     /**
      * Creates a new instance.
@@ -88,7 +88,8 @@ public final class ServiceConfig {
                   ScheduledExecutorService blockingTaskExecutor,
                   SuccessFunction successFunction,
                   Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
-                  HttpHeaders defaultHeaders, Supplier<? extends RequestId> requestIdGenerator) {
+                  HttpHeaders defaultHeaders,
+                  Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
@@ -109,7 +110,7 @@ public final class ServiceConfig {
                           SuccessFunction successFunction,
                           Path multipartUploadsLocation,
                           List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
-                          Supplier<? extends RequestId> requestIdGenerator) {
+                          Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
@@ -403,7 +404,7 @@ public final class ServiceConfig {
     /**
      * Returns the {@link Supplier} that generates a {@link RequestId}.
      */
-    public Supplier<? extends RequestId> requestIdGenerator() {
+    public Function<? super RoutingContext, ? extends RequestId> requestIdGenerator() {
         return requestIdGenerator;
     }
 

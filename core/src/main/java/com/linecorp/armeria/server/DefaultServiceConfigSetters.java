@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
@@ -74,7 +73,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
     @Nullable
-    private Supplier<? extends RequestId> requestIdGenerator;
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -208,7 +207,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+    public ServiceConfigSetters requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }
