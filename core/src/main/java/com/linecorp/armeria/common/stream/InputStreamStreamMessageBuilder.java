@@ -20,11 +20,13 @@ import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A builder for creating a {@link ByteStreamMessage} that reads data from the {@link InputStream}
  * and publishes using {@link HttpData}.
  */
+@UnstableApi
 public final class InputStreamStreamMessageBuilder extends AbstractByteStreamMessageBuilder {
 
     private final InputStream inputStream;
