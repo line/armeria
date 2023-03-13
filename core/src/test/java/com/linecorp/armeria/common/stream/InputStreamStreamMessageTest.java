@@ -310,7 +310,7 @@ class InputStreamStreamMessageTest {
     }
 
     @Test
-    void skip0_tak3() {
+    void skip0_take3() {
         final InputStream inputStream = new ByteArrayInputStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         final ByteStreamMessage byteStreamMessage = StreamMessage
                 .of(inputStream)
