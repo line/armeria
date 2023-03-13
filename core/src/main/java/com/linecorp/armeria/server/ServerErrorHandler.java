@@ -239,8 +239,7 @@ public interface ServerErrorHandler {
     }
 
     /**
-     * Casts this {@link ServerErrorHandler} to {@link ServiceErrorHandler}.
-     * @return {@link ServiceErrorHandler} cast from this {@link ServerErrorHandler}.
+     * Transforms this {@link ServerErrorHandler} into a {@link ServiceErrorHandler}.
      */
     default ServiceErrorHandler asServiceErrorHandler() {
         return new ServiceErrorHandler() {
