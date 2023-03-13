@@ -50,7 +50,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
  * desired response by returning a failed response whose cause is an {@link HttpStatusException} or
  * {@link HttpResponseException}:
  * <pre>{@code
- * ServerErrorHandler errorHandler = (ctx, cause) -> {
+ * ServiceErrorHandler errorHandler = (ctx, cause) -> {
  *     if (cause instanceof IllegalArgumentException) {
  *         // IllegalArgumentException is captured into RequestLog#responseCause().
  *         return HttpResponse.of(HttpStatus.BAD_REQUEST);
@@ -84,7 +84,7 @@ public interface ServiceErrorHandler {
 
     /**
      * Returns an {@link AggregatedHttpResponse} generated from the given {@link HttpStatus}, {@code message}
-     * and {@link Throwable}. When {@code null} is returned, the next {@link ServerErrorHandler}
+     * and {@link Throwable}. When {@code null} is returned, the next {@link ServiceErrorHandler}
      * in the invocation chain will be used as a fallback (See {@link #orElse(ServiceErrorHandler)}
      * for more information).
      *
@@ -129,15 +129,15 @@ public interface ServiceErrorHandler {
      *     return null;
      * });
      *
-     * assert handler.onServiceException(ctx, new FirstException()) != null;
-     * assert handler.onServiceException(ctx, new SecondException()) != null;
-     * assert handler.onServiceException(ctx, new ThirdException()) == null;
+     * assert combinedHandler.onServiceException(ctx, new FirstException()) != null;
+     * assert combinedHandler.onServiceException(ctx, new SecondException()) != null;
+     * assert combinedHandler.onServiceException(ctx, new ThirdException()) == null;
      *
      * // The default handler never returns null.
      * ServiceErrorHandler nonNullHandler = combinedHandler.orElse(ServiceErrorHandler.ofDefault());
-     * assert handler.onServiceException(ctx, new FirstException()) != null;
-     * assert handler.onServiceException(ctx, new SecondException()) != null;
-     * assert handler.onServiceException(ctx, new ThirdException()) != null;
+     * assert nonNullHandler.onServiceException(ctx, new FirstException()) != null;
+     * assert nonNullHandler.onServiceException(ctx, new SecondException()) != null;
+     * assert nonNullHandler.onServiceException(ctx, new ThirdException()) != null;
      * }</pre>
      */
     default ServiceErrorHandler orElse(ServiceErrorHandler other) {
