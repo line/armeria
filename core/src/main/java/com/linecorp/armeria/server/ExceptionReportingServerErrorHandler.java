@@ -69,7 +69,7 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
         assert !interval.isNegative() && !interval.isZero() : interval;
         this.interval = interval;
         delegate = serverErrorHandler;
-        micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unhandled", Tags.empty());
+        micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unhandled");
         counter = new LongAdder();
     }
 

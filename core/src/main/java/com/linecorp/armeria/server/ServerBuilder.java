@@ -1848,7 +1848,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the interval between reporting exceptions which is not handled or logged
-     * by any decorators or services, such as {@link LoggingService}.
+     * by any decorators or services such as {@link LoggingService}.
      * @param interval the interval between reports, or {@link Duration#ZERO} to disable this feature
      * @throws IllegalArgumentException if specified {@code interval} is negative.
      */
@@ -1861,7 +1861,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the interval between reporting exceptions which is not handled or logged
-     * by any decorators or services, such as {@link LoggingService}, in milliseconds.
+     * by any decorators or services such as {@link LoggingService}.
      * @param interval the interval between reports in milliseconds, or {@code 0} to disable this feature
      * @throws IllegalArgumentException if specified {@code interval} is negative.
      */
@@ -1988,9 +1988,11 @@ public final class ServerBuilder implements TlsSetters {
         }
 
         if (unhandledExceptionsReportInterval != Duration.ZERO) {
-            errorHandler = new ExceptionReportingServerErrorHandler(meterRegistry, this.errorHandler,
-                                                                    unhandledExceptionsReportInterval);
-            serverListeners.add((ExceptionReportingServerErrorHandler) errorHandler);
+            final ExceptionReportingServerErrorHandler reportingErrorHandler =
+                    new ExceptionReportingServerErrorHandler(meterRegistry, this.errorHandler,
+                                                             unhandledExceptionsReportInterval);
+            errorHandler = reportingErrorHandler;
+            serverListeners.add(reportingErrorHandler);
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
