@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -94,7 +93,7 @@ public interface ServiceErrorHandler {
      * @param status the desired {@link HttpStatus} of the error response.
      * @param description an optional human-readable description of the error.
      * @param cause an optional exception that may contain additional information about the error, such as
-     *              {@link ContentTooLargeException}.
+     *              {@link IllegalArgumentException}.
      *
      * @return an {@link AggregatedHttpResponse}, or {@code null} to let the next handler specified with
      *         {@link #orElse(ServiceErrorHandler)} handle the event.
