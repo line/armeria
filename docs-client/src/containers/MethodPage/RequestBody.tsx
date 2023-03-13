@@ -68,7 +68,7 @@ const RequestBody: React.FunctionComponent<Props> = (props) => (
         <TextField
           multiline
           fullWidth
-          rows={15}
+          minRows={15}
           value={props.requestBody}
           placeholder={jsonPlaceHolder}
           onChange={(e) => {

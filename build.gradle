@@ -49,11 +49,7 @@ gradle.buildFinished({ result ->
 allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
-        maxHeapSize = '1g'
-        // Specify the max heap size -PmaxHeapSize=512m
-        if (rootProject.hasProperty('maxHeapSize')) {
-            maxHeapSize = rootProject.findProperty('maxHeapSize')
-        }
+        maxHeapSize = '512m'
 
         if (rootProject.ext.testJavaVersion >= 9) {
             jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
@@ -184,7 +180,7 @@ configure(projectsWithFlags('java')) {
         testRuntimeOnly libs.checkerframework // Required by guava-testlib
         testImplementation libs.assertj
         testImplementation libs.mockito
-        testImplementation libs.apache.httpclient
+        testImplementation libs.apache.httpclient5
         testImplementation libs.hamcrest
         testImplementation libs.hamcrest.library
     }

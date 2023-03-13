@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -31,6 +32,7 @@ class CachingRoutingContextTest {
 
     @Test
     void disableMatchingQueryParamsByCachingRoutingContext() {
+        final VirtualHost virtualHost = virtualHost();
         final Route route = Route.builder()
                                  .exact("/test")
                                  .methods(HttpMethod.GET)
@@ -42,6 +44,7 @@ class CachingRoutingContextTest {
         when(context.method()).thenReturn(HttpMethod.GET);
         when(context.params()).thenReturn(QueryParams.of("foo", "qux"));
         when(context.requiresMatchingParamsPredicates()).thenReturn(true);
+        when(context.virtualHost()).thenReturn(virtualHost);
 
         assertThat(route.apply(context, false).isPresent()).isFalse(); // Because of the query parameters.
 
@@ -51,6 +54,7 @@ class CachingRoutingContextTest {
 
     @Test
     void disableMatchingHeadersByCachingRoutingContext() {
+        final VirtualHost virtualHost = virtualHost();
         final Route route = Route.builder()
                                  .exact("/test")
                                  .methods(HttpMethod.GET)
@@ -62,6 +66,7 @@ class CachingRoutingContextTest {
         when(context.method()).thenReturn(HttpMethod.GET);
         when(context.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/test", "foo", "qux"));
         when(context.requiresMatchingHeadersPredicates()).thenReturn(true);
+        when(context.virtualHost()).thenReturn(virtualHost);
 
         assertThat(route.apply(context, false).isPresent()).isFalse(); // Because of HTTP headers.
 
