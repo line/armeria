@@ -51,6 +51,8 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 class CustomServerErrorHandlerTest {
 
     private static final int MAX_REQUEST_LENGTH = 10;
+    private static final String TEST_HOST = "foo.com";
+
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -74,24 +76,15 @@ class CustomServerErrorHandlerTest {
             sb.service("/post", (ctx, req) -> HttpResponse.from(
                     req.aggregate().thenApply(aggregated -> HttpResponse.of(HttpStatus.OK))));
 
-            sb.errorHandler(new CustomServerErrorHandler());
-        }
-    };
-
-    private static final String TEST_HOST = "foo.com";
-
-    @RegisterExtension
-    static final ServerExtension virtualServer = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) throws Exception {
             sb.virtualHost(TEST_HOST)
               .service("/bar", (ctx, req) -> {
                   throw new RuntimeException();
               })
               .errorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.BAD_REQUEST));
+
+            sb.errorHandler(new CustomServerErrorHandler());
         }
     };
-
     @Test
     void exceptionTranslated() {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
@@ -154,7 +147,7 @@ class CustomServerErrorHandlerTest {
     @ParameterizedTest
     @CsvSource({ "H1C", "H2C" })
     void defaultVirtualHost(SessionProtocol protocol) {
-        final Endpoint endpoint = Endpoint.of(TEST_HOST, virtualServer.httpPort()).withIpAddr("127.0.0.1");
+        final Endpoint endpoint = Endpoint.of(TEST_HOST, server.httpPort()).withIpAddr("127.0.0.1");
         final WebClient webClientTest = WebClient.of(protocol, endpoint);
         final AggregatedHttpResponse response = webClientTest.get("/foo").aggregate().join();
 
