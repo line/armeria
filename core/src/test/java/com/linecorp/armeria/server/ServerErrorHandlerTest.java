@@ -52,7 +52,7 @@ class ServerErrorHandlerTest {
 
     @ParameterizedTest
     @CsvSource({ "H1C", "H2C" })
-    void testPassThrough(SessionProtocol protocol) {
+    void shouldFallbackIfServiceErrorHandlerReturnsNull(SessionProtocol protocol) {
         final Endpoint endpoint = Endpoint.of(TEST_HOST, server.httpPort()).withIpAddr("127.0.0.1");
         final WebClient webClientTest = WebClient.of(protocol, endpoint);
         final AggregatedHttpResponse response = webClientTest.get("/foo").aggregate().join();
