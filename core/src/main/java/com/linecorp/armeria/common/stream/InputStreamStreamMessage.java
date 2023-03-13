@@ -156,7 +156,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
         // To make sure to close the inputStreamSubscription when this is aborted.
         if (completionFuture.isCompletedExceptionally()) {
             completionFuture.exceptionally(cause -> {
-                inputStreamSubscription.close(cause);
+                inputStreamSubscription.close0(cause);
                 return null;
             });
         }
