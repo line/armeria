@@ -398,6 +398,10 @@ public final class ServiceConfig {
         return multipartUploadsLocation;
     }
 
+    ServiceErrorHandler errorHandler() {
+        return serviceErrorHandler;
+    }
+
     List<ShutdownSupport> shutdownSupports() {
         return shutdownSupports;
     }

@@ -147,7 +147,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.verboseResponses()).isTrue();
         assertThat(homeFoo.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         // serviceErrorHandler is composed with ServerErrorHandler so we cannot do the equality check.
-        assertThat(homeFoo.serviceErrorHandler().onServiceException(null, null)
+        assertThat(homeFoo.errorHandler().onServiceException(null, null)
                           .aggregate()
                           .join()
                           .status()).isSameAs(HttpStatus.OK);
@@ -162,7 +162,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.verboseResponses()).isTrue();
         assertThat(homeBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         // serviceErrorHandler is composed with ServerErrorHandler so we cannot do the equality check.
-        assertThat(homeBar.serviceErrorHandler().onServiceException(null, null)
+        assertThat(homeBar.errorHandler().onServiceException(null, null)
                           .aggregate()
                           .join()
                           .status()).isSameAs(HttpStatus.OK);
