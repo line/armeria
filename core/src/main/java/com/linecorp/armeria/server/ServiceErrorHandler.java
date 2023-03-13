@@ -90,7 +90,7 @@ public interface ServiceErrorHandler {
      * for more information).
      *
      * @param config the {@link ServiceConfig} that provides the configuration properties.
-     * @param headers the received {@link RequestHeaders}, or {@code null} in case of severe protocol violation.
+     * @param headers the received {@link RequestHeaders}.
      * @param status the desired {@link HttpStatus} of the error response.
      * @param description an optional human-readable description of the error.
      * @param cause an optional exception that may contain additional information about the error, such as
@@ -101,7 +101,7 @@ public interface ServiceErrorHandler {
      */
     @Nullable
     default AggregatedHttpResponse renderStatus(ServiceConfig config,
-                                                @Nullable RequestHeaders headers,
+                                                RequestHeaders headers,
                                                 HttpStatus status,
                                                 @Nullable String description,
                                                 @Nullable Throwable cause) {
