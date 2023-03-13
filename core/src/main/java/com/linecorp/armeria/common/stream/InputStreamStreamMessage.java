@@ -235,7 +235,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                 return;
             }
             if (offset >= end) {
-                close(null);
+                close0(null);
                 return;
             }
 
