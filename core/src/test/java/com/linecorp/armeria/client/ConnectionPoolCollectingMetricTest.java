@@ -58,8 +58,7 @@ class ConnectionPoolCollectingMetricTest {
         final AttributeMap attributeMap = new DefaultAttributeMap();
 
         connectionPoolListener.connectionOpen(SessionProtocol.H1, addressA, addressB, attributeMap);
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry))
-                .containsEntry(openABMetricKey, 1.0));
+        assertThat(MoreMeters.measureAll(registry)).containsEntry(openABMetricKey, 1.0);
 
         connectionPoolListener.connectionClosed(SessionProtocol.H1, addressA, addressB, attributeMap);
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry))

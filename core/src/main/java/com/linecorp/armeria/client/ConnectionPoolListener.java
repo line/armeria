@@ -63,7 +63,7 @@ public interface ConnectionPoolListener extends Unwrappable {
      *   <th>description</th>
      * </tr>
      * <tr>
-     *   <td>{@code armeria.client.connections#count{state="open"}}</td>
+     *   <td>{@code armeria.client.connections#count{state="opened"}}</td>
      *   <td>The number of opened connection.</td>
      * </tr>
      * <tr>
@@ -86,8 +86,8 @@ public interface ConnectionPoolListener extends Unwrappable {
      *   <th>description</th>
      * </tr>
      * <tr>
-     *   <td>{@code <name>#count{state="open"}}</td>
-     *   <td>The number of open connection.</td>
+     *   <td>{@code <name>#count{state="opened"}}</td>
+     *   <td>The number of opened connection.</td>
      * </tr>
      * <tr>
      *   <td>{@code <name>#count{state="closed"}}</td>

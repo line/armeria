@@ -30,18 +30,15 @@ final class ConnectionPoolMetrics {
     private static final String REMOTE_IP = "remote.ip";
     private static final String LOCAL_IP = "local.ip";
     private static final String STATE = "state";
-    private MeterRegistry meterRegistry;
-    private MeterIdPrefix idPrefix;
+    private final MeterRegistry meterRegistry;
+    private final MeterIdPrefix idPrefix;
 
     /**
      * Creates a new instance with the specified {@link Meter} name.
      */
     ConnectionPoolMetrics(MeterRegistry meterRegistry, MeterIdPrefix idPrefix) {
-        requireNonNull(meterRegistry, "meterRegistry");
-        requireNonNull(idPrefix, "idPrefix");
-
-        this.idPrefix = idPrefix;
-        this.meterRegistry = meterRegistry;
+        this.idPrefix = requireNonNull(idPrefix, "idPrefix");
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
     }
 
     void increaseConnOpened(SessionProtocol protocol, InetSocketAddress remoteAddr,
@@ -50,7 +47,7 @@ final class ConnectionPoolMetrics {
                               idPrefix.tags(PROTOCOL, protocol.name(),
                                             REMOTE_IP, remoteAddr.getAddress().getHostAddress(),
                                             LOCAL_IP, localAddr.getAddress().getHostAddress(),
-                                            STATE, "open"))
+                                            STATE, "opened"))
                      .increment();
     }
 
