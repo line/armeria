@@ -76,7 +76,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
             while (inLoop = true) {
                 final List<Consumer<Listener<I>>> pendingTasks = this.pendingTasks;
                 if (pendingTasks == null) {
-                    this.inLoop = false;
+                    inLoop = false;
                     break;
                 }
 
@@ -91,7 +91,6 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                     return null;
                 }
             }
-            pendingTasks = null;
             return null;
         }, sequentialExecutor());
     }
