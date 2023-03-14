@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.function.Consumer;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -28,30 +26,32 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.netty.channel.ChannelPipeline;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 
-public class ResponseTimeoutTest {
-    private static final Consumer<? super ChannelPipeline> CHANNEL_PIPELINE_CUSTOMIZER =
-            pipeline ->  pipeline.addLast(new ChannelTrafficShapingHandler(1024, 0));
-
+class ResponseTimeoutTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final ResponseHeadersBuilder responseHeadersBuilder = ResponseHeaders.builder().status(200);
-            responseHeadersBuilder.add("header1", Strings.repeat("a", 2048)); // set a header over 1KB;
-
-            sb.channelPipelineCustomizer(CHANNEL_PIPELINE_CUSTOMIZER)
-              .service(Route.ofCatchAll(), (ctx, req) -> HttpResponse.of(responseHeadersBuilder.build()));
+            sb.channelPipelineCustomizer(
+                    pipeline ->  pipeline.addLast(new ChannelTrafficShapingHandler(1024, 0)))
+                .service(Route.ofCatchAll(), new AbstractHttpService() {
+                    @Override
+                    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                            throws Exception {
+                        return HttpResponse.of(
+                                ResponseHeaders.of(HttpStatus.OK, "header1", Strings.repeat("a", 2048)));
+                    }
+                });
         }
     };
 

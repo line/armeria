@@ -472,7 +472,8 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * The {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * Sets the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * This customizer is run right before HTTP(S) codecs are configured.
      * This customizer is no-op by default.
      *
      * <p>Note that usage of this customizer is an advanced
@@ -480,6 +481,7 @@ public final class ServerBuilder implements TlsSetters {
      * breakdown. It is not recommended if you are not familiar with
      * Armeria and Netty internals.
      */
+    @UnstableApi
     public ServerBuilder channelPipelineCustomizer(
             Consumer<? super ChannelPipeline> channelPipelineCustomizer) {
         requireNonNull(channelPipelineCustomizer, "channelPipelineCustomizer");
