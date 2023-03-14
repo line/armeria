@@ -30,7 +30,6 @@ final class MetricCollectingConnectionPoolListener implements ConnectionPoolList
     private final ConnectionPoolMetrics connectionPoolMetrics;
 
     /**
-     * Creates a new instance with the specified {@link Meter} name.
      */
     MetricCollectingConnectionPoolListener(MeterRegistry registry, MeterIdPrefix idPrefix) {
         requireNonNull(registry, "registry");
