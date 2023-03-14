@@ -276,8 +276,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
 
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder requestIdGenerator(
-            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator
-    ) {
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         defaultServiceConfigSetters.requestIdGenerator(requestIdGenerator);
         return this;
     }

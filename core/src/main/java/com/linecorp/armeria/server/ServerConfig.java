@@ -275,8 +275,11 @@ public interface ServerConfig {
 
     /**
      * Returns the {@link Function} that generates a {@link RequestId} for each {@link Request}.
+     *
+     * @deprecated The functionality is moved to {@link VirtualHostBuilder#requestIdGenerator(Function)}
      */
     @UnstableApi
+    @Deprecated
     Function<RoutingContext, RequestId> requestIdGenerator();
 
     /**

@@ -207,8 +207,6 @@ public final class ServerBuilder implements TlsSetters {
             ProxiedAddresses::sourceAddress;
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
-    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
-            routingContext -> RequestId.random();
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
     @Nullable
     private DependencyInjector dependencyInjector;
@@ -231,7 +229,7 @@ public final class ServerBuilder implements TlsSetters {
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
-        virtualHostTemplate.requestIdGenerator(requestIdGenerator);
+        virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -1730,7 +1728,6 @@ public final class ServerBuilder implements TlsSetters {
      */
     public ServerBuilder requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
-        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         virtualHostTemplate.requestIdGenerator(requestIdGenerator);
         return this;
     }
@@ -1975,7 +1972,7 @@ public final class ServerBuilder implements TlsSetters {
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
+                enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
                 ImmutableList.copyOf(shutdownSupports));
     }

@@ -296,8 +296,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
 
     @Override
     public VirtualHostServiceBindingBuilder requestIdGenerator(
-            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator
-    ) {
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         return (VirtualHostServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
     }
 

@@ -657,7 +657,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
-    private RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {
+    private static RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {
         try {
             final RequestId id = serviceConfig.requestIdGenerator().apply(routingCtx);
             if (id != null) {

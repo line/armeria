@@ -85,7 +85,7 @@ public final class VirtualHost {
     private final AccessLogWriter accessLogWriter;
     private final ScheduledExecutorService blockingTaskExecutor;
     private final List<ShutdownSupport> shutdownSupports;
-    private final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
+    private final Function<RoutingContext, RequestId> requestIdGenerator;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
@@ -118,7 +118,10 @@ public final class VirtualHost {
         this.accessLogWriter = accessLogWriter;
         this.blockingTaskExecutor = blockingTaskExecutor;
         this.shutdownSupports = shutdownSupports;
-        this.requestIdGenerator = requestIdGenerator;
+        @SuppressWarnings("unchecked")
+        final Function<RoutingContext, RequestId> castRequestIdGenerator =
+                (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        this.requestIdGenerator = castRequestIdGenerator;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(fallbackServiceConfig, "fallbackServiceConfig");
@@ -368,6 +371,13 @@ public final class VirtualHost {
     @Deprecated
     public boolean shutdownBlockingTaskExecutorOnStop() {
         return false;
+    }
+
+    /**
+     * Returns the {@link Function} that generates a {@link RequestId}.
+     */
+    public Function<RoutingContext, RequestId> requestIdGenerator() {
+        return requestIdGenerator;
     }
 
     /**
