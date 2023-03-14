@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 
@@ -47,11 +46,11 @@ class ConnectionPoolCollectingMetricTest {
         final InetSocketAddress addressB = new InetSocketAddress("10.10.10.11", 3333);
 
         final String openABMetricKey = "armeria.client.connections#count{local.ip=10.10.10.11," +
-                                       "protocol=H1,remote.ip=10.10.10.10,state=open}";
+                                       "protocol=H1,remote.ip=10.10.10.10,state=opened}";
         final String closedABMetricKey = "armeria.client.connections#count{local.ip=10.10.10.11," +
                                          "protocol=H1,remote.ip=10.10.10.10,state=closed}";
         final String openBAMetricKey = "armeria.client.connections#count{local.ip=10.10.10.10," +
-                                       "protocol=H1,remote.ip=10.10.10.11,state=open}";
+                                       "protocol=H1,remote.ip=10.10.10.11,state=opened}";
         final String closedBAMetricKey = "armeria.client.connections#count{local.ip=10.10.10.10," +
                                          "protocol=H1,remote.ip=10.10.10.11,state=closed}";
 
@@ -61,27 +60,27 @@ class ConnectionPoolCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openABMetricKey, 1.0);
 
         connectionPoolListener.connectionClosed(SessionProtocol.H1, addressA, addressB, attributeMap);
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry))
+        assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 1.0)
-                .containsEntry(closedABMetricKey, 1.0));
+                .containsEntry(closedABMetricKey, 1.0);
 
         connectionPoolListener.connectionOpen(SessionProtocol.H1, addressA, addressB, attributeMap);
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry))
+        assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 2.0)
-                .containsEntry(closedABMetricKey, 1.0));
+                .containsEntry(closedABMetricKey, 1.0);
 
         connectionPoolListener.connectionOpen(SessionProtocol.H1, addressB, addressA, attributeMap);
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry))
+        assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 2.0)
                 .containsEntry(closedABMetricKey, 1.0)
-                .containsEntry(openBAMetricKey, 1.0));
+                .containsEntry(openBAMetricKey, 1.0);
 
         connectionPoolListener.connectionClosed(SessionProtocol.H1, addressA, addressB, attributeMap);
         connectionPoolListener.connectionClosed(SessionProtocol.H1, addressB, addressA, attributeMap);
-        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry))
+        assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 2.0)
                 .containsEntry(closedABMetricKey, 2.0)
                 .containsEntry(openBAMetricKey, 1.0)
-                .containsEntry(closedBAMetricKey, 1.0));
+                .containsEntry(closedBAMetricKey, 1.0);
     }
 }
