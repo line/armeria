@@ -53,7 +53,6 @@ class CustomServerErrorHandlerTest {
     private static final int MAX_REQUEST_LENGTH = 10;
     private static final String TEST_HOST = "foo.com";
 
-
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -85,6 +84,7 @@ class CustomServerErrorHandlerTest {
             sb.errorHandler(new CustomServerErrorHandler());
         }
     };
+
     @Test
     void exceptionTranslated() {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
