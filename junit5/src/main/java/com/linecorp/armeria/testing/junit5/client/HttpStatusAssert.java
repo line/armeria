@@ -17,6 +17,7 @@
 package com.linecorp.armeria.testing.junit5.client;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpStatus;
 
@@ -30,6 +31,7 @@ public final class HttpStatusAssert extends AssertThat<HttpStatus, TestHttpRespo
     }
 
     public TestHttpResponse isEqualTo(HttpStatus expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().equals(expected), "\nexpected: %s\n but was: %s", expected, actual());
         return back();
     }

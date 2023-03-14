@@ -17,6 +17,7 @@
 package com.linecorp.armeria.testing.junit5.client;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -32,6 +33,7 @@ public final class HttpDataAssert extends AssertThat<HttpData, TestHttpResponse>
     }
 
     public TestHttpResponse isEqualTo(HttpData expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().equals(expected), "\nexpected: %s\n but was: %s", expected, actual());
         return back();
     }
@@ -42,31 +44,37 @@ public final class HttpDataAssert extends AssertThat<HttpData, TestHttpResponse>
     }
 
     public TestHttpResponse arrayContains(byte... expected) {
+        requireNonNull(expected, "expected");
         checkState(bytesContains(actual().array(), expected), "\nExpecting to contain %s but was not", Arrays.toString(expected));
         return back();
     }
 
     public TestHttpResponse arrayContains(Byte[] expected) {
+        requireNonNull(expected, "expected");
         checkState(bytesContains(actual().array(), toPrimitiveByteArray(expected)), "\nExpecting to contain %s but was not", Arrays.toString(expected));
         return back();
     }
 
     public TestHttpResponse arrayContains(int... expected) {
+        requireNonNull(expected, "expected");
         checkState(bytesContains(actual().array(), toByteArray(expected)), "\nExpecting to contain %s but was not", Arrays.toString(expected));
         return back();
     }
 
     public TestHttpResponse arrayContainsExactly(byte... expected) {
+        requireNonNull(expected, "expected");
         checkState(bytesContainsExactly(actual().array(), expected), "\nExpecting to contain %s but was not", Arrays.toString(expected));
         return back();
     }
 
     public TestHttpResponse arrayContainsExactly(Byte[] expected) {
+        requireNonNull(expected, "expected");
         checkState(bytesContainsExactly(actual().array(), toPrimitiveByteArray(expected)), "\nExpecting to contain %s but was not", Arrays.toString(expected));
         return back();
     }
 
     public TestHttpResponse arrayContainsExactly(int... expected) {
+        requireNonNull(expected, "expected");
         checkState(bytesContainsExactly(actual().array(), toByteArray(expected)), "\nExpecting to contain %s but was not", Arrays.toString(expected));
         return back();
     }
@@ -77,34 +85,42 @@ public final class HttpDataAssert extends AssertThat<HttpData, TestHttpResponse>
     }
 
     public TestHttpResponse stringIsEqualTo(Charset charset, String expected) {
+        requireNonNull(charset, "charset");
+        requireNonNull(expected, "expected");
         checkState(actual().toString(charset).equals(expected), "\nexpected: %s\n but was: %s", expected,
                    actual().toString(charset));
         return back();
     }
 
     public TestHttpResponse stringUtf8IsEqualTo(String expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().toStringUtf8().equals(expected), "\nexpected: %s\n but was: %s", expected,
                    actual().toStringUtf8());
         return back();
     }
 
     public TestHttpResponse stringAsciiIsEqualTo(String expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().toStringAscii().equals(expected), "\nexpected: %s\n but was: %s", expected,
                    actual().toStringAscii());
         return back();
     }
 
     public TestHttpResponse stringContains(Charset charset, String expected) {
+        requireNonNull(charset, "charset");
+        requireNonNull(expected, "expected");
         checkState(actual().toString(charset).contains(expected), "\nExpecting to contain %s but was not", expected);
         return back();
     }
 
     public TestHttpResponse stringUtf8Contains(String expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().toStringUtf8().contains(expected), "\nExpecting to contain %s but was not", expected);
         return back();
     }
 
     public TestHttpResponse stringAsciiContains(String expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().toStringAscii().contains(expected), "\nExpecting to contain %s but was not", expected);
         return back();
     }

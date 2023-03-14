@@ -16,11 +16,15 @@
 
 package com.linecorp.armeria.testing.junit5.client;
 
+import static java.util.Objects.requireNonNull;
+
 abstract class AssertThat<T, U> {
     private final T actual;
     private final U back;
 
     AssertThat(T actual, U back) {
+        requireNonNull(actual, "actual");
+        requireNonNull(back, "back");
         this.actual = actual;
         this.back = back;
     }

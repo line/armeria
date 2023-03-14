@@ -17,6 +17,7 @@
 package com.linecorp.armeria.testing.junit5.client;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -33,6 +34,7 @@ public final class HttpHeadersAssert extends AssertThat<HttpHeaders, TestHttpRes
     }
 
     public TestHttpResponse isEqualTo(HttpHeaders expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().equals(expected), "\nexpected: %s\n but was: %s", expected, actual());
         return back();
     }
@@ -44,63 +46,76 @@ public final class HttpHeadersAssert extends AssertThat<HttpHeaders, TestHttpRes
     }
 
     public TestHttpResponse contentTypeIsEqualTo(MediaType expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().contentType().equals(expected), "\nexpected: %s\n but was: %s", expected,
                    actual().contentType());
         return back();
     }
 
     public TestHttpResponse contentDispositionIsEqualTo(ContentDisposition expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().contentDisposition().equals(expected), "\nexpected: %s\n but was: %s", expected,
                    actual().contentDisposition());
         return back();
     }
 
     public TestHttpResponse contains(CharSequence name) {
+        requireNonNull(name, "name");
         checkState(actual().contains(name), "\nExpecting to contain %s but was not", name);
         return back();
     }
 
     public TestHttpResponse contains(CharSequence name, String value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
         checkState(actual().contains(name, value), "\nExpecting to contain %s: %s but was not", name, value);
         return back();
     }
 
     public TestHttpResponse containsObject(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
         checkState(actual().containsObject(name, value), "\nExpecting to contain %s: %s but was not", name,
                    value);
         return back();
     }
 
     public TestHttpResponse containsBoolean(CharSequence name, boolean value) {
+        requireNonNull(name, "name");
         checkState(actual().containsBoolean(name, value), "\nExpecting to contain %s: %s but was not", name,
                    value);
         return back();
     }
 
     public TestHttpResponse containsInt(CharSequence name, int value) {
+        requireNonNull(name, "name");
         checkState(actual().containsInt(name, value), "\nExpecting to contain %s: %s but was not", name, value);
         return back();
     }
 
     public TestHttpResponse containsLong(CharSequence name, long value) {
+        requireNonNull(name, "name");
         checkState(actual().containsLong(name, value), "\nExpecting to contain %s: %s but was not", name,
                    value);
         return back();
     }
 
     public TestHttpResponse containsFloat(CharSequence name, float value) {
+        requireNonNull(name, "name");
         checkState(actual().containsFloat(name, value), "\nExpecting to contain %s: %s but was not", name,
                    value);
         return back();
     }
 
     public TestHttpResponse containsDouble(CharSequence name, double value) {
+        requireNonNull(name, "name");
         checkState(actual().containsDouble(name, value), "\nExpecting to contain %s: %s but was not", name,
                    value);
         return back();
     }
 
     public TestHttpResponse containsTimeMillis(CharSequence name, long value) {
+        requireNonNull(name, "name");
         checkState(actual().containsTimeMillis(name, value), "\nExpecting to contain %s: %s but was not", name,
                    value);
         return back();
@@ -117,11 +132,13 @@ public final class HttpHeadersAssert extends AssertThat<HttpHeaders, TestHttpRes
     }
 
     public TestHttpResponse namesContains(AsciiString expected) {
+        requireNonNull(expected, "expected");
         checkState(actual().names().contains(expected), "\nExpecting to contain %s but was not", expected);
         return back();
     }
 
     public TestHttpResponse namesDoesNotContains(AsciiString expected) {
+        requireNonNull(expected, "expected");
         checkState(!actual().names().contains(expected), "\nExpecting to not contain %s but was",
                    expected);
         return back();
