@@ -67,11 +67,15 @@ abstract class DnsEndpointGroupBuilder
         return hostname;
     }
 
+    /**
+     * Returns the {@link EventLoop} set via {@link #eventLoop(EventLoop)} or acquires a random
+     * {@link EventLoop} from {@link CommonPools#workerGroup()}.
+     */
     final EventLoop eventLoop() {
         if (eventLoop != null) {
             return eventLoop;
         } else {
-            return CommonPools.workerGroup().next();
+            return eventLoop = CommonPools.workerGroup().next();
         }
     }
 

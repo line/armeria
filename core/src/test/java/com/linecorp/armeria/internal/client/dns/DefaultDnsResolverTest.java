@@ -98,10 +98,13 @@ class DefaultDnsResolverTest {
                             1, HostsFileEntriesResolver.DEFAULT);
 
             final DnsQuestionContext ctx = new DnsQuestionContext(eventLoop, 1);
-            resolver.resolveAll(ctx,
-                                ImmutableList.of(new DefaultDnsQuestion("foo.com.", DnsRecordType.A),
-                                                 new DefaultDnsQuestion("bar.com.", DnsRecordType.A)),
-                                "");
+            // resolver.resolveAll() should be executed by the event loop set to DnsNameResolver.
+            eventLoop.submit(() -> {
+                resolver.resolveAll(ctx,
+                                    ImmutableList.of(new DefaultDnsQuestion("foo.com.", DnsRecordType.A),
+                                                     new DefaultDnsQuestion("bar.com.", DnsRecordType.A)),
+                                    "");
+            }).get();
 
             // Cancel the queries immediately.
             ctx.whenCancelled().cancel(false);
@@ -166,8 +169,10 @@ class DefaultDnsResolverTest {
                         new DefaultDnsQuestion("foo.com.", DnsRecordType.A));
             }
 
-            final CompletableFuture<List<DnsRecord>> result =
-                    eventLoop.submit(() -> resolver.resolveAll(ctx, questions, "")).get();
+            // resolver.resolveAll() should be executed by the event loop set to DnsNameResolver.
+            final CompletableFuture<List<DnsRecord>> result = eventLoop.submit(() -> {
+                return resolver.resolveAll(ctx, questions, "");
+            }).get();
 
             final List<DnsRecord> records = result.join();
 
