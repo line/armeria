@@ -43,7 +43,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
 
-public class InitiateConnectionShutdownTest {
+class InitiateConnectionShutdownTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override

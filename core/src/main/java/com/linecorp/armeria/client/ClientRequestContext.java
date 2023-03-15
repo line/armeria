@@ -545,7 +545,7 @@ public interface ClientRequestContext extends RequestContext {
      *
      * <p>
      * If not sent already, {@code "connection: close"} header is sent with the request.
-     * If the underlying connection's protocol is HTTP/1, the connection will be closed as soon as all pending
+     * If the underlying connection's protocol is HTTP/1.1, the connection will be closed as soon as all pending
      * requests are processed. Otherwise, a GOAWAY frame will be sent to initiate graceful connection shutdown.
      * </p>
      */
