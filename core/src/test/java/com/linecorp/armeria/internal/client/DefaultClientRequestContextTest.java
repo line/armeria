@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -271,6 +272,27 @@ class DefaultClientRequestContextTest {
         assertThat(ctx.uri().toString()).isEqualTo("http://request.com/a/b/c");
     }
 
+    @Test
+    void uriIncludesAllComponents() {
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "https://path.com/a/b/c?q1=p1&q2=p2",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "request.com"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request, "fragment1");
+        ctx.updateRequest(request);
+        assertThat(ctx.uri().toString()).isEqualTo("http://request.com/a/b/c?q1=p1&q2=p2#fragment1");
+    }
+
+    @Test
+    void uriWithOnlySchemePath() {
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/",
+                HttpHeaderNames.SCHEME, "http"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request);
+        ctx.updateRequest(request);
+        assertThat(ctx.uri().toString()).isEqualTo("http://UNKNOWN/");
+    }
+
     private static DefaultClientRequestContext newContext() {
         final HttpRequest request = HttpRequest.of(RequestHeaders.of(
                 HttpMethod.POST, "/foo",
@@ -283,9 +305,15 @@ class DefaultClientRequestContextTest {
 
     private static DefaultClientRequestContext newContext(ClientOptions clientOptions,
                                                           HttpRequest httpRequest) {
+        return newContext(clientOptions, httpRequest, null);
+    }
+
+    private static DefaultClientRequestContext newContext(ClientOptions clientOptions,
+                                                          HttpRequest httpRequest,
+                                                          @Nullable String fragment) {
         return new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                RequestId.random(), HttpMethod.POST, "/foo", null, null,
+                RequestId.random(), HttpMethod.POST, "/foo", null, fragment,
                 clientOptions, httpRequest,
                 null, RequestOptions.of(), new CancellationScheduler(0), System.nanoTime(),
                 SystemInfo.currentTimeMicros());

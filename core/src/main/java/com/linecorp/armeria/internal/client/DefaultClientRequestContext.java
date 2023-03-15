@@ -657,16 +657,13 @@ public final class DefaultClientRequestContext
 
     @Override
     public URI uri() {
-        final String path = pathWithQuery(path(), query());
-        checkState(!isAbsoluteUri(path), "Path should be relative URI.");
         final String scheme = getScheme(sessionProtocol());
         String authority = authority();
         authority = firstNonNull(authority, "UNKNOWN");
-        final String uri = scheme + "://" + authority + path;
         try {
-            return new URI(uri);
+            return new URI(scheme, authority, path(), query(), fragment());
         } catch (URISyntaxException e) {
-            throw new IllegalStateException("not a valid URI: " + uri, e);
+            throw new IllegalStateException("not a valid URI", e);
         }
     }
 

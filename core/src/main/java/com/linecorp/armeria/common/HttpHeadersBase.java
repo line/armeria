@@ -204,8 +204,7 @@ class HttpHeadersBase
         } else {
             final String scheme = scheme();
             checkState(scheme != null, ":scheme header does not exist.");
-            String authority = authority();
-            uri = scheme + "://" + firstNonNull(authority, "UNKNOWN") + path;
+            uri = scheme + "://" + firstNonNull(authority(), "UNKNOWN") + path;
         }
 
         try {
