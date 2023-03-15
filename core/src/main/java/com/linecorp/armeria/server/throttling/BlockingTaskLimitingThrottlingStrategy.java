@@ -16,30 +16,37 @@
 
 package com.linecorp.armeria.server.throttling;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.concurrent.CompletionStage;
+import java.util.function.IntSupplier;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.LimitedBlockingTaskExecutor;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A {@link ThrottlingStrategy} which
- * provides a throttling strategy based on the count of the tasks of the {@link LimitedBlockingTaskExecutor}.
- * @see ThrottlingStrategy#blockingTaskLimiting(LimitedBlockingTaskExecutor, String)
+ * provides a throttling strategy based on the count of the tasks of the {@link BlockingTaskExecutor}.
+ * @see ThrottlingStrategy#blockingTaskLimiting(IntSupplier, String)
  */
 final class BlockingTaskLimitingThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
-    private final LimitedBlockingTaskExecutor executor;
 
-    BlockingTaskLimitingThrottlingStrategy(LimitedBlockingTaskExecutor executor, @Nullable String name) {
+    private final IntSupplier limitSupplier;
+
+    BlockingTaskLimitingThrottlingStrategy(IntSupplier limitSupplier, @Nullable String name) {
         super(name);
-        this.executor = executor;
+        checkArgument(limitSupplier.getAsInt() > 0);
+        this.limitSupplier = limitSupplier;
     }
 
     @Override
     public CompletionStage<Boolean> accept(ServiceRequestContext ctx, T request) {
-        if (executor.hitLimit()) {
+        final BlockingTaskExecutor executor =
+                (BlockingTaskExecutor) ctx.blockingTaskExecutor().withoutContext();
+        if (limitSupplier.getAsInt() <= executor.numPendingTasks()) {
             return UnmodifiableFuture.completedFuture(false);
         }
 

@@ -17,32 +17,78 @@
 package com.linecorp.armeria.server.throttling;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.awaitility.Awaitility.await;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+import java.util.function.IntSupplier;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.util.LimitedBlockingTaskExecutor;
-import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Blocking;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class BlockingTaskLimitingThrottlingStrategyTest {
-    final LimitedBlockingTaskExecutor executor = mock(LimitedBlockingTaskExecutor.class);
+    private static final IntSupplier limitSupplier = () -> 2;
+
+    private static final BlockingTaskExecutor executor =
+            BlockingTaskExecutor.builder()
+                                .threadNamePrefix("blocking-task-executor")
+                                .numThreads(4)
+                                .build();
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.blockingTaskExecutor(executor, true);
+            sb.annotatedService(new BlockingAnnotatedService())
+              .decorator(ThrottlingService.newDecorator(
+                      ThrottlingStrategy.blockingTaskLimiting(limitSupplier, null)))
+              .decorator(LoggingService.newDecorator());
+        }
+    };
 
     @Test
-    void blockingTaskLimiting() {
-        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+    void serve() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(LoggingClient.newDecorator())
+                                          .build();
+        assertThat(client.get("/blocking-api").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+    }
 
-        final ThrottlingStrategy<Request> strategy =
-                new BlockingTaskLimitingThrottlingStrategy<>(executor, null);
+    @Test
+    void throttle() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(LoggingClient.newDecorator())
+                                          .build();
 
-        when(executor.hitLimit()).thenReturn(true);
-        assertThat(strategy.accept(ctx, req).toCompletableFuture().join()).isFalse();
+        await().pollInterval(100L, TimeUnit.MILLISECONDS)
+               .untilAsserted(() -> {
+                                  final HttpResponse ignore = client.get("/blocking-api");
+                                  assertThat(client.get("/blocking-api").aggregate().join().status())
+                                          .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+                              }
+               );
+    }
 
-        when(executor.hitLimit()).thenReturn(false);
-        assertThat(strategy.accept(ctx, req).toCompletableFuture().join()).isTrue();
+    static class BlockingAnnotatedService {
+        @Get("/blocking-api")
+        @Blocking
+        public HttpResponse response() {
+            System.out.println("thread name: " + Thread.currentThread().getName());
+            return HttpResponse.delayed(HttpResponse.of(HttpStatus.OK), Duration.ofSeconds(1),
+                                        RequestContext.current().root().blockingTaskExecutor());
+        }
     }
 }
