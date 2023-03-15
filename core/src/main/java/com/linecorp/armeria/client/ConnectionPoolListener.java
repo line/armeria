@@ -22,7 +22,6 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.common.util.Unwrappable;
 
-import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeMap;
 

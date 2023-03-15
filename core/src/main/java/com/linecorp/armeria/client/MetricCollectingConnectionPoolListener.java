@@ -22,15 +22,12 @@ import java.net.InetSocketAddress;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
-import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeMap;
 
 final class MetricCollectingConnectionPoolListener implements ConnectionPoolListener {
     private final ConnectionPoolMetrics connectionPoolMetrics;
 
-    /**
-     */
     MetricCollectingConnectionPoolListener(MeterRegistry registry, MeterIdPrefix idPrefix) {
         requireNonNull(registry, "registry");
         requireNonNull(idPrefix, "idPrefix");
