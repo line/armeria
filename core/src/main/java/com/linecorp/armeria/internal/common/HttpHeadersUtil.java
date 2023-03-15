@@ -29,10 +29,13 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AsciiString;
 
 // TODO(minwoox): Replace this class with CompositeHeaders.
 public final class HttpHeadersUtil {
+
+    public static final String CLOSE_STRING = HttpHeaderValues.CLOSE.toString();
 
     /**
      * Merges the given {@link ResponseHeaders}. The headers have priority in the following order.

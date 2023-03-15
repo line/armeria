@@ -293,7 +293,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     private static boolean isHealthy(PooledChannel pooledChannel) {
         final Channel ch = pooledChannel.get();
-        return ch.isActive() && HttpSession.get(ch).canSendRequest();
+        return ch.isActive() && HttpSession.get(ch).isAcquirable();
     }
 
     @Nullable
