@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class Http1KeepAliveTest {
+class Http1ServerKeepAliveTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -75,13 +75,20 @@ class Http1KeepAliveTest {
             assertThat(in.readLine()).isEqualTo("HTTP/1.1 200 OK");
 
             String line;
+            boolean hasConnectionClose = false;
             while ((line = in.readLine()) != null) {
+                if ("connection: close".equalsIgnoreCase(line)) {
+                    // If "Connection: close" was sent by the client,
+                    // the server should return "Connection: close" as well.
+                    hasConnectionClose = true;
+                }
                 if (line.isEmpty() || line.contains(":")) {
                     // Skip headers.
                     continue;
                 }
                 assertThat(line).isEqualTo("A late response");
             }
+            assertThat(hasConnectionClose).isTrue();
         }
     }
 }

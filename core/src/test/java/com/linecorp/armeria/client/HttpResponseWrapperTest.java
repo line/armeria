@@ -164,13 +164,15 @@ class HttpResponseWrapperTest {
     }
 
     private static class TestHttpResponseDecoder extends HttpResponseDecoder {
+        private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler();
+
         TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
             super(channel, inboundTrafficController);
         }
 
         @Override
         KeepAliveHandler keepAliveHandler() {
-            return NoopKeepAliveHandler.INSTANCE;
+            return keepAliveHandler;
         }
     }
 }
