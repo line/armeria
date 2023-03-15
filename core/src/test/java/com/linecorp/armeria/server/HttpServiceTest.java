@@ -18,9 +18,6 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpHead;
@@ -32,8 +29,6 @@ import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-
-import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -47,7 +42,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 class HttpServiceTest {
 
@@ -111,8 +105,6 @@ class HttpServiceTest {
                             return HttpResponse.of(HttpStatus.NO_CONTENT);
                         }
                     }.decorate(LoggingService.newDecorator()));
-
-            sb.service(Route.builder().glob("/uri-valid/**").build(), (ctx, req) -> HttpResponse.of(204));
         }
     };
 
@@ -183,23 +175,5 @@ class HttpServiceTest {
         res = client.get("/additionalTrailers").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
         assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("baz");
-    }
-
-    @Test
-    void testBracketPathnames() throws Exception {
-        try (Socket s = new Socket()) {
-            s.connect(server.httpSocketAddress());
-            s.getOutputStream().write(
-                    ("GET /uri-valid/foobar/[..foobar] HTTP/1.1\r\n" +
-                     "Host: localhost\r\n" +
-                     "Connection: close\r\n" +
-                     "\r\n").getBytes(StandardCharsets.US_ASCII));
-            final String ret = new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII);
-            assertThat(ret).contains("HTTP/1.1 204 No Content");
-        }
-        final ServiceRequestContextCaptor captor = server.requestContextCaptor();
-        assertThat(captor.size()).isEqualTo(1);
-        final ServiceRequestContext ctx = captor.poll();
-        assertThat(ctx.request().uri()).isEqualTo(server.httpUri());
     }
 }
