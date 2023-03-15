@@ -274,7 +274,8 @@ class DefaultEventLoopSchedulerTest {
         final AbstractEventLoopEntry[] entries = s.entries(SessionProtocol.HTTP, endpoint, endpoint);
         for (AbstractEventLoopEntry e : entries) {
             if (e != null) {
-                assertThat(e.activeRequests()).withFailMessage("All entries must have 0 activeRequests.").isZero();
+                assertThat(e.activeRequests()).withFailMessage(
+                        "All entries must have 0 activeRequests.").isZero();
             }
         }
         assertThat(entries[0].id()).isZero();
