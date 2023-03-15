@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.common.util.Unwrappable;
@@ -71,6 +72,7 @@ public interface ConnectionPoolListener extends Unwrappable {
      * </tr>
      * </table>
      */
+    @UnstableApi
     static ConnectionPoolListener metricCollecting(MeterRegistry registry) {
         return metricCollecting(registry, new MeterIdPrefix("armeria.client.connections"));
     }
@@ -95,6 +97,7 @@ public interface ConnectionPoolListener extends Unwrappable {
      * </tr>
      * </table>
      */
+    @UnstableApi
     static ConnectionPoolListener metricCollecting(MeterRegistry registry, MeterIdPrefix meterIdPrefix) {
         return new MetricCollectingConnectionPoolListener(registry, meterIdPrefix);
     }
