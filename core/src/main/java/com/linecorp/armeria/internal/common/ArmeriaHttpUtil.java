@@ -642,19 +642,6 @@ public final class ArmeriaHttpUtil {
         return out.build();
     }
 
-    private static String maybeEncodePath(String path) {
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
-        if (pathAndQuery == null) {
-            // this will be handled as an invalid path later
-            return path;
-        }
-        String encoded = pathAndQuery.path();
-        if (pathAndQuery.query() != null) {
-            encoded += '?' + pathAndQuery.query();
-        }
-        return encoded;
-    }
-
     /**
      * Converts the headers of the given Netty HTTP/1.x response into Armeria HTTP/2 headers.
      */
@@ -722,6 +709,19 @@ public final class ArmeriaHttpUtil {
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
+    }
+
+    private static String maybeEncodePath(String path) {
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
+        if (pathAndQuery == null) {
+            // this will be handled as an invalid path later
+            return path;
+        }
+        String encoded = pathAndQuery.path();
+        if (pathAndQuery.query() != null) {
+            encoded += '?' + pathAndQuery.query();
+        }
+        return encoded;
     }
 
     private static String maybeTransformAbsoluteUri(

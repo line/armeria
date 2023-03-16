@@ -61,7 +61,8 @@ class ServerRequestPathEncodingTest {
                      "Host:" + server.httpUri().getAuthority() + "\r\n" +
                      "Connection: close\r\n" +
                      "\r\n").getBytes(StandardCharsets.US_ASCII));
-            final String ret = new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII);
+            final String ret = new String(ByteStreams.toByteArray(s.getInputStream()),
+                                          StandardCharsets.US_ASCII);
             assertThat(ret).contains("HTTP/1.1 204 No Content");
         }
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();

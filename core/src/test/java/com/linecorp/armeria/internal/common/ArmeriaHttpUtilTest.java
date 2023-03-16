@@ -350,7 +350,7 @@ class ArmeriaHttpUtilTest {
                 new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/\"?\"",
                                        new DefaultHttpHeaders());
         RequestHeaders armeriaHeaders = toArmeria(ctx, doubleQuoteReq, serverConfig(), "http", null);
-        assertThat(armeriaHeaders.path()).isEqualTo("/\"?\"");
+        assertThat(armeriaHeaders.path()).isEqualTo("/%22?%22");
 
         // Should accept an asterisk request.
         final HttpRequest asteriskReq =
