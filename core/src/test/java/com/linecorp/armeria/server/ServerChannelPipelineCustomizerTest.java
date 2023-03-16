@@ -37,7 +37,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 
-class ResponseTimeoutTest {
+class ServerChannelPipelineCustomizerTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -57,14 +57,14 @@ class ResponseTimeoutTest {
 
     @Test
     void testResponseTimeout() {
-        final RequestHeadersBuilder headersBuilder = RequestHeaders.builder(HttpMethod.GET, "/");
+        final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.GET, "/");
 
         // using h1c since http2 compresses headers
-        assertThatThrownBy(() -> WebClient.builder(SessionProtocol.H1C, server.httpEndpoint())
+        assertThatThrownBy(() -> WebClient.builder(server.uri(SessionProtocol.H1C))
                                           .responseTimeoutMillis(1000)
                                           .build()
                                           .blocking()
-                                          .execute(headersBuilder.build(), "content"))
+                                          .execute(requestHeaders, "content"))
                 .isInstanceOf(ResponseTimeoutException.class);
     }
 }
