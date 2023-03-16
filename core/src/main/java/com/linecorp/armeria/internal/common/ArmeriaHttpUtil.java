@@ -568,6 +568,10 @@ public final class ArmeriaHttpUtil {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
 
+        // encode the path
+        final String encodedPath = maybeEncodePath(headers.path().toString());
+        headers.path(encodedPath);
+
         if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
@@ -619,11 +623,12 @@ public final class ArmeriaHttpUtil {
             Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
 
         final String path = maybeTransformAbsoluteUri(in.uri(), absoluteUriTransformer);
+        final String encodedPath = maybeEncodePath(path);
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final RequestHeadersBuilder out = RequestHeaders.builder();
         out.sizeHint(inHeaders.size());
         out.method(HttpMethod.valueOf(in.method().name()))
-           .path(path)
+           .path(encodedPath)
            .scheme(scheme);
 
         // Add the HTTP headers which have not been consumed above
@@ -637,6 +642,19 @@ public final class ArmeriaHttpUtil {
             out.add(HttpHeaderNames.HOST, defaultHostname + ':' + port);
         }
         return out.build();
+    }
+
+    private static String maybeEncodePath(String path) {
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
+        if (pathAndQuery == null) {
+            // this will be handled as an invalid path later
+            return path;
+        }
+        String encoded = pathAndQuery.path();
+        if (pathAndQuery.query() != null) {
+            encoded += '?' + pathAndQuery.query();
+        }
+        return encoded;
     }
 
     /**

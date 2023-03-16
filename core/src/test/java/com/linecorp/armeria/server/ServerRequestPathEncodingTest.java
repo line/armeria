@@ -25,8 +25,9 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.hc.core5.http2.hpack.HPackEncoder;
 import org.apache.hc.core5.util.ByteArrayBuffer;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.io.ByteStreams;
 
@@ -39,7 +40,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2Flags;
 import io.netty.handler.codec.http2.Http2FrameTypes;
 
-class SquareBracketIntegrationTest {
+class ServerRequestPathEncodingTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -49,12 +50,14 @@ class SquareBracketIntegrationTest {
         }
     };
 
-    @Test
-    void testBracketPathnameHttp1() throws Exception {
+    @ParameterizedTest
+    @CsvSource({"/uri-valid/foobar/[..foobar],/uri-valid/foobar/%5B..foobar%5D",
+                "/uri-valid/[..foobar]?q1=[]&q2=[..],/uri-valid/%5B..foobar%5D?q1=[]&q2=[..]"})
+    void testBracketPathnameHttp1(String path, String expected) throws Exception {
         try (Socket s = new Socket()) {
             s.connect(server.httpSocketAddress());
             s.getOutputStream().write(
-                    ("GET /uri-valid/foobar/[..foobar] HTTP/1.1\r\n" +
+                    ("GET " + path + " HTTP/1.1\r\n" +
                      "Host:" + server.httpUri().getAuthority() + "\r\n" +
                      "Connection: close\r\n" +
                      "\r\n").getBytes(StandardCharsets.US_ASCII));
@@ -64,15 +67,17 @@ class SquareBracketIntegrationTest {
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
         assertThat(captor.size()).isEqualTo(1);
         final ServiceRequestContext ctx = captor.poll();
-        assertThat(ctx.request().uri().toString()).isEqualTo(server.httpUri() + "/uri-valid/foobar/%5B..foobar%5D");
+        assertThat(ctx.request().uri().toString()).isEqualTo(server.httpUri() + expected);
     }
 
-    @Test
-    void testBracketPathnameHttp2() throws Exception {
+    @ParameterizedTest
+    @CsvSource({"/uri-valid/foobar/[..foobar],/uri-valid/foobar/%5B..foobar%5D",
+                "/uri-valid/[..foobar]?q1=[]&q2=[..],/uri-valid/%5B..foobar%5D?q1=[]&q2=[..]"})
+    void testBracketPathnameHttp2(String path, String expected) throws Exception {
         try (Socket s = new Socket()) {
             s.connect(server.httpSocketAddress());
 
-            // start an http2 connection with a preface
+            // start a http2 connection with a preface
             s.getOutputStream().write("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
             ByteBuf buf = Unpooled.buffer(FRAME_HEADER_LENGTH);
             buf.writeMedium(0);
@@ -90,7 +95,7 @@ class SquareBracketIntegrationTest {
             s.getOutputStream().write(buf.array());
 
             // write headers
-            final byte[] headerBytes = headerBytes();
+            final byte[] headerBytes = headerBytes(path);
             buf = Unpooled.buffer(FRAME_HEADER_LENGTH + headerBytes.length);
             buf.writeMedium(headerBytes.length);
             buf.writeByte(Http2FrameTypes.HEADERS);
@@ -116,16 +121,17 @@ class SquareBracketIntegrationTest {
             await().until(() -> captor.size() > 0);
             assertThat(captor.size()).isEqualTo(1);
             final ServiceRequestContext ctx = captor.poll();
-            assertThat(ctx.request().uri().toString())
-                    .isEqualTo(server.httpUri() + "/uri-valid/foobar/%5B..foobar%5D");
+
+            assertThat(ctx.request().uri().toString()).isEqualTo(server.httpUri() + expected);
         }
     }
 
-    private static byte[] headerBytes() throws Exception {
+    private static byte[] headerBytes(String path) throws Exception {
         final HPackEncoder encoder = new HPackEncoder(StandardCharsets.UTF_8);
         final ByteArrayBuffer buffer = new ByteArrayBuffer(1024);
         encoder.encodeHeader(buffer, ":method", "GET", false);
-        encoder.encodeHeader(buffer, ":path", "/uri-valid/foobar/[..foobar]", false);
+        encoder.encodeHeader(buffer, ":authority", server.httpUri().getAuthority(), false);
+        encoder.encodeHeader(buffer, ":path", path, false);
         return buffer.toByteArray();
     }
 }
