@@ -46,7 +46,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 class HttpServiceTest {
 
     @RegisterExtension
-    static final ServerExtension server = new ServerExtension() {
+    static final ServerExtension rule = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(
@@ -63,15 +63,15 @@ class HttpServiceTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
-                            HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
+                                           HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
                 }
             });
             sb.service("/dataAndTrailers", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
-                            HttpData.ofUtf8("trailer"),
-                            HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
+                                           HttpData.ofUtf8("trailer"),
+                                           HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
                 }
             });
             sb.service("/additionalTrailers", new AbstractHttpService() {
@@ -111,16 +111,16 @@ class HttpServiceTest {
     @Test
     void testHello() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/hello/foo"))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/hello/foo"))) {
                 assertThat(res.getCode()).isEqualTo(200);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, foo!");
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/hello/foo/bar"))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/hello/foo/bar"))) {
                 assertThat(res.getCode()).isEqualTo(404);
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpDelete(server.httpUri() + "/hello/bar"))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpDelete(rule.httpUri() + "/hello/bar"))) {
                 assertThat(res.getCode()).isEqualTo(405);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(
                         "405 Method Not Allowed");
@@ -133,7 +133,7 @@ class HttpServiceTest {
         // Test if the server responds with the 'content-length' header
         // even if it is the last response of the connection.
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpUriRequest req = new HttpGet(server.httpUri() + "/200");
+            final HttpUriRequest req = new HttpGet(rule.httpUri() + "/200");
             req.setHeader("Connection", "Close");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getCode()).isEqualTo(200);
@@ -146,13 +146,13 @@ class HttpServiceTest {
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Ensure the HEAD response does not have content.
-            try (CloseableHttpResponse res = hc.execute(new HttpHead(server.httpUri() + "/200"))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpHead(rule.httpUri() + "/200"))) {
                 assertThat(res.getCode()).isEqualTo(200);
                 assertThat(res.getEntity()).isNull();
             }
 
             // Ensure the 204 response does not have content.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/204"))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/204"))) {
                 assertThat(res.getCode()).isEqualTo(204);
                 assertThat(res.getEntity()).isNull();
             }
@@ -161,7 +161,7 @@ class HttpServiceTest {
 
     @Test
     void contentLengthIsNotSetWhenTrailerExists() {
-        final WebClient client = WebClient.of(server.httpUri());
+        final WebClient client = WebClient.of(rule.httpUri());
         AggregatedHttpResponse res = client.get("/trailersWithoutData").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
         assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
