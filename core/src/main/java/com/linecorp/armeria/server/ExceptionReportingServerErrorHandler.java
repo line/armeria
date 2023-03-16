@@ -35,7 +35,6 @@ import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
 
 /**
  * A {@link ServerErrorHandler} that wraps another {@link ServerErrorHandler}
