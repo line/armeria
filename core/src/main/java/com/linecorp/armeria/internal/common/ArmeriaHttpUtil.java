@@ -567,11 +567,9 @@ public final class ArmeriaHttpUtil {
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-
         // encode the path
         final String encodedPath = maybeEncodePath(headers.path().toString());
         headers.path(encodedPath);
-
         if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
