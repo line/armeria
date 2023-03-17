@@ -61,7 +61,7 @@ class ServerRequestPathEncodingTest {
     @CsvSource({"/uri-valid/foobar/[..foobar],/uri-valid/foobar/%5B..foobar%5D",
                 "/uri-valid/[..foobar]?q1=[]&q2=[..],/uri-valid/%5B..foobar%5D?q1=[]&q2=[..]",
                 ABSOLUTE_PATH_PREFIX + ",/uri-valid/%5B..foobar%5D"})
-    void testBracketPathnameHttp1(String path, String expected) throws Exception {
+    void requestUriEncodedHttp1(String path, String expected) throws Exception {
         try (Socket s = new Socket()) {
             s.connect(server.httpSocketAddress());
             s.getOutputStream().write(
@@ -82,7 +82,7 @@ class ServerRequestPathEncodingTest {
     @ParameterizedTest
     @CsvSource({"/uri-valid/foobar/[..foobar],/uri-valid/foobar/%5B..foobar%5D",
                 "/uri-valid/[..foobar]?q1=[]&q2=[..],/uri-valid/%5B..foobar%5D?q1=[]&q2=[..]"})
-    void testBracketPathnameHttp2(String path, String expected) throws Exception {
+    void requestUriEncodedHttp2(String path, String expected) throws Exception {
         try (Socket s = new Socket()) {
             s.connect(server.httpSocketAddress());
 
