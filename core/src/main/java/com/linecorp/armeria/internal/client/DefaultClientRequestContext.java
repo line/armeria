@@ -658,10 +658,8 @@ public final class DefaultClientRequestContext
     @Override
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
-        String authority = authority();
-        authority = firstNonNull(authority, "UNKNOWN");
         try {
-            return new URI(scheme, authority, path(), query(), fragment());
+            return new URI(scheme, authority(), path(), query(), fragment());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("not a valid URI", e);
         }

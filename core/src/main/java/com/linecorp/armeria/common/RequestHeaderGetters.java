@@ -35,7 +35,7 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
 
     /**
      * Returns the request URI generated from the {@code ":scheme"}, {@code ":authority"} and {@code ":path"}
-     * headers. If {@code ":authority"} cannot be determined, the {@link String} "UNKNOWN" is used instead.
+     * headers.
      *
      * @throws IllegalStateException if any of the required headers do not exist or
      *                               the resulting URI is not valid.

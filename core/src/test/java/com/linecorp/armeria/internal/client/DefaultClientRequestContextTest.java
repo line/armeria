@@ -222,7 +222,8 @@ class DefaultClientRequestContextTest {
                 HttpHeaderNames.SCHEME, "http"));
         final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request1);
         assertThat(ctx.authority()).isNull();
-        assertThat(ctx.uri().toString()).isEqualTo("http://UNKNOWN/foo");
+        assertThat(ctx.uri().toString()).isEqualTo("http:///foo");
+        assertThat(ctx.uri()).hasScheme("http").hasAuthority(null).hasPath("/foo");
 
         ctx.init(Endpoint.of("endpoint.com", 8080));
         assertThat(ctx.authority()).isEqualTo("endpoint.com:8080");

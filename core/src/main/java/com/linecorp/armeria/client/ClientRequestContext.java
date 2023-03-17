@@ -298,11 +298,6 @@ public interface ClientRequestContext extends RequestContext {
      * {@link ClientRequestContext#authority()}, {@link ClientRequestContext#path()} and
      * {@link ClientRequestContext#query()}.
      *
-     * <p>Note that if the value of {@link ClientRequestContext#authority()}
-     * cannot be determined, the {@link String} "UNKNOWN" may be used as the authority.
-     * This may happen if {@link ClientRequestContext#endpoint()} has not been initialized yet
-     * or couldn't be selected.
-     *
      * @throws IllegalStateException if the resulting URI is not valid.
      */
     @Override
