@@ -64,8 +64,12 @@ import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.Http
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoAnyRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoAnyResponse;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoFieldMaskRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoFieldMaskResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueResponse;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoNestedMessageRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoNestedMessageResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoRecursiveRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoRecursiveResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoResponseBodyRequest;
@@ -167,6 +171,17 @@ public class HttpJsonTranscodingTest {
                                                                     .setTimestamp(request.getTimestamp())
                                                                     .setDuration(request.getDuration())
                                                                     .build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoFieldMask(EchoFieldMaskRequest request,
+                                  StreamObserver<EchoFieldMaskResponse> responseObserver) {
+            responseObserver.onNext(EchoFieldMaskResponse.newBuilder()
+                                                         .setFieldMask(request.getFieldMask())
+                                                         .setPathCount(request.getFieldMask()
+                                                                              .getPathsList().size())
+                                                         .build());
             responseObserver.onCompleted();
         }
 
@@ -281,6 +296,14 @@ public class HttpJsonTranscodingTest {
                                                StreamObserver<EchoResponseBodyResponse>
                                                        responseObserver) {
             responseObserver.onNext(getResponseBodyResponse(request));
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoNestedMessageField(EchoNestedMessageRequest request,
+                                           StreamObserver<EchoNestedMessageResponse> responseObserver) {
+            responseObserver
+                    .onNext(EchoNestedMessageResponse.newBuilder().setNested(request.getNested()).build());
             responseObserver.onCompleted();
         }
     }
@@ -491,6 +514,17 @@ public class HttpJsonTranscodingTest {
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
         assertThat(root.get("duration").asText()).isEqualTo(duration);
+    }
+
+    @Test
+    void shouldAcceptFieldMaskAsString() throws JsonProcessingException {
+        final String fieldMask = "a,b,c";
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/field_mask?field_mask=" + fieldMask).aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(root.get("fieldMask").asText()).isEqualTo(fieldMask);
+        assertThat(root.get("pathCount").asInt()).isEqualTo(3);
     }
 
     @Test
@@ -878,6 +912,23 @@ public class HttpJsonTranscodingTest {
                                                             .execute()
                                                             .content();
         assertThat(response2.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+    }
+
+    @Test
+    void shouldAcceptNestedMessageTypeFields() throws JsonProcessingException {
+        final String jsonContent =
+                '{' +
+                "  \"nested\": {" +
+                "    \"name\": \"Armeria\"" +
+                "  }" +
+                '}';
+        final AggregatedHttpResponse response = jsonPostRequest(webClient,
+                                                                "/v1/echo/nested_message", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        final JsonNode nested = root.get("nested");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(nested).isNotNull().matches(v -> ((TreeNode) v).isObject());
+        assertThat(nested.get("name").asText()).isEqualTo("Armeria");
     }
 
     public static JsonNode findMethod(JsonNode methods, String name) {

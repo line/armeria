@@ -97,6 +97,11 @@ service TestService {
   // The test server will not implement this method. It will be used
   // to test the behavior when clients call unimplemented methods.
   rpc UnimplementedCall(armeria.grpc.testing.Empty) returns (armeria.grpc.testing.Empty);
+
+  // This method's parameter message contains all different types of parameters
+  // as well as the response type contains all different types of parameters.
+  // Can be used to check any kind of serialization issues.
+  rpc UnaryCallWithAllDifferentParameterTypes(ExtendedTestMessage) returns (ExtendedTestMessage);
 }
 
 // A service for use in unit tests with methods for fine-grained test conditions.
@@ -114,6 +119,9 @@ service UnitTestService {
 
     // A call that always returns an error with a message.
     rpc ErrorWithMessage(SimpleRequest) returns (SimpleResponse);
+
+    // A streaming call that handles onError from client service logic.
+    rpc ErrorFromClient(stream SimpleRequest) returns (stream SimpleResponse);
 
     // A unary call that always throws an error (as opposed to using StreamObserver.onError). The error is
     // thrown in the onHalfClose callback.
@@ -170,8 +178,10 @@ service ReconnectService {
 
 service UnitTestFooService {
   rpc StaticUnaryCall(SimpleRequest) returns (SimpleResponse);
+  rpc StaticUnaryCall2(SimpleRequest) returns (SimpleResponse);
 }
 
 service UnitTestBarService {
   rpc StaticUnaryCall(SimpleRequest) returns (SimpleResponse);
+  rpc StaticUnaryCall2(SimpleRequest) returns (SimpleResponse);
 }

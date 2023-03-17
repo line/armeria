@@ -121,18 +121,19 @@ class GrpcDocServiceTest {
             sb.serviceUnder("/docs/",
                             DocService.builder()
                                       .exampleRequests(
-                                            TestServiceGrpc.SERVICE_NAME,
-                                            "UnaryCall",
-                                            SimpleRequest.newBuilder()
-                                                         .setPayload(
-                                                             Payload.newBuilder()
-                                                                    .setBody(ByteString.copyFromUtf8("world")))
-                                                         .build())
+                                              TestServiceGrpc.SERVICE_NAME,
+                                              "UnaryCall",
+                                              SimpleRequest.newBuilder()
+                                                           .setPayload(
+                                                                   Payload.newBuilder()
+                                                                          .setBody(ByteString.copyFromUtf8(
+                                                                                  "world")))
+                                                           .build())
                                       .injectedScripts(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
                                       .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
                                       .exclude(DocServiceFilter.ofMethodName(
-                                                        TestServiceGrpc.SERVICE_NAME,
-                                                        "EmptyCall"))
+                                              TestServiceGrpc.SERVICE_NAME,
+                                              "EmptyCall"))
                                       .build()
                                       .decorate(LoggingService.newDecorator()));
             sb.serviceUnder("/excludeAll/",
@@ -245,21 +246,21 @@ class GrpcDocServiceTest {
     private static void addExamples(JsonNode json) {
         final Map<String, Multimap<String, String>> examplesToAdd =
                 ImmutableMap.<String, Multimap<String, String>>builder()
-                        .put(TestServiceGrpc.SERVICE_NAME,
-                             ImmutableMultimap.<String, String>builder()
-                                     .put("UnaryCall", "{\n" +
-                                                       "  \"responseType\": \"COMPRESSABLE\",\n" +
-                                                       "  \"responseSize\": 0,\n" +
-                                                       "  \"payload\": {\n" +
-                                                       "    \"type\": \"COMPRESSABLE\",\n" +
-                                                       "    \"body\": \"d29ybGQ=\"\n" +
-                                                       "  },\n" +
-                                                       "  \"fillUsername\": false,\n" +
-                                                       "  \"fillOauthScope\": false,\n" +
-                                                       "  \"responseCompression\": \"NONE\"\n" +
-                                                       '}')
-                                     .build())
-                        .build();
+                            .put(TestServiceGrpc.SERVICE_NAME,
+                                 ImmutableMultimap.<String, String>builder()
+                                                  .put("UnaryCall", "{\n" +
+                                                                    "  \"responseType\": \"COMPRESSABLE\",\n" +
+                                                                    "  \"responseSize\": 0,\n" +
+                                                                    "  \"payload\": {\n" +
+                                                                    "    \"type\": \"COMPRESSABLE\",\n" +
+                                                                    "    \"body\": \"d29ybGQ=\"\n" +
+                                                                    "  },\n" +
+                                                                    "  \"fillUsername\": false,\n" +
+                                                                    "  \"fillOauthScope\": false,\n" +
+                                                                    "  \"responseCompression\": \"NONE\"\n" +
+                                                                    '}')
+                                                  .build())
+                            .build();
 
         json.get("services").forEach(service -> {
             final String serviceName = service.get("name").textValue();

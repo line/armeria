@@ -300,7 +300,9 @@ final class HttpClientFactory implements ClientFactory {
             return delegate;
         }
 
-        if (clientType == WebClient.class) {
+        // XXX(ikhoon): Consider a common interface for HTTP clients?
+        if (clientType == WebClient.class || clientType == BlockingWebClient.class ||
+            clientType == RestClient.class) {
             final RedirectConfig redirectConfig = options.redirectConfig();
             final HttpClient delegate0;
             if (redirectConfig == RedirectConfig.disabled()) {
@@ -308,17 +310,26 @@ final class HttpClientFactory implements ClientFactory {
             } else {
                 delegate0 = RedirectingClient.newDecorator(params, redirectConfig).apply(delegate);
             }
-            return new DefaultWebClient(params, delegate0, meterRegistry);
+            final DefaultWebClient webClient = new DefaultWebClient(params, delegate0, meterRegistry);
+            if (clientType == WebClient.class) {
+                return webClient;
+            } else if (clientType == BlockingWebClient.class) {
+                return webClient.blocking();
+            } else {
+                return webClient.asRestClient();
+            }
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
     }
 
     private static Class<?> validateClientType(Class<?> clientType) {
-        if (clientType != WebClient.class && clientType != HttpClient.class) {
+        if (clientType != WebClient.class && clientType != HttpClient.class &&
+            clientType != BlockingWebClient.class && clientType != RestClient.class) {
             throw new IllegalArgumentException(
                     "clientType: " + clientType +
-                    " (expected: " + WebClient.class.getSimpleName() + " or " +
+                    " (expected: " + WebClient.class.getSimpleName() + ", " +
+                    BlockingWebClient.class.getSimpleName() + ", " + RestClient.class.getSimpleName() + " or " +
                     HttpClient.class.getSimpleName() + ')');
         }
 

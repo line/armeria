@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -67,9 +68,12 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsSetters;
@@ -203,10 +207,12 @@ public final class ServerBuilder implements TlsSetters {
             ProxiedAddresses::sourceAddress;
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
-    private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
+            routingContext -> RequestId.random();
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
     @Nullable
     private DependencyInjector dependencyInjector;
+    private Function<? super String, String> absoluteUriTransformer = Function.identity();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     ServerBuilder() {
@@ -1388,6 +1394,9 @@ public final class ServerBuilder implements TlsSetters {
      * with the specified {@code port}. The returned virtual host will have a catch-all (wildcard host) name
      * pattern that allows all host names.
      *
+     * <p>Note that you cannot configure TLS to the port-based virtual host. Configure it to the
+     * {@link ServerBuilder} or a {@linkplain #virtualHost(String) name-based virtual host}.
+     *
      * @param port the port number that this virtual host binds to
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
@@ -1623,12 +1632,103 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default header could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#addHeader(CharSequence, Object)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerBuilder addHeader(CharSequence name, Object value) {
+        virtualHostTemplate.addHeader(name, value);
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP headers for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#addHeaders(Iterable)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeaders(Iterable)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeaders(Iterable)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        virtualHostTemplate.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default header could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#setHeader(CharSequence, Object)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#setHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerBuilder setHeader(CharSequence name, Object value) {
+        virtualHostTemplate.setHeader(name, value);
+        return this;
+    }
+
+    /**
+     * Sets the default HTTP headers for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#setHeaders(Iterable)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#setHeaders(Iterable)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeaders(Iterable)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        virtualHostTemplate.setHeaders(defaultHeaders);
+        return this;
+    }
+
+    /**
      * Sets the {@link Supplier} which generates a {@link RequestId}.
+     * By default, a {@link RequestId} is generated from a random 64-bit integer.
+     *
+     * @deprecated Use {@link #requestIdGenerator(Function)}
+     */
+    @Deprecated
+    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdSupplier) {
+        requireNonNull(requestIdSupplier, "requestIdSupplier");
+        return requestIdGenerator(routingContext -> requestIdSupplier.get());
+    }
+
+    /**
+     * Sets the {@link Function} that generates a {@link RequestId} for each {@link Request}.
      * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
      * @see RequestContext#id()
      */
-    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+    public ServerBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }
@@ -1709,6 +1809,26 @@ public final class ServerBuilder implements TlsSetters {
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(dependencyInjector));
         }
+        return this;
+    }
+
+    /**
+     * Sets the {@link Function} that transforms the absolute URI in an HTTP/1 request line
+     * into an absolute path. Use this property when you have to handle a client that sends
+     * such an HTTP/1 request, because Armeria always assumes that request path is an absolute path and
+     * return a {@code 400 Bad Request} response otherwise. For example:
+     * <pre>{@code
+     * builder.absoluteUriTransformer(absoluteUri -> {
+     *   // https://foo.com/bar -> /bar
+     *   return absoluteUri.replaceFirst("^https://\\.foo\\.com/", "/");
+     *   // or..
+     *   // return "/proxy?uri=" + URLEncoder.encode(absoluteUri);
+     * });
+     * }</pre>
+     */
+    @UnstableApi
+    public ServerBuilder absoluteUriTransformer(Function<? super String, String> absoluteUriTransformer) {
+        this.absoluteUriTransformer = requireNonNull(absoluteUriTransformer, "absoluteUriTransformer");
         return this;
     }
 
@@ -1854,7 +1974,8 @@ public final class ServerBuilder implements TlsSetters {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports));
+                http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
+                ImmutableList.copyOf(shutdownSupports));
     }
 
     /**
@@ -1949,6 +2070,6 @@ public final class ServerBuilder implements TlsSetters {
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, dependencyInjector);
+                enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer);
     }
 }

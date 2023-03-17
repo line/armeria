@@ -94,7 +94,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
             SerializationFormatProvider.Entry entry) {
 
         checkState(!uriTextToFormats.containsKey(entry.uriText),
-                   "serialization format registered already: ", entry.uriText);
+                   "serialization format registered already: %s", entry.uriText);
 
         final SerializationFormat value = new SerializationFormat(
                 entry.uriText, entry.primaryMediaType, entry.mediaTypes);
@@ -119,7 +119,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
         for (SerializationFormat format : simplifiedMediaTypeToFormats.get(simplifiedMediaType)) {
             for (MediaType registeredMediaType : format.mediaTypes()) {
                 checkState(!registeredMediaType.is(mediaType) && !mediaType.is(registeredMediaType),
-                           "media type registered already: ", mediaType);
+                           "media type registered already: %s", mediaType);
             }
         }
     }
@@ -139,7 +139,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     public static SerializationFormat of(String uriText) {
         uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
         final SerializationFormat value = uriTextToFormats.get(uriText);
-        checkArgument(value != null, "unknown serialization format: ", uriText);
+        checkArgument(value != null, "unknown serialization format: %s", uriText);
         return value;
     }
 

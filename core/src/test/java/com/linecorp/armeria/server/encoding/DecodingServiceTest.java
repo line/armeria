@@ -21,25 +21,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Stream;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
+import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -47,25 +52,33 @@ import io.netty.handler.codec.compression.Brotli;
 
 class DecodingServiceTest {
 
+    private static final int ORIGINAL_MESSAGE_LENGTH = 10000;
+
+    static {
+        // Initialize the Brotli native module.
+        Brotli.isAvailable();
+    }
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final HttpService httpService = (ctx, req) -> HttpResponse.from(
-                    req.aggregate()
-                       .thenApply(aggregated -> {
-                           final ResponseHeaders responseHeaders =
-                                   ResponseHeaders.of(HttpStatus.OK,
-                                                      HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
-                           return HttpResponse.of(responseHeaders,
-                                                  HttpData.ofUtf8("Hello " + aggregated.contentUtf8() + '!'));
-                       }));
-            sb.decorator("/decodeTest", DecodingService.newDecorator());
-            sb.service("/decodeTest", httpService);
+            sb.service("/decodeTest", (ctx1, req1) -> HttpResponse.from(
+                    req1.aggregate()
+                        .thenApply(aggregated -> {
+                            return HttpResponse.of("Hello " + aggregated.contentUtf8() + '!');
+                        })));
 
-            sb.decoratorUnder("/", (delegate, ctx, req) -> {
-                return delegate.serve(ctx, req);
-            });
+            sb.route()
+              .path("/length-limit")
+              .maxRequestLength(ORIGINAL_MESSAGE_LENGTH - 1)
+              .build((ctx, req) -> {
+                  return HttpResponse.from(req.aggregate().thenApply(agg -> {
+                      // The large decoded content should be rejected by DecodingService.
+                      return HttpResponse.of("Should never reach here");
+                  }));
+              });
+            sb.decorator(DecodingService.newDecorator());
         }
     };
 
@@ -104,13 +117,10 @@ class DecodingServiceTest {
     }
 
     @Test
-    @EnabledIf("io.netty.handler.codec.compression.Brotli#isAvailable")
     void decodingBrotliCompressedPayloadFromClient() throws Throwable {
-
         final WebClient client = WebClient.builder(server.httpUri()).build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/decodeTest",
                                                          HttpHeaderNames.CONTENT_ENCODING, "br");
-        Brotli.ensureAvailability();
 
         final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
         final BrotliOutputStream encodingStream = new BrotliOutputStream(encodedStream);
@@ -121,5 +131,48 @@ class DecodingServiceTest {
 
         assertThat(client.execute(headers, HttpData.wrap(encodedStream.toByteArray())).aggregate().join()
                          .contentUtf8()).isEqualTo("Hello Armeria Brotli Test!");
+    }
+
+    @ArgumentsSource(HighlyCompressedOutputStreamProvider.class)
+    @ParameterizedTest
+    void shouldLimitDecodedContentLength(byte[] compressed, String contentEncoding) {
+        final BlockingWebClient client = server.blockingWebClient();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/length-limit",
+                                                         HttpHeaderNames.CONTENT_ENCODING, contentEncoding);
+        final AggregatedHttpResponse response = client.execute(headers, HttpData.wrap(compressed));
+        assertThat(response.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+    }
+
+    private static class HighlyCompressedOutputStreamProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            final byte[] original = Strings.repeat("1", ORIGINAL_MESSAGE_LENGTH).getBytes();
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            final GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream, true);
+            gzipOutputStream.write(original);
+            gzipOutputStream.flush();
+            final byte[] gzip = byteArrayOutputStream.toByteArray();
+            assertThat(gzip.length).isLessThan(original.length);
+
+            byteArrayOutputStream = new ByteArrayOutputStream();
+            final DeflaterOutputStream deflaterOutputStream =
+                    new DeflaterOutputStream(byteArrayOutputStream, true);
+            deflaterOutputStream.write(original);
+            deflaterOutputStream.flush();
+            final byte[] deflate = byteArrayOutputStream.toByteArray();
+            assertThat(deflate.length).isLessThan(original.length);
+
+            byteArrayOutputStream = new ByteArrayOutputStream();
+            final BrotliOutputStream brotliOutputStream = new BrotliOutputStream(byteArrayOutputStream);
+            brotliOutputStream.write(original);
+            brotliOutputStream.flush();
+            final byte[] brotli = byteArrayOutputStream.toByteArray();
+            assertThat(brotli.length).isLessThan(original.length);
+
+            return Stream.of(Arguments.of(gzip, "gzip"),
+                             Arguments.of(deflate, "deflate"),
+                             Arguments.of(brotli, "br"));
+        }
     }
 }

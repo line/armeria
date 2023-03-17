@@ -13,6 +13,9 @@ dependencies {
     }
     testImplementation libs.thrift012
 
+    // thrift api depends on httpclient4
+    testImplementation libs.apache.httpclient4
+
     // Jetty, for testing TServlet interoperability.
     testImplementation libs.jetty94.webapp
     testImplementation libs.jetty94.http2.server
@@ -33,7 +36,7 @@ tasks.processTestResources.from "${rootProject.projectDir}/thrift/thrift0.13/src
 // Use the old compiler.
 def thriftFullVersion = libs.thrift012.get().versionConstraint.requiredVersion
 ext {
-    thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
+    thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'))
 }
 
 // Disable checkstyle because it's checked by ':thrift0.13'.
