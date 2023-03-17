@@ -85,14 +85,6 @@ class GrpcServiceImplErrorTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            configureGrpcService(sb);
-        }
-    };
-
-    @RegisterExtension
-    static ServerExtension serverUsingCorruptedInterceptor = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
             final ServerInterceptor corruptedServerInterceptor = new ServerInterceptor() {
                 @Override
                 public <I, O> Listener<I> interceptCall(ServerCall<I, O> call,
@@ -106,7 +98,16 @@ class GrpcServiceImplErrorTest {
                     }, headers);
                 }
             };
-            configureGrpcService(sb, corruptedServerInterceptor);
+            final ServerImplErrorAtMetadataService service = new ServerImplErrorAtMetadataService();
+            sb.service(GrpcService.builder()
+                                  .addService(service)
+                                  .build());
+            sb.serviceUnder("/corruptedInterceptor",
+                            GrpcService.builder()
+                                       .addService(service)
+                                       .intercept(corruptedServerInterceptor)
+                                       .build());
+            sb.decorator(LoggingService.newDecorator());
         }
     };
 
@@ -117,8 +118,9 @@ class GrpcServiceImplErrorTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             assertThatThrownBy(() -> {
                 final TestServiceBlockingStub client =
-                        GrpcClients.newClient("http://127.0.0.1:" + serverUsingCorruptedInterceptor.httpPort(),
-                                              TestServiceBlockingStub.class);
+                        GrpcClients.builder("http://127.0.0.1:" + server.httpPort())
+                                   .pathPrefix("/corruptedInterceptor")
+                                   .build(TestServiceBlockingStub.class);
                 client.unaryCall2(REQUEST_MESSAGE);
             }).satisfies(cause -> {
                 assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(Status.INTERNAL.getCode());
@@ -294,10 +296,4 @@ class GrpcServiceImplErrorTest {
         }
     }
 
-    private static void configureGrpcService(
-            ServerBuilder sb, ServerInterceptor... interceptors) {
-        sb.service(GrpcService.builder().addService(new ServerImplErrorAtMetadataService())
-                              .intercept(interceptors).build());
-        sb.decorator(LoggingService.newDecorator());
-    }
 }
