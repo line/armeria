@@ -28,7 +28,7 @@ public interface ContextAwareBlockingTaskExecutor
         extends BlockingTaskExecutor, ContextAwareScheduledExecutorService {
 
     /**
-     * Returns a new {@link ContextAwareEventLoop} that sets the specified {@link RequestContext}
+     * Returns a new {@link ContextAwareBlockingTaskExecutor} that sets the specified {@link RequestContext}
      * before executing any submitted tasks.
      */
     static ContextAwareBlockingTaskExecutor of(RequestContext context, BlockingTaskExecutor executor) {

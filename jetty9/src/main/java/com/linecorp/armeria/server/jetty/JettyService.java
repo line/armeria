@@ -24,7 +24,6 @@ import java.lang.invoke.MethodHandles;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -60,6 +59,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
@@ -166,7 +166,7 @@ public final class JettyService implements HttpService {
         return new JettyServiceBuilder();
     }
 
-    private final Function<ScheduledExecutorService, Server> serverFactory;
+    private final Function<BlockingTaskExecutor, Server> serverFactory;
     private final Consumer<Server> postStopTask;
     private final Configurator configurator;
 
@@ -182,13 +182,13 @@ public final class JettyService implements HttpService {
     private boolean startedServer;
 
     private JettyService(@Nullable String hostname, boolean tlsReverseDnsLookup,
-                         Function<ScheduledExecutorService, Server> serverSupplier) {
+                         Function<BlockingTaskExecutor, Server> serverSupplier) {
         this(hostname, tlsReverseDnsLookup, serverSupplier, unused -> { /* unused */ });
     }
 
     JettyService(@Nullable String hostname,
                  boolean tlsReverseDnsLookup,
-                 Function<ScheduledExecutorService, Server> serverFactory,
+                 Function<BlockingTaskExecutor, Server> serverFactory,
                  Consumer<Server> postStopTask) {
 
         this.hostname = hostname;

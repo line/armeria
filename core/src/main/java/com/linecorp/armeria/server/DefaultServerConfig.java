@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -677,7 +676,7 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            @Nullable ScheduledExecutorService blockingTaskExecutor,
+            @Nullable BlockingTaskExecutor blockingTaskExecutor,
             @Nullable MeterRegistry meterRegistry,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
