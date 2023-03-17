@@ -22,12 +22,12 @@ import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import { Tooltip } from '@material-ui/core';
 
-import Editor, { useMonaco, loader } from '@monaco-editor/react';
+import Editor, { loader, useMonaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
 import jsonPrettify from '../../lib/json-prettify';
 import { truncate } from '../../lib/strings';
-import { Method } from '../../lib/specification';
+import { Method, ServiceType } from '../../lib/specification';
 
 loader.config({ monaco });
 
@@ -41,6 +41,7 @@ interface Props {
   onEditRequestBodyClick: React.Dispatch<unknown>;
   onDebugFormChange: (value: string) => void;
   method: Method;
+  serviceType: ServiceType;
   jsonSchemas: any[];
 }
 
@@ -51,25 +52,35 @@ const RequestBody: React.FunctionComponent<Props> = ({
   requestBodyOpen,
   onEditRequestBodyClick,
   onDebugFormChange,
-  jsonSchemas,
   method,
+  serviceType,
+  jsonSchemas,
 }) => {
   const monacoEditor = useMonaco();
 
   useEffect(() => {
-    const schema = jsonSchemas.find((s: any) => s.$id === method.id) || {};
+    if (
+      serviceType === ServiceType.GRPC ||
+      serviceType === ServiceType.THRIFT
+    ) {
+      const schema = jsonSchemas.find((s: any) => s.$id === method.id) || {};
 
-    monacoEditor?.languages.json.jsonDefaults.setDiagnosticsOptions({
-      validate: true,
-      schemas: [
-        {
-          schema,
-          fileMatch: ['*'],
-          uri: '*',
-        },
-      ],
-    });
-  }, [monacoEditor, jsonSchemas, method.id]);
+      monacoEditor?.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: true,
+        schemas: [
+          {
+            schema,
+            fileMatch: ['*'],
+            uri: '*',
+          },
+        ],
+      });
+    } else {
+      monacoEditor?.languages.json.jsonDefaults.setDiagnosticsOptions({
+        validate: false,
+      });
+    }
+  }, [monacoEditor, jsonSchemas, method.id, serviceType]);
 
   return (
     <>
@@ -104,6 +115,10 @@ const RequestBody: React.FunctionComponent<Props> = ({
             height="30vh"
             language="json"
             theme="vs-light"
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+            }}
             value={requestBody}
             defaultValue={jsonPlaceHolder}
             onChange={(val) => val && onDebugFormChange(val)}

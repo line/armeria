@@ -184,6 +184,7 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
               value={query}
               options={{
                 minimap: { enabled: false },
+                fontSize: 14,
               }}
               defaultValue={graphqlPlaceHolder}
               onChange={(val) => val && onQueryFromChange(val)}
