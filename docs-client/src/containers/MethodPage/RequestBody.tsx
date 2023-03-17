@@ -23,8 +23,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import { Tooltip } from '@material-ui/core';
 
 import Editor, { useMonaco, loader } from '@monaco-editor/react';
-// eslint-disable-next-line import/extensions
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
 import jsonPrettify from '../../lib/json-prettify';
 import { truncate } from '../../lib/strings';

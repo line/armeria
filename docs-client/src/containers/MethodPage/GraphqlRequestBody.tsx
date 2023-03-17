@@ -25,8 +25,7 @@ import {
 } from 'graphql';
 import TextField from '@material-ui/core/TextField';
 import Editor, { useMonaco, loader } from '@monaco-editor/react';
-// eslint-disable-next-line import/extensions
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-graphql';
 import jsonPrettify from '../../lib/json-prettify';
 import { docServiceDebug } from '../../lib/header-provider';
