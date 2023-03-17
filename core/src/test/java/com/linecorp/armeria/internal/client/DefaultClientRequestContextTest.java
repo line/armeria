@@ -291,7 +291,7 @@ class DefaultClientRequestContextTest {
                 HttpHeaderNames.SCHEME, "http"));
         final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request);
         ctx.updateRequest(request);
-        assertThat(ctx.uri().toString()).isEqualTo("http://UNKNOWN/");
+        assertThat(ctx.uri().toString()).isEqualTo("http:///");
     }
 
     private static DefaultClientRequestContext newContext() {
