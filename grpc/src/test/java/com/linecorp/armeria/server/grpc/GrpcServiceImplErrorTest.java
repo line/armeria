@@ -20,9 +20,7 @@ import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.REQUEST_MES
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Iterator;
 
 import org.junit.jupiter.api.Test;
@@ -74,11 +72,14 @@ class GrpcServiceImplErrorTest {
             "key2".getBytes(StandardCharsets.US_ASCII),
             "val2".getBytes(StandardCharsets.US_ASCII)
     );
+    private static final String KEY_OF_CORRUPTED_METADATA = "key1";
     // 'usedNames' is 3, but size of 'binaryValues' is 2.
-    // 'usedNames' and size of 'binaryValues' must be equal, so this is corrupted metadata.
+    // 'usedNames' and size of ('binaryValues'.length/2) must be equal, so this is corrupted metadata.
     private static final Metadata corruptedMetadata =
             InternalMetadata.newMetadata(
-                    3, "key1".getBytes(StandardCharsets.US_ASCII), "val1".getBytes(StandardCharsets.US_ASCII));
+                    3,
+                    KEY_OF_CORRUPTED_METADATA.getBytes(StandardCharsets.US_ASCII),
+                    "val1".getBytes(StandardCharsets.US_ASCII));
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -122,7 +123,7 @@ class GrpcServiceImplErrorTest {
             }).satisfies(cause -> {
                 assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(Status.INTERNAL.getCode());
                 assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
-                    assertThat(isSameSizeAndNameAndValues(metadata, corruptedMetadata)).isFalse();
+                    assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
                 });
             });
 
@@ -138,7 +139,7 @@ class GrpcServiceImplErrorTest {
                     .satisfies(cause -> {
                         assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(Status.INTERNAL.getCode());
                         assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
-                            assertThat(isSameSizeAndNameAndValues(metadata, corruptedMetadata)).isFalse();
+                            assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
                         });
                     });
         }
@@ -213,7 +214,7 @@ class GrpcServiceImplErrorTest {
                         assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
                                 Status.INTERNAL.getCode());
                         assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
-                            assertThat(isSameSizeAndNameAndValues(metadata, corruptedMetadata)).isFalse();
+                            assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
                         });
                     });
         }
@@ -253,7 +254,7 @@ class GrpcServiceImplErrorTest {
                         assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
                                 Status.INTERNAL.getCode());
                         assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
-                            assertThat(isSameSizeAndNameAndValues(metadata, corruptedMetadata)).isFalse();
+                            assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
                         });
                     });
         }
@@ -298,22 +299,5 @@ class GrpcServiceImplErrorTest {
         sb.service(GrpcService.builder().addService(new ServerImplErrorAtMetadataService())
                               .intercept(interceptors).build());
         sb.decorator(LoggingService.newDecorator());
-    }
-
-    // Use this method to ensure to escape assertion in the constructor of Metadata.
-    private static boolean isSameSizeAndNameAndValues(Metadata a, Metadata b) {
-        try {
-            final Field sizeField = Metadata.class.getDeclaredField("size");
-            sizeField.setAccessible(true);
-
-            final Field namesAndValuesField = Metadata.class.getDeclaredField("namesAndValues");
-            namesAndValuesField.setAccessible(true);
-
-            return sizeField.get(a) == sizeField.get(b) &&
-                   Arrays.equals((Object[]) namesAndValuesField.get(a),
-                                 (Object[]) namesAndValuesField.get(b));
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            throw new RuntimeException("It has failed to mutate fields with reflection.", e);
-        }
     }
 }
