@@ -42,17 +42,25 @@ import io.netty.handler.codec.http2.Http2FrameTypes;
 
 class ServerRequestPathEncodingTest {
 
+    private static final String ABSOLUTE_PATH_PREFIX = "http://localhost:8080";
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(Route.builder().glob("/uri-valid/**").build(), (ctx, req) -> HttpResponse.of(204));
+            sb.absoluteUriTransformer(uri -> {
+                if (ABSOLUTE_PATH_PREFIX.equals(uri)) {
+                    return "/uri-valid/[..foobar]";
+                }
+                return uri;
+            });
         }
     };
 
     @ParameterizedTest
     @CsvSource({"/uri-valid/foobar/[..foobar],/uri-valid/foobar/%5B..foobar%5D",
-                "/uri-valid/[..foobar]?q1=[]&q2=[..],/uri-valid/%5B..foobar%5D?q1=[]&q2=[..]"})
+                "/uri-valid/[..foobar]?q1=[]&q2=[..],/uri-valid/%5B..foobar%5D?q1=[]&q2=[..]",
+                ABSOLUTE_PATH_PREFIX + ",/uri-valid/%5B..foobar%5D"})
     void testBracketPathnameHttp1(String path, String expected) throws Exception {
         try (Socket s = new Socket()) {
             s.connect(server.httpSocketAddress());
