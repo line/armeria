@@ -205,8 +205,9 @@ class HttpHeadersBase
             checkState(scheme != null, ":scheme header does not exist.");
             final String authority = authority();
 
-            final StringBuilder sb = new StringBuilder(scheme + "://");
+            final StringBuilder sb = new StringBuilder(scheme + ":");
             if (authority != null) {
+                sb.append("//");
                 sb.append(authority);
             }
             sb.append(path);

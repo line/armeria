@@ -220,7 +220,7 @@ class BraveClientTest {
         assertThat(collector.spans()).hasSize(1);
         final MutableSpan span = collector.spans().poll();
         assertThat(span.tag("http.host")).isEqualTo("UNKNOWN");
-        assertThat(span.tag("http.url")).isEqualTo("http:///");
+        assertThat(span.tag("http.url")).isEqualTo("http:/");
     }
 
     private static RequestLog testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
