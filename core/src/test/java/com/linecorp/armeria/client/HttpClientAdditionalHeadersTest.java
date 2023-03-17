@@ -73,7 +73,8 @@ class HttpClientAdditionalHeadersTest {
             assertThat(clientCaptor.size()).isEqualTo(1);
             final ClientRequestContext clientContext = clientCaptor.get();
             assertThat(clientContext.authority()).isEqualTo(authority);
-            assertThat(clientContext.log().ensureComplete().requestHeaders().get(HttpHeaderNames.USER_AGENT))
+            assertThat(clientContext.log().whenComplete().join().requestHeaders()
+                                    .get(HttpHeaderNames.USER_AGENT))
                     .isEqualTo(UserAgentUtil.USER_AGENT.toString());
 
             final ServiceRequestContextCaptor serviceCaptor = server.requestContextCaptor();

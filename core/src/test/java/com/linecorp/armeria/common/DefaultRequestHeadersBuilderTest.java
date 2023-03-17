@@ -137,11 +137,11 @@ class DefaultRequestHeadersBuilderTest {
     @Test
     void uriForNoAuthority() {
         final URI uri = RequestHeaders.builder().path("/").scheme("http").uri();
-        assertThat(uri.toString()).isEqualTo("http:///");
+        assertThat(uri.toString()).isEqualTo("http:/");
         assertThat(uri).hasScheme("http").hasAuthority(null).hasPath("/");
 
         final URI uri2 = RequestHeaders.builder().path("/asdf").scheme("ftp").uri();
-        assertThat(uri2.toString()).isEqualTo("ftp:///asdf");
+        assertThat(uri2.toString()).isEqualTo("ftp:/asdf");
         assertThat(uri2).hasScheme("ftp").hasAuthority(null).hasPath("/asdf");
     }
 
