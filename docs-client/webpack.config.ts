@@ -126,24 +126,20 @@ plugins.push(new FaviconsWebpackPlugin({
   mode: 'light',
   devMode: 'light',
 }));
-plugins.push(new DefinePlugin({
-  'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
-}));
-// Do not add CompressionWebpackPlugin on dev
-if (!isDev) {
-  plugins.push(new CompressionWebpackPlugin({
-    test: /\.(js|css|html|svg)$/,
-    algorithm: 'gzip',
-    filename: '[path][base].gz',
-    // If a `Accept-Encoding` is not specified, `DocService` decompresses the compressed content on the fly.
-    deleteOriginalAssets: true
-  }) as any);
-}
 
-const enableAnalyzer = !!process.env.WEBPACK_ANALYZER;
-if (enableAnalyzer) {
-  const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-  plugins.push(new BundleAnalyzerPlugin())
+// Do not add LicenseWebpackPlugin on Windows, because otherwise it will fail with a known issue.
+if (!isWindows) {
+  plugins.push(new LicenseWebpackPlugin({
+    stats: {
+      warnings: true,
+      errors: true,
+    },
+    excludedPackageTest: (packageName: string) => {
+      // @monaco-editor/react and monaco-editor are the same package and causes license duplication.
+      return packageName.includes("monaco-editor");
+    },
+    outputFilename: '../../../licenses/web-licenses.txt',
+  }) as any);
 }
 
 plugins.push(
@@ -200,15 +196,26 @@ plugins.push(
   })
 )
 
-// Do not add LicenseWebpackPlugin on Windows, because otherwise it will fail with a known issue.
-if (!isWindows) {
-  plugins.push(new LicenseWebpackPlugin({
-    stats: {
-      warnings: true,
-      errors: true,
-    },
-    outputFilename: '../../../licenses/web-licenses.txt',
+const enableAnalyzer = !!process.env.WEBPACK_ANALYZER;
+if (enableAnalyzer) {
+  const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+  plugins.push(new BundleAnalyzerPlugin())
+}
+
+plugins.push(new DefinePlugin({
+  'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
+}));
+
+// Do not add CompressionWebpackPlugin on dev
+if (!isDev) {
+  plugins.push(new CompressionWebpackPlugin({
+    test: /\.(js|css|html|svg)$/,
+    algorithm: 'gzip',
+    filename: '[path][base].gz',
+    // If a `Accept-Encoding` is not specified, `DocService` decompresses the compressed content on the fly.
+    deleteOriginalAssets: true
   }) as any);
 }
+
 
 export default config;
