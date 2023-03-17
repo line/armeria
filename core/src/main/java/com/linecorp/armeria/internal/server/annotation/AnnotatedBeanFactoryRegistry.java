@@ -89,8 +89,8 @@ final class AnnotatedBeanFactoryRegistry {
      * factory from the factory cache later.
      */
     static BeanFactoryId register(Class<?> clazz, Set<String> pathParams,
-                                               List<RequestObjectResolver> objectResolvers,
-                                               DependencyInjector dependencyInjector) {
+                                  List<RequestObjectResolver> objectResolvers,
+                                  DependencyInjector dependencyInjector) {
         lock.lock();
         try {
             final BeanFactoryId beanFactoryId = new BeanFactoryId(clazz, pathParams);

@@ -76,8 +76,6 @@ public final class ServletTlsAttributes {
             40, 56, 128
     };
 
-    private static final ReentrantLock lock = new ReentrantLock();
-
     /**
      * Fills the Servlet TLS attributes from {@link SSLSession} into {@code ServletRequest}.
      *
@@ -111,8 +109,7 @@ public final class ServletTlsAttributes {
             return attrs;
         }
 
-        lock.lock();
-        try {
+        synchronized (session) {
             attrs = (ServletTlsAttributes) session.getValue(ATTR_NAME);
             if (attrs == null) {
                 final byte[] sessionIdBytes = session.getId();
@@ -129,8 +126,6 @@ public final class ServletTlsAttributes {
                 session.putValue(ATTR_NAME, attrs);
             }
             return attrs;
-        } finally {
-            lock.unlock();
         }
     }
 

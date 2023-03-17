@@ -23,9 +23,9 @@ import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
 import java.security.cert.CertificateFactorySpi;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
@@ -36,8 +36,6 @@ import org.bouncycastle.jcajce.provider.asymmetric.x509.KeyFactory;
 import org.bouncycastle.jcajce.provider.config.ConfigurableProvider;
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 /**
  * A downsized version of {@link BouncyCastleProvider} which provides only RSA/DSA/EC {@link KeyFactorySpi}s
@@ -51,11 +49,8 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
 
     private static final ReentrantLock lock = new ReentrantLock();
 
-    private static final ReentrantLock keyInfoConvertersLock = new ReentrantLock();
-
-    @GuardedBy("keyInfoConvertersLock")
     private static final Map<ASN1ObjectIdentifier, AsymmetricKeyInfoConverter> keyInfoConverters =
-            new HashMap<>();
+            new ConcurrentHashMap<>();
 
     /**
      * Invokes the specified {@link Runnable} with {@link MinifiedBouncyCastleProvider} enabled temporarily.
@@ -155,15 +150,9 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
 
     @Override
     public void addKeyInfoConverter(ASN1ObjectIdentifier oid, AsymmetricKeyInfoConverter keyInfoConverter) {
-        keyInfoConvertersLock.lock();
-        try {
-            keyInfoConverters.put(oid, keyInfoConverter);
-        } finally {
-            keyInfoConvertersLock.unlock();
-        }
+        keyInfoConverters.put(oid, keyInfoConverter);
     }
 
-    @SuppressWarnings("GuardedBy")
     @Override
     public AsymmetricKeyInfoConverter getKeyInfoConverter(ASN1ObjectIdentifier oid) {
         return keyInfoConverters.get(oid);

@@ -31,7 +31,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -139,7 +138,6 @@ public final class HealthCheckService implements TransientHttpService {
     private final double longPollingTimeoutJitterRate;
     private final long pingIntervalMillis;
     private final ReentrantLock lock = new ReentrantLock();
-    @GuardedBy("lock")
     @Nullable
     private final Consumer<HealthChecker> healthCheckerListener;
     @Nullable
@@ -267,7 +265,6 @@ public final class HealthCheckService implements TransientHttpService {
                                             .build());
     }
 
-    @SuppressWarnings("GuardedBy")
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         if (server != null) {
@@ -322,7 +319,6 @@ public final class HealthCheckService implements TransientHttpService {
         });
     }
 
-    @SuppressWarnings("GuardedBy")
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final long longPollingTimeoutMillis = getLongPollingTimeoutMillis(req);
@@ -494,7 +490,6 @@ public final class HealthCheckService implements TransientHttpService {
         return (long) (Math.min(timeoutMillisHolder.value, maxLongPollingTimeoutMillis) * multiplier);
     }
 
-    @SuppressWarnings("GuardedBy")
     private boolean isLongPollingEnabled() {
         return healthCheckerListener != null;
     }
@@ -533,7 +528,6 @@ public final class HealthCheckService implements TransientHttpService {
         return unhealthyResponse;
     }
 
-    @SuppressWarnings("GuardedBy")
     private void onHealthCheckerUpdate(HealthChecker unused) {
         assert healthCheckerListener != null : "healthCheckerListener is null.";
         assert pendingHealthyResponses != null : "pendingHealthyResponses is null.";

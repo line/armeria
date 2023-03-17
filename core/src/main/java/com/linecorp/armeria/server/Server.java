@@ -249,7 +249,6 @@ public final class Server implements ListenableAsyncCloseable {
         return activeLocalPort0(requireNonNull(protocol, "protocol"));
     }
 
-    @SuppressWarnings("GuardedBy")
     private int activeLocalPort0(@Nullable SessionProtocol protocol) {
         lock.lock();
         try {
