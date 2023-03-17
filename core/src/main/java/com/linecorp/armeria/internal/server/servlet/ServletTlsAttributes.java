@@ -20,7 +20,6 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
