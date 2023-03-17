@@ -20,7 +20,6 @@ import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeI
 import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.newExceptionInfo;
 import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.newFieldInfo;
 import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.newStructInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
@@ -94,11 +93,5 @@ class ThriftDescriptiveTypeInfoProviderTest {
 
         final StructInfo fooStruct = newStructInfo(FooStruct.class);
         assertThat(fooStruct).isEqualTo(new StructInfo(FooStruct.class.getName(), fields));
-    }
-
-    @Test
-    void incompleteStructMetadata() throws Exception {
-        assertThat(toTypeSignature(new FieldValueMetaData(TType.STRUCT)))
-                .isEqualTo(TypeSignature.ofUnresolved("unknown"));
     }
 }

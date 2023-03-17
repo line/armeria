@@ -17,11 +17,13 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,21 +40,24 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallRequest;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
+import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 
-class GrpcServiceLogNameTest {
-
-    private static ServiceRequestContext capturedCtx;
+class GrpcServiceLogTest {
 
     private static final ch.qos.logback.classic.Logger rootLogger =
             (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
@@ -63,7 +68,7 @@ class GrpcServiceLogNameTest {
         protected void configure(ServerBuilder sb) throws Exception {
             final GrpcService grpcService =
                     GrpcService.builder()
-                               .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                               .addService(new FooTestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
                                .build();
 
             sb.accessLogWriter(AccessLogWriter.combined(), true);
@@ -73,10 +78,6 @@ class GrpcServiceLogNameTest {
               .defaultServiceName("DefaultServiceName")
               .defaultLogName("DefaultName")
               .build(grpcService);
-            sb.decorator((delegate, ctx, req) -> {
-                capturedCtx = ctx;
-                return delegate.serve(ctx, req);
-            });
         }
     };
 
@@ -96,26 +97,26 @@ class GrpcServiceLogNameTest {
     }
 
     @Test
-    void logName() {
+    void logName() throws InterruptedException {
         final TestServiceBlockingStub client =
                 GrpcClients.builder(server.httpUri().resolve("/grpc/"))
                            .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
-        final RequestLog log = capturedCtx.log().whenComplete().join();
+        final RequestLog log = server.requestContextCaptor().take().log().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo(TestServiceGrpc.SERVICE_NAME);
         assertThat(log.name()).isEqualTo("EmptyCall");
         assertThat(log.fullName()).isEqualTo(TestServiceGrpc.getEmptyCallMethod().getFullMethodName());
     }
 
     @Test
-    void defaultNames() {
+    void defaultNames() throws InterruptedException {
         final TestServiceBlockingStub client =
                 GrpcClients.builder(server.httpUri().resolve("/default-names/"))
                            .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
-        final RequestLog log = capturedCtx.log().whenComplete().join();
+        final RequestLog log = server.requestContextCaptor().take().log().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("DefaultServiceName");
         assertThat(log.name()).isEqualTo("DefaultName");
         assertThat(log.fullName()).isEqualTo("DefaultServiceName/DefaultName");
@@ -147,6 +148,56 @@ class GrpcServiceLogNameTest {
             final RequestLog requestLog = ctx.log().whenComplete().join();
             assertThat(requestLog.serviceName()).isEqualTo(TestServiceGrpc.SERVICE_NAME);
             assertThat(requestLog.name()).isEqualTo("EmptyCall");
+        }
+    }
+
+    @Test
+    void sameStatusExceptionIsUsedForLogAndRequestAbortion() throws Exception {
+        final TestServiceStub client =
+                GrpcClients.builder(server.httpUri().resolve("/grpc/"))
+                           .build(TestServiceStub.class);
+
+        final StreamRecorder<StreamingInputCallResponse> responseObserver = StreamRecorder.create();
+        final StreamObserver<StreamingInputCallRequest> requestObserver =
+                client.streamingInputCall(responseObserver);
+
+        requestObserver.onNext(StreamingInputCallRequest.getDefaultInstance());
+        responseObserver.awaitCompletion();
+        // StatusRuntimeException is created by io.grpc.stub.ClientCalls
+        assertThat(responseObserver.getError()).isInstanceOf(StatusRuntimeException.class);
+
+        final RequestLog log = server.requestContextCaptor().take().log().whenComplete().join();
+        assertThatThrownBy(() -> log.context().request().whenComplete().join())
+                .cause() // Unwrap CompletionException.
+                .isInstanceOf(StatusRuntimeException.class)
+                .isSameAs(log.responseCause());
+    }
+
+    private static class FooTestServiceImpl extends TestServiceImpl {
+
+        /**
+         * Constructs a controller using the given executor for scheduling response stream chunks.
+         */
+        FooTestServiceImpl(ScheduledExecutorService executor) {
+            super(executor);
+        }
+
+        @Override
+        public StreamObserver<StreamingInputCallRequest> streamingInputCall(
+                StreamObserver<StreamingInputCallResponse> responseObserver) {
+            return new StreamObserver<StreamingInputCallRequest>() {
+
+                @Override
+                public void onNext(StreamingInputCallRequest value) {
+                    responseObserver.onError(new IllegalArgumentException());
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onCompleted() {}
+            };
         }
     }
 }

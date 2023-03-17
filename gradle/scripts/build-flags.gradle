@@ -35,7 +35,7 @@ if (!projectsWithFlags('java').isEmpty()) {
     }
 
     if (!projectsWithFlags('java', 'relocate').isEmpty()) {
-        ['com.github.jengelman.gradle.plugins:shadow', 'com.guardsquare:proguard-gradle'].each {
+        ['gradle.plugin.com.github.johnrengelman:shadow', 'com.guardsquare:proguard-gradle'].each {
             if (!managedVersions.containsKey(it)) {
                 throw new IllegalStateException(
                         "${it} must be specified in dependencies.(toml|yml) to use the 'relocate' flag.")

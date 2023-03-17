@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.internal.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
@@ -62,6 +63,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.server.RequestTimeoutException;
@@ -80,7 +82,6 @@ import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerCall;
 import io.grpc.Status;
 import io.grpc.Status.Code;
-import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
@@ -89,7 +90,7 @@ import io.netty.channel.EventLoop;
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
  * via {@link Listener}, and writing messages passed back to the response.
  */
-abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
+public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractServerCall.class);
 
@@ -136,21 +137,21 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private volatile boolean listenerClosed;
     private boolean closeCalled;
 
-    AbstractServerCall(HttpRequest req,
-                       MethodDescriptor<I, O> method,
-                       String simpleMethodName,
-                       CompressorRegistry compressorRegistry,
-                       DecompressorRegistry decompressorRegistry,
-                       HttpResponse res,
-                       int maxResponseMessageLength,
-                       ServiceRequestContext ctx,
-                       SerializationFormat serializationFormat,
-                       @Nullable GrpcJsonMarshaller jsonMarshaller,
-                       boolean unsafeWrapRequestBuffers,
-                       ResponseHeaders defaultHeaders,
-                       @Nullable GrpcStatusFunction statusFunction,
-                       @Nullable Executor blockingExecutor,
-                       boolean autoCompression) {
+    protected AbstractServerCall(HttpRequest req,
+                                 MethodDescriptor<I, O> method,
+                                 String simpleMethodName,
+                                 CompressorRegistry compressorRegistry,
+                                 DecompressorRegistry decompressorRegistry,
+                                 HttpResponse res,
+                                 int maxResponseMessageLength,
+                                 ServiceRequestContext ctx,
+                                 SerializationFormat serializationFormat,
+                                 @Nullable GrpcJsonMarshaller jsonMarshaller,
+                                 boolean unsafeWrapRequestBuffers,
+                                 ResponseHeaders defaultHeaders,
+                                 @Nullable GrpcStatusFunction statusFunction,
+                                 @Nullable Executor blockingExecutor,
+                                 boolean autoCompression) {
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.simpleMethodName = requireNonNull(simpleMethodName, "simpleMethodName");
@@ -186,17 +187,17 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         });
     }
 
-    final ResponseHeaders defaultResponseHeaders() {
+    protected final ResponseHeaders defaultResponseHeaders() {
         return defaultResponseHeaders;
     }
 
     @Nullable
-    abstract O firstResponse();
+    protected abstract O firstResponse();
 
     /**
      * Cancels a call when the call was closed by a client, not by server.
      */
-    final void maybeCancel() {
+    protected final void maybeCancel() {
         if (!closeCalled) {
             cancelled = true;
             try (SafeCloseable ignore = ctx.push()) {
@@ -205,7 +206,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
-    final void close(Throwable exception) {
+    public final void close(Throwable exception) {
+        exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
         close(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
     }
@@ -229,12 +231,12 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         maybeLogFailedRequestContent(exception);
         if (isCancelled()) {
             // No need to write anything to client if cancelled already.
-            closeListener(status, false, true);
+            closeListener(status, metadata, false, true);
             return;
         }
 
         if (status.getCode() == Code.CANCELLED && status.getCause() instanceof ClosedStreamException) {
-            closeListener(status, false, true);
+            closeListener(status, metadata, false, true);
             return;
         }
 
@@ -255,9 +257,15 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         doClose(status, metadata, completed);
     }
 
-    abstract void doClose(Status status, Metadata metadata, boolean completed);
+    protected abstract void doClose(Status status, Metadata metadata, boolean completed);
 
-    final void closeListener(Status newStatus, boolean completed, boolean setResponseContent) {
+    protected final void closeListener(Status newStatus, Metadata metadata, boolean completed,
+                                       boolean setResponseContent) {
+        closeListener(new StatusAndMetadata(newStatus, metadata), completed, setResponseContent);
+    }
+
+    protected final void closeListener(StatusAndMetadata statusAndMetadata, boolean completed,
+                                       boolean setResponseContent) {
         if (!listenerClosed) {
             listenerClosed = true;
 
@@ -265,16 +273,18 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 // Failed to deserialize a message into a request
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
             }
+
             if (setResponseContent) {
-                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse()), null);
+                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse()),
+                                                 null);
             }
 
             if (!clientStreamClosed) {
                 clientStreamClosed = true;
-                if (newStatus.isOk()) {
+                if (statusAndMetadata.status().isOk()) {
                     req.abort();
                 } else {
-                    req.abort(newStatus.asException());
+                    req.abort(statusAndMetadata.asRuntimeException());
                 }
             }
 
@@ -293,14 +303,13 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
                 // Transport error, not business logic error, so reset the stream.
                 if (!closeCalled) {
-                    final StatusException statusException = newStatus.asException();
-                    res.abort(statusException);
+                    res.abort(statusAndMetadata.asRuntimeException());
                 }
             }
         }
     }
 
-    void onRequestMessage(DeframedMessage message, boolean endOfStream) {
+    public void onRequestMessage(DeframedMessage message, boolean endOfStream) {
         try {
             final I request;
             final ByteBuf buf = message.buf();
@@ -311,8 +320,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 if (messageReceived && method.getType() == MethodType.UNARY) {
                     closeListener(Status.INTERNAL.withDescription(
                                           "More than one request messages for unary call or server streaming " +
-                                          "call"), false,
-                                  true);
+                                          "call"),
+                                  new Metadata(), false, true);
                     return;
                 }
                 messageReceived = true;
@@ -345,7 +354,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
-    final void onRequestComplete() {
+    protected final void onRequestComplete() {
         clientStreamClosed = true;
         if (!closeCalled) {
             maybeLogRequestContent(null);
@@ -357,7 +366,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
-    final void invokeOnReady() {
+    protected final void invokeOnReady() {
         try {
             if (listener != null) {
                 listener.onReady();
@@ -379,7 +388,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
-    final void invokeHalfClose() {
+    protected final void invokeHalfClose() {
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onHalfClose();
@@ -415,22 +424,22 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
-    void onError(Throwable t) {
+    protected void onError(Throwable t) {
         if (!closeCalled && !(t instanceof AbortedStreamException)) {
             close(t);
         }
     }
 
-    final void setListener(Listener<I> listener) {
+    public final void setListener(Listener<I> listener) {
         checkState(this.listener == null, "listener already set");
         this.listener = requireNonNull(listener, "listener");
         invokeOnReady();
     }
 
-    abstract void startDeframing();
+    public abstract void startDeframing();
 
     @Nullable
-    final ResponseHeaders responseHeaders() {
+    protected final ResponseHeaders responseHeaders() {
         return responseHeaders;
     }
 
@@ -506,12 +515,12 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         responseHeaders = headers;
     }
 
-    final HttpData toPayload(O message) throws IOException {
+    protected final HttpData toPayload(O message) throws IOException {
         return responseFramer.writePayload(marshaller.serializeResponse(message));
     }
 
-    final HttpObject responseTrailers(ServiceRequestContext ctx, Status status,
-                                      Metadata metadata, boolean trailersOnly) {
+    protected final HttpObject responseTrailers(ServiceRequestContext ctx, Status status,
+                                                Metadata metadata, boolean trailersOnly) {
         final HttpHeadersBuilder defaultTrailers =
                 trailersOnly ? defaultResponseHeaders.toBuilder() : HttpHeaders.builder();
         final HttpHeaders trailers = statusToTrailers(ctx, defaultTrailers, status, metadata);
@@ -526,7 +535,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
-    static HttpHeaders statusToTrailers(
+    public static HttpHeaders statusToTrailers(
             ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
         GrpcTrailersUtil.addStatusMessageToTrailers(
                 trailersBuilder, status.getCode().value(), status.getDescription());
@@ -566,7 +575,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     @Nullable
-    static Decompressor clientDecompressor(HttpHeaders headers, DecompressorRegistry registry) {
+    protected static Decompressor clientDecompressor(HttpHeaders headers, DecompressorRegistry registry) {
         final String encoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
         if (encoding == null) {
             return ForwardingDecompressor.forGrpc(Identity.NONE);
@@ -578,7 +587,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         return ForwardingDecompressor.forGrpc(Identity.NONE);
     }
 
-    final void maybeLogRequestContent(@Nullable Object message) {
+    private void maybeLogRequestContent(@Nullable Object message) {
         if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
             if (message == null) {
                 ctx.logBuilder()
@@ -590,7 +599,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
-    final void maybeLogFailedRequestContent(@Nullable Throwable cause) {
+    private void maybeLogFailedRequestContent(@Nullable Throwable cause) {
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
             logBuilder.requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
@@ -603,7 +612,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
-    final boolean isCloseCalled() {
+    public final boolean isCloseCalled() {
         return closeCalled;
     }
 
@@ -613,12 +622,20 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     @Nullable
-    final Executor blockingExecutor() {
+    public final Executor blockingExecutor() {
         return blockingExecutor;
+    }
+
+    public final EventLoop eventLoop() {
+        return ctx.eventLoop();
     }
 
     @Override
     public final MethodDescriptor<I, O> getMethodDescriptor() {
         return method;
+    }
+
+    public final ServiceRequestContext ctx() {
+        return ctx;
     }
 }

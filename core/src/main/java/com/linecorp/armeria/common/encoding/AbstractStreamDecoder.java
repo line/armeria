@@ -34,14 +34,12 @@ class AbstractStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
     private final int maxLength;
-    private final boolean checkOverflow;
+    private int decodedLength;
 
-    protected AbstractStreamDecoder(ChannelHandler handler, ByteBufAllocator alloc, int maxLength,
-                                    boolean checkOverflow) {
+    protected AbstractStreamDecoder(ChannelHandler handler, ByteBufAllocator alloc, int maxLength) {
         decoder = new EmbeddedChannel(false, handler);
         decoder.config().setAllocator(alloc);
         this.maxLength = maxLength;
-        this.checkOverflow = maxLength > 0 && checkOverflow;
     }
 
     @Override
@@ -86,7 +84,6 @@ class AbstractStreamDecoder implements StreamDecoder {
                 buf.release();
                 continue;
             }
-
             maybeCheckOverflow(decoded, buf);
             if (decoded == null) {
                 decoded = buf;
@@ -107,22 +104,19 @@ class AbstractStreamDecoder implements StreamDecoder {
     }
 
     private void maybeCheckOverflow(@Nullable ByteBuf decoded, ByteBuf newBuf) {
-        if (!checkOverflow) {
+        if (maxLength <= 0 || maxLength == Integer.MAX_VALUE) {
             return;
         }
 
-        long length = newBuf.readableBytes();
-        if (decoded != null) {
-            length += decoded.readableBytes();
-        }
-        if (length > maxLength) {
+        decodedLength += newBuf.readableBytes();
+        if (decodedLength > maxLength) {
             if (decoded != null) {
                 decoded.release();
             }
             newBuf.release();
             throw ContentTooLargeException.builder()
                                           .maxContentLength(maxLength)
-                                          .transferred(length)
+                                          .transferred(decodedLength)
                                           .build();
         }
     }

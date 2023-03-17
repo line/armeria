@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,11 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
-
 /**
- * A type which is both a {@link StreamMessage} and a {@link StreamWriter}. This type is mainly used by tests
- * which need to exercise both functionality.
+ * {@code Resilience4j}'s {@link io.github.resilience4j.circuitbreaker.CircuitBreaker}
+ * integration with Armeria.
  */
-interface StreamMessageAndWriter<T> extends StreamMessage<T>, StreamWriter<T> {
-}
+@NonNullByDefault
+@UnstableApi
+package com.linecorp.armeria.resilience4j.circuitbreaker;
+
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;
