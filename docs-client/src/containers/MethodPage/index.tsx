@@ -42,6 +42,7 @@ import ReturnType from './ReturnType';
 
 interface OwnProps {
   specification: Specification;
+  jsonSchemas: any[];
 }
 
 function getExampleHeaders(

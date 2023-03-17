@@ -82,6 +82,7 @@ interface OwnProps {
   useRequestBody: boolean;
   debugFormIsOpen: boolean;
   setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
+  jsonSchemas: any[];
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -141,6 +142,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   useRequestBody,
   debugFormIsOpen,
   setDebugFormIsOpen,
+  jsonSchemas,
 }) => {
   const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [requestBody, setRequestBody] = useState('');
@@ -635,6 +637,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
                     requestBody={requestBody}
                     onEditRequestBodyClick={toggleRequestBodyOpen}
                     onDebugFormChange={onDebugFormChange}
+                    jsonSchemas={jsonSchemas}
+                    method={method}
                   />
                 )}
                 <Typography variant="body2" paragraph />
