@@ -659,7 +659,7 @@ public final class DefaultClientRequestContext
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
         try {
-            return new URI(scheme, authority(), path(), query(), fragment());
+            return new URI(scheme, firstNonNull(authority(), ""), path(), query(), fragment());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("not a valid URI", e);
         }
