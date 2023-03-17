@@ -162,6 +162,7 @@ includeWithFlags ':examples:spring-boot-tomcat',                   'java11'
 includeWithFlags ':examples:spring-boot-webflux',                  'java11'
 includeWithFlags ':examples:static-files',                         'java11'
 includeWithFlags ':examples:thrift',                               'java11'
-includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java11'
 includeWithFlags ':examples:tutorials:grpc-tutorial',              'java11'
 project(':examples:tutorials:grpc-tutorial').projectDir = file('examples/tutorials/grpc')
+includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java11'
+includeWithFlags ':examples:tutorials:thrift',                     'java11'
