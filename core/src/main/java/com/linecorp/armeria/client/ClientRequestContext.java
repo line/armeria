@@ -290,6 +290,7 @@ public interface ClientRequestContext extends RequestContext {
      * </ol>
      */
     @Nullable
+    @UnstableApi
     String authority();
 
     /**
