@@ -318,6 +318,7 @@ public interface ServiceRequestContext extends RequestContext {
      * Note that this method is a shortcut of calling {@link HttpRequest#uri()} on {@link #request()}.
      */
     @Override
+    @UnstableApi
     URI uri();
 
     /**

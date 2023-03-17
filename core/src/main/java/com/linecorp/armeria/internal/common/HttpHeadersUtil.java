@@ -175,18 +175,13 @@ public final class HttpHeadersUtil {
     }
 
     public static String getScheme(SessionProtocol sessionProtocol) {
-        switch (sessionProtocol) {
-            case HTTPS:
-            case H2:
-            case H1:
-                return "https";
-            case HTTP:
-            case H2C:
-            case H1C:
-                return "http";
-            default:
-                throw new IllegalArgumentException("sessionProtocol: " + sessionProtocol +
-                                                   " (expected: HTTPS, H2, H1, HTTP, H2C or H1C)");
+        if (sessionProtocol.isHttps()) {
+            return "https";
+        } else if (sessionProtocol.isHttp()) {
+            return "http";
+        } else {
+            throw new IllegalArgumentException("sessionProtocol: " + sessionProtocol +
+                                               " (expected: HTTPS, H2, H1, HTTP, H2C or H1C)");
         }
     }
 

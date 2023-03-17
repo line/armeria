@@ -378,6 +378,7 @@ public interface RequestContext extends Unwrappable {
      * @see ServiceRequestContext#uri()
      * @see ClientRequestContext#uri()
      */
+    @UnstableApi
     URI uri();
 
     /**

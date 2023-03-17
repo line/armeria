@@ -39,7 +39,7 @@ class HttpClientAdditionalHeadersTest {
     };
 
     @Test
-    void disallowedHeadersMustBeFiltered() throws Exception {
+    void disallowedHeadersMustBeFiltered() {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator((delegate, ctx, req) -> {
@@ -53,22 +53,33 @@ class HttpClientAdditionalHeadersTest {
                          })
                          .build();
 
+        assertThat(client.get("/").aggregate().join().contentUtf8())
+                .doesNotContain("=https")
+                .doesNotContain("=503")
+                .doesNotContain("=CONNECT")
+                .contains("foo=bar");
+    }
+
+    @Test
+    void authorityOverriddenCorrectly() throws Exception {
+        final String authority = "custom.authority";
         try (ClientRequestContextCaptor clientCaptor = Clients.newContextCaptor()) {
-            assertThat(client.get("/").aggregate().join().contentUtf8())
-                    .doesNotContain("=https")
-                    .doesNotContain("=503")
-                    .doesNotContain("=CONNECT")
-                    .contains("foo=bar");
+            assertThat(server.blockingWebClient(cb -> cb.decorator((delegate, ctx, req) -> {
+                                 ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, authority);
+                                 return delegate.execute(ctx, req);
+                             }))
+                             .get("/").status().code()).isEqualTo(200);
+
             assertThat(clientCaptor.size()).isEqualTo(1);
             final ClientRequestContext clientContext = clientCaptor.get();
-            assertThat(clientContext.authority()).isEqualTo(server.httpEndpoint().authority());
+            assertThat(clientContext.authority()).isEqualTo(authority);
             assertThat(clientContext.log().ensureComplete().requestHeaders().get(HttpHeaderNames.USER_AGENT))
                     .isEqualTo(UserAgentUtil.USER_AGENT.toString());
 
             final ServiceRequestContextCaptor serviceCaptor = server.requestContextCaptor();
             assertThat(serviceCaptor.size()).isEqualTo(1);
             final ServiceRequestContext serviceContext = serviceCaptor.poll();
-            assertThat(serviceContext.request().authority()).isEqualTo(server.httpEndpoint().authority());
+            assertThat(serviceContext.request().authority()).isEqualTo(authority);
             assertThat(serviceContext.request().headers().get(HttpHeaderNames.USER_AGENT))
                     .isEqualTo(UserAgentUtil.USER_AGENT.toString());
         }
