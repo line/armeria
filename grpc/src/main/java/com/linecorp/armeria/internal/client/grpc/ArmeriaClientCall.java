@@ -68,6 +68,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
@@ -421,7 +422,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             }
         } catch (Throwable t) {
             final Status status = GrpcStatus.fromThrowable(t);
-            req.close(status.asException());
+            req.close(status.asRuntimeException());
             close(status, new Metadata());
         }
 
@@ -441,6 +442,12 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     @Override
     public void transportReportStatus(Status status, Metadata metadata) {
         close(status, metadata);
+    }
+
+    @Override
+    public void transportReportHeaders(Metadata metadata) {
+        assert listener != null;
+        listener.onHeaders(metadata);
     }
 
     private void prepareHeaders(Compressor compressor, Metadata metadata, long remainingNanos) {
@@ -484,11 +491,12 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
+        logBuilder.responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
         if (status.isOk()) {
             req.abort();
         } else {
-            req.abort(status.asRuntimeException(metadata));
+            req.abort(statusAndMetadata.asRuntimeException());
         }
         if (upstream != null) {
             upstream.cancel();

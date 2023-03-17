@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
 
 import com.codahale.metrics.json.MetricsModule;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -48,7 +50,7 @@ import io.netty.channel.EventLoopGroup;
  *   ports:
  *     - port: 8080
  *       protocol: HTTP
- *     - ip: 127.0.0.1
+ *     - address: 127.0.0.1
  *       port: 8081
  *       protocol:HTTP
  *     - port: 8443
@@ -82,9 +84,18 @@ public class ArmeriaSettings {
     public static class Port {
         /**
          * IP address to bind to. If not set, will bind to all addresses, e.g. {@code 0.0.0.0}.
+         *
+         * @deprecated Use {@link #address} instead.
          */
+        @Deprecated
         @Nullable
         private String ip;
+
+        /**
+         * Network address to bind to. If not set, will bind to all addresses, e.g. {@code 0.0.0.0}.
+         */
+        @Nullable
+        private InetAddress address;
 
         /**
          * Network interface to bind to. If not set, will bind to the first detected network interface.
@@ -105,7 +116,10 @@ public class ArmeriaSettings {
 
         /**
          * Returns the IP address that the {@link Server} uses.
+         *
+         * @deprecated Use {@link #getAddress()} instead.
          */
+        @Deprecated
         @Nullable
         public String getIp() {
             return ip;
@@ -113,9 +127,28 @@ public class ArmeriaSettings {
 
         /**
          * Registers an IP address that the {@link Server} uses.
+         *
+         * @deprecated Use {@link #setAddress(InetAddress)} instead.
          */
+        @Deprecated
         public Port setIp(String ip) {
             this.ip = ip;
+            return this;
+        }
+
+        /**
+         * Returns the network address that the {@link Server} uses.
+         */
+        @Nullable
+        public InetAddress getAddress() {
+            return address;
+        }
+
+        /**
+         * Registers a network address that the {@link Server} uses.
+         */
+        public Port setAddress(InetAddress address) {
+            this.address = address;
             return this;
         }
 
@@ -172,6 +205,17 @@ public class ArmeriaSettings {
         public Port setProtocol(SessionProtocol protocol) {
             protocols = ImmutableList.of(protocol);
             return this;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("ip", ip)
+                              .add("address", address)
+                              .add("iface", iface)
+                              .add("port", port)
+                              .add("protocols", protocols)
+                              .toString();
         }
     }
 

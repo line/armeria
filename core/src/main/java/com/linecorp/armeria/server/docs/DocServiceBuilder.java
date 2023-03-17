@@ -516,7 +516,7 @@ public final class DocServiceBuilder {
      */
     private static String[] guessAndSerializeExampleRequest(Object exampleRequest) {
         checkArgument(!(exampleRequest instanceof CharSequence),
-                      "can't guess service or method name from a string: ", exampleRequest);
+                      "can't guess service or method name from a string: %s", exampleRequest);
 
         boolean guessed = false;
         for (DocServicePlugin plugin : DocService.plugins) {

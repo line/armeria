@@ -151,13 +151,13 @@ Micrometer's `MeterRegistry` can be configured with [meter filters](https://micr
 If you need to control the exported meters, you can apply sophisticated filters to the `MeterRegistry`.
 
 ```java
-import io.micrometer.core.instrument.Metrics;
+import com.linecorp.armeria.common.Flags;
 
-Metrics.globalRegistry
-       .config()
-       .meterFilter(MeterFilter.deny(id ->
-               id.getTag("service").equals("MyHealthCheckService")));
-       .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
+Flags.meterRegistry()
+     .config()
+     .meterFilter(MeterFilter.deny(id ->
+                  id.getTag("service").equals("MyHealthCheckService")));
+     .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
 ```
 
 Please refer to <type://MeterIdPrefixFunction> to learn what kinds of tags are used for request metrics.

@@ -21,11 +21,13 @@ import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.getConstructors;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -43,6 +45,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -123,13 +126,32 @@ final class AnnotatedBeanFactoryRegistry {
 
     static Set<AnnotatedValueResolver> uniqueResolverSet() {
         return new TreeSet<>((o1, o2) -> {
-            final String o1Name = o1.httpElementName();
-            final String o2Name = o2.httpElementName();
-            if (o1Name != null && o1Name.equals(o2Name) && o1.annotationType() == o2.annotationType()) {
+            String o1Name = o1.httpElementName();
+            String o2Name = o2.httpElementName();
+            final Class<? extends Annotation> o1AnnotationType = o1.annotationType();
+            final Class<? extends Annotation> o2AnnotationType = o2.annotationType();
+            if (o1AnnotationType == o2AnnotationType && o1Name.equals(o2Name)) {
                 return 0;
             }
-            // We are not ordering, but just finding duplicate elements.
-            return -1;
+
+            // TreeSet internally creates a binary tree. A consistent comparison for the two inputs is
+            // necessary to traverse the binary tree correctly and check uniqueness.
+            // If compare(o1, o2) returns -1, compare(o2, o1) should return 1 or a positive number.
+            if (o1AnnotationType != null) {
+                o1Name += '/' + o1AnnotationType.getName();
+            }
+            if (o2AnnotationType != null) {
+                o2Name += '/' + o2AnnotationType.getName();
+            }
+            final int result = o1Name.compareTo(o2Name);
+            if (result != 0) {
+                return result;
+            }
+            // It is still not a good idea to return 0 since the equality for `httpElementName()` and
+            // `annotationType()` is broken. `o1AnnotationType` and `o2AnnotationType` may be the same
+            // class, but loaded by two class different loaders. The hash comparison is used to return a
+            // non-zero value for the different classes.
+            return Ints.compare(Objects.hashCode(o1AnnotationType), Objects.hashCode(o2AnnotationType));
         });
     }
 
@@ -258,17 +280,20 @@ final class AnnotatedBeanFactoryRegistry {
                                 addToFirstIfExists(objectResolvers, converters, dependencyInjector),
                                 dependencyInjector);
                 if (!resolvers.isEmpty()) {
-                    int redundant = 0;
+                    final List<AnnotatedValueResolver> duplicateResolvers = new ArrayList<>(resolvers.size());
                     for (AnnotatedValueResolver resolver : resolvers) {
                         if (!uniques.add(resolver)) {
-                            redundant++;
-                            warnDuplicateResolver(resolver, method.toGenericString());
+                            duplicateResolvers.add(resolver);
                         }
                     }
-                    if (redundant == resolvers.size()) {
+                    if (duplicateResolvers.size() == resolvers.size()) {
                         // Prevent redundant injection only when all parameters are redundant.
                         // Otherwise, we'd better to inject the method rather than ignore it.
                         continue;
+                    }
+
+                    for (AnnotatedValueResolver duplicateResolver : duplicateResolvers) {
+                        warnDuplicateResolver(duplicateResolver, method.toGenericString());
                     }
                     methodsBuilder.put(method, resolvers);
                 }

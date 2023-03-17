@@ -71,6 +71,8 @@ You need to have the files obtained from previous steps:
  ```
 3. Add an exception handler class for the blog service.
   ```java filename=GrpcExceptionHandler.java
+  package example.armeria.blog.grpc;
+
   import com.linecorp.armeria.common.RequestContext;
   import com.linecorp.armeria.common.annotation.Nullable;
   import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
@@ -113,7 +115,7 @@ Add a method `updateBlogPost()` to send a request to update a blog post.
 import example.armeria.blog.grpc.Blog.UpdateBlogPostRequest;
 
 class BlogClient {
-  static void updateBlogPost(Integer id, String newTitle, String newContent){
+  static void updateBlogPost(Integer id, String newTitle, String newContent) {
     final UpdateBlogPostRequest request = UpdateBlogPostRequest.newBuilder()
                                                                .setId(id)
                                                                .setTitle(newTitle)

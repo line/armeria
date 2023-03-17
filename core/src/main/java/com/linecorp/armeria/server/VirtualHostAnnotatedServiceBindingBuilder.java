@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -201,6 +202,13 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
 
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) AnnotatedServiceConfigSetters.super.decorator(
+                decoratingHttpServiceFunction);
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder decorator(
             Function<? super HttpService, ? extends HttpService> decorator) {
         defaultServiceConfigSetters.decorator(decorator);
         return this;
@@ -262,6 +270,32 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.addHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.setHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.setHeaders(defaultHeaders);
         return this;
     }
 

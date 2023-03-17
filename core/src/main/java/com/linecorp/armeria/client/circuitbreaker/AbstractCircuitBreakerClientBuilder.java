@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,24 +22,26 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A skeletal builder implementation that builds a new {@link AbstractCircuitBreakerClient} or
  * its decorator function.
  *
+ * @param <I> the type of incoming {@link Request} of the {@link Client}
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
+public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O extends Response> {
 
     @Nullable
     private final CircuitBreakerRule rule;
-
     @Nullable
     private final CircuitBreakerRuleWithContent<O> ruleWithContent;
-
-    private CircuitBreakerMapping mapping = CircuitBreakerMapping.ofDefault();
+    private CircuitBreakerClientHandler handler =
+            CircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault());
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
@@ -74,17 +76,31 @@ public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
 
     /**
      * Sets the {@link CircuitBreakerMapping}. If unspecified, {@link CircuitBreakerMapping#ofDefault()}
-     * will be used.
+     * will be used. Note that the {@link CircuitBreakerClientHandler} set by calling
+     * {@link #handler(CircuitBreakerClientHandler)} will be overwritten by calling this method.
      *
      * @return {@code this} to support method chaining.
      */
-    public AbstractCircuitBreakerClientBuilder<O> mapping(CircuitBreakerMapping mapping) {
-        this.mapping = requireNonNull(mapping, "mapping");
+    @UnstableApi
+    public AbstractCircuitBreakerClientBuilder<I, O> mapping(CircuitBreakerMapping mapping) {
+        handler = CircuitBreakerClientHandler.of(requireNonNull(mapping, "mapping"));
         return this;
     }
 
-    final CircuitBreakerMapping mapping() {
-        return mapping;
+    /**
+     * Sets the {@link CircuitBreakerClientHandler}. Note that the {@link CircuitBreakerMapping}
+     * set by calling {@link #mapping(CircuitBreakerMapping)} will be overwritten by calling this method.
+     *
+     * @return {@code this} to support method chaining.
+     */
+    @UnstableApi
+    public AbstractCircuitBreakerClientBuilder<I, O> handler(CircuitBreakerClientHandler handler) {
+        this.handler = requireNonNull(handler, "handler");
+        return this;
+    }
+
+    final CircuitBreakerClientHandler handler() {
+        return handler;
     }
 
     @Override
@@ -92,7 +108,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
         return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("rule", rule)
                           .add("ruleWithContent", ruleWithContent)
-                          .add("mapping", mapping)
+                          .add("handler", handler)
                           .toString();
     }
 }

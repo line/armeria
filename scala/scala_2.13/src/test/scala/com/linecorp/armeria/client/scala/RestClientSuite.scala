@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.scala
 
 import com.google.common.collect.Iterables
-import com.linecorp.armeria.client.RequestPreparationSetters
+import com.linecorp.armeria.client.{ClientOptions, Clients, RequestPreparationSetters, WebClient}
 import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, ResponseEntity}
 import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.annotation._
@@ -127,6 +127,19 @@ class RestClientSuite extends FunSuite with ServerSuite {
           assert(overridden.getReturnType == classOf[ScalaRestClientPreparation])
         }
       })
+  }
+
+  test("should derive a new client") {
+    val webClient = WebClient
+      .builder("http://example.com")
+      .setHeader("foo", "bar")
+      .build()
+    val maxResponseLength = webClient.options().maxResponseLength()
+    val restClient = ScalaRestClient(webClient)
+    val derivedClient =
+      Clients.newDerivedClient(restClient, ClientOptions.MAX_RESPONSE_LENGTH.newValue(maxResponseLength + 1))
+    assertEquals(derivedClient.options().headers().get("foo"), "bar")
+    assertEquals(derivedClient.options().maxResponseLength(), maxResponseLength + 1)
   }
 }
 

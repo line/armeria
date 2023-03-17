@@ -66,7 +66,7 @@ public final class PathAndQuery {
 
     static {
         final String allowedPathChars =
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=";
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#@!$&'()*+,;=";
         for (int i = 0; i < allowedPathChars.length(); i++) {
             ALLOWED_PATH_CHARS.set(allowedPathChars.charAt(i));
         }
