@@ -159,7 +159,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private void configurePipeline(ChannelPipeline p, Set<SessionProtocol> protocols,
                                    @Nullable ProxiedAddresses proxiedAddresses) {
-        config.channelPipelineCustomizer().accept(p);
+        config.childChannelPipelineCustomizer().accept(p);
 
         if (protocols.size() == 1) {
             switch (protocols.iterator().next()) {

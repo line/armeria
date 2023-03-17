@@ -142,8 +142,8 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public Consumer<? super ChannelPipeline> channelPipelineCustomizer() {
-        return delegate.channelPipelineCustomizer();
+    public Consumer<? super ChannelPipeline> childChannelPipelineCustomizer() {
+        return delegate.childChannelPipelineCustomizer();
     }
 
     @Override

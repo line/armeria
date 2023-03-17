@@ -18,11 +18,13 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
@@ -30,38 +32,45 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 
-class ServerChannelPipelineCustomizerTest {
+class ServerChildChannelPipelineCustomizerTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.channelPipelineCustomizer(
-                    pipeline ->  pipeline.addLast(new ChannelTrafficShapingHandler(1024, 0)))
-                .service(Route.ofCatchAll(), new AbstractHttpService() {
-                    @Override
-                    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                            throws Exception {
-                        return HttpResponse.of(
-                                ResponseHeaders.of(HttpStatus.OK, "header1", Strings.repeat("a", 2048)));
-                    }
-                });
+            sb.http(0);
+            sb.https(0);
+            sb.tlsSelfSigned();
+            sb.childChannelPipelineCustomizer(
+                    pipeline ->  pipeline.addLast(new ChannelTrafficShapingHandler(1024, 0)));
+            sb.service("/", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    return HttpResponse.of(
+                        ResponseHeaders.of(HttpStatus.OK, "header1", Strings.repeat("a", 2048)));
+                }
+            });
         }
     };
 
-    @Test
-    void testResponseTimeout() {
+    @EnumSource(value = SessionProtocol.class, names = {"H1", "H1C"})
+    @ParameterizedTest
+    void testResponseTimeout(SessionProtocol protocol) {
         final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.GET, "/");
+        final ClientFactory clientFactory = ClientFactory.builder()
+                                                         .tlsNoVerify()
+                                                         .build();
 
-        // using h1c since http2 compresses headers
-        assertThatThrownBy(() -> WebClient.builder(server.uri(SessionProtocol.H1C))
+        // using h1 or h1c since http2 compresses headers
+        assertThatThrownBy(() -> WebClient.builder(server.uri(protocol))
                                           .responseTimeoutMillis(1000)
+                                          .factory(clientFactory)
                                           .build()
                                           .blocking()
                                           .execute(requestHeaders, "content"))

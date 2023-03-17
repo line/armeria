@@ -133,7 +133,7 @@ public interface ServerConfig {
      * Returns the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
      */
     @UnstableApi
-    Consumer<? super ChannelPipeline> channelPipelineCustomizer();
+    Consumer<? super ChannelPipeline> childChannelPipelineCustomizer();
 
     /**
      * Returns the maximum allowed number of open connections.

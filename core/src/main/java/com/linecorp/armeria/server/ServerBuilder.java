@@ -94,6 +94,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -161,7 +162,7 @@ public final class ServerBuilder implements TlsSetters {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
-    private static final Consumer<? super ChannelPipeline> DEFAULT_CHANNEL_PIPELINE_CUSTOMIZER =
+    private static final Consumer<? super ChannelPipeline> DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER =
             v -> { /* no-op */ };
 
     @VisibleForTesting
@@ -184,7 +185,8 @@ public final class ServerBuilder implements TlsSetters {
     private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
-    private Consumer<? super ChannelPipeline> channelPipelineCustomizer = DEFAULT_CHANNEL_PIPELINE_CUSTOMIZER;
+    private Consumer<? super ChannelPipeline> childChannelPipelineCustomizer =
+            DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER;
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
@@ -473,7 +475,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
-     * This customizer is run right before HTTP(S) codecs are configured.
+     * This customizer is run right after the initial set of {@link ChannelHandler}s are configured.
      * This customizer is no-op by default.
      *
      * <p>Note that usage of this customizer is an advanced
@@ -482,10 +484,10 @@ public final class ServerBuilder implements TlsSetters {
      * Armeria and Netty internals.
      */
     @UnstableApi
-    public ServerBuilder channelPipelineCustomizer(
-            Consumer<? super ChannelPipeline> channelPipelineCustomizer) {
-        requireNonNull(channelPipelineCustomizer, "channelPipelineCustomizer");
-        this.channelPipelineCustomizer = channelPipelineCustomizer;
+    public ServerBuilder childChannelPipelineCustomizer(
+            Consumer<? super ChannelPipeline> childChannelPipelineCustomizer) {
+        requireNonNull(childChannelPipelineCustomizer, "childChannelPipelineCustomizer");
+        this.childChannelPipelineCustomizer = childChannelPipelineCustomizer;
         return this;
     }
 
@@ -1959,7 +1961,7 @@ public final class ServerBuilder implements TlsSetters {
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
-                channelPipelineCustomizer,
+                childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports));
