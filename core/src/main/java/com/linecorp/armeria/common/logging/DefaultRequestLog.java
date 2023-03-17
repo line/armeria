@@ -372,7 +372,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             reentrantLock.lock();
             try {
                 pendingFutures.add(newFuture);
-                satisfiedFutures = removeSatisfiedFutures(pendingFutures, flags);
+                satisfiedFutures = removeSatisfiedFutures(pendingFutures, this.flags);
             } finally {
                 reentrantLock.unlock();
             }
@@ -418,7 +418,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 final RequestLogFuture[] satisfiedFutures;
                 reentrantLock.lock();
                 try {
-                    satisfiedFutures = removeSatisfiedFutures(pendingFutures, newFlags);
+                    satisfiedFutures = removeSatisfiedFutures(pendingFutures, this.flags);
                 } finally {
                     reentrantLock.unlock();
                 }
