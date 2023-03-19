@@ -43,7 +43,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     @Nullable
     private List<Consumer<Listener<I>>> pendingTasks;
 
-    private boolean inLoop;
+    private boolean shouldBePending = true;
 
     @Nullable
     private Listener<I> delegate;
@@ -75,7 +75,6 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
             this.delegate = delegate;
             try {
                 for (;;) {
-                    inLoop = true;
                     final List<Consumer<Listener<I>>> pendingTasks = this.pendingTasks;
                     if (pendingTasks == null) {
                         break;
@@ -93,7 +92,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                     }
                 }
             } finally {
-                inLoop = false;
+                shouldBePending = false;
             }
             return null;
         }, sequentialExecutor());
@@ -129,7 +128,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
             return;
         }
 
-        if (isPendingTaskNotAvailable()) {
+        if (!shouldBePending()) {
             task.accept(delegate);
             return;
         }
@@ -142,7 +141,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                 if (callClosed) {
                     return;
                 }
-                if (isPendingTaskNotAvailable()) {
+                if (!shouldBePending()) {
                     task.accept(delegate);
                 } else {
                     addPendingTask(task);
@@ -158,8 +157,8 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
         pendingTasks.add(task);
     }
 
-    private boolean isPendingTaskNotAvailable() {
-        return !inLoop && delegate != null;
+    private boolean shouldBePending() {
+        return shouldBePending;
     }
 
     private Executor sequentialExecutor() {
