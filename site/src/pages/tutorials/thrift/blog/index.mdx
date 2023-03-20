@@ -1,0 +1,105 @@
+---
+type: tutorial
+level: basic
+---
+
+import versions from '/gen-src/versions.json';
+
+# Thrift tutorial introduction
+
+Learn to build a Apache Thrift service with Armeria by writing a blog service in Apache Thrift. This tutorial is based on a [sample service](https://github.com/line/armeria/tree/main/examples/tutorials/thrift), a minimal blog service, with which you can create, read, update, and delete blog posts.
+
+To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using database. Try writing a service yourself by following this tutorial or have a go at [running the sample service](#build-and-run-sample-service) right away.
+
+## Assumptions
+
+This tutorial assumes that you have:
+
+- Experience in building services in Java
+- Experience in Java frameworks for server-side programming
+- Understanding of Apache Thrift and experience in implementing Thrift services
+
+## Prerequisites
+
+To run and develop the sample service, you need JDK 11 or higher.
+
+## Build and run sample service
+
+The sample service provides you implementations of CRUD operations with corresponding service methods. Have a go at running the sample Apache Thrift service and see the outcome of this tutorial.
+Using Armeria's [Documentation Service](/docs/server-docservice), you can easily verify a server is running, receiving requests and sending responses.
+
+1. Download the code from [here](https://github.com/line/armeria/tree/main/examples/tutorials/thrift).
+2. Build the sample service using the Gradle Wrapper.
+  ```bash
+  $ ./gradlew build
+  ```
+3. Run the sample service again, using the Gradle Wrapper.
+  ```bash
+  $ ./gradlew run
+  ```
+4. Open the Documentation service page on your web browser at http://127.0.0.1:8080/docs.
+
+## Try writing blog service yourself
+
+Have a go at writing the blog service yourself, starting with [Creating a server](/tutorials/thrift/blog/create-server). Use the sample service's build.gradle to start building the service from scratch.
+
+<Tip>
+
+  In this tutorial, we use [gradle](https://gradle.org/) as the build tool and use [thrift-gradle-plugin](https://plugins.gradle.org/plugin/org.jruyi.thrift) to compile thrift IDL files and generate stubs.
+
+</Tip>
+
+<CodeBlock language="groovy" filename="build.gradle">{`
+plugins {
+    id 'application'
+    id "org.jruyi.thrift" version "0.4.2"
+    id "io.spring.dependency-management" version "1.0.11.RELEASE"
+}\n
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'\n
+repositories {
+    mavenCentral()
+}\n
+dependencyManagement {
+    imports {
+        mavenBom 'io.micrometer:micrometer-bom:1.10.2'
+        mavenBom 'io.netty:netty-bom:4.1.86.Final'
+        mavenBom 'com.linecorp.armeria:armeria-bom:1.22.0'
+        mavenBom 'org.junit:junit-bom:5.9.1'
+    }
+}\n
+dependencies {
+  implementation 'com.google.code.findbugs:jsr305:3.0.2'
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation 'org.assertj:assertj-core:3.23.1'
+  testImplementation 'org.junit.jupiter:junit-jupiter-api'
+  testImplementation 'org.junit.jupiter:junit-jupiter-params'
+  testRuntimeOnly 'org.junit.platform:junit-platform-commons'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+  testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
+}\n
+dependencies {
+    implementation 'com.linecorp.armeria:armeria'
+    implementation 'com.linecorp.armeria:armeria-thrift0.17'
+    runtimeOnly 'org.slf4j:slf4j-simple:1.7.36'\n
+    testImplementation 'com.linecorp.armeria:armeria-junit5'
+    testImplementation 'org.assertj:assertj-core:3.23.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+}\n
+application {
+    mainClass.set('example.armeria.server.blog.thrift.Main')
+}\n
+tasks.withType(JavaCompile) {
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+    options.encoding = 'UTF-8'
+    options.debug = true
+    options.compilerArgs += '-parameters'
+}\n
+tasks.withType(Test) {
+    useJUnitPlatform()
+}
+`}</CodeBlock>
+

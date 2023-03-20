@@ -1,0 +1,148 @@
+---
+menuTitle: "Create a server"
+order: 1
+category: thrift
+type: step
+targetLang: java
+---
+
+# Creating a server
+
+As the first step of the tutorial, we'll write a Thrift server with a dummy service.
+
+<TutorialSteps current={1} />
+
+
+## 1. Create a thrift file
+
+Create two `blog.thrift` files inside the directory `{project_root}/src/main/thrift` each server and client.
+
+```thrift filename=blog.thrift
+namespace java example.armeria.blog.thrift
+```
+
+## 2. Define a service and a method.
+
+Define the `BlogService` and add `hello` method to test the connection between the server and the client. 
+
+```thrift filename=blog.thrift
+service BlogService {
+  string hello(1:string request)
+}
+```
+
+## 3. Compile the thrift file
+
+Compile the `blog.thrift` file to generate Java code. 
+
+```bash
+./gradlew build
+```
+
+<Tip>
+
+Please refer to [build.gradle](https://github.com/line/armeria-examples/blob/master/tutorials/thrift/build.gradle) for generating code with [Gradle Thrift Plugin](https://github.com/jruyi/thrift-gradle-plugin).
+
+</Tip>
+
+Find the Java code output in the directory, `{project_root}/build/generated-sources/thrift/gen-java/example/armeria/blog/thrift/`.
+
+## 4. Declare the blog service and override the `hello` method 
+
+Create a file `BlogServiceImpl.java`. Declare the service and override the `hello` method that we've defined in the blog.thrift file. 
+
+```java filename=BlogServiceImpl.java
+package example.armeria.server.blog.thrift;
+
+import example.armeria.blog.thrift.BlogService;
+
+import org.apache.thrift.TException;
+import org.apache.thrift.async.AsyncMethodCallback;
+
+public class BlogServiceImpl implements BlogService.AsyncIface{
+    @Override
+    public void hello(String request, AsyncMethodCallback<String> resultHandler) {
+        resultHandler.onComplete("Hello, " + request + '!');
+    } 
+}
+```
+
+## 5. Add a service to a server
+
+Build a server and add service to the server using Armeria's <type://ServerBuilder>.
+
+1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
+
+  ```java filename=Main.java
+  package example.armeria.server.blog.thrift;
+
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
+  public final class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+  }
+  ```
+2. Create a service instance using Armeria's <type://THttpService#builder()>.
+  ```java filename=Main.java
+  import com.linecorp.armeria.server.thrift.THttpService;
+
+  public final class Main {
+    private static Server newServer(int port) throws Exception {
+        final THttpService tHttpService =
+                THttpService.builder()
+                            .addService(new BlogServiceImpl())
+                            .build();
+    }
+  }
+  ```
+3. Build and return a new server instance using Armeria's <type://ServerBuilder>.
+  ```java filename=Main.java
+    public final class Main {
+      private static Server newServer(int port) throws Exception {
+        ...
+        return Server.builder()
+                     .http(port)
+                     .service("/thrift", tHttpService)
+                     .build();
+      }
+    }
+  ```
+
+## 6. Start the server
+
+Create a server instance in the `main()` method.
+
+```java filename=Main.java
+  public static void main(String[] args) throws Exception {
+      final Server server = newServer(8080);
+
+      server.closeOnJvmShutdown().thenRun(() -> {
+          logger.info("Server has been stopped.");
+      });
+
+      server.start().join();
+  }
+  ```
+
+## 7. Test run
+
+Start the server by running the `Main.main()` method on your IDE or using Gradle.
+
+```bash
+./gradlew run
+```
+
+Your server is running if you see the following message.
+
+```bash
+[armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
+```
+
+## What's next
+
+In this step, we've defined a thrift file for our service and generated Java code. And then, we've created and added a Thrift service to a server. See [Running a Thrift service](/docs/server-thrift) for more information.
+
+Next, we'll implement a minimal client and made a call to the server to [test run](/tutorials/thrift/blog/create-client).
+
+<TutorialSteps current={1} />

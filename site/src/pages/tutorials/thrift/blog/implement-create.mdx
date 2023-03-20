@@ -1,0 +1,172 @@
+---
+menuTitle: "Implement CREATE"
+order: 3
+category: thrift
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing CREATE operation
+
+Previously, we ran an blog service on a server and also confirmed that our client could make a call to the service. In this step, we'll create and implement a create operation and again, try making a call to a service method.
+
+<TutorialSteps current={3} />
+
+## What you need
+
+You need to have the following obtained from previous steps:
+
+- [Java code generated](/tutorials/thrift/blog/create-server#compile-the-thrift-file)
+- blog.thrift(both server and client)
+- Main.java
+- BlogServiceImpl.java
+- BlogClient.java
+
+
+## 1. Update `blog.thrift` for both server and client 
+
+Add a service method to the blog service and a request type for the create operation. Here, we will add only the creation method and a struct that for creating blog posts. We will add the retrieving, modification, and deletion method at each step.
+
+```thrift filename=blog.thrift
+/**
+ * An object which represents a blog post.
+ */
+struct BlogPost {
+    1: i32 id;
+    2: string title;
+    3: string content;
+    4: i64 createdAt;
+    5: i64 modifiedAt;
+}
+
+/**
+ * A request object for creating a blog post.
+ */
+struct CreateBlogPostRequest {
+    1: string title;
+    2: string content;
+}
+
+/**
+ * My first BlogService in Armeria!
+ */
+service BlogService {
+  ...
+  /**
+    * Creates a blog post.
+    */
+  BlogPost createBlogPost(1:CreateBlogPostRequest request)
+}
+```
+
+## 2. Implement server-side
+
+Let's implement a service method `createBlogPost()` in `BlogServiceImpl.java`.
+
+1. Create an ID generator to issue temporary blog post IDs and a map to contain blog posts.
+  ```java filename=BlogServiceImpl.java
+  ...
+  import java.util.Map;
+  import java.util.concurrent.ConcurrentHashMap;
+  import java.util.concurrent.atomic.AtomicInteger;
+
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+    private final AtomicInteger idGenerator = new AtomicInteger();
+    private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+    ...
+  }
+  ```
+2. Override and implement a service method, `createBlogPost()`:
+    1. Override a `createBlogPost` method.
+    2. Create a `BlogPost` object with request parameters.
+    3. Save the post information in the map.
+    4. Return the information of the blog post created.
+  ```java filename=BlogServiceImpl.java
+  ...
+  import java.time.Instant;
+
+  import example.armeria.blog.thrift.BlogPost;
+  import example.armeria.blog.thrift.BlogService;
+  import example.armeria.blog.thrift.CreateBlogPostRequest;
+
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+      ...
+      @Override
+      public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+              throws TException {
+          final int id = idGenerator.getAndIncrement();
+          final Instant now = Instant.now();
+          final BlogPost blogPost = new BlogPost()
+                  .setId(id)
+                  .setTitle(request.getTitle())
+                  .setContent(request.getContent())
+                  .setModifiedAt(now.toEpochMilli())
+                  .setCreatedAt(now.toEpochMilli());
+          blogPosts.put(id, blogPost);
+          final BlogPost stored = blogPost;
+          resultHandler.onComplete(stored);
+      }
+  }
+  ```
+
+## 3. Implement client-side
+
+Let's implement a method for creating a blog post.
+
+Add a method `createBlogPost()` in `BlogClient.java` to send a request to create a blog post.
+  ```java filename=BlogClient.java
+  ...
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
+  public class BlogClient {
+    private static final Logger logger = LoggerFactory.getLogger(BlogClient.class);
+    static BlogService.Iface blogService;
+    ...
+    void createBlogPost(String title, String content) throws Exception {
+      final CreateBlogPostRequest request = 
+          new CreateBlogPostRequest().setTitle(title)
+                                  .setContent(content);
+      final BlogPost response = blogService.createBlogPost(request);
+      logger.info("[Create response] Title: {} Content: {}",
+                      response.getTitle(), response.getContent());
+    }
+  }
+  ```
+
+## 4. Test run
+
+Now, let's make a call from the client. Note the code is minimal to keep things simple.
+
+1. Add a method to test the create method we just implemented.
+  ```java filename=BlogClient.java
+  ...
+    public static void main(String[] args) throws Exception {
+        blogService =
+            ThriftClients.builder("http://127.0.0.1:8080")
+            .path("/thrift")
+            .build(BlogService.Iface.class);
+        ...
+        BlogClient blogClient = new BlogClient();
+        blogClient.testRun();
+    }
+    void testRun() throws Exception {
+        createBlogPost("My first blog", "Yay");
+    }
+  ```
+2. [Re-run the server](/tutorials/thrift/blog/create-server#7-test-run). Your server is running if you see the following message.
+  ```bash
+  [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
+  ```
+3. Run the client. You'll see only a single message for blog posting, because we haven't added logging for creating a post in the `main()` method.
+  ```bash
+  [main] INFO  e.a.client.blog.thrift.BlogClient - [Create response] Title: My first blog Content: Yay
+  ```
+
+## What's next
+
+Here, we've implemented a method for creating a blog post. Next, we'll [implement a READ operation](/tutorials/thrift/blog/implement-read).
+
+<TutorialSteps current={3} />

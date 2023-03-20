@@ -1,0 +1,128 @@
+---
+menuTitle: "Implement DELETE"
+order: 6
+category: thrift
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing DELETE operation
+
+So far, we've created, read, and updated a blog post. Now, let's implement and make a call to finally delete a blog post.
+
+<TutorialSteps current={6} />
+
+## What you need
+
+You need to have the files obtained from previous steps:
+
+- [Java code generated](/tutorials/thrift/blog/define-service#compile-the-thrift-file)
+- blog.thrift(both server and client)
+- Main.java
+- BlogService.java
+- BlogClient.java
+- BlogServiceExceptionHandler.java
+
+## 1. Implement server-side
+
+Let's implement a service method `deleteBlogPost()` in `BlogServiceImpl.java` we've been working on.
+
+1. Add a service method and a struct in `blog.thrift` file for deleting a blog post.
+  ```thrift filename=blog.thrift
+  ...
+  /**
+   * A request object for deleting a blog post.
+   */
+  struct DeleteBlogPostRequest {
+      1: i32 id;
+  }
+  ...
+  /**
+   * My first BlogService in Armeria!
+   */
+  service BlogService {
+  ...
+    /**
+     * Deletes a blog post.
+     */
+    void deleteBlogPost(1:DeleteBlogPostRequest request) throws (1:BlogNotFoundException e),
+  }
+  ```
+2. Add a service method, `deleteBlogPost()` in the class `BlogServiceImpl`.
+  ```java filename=BlogServiceImpl.java
+  import example.armeria.blog.thrift.DeleteBlogPostRequest;
+
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+    ...
+    @Override
+    public void deleteBlogPost(DeleteBlogPostRequest request, AsyncMethodCallback<Void> resultHandler)
+            throws TException {
+        final BlogPost removed = blogPosts.remove(request.getId());
+        if (removed == null) {
+            resultHandler.onError(
+                    new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
+        } else {
+            resultHandler.onComplete(null);
+        }
+    }
+  }
+  ```
+
+## 2. Implement client-side
+
+Add a method `deleteBlogPost()` to send a request to delete a blog post.
+
+1. Add a service method and a struct for deleting a blog post in `blog.thrift` file, as we did in [1. Implement server-side](#1-implement-server-side).
+2. Add a service method, `deleteBlogPost()` in the class `BlogClient`.
+  ```java filename=BlogClient.java
+  import example.armeria.blog.thrift.DeleteBlogPostRequest;
+
+  public class BlogClient {
+    ...
+    void deleteBlogPost(int id) throws Exception {
+        final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
+        client.deleteBlogPost(request);
+    }
+  }
+  ```
+
+## 3. Test run
+
+Let's test deleting a blog. We know that our client creates a blog post by default when it's executed and that the ID of the first one has been `0` always.
+
+1. Call the delete method we just implemented followed by `listBlogPosts()` to see that no post with the ID `0` exists after deleting the post.
+  ```java filename=BlogClient.java
+  void testRun() throws Exception {
+      createBlogPost("My first blog", "Yay");
+      createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+      deleteBlogPost(0);
+      listBlogPosts();
+  }
+  ```
+2. [Re-run the server](/tutorials/thrift/blog/create-server#7-test-run) and run the client. The number of blog posts in the log depends on how you've tested so far. Anyhow, since we are attempting to delete the first post, you won't have a problem, unless you've deleted it already. You can check that the list of posts retrieved start from `1`, which is the second post.
+   ```bash
+   [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=DefaultRpcRequest{
+    serviceType=BlogService$Iface, 
+    serviceName=example.armeria.blog.thrift.BlogService$Iface, 
+    method=deleteBlogPost, 
+    params=[DeleteBlogPostRequest(id:0)]}}
+    ...
+   [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
+    ListBlogPostsResponse(
+      blogs:[BlogPost(
+        id:1, title:Another blog post, content:Creating a post via createBlogPost()., createdAt:1677145864108, modifiedAt:1677145864108)])}}
+   ```
+4. Now, while keeping the server running, run the client again, attempting to delete the post with the ID `0`, which does not exist any longer.
+   
+   You should see the exception logged as the following.
+   ```bash
+   Exception in thread "main" BlogNotFoundException(reason:The blog post does not exist. ID: 0)
+   ```
+
+## What's next
+
+Here, we've implemented a service method and client method for deleting a blog post. Next, we'll finally [add](/tutorials/thrift/blog/add-docservice) Armeria's [Documentation service](/docs/server-docservice) to our service.
+
+<TutorialSteps current={6} />

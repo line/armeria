@@ -1,0 +1,115 @@
+---
+menuTitle: Add Documentation service
+order: 7
+type: step
+tags:
+  - docservice
+level: basic
+---
+
+# Adding Documentation service 
+
+Take advantage of Armeria's [Documentation service](/docs/server-docservice) which automatically creates documentation of your service methods, as well as providing means to test out the methods. Note that the Documentation service supports only unary calls for testing. To make calls on the Documentation service, you need to enable unframed requests.
+
+<TutorialSteps current={7} />
+
+## What you need
+
+You need to have all the files you created for the server-side. No client files are required for this step.
+
+- [Java code generated](/tutorials/thrift/blog/define-service#compile-the-thrift-file)
+- Main.java
+- BlogService.java
+- BlogServiceExceptionHandler.java
+
+## 1. Create a DocService instance
+
+Create a <type://DocService> instance in `Main.java`.
+
+```java filename=Main.java
+...
+import com.linecorp.armeria.server.docs.DocService;
+import example.armeria.blog.thrift.CreateBlogPostRequest;
+
+public final class Main {
+    ...
+    private static Server newServer(int port) throws Exception {
+      ...
+      final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
+              .setTitle("My first blog")
+              .setContent("Hello Armeria!");
+      final DocService docService = DocService
+              .builder()
+              .exampleRequests(List.of(new BlogService.createBlogPost_args(exampleRequest)))
+              .build();
+      return Server.builder()
+                    .http(port)
+                    .service("/thrift", tHttpService)
+                    .build();
+    }
+    ...
+}
+```
+
+## 2. Add the Documentation service
+
+Add the doc service to the server builder.
+
+```java filename=Main.java
+public final class Main {
+    ...
+    public static void main(String[] args) throws Exception {
+      ...
+      logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
+                  server.activeLocalPort());
+    }
+
+    private static Server newServer(int port) throws Exception {
+      ...
+      return Server.builder()
+                    .http(port)
+                    .service("/thrift", tHttpService)
+                    // You can access the documentation service at http://127.0.0.1:8080/docs.
+                    // See https://armeria.dev/docs/server-docservice for more information.
+                    .serviceUnder("/docs", docService)
+                    .build();
+    }
+    ...
+}
+```
+
+Now, [re-run the server](/tutorials/thrift/blog/create-server#7-test-run). The server and services are launched successfully if you see this message.
+
+```bash
+ Server has been started. Serving DocService at http://127.0.0.1:8080/docs
+```
+
+## 3. Test DocService
+
+Let's test and call our service operations using Armeria's Documentation service.
+
+1. Click the URL `http://127.0.0.1:8080/docs` from the log message or open up the URL on a web browser. If you see the Document service page, you've successfully launched the <type://DocService> and server.
+
+![](../../../../images/tutorial_blogservice_thrift_docservice_start.png)
+
+2. Click the **CreateBlogPost()** method link in the left panel. You can make calls to the method from the page.
+
+  ![](../../../../images/tutorial_blogservice_thrift_reqex.png)
+  
+  Note that in the **REQUEST BODY** section the values specified in the `exampleRequest` are automatically displayed on the page.
+  
+  ```java filename=Main.java
+  final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
+          .setTitle("Example title")
+          .setContent("Example content");
+  ```
+
+3. Click the **SUBMIT** button, and you'll see the blog post information returned in the right panel.
+
+![](../../../../images/tutorial_blogservice_thrift_return.png)
+
+## Next step
+
+Here, we've finally added the Documentation service to the server. We've come to the end of this tutorial. Next, try adding more service methods to the tutorial or have a go at developing a service of your own.
+
+<TutorialSteps current={7} />

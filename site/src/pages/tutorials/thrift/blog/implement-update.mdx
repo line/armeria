@@ -1,0 +1,199 @@
+---
+menuTitle: "Implement UPDATE"
+order: 5
+category: thrift
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing UPDATE operation
+
+Previously, we created and read blog posts. Now, let's implement and make a call to update a blog post.
+
+<TutorialSteps current={5} />
+
+## What you need
+
+You need to have the files obtained from previous steps:
+
+- [Java code generated](/tutorials/thrift/blog/define-service#compile-the-thrift-file)
+- blog.thrift(both server and client)
+- Main.java
+- BlogServiceImpl.java
+- BlogClient.java
+- BlogServiceExceptionHandler.java
+
+## 1. Implement server-side
+
+1. Add a service method and a struct in `blog.thrift` for updating a blog post.
+  ```thrift filename=blog.thrift
+  ...
+  /**
+   * A request object for updating a blog post.
+   */
+  struct UpdateBlogPostRequest {
+      1: i32 id;
+      2: string title;
+      3: string content;
+  }
+  ...
+  /**
+   * My first BlogService in Armeria!
+   */
+  service BlogService {
+  ...
+    /**
+     * Updates a blog post.
+     */
+    BlogPost updateBlogPost(1:UpdateBlogPostRequest request) throws (1:BlogNotFoundException e),
+  }
+  ```
+2. In `BlogServiceImpl.java` we've been working on, add a service method for updating a blog post.
+  ```java filename=BlogServiceImpl.java
+  import example.armeria.blog.thrift.UpdateBlogPostRequest;
+  
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+    ...
+    @Override
+    public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+            throws TException {
+        final BlogPost oldBlogPost = blogPosts.get(request.getId());
+        if (oldBlogPost == null) {
+            resultHandler.onError(
+                    new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+        } else {
+            final BlogPost newBlogPost = oldBlogPost.deepCopy()
+                                                    .setTitle(request.getTitle())
+                                                    .setContent(request.getContent())
+                                                    .setModifiedAt(Instant.now().toEpochMilli());
+            blogPosts.put(request.getId(), newBlogPost);
+            resultHandler.onComplete(newBlogPost);
+        }
+    }
+  }
+  ```
+
+## 2. Implement client-side
+
+1. Add a service method and a struct for updating a blog post in `blog.thrift` file, as we did in [1. Implement server-side](#1-implement-server-side).
+2. Add a method `updateBlogPost()` to send a request to update a blog post.
+  ```java filename=BlogClient.java
+  import example.armeria.blog.thrift.UpdateBlogPostRequest;
+
+  public class BlogClient {
+    ...
+    void updateBlogPost(int id, String newTitle, String newContent) throws Exception {
+        final UpdateBlogPostRequest request = new UpdateBlogPostRequest().setId(id).setTitle(newTitle).setContent(newContent);
+        client.updateBlogPost(request);
+    }
+  }
+  ```
+
+## 3. Test run
+
+Let's test updating a blog post. Since we know we are giving an incremental index to blog posts, we'll update the post at index 1.
+
+1. Add a method to test run the update method we just implemented. 
+  ```java filename=BlogClient.java
+  ...
+    void testRun() throws Exception {
+        createBlogPost("My first blog", "Yay");
+        createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+        getBlogPost(1);
+        updateBlogPosT(1, "New title", "New content.");
+        getBlogPost(1);
+    }
+  ...
+  ```
+2. [Re-run the server](/tutorials/thrift/blog/create-server#7-test-run), since we've modified the server-side in [1. Implement service](#1-implement-server-side).
+3. Run the client and check the blog information before updating. Confirm that the ID of the post to update is indeed `1`.
+  ```bash
+  [main] INFO  e.a.client.blog.thrift.BlogClient - [Create response] Title: Another blog post Content: Creating a post via createBlogPost().
+  ...
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
+  BlogPost(
+    id:1, 
+    title:Another blog post, 
+    content:Creating a post via createBlogPost()., 
+    createdAt:1677140636921, 
+    modifiedAt:1677140636921)}}
+  ...
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... ,  content=DefaultRpcRequest{
+    serviceType=BlogService$Iface, 
+    serviceName=example.armeria.blog.thrift.BlogService$Iface, 
+    method=getBlogPost, params=[GetBlogPostRequest(id:1)]}}
+  ...
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
+  BlogPost(
+    id:1, 
+    title:Another blog post, 
+    content:Creating a post via createBlogPost()., 
+    createdAt:1677140636921, 
+    modifiedAt:1677140636921)}}
+  ```
+4. Check that you see log for the update request followed by the response.
+   ```bash
+   ...
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=DefaultRpcRequest{
+    serviceType=BlogService$Iface, 
+    serviceName=example.armeria.blog.thrift.BlogService$Iface, 
+    method=updateBlogPost, 
+    params=[UpdateBlogPostRequest(
+      id:1, 
+      title:New title, 
+      content:New content.)]}}
+   ...
+   [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
+    BlogPost(
+      id:1, 
+      title:New title, 
+      content:New content., 
+      createdAt:1677140636921, 
+      modifiedAt:1677140636933)}}
+   ```
+5. Double-check that the updated information is stored properly by checking the response to the `getBlogPost()`.
+  ```bash
+  ...
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=DefaultRpcRequest{
+  serviceType=BlogService$Iface, 
+  serviceName=example.armeria.blog.thrift.BlogService$Iface, 
+  method=getBlogPost, 
+  params=[GetBlogPostRequest(id:1)]}}
+  ...
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
+    BlogPost(
+      id:1, 
+      title:New title, 
+      content:New content., 
+      createdAt:1677140636921, 
+      modifiedAt:1677140636933)}}
+  ...
+  ```
+
+## 4. Test error case
+
+To check that our exception handler is working, let's try updating a post we know for sure does not exist.
+
+1. Add a method to test run the update method we just implemented.
+  ```java filename=BlogClient.java
+    void testRun() throws Exception {
+        ...
+        updateBlogPost(10000, "New title", "New content."); // add this
+    }
+  ```
+2. While the server is running, run the client and see the message that you get. We threw the `BlogNotFoundException` and the exception handler returned that runtime exception for us.
+  ```bash
+  Exception in thread "main" BlogNotFoundException(reason:The blog post does not exist. ID: 10000)
+        at example.armeria.blog.thrift.BlogService$updateBlogPost_result$updateBlogPost_resultStandardScheme.read(BlogService.java:3974)
+        at example.armeria.blog.thrift.BlogService$updateBlogPost_result$updateBlogPost_resultStandardScheme.read(BlogService.java:3950)
+        at example.armeria.blog.thrift.BlogService$updateBlogPost_result.read(BlogService.java:3888)
+  ...
+  ```
+
+## What's next
+
+Here, we've implemented a service method and client method for updating a blog post. We've also added exception handling. Next, we'll implement a method for [deleting a blog post](/tutorials/thrift/blog/implement-delete).
+
+<TutorialSteps current={5} />

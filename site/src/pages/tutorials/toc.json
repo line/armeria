@@ -25,7 +25,14 @@
     "grpc/blog/implement-delete",
     "grpc/blog/add-docservice"
   ],
-  "Thrift service":{
-    "Coming soon": null
-  }
+  "Thrift service":[
+    "thrift/blog",
+    "thrift/blog/create-server",
+    "thrift/blog/create-client",
+    "thrift/blog/implement-create",
+    "thrift/blog/implement-read",
+    "thrift/blog/implement-update",
+    "thrift/blog/implement-delete",
+    "thrift/blog/add-docservice"
+  ]
 }

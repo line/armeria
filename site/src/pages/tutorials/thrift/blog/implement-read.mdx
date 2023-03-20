@@ -1,0 +1,362 @@
+---
+menuTitle: "Implement READ"
+order: 4
+type: step
+category: thrift
+tags:
+  - server
+level: basic
+---
+
+# Implementing READ operation
+
+In the earlier step, we tried creating a blog post. In this step, we'll implement a read operation and make a call to read blog posts. We'll write two service methods, one for reading a single post and another for multiple posts. And here, we'll throw a custom exception and add a `BlogServiceExceptionHandler` for handling.
+
+<TutorialSteps current={4} />
+
+## What you need
+
+You need to have:
+- [Java code generated](/tutorials/thrift/blog/define-service#compile-the-thrift-file)
+- blog.thrift(both server and client)
+- Main.java
+- BlogServiceImpl.java
+- BlogClient.java
+
+## 1. Implement server-side
+
+First, add an exception and an exception handler class for the exception to be thrown when a specified blog post ID doesn't exist.
+
+1. Add an exception in `blog.thrift` file.
+  ```thrift filename=blog.thrift
+  ...
+  /**
+   * An exception which is thrown when a blog is not found.
+   */
+  exception BlogNotFoundException {
+      1: string reason
+  }
+  ...
+  ```
+2. Add an exception handler class for the blog service.
+  ```java filename=BlogServiceExceptionHandler.java
+  package example.armeria.server.blog.thrift;
+
+  import java.util.function.BiFunction;
+
+  import com.linecorp.armeria.common.RpcResponse;
+  import com.linecorp.armeria.server.ServiceRequestContext;
+
+  import example.armeria.blog.thrift.BlogNotFoundException;
+
+  public class BlogServiceExceptionHandler implements BiFunction<ServiceRequestContext, Throwable, RpcResponse> {
+
+      @Override
+      public RpcResponse apply(ServiceRequestContext serviceRequestContext, Throwable cause) {
+          if (cause instanceof IllegalArgumentException) {
+              return RpcResponse.ofFailure(new BlogNotFoundException(cause.getMessage()));
+          }
+          return RpcResponse.ofFailure(cause);
+      }
+  }
+  ```
+3. Bind the `BlogServiceExceptionHandler` to our service.
+  ```java filename=Main.java
+  ...
+  private static Server newServer(int port) throws Exception {
+      final THttpService tHttpService =
+              THttpService.builder()
+                          .addService(new BlogServiceImpl())
+                          .exceptionHandler(new BlogServiceExceptionHandler())
+                          .build();
+      ...
+  }
+  ```
+
+Now, let's write two methods for retrieving blog posts; one for a single post and another for multiple posts.
+
+<Tabs>
+<TabPane tab="Single post" key="1">
+
+1. Add a method and a struct in `blog.thrift` file to retrieve a single post.
+  ```thrift filename=blog.thrift
+  ...
+  /**
+   * A request object for getting a blog post.
+   */
+  struct GetBlogPostRequest {
+      1: i32 id;
+  }
+  ...
+  /**
+   * My first BlogService in Armeria!
+   */
+  service BlogService {
+    ...
+    /**
+    * Gets a blog post.
+    */
+    BlogPost getBlogPost(1:GetBlogPostRequest request) throws (1:BlogNotFoundException e),
+  }
+  ```
+2. Add a service method in `BlogServiceImpl.java` to retrieve a single post.
+  ```java filename=BlogServiceImpl.java
+  ...
+  import example.armeria.blog.thrift.BlogNotFoundException;
+  import example.armeria.blog.thrift.GetBlogPostRequest;
+
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+    ...
+    @Override
+    public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+            throws TException {
+      final BlogPost blogPost = blogPosts.get(request.getId());
+      if (blogPost == null) {
+          // throwing an exception will also have the same effect
+          // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+          resultHandler.onError(
+                  new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+      } else {
+          resultHandler.onComplete(blogPost);
+      }
+    }
+  }
+  ```
+
+</TabPane>
+<TabPane tab="Multiple posts" key="2">
+
+1. Add a method and structs in `blog.thrift` file.
+  ```thrift filename=blog.thrift
+  /**
+   * A request object for fetching a list of blog posts.
+   */
+  struct ListBlogPostsRequest {
+      1: bool descending;
+  }
+
+  /**
+   * A response object containing a list of blog posts.
+   */
+  struct ListBlogPostsResponse {
+      1: list<BlogPost> blogs;
+  }
+  ...
+  /**
+   * My first BlogService in Armeria!
+   */
+  service BlogService {
+    ...
+    /**
+     * Retrieves a list of blog posts.
+     */
+    ListBlogPostsResponse listBlogPosts(1:ListBlogPostsRequest request),
+  }
+  ```
+2. Add a service method in `BlogServiceImpl.java` to retrieve multiple posts.
+  ```java filename=BlogServiceImpl.java
+  ...
+  import java.util.Collections;
+  import java.util.Comparator;
+  import java.util.List;
+  import java.util.Map.Entry;
+  import java.util.stream.Collectors;
+  
+  import example.armeria.blog.thrift.ListBlogPostsRequest;
+  import example.armeria.blog.thrift.ListBlogPostsResponse;
+
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+    ...
+    @Override
+    public void listBlogPosts(ListBlogPostsRequest request,
+                              AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
+      final List<BlogPost> blogPosts;
+      if (request.isDescending()) {
+          blogPosts = this.blogPosts.entrySet()
+                                    .stream()
+                                    .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                                    .map(Entry::getValue).collect(Collectors.toList());
+      } else {
+          blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
+      }
+      resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
+    }
+  }
+  ```
+
+</TabPane>
+</Tabs>
+
+## 2. Implement client-side
+
+This time, we'll implement a client method for each corresponding server method.
+
+<Tabs>
+<TabPane tab="Single post" key="1">
+
+1. Add a method and a struct and an exception in `blog.thrift` file, as we did in [1. Implement server-side](#1-implement-server-side).
+2. Add a method in `BlogClient.java` to retrieve a single post.
+  ```java filename=BlogClient.java
+  import example.armeria.blog.thrift.BlogNotFoundException;
+  import example.armeria.blog.thrift.GetBlogPostRequest;
+  ...
+  void getBlogPost(int id) throws Exception {
+      final GetBlogPostRequest request = 
+                  new GetBlogPostRequest().setId(id);
+      client.getBlogPost(request);
+  }
+  ```
+
+</TabPane>
+<TabPane tab="Multiple posts" key="2">
+
+1. Add a method and a struct and an exception in `blog.thrift` file, as we did in [1. Implement server-side](#1-implement-server-side).
+2. Add a method in `BlogClient.java` to retrieve a list of posts.
+  ```java filename=BlogClient.java
+  import example.armeria.blog.thrift.ListBlogPostsRequest;
+  import example.armeria.blog.thrift.ListBlogPostsResponse;
+
+  ...
+  void listBlogPost() throws Exception {
+      final ListBlogPostsRequest request = 
+                  new ListBlogPostsRequest().setDescending(false);
+      client.listBlogPosts(request);
+  }
+  ```
+
+</TabPane>
+</Tabs>
+
+## 3. Test retrieving multiple posts
+
+Let's start off with retrieving all the blog posts there are:
+
+1. Add the `listBlogPosts()` method in the test call.
+  ```java filename=BlogClient.java
+  void testRun() {
+    createBlogPost("My first blog", "Yay");
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    listBlogPosts();
+  }
+  ```
+2. [Re-run the server](/tutorials/thrift/blog/create-server#7-test-run). Your server is running if you see the following message.
+  ```bash
+  [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
+  ```
+3. Run the client.
+
+Since we haven't added any log messages, we can't tell if we've successfully retrieved blog posts or not. To check the result, we'll add in a decorator in the following step. Not only can we see the blog posts retrieved, we can obtain IDs to retrieve a post later on.
+
+## 4. Decorate the client
+
+Retrieving a single blog post requires a post ID. We haven't saved any post ID returned by the server. (Although we very much know that our tutorial service issues incremental ID.). To check IDs, we'll decorate the client with Armeria's <type://LoggingClient>. Likewise, you can decorate your service also. To decorate your service, use the [server decorator](https://armeria.dev/docs/server-decorator) or annotate your Apache Thrift class with <type://@LoggingDecorator>.
+
+<Tip>
+
+  Another option available is interceptor. See <type://ThriftClientBuilder> for information.
+
+</Tip>
+
+1. Add a decorator to the client instance.
+  ```java filename=BlogClient.java
+  import com.linecorp.armeria.client.logging.LoggingRpcClient;
+
+  public class BlogClient {
+    public static void main(String[] args) throws Exception {
+      ...
+      blogService = ThriftClients.builder("http://127.0.0.1:8080")
+                          .path("/thrift")
+                          .rpcDecorator(LoggingRpcClient.newDecorator()) // add this
+                          .build(BlogService.Iface.class);
+      ...
+    }
+  }
+  ```
+2. Set up log messages:
+    - Add a dependency in the build.gradle file.
+      ```groovy filename=build.gradle
+      dependencies {
+        implementation 'ch.qos.logback:logback-classic:1.2.10'
+      }
+      ```
+    - Add the logback.xml file in the {project_root}/src/main/resources folder.
+      ```xml filename=logback.xml
+      <?xml version="1.0" encoding="UTF-8"?>
+      <configuration>
+
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+          <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+          </encoder>
+        </appender>
+
+        <root level="debug">
+          <appender-ref ref="STDOUT" />
+        </root>
+      </configuration>
+      ```
+3. Restart the server and run the client. If we succeed, we'll see an output like the following.
+  ```bash
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - [creqId=b0bfb91d, chanId=4b890fb0, laddr=127.0.0.1:51644, raddr=127.0.0.1:8080][http://127.0.0.1:8080/thrift#POST] Response: {startTime=2023-02-22T03:03:30.740Z(1677035010740687), length=196B, duration=1143µs(1143917ns), totalDuration=6576µs(6576292ns), headers=[:status=200, content-type=application/x-thrift; protocol=TBINARY, server=Armeria/1.22.0, date=Wed, 22 Feb 2023 03:03:30 GMT, content-length=196], content=CompletableRpcResponse{ListBlogPostsResponse(blogs:
+  [BlogPost(
+      id:0, 
+      title:My first blog, 
+      content:Yay, 
+      createdAt:1677035010712, 
+      modifiedAt:1677035010712), 
+  BlogPost(
+      id:1, 
+      title:Another blog post, 
+      content:Creating a post via createBlogPost()., 
+      createdAt:1677035010733, 
+      modifiedAt:1677035010733)])}}
+  ```
+Now that we have the ID information, we can now retrieve a single post.
+
+## 5. Test retrieving a single post
+
+Let's retrieve the second blog post. Apparently, the ID to use is `1`.
+
+1. Call the `getBlogPost()` method.
+  ```java filename=BlogClient.java
+  void testRun() {
+    createBlogPost("My first blog", "Yay");
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    listBlogPosts();  // feel free to comment this out or leave it
+    getBlogPost(1);   // add this
+  }
+  ```
+2. If you've stopped your server, run it again and then the client.
+  Because we haven't changed any code for creating blog posts, you'll be able to see the response for the `getBlogPost()` as below, whether you are re-running the server or not.
+  We have succeeded in reading a single blog post.
+  ```bash
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - [creqId=e0dcd594, chanId=5601d592, laddr=127.0.0.1:52486, raddr=127.0.0.1:8080][http://127.0.0.1:8080/thrift#POST] Response: {startTime=2023-02-22T04:52:02.801Z(1677041522801509), length=125B, duration=1842µs(1842458ns), totalDuration=5748µs(5748416ns), headers=[:status=200, content-type=application/x-thrift; protocol=TBINARY, server=Armeria/1.22.0, date=Wed, 22 Feb 2023 04:52:02 GMT, content-length=125], content=CompletableRpcResponse{
+    BlogPost(
+      id:1, 
+      title:Another blog post, 
+      content:Creating a post via createBlogPost()., 
+      createdAt:1677041522789, 
+      modifiedAt:1677041522789)}}
+  ```
+3. Check what happens if you retrieve a post that does not exist. Change the argument to `100` and run the client again.
+  ```java filename=BlogClient.java
+  void testRun() {
+    createBlogPost("My first blog", "Yay");
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    getBlogPost(100); // Set the argument to 100
+  }
+  ```
+  We can see that our `getBlogPost()` method returns the `BlogNotFoundException` error as a runtime exception.
+  ```bash
+  Exception in thread "main" BlogNotFoundException(reason:The blog post does not exist. ID: 100)
+          at example.armeria.blog.thrift.BlogService$getBlogPost_result$getBlogPost_resultStandardScheme.read(BlogService.java:2157)
+          at example.armeria.blog.thrift.BlogService$getBlogPost_result$getBlogPost_resultStandardScheme.read(BlogService.java:2133)
+          at example.armeria.blog.thrift.BlogService$getBlogPost_result.read(BlogService.java:2071)
+          ...
+  ```
+
+## What's next
+
+Here, we've implemented service methods and client methods to retrieve blog posts. We have also added a decorator. See [Decorating a client](/docs/client-decorator/) for more information. Next, we'll implement a method for [updating a blog post](/tutorials/thrift/blog/implement-update).
+
+<TutorialSteps current={4} />
