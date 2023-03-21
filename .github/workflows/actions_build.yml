@@ -93,7 +93,7 @@ jobs:
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
-      - if: ${{ matrix.snapshot && github.ref_name == 'master' }}
+      - if: ${{ matrix.snapshot && github.ref_name == 'main' }}
         name: Publish snapshots
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=1 publish
