@@ -172,4 +172,11 @@ public final class ServiceRequestContextCaptor {
     public ServiceRequestContext poll(long timeout, TimeUnit unit) throws InterruptedException {
         return serviceContexts.poll(timeout, unit);
     }
+
+    /**
+     * Returns whether the {@link #size()} of this data is 0.
+     */
+    public boolean isEmpty() {
+        return size() == 0;
+    }
 }
