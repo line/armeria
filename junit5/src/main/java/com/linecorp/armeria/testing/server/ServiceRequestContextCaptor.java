@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -171,5 +172,12 @@ public final class ServiceRequestContextCaptor {
     @Nullable
     public ServiceRequestContext poll(long timeout, TimeUnit unit) throws InterruptedException {
         return serviceContexts.poll(timeout, unit);
+    }
+
+    /**
+     * Returns whether the {@link #size()} of this data is 0.
+     */
+    public boolean isEmpty() {
+        return size() == 0;
     }
 }
