@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSumma
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -30,6 +29,7 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -132,7 +132,6 @@ public final class RequestMetricSupport {
             if (log.requestCause() instanceof WriteTimeoutException) {
                 metrics.writeTimeouts().increment();
             }
-            return;
         }
 
         if (log.responseCause() instanceof ResponseTimeoutException) {
@@ -141,8 +140,9 @@ public final class RequestMetricSupport {
 
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
-            metrics.actualRequests().increment(childrenSize);
-            metrics.retries().record(childrenSize);
+            updateRetryingClientMetrics(ctx, log,
+                                        new DefaultClientRequestMetrics(registry, idPrefix, true),
+                                        childrenSize, successFunction);
         }
     }
 
@@ -160,6 +160,27 @@ public final class RequestMetricSupport {
         } else {
             metrics.failure().increment();
         }
+    }
+
+    private static void updateRetryingClientMetrics(
+            RequestContext ctx, RequestLog log,
+            ClientRequestMetrics metrics, int childrenSize,
+            SuccessFunction successFunction) {
+        int successAttempts = 0;
+        int failureAttempts = 0;
+
+        metrics.actualRequests().increment(childrenSize);
+
+        for(RequestLogAccess child : log.children()) {
+            if (successFunction.isSuccess(ctx, child.ensureComplete())) {
+                successAttempts++;
+            } else {
+                failureAttempts++;
+            }
+        }
+
+        metrics.successAttempts().record(successAttempts);
+        metrics.failureAttempts().record(failureAttempts);
     }
 
     private RequestMetricSupport() {}
@@ -196,7 +217,9 @@ public final class RequestMetricSupport {
 
         Counter responseTimeouts();
 
-        DistributionSummary retries();
+        DistributionSummary successAttempts();
+
+        DistributionSummary failureAttempts();
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -265,15 +288,6 @@ public final class RequestMetricSupport {
 
     private static class DefaultClientRequestMetrics
             extends AbstractRequestMetrics implements ClientRequestMetrics {
-
-        private static final AtomicReferenceFieldUpdater<DefaultClientRequestMetrics, Counter>
-                actualRequestsUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                DefaultClientRequestMetrics.class, Counter.class, "actualRequests");
-
-        private static final AtomicReferenceFieldUpdater<DefaultClientRequestMetrics, DistributionSummary>
-                retriesUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                DefaultClientRequestMetrics.class, DistributionSummary.class, "retries");
-
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
 
@@ -289,12 +303,24 @@ public final class RequestMetricSupport {
         private volatile Counter actualRequests;
 
         @Nullable
-        private volatile DistributionSummary retries;
+        private volatile DistributionSummary successAttempts;
+
+        @Nullable
+        private volatile DistributionSummary failureAttempts;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
+            this(parent, idPrefix, false);
+        }
+        DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix, Boolean retryable) {
             super(parent, idPrefix);
             this.parent = parent;
             this.idPrefix = idPrefix;
+
+            if(retryable) {
+                actualRequests = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
+                successAttempts = parent.summary(idPrefix.name("successAttempts"), idPrefix.tags("result", "success"));
+                failureAttempts = parent.summary(idPrefix.name("failureAttempts"), idPrefix.tags("result", "failure"));
+            }
 
             connectionAcquisitionDuration = newTimer(
                     parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags());
@@ -312,16 +338,7 @@ public final class RequestMetricSupport {
 
         @Override
         public Counter actualRequests() {
-            final Counter actualRequests = this.actualRequests;
-            if (actualRequests != null) {
-                return actualRequests;
-            }
-
-            final Counter counter = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
-            if (actualRequestsUpdater.compareAndSet(this, null, counter)) {
-                return counter;
-            }
-            return this.actualRequests;
+            return actualRequests;
         }
 
         @Override
@@ -355,19 +372,13 @@ public final class RequestMetricSupport {
         }
 
         @Override
-        public DistributionSummary retries() {
-            final DistributionSummary retries = this.retries;
-            if (retries != null) {
-                return retries;
-            }
+        public DistributionSummary successAttempts() {
+            return successAttempts;
+        }
 
-            final DistributionSummary distributionSummary = parent.summary(
-                    idPrefix.name("retries"), idPrefix.tags());
-            if (retriesUpdater.compareAndSet(this, null, distributionSummary)) {
-                return distributionSummary;
-            }
-
-            return this.retries;
+        @Override
+        public DistributionSummary failureAttempts() {
+            return failureAttempts;
         }
     }
 
