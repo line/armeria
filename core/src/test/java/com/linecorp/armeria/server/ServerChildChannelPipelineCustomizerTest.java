@@ -58,7 +58,7 @@ class ServerChildChannelPipelineCustomizerTest {
             sb.https(0);
             sb.tlsSelfSigned();
             sb.childChannelPipelineCustomizer(
-                    pipeline ->  pipeline.addLast(new ChannelTrafficShapingHandler(1024, 0)));
+                    pipeline ->  pipeline.addFirst(new ChannelTrafficShapingHandler(1024, 0)));
             sb.service("/", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
