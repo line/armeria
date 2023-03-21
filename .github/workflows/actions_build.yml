@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
