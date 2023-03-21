@@ -189,7 +189,8 @@ final class DefaultServerConfig implements ServerConfig {
                 new Object2ObjectArrayMap<>(requireNonNull(channelOptions, "channelOptions")));
         this.childChannelOptions = Collections.unmodifiableMap(
                 new Object2ObjectArrayMap<>(requireNonNull(childChannelOptions, "childChannelOptions")));
-        this.childChannelPipelineCustomizer = requireNonNull(childChannelPipelineCustomizer, "channelPipelineCustomizer");
+        this.childChannelPipelineCustomizer =
+                requireNonNull(childChannelPipelineCustomizer, "channelPipelineCustomizer");
         this.clientAddressSources = ImmutableList.copyOf(
                 requireNonNull(clientAddressSources, "clientAddressSources"));
         this.clientAddressTrustedProxyFilter =
