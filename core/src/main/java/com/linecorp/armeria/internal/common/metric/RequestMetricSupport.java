@@ -171,7 +171,7 @@ public final class RequestMetricSupport {
 
         metrics.actualRequests().increment(childrenSize);
 
-        for(RequestLogAccess child : log.children()) {
+        for (RequestLogAccess child : log.children()) {
             if (successFunction.isSuccess(ctx, child.ensureComplete())) {
                 successAttempts++;
             } else {
@@ -311,15 +311,18 @@ public final class RequestMetricSupport {
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             this(parent, idPrefix, false);
         }
+
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix, Boolean retryable) {
             super(parent, idPrefix);
             this.parent = parent;
             this.idPrefix = idPrefix;
 
-            if(retryable) {
+            if (retryable) {
                 actualRequests = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
-                successAttempts = parent.summary(idPrefix.name("successAttempts"), idPrefix.tags("result", "success"));
-                failureAttempts = parent.summary(idPrefix.name("failureAttempts"), idPrefix.tags("result", "failure"));
+                successAttempts = parent.summary(idPrefix.name("successAttempts"),
+                                                 idPrefix.tags("result", "success"));
+                failureAttempts = parent.summary(idPrefix.name("failureAttempts"),
+                                                 idPrefix.tags("result", "failure"));
             }
 
             connectionAcquisitionDuration = newTimer(
