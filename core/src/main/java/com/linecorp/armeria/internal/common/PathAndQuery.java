@@ -57,7 +57,7 @@ public final class PathAndQuery {
     /**
      * The lookup table for the characters that whose percent encoding must be preserved
      * when used in a query string because whether they are percent-encoded or not affects
-     * their semantics. For example, 'A%3dB=1' should NOT be encoded into 'A=B=1' because
+     * their semantics. For example, 'A%3dB=1' should NOT be normalized into 'A=B=1' because
      * 'A=B=1` means 'A' is 'B=1' but 'A%3dB=1' means 'A=B' is '1'.
      */
     private static final BitSet MUST_PRESERVE_ENCODING_IN_QUERY = new BitSet();
