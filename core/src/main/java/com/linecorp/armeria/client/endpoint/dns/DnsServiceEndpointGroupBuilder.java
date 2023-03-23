@@ -43,9 +43,10 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
      * Returns a newly created {@link DnsServiceEndpointGroup}.
      */
     public DnsServiceEndpointGroup build() {
+        final EventLoop eventLoop = getOrAcquireEventLoop();
         return new DnsServiceEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
-                                           selectionTimeoutMillis(), buildResolver(),
-                                           eventLoop(), backoff(), minTtl(), maxTtl(),
+                                           selectionTimeoutMillis(), buildResolver(eventLoop),
+                                           eventLoop, backoff(), minTtl(), maxTtl(),
                                            hostname(), dnsQueryListeners());
     }
 
