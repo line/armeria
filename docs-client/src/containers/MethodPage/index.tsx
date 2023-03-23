@@ -18,6 +18,9 @@ import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
+import Button from '@material-ui/core/Button';
+import { Launch } from '@material-ui/icons';
+import Grid from '@material-ui/core/Grid';
 import {
   Method,
   Service,
@@ -129,6 +132,8 @@ type Props = OwnProps &
   }>;
 
 const MethodPage: React.FunctionComponent<Props> = (props) => {
+  const [debugFormIsOpen, setDebugFormIsOpen] = React.useState(false);
+
   const params = props.match.params;
   const service = props.specification.getServiceByName(params.serviceName);
   if (!service) {
@@ -159,9 +164,22 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
 
   return (
     <>
-      <Typography variant="h5" paragraph>
-        <code>{`${simpleName(service.name)}.${method.name}()`}</code>
-      </Typography>
+      <Grid item container justifyContent="space-between">
+        <Typography variant="h5" paragraph>
+          <code>{`${simpleName(service.name)}.${method.name}()`}</code>
+        </Typography>
+        {debugTransport && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setDebugFormIsOpen(true)}
+            endIcon={<Launch />}
+            style={{ maxHeight: '3em' }}
+          >
+            Debug
+          </Button>
+        )}
+      </Grid>
       {method.descriptionInfo && (
         <Section>
           <Description descriptionInfo={method.descriptionInfo} />
@@ -203,6 +221,8 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
               : false
           }
           useRequestBody={needsToUseRequestBody(props.match.params.httpMethod)}
+          debugFormIsOpen={debugFormIsOpen}
+          setDebugFormIsOpen={setDebugFormIsOpen}
         />
       )}
     </>
