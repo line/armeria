@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,8 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -25,7 +26,7 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 
-interface HttpSession {
+public interface HttpSession {
 
     /**
      * 2^29 - We could have used 2^30 but this should be large enough.
@@ -71,7 +72,7 @@ interface HttpSession {
         }
 
         @Override
-        public boolean isActive() {
+        public boolean isAcquirable() {
             return false;
         }
 
@@ -95,6 +96,28 @@ interface HttpSession {
     @Nullable
     SessionProtocol protocol();
 
+    /**
+     * Returns whether this {@link HttpSession} is healthy. {@code true} if a new request can acquire this
+     * session from {@code com.linecorp.armeria.client.HttpChannelPool}.
+     */
+    boolean isAcquirable();
+
+    /**
+     * Deactivates this {@link HttpSession} to prevent new requests from acquiring this {@link HttpSession}.
+     * This method may be invoked when:
+     * <ul>
+     *     <li>A connection is closed.</li>
+     *     <li>"Connection: close" header is sent or received.</li>
+     *     <li>A GOAWAY frame is sent or received.</li>
+     * </ul>
+     */
+    void deactivate();
+
+    /**
+     * Returns {@code true} if a new request can be sent with this {@link HttpSession}.
+     * Note that {@link #canSendRequest()} may return {@code true} even if {@link #isAcquirable()} is
+     * {@code false} when the session is in the initial phase of a graceful shutdown.
+     */
     boolean canSendRequest();
 
     InboundTrafficController inboundTrafficController();
@@ -107,10 +130,6 @@ interface HttpSession {
                 HttpRequest req, DecodedHttpResponse res);
 
     void retryWithH1C();
-
-    boolean isActive();
-
-    void deactivate();
 
     int incrementAndGetNumRequestsSent();
 }

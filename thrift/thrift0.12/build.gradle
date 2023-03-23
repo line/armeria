@@ -13,6 +13,9 @@ dependencies {
     }
     testImplementation libs.thrift012
 
+    // thrift api depends on httpclient4
+    testImplementation libs.apache.httpclient4
+
     // Jetty, for testing TServlet interoperability.
     testImplementation libs.jetty94.webapp
     testImplementation libs.jetty94.http2.server

@@ -211,7 +211,7 @@ class ConcatPublisherStreamMessageTest {
     @Test
     void defaultStreamMessageShouldAbortElements() {
         final StreamMessage<Integer> inner = StreamMessage.of(1);
-        final DefaultStreamMessage<StreamMessage<Integer>> defaultStreamMessage = new DefaultStreamMessage<>();
+        final StreamWriter<StreamMessage<Integer>> defaultStreamMessage = StreamMessage.streaming();
         defaultStreamMessage.write(inner);
         defaultStreamMessage.close();
 
