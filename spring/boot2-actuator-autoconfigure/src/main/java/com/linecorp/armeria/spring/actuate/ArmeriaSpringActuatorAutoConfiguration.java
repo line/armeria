@@ -186,7 +186,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         return sb -> {
             if (serverProperties.getSsl() != null && serverProperties.getSsl().getKeyStore() != null) {
                 logger.warn("Armeria doesn't support management.server.ssl using different keystore, " +
-                            "it will use the keystore from armeria.ssl instead");
+                            "it will use the keystore from armeria.ssl instead.");
             }
             final Integer managementPort = obtainManagementServerPort(sb, beanFactory, serverProperties);
             if (managementPort != null) {
