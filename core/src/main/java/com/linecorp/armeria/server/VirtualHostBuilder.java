@@ -1046,6 +1046,11 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @VisibleForTesting
+    Path multipartUploadsLocation() {
+        return multipartUploadsLocation;
+    }
+
     /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
@@ -1307,11 +1312,6 @@ public final class VirtualHostBuilder implements TlsSetters {
 
     boolean defaultVirtualHost() {
         return defaultVirtualHost;
-    }
-
-    @VisibleForTesting
-    Path multipartUploadsLocation() {
-        return multipartUploadsLocation;
     }
 
     @Override
