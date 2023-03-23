@@ -39,7 +39,6 @@ interface Props {
 
 const EndpointPath: React.FunctionComponent<Props> = (props) => (
   <>
-    <Typography variant="body2" paragraph />
     <Button color="secondary" onClick={props.onEditEndpointPathClick}>
       Endpoint path
     </Button>

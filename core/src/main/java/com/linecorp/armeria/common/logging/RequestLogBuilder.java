@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.Channel;
 
@@ -116,6 +117,14 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * name or HTTP method name. This property is often used as a meter tag or distributed trace's span name.
      */
     void name(String name);
+
+    /**
+     * Sets the remote user of the request if it's authenticated. The value will be printed out if the
+     * {@linkplain AccessLogWriter access log} has {@code %u} format.
+     *
+     * @see <a href="https://httpd.apache.org/docs/current/mod/mod_log_config.html">Custom Log Formats</a>
+     */
+    void authenticatedUser(String authenticatedUser);
 
     /**
      * Increases the {@link RequestLog#requestLength()} by {@code deltaBytes}.

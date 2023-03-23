@@ -582,7 +582,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates graceful connection shutdown with a given drain duration in microseconds and returns
-     * {@link CompletableFuture} that completes when the channel is closed.
+     * {@link CompletableFuture} that completes when the connection associated with this context is closed.
      *
      * <p>
      * At the connection drain server signals the clients that the connection shutdown is imminent
@@ -610,7 +610,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates graceful connection shutdown with a given drain duration and returns {@link CompletableFuture}
-     * that completes when the channel is closed.
+     * that completes when the connection associated with this context is closed.
      *
      * @see #initiateConnectionShutdown()
      * @see #initiateConnectionShutdown(long)
@@ -623,12 +623,13 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates connection shutdown without overriding current configuration of the drain duration and returns
-     * {@link CompletableFuture} that completes when the channel is closed.
+     * {@link CompletableFuture} that completes when the connection associated with this context is closed.
      *
      * @see #initiateConnectionShutdown(long)
      * @see #initiateConnectionShutdown(Duration)
      */
     @UnstableApi
+    @Override
     CompletableFuture<Void> initiateConnectionShutdown();
 
     /**

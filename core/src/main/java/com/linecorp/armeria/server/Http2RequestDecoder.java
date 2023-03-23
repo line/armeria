@@ -69,7 +69,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final KeepAliveHandler keepAliveHandler;
     private final Http2GoAwayHandler goAwayHandler;
-    private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
+    private final IntObjectMap<@Nullable DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, String scheme, KeepAliveHandler keepAliveHandler) {
