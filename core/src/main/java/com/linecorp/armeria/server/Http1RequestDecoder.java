@@ -161,7 +161,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // immutability.
                     final boolean hasInvalidExpectHeader = !handle100Continue(id, nettyReq);
 
-
                     final String path = HttpHeaderUtil
                             .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
                     final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
@@ -209,7 +208,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     // Close the request early when it is certain there will be neither content nor trailers.
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers, pathAndQuery);
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
+                                                                        headers, pathAndQuery);
                     if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.
