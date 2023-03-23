@@ -19,12 +19,8 @@ package com.linecorp.armeria.internal.server.thrift;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 import org.apache.thrift.TBase;
 import org.apache.thrift.TFieldIdEnum;
@@ -39,47 +35,29 @@ final class ThriftMetadataAccess {
     private static final Logger logger = LoggerFactory.getLogger(ThriftMetadataAccess.class);
 
     private static boolean preInitializeThriftClass;
-    private static final Pattern preInitializeTargetPattern =
-            Pattern.compile("^armeria-thrift0\\.(\\d+)$");
 
-    private static final String filename =
-            "com/linecorp/armeria/internal/common/thrift-options.properties";
+    private static final String filename = "../../common/thrift/thrift-options.properties";
 
     static {
         try {
-            final Enumeration<URL> versionPropertiesUrls =
-                    ThriftMetadataAccess.class.getClassLoader().getResources(filename);
-            final List<Properties> propertiesList = new ArrayList<>();
-            while (versionPropertiesUrls.hasMoreElements()) {
-                final URL url = versionPropertiesUrls.nextElement();
+            final URL url = ThriftMetadataAccess.class.getResource(filename);
+            if (url != null) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
                     final Properties props = new Properties();
                     props.load(reader);
-                    propertiesList.add(props);
+                    preInitializeThriftClass = needsPreInitialization(props);
                 }
+            } else {
+                preInitializeThriftClass = true;
             }
-            preInitializeThriftClass = needsPreInitialization(propertiesList);
         } catch (Exception e) {
             logger.debug("Unexpected exception while extracting options: ", e);
+            preInitializeThriftClass = true;
         }
     }
 
     @VisibleForTesting
-    static boolean needsPreInitialization(List<Properties> propertiesList) {
-        if (propertiesList.isEmpty()) {
-            // versions.properties was not found
-            logger.debug("Unable to find a '{}' file. You may want to consider " +
-                         "checking if the file has been omitted from the classpath to avoid " +
-                         "unexpected issues.", filename);
-            return true;
-        }
-        if (propertiesList.size() > 1) {
-            logger.debug("More than one '{}' file has been found. You may want to consider " +
-                         "checking if more than one 'armeria-thrift' module has been added " +
-                         "to the classpath", filename);
-            return true;
-        }
-        final Properties properties = propertiesList.get(0);
+    static boolean needsPreInitialization(Properties properties) {
         return "true".equals(properties.getProperty("structPreinitRequired"));
     }
 

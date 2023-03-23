@@ -18,40 +18,22 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Collections;
 import java.util.Properties;
 
-import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
 
 class ThriftMetadataAccessTest {
 
     @Test
-    void wrongCountCase() {
-        // empty properties
-        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.emptyList())).isTrue();
-
-        // more than one properties
-        assertThat(ThriftMetadataAccess.needsPreInitialization(
-                Lists.list(new Properties(), new Properties()))).isTrue();
-    }
-
-    @Test
     void basicCase() {
         final Properties props = new Properties();
         props.put("structPreinitRequired", "true");
-        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singletonList(props))).isTrue();
+        assertThat(ThriftMetadataAccess.needsPreInitialization(props)).isTrue();
     }
 
     @Test
     void failingCase() {
         final Properties props = new Properties();
-        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singletonList(props))).isFalse();
-
-        props.put("structPreinitRequired", "false");
-        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singletonList(props))).isFalse();
-
-        props.put("structPreinitRequired", "asdf");
-        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singletonList(props))).isFalse();
+        assertThat(ThriftMetadataAccess.needsPreInitialization(props)).isFalse();
     }
 }
