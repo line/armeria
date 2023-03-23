@@ -25,6 +25,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -88,6 +90,8 @@ class HeadMethodLeakTest {
         bufs = new LinkedBlockingDeque<>();
     }
 
+    private static final Logger logger = LoggerFactory.getLogger(HeadMethodLeakTest.class);
+
     @EnumSource(ExchangeType.class)
     @ParameterizedTest
     void shouldReleaseDataWhenHeadMethodIsRequested(ExchangeType exchangeType) throws InterruptedException {
@@ -103,9 +107,16 @@ class HeadMethodLeakTest {
             assertThat(response.content().isEmpty()).isTrue();
         }
 
+        for (int i = 0; i < 10; i++) {
+            final ServiceRequestContext sctx = server.requestContextCaptor().poll();
+            // Waits for all responses to be cancelled.
+            sctx.log().whenComplete().join();
+        }
+
         // Make sure all bufs were released by HttpResponseSubscriber.
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
         }
+        logger.info("finished : {}", bufs);
     }
 }
