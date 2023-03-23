@@ -556,4 +556,16 @@ class PathAndQueryTest {
         assertThat(res2).isNotNull();
         assertThat(res2.path()).isEqualTo("/#%2F:%5B%5D@!$&'()*+,;=?");
     }
+
+    @Test
+    void toStringAppendsQueryCorrectly() {
+        PathAndQuery res = parse("/");
+        assertThat(res.toString()).isEqualTo("/");
+
+        res = parse("/?");
+        assertThat(res.toString()).isEqualTo("/?");
+
+        res = parse("/?a=b");
+        assertThat(res.toString()).isEqualTo("/?a=b");
+    }
 }

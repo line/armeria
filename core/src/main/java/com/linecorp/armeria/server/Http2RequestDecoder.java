@@ -38,6 +38,7 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -125,6 +126,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
+            final PathAndQuery pathAndQuery = PathAndQuery.parse(nettyHeaders.path().toString());
+            if (pathAndQuery != null) {
+                nettyHeaders.path(pathAndQuery.toString());
+            }
+
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
                     ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream, scheme, cfg);
@@ -158,7 +164,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
+            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers, pathAndQuery);
             if (routingCtx.status().routeMustExist()) {
                 try {
                     // Find the service that matches the path.
