@@ -197,7 +197,7 @@ final class HttpHeaderUtil {
             throw newInvalidPathException(path);
         }
 
-        if (newPath == null) {
+        if (newPath == null || newPath.isEmpty()) {
             warnNullReturningAbsoluteUriTransformer();
             throw newInvalidPathException(path);
         }
