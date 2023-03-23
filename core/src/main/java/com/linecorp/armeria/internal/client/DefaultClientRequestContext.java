@@ -82,6 +82,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 
@@ -859,5 +860,36 @@ public final class DefaultClientRequestContext
 
             return buf.toString();
         }
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+
+        setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        log().whenRequestComplete().thenAccept(log -> {
+            final Channel ch = log.channel();
+            if (ch == null) {
+                final Throwable ex = log.requestCause();
+                if (ex == null) {
+                    completableFuture.completeExceptionally(new IllegalStateException(
+                            "A request has failed before a connection is established."));
+                } else {
+                    completableFuture.completeExceptionally(ex);
+                }
+            } else {
+                ch.closeFuture().addListener(f -> {
+                    if (f.cause() == null) {
+                        completableFuture.complete(null);
+                    } else {
+                        completableFuture.completeExceptionally(f.cause());
+                    }
+                });
+                // To deactivate the channel when initiateShutdown is called after the RequestHeaders is sent.
+                // The next request will trigger shutdown.
+                HttpSession.get(ch).deactivate();
+            }
+        });
+        return completableFuture;
     }
 }

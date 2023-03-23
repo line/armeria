@@ -80,6 +80,15 @@ class AbsoluteRequestUriTest {
         }
     };
 
+    @RegisterExtension
+    static final ServerExtension serverWithEmptyStringReturningTransformer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.absoluteUriTransformer(absoluteUri -> "");
+            sb.service("/proxy", service);
+        }
+    };
+
     @Test
     void absoluteUriTransformation() throws Exception {
         assertThat(sendRequest(server))
@@ -97,7 +106,8 @@ class AbsoluteRequestUriTest {
     static List<Object[]> badServers() {
         return ImmutableList.of(
                 new Object[] { "exceptionThrowing", serverWithExceptionThrowingTransformer },
-                new Object[] { "nullReturning", serverWithNullReturningTransformer });
+                new Object[] { "nullReturning", serverWithNullReturningTransformer },
+                new Object[] { "emptyStringReturning", serverWithEmptyStringReturningTransformer });
     }
 
     private static String sendRequest(ServerExtension server) throws IOException {

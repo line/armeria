@@ -566,6 +566,20 @@ public interface ClientRequestContext extends RequestContext {
     void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator);
 
     /**
+     * Initiates connection shutdown and returns {@link CompletableFuture} that completes when the connection
+     * associated with this context is closed.
+     *
+     * <p>
+     * If not sent already, {@code "connection: close"} header is sent with the request.
+     * If the underlying connection's protocol is HTTP/1.1, the connection will be closed as soon as all pending
+     * requests are processed. Otherwise, a GOAWAY frame will be sent to initiate graceful connection shutdown.
+     * </p>
+     */
+    @UnstableApi
+    @Override
+    CompletableFuture<Void> initiateConnectionShutdown();
+
+    /**
      * {@inheritDoc}
      *
      * <p>Note that an {@link HttpRequest} will be aggregated before being written if
