@@ -160,10 +160,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // immutability.
                     final boolean hasInvalidExpectHeader = !handle100Continue(id, nettyReq);
 
+
+                    final String path = HttpHeaderUtil
+                            .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
+                    nettyReq.setUri(path);
+
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(),
-                                                      cfg.absoluteUriTransformer());
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
 
                     // Do not accept a CONNECT request.
                     if (headers.method() == HttpMethod.CONNECT) {

@@ -46,7 +46,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -252,8 +251,6 @@ public final class ArmeriaHttpUtil {
             Flags.headerValueCacheSpec() != null ? buildCache(Flags.headerValueCacheSpec()) : null;
     private static final Set<AsciiString> CACHED_HEADERS = Flags.cachedHeaders().stream().map(AsciiString::of)
                                                                 .collect(toImmutableSet());
-
-    private static boolean warnedIllegalAbsoluteUriTransformer;
 
     private static LoadingCache<AsciiString, String> buildCache(String spec) {
         return Caffeine.from(spec).build(AsciiString::toString);
@@ -617,16 +614,13 @@ public final class ArmeriaHttpUtil {
      */
     public static RequestHeaders toArmeria(
             ChannelHandlerContext ctx, HttpRequest in,
-            ServerConfig cfg, String scheme,
-            Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
+            ServerConfig cfg, String scheme) throws URISyntaxException {
 
-        final String path = maybeTransformAbsoluteUri(in.uri(), absoluteUriTransformer);
-        final String encodedPath = maybeEncodePath(path);
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final RequestHeadersBuilder out = RequestHeaders.builder();
         out.sizeHint(inHeaders.size());
         out.method(HttpMethod.valueOf(in.method().name()))
-           .path(encodedPath)
+           .path(in.uri())
            .scheme(scheme);
 
         // Add the HTTP headers which have not been consumed above
@@ -722,60 +716,6 @@ public final class ArmeriaHttpUtil {
             encoded += '?' + pathAndQuery.query();
         }
         return encoded;
-    }
-
-    private static String maybeTransformAbsoluteUri(
-            String path, Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
-
-        if (isValidHttp2Path(path)) {
-            return path;
-        }
-
-        if (!isAbsoluteUri(path)) {
-            throw newInvalidPathException(path);
-        }
-
-        final String newPath;
-        try {
-            newPath = absoluteUriTransformer.apply(path);
-        } catch (Exception e) {
-            warnExceptionThrowingAbsoluteUriTransformer(e);
-            throw newInvalidPathException(path);
-        }
-
-        if (newPath == null) {
-            warnNullReturningAbsoluteUriTransformer();
-            throw newInvalidPathException(path);
-        }
-
-        if (!isValidHttp2Path(newPath)) {
-            throw newInvalidPathException(path);
-        }
-
-        return newPath;
-    }
-
-    private static void warnExceptionThrowingAbsoluteUriTransformer(Exception e) {
-        if (!warnedIllegalAbsoluteUriTransformer) {
-            warnedIllegalAbsoluteUriTransformer = true;
-            logger.warn("absoluteUriTransformer.apply() raised an exception; returning 400 Bad Request", e);
-        }
-    }
-
-    private static void warnNullReturningAbsoluteUriTransformer() {
-        if (!warnedIllegalAbsoluteUriTransformer) {
-            warnedIllegalAbsoluteUriTransformer = true;
-            logger.warn("absoluteUriTransformer.apply() returned null; returning 400 Bad Request");
-        }
-    }
-
-    private static URISyntaxException newInvalidPathException(String path) {
-        return new URISyntaxException(path, "neither origin form nor asterisk form");
-    }
-
-    private static boolean isValidHttp2Path(String path) {
-        // We support only origin form and asterisk form.
-        return path.charAt(0) == '/' || "*".equals(path);
     }
 
     private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
