@@ -40,6 +40,7 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
 
 import io.netty.buffer.ByteBuf;
@@ -163,7 +164,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final String path = HttpHeaderUtil
                             .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
-                    nettyReq.setUri(path);
+                    final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
+                    if (pathAndQuery == null) {
+                        nettyReq.setUri(path);
+                    } else {
+                        nettyReq.setUri(pathAndQuery.toString());
+                    }
 
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
@@ -203,7 +209,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     // Close the request early when it is certain there will be neither content nor trailers.
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers, pathAndQuery);
                     if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.
