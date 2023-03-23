@@ -450,6 +450,16 @@ public interface RequestContext extends Unwrappable {
     ExchangeType exchangeType();
 
     /**
+     * Initiates connection shutdown and returns {@link CompletableFuture} that completes when the connection
+     * associated with this context is closed.
+     *
+     * @see ClientRequestContext#initiateConnectionShutdown()
+     * @see ServiceRequestContext#initiateConnectionShutdown()
+     */
+    @UnstableApi
+    CompletableFuture<Void> initiateConnectionShutdown();
+
+    /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
