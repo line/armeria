@@ -115,6 +115,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
         if (failIfStreamOrSessionClosed()) {
             PooledObjects.close(o);
+            setDone(true);
             return;
         }
 
@@ -157,7 +158,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         state = State.NEEDS_DATA_OR_TRAILERS;
                     }
                     if (endOfStream) {
-                        setDone(false);
+                        setDone(true);
                     }
                     final ServerConfig config = reqCtx.config().server().config();
                     merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),
