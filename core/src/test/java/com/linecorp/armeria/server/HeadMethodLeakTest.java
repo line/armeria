@@ -50,7 +50,6 @@ class HeadMethodLeakTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.requestTimeoutMillis(0);
             sb.service("/{number}", new HttpService() {
 
                 @Override
