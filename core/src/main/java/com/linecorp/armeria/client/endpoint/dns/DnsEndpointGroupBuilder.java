@@ -71,11 +71,11 @@ abstract class DnsEndpointGroupBuilder
      * Returns the {@link EventLoop} set via {@link #eventLoop(EventLoop)} or acquires a random
      * {@link EventLoop} from {@link CommonPools#workerGroup()}.
      */
-    final EventLoop eventLoop() {
+    final EventLoop getOrAcquireEventLoop() {
         if (eventLoop != null) {
             return eventLoop;
         } else {
-            return eventLoop = CommonPools.workerGroup().next();
+            return CommonPools.workerGroup().next();
         }
     }
 
@@ -148,12 +148,11 @@ abstract class DnsEndpointGroupBuilder
         return dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis();
     }
 
-    final DefaultDnsResolver buildResolver() {
-        return buildResolver(unused -> {});
+    final DefaultDnsResolver buildResolver(EventLoop eventLoop) {
+        return buildResolver(unused -> {}, eventLoop);
     }
 
-    final DefaultDnsResolver buildResolver(Consumer<DnsNameResolverBuilder> customizer) {
-        final EventLoop eventLoop = eventLoop();
+    final DefaultDnsResolver buildResolver(Consumer<DnsNameResolverBuilder> customizer, EventLoop eventLoop) {
         final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop);
         customizer.accept(resolverBuilder);
         buildConfigurator(eventLoop.parent()).accept(resolverBuilder);
