@@ -210,6 +210,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                    .addListener(writeHeadersFutureListener(true));
                 } else {
                     final HttpData data = (HttpData) o;
+                    data.touch(reqCtx);
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
