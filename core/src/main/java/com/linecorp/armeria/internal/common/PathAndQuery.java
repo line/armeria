@@ -55,9 +55,12 @@ public final class PathAndQuery {
     private static final BitSet ALLOWED_QUERY_CHARS = new BitSet();
 
     /**
-     * The lookup table for the reserved characters that require percent-encoding.
+     * The lookup table for the characters that whose percent encoding must be preserved
+     * when used in a query string because whether they are percent-encoded or not affects
+     * their semantics. For example, 'A%3dB=1' should NOT be normalized into 'A=B=1' because
+     * 'A=B=1` means 'A' is 'B=1' but 'A%3dB=1' means 'A=B' is '1'.
      */
-    private static final BitSet RESERVED_CHARS = new BitSet();
+    private static final BitSet MUST_PRESERVE_ENCODING_IN_QUERY = new BitSet();
 
     /**
      * The table that converts a byte into a percent-encoded chars, e.g. 'A' -> "%41".
@@ -65,21 +68,21 @@ public final class PathAndQuery {
     private static final char[][] TO_PERCENT_ENCODED_CHARS = new char[256][];
 
     static {
-        final String allowedPathChars =
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#@!$&'()*+,;=";
+        final String commonAllowedChars =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?@!$&'()*,;=";
+        final String allowedPathChars = commonAllowedChars + '+';
         for (int i = 0; i < allowedPathChars.length(); i++) {
             ALLOWED_PATH_CHARS.set(allowedPathChars.charAt(i));
         }
 
-        final String allowedQueryChars =
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*,;=";
+        final String allowedQueryChars = commonAllowedChars + "[]";
         for (int i = 0; i < allowedQueryChars.length(); i++) {
             ALLOWED_QUERY_CHARS.set(allowedQueryChars.charAt(i));
         }
 
-        final String reservedChars = ":/?#[]@!$&'()*+,;=";
-        for (int i = 0; i < reservedChars.length(); i++) {
-            RESERVED_CHARS.set(reservedChars.charAt(i));
+        final String mustPreserveEncodingInQuery = ":/?[]@!$&'()*+,;=";
+        for (int i = 0; i < mustPreserveEncodingInQuery.length(); i++) {
+            MUST_PRESERVE_ENCODING_IN_QUERY.set(mustPreserveEncodingInQuery.charAt(i));
         }
 
         for (int i = 0; i < TO_PERCENT_ENCODED_CHARS.length; i++) {
@@ -308,7 +311,7 @@ public final class PathAndQuery {
                     }
                 } else {
                     // If query:
-                    if (RESERVED_CHARS.get(decoded)) {
+                    if (MUST_PRESERVE_ENCODING_IN_QUERY.get(decoded)) {
                         buf.ensure(1);
                         buf.addEncoded((byte) decoded);
                         wasSlash = false;
