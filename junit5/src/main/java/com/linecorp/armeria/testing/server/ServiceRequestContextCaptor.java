@@ -174,9 +174,9 @@ public final class ServiceRequestContextCaptor {
     }
 
     /**
-     * Returns whether the {@link #size()} of this data is 0.
+     * Returns whether there is any captured {@link ServiceRequestContext}.
      */
     public boolean isEmpty() {
-        return size() == 0;
+        return serviceContexts.isEmpty();
     }
 }
