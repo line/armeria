@@ -20,13 +20,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
@@ -38,6 +44,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
@@ -50,6 +57,9 @@ class HeadMethodLeakTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            sb.http(0);
+            sb.https(0);
+            sb.tlsSelfSigned();
             sb.service("/{number}", new HttpService() {
 
                 @Override
@@ -88,30 +98,48 @@ class HeadMethodLeakTest {
         bufs = new LinkedBlockingDeque<>();
     }
 
-    @EnumSource(ExchangeType.class)
+    @ArgumentsSource(HeadRequestOptionsProvider.class)
     @ParameterizedTest
-    void shouldReleaseDataWhenHeadMethodIsRequested(ExchangeType exchangeType) throws InterruptedException {
-        final BlockingWebClient client = server.blockingWebClient();
-        for (int i = 0; i < 10; i++) {
-            final AggregatedHttpResponse response = client.prepare()
-                                                          .method(HttpMethod.HEAD)
-                                                          .path("/{number}")
-                                                          .pathParam("number", i)
-                                                          .queryParam("exchangeType", exchangeType.name())
-                                                          .execute();
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.content().isEmpty()).isTrue();
-        }
+    void shouldReleaseDataWhenHeadMethodIsRequested(int numChunks, SessionProtocol protocol,
+                                                    ExchangeType exchangeType) throws InterruptedException {
+        final BlockingWebClient client = WebClient.builder(server.uri(protocol))
+                                                  .factory(ClientFactory.insecure())
+                                                  .build()
+                                                  .blocking();
+        final AggregatedHttpResponse response = client.prepare()
+                                                      .method(HttpMethod.HEAD)
+                                                      .path("/{number}")
+                                                      .pathParam("number", numChunks)
+                                                      .queryParam("exchangeType", exchangeType.name())
+                                                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().isEmpty()).isTrue();
 
-        for (int i = 0; i < 10; i++) {
-            final ServiceRequestContext sctx = server.requestContextCaptor().poll();
-            // Waits for all responses to be cancelled.
-            sctx.log().whenComplete().join();
-        }
-
+        final ServiceRequestContext sctx = server.requestContextCaptor().take();
+        // Waits for all responses to be cancelled.
+        sctx.log().whenComplete().join();
         // Make sure all bufs were released by HttpResponseSubscriber.
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
+        }
+    }
+
+    private static class HeadRequestOptionsProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            final Stream.Builder<Arguments> builder = Stream.builder();
+            for (int i = 0; i < 10; i++) {
+                for (SessionProtocol protocol : SessionProtocol.values()) {
+                    if (protocol == SessionProtocol.PROXY) {
+                        continue;
+                    }
+                    for (ExchangeType exchangeType : ExchangeType.values()) {
+                        builder.add(Arguments.of(i, protocol, exchangeType));
+                    }
+                }
+            }
+            return builder.build();
         }
     }
 }
