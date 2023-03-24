@@ -27,7 +27,7 @@ class ThriftMetadataAccessTest {
     @Test
     void basicCase() {
         final Properties props = new Properties();
-        props.put("structPreinitRequired", "true");
+        props.put("struct.preinit", "true");
         assertThat(ThriftMetadataAccess.needsPreInitialization(props)).isTrue();
     }
 
