@@ -73,8 +73,8 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
     }
 
     /**
-     * Increments both {@link #micrometerCounter} and {@link #counter} and stores unhandled exception
-     * that occurs. If multiple servers use the same {@link MeterRegistry}, then {@link #micrometerCounter}
+     * Increments both {@code micrometerCounter} and {@code counter} and stores unhandled exception
+     * that occurs. If multiple servers use the same {@link MeterRegistry}, then {@code micrometerCounter}
      * will be shared across servers.
      */
     @Nullable
