@@ -294,7 +294,7 @@ public interface ClientRequestContext extends RequestContext {
     String authority();
 
     /**
-     * Returns the uri constructed based on {@link ClientRequestContext#sessionProtocol()},
+     * Returns the {@link URI} constructed based on {@link ClientRequestContext#sessionProtocol()},
      * {@link ClientRequestContext#authority()}, {@link ClientRequestContext#path()} and
      * {@link ClientRequestContext#query()}.
      *

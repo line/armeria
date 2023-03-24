@@ -63,7 +63,6 @@ final class ClientRequestContextAdapter {
         }
 
         @Override
-        @Nullable
         public String url() {
             return ctx.uri().toString();
         }
