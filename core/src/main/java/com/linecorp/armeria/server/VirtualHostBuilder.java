@@ -56,6 +56,7 @@ import javax.net.ssl.KeyManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
@@ -1049,6 +1050,11 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @VisibleForTesting
+    Path multipartUploadsLocation() {
+        return multipartUploadsLocation;
+    }
+
     /**
      * Sets the {@link Function} which generates a {@link RequestId}.
      * If not set, the value set via {@link ServerBuilder#requestIdGenerator(Function)} is used.
@@ -1216,7 +1222,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter,
-                                blockingTaskExecutor, builder.build(), requestIdGenerator);
+                                blockingTaskExecutor, multipartUploadsLocation, builder.build(), requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);
