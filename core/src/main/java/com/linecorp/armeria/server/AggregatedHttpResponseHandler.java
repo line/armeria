@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -65,6 +64,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
     }
 
     private void apply0(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
+        logger.info("1. response: {}, cause: {}", response, cause);
         clearTimeout();
         if (cause != null) {
             cause = Exceptions.peel(cause);
@@ -73,11 +73,13 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         }
 
         assert response != null;
+        logger.info("2. response: {}", response);
         if (failIfStreamOrSessionClosed()) {
-            PooledObjects.close(response.content());
+            response.content().close();
             return;
         }
 
+        logger.info("3. response: {}", response);
         logBuilder().startResponse();
         write(response, null);
     }

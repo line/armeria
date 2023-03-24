@@ -23,6 +23,9 @@ import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers
 
 import java.util.concurrent.CompletableFuture;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
@@ -128,6 +131,8 @@ abstract class AbstractHttpResponseHandler {
         return responseEncoder.isWritable(req.id(), req.streamId());
     }
 
+    private static final Logger logger = LoggerFactory.getLogger(AbstractHttpResponseHandler.class);
+
     /**
      * Writes the {@link AggregatedHttpResponse} to the {@link Channel}.
      * Note that the caller has to flush the written data when needed.
@@ -146,8 +151,10 @@ abstract class AbstractHttpResponseHandler {
             disconnectWhenFinished();
         }
 
+        logger.info("4. response: {}", res);
         final HttpData content = res.content();
         content.touch(reqCtx);
+        logger.info("5. response: {}, refCnt: {}", res, content.byteBuf().refCnt());
         // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
         assert !res.status().isContentAlwaysEmpty() || content.isEmpty();
         final boolean contentEmpty;
@@ -159,6 +166,12 @@ abstract class AbstractHttpResponseHandler {
             content.close();
         } else {
             contentEmpty = false;
+        }
+        try {
+            logger.info("6. response: {}, refCnt: {}, contentEmpty: {}", res, content.byteBuf().refCnt(),
+                        contentEmpty);
+        } catch (Exception ex) {
+            logger.warn(ex.getMessage(), ex);
         }
 
         final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
