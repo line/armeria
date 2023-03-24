@@ -116,7 +116,7 @@ class HeadMethodLeakTest {
         assertThat(response.content().isEmpty()).isTrue();
 
         final ServiceRequestContext sctx = server.requestContextCaptor().take();
-        // Waits for all responses to be cancelled.
+        // Waits for the server response to be cancelled.
         sctx.log().whenComplete().join();
         // Make sure all bufs were released by HttpResponseSubscriber.
         for (ByteBuf buf : bufs) {
