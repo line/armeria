@@ -186,6 +186,14 @@ public enum RequestLogProperty {
         return ALL_PROPERTIES;
     }
 
+    /**
+     * Check if this property is available by using the specified flags which represents the currently available
+     * properties.
+     */
+    public boolean isAvailable(int flags) {
+        return (flag & flags) == 0;
+    }
+
     static int flags(RequestLogProperty... properties) {
         int flags = 0;
         for (RequestLogProperty property : properties) {

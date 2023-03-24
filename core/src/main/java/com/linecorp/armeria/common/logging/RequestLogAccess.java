@@ -16,13 +16,11 @@
 package com.linecorp.armeria.common.logging;
 
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides the access to a {@link RequestLog} or {@link RequestOnlyLog}, while ensuring the interested
@@ -263,10 +261,4 @@ public interface RequestLogAccess {
      * ordered by the time they were added.
      */
     List<RequestLogAccess> children();
-
-    /**
-     * Returns all available {@link RequestLogProperty}s.
-     */
-    @UnstableApi
-    Set<RequestLogProperty> availableProperties();
 }

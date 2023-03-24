@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.logging;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Set;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -73,13 +72,13 @@ final class TextLogFormatter implements LogFormatter {
     public String formatRequest(RequestOnlyLog log) {
         requireNonNull(log, "log");
 
-        final Set<RequestLogProperty> availableProperties = log.availableProperties();
-        if (!availableProperties.contains(RequestLogProperty.REQUEST_START_TIME)) {
+        final int flags = log.availabilityStamp();
+        if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
             return "{}";
         }
 
         String requestCauseString = null;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_CAUSE)) {
+        if (RequestLogProperty.REQUEST_CAUSE.isAvailable(flags)) {
             final Throwable cause = log.requestCause();
             if (cause != null) {
                 requestCauseString = cause.toString();
@@ -88,19 +87,19 @@ final class TextLogFormatter implements LogFormatter {
 
         final RequestContext ctx = log.context();
         final String sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS)) {
+        if (RequestLogProperty.REQUEST_HEADERS.isAvailable(flags)) {
             sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
         } else {
             sanitizedHeaders = null;
         }
 
         String sanitizedContent = null;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT)) {
+        if (RequestLogProperty.REQUEST_CONTENT.isAvailable(flags)) {
             final Object content = log.requestContent();
             if (content != null) {
                 sanitizedContent = requestContentSanitizer.apply(ctx, content);
             }
-        } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+        } else if (RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
             final String contentPreview = log.requestContentPreview();
             if (contentPreview != null) {
                 sanitizedContent = requestContentSanitizer.apply(ctx, contentPreview);
@@ -108,7 +107,7 @@ final class TextLogFormatter implements LogFormatter {
         }
 
         final String sanitizedTrailers;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS) &&
+        if (RequestLogProperty.REQUEST_TRAILERS.isAvailable(flags) &&
             !log.requestTrailers().isEmpty()) {
             sanitizedTrailers = requestTrailersSanitizer.apply(ctx, log.requestTrailers());
         } else {
@@ -120,12 +119,12 @@ final class TextLogFormatter implements LogFormatter {
             buf.append("{startTime=");
             TextFormatter.appendEpochMicros(buf, log.requestStartTimeMicros());
 
-            if (availableProperties.contains(RequestLogProperty.REQUEST_LENGTH)) {
+            if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
                 buf.append(", length=");
                 TextFormatter.appendSize(buf, log.requestLength());
             }
 
-            if (availableProperties.contains(RequestLogProperty.REQUEST_END_TIME)) {
+            if (RequestLogProperty.REQUEST_END_TIME.isAvailable(flags)) {
                 buf.append(", duration=");
                 TextFormatter.appendElapsed(buf, log.requestDurationNanos());
             }
@@ -135,9 +134,9 @@ final class TextLogFormatter implements LogFormatter {
             }
 
             buf.append(", scheme=");
-            if (availableProperties.contains(RequestLogProperty.SCHEME)) {
+            if (RequestLogProperty.SCHEME.isAvailable(flags)) {
                 buf.append(log.scheme().uriText());
-            } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
+            } else if (RequestLogProperty.SESSION.isAvailable(flags)) {
                 buf.append(SerializationFormat.UNKNOWN.uriText())
                    .append('+')
                    .append(log.sessionProtocol());
@@ -147,7 +146,7 @@ final class TextLogFormatter implements LogFormatter {
                    .append("unknown");
             }
 
-            if (availableProperties.contains(RequestLogProperty.NAME)) {
+            if (RequestLogProperty.NAME.isAvailable(flags)) {
                 buf.append(", name=").append(log.name());
             }
 
@@ -172,13 +171,13 @@ final class TextLogFormatter implements LogFormatter {
     public String formatResponse(RequestLog log) {
         requireNonNull(log, "log");
 
-        final Set<RequestLogProperty> availableProperties = log.availableProperties();
-        if (!availableProperties.contains(RequestLogProperty.RESPONSE_START_TIME)) {
+        final int flags = log.availabilityStamp();
+        if (!RequestLogProperty.RESPONSE_START_TIME.isAvailable(flags)) {
             return "{}";
         }
 
         String responseCauseString = null;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_CAUSE)) {
+        if (RequestLogProperty.RESPONSE_CAUSE.isAvailable(flags)) {
             final Throwable cause = log.responseCause();
             if (cause != null) {
                 responseCauseString = cause.toString();
@@ -187,19 +186,19 @@ final class TextLogFormatter implements LogFormatter {
 
         final RequestContext ctx = log.context();
         final String sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS)) {
+        if (RequestLogProperty.RESPONSE_HEADERS.isAvailable(flags)) {
             sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
         } else {
             sanitizedHeaders = null;
         }
 
         String sanitizedContent = null;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT)) {
+        if (RequestLogProperty.RESPONSE_CONTENT.isAvailable(flags)) {
             final Object content = log.responseContent();
             if (content != null) {
                 sanitizedContent = responseContentSanitizer.apply(ctx, content);
             }
-        } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+        } else if (RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
             final String contentPreview = log.responseContentPreview();
             if (contentPreview != null) {
                 sanitizedContent = responseContentSanitizer.apply(ctx, contentPreview);
@@ -207,7 +206,7 @@ final class TextLogFormatter implements LogFormatter {
         }
 
         final String sanitizedTrailers;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_TRAILERS) &&
+        if (RequestLogProperty.RESPONSE_TRAILERS.isAvailable(flags) &&
             !log.responseTrailers().isEmpty()) {
             sanitizedTrailers = responseTrailersSanitizer.apply(ctx, log.responseTrailers());
         } else {
@@ -219,12 +218,12 @@ final class TextLogFormatter implements LogFormatter {
             buf.append("{startTime=");
             TextFormatter.appendEpochMicros(buf, log.responseStartTimeMicros());
 
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_LENGTH)) {
+            if (RequestLogProperty.RESPONSE_LENGTH.isAvailable(flags)) {
                 buf.append(", length=");
                 TextFormatter.appendSize(buf, log.responseLength());
             }
 
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_END_TIME)) {
+            if (RequestLogProperty.RESPONSE_END_TIME.isAvailable(flags)) {
                 buf.append(", duration=");
                 TextFormatter.appendElapsed(buf, log.responseDurationNanos());
                 buf.append(", totalDuration=");

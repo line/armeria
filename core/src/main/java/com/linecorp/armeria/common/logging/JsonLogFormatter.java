@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.logging;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Set;
 import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
@@ -88,14 +87,14 @@ final class JsonLogFormatter implements LogFormatter {
     public String formatRequest(RequestOnlyLog log) {
         requireNonNull(log, "log");
 
-        final Set<RequestLogProperty> availableProperties = log.availableProperties();
-        if (!availableProperties.contains(RequestLogProperty.REQUEST_START_TIME)) {
+        final int flags = log.availabilityStamp();
+        if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
             return "{}";
         }
 
         try {
             String requestCauseString = null;
-            if (availableProperties.contains(RequestLogProperty.REQUEST_CAUSE)) {
+            if (RequestLogProperty.REQUEST_CAUSE.isAvailable(flags)) {
                 final Throwable cause = log.requestCause();
                 if (cause != null) {
                     requestCauseString = cause.toString();
@@ -104,19 +103,19 @@ final class JsonLogFormatter implements LogFormatter {
 
             final RequestContext ctx = log.context();
             final JsonNode sanitizedHeaders;
-            if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS)) {
+            if (RequestLogProperty.REQUEST_HEADERS.isAvailable(flags)) {
                 sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
             } else {
                 sanitizedHeaders = null;
             }
 
             JsonNode sanitizedContent = null;
-            if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT)) {
+            if (RequestLogProperty.REQUEST_CONTENT.isAvailable(flags)) {
                 final Object content = log.requestContent();
                 if (content != null) {
                     sanitizedContent = requestContentSanitizer.apply(ctx, content);
                 }
-            } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            } else if (RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
                 final String contentPreview = log.requestContentPreview();
                 if (contentPreview != null) {
                     sanitizedContent = requestContentSanitizer.apply(ctx, contentPreview);
@@ -124,7 +123,7 @@ final class JsonLogFormatter implements LogFormatter {
             }
 
             final JsonNode sanitizedTrailers;
-            if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS) &&
+            if (RequestLogProperty.REQUEST_TRAILERS.isAvailable(flags) &&
                 !log.requestTrailers().isEmpty()) {
                 sanitizedTrailers = requestTrailersSanitizer.apply(ctx, log.requestTrailers());
             } else {
@@ -135,11 +134,11 @@ final class JsonLogFormatter implements LogFormatter {
             objectNode.put("startTime",
                            TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
 
-            if (availableProperties.contains(RequestLogProperty.REQUEST_LENGTH)) {
+            if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
                 objectNode.put("length", TextFormatter.size(log.requestLength()).toString());
             }
 
-            if (availableProperties.contains(RequestLogProperty.REQUEST_END_TIME)) {
+            if (RequestLogProperty.REQUEST_END_TIME.isAvailable(flags)) {
                 objectNode.put("duration",
                                TextFormatter.elapsed(log.requestDurationNanos()).toString());
             }
@@ -148,9 +147,9 @@ final class JsonLogFormatter implements LogFormatter {
                 objectNode.put("cause", requestCauseString);
             }
 
-            if (availableProperties.contains(RequestLogProperty.SCHEME)) {
+            if (RequestLogProperty.SCHEME.isAvailable(flags)) {
                 objectNode.put("scheme", log.scheme().uriText());
-            } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
+            } else if (RequestLogProperty.SESSION.isAvailable(flags)) {
                 objectNode.put("scheme",
                                SerializationFormat.UNKNOWN.uriText() + '+' +
                                log.sessionProtocol());
@@ -159,7 +158,7 @@ final class JsonLogFormatter implements LogFormatter {
                                SerializationFormat.UNKNOWN.uriText() + "+unknown");
             }
 
-            if (availableProperties.contains(RequestLogProperty.NAME)) {
+            if (RequestLogProperty.NAME.isAvailable(flags)) {
                 objectNode.put("name", log.name());
             }
 
@@ -185,14 +184,14 @@ final class JsonLogFormatter implements LogFormatter {
     public String formatResponse(RequestLog log) {
         requireNonNull(log, "log");
 
-        final Set<RequestLogProperty> availableProperties = log.availableProperties();
-        if (!availableProperties.contains(RequestLogProperty.RESPONSE_START_TIME)) {
+        final int flags = log.availabilityStamp();
+        if (!RequestLogProperty.RESPONSE_START_TIME.isAvailable(flags)) {
             return "{}";
         }
 
         try {
             String responseCauseString = null;
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_CAUSE)) {
+            if (RequestLogProperty.RESPONSE_CAUSE.isAvailable(flags)) {
                 final Throwable cause = log.responseCause();
                 if (cause != null) {
                     responseCauseString = cause.toString();
@@ -201,19 +200,19 @@ final class JsonLogFormatter implements LogFormatter {
 
             final RequestContext ctx = log.context();
             final JsonNode sanitizedHeaders;
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS)) {
+            if (RequestLogProperty.RESPONSE_HEADERS.isAvailable(flags)) {
                 sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
             } else {
                 sanitizedHeaders = null;
             }
 
             JsonNode sanitizedContent = null;
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT)) {
+            if (RequestLogProperty.RESPONSE_CONTENT.isAvailable(flags)) {
                 final Object content = log.responseContent();
                 if (content != null) {
                     sanitizedContent = responseContentSanitizer.apply(ctx, content);
                 }
-            } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            } else if (RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
                 final String contentPreview = log.responseContentPreview();
                 if (contentPreview != null) {
                     sanitizedContent = responseContentSanitizer.apply(ctx, contentPreview);
@@ -221,7 +220,7 @@ final class JsonLogFormatter implements LogFormatter {
             }
 
             final JsonNode sanitizedTrailers;
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_TRAILERS) &&
+            if (RequestLogProperty.RESPONSE_TRAILERS.isAvailable(flags) &&
                 !log.responseTrailers().isEmpty()) {
                 sanitizedTrailers = responseTrailersSanitizer.apply(ctx, log.responseTrailers());
             } else {
@@ -232,11 +231,11 @@ final class JsonLogFormatter implements LogFormatter {
             objectNode.put("startTime",
                            TextFormatter.epochMicros(log.responseStartTimeMicros()).toString());
 
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_LENGTH)) {
+            if (RequestLogProperty.RESPONSE_LENGTH.isAvailable(flags)) {
                 objectNode.put("length", TextFormatter.size(log.responseLength()).toString());
             }
 
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_END_TIME)) {
+            if (RequestLogProperty.RESPONSE_END_TIME.isAvailable(flags)) {
                 objectNode.put("duration", TextFormatter.elapsed(log.responseDurationNanos()).toString());
                 objectNode.put("totalDuration",
                                TextFormatter.elapsed(log.totalDurationNanos()).toString());

@@ -17,7 +17,6 @@ package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.common.logging.RequestLogProperty.FLAGS_ALL_COMPLETE;
 import static java.util.Objects.requireNonNull;
 
@@ -25,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -324,18 +322,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public List<RequestLogAccess> children() {
         return children != null ? ImmutableList.copyOf(children) : ImmutableList.of();
-    }
-
-    @Override
-    public Set<RequestLogProperty> availableProperties() {
-        final int flags = this.flags;
-        if (flags == FLAGS_ALL_COMPLETE) {
-            return RequestLogProperty.allProperties();
-        }
-        return RequestLogProperty.allProperties()
-                                 .stream()
-                                 .filter(requestLogProperty -> hasInterestedFlags(flags, requestLogProperty))
-                                 .collect(toImmutableSet());
     }
 
     // Methods required for updating availability and notifying listeners.
@@ -1568,11 +1554,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public List<RequestLogAccess> children() {
             return DefaultRequestLog.this.children();
-        }
-
-        @Override
-        public Set<RequestLogProperty> availableProperties() {
-            return RequestLogProperty.allProperties();
         }
 
         @Override
