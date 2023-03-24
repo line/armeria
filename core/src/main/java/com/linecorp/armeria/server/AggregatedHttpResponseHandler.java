@@ -64,7 +64,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
     }
 
     private void apply0(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
-        logger.info("1. id: {}, response: {}, cause: {}", reqCtx.id().text(), response, cause);
         clearTimeout();
         if (cause != null) {
             cause = Exceptions.peel(cause);
@@ -73,13 +72,11 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         }
 
         assert response != null;
-        logger.info("2. id: {}, response: {}", reqCtx.id().text(), response);
         if (failIfStreamOrSessionClosed()) {
             response.content().close();
             return;
         }
 
-        logger.info("3. id: {}, response: {}", reqCtx.id().text(), response);
         logBuilder().startResponse();
         write(response, null);
     }

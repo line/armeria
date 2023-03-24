@@ -29,13 +29,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
@@ -48,7 +45,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
@@ -65,7 +61,6 @@ class HeadMethodLeakTest {
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
-            sb.decorator(LoggingService.newDecorator());
             sb.service("/{number}", new HttpService() {
 
                 @Override
@@ -104,15 +99,12 @@ class HeadMethodLeakTest {
         bufs = new LinkedBlockingDeque<>();
     }
 
-    private static final Logger logger = LoggerFactory.getLogger(HeadMethodLeakTest.class);
-
     @ArgumentsSource(HeadRequestOptionsProvider.class)
     @ParameterizedTest
     void shouldReleaseDataWhenHeadMethodIsRequested(int numChunks, SessionProtocol protocol,
                                                     ExchangeType exchangeType) throws InterruptedException {
         final BlockingWebClient client = WebClient.builder(server.uri(protocol))
                                                   .factory(ClientFactory.insecure())
-                                                  .decorator(LoggingClient.newDecorator())
                                                   .build()
                                                   .blocking();
         final AggregatedHttpResponse response = client.prepare()
@@ -128,12 +120,8 @@ class HeadMethodLeakTest {
         // Waits for the server response to be cancelled.
         sctx.log().whenComplete().join();
         // Make sure all bufs were released by HttpResponseSubscriber.
-        logger.info("id: {}, bufs: {}", sctx.id().text(), bufs);
         for (ByteBuf buf : bufs) {
-            logger.info("id: {}, bufs: {}, buf: {}, refCnt: {}", sctx.id().text(), bufs, buf, buf.refCnt());
-            assertThat(buf.refCnt())
-                    .describedAs("id: %s, buf: %s, refCnt: %s", sctx.id().text(), buf, buf.refCnt())
-                    .isZero();
+            assertThat(buf.refCnt()).isZero();
         }
     }
 

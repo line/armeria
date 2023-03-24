@@ -218,9 +218,7 @@ public final class HttpMessageAggregator {
             for (int i = start; i < end; i++) {
                 try (HttpData data = (HttpData) objects.get(i)) {
                     final ByteBuf buf = data.byteBuf();
-                    if (data.isEmpty()) {
-                        data.close();
-                    } else {
+                    if (!data.isEmpty()) {
                         merged.writeBytes(buf, buf.readerIndex(), data.length());
                     }
                 }
