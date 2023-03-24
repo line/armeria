@@ -19,9 +19,8 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
@@ -41,7 +40,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     // by non-`sequentialExecutor()` thread, access the values. Because `maybeAddPendingTask()` double-checks
     // the status of the values in the `sequentialExecutor()`.
     @Nullable
-    private List<Consumer<Listener<I>>> pendingTasks;
+    private ConcurrentLinkedQueue<Consumer<Listener<I>>> pendingTasks = new ConcurrentLinkedQueue<>();
 
     private boolean shouldBePending = true;
 
@@ -74,25 +73,16 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
 
             this.delegate = delegate;
             try {
-                for (;;) {
-                    final List<Consumer<Listener<I>>> pendingTasks = this.pendingTasks;
-                    if (pendingTasks == null) {
-                        break;
-                    }
-
-                    this.pendingTasks = null;
-                    try {
-                        for (Consumer<Listener<I>> task : pendingTasks) {
-                            task.accept(delegate);
-                        }
-                    } catch (Throwable ex) {
-                        callClosed = true;
-                        armeriaServerCall.close(ex);
-                        return null;
-                    }
+                while (!pendingTasks.isEmpty()) {
+                    pendingTasks.poll().accept(delegate);
                 }
+            } catch (Throwable ex) {
+                callClosed = true;
+                armeriaServerCall.close(ex);
+                return null;
             } finally {
                 shouldBePending = false;
+                pendingTasks = null;
             }
             return null;
         }, sequentialExecutor());
@@ -151,9 +141,6 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     }
 
     private void addPendingTask(Consumer<ServerCall.Listener<I>> task) {
-        if (pendingTasks == null) {
-            pendingTasks = new ArrayList<>();
-        }
         pendingTasks.add(task);
     }
 
