@@ -260,7 +260,9 @@ class ArmeriaHttpUtilTest {
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
-        final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(null, in, false, "http", null);
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(in.path().toString());
+        final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(
+                null, in, false, "http", null, pathAndQuery);
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f;g=h; i=j; k=l;");
@@ -519,8 +521,10 @@ class ArmeriaHttpUtilTest {
         in.set(HttpHeaderNames.METHOD, "GET")
           .set(HttpHeaderNames.PATH, "/");
         // Request headers without pseudo headers.
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(in.path().toString());
         final RequestHeaders headers =
-                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https", serverConfig());
+                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https",
+                                                        serverConfig(), pathAndQuery);
         assertThat(headers.scheme()).isEqualTo("https");
         assertThat(headers.authority()).isEqualTo("foo:36462");
     }

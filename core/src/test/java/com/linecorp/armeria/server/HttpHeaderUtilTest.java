@@ -337,7 +337,7 @@ class HttpHeaderUtilTest {
                 new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/\"?\"",
                                        new DefaultHttpHeaders());
         assertThat(HttpHeaderUtil.maybeTransformAbsoluteUri(doubleQuoteReq.uri(),
-                                                            Function.identity())).isEqualTo("/%22?%22");
+                                                            Function.identity())).isEqualTo("/\"?\"");
 
         // Should accept an asterisk request.
         final HttpRequest asteriskReq =

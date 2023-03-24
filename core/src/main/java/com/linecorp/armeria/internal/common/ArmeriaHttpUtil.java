@@ -556,7 +556,8 @@ public final class ArmeriaHttpUtil {
      */
     public static RequestHeaders toArmeriaRequestHeaders(ChannelHandlerContext ctx, Http2Headers headers,
                                                          boolean endOfStream, String scheme,
-                                                         ServerConfig cfg) {
+                                                         ServerConfig cfg,
+                                                         @Nullable PathAndQuery pathAndQuery) {
         assert headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
         builder.endOfStream(endOfStream);
@@ -564,9 +565,10 @@ public final class ArmeriaHttpUtil {
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-        // encode the path
-        final String encodedPath = maybeEncodePath(headers.path().toString());
-        headers.path(encodedPath);
+        // if pathAndQuery == null, then the request will fail later anyways
+        if (pathAndQuery != null) {
+            builder.set(HttpHeaderNames.PATH, pathAndQuery.toString());
+        }
         if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
@@ -703,19 +705,6 @@ public final class ArmeriaHttpUtil {
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
-    }
-
-    private static String maybeEncodePath(String path) {
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
-        if (pathAndQuery == null) {
-            // this will be handled as an invalid path later
-            return path;
-        }
-        String encoded = pathAndQuery.path();
-        if (pathAndQuery.query() != null) {
-            encoded += '?' + pathAndQuery.query();
-        }
-        return encoded;
     }
 
     private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,

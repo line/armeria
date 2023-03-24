@@ -127,13 +127,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             final PathAndQuery pathAndQuery = PathAndQuery.parse(nettyHeaders.path().toString());
-            if (pathAndQuery != null) {
-                nettyHeaders.path(pathAndQuery.toString());
-            }
 
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
-                    ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream, scheme, cfg);
+                    ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream,
+                                                            scheme, cfg, pathAndQuery);
 
             // Accept a CONNECT request only when it has a :protocol header, as defined in:
             // https://datatracker.ietf.org/doc/html/rfc8441#section-4
