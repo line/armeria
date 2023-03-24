@@ -35,9 +35,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
  *       all request properties are available.</li>
  *   <li>{@link #isAvailable(RequestLogProperty)}, {@link #isAvailable(RequestLogProperty...)},
  *       {@link #isAvailable(Iterable)}, {@link #whenAvailable(RequestLogProperty)},
- *       {@link #whenAvailable(RequestLogProperty...)}, {@link #whenAvailable(Iterable)}, or
- *       {@link #availableProperties()} to check if or to get notified
- *       when a certain set of properties are available.</li>
+ *       {@link #whenAvailable(RequestLogProperty...)} or {@link #whenAvailable(Iterable)} to check if or
+ *       to get notified when a certain set of properties are available.</li>
  * </ul>
  *
  * <p>If you are sure that certain properties are available, you can convert a {@link RequestLogAccess} into
