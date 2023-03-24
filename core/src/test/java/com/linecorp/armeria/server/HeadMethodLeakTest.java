@@ -127,9 +127,12 @@ class HeadMethodLeakTest {
         // Waits for the server response to be cancelled.
         sctx.log().whenComplete().join();
         // Make sure all bufs were released by HttpResponseSubscriber.
+        logger.info("id: {}, bufs: {}", sctx.id().text(), bufs);
         for (ByteBuf buf : bufs) {
-            logger.info("buf: {}, refCnt: {}", buf, buf.refCnt());
-            assertThat(buf.refCnt()).isZero();
+            logger.info("id: {}, bufs: {}, buf: {}, refCnt: {}", sctx.id().text(), bufs, buf, buf.refCnt());
+            assertThat(buf.refCnt())
+                    .describedAs("id: %s, buf: %s, refCnt: %s", sctx.id().text(), buf, buf.refCnt())
+                    .isZero();
         }
     }
 

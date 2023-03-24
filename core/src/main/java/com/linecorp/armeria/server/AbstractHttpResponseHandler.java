@@ -151,10 +151,10 @@ abstract class AbstractHttpResponseHandler {
             disconnectWhenFinished();
         }
 
-        logger.info("4. response: {}", res);
+        logger.info("4. id: {}, response: {}", reqCtx.id().text(), res);
         final HttpData content = res.content();
         content.touch(reqCtx);
-        logger.info("5. response: {}, refCnt: {}", res, content.byteBuf().refCnt());
+        logger.info("5. id: {}, response: {}, refCnt: {}", reqCtx.id().text(), res, content.byteBuf().refCnt());
         // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
         assert !res.status().isContentAlwaysEmpty() || content.isEmpty();
         final boolean contentEmpty;
@@ -168,10 +168,10 @@ abstract class AbstractHttpResponseHandler {
             contentEmpty = false;
         }
         try {
-            logger.info("6. response: {}, refCnt: {}, contentEmpty: {}", res, content.byteBuf().refCnt(),
-                        contentEmpty);
+            logger.info("6. id: {}, response: {}, refCnt: {}, contentEmpty: {}", reqCtx.id().text(), res,
+                        content.byteBuf().refCnt(), contentEmpty);
         } catch (Exception ex) {
-            logger.warn(ex.getMessage(), ex);
+            logger.warn("id: {}, {}", reqCtx.id().text(), ex.getMessage());
         }
 
         final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
