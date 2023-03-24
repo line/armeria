@@ -191,7 +191,7 @@ public enum RequestLogProperty {
      * properties.
      */
     public boolean isAvailable(int flags) {
-        return (flag & flags) == 0;
+        return (flag & flags) != 0;
     }
 
     static int flags(RequestLogProperty... properties) {
