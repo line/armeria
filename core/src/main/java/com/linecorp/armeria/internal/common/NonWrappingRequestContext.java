@@ -17,12 +17,9 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
-import java.net.URI;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -59,7 +56,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
 
     private final MeterRegistry meterRegistry;
     private final ConcurrentAttributes attrs;
-    private final SessionProtocol sessionProtocol;
+    private SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
     private String path;
@@ -118,7 +115,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     }
 
     @Override
-    public final void updateRequest(HttpRequest req) {
+    public void updateRequest(HttpRequest req) {
         requireNonNull(req, "req");
         validateHeaders(req.headers());
         unsafeUpdateRequest(req);
@@ -144,28 +141,17 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
      * Replaces the {@link HttpRequest} associated with this context with the specified one
      * without any validation. Internal use only. Use it at your own risk.
      */
-    protected final void unsafeUpdateRequest(HttpRequest req) {
-        final PathAndQuery pathAndQuery;
-        if (isAbsoluteUri(req.path())) {
-            // ignore the sessionProtocol and authority set by the absolute path
-            final URI uri = URI.create(req.path());
-            final String rawQuery = uri.getRawQuery();
-            final String pathWithQuery = pathWithQuery(uri, rawQuery);
-            pathAndQuery = PathAndQuery.parse(pathWithQuery);
-        } else {
-            pathAndQuery = PathAndQuery.parse(req.path());
-        }
-        if (pathAndQuery == null) {
-            throw new IllegalArgumentException("invalid path: " + req.path());
-        }
+    protected void unsafeUpdateRequest(HttpRequest req) {
         this.req = req;
-        path(pathAndQuery.path());
-        query(pathAndQuery.query());
     }
 
     @Override
     public final SessionProtocol sessionProtocol() {
         return sessionProtocol;
+    }
+
+    protected void sessionProtocol(SessionProtocol sessionProtocol) {
+        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
     }
 
     /**
@@ -206,7 +192,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return path;
     }
 
-    private void path(String path) {
+    protected void path(String path) {
         this.path = requireNonNull(path, "path");
     }
 
@@ -225,7 +211,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return query;
     }
 
-    private void query(@Nullable String query) {
+    protected void query(@Nullable String query) {
         this.query = query;
     }
 

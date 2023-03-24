@@ -575,6 +575,42 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    protected void unsafeUpdateRequest(HttpRequest req) {
+        final PathAndQuery pathAndQuery;
+        final SessionProtocol sessionProtocol;
+        final String authority;
+        if (isAbsoluteUri(req.path())) {
+            final URI uri = URI.create(req.path());
+            checkArgument(uri.getScheme() != null, "missing scheme");
+            checkArgument(uri.getAuthority() != null, "missing authority");
+            checkArgument(!uri.getAuthority().isEmpty(), "empty authority");
+            final String rawQuery = uri.getRawQuery();
+            final String pathWithQuery = pathWithQuery(uri, rawQuery);
+            pathAndQuery = PathAndQuery.parse(pathWithQuery);
+            sessionProtocol = Scheme.parse(uri.getScheme()).sessionProtocol();
+            authority = uri.getAuthority();
+        } else {
+            pathAndQuery = PathAndQuery.parse(req.path());
+            sessionProtocol = null;
+            authority = null;
+        }
+        if (pathAndQuery == null) {
+            throw new IllegalArgumentException("invalid path: " + req.path());
+        }
+
+        // all validation is complete at this point
+        super.unsafeUpdateRequest(req);
+        path(pathAndQuery.path());
+        query(pathAndQuery.query());
+        if (sessionProtocol != null) {
+            sessionProtocol(sessionProtocol);
+        }
+        if (authority != null) {
+            updateEndpoint(Endpoint.parse(authority));
+        }
+    }
+
+    @Override
     @Nullable
     protected Channel channel() {
         if (log.isAvailable(RequestLogProperty.SESSION)) {
