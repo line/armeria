@@ -44,7 +44,7 @@ import io.netty.buffer.ByteBuf;
 
 class HeadMethodLeakTest {
 
-    static Queue<ByteBuf> bufs;
+    private static Queue<ByteBuf> bufs;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
