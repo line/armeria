@@ -36,11 +36,11 @@ final class ThriftMetadataAccess {
 
     private static boolean preInitializeThriftClass;
 
-    private static final String filename = "../../common/thrift/thrift-options.properties";
+    private static final String THRIFT_OPTIONS_PROPERTIES = "../../common/thrift/thrift-options.properties";
 
     static {
         try {
-            final URL url = ThriftMetadataAccess.class.getResource(filename);
+            final URL url = ThriftMetadataAccess.class.getResource(THRIFT_OPTIONS_PROPERTIES);
             if (url != null) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
                     final Properties props = new Properties();
@@ -58,7 +58,7 @@ final class ThriftMetadataAccess {
 
     @VisibleForTesting
     static boolean needsPreInitialization(Properties properties) {
-        return "true".equals(properties.getProperty("structPreinitRequired"));
+        return "true".equals(properties.getProperty("struct.preinit"));
     }
 
     @SuppressWarnings("unchecked")
