@@ -278,7 +278,8 @@ class ArmeriaHttpUtilTest {
 
         final ChannelHandlerContext ctx = mockChannelHandlerContext();
 
-        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http");
+        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http",
+                                                  PathAndQuery.parse(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
         assertThat(armeriaHeaders.authority()).isEqualTo("bar");
         assertThat(armeriaHeaders.scheme()).isEqualTo("http");
@@ -286,7 +287,8 @@ class ArmeriaHttpUtilTest {
 
         // Remove Host header.
         headers.remove(HttpHeaderNames.HOST);
-        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https");
+        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https",
+                                   PathAndQuery.parse(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
         assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");
         assertThat(armeriaHeaders.scheme()).isEqualTo("https");

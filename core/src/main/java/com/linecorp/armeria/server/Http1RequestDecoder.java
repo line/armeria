@@ -164,15 +164,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final String path = HttpHeaderUtil
                             .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
                     final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
-                    if (pathAndQuery == null) {
-                        nettyReq.setUri(path);
-                    } else {
-                        nettyReq.setUri(pathAndQuery.toString());
-                    }
 
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), pathAndQuery);
 
                     // Do not accept a CONNECT request.
                     if (headers.method() == HttpMethod.CONNECT) {

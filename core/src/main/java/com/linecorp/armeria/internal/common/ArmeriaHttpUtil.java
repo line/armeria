@@ -616,14 +616,18 @@ public final class ArmeriaHttpUtil {
      */
     public static RequestHeaders toArmeria(
             ChannelHandlerContext ctx, HttpRequest in,
-            ServerConfig cfg, String scheme) throws URISyntaxException {
+            ServerConfig cfg, String scheme, @Nullable PathAndQuery pathAndQuery) throws URISyntaxException {
 
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final RequestHeadersBuilder out = RequestHeaders.builder();
         out.sizeHint(inHeaders.size());
         out.method(HttpMethod.valueOf(in.method().name()))
-           .path(in.uri())
            .scheme(scheme);
+        if (pathAndQuery == null) {
+            out.path(in.uri());
+        } else {
+            out.path(pathAndQuery.toString());
+        }
 
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
