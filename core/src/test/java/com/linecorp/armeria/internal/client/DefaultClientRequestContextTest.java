@@ -257,7 +257,7 @@ class DefaultClientRequestContextTest {
     }
 
     @Test
-    void requestUpdateOnlyUpdatesPathAndQuery() {
+    void requestUpdateAllComponents() {
         final DefaultClientRequestContext ctx = newContext();
         assertThat(ctx.authority()).isEqualTo("example.com:8080");
         assertThat(ctx.uri().toString()).isEqualTo("http://example.com:8080/foo");
@@ -267,10 +267,10 @@ class DefaultClientRequestContextTest {
                 HttpHeaderNames.SCHEME, "http",
                 HttpHeaderNames.AUTHORITY, "request.com"));
         ctx.updateRequest(request);
-        // the scheme and authority in path is ignored
-        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.H2C);
+        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
         assertThat(ctx.authority()).isEqualTo("request.com");
-        assertThat(ctx.uri().toString()).isEqualTo("http://request.com/a/b/c");
+        assertThat(ctx.uri().toString()).isEqualTo("https://request.com/a/b/c");
+        assertThat(ctx.endpoint().authority()).isEqualTo("path.com");
     }
 
     @Test
@@ -281,7 +281,8 @@ class DefaultClientRequestContextTest {
                 HttpHeaderNames.AUTHORITY, "request.com"));
         final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request, "fragment1");
         ctx.updateRequest(request);
-        assertThat(ctx.uri().toString()).isEqualTo("http://request.com/a/b/c?q1=p1&q2=p2#fragment1");
+        assertThat(ctx.uri().toString()).isEqualTo("https://request.com/a/b/c?q1=p1&q2=p2#fragment1");
+        assertThat(ctx.endpoint().authority()).isEqualTo("path.com");
     }
 
     @Test

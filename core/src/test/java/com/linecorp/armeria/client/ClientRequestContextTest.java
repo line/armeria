@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.URI;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -265,24 +265,37 @@ class ClientRequestContextTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"https://host.com/path?a=b", "http://host.com/path?a=b", "/path?a=b"})
+    @ValueSource(strings = {"https://host.com/path?a=b", "http://host.com/path?a=b",
+                            "h2://1.2.3.4:8080/path?a=b"})
     void updateRequestWithAbsolutePath(String path) {
         final ClientRequestContext clientRequestContext = clientRequestContext();
         assertThat(clientRequestContext.path()).isEqualTo("/");
         final HttpRequest request =
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
-        final String prevAuthority = clientRequestContext.authority();
-        final SessionProtocol prevSessionProtocol = clientRequestContext.sessionProtocol();
+
+        final URI uri = URI.create(path);
 
         clientRequestContext.updateRequest(request);
 
-        // the absolute path does not affect the authority, session protocol
-        assertThat(clientRequestContext.authority()).isEqualTo(prevAuthority);
-        assertThat(clientRequestContext.sessionProtocol()).isEqualTo(prevSessionProtocol);
-
+        // absolute path updates the authority, session protocol
+        assertThat(clientRequestContext.authority()).isEqualTo(uri.getAuthority());
+        assertThat(clientRequestContext.sessionProtocol().toString()).isEqualTo(uri.getScheme());
         assertThat(clientRequestContext.path()).isEqualTo("/path");
         assertThat(clientRequestContext.query()).isEqualTo("a=b");
-        assertThat(clientRequestContext.uri().toString()).isEqualTo("http://127.0.0.1/path?a=b");
+        assertThat(clientRequestContext.uri().toString()).isEqualTo(path);
+        assertThat(clientRequestContext.endpoint().authority()).isEqualTo(uri.getAuthority());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"https:/path?a=b", "http:///"})
+    void updateRequestWithInvalidPath(String path) {
+        final ClientRequestContext clientRequestContext = clientRequestContext();
+        assertThat(clientRequestContext.path()).isEqualTo("/");
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
+
+        assertThatThrownBy(() -> clientRequestContext.updateRequest(request))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static void assertUnwrapAllCurrentCtx(@Nullable RequestContext ctx) {
