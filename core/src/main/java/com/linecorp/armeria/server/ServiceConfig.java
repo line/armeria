@@ -75,7 +75,7 @@ public final class ServiceConfig {
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
     private final HttpHeaders defaultHeaders;
-    private final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
+    private final Function<RoutingContext, RequestId> requestIdGenerator;
 
     /**
      * Creates a new instance.
@@ -127,7 +127,10 @@ public final class ServiceConfig {
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
         this.defaultHeaders = defaultHeaders;
-        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        @SuppressWarnings("unchecked")
+        final Function<RoutingContext, RequestId> castRequestIdGenerator =
+                (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        this.requestIdGenerator = castRequestIdGenerator;
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -403,7 +406,7 @@ public final class ServiceConfig {
     /**
      * Returns the {@link Function} that generates a {@link RequestId}.
      */
-    public Function<? super RoutingContext, ? extends RequestId> requestIdGenerator() {
+    public Function<RoutingContext, RequestId> requestIdGenerator() {
         return requestIdGenerator;
     }
 
