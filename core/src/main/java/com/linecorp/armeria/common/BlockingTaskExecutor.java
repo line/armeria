@@ -14,11 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.common;
 
 import java.util.concurrent.ScheduledExecutorService;
-
-import com.linecorp.armeria.common.CommonPools;
 
 /**
  * Provides an executor interface which is used for potentially long-running tasks which may block I/O threads.

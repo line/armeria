@@ -14,7 +14,8 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.common;
+
 
 import java.util.Collection;
 import java.util.List;

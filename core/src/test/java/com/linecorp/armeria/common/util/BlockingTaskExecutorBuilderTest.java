@@ -20,6 +20,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.linecorp.armeria.common.BlockingTaskExecutor;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.Flags;

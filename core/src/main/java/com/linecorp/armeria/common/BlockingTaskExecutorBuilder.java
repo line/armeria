@@ -14,10 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.util;
+package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.common.util.ThreadFactories;
 
 import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,8 +25,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.Flags;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A builder that is useful for creating a {@link ScheduledExecutorService}.
