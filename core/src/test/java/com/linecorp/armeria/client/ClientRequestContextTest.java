@@ -266,7 +266,7 @@ class ClientRequestContextTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"https://host.com/path?a=b", "http://host.com/path?a=b",
-                            "h2://1.2.3.4:8080/path?a=b"})
+                            "http://1.2.3.4:8080/path?a=b"})
     void updateRequestWithAbsolutePath(String path) {
         final ClientRequestContext clientRequestContext = clientRequestContext();
         assertThat(clientRequestContext.path()).isEqualTo("/");
