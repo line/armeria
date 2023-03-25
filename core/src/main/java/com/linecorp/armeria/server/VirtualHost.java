@@ -34,7 +34,10 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -79,11 +82,13 @@ public final class VirtualHost {
     private final Logger accessLogger;
 
     private final ServiceNaming defaultServiceNaming;
+    private final String defaultLogName;
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
     private final ScheduledExecutorService blockingTaskExecutor;
+    private final SuccessFunction successFunction;
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
 
@@ -94,10 +99,12 @@ public final class VirtualHost {
                 RejectedRouteHandler rejectionHandler,
                 Function<? super VirtualHost, ? extends Logger> accessLoggerMapper,
                 ServiceNaming defaultServiceNaming,
+                String defaultLogName,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
                 ScheduledExecutorService blockingTaskExecutor,
+                SuccessFunction successFunction,
                 Path multipartUploadsLocation,
                 List<ShutdownSupport> shutdownSupports) {
         originalDefaultHostname = defaultHostname;
@@ -112,11 +119,13 @@ public final class VirtualHost {
         this.port = port;
         this.sslContext = sslContext;
         this.defaultServiceNaming = defaultServiceNaming;
+        this.defaultLogName = defaultLogName;
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = accessLogWriter;
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.successFunction = successFunction;
         this.multipartUploadsLocation = multipartUploadsLocation;
         this.shutdownSupports = shutdownSupports;
 
@@ -137,9 +146,9 @@ public final class VirtualHost {
     VirtualHost withNewSslContext(SslContext sslContext) {
         return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
+                               host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, multipartUploadsLocation,
+                               accessLogWriter, blockingTaskExecutor, successFunction, multipartUploadsLocation,
                                shutdownSupports);
     }
 
@@ -297,6 +306,21 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the default value of the {@link RequestLog#name()} property which is used when no name was set
+     * via {@link RequestLogBuilder#name(String, String)}.
+     * If {@code null}, one of the following values will be used instead:
+     * <ul>
+     *   <li>gRPC - A capitalized method name defined in {@code io.grpc.MethodDescriptor}
+     *       (e.g, {@code GetItems})</li>
+     *   <li>Thrift and annotated service - a method name (e.g, {@code getItems})</li>
+     *   <li>{@link HttpService} - an HTTP method name</li>
+     * </ul>
+     */
+    public String defaultLogName() {
+        return defaultLogName;
+    }
+
+    /**
      * Returns the timeout of a request.
      *
      * @see ServiceConfig#requestTimeoutMillis()
@@ -368,6 +392,14 @@ public final class VirtualHost {
     @Deprecated
     public boolean shutdownBlockingTaskExecutorOnStop() {
         return false;
+    }
+
+    /**
+     * Returns the {@link SuccessFunction} that determines whether a request was
+     * handled successfully or not.
+     */
+    public SuccessFunction successFunction() {
+        return successFunction;
     }
 
     /**
@@ -474,9 +506,9 @@ public final class VirtualHost {
 
         return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
+                               host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, multipartUploadsLocation,
+                               accessLogWriter, blockingTaskExecutor, successFunction, multipartUploadsLocation,
                                shutdownSupports);
     }
 

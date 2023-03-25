@@ -74,6 +74,8 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
@@ -133,6 +135,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     private RejectedRouteHandler rejectedRouteHandler;
     @Nullable
     private ServiceNaming defaultServiceNaming;
+    @Nullable
+    private String defaultLogName;
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -942,6 +946,22 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
+     * {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultLogName the default log name.
+     */
+    public VirtualHostBuilder defaultLogName(String defaultLogName) {
+        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
+        return this;
+    }
+
+    @VisibleForTesting
+    String defaultLogName() {
+        return defaultLogName;
+    }
+
+    /**
      * Sets the timeout of a request in milliseconds. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
@@ -1035,6 +1055,11 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @VisibleForTesting
+    SuccessFunction successFunction() {
+        return successFunction;
+    }
+
     /**
      * Sets the {@link Path} for storing the files uploaded from
      * {@code multipart/form-data} requests.
@@ -1104,6 +1129,9 @@ public final class VirtualHostBuilder implements TlsSetters {
         final ServiceNaming defaultServiceNaming =
                 this.defaultServiceNaming != null ?
                 this.defaultServiceNaming : template.defaultServiceNaming;
+        final String defaultLogName =
+                this.defaultLogName != null ?
+                this.defaultLogName : template.defaultLogName;
         final long requestTimeoutMillis =
                 this.requestTimeoutMillis != null ?
                 this.requestTimeoutMillis : template.requestTimeoutMillis;
@@ -1197,9 +1225,10 @@ public final class VirtualHostBuilder implements TlsSetters {
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
+                                accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter,
-                                blockingTaskExecutor, multipartUploadsLocation, builder.build());
+                                blockingTaskExecutor, successFunction, multipartUploadsLocation,
+                                builder.build());
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);

@@ -48,7 +48,7 @@ public class RoutersBenchmark {
             RequestHeaders.of(HttpMethod.POST, "/grpc.package.Service/Method1");
 
     static {
-        final String defaultLogName = null;
+        final String defaultLogName = "log";
         final String defaultServiceName = null;
         final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
         final Route route1 = Route.builder().exact("/grpc.package.Service/Method1").build();
@@ -74,9 +74,9 @@ public class RoutersBenchmark {
                                              ImmutableList.of(), HttpHeaders.of());
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
-                unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
-                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), multipartUploadsLocation,
-                ImmutableList.of());
+                unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, defaultLogName, 0, 0, false,
+                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), SuccessFunction.ofDefault(),
+                multipartUploadsLocation, ImmutableList.of());
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }
 

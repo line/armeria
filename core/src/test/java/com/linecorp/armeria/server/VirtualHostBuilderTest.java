@@ -37,6 +37,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SuccessFunction;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
@@ -341,5 +342,31 @@ class VirtualHostBuilderTest {
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .build(template, noopDependencyInjector);
         assertThat(h2.multipartUploadsLocation()).isEqualTo(template.multipartUploadsLocation());
+    }
+
+    @Test
+    void defaultLogNameCustomization() {
+        final String defaultLogName = "test";
+        final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
+                .defaultLogName(defaultLogName)
+                .build(template, noopDependencyInjector);
+        assertThat(h1.defaultLogName()).isEqualTo(defaultLogName);
+
+        final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
+                .build(template, noopDependencyInjector);
+        assertThat(h2.defaultLogName()).isEqualTo(template.defaultLogName());
+    }
+
+    @Test
+    void successFunctionCustomization() {
+        final SuccessFunction successFunction = (ctx, log) -> false;
+        final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
+                .successFunction(successFunction)
+                .build(template, noopDependencyInjector);
+        assertThat(h1.successFunction()).isEqualTo(successFunction);
+
+        final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
+                .build(template, noopDependencyInjector);
+        assertThat(h2.successFunction()).isEqualTo(template.successFunction());
     }
 }
