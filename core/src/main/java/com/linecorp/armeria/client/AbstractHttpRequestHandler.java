@@ -229,6 +229,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
      * {@link Channel#flush()} when each write unit is done.
      */
     final void writeData(HttpData data) {
+        data.touch(ctx);
         logBuilder.increaseRequestLength(data);
         write(data, data.isEndOfStream());
     }
