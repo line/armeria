@@ -124,7 +124,17 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         keepAliveHandler.onReadOrWrite();
         // this.req can be set to null by fail(), so we keep it in a local variable.
         DecodedHttpRequest req = this.req;
-        final int id = req != null ? req.id() : ++receivedRequests;
+        final int id;
+        if (req != null) {
+            id = req.id();
+        } else {
+            if (msg instanceof HttpRequest) {
+                id = ++receivedRequests;
+            } else {
+                // Invalid decoder state. 404 Bad Request may be returned if no response was sent for the `id`.
+                id = receivedRequests;
+            }
+        }
         try {
             if (discarding) {
                 return;
@@ -137,12 +147,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (!nettyReq.decoderResult().isSuccess()) {
                         final Throwable cause = nettyReq.decoderResult().cause();
                         if (cause instanceof TooLongHttpLineException) {
-                            fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, "Too Long URI", cause);
+                            fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, Http2Error.FRAME_SIZE_ERROR,
+                                 "Too Long URI", cause);
                         } else if (cause instanceof TooLongHttpHeaderException) {
                             fail(id, null, HttpStatus.REQUEST_HEADER_FIELDS_TOO_LARGE,
-                                 "Request Header Fields Too Large", cause);
+                                 Http2Error.FRAME_SIZE_ERROR, "Request Header Fields Too Large", cause);
                         } else {
-                            fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", cause);
+                            fail(id, null, HttpStatus.BAD_REQUEST, Http2Error.PROTOCOL_ERROR,
+                                 "Decoder failure", cause);
                         }
                         return;
                     }
@@ -150,7 +162,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // Do not accept unsupported methods.
                     final io.netty.handler.codec.http.HttpMethod nettyMethod = nettyReq.method();
                     if (!HttpMethod.isSupported(nettyMethod.name())) {
-                        fail(id, null, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                        fail(id, null, HttpStatus.METHOD_NOT_ALLOWED, Http2Error.PROTOCOL_ERROR,
+                             "Unsupported method", null);
                         return;
                     }
 
@@ -167,7 +180,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Do not accept a CONNECT request.
                     if (headers.method() == HttpMethod.CONNECT) {
-                        fail(id, headers, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                        fail(id, headers, HttpStatus.METHOD_NOT_ALLOWED, Http2Error.CONNECT_ERROR,
+                             "Unsupported method", null);
                         return;
                     }
 
@@ -182,7 +196,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             contentLength = -1;
                         }
                         if (contentLength < 0) {
-                            fail(id, headers, HttpStatus.BAD_REQUEST, "Invalid content length", null);
+                            fail(id, headers, HttpStatus.BAD_REQUEST, Http2Error.FRAME_SIZE_ERROR,
+                                 "Invalid content length", null);
                             return;
                         }
 
@@ -194,7 +209,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // Reject the requests with an `expect` header whose value is not `100-continue`.
                     if (hasInvalidExpectHeader) {
                         ctx.pipeline().fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
-                        fail(id, headers, HttpStatus.EXPECTATION_FAILED, null, null);
+                        fail(id, headers, HttpStatus.EXPECTATION_FAILED, Http2Error.PROTOCOL_ERROR, null, null);
                         return;
                     }
 
@@ -208,7 +223,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             assert routed.isPresent();
                         } catch (Throwable cause) {
                             logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
-                            fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+                            fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR,
+                                 null, cause);
                             return;
                         }
                     }
@@ -224,7 +240,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         ctx.fireChannelRead(req);
                     }
                 } else {
-                    fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
+                    fail(id, null, HttpStatus.BAD_REQUEST, Http2Error.PROTOCOL_ERROR,
+                         "Invalid decoder state", null);
                     return;
                 }
             }
@@ -242,8 +259,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    fail(id, decodedReq.headers(), HttpStatus.BAD_REQUEST,
-                         Http2Error.PROTOCOL_ERROR, "Decoder failure", null);
+                    fail(id, decodedReq.headers(), HttpStatus.BAD_REQUEST, Http2Error.PROTOCOL_ERROR,
+                         "Decoder failure", null);
                     final ProtocolViolationException cause =
                             new ProtocolViolationException(decoderResult.cause());
                     decodedReq.close(HttpStatusException.of(HttpStatus.BAD_REQUEST, cause));
@@ -259,13 +276,22 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
                         final Routed<ServiceConfig> routed = req.route();
                         if (routed != null && routed.route().isFallback()) {
-                            // Don't need to return an error response. `FallbackService` immediately respond to
-                            // the request without consuming data. Set `req` to null to receive a new request.
-                            // If the client sends subsequent HttpMessages, a connection will be reset.
-                            this.req = null;
-                            // The client could be suspicious or an attacker. Try to close the connection
-                            // after sending a `404 Not Found` response.
-                            ((ServerHttp1ObjectEncoder) encoder).initiateConnectionShutdown();
+                            // The client could be suspicious or an attacker. Gracefully close the connection
+                            // after a `404 Not Found` response is sent.
+                            encoder.keepAliveHandler().disconnectWhenFinished();
+                            if (encoder.isResponseHeadersSent(id, 1)) {
+                                // FallbackService returned a response.
+                                discarding = true;
+                                req = null;
+                            } else {
+                                // If `FallbackService` does not return a response until the maximum length
+                                // exceeds, a decorator might intercept the request. A 404 Bad Request is sent
+                                // here instead. The late response returned by the decorator will be blocked at
+                                // `encoder` level.
+                                fail(id, decodedReq.headers(), HttpStatus.NOT_FOUND, Http2Error.CANCEL, null,
+                                     null);
+                                decodedReq.abortResponse(HttpStatusException.of(HttpStatus.NOT_FOUND), true);
+                            }
                         } else {
                             final ContentTooLargeException cause =
                                     ContentTooLargeException.builder()
@@ -277,8 +303,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                  Http2Error.CANCEL, null, cause);
                             // Wrap the cause with the returned status to let LoggingService correctly log the
                             // status.
-                            decodedReq.close(
-                                    HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));
+                            decodedReq.abortResponse(
+                                    HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
+                                    true);
                         }
                         return;
                     }
@@ -355,18 +382,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // the error response.
             encoder.writeReset(id, 1, error);
         } else {
-            fail(id, headers, status, message, cause);
+            discarding = true;
+            req = null;
+            // FIXME(trustin): Use a different verboseResponses for a different virtual host.
+            encoder.writeErrorResponse(id, 1, cfg.defaultVirtualHost().fallbackServiceConfig(),
+                                       headers, status, message, cause);
         }
-    }
-
-    private void fail(int id, @Nullable RequestHeaders headers, HttpStatus status,
-                      @Nullable String message, @Nullable Throwable cause) {
-        discarding = true;
-        req = null;
-
-        // FIXME(trustin): Use a different verboseResponses for a different virtual host.
-        encoder.writeErrorResponse(id, 1, cfg.defaultVirtualHost().fallbackServiceConfig(),
-                                   headers, status, message, cause);
     }
 
     @Override
