@@ -32,6 +32,7 @@ import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 public class ServerRequestIdTest {
+
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -49,6 +50,7 @@ public class ServerRequestIdTest {
               .build((ctx, req) -> HttpResponse.of(ctx.id().toString()));
         }
     };
+
     private static ClientFactory clientFactory;
 
     @BeforeAll
