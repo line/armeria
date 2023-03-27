@@ -124,17 +124,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         keepAliveHandler.onReadOrWrite();
         // this.req can be set to null by fail(), so we keep it in a local variable.
         DecodedHttpRequest req = this.req;
-        final int id;
-        if (req != null) {
-            id = req.id();
-        } else {
-            if (msg instanceof HttpRequest) {
-                id = ++receivedRequests;
-            } else {
-                // Invalid decoder state. 404 Bad Request may be returned if no response was sent for the `id`.
-                id = receivedRequests;
-            }
-        }
+        final int id = req != null ? req.id() : ++receivedRequests;
         try {
             if (discarding) {
                 return;

@@ -41,9 +41,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class FallbackServiceTest {
@@ -82,9 +80,6 @@ class FallbackServiceTest {
             sb.decorator((delegate, ctx, req) -> {
                 return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(5));
             });
-            sb.decorator(LoggingService.builder()
-                                       .successfulResponseLogLevel(LogLevel.DEBUG)
-                                       .newDecorator());
             sb.service("/", (ctx, req) -> HttpResponse.of(200));
         }
     };
