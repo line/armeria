@@ -38,20 +38,15 @@ final class ServiceRouteUtil {
         final String originalPath = headers.path();
 
         final RoutingStatus routingStatus;
-        if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
-            // 'OPTIONS * HTTP/1.1' will be handled by HttpServerHandler
-            if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
-                routingStatus = RoutingStatus.OPTIONS;
+        if (pathAndQuery != null) {
+            if (isCorsPreflightRequest(headers)) {
+                routingStatus = RoutingStatus.CORS_PREFLIGHT;
             } else {
-                routingStatus = RoutingStatus.INVALID_PATH;
+                routingStatus = RoutingStatus.OK;
             }
         } else {
-            if (pathAndQuery != null) {
-                if (isCorsPreflightRequest(headers)) {
-                    routingStatus = RoutingStatus.CORS_PREFLIGHT;
-                } else {
-                    routingStatus = RoutingStatus.OK;
-                }
+            if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
+                routingStatus = RoutingStatus.OPTIONS;
             } else {
                 routingStatus = RoutingStatus.INVALID_PATH;
             }
