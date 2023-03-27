@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpSessionHandler.MAX_NUM_REQUESTS_SENT;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeRequestHeaders;
 
 import java.util.concurrent.ScheduledFuture;
@@ -28,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -38,6 +40,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -155,10 +159,9 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                         " in one connection. ID: " + id);
             } else {
                 exception = new ClosedSessionException(
-                        "Can't send requests. ID: " + id + ", session active: " + session.isActive() +
-                        ", response needs to disconnect: " + responseDecoder.needsToDisconnectWhenFinished());
+                        "Can't send requests. ID: " + id + ", session active: " + session.isAcquirable());
             }
-            responseDecoder.disconnectWhenFinished();
+            session.deactivate();
             // No need to send RST because we didn't send any packet and this will be disconnected anyway.
             fail(UnprocessedRequestException.of(exception));
             return false;
@@ -202,6 +205,17 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         final RequestHeaders merged = mergeRequestHeaders(
                 headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(merged);
+
+        final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
+        if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
+            // Make the session unhealthy so that subsequent requests do not use it.
+            // In HTTP/2 request, the "Connection: close" is just interpreted as a signal to close the
+            // connection by sending a GOAWAY frame that will be sent after receiving the corresponding
+            // response from the remote peer. The "Connection: close" header is stripped when it is converted to
+            // a Netty HTTP/2 header.
+            session.deactivate();
+        }
+
         final ChannelPromise promise = ch.newPromise();
         // Attach a listener first to make the listener early handle a cause raised while writing headers
         // before any other callbacks like `onStreamClosed()` are invoked.
@@ -215,6 +229,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
      * {@link Channel#flush()} when each write unit is done.
      */
     final void writeData(HttpData data) {
+        data.touch(ctx);
         logBuilder.increaseRequestLength(data);
         write(data, data.isEndOfStream());
     }

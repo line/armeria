@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -39,6 +41,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
@@ -112,6 +115,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
         if (failIfStreamOrSessionClosed()) {
             PooledObjects.close(o);
+            setDone(true);
             return;
         }
 
@@ -154,13 +158,17 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         state = State.NEEDS_DATA_OR_TRAILERS;
                     }
                     if (endOfStream) {
-                        setDone(false);
+                        setDone(true);
                     }
                     final ServerConfig config = reqCtx.config().server().config();
                     merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),
                                                   reqCtx.config().defaultHeaders(),
                                                   config.isServerHeaderEnabled(),
                                                   config.isDateHeaderEnabled());
+                    final String connectionOption = merged.get(HttpHeaderNames.CONNECTION);
+                    if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
+                        disconnectWhenFinished();
+                    }
                     logBuilder().responseHeaders(merged);
                 }
 
@@ -202,6 +210,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                    .addListener(writeHeadersFutureListener(true));
                 } else {
                     final HttpData data = (HttpData) o;
+                    data.touch(reqCtx);
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
@@ -314,11 +323,33 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                 responseEncoder.writeTrailers(req.id(), req.streamId(), additionalTrailers)
                                .addListener(writeHeadersFutureListener(true));
                 ctx.flush();
-            } else if (responseEncoder.isWritable(req.id(), req.streamId())) {
-                responseEncoder.writeData(req.id(), req.streamId(), HttpData.empty(), true)
-                               .addListener(writeDataFutureListener(true, true));
-                ctx.flush();
+            } else {
+                if (isWritable()) {
+                    responseEncoder.writeData(req.id(), req.streamId(), HttpData.empty(), true)
+                                   .addListener(writeDataFutureListener(true, true));
+                    ctx.flush();
+                } else {
+                    if (!reqCtx.sessionProtocol().isMultiplex()) {
+                        // An HTTP/1 connection is closed by a remote peer after all data is sent,
+                        // so we can assume the HTTP/1 request is complete successfully.
+                        succeed();
+                    } else {
+                        fail(ClosedStreamException.get());
+                    }
+                }
             }
+        }
+    }
+
+    private void succeed() {
+        if (tryComplete(null)) {
+            final Throwable capturedException = CapturedServiceException.get(reqCtx);
+            if (capturedException != null) {
+                endLogRequestAndResponse(capturedException);
+            } else {
+                endLogRequestAndResponse();
+            }
+            maybeWriteAccessLog();
         }
     }
 
@@ -434,9 +465,13 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                     //    3) and the protocol is HTTP/1,
                     // it is very likely that a client closed the connection after receiving the
                     // complete content, which is not really a problem.
+                    final Throwable cause = future.cause();
                     isSuccess = endOfStream && wroteEmptyData &&
-                                future.cause() instanceof ClosedChannelException &&
-                                responseEncoder instanceof Http1ObjectEncoder;
+                                responseEncoder instanceof Http1ObjectEncoder &&
+                                (cause instanceof ClosedChannelException ||
+                                 // A ClosedSessionException may be raised by HttpObjectEncoder
+                                 // if a channel was closed.
+                                 cause instanceof ClosedSessionException);
                 }
                 handleWriteComplete(future, endOfStream, isSuccess);
             }
@@ -451,15 +486,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
             maybeLogFirstResponseBytesTransferred();
 
             if (endOfStream) {
-                if (tryComplete(null)) {
-                    final Throwable capturedException = CapturedServiceException.get(reqCtx);
-                    if (capturedException != null) {
-                        endLogRequestAndResponse(capturedException);
-                    } else {
-                        endLogRequestAndResponse();
-                    }
-                    maybeWriteAccessLog();
-                }
+                succeed();
             }
 
             if (!isSubscriptionCompleted) {
