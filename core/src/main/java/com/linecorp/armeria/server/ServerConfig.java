@@ -306,4 +306,9 @@ public interface ServerConfig {
      */
     @UnstableApi
     Function<String, String> absoluteUriTransformer();
+
+    /**
+     * Returns the interval between reporting unhandled exceptions.
+     */
+    Duration unhandledExceptionsReportInterval();
 }

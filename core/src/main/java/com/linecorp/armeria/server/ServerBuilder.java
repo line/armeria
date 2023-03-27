@@ -92,6 +92,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -211,6 +212,8 @@ public final class ServerBuilder implements TlsSetters {
     @Nullable
     private DependencyInjector dependencyInjector;
     private Function<? super String, String> absoluteUriTransformer = Function.identity();
+    private Duration unhandledExceptionsReportInterval = Duration.ofMillis(
+            Flags.defaultUnhandledExceptionsReportIntervalMillis());
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     ServerBuilder() {
@@ -1843,6 +1846,29 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the interval between reporting exceptions which is not handled or logged
+     * by any decorators or services such as {@link LoggingService}.
+     * @param interval the interval between reports, or {@link Duration#ZERO} to disable this feature
+     * @throws IllegalArgumentException if specified {@code interval} is negative.
+     */
+    public ServerBuilder unhandledExceptionsReportInterval(Duration interval) {
+        requireNonNull(interval, "interval");
+        checkArgument(!interval.isNegative());
+        unhandledExceptionsReportInterval = interval;
+        return this;
+    }
+
+    /**
+     * Sets the interval between reporting exceptions which is not handled or logged
+     * by any decorators or services such as {@link LoggingService}.
+     * @param interval the interval between reports in milliseconds, or {@code 0} to disable this feature
+     * @throws IllegalArgumentException if specified {@code interval} is negative.
+     */
+    public ServerBuilder unhandledExceptionsReportIntervalMillis(long interval) {
+        return unhandledExceptionsReportInterval(Duration.ofMillis(interval));
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1960,6 +1986,14 @@ public final class ServerBuilder implements TlsSetters {
             errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
         }
 
+        if (unhandledExceptionsReportInterval != Duration.ZERO) {
+            final ExceptionReportingServerErrorHandler reportingErrorHandler =
+                    new ExceptionReportingServerErrorHandler(meterRegistry, errorHandler,
+                                                             unhandledExceptionsReportInterval);
+            errorHandler = reportingErrorHandler;
+            serverListeners.add(reportingErrorHandler);
+        }
+
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
@@ -1974,7 +2008,7 @@ public final class ServerBuilder implements TlsSetters {
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
-                ImmutableList.copyOf(shutdownSupports));
+                unhandledExceptionsReportInterval, ImmutableList.copyOf(shutdownSupports));
     }
 
     /**
@@ -2069,6 +2103,7 @@ public final class ServerBuilder implements TlsSetters {
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer);
+                enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer,
+                unhandledExceptionsReportInterval);
     }
 }

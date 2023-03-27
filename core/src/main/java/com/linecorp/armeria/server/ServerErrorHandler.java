@@ -228,7 +228,7 @@ public interface ServerErrorHandler {
                                                        @Nullable String description,
                                                        @Nullable Throwable cause) {
                 final AggregatedHttpResponse response =
-                        ServerErrorHandler.super.renderStatus(config, headers, status, description, cause);
+                        ServerErrorHandler.this.renderStatus(config, headers, status, description, cause);
                 if (response != null) {
                     return response;
                 }
