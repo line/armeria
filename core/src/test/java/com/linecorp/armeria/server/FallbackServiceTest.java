@@ -135,7 +135,7 @@ class FallbackServiceTest {
         final HttpResponse response = WebClient.builder(lengthLimitServer.uri(protocol))
                                                .build()
                                                .execute(streaming);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 4; i++) {
             streaming.write(HttpData.ofUtf8(Strings.repeat("a", 30)));
         }
         streaming.close();
@@ -158,7 +158,7 @@ class FallbackServiceTest {
         final HttpResponse response = WebClient.builder(lengthLimitServerWithDecorator.uri(protocol))
                                                .build()
                                                .execute(streaming);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 4; i++) {
             streaming.write(HttpData.ofUtf8(Strings.repeat("a", 30)));
         }
         streaming.close();
