@@ -101,6 +101,8 @@ public final class DefaultServiceRequestContext
 
     private final InetAddress clientAddress;
 
+    private boolean shouldReportUnhandledExceptions = true;
+
     private final RequestLogBuilder log;
 
     @Nullable
@@ -437,6 +439,16 @@ public final class DefaultServiceRequestContext
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return proxiedAddresses;
+    }
+
+    @Override
+    public boolean shouldReportUnhandledExceptions() {
+        return shouldReportUnhandledExceptions;
+    }
+
+    @Override
+    public void setShouldReportUnhandledExceptions(boolean value) {
+        shouldReportUnhandledExceptions = value;
     }
 
     @Override

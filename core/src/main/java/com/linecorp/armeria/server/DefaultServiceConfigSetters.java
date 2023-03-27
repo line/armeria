@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -71,6 +72,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
+    @Nullable
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -204,6 +207,13 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigSetters requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        return this;
+    }
+
+    @Override
     public ServiceConfigSetters addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
@@ -297,6 +307,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (multipartUploadsLocation != null) {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
+        }
+        if (requestIdGenerator != null) {
+            serviceConfigBuilder.requestIdGenerator(requestIdGenerator);
         }
         serviceConfigBuilder.shutdownSupports(shutdownSupports);
         if (!defaultHeaders.isEmpty()) {

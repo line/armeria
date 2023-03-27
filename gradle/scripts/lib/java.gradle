@@ -36,7 +36,6 @@ configure(rootProject) {
     apply plugin: 'idea'
 }
 
-
 /**
  * Checks each flag of the specified project for flags of format "java(\\d+)".
  * If such a flag exists, the minimum Java version is extracted and returned.
