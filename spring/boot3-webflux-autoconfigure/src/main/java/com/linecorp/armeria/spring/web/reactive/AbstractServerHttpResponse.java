@@ -173,35 +173,34 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
                 final AtomicBoolean subscribed = new AtomicBoolean();
                 return doCommit(() -> {
                     try {
-                        // Upstream code uses `Mono.fromCallable(()
-                        // -> buffer)` which does
-                        // nothing when `Subscription.cancel()` is
-                        // called. It can lead to
-                        // leaking of the buffer when an
+                        // Upstream code uses `Mono.fromCallable(() -> buffer)` which does nothing when
+                        // `Subscription.cancel()` is called. It can lead to leaking of the buffer when an
                         // HttpResponse is canceled.
-                        return writeWithInternal(Mono.just(buffer).doOnSubscribe(s -> subscribed.set(true))
+                        //
+                        return writeWithInternal(Mono.just(buffer)
+                                                     .doOnSubscribe(s -> subscribed.set(true))
                                                      .doOnDiscard(DataBuffer.class, DataBufferUtils::release));
                     } catch (Throwable ex) {
                         return Mono.error(ex);
                     }
-                }).doOnError(ex -> DataBufferUtils.release(buffer)).doOnCancel(() -> {
-                    if (!subscribed.get()) {
-                        DataBufferUtils.release(buffer);
-                    }
-                });
+                }).doOnError(ex -> DataBufferUtils.release(buffer))
+                  .doOnCancel(() -> {
+                      if (!subscribed.get()) {
+                          DataBufferUtils.release(buffer);
+                      }
+                  });
             }).doOnError(t -> getHeaders().clearContentHeaders()).doOnDiscard(DataBuffer.class,
                                                                               DataBufferUtils::release);
         } else {
-            return new ChannelSendOperator<>(body, inner -> doCommit(() -> writeWithInternal(inner))).doOnError(
-                    t -> getHeaders().clearContentHeaders());
+            return new ChannelSendOperator<>(body, inner -> doCommit(() -> writeWithInternal(inner)))
+                    .doOnError(t -> getHeaders().clearContentHeaders());
         }
     }
 
     @Override
     public final Mono<Void> writeAndFlushWith(Publisher<? extends Publisher<? extends DataBuffer>> body) {
-        return new ChannelSendOperator<>(body,
-                                         inner -> doCommit(() -> writeAndFlushWithInternal(inner))).doOnError(
-                t -> getHeaders().clearContentHeaders());
+        return new ChannelSendOperator<>(body, inner -> doCommit(() -> writeAndFlushWithInternal(inner)))
+                .doOnError(t -> getHeaders().clearContentHeaders());
     }
 
     @Override

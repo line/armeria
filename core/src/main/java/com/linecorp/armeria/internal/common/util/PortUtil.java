@@ -26,7 +26,7 @@ public final class PortUtil {
 
     private static final int PORT_MIN = 1024;
     private static final int PORT_MAX = 65535;
-    private static final int PORT_RANGE = PORT_MAX - PORT_MIN;
+    private static final int PORT_RANGE = PORT_MAX - PORT_MIN + 1;
 
     public static int unusedTcpPort() {
         final Random random = ThreadLocalRandom.current();

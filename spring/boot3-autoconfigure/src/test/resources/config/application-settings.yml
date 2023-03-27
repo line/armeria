@@ -17,14 +17,3 @@ armeria:
   request-timeout: 8000
   max-request-length: 0
   verbose-responses: true
-
-management:
-  metrics:
-    export:
-      prometheus:
-        enabled: true # In order to inject PrometheusMeterRegistry
-
-  prometheus:
-    metrics:
-      export:
-        enabled: true
