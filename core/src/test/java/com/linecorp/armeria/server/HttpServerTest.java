@@ -960,8 +960,6 @@ class HttpServerTest {
                                      (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 
                              builder.factory(clientFactory);
-                             // TODO(ikhoon): Revert
-                             builder.responseTimeoutMillis(0);
                              builder.decorator(
                                      (delegate, ctx, req) -> {
                                          ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
