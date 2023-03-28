@@ -22,8 +22,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 class HttpClientAdditionalHeadersTest {
 
@@ -55,5 +58,31 @@ class HttpClientAdditionalHeadersTest {
                 .doesNotContain("=503")
                 .doesNotContain("=CONNECT")
                 .contains("foo=bar");
+    }
+
+    @Test
+    void authorityOverriddenCorrectly() throws Exception {
+        final String authority = "custom.authority";
+        try (ClientRequestContextCaptor clientCaptor = Clients.newContextCaptor()) {
+            assertThat(server.blockingWebClient(cb -> cb.decorator((delegate, ctx, req) -> {
+                                 ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, authority);
+                                 return delegate.execute(ctx, req);
+                             }))
+                             .get("/").status().code()).isEqualTo(200);
+
+            assertThat(clientCaptor.size()).isEqualTo(1);
+            final ClientRequestContext clientContext = clientCaptor.get();
+            assertThat(clientContext.authority()).isEqualTo(authority);
+            assertThat(clientContext.log().whenComplete().join().requestHeaders()
+                                    .get(HttpHeaderNames.USER_AGENT))
+                    .isEqualTo(UserAgentUtil.USER_AGENT.toString());
+
+            final ServiceRequestContextCaptor serviceCaptor = server.requestContextCaptor();
+            assertThat(serviceCaptor.size()).isEqualTo(1);
+            final ServiceRequestContext serviceContext = serviceCaptor.poll();
+            assertThat(serviceContext.request().authority()).isEqualTo(authority);
+            assertThat(serviceContext.request().headers().get(HttpHeaderNames.USER_AGENT))
+                    .isEqualTo(UserAgentUtil.USER_AGENT.toString());
+        }
     }
 }

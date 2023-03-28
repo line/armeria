@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -214,19 +215,110 @@ class DefaultClientRequestContextTest {
         assertThat(ClientThreadLocalState.get()).isNull();
     }
 
+    @Test
+    void testAuthorityOverridden() {
+        final HttpRequest request1 = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/foo",
+                HttpHeaderNames.SCHEME, "http"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request1);
+        assertThat(ctx.authority()).isNull();
+        assertThat(ctx.uri().toString()).isEqualTo("http:/foo");
+        assertThat(ctx.uri()).hasScheme("http").hasAuthority(null).hasPath("/foo");
+
+        ctx.init(Endpoint.of("endpoint.com", 8080));
+        assertThat(ctx.authority()).isEqualTo("endpoint.com:8080");
+        assertThat(ctx.uri().toString()).isEqualTo("http://endpoint.com:8080/foo");
+
+        final HttpRequest request2 = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/bar",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "request.com"));
+        ctx.updateRequest(request2);
+        assertThat(ctx.authority()).isEqualTo("request.com");
+        assertThat(ctx.uri().toString()).isEqualTo("http://request.com/bar");
+
+        ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "additional.com");
+        assertThat(ctx.authority()).isEqualTo("additional.com");
+        assertThat(ctx.uri().toString()).isEqualTo("http://additional.com/bar");
+    }
+
+    @Test
+    void testDefaultAuthorityOverridesInternal() {
+        final HttpRequest request1 = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/foo",
+                HttpHeaderNames.SCHEME, "http"));
+        final ClientOptions clientOptions = ClientOptions.builder()
+                                                         .addHeader(HttpHeaderNames.AUTHORITY, "default.com")
+                                                         .build();
+        final DefaultClientRequestContext ctx = newContext(clientOptions, request1);
+        ctx.init(Endpoint.of("example.com", 8080));
+        assertThat(ctx.authority()).isEqualTo("default.com");
+        assertThat(ctx.uri().toString()).isEqualTo("http://default.com/foo");
+    }
+
+    @Test
+    void requestUpdateAllComponents() {
+        final DefaultClientRequestContext ctx = newContext();
+        assertThat(ctx.authority()).isEqualTo("example.com:8080");
+        assertThat(ctx.uri().toString()).isEqualTo("http://example.com:8080/foo");
+
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "https://path.com/a/b/c",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "request.com"));
+        ctx.updateRequest(request);
+        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
+        assertThat(ctx.authority()).isEqualTo("request.com");
+        assertThat(ctx.uri().toString()).isEqualTo("https://request.com/a/b/c");
+        assertThat(ctx.endpoint().authority()).isEqualTo("path.com");
+    }
+
+    @Test
+    void uriIncludesAllComponents() {
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "https://path.com/a/b/c?q1=p1&q2=p2",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "request.com"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request, "fragment1");
+        ctx.updateRequest(request);
+        assertThat(ctx.uri().toString()).isEqualTo("https://request.com/a/b/c?q1=p1&q2=p2#fragment1");
+        assertThat(ctx.endpoint().authority()).isEqualTo("path.com");
+    }
+
+    @Test
+    void uriWithOnlySchemePath() {
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/",
+                HttpHeaderNames.SCHEME, "http"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request);
+        ctx.updateRequest(request);
+        assertThat(ctx.uri().toString()).isEqualTo("http:/");
+    }
+
     private static DefaultClientRequestContext newContext() {
-        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                RequestId.random(), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.of(),
-                HttpRequest.of(RequestHeaders.of(
-                        HttpMethod.POST, "/foo",
-                        HttpHeaderNames.SCHEME, "http",
-                        HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null, RequestOptions.of(), new CancellationScheduler(0), System.nanoTime(),
-                SystemInfo.currentTimeMicros());
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/foo",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "example.com:8080"));
+        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request);
         ctx.init(Endpoint.of("example.com", 8080));
         return ctx;
+    }
+
+    private static DefaultClientRequestContext newContext(ClientOptions clientOptions,
+                                                          HttpRequest httpRequest) {
+        return newContext(clientOptions, httpRequest, null);
+    }
+
+    private static DefaultClientRequestContext newContext(ClientOptions clientOptions,
+                                                          HttpRequest httpRequest,
+                                                          @Nullable String fragment) {
+        return new DefaultClientRequestContext(
+                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
+                RequestId.random(), HttpMethod.POST, "/foo", null, fragment,
+                clientOptions, httpRequest,
+                null, RequestOptions.of(), new CancellationScheduler(0), System.nanoTime(),
+                SystemInfo.currentTimeMicros());
     }
 
     @Test

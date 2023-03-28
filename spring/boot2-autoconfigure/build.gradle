@@ -18,7 +18,30 @@ dependencies {
     testImplementation libs.spring.boot2.starter.actuator
     testImplementation libs.spring.boot2.starter.test
     // Enables cglib for testing
-    testImplementation libs.hibernate.validator
+    testImplementation libs.hibernate.validator6
+}
+
+def boot3Autoconfigure = "boot3-autoconfigure"
+def boot3AutoconfigureProjectDir = "${rootProject.projectDir}/spring/$boot3Autoconfigure"
+
+// Use the sources from ':spring:boot3-autoconfigure'.
+tasks.compileJava.dependsOn(project(":spring:$boot3Autoconfigure").tasks.compileJava)
+tasks.compileTestJava.dependsOn(project(":spring:$boot3Autoconfigure").tasks.compileTestJava)
+
+tasks.compileJava.source "${boot3AutoconfigureProjectDir}/src/main/java"
+tasks.processResources.from "${boot3AutoconfigureProjectDir}/src/main/resources"
+tasks.compileTestJava.source "${projectDir}/src/test/java",
+        "${boot3AutoconfigureProjectDir}/src/test/java",
+        "${boot3AutoconfigureProjectDir}/gen-src/test/grpc",
+        "${boot3AutoconfigureProjectDir}/gen-src/test/java"
+tasks.processTestResources.from "${boot3AutoconfigureProjectDir}/src/test/resources"
+tasks.sourcesJar.from "${boot3AutoconfigureProjectDir}/src/main/java"
+tasks.sourcesJar.from "${boot3AutoconfigureProjectDir}/src/main/resources"
+tasks.javadoc.source "${boot3AutoconfigureProjectDir}/src/main/java"
+
+// Disable checkstyle because it's checked by ':spring:boot3-autoconfigure'.
+tasks.withType(Checkstyle) {
+    onlyIf { false }
 }
 
 // allows illegal access by cglib
