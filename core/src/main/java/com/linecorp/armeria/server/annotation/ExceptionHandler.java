@@ -22,6 +22,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.DependencyInjector;
+
 /**
  * Specifies an {@link ExceptionHandlerFunction} class which handles exceptions throwing from an
  * annotated service method.
@@ -32,8 +34,14 @@ import java.lang.annotation.Target;
 public @interface ExceptionHandler {
 
     /**
-     * {@link ExceptionHandlerFunction} implementation type. The specified class must have an accessible
-     * default constructor.
+     * {@link ExceptionHandlerFunction} implementation type. The specified class must either have
+     * an accessible default constructor or get injected by {@link DependencyInjector}
+     * depending on its {@link #mode()}.
      */
     Class<? extends ExceptionHandlerFunction> value();
+
+    /**
+     * The instance {@link CreationMode} of {@link ExceptionHandlerFunction} specified in {@link #value()}.
+     */
+    CreationMode mode() default CreationMode.REFLECTION;
 }

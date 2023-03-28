@@ -37,6 +37,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.CreationMode;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
@@ -79,17 +80,17 @@ class DependencyInjectorTest {
 
         @Get("/foo")
         @FooDecoratorAnnotation
-        @Decorator(FooDecorator.class)
-        @ResponseConverter(FooResponseConverter.class)
-        @RequestConverter(FooRequestConverter.class)
+        @Decorator(value = FooDecorator.class, mode = CreationMode.INJECTION)
+        @ResponseConverter(value = FooResponseConverter.class, mode = CreationMode.INJECTION)
+        @RequestConverter(value = FooRequestConverter.class, mode = CreationMode.INJECTION)
         public FooResponse foo(FooRequest req) {
             return new FooResponse();
         }
 
         @Get("/fooException")
-        @Decorator(FooDecorator.class)
-        @ExceptionHandler(FooExceptionHandler.class)
-        @RequestConverter(FooRequestConverter.class)
+        @Decorator(value = FooDecorator.class, mode = CreationMode.INJECTION)
+        @ExceptionHandler(value = FooExceptionHandler.class, mode = CreationMode.INJECTION)
+        @RequestConverter(value = FooRequestConverter.class, mode = CreationMode.INJECTION)
         public FooResponse fooException(FooRequest req) {
             throw new AnticipatedException();
         }
@@ -99,7 +100,7 @@ class DependencyInjectorTest {
 
     static class FooResponse {}
 
-    @DecoratorFactory(FooDecoratorFactory.class)
+    @DecoratorFactory(value = FooDecoratorFactory.class, mode = CreationMode.INJECTION)
     @Retention(RetentionPolicy.RUNTIME)
     @Target({ ElementType.TYPE, ElementType.METHOD })
     @interface FooDecoratorAnnotation {}
@@ -214,13 +215,14 @@ class DependencyInjectorTest {
 
     @Test
     void instanceIsClosed() {
+        final DependencyInjector injector = DependencyInjector.ofSingletons(new CloseableDecorator());
         final Server server = Server.builder().annotatedService(new Object() {
-            @Decorator(CloseableDecorator.class)
+            @Decorator(value = CloseableDecorator.class, mode = CreationMode.INJECTION)
             @Get("/foo")
             public HttpResponse foo() {
                 return HttpResponse.of(200);
             }
-        }).build();
+        }).dependencyInjector(injector, true).build();
         server.start().join();
         assertThat(closeCounter.get()).isZero();
         server.stop().join();

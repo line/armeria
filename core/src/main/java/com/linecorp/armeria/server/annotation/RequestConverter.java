@@ -23,6 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.DependencyInjector;
 
 /**
  * Specifies a {@link RequestConverterFunction} class which converts an {@link AggregatedHttpRequest} to
@@ -63,8 +64,14 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 public @interface RequestConverter {
 
     /**
-     * {@link RequestConverterFunction} implementation type. The specified class must have an accessible
-     * default constructor.
+     * {@link RequestConverterFunction} implementation type. The specified class must either have
+     * an accessible default constructor or get injected by {@link DependencyInjector}
+     * depending on its {@link #mode()}.
      */
     Class<? extends RequestConverterFunction> value();
+
+    /**
+     * The instance {@link CreationMode} of {@link RequestConverterFunction} specified in {@link #value()}.
+     */
+    CreationMode mode() default CreationMode.REFLECTION;
 }

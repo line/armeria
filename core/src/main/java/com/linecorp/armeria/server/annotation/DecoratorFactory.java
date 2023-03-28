@@ -20,6 +20,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.DependencyInjector;
+
 /**
  * Specifies a {@link DecoratorFactoryFunction} class which is a factory to create a decorator.
  */
@@ -28,7 +30,14 @@ import java.lang.annotation.Target;
 public @interface DecoratorFactory {
 
     /**
-     * {@link DecoratorFactoryFunction} implementation type.
+     * {@link DecoratorFactoryFunction} implementation type. The specified class must either have
+     * an accessible default constructor or get injected by {@link DependencyInjector}
+     * depending on its {@link #mode()}.
      */
     Class<? extends DecoratorFactoryFunction<?>> value();
+
+    /**
+     * The instance {@link CreationMode} of {@link DecoratorFactoryFunction} specified in {@link #value()}.
+     */
+    CreationMode mode() default CreationMode.REFLECTION;
 }

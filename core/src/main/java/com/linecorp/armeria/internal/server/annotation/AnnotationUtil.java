@@ -321,6 +321,31 @@ public final class AnnotationUtil {
         return builder.build();
     }
 
+    /**
+     * Returns an object which is returned by invoking {@code value()} method of the given {@code annotation}.
+     */
+    static Object invokeValueMethod(Annotation annotation) {
+        return invokeMethod(annotation, "value");
+    }
+
+    /**
+     * Returns an object which is returned by invoking the annotation method of the given {@code methodName}.
+     */
+    static Object invokeMethod(Annotation annotation, String methodName) {
+        try {
+            final Method method = Iterables.getFirst(
+                    getMethods(annotation.annotationType(), withName(methodName)), null);
+
+            assert method != null : "No '" + methodName + "' method is found from " + annotation;
+
+            method.setAccessible(true);
+            return method.invoke(annotation);
+        } catch (Exception e) {
+            throw new Error("An annotation @" + annotation.annotationType().getSimpleName() +
+                            " must have a '" + methodName + "' method", e);
+        }
+    }
+
     private static void getMetaAnnotations(Builder<Annotation> builder, Annotation annotation,
                                            Predicate<Annotation> collectingFilter) {
         getMetaAnnotations(builder, annotation, collectingFilter,

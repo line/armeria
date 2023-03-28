@@ -22,6 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
@@ -35,8 +36,14 @@ import com.linecorp.armeria.common.HttpResponse;
 public @interface ResponseConverter {
 
     /**
-     * {@link ResponseConverterFunction} implementation type. The specified class must have an accessible
-     * default constructor.
+     * {@link ResponseConverterFunction} implementation type. The specified class must either have
+     * an accessible default constructor or get injected by {@link DependencyInjector}
+     * depending on its {@link #mode()}.
      */
     Class<? extends ResponseConverterFunction> value();
+
+    /**
+     * The instance {@link CreationMode} of {@link ResponseConverterFunction} specified in {@link #value()}.
+     */
+    CreationMode mode() default CreationMode.REFLECTION;
 }

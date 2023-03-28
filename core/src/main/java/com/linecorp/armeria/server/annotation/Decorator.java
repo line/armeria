@@ -22,6 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 
@@ -35,10 +36,16 @@ import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 public @interface Decorator {
 
     /**
-     * {@link DecoratingHttpServiceFunction} implementation type. The specified class must have an accessible
-     * default constructor.
+     * {@link DecoratingHttpServiceFunction} implementation type. The specified class must either have
+     * an accessible default constructor or get injected by {@link DependencyInjector}
+     * depending on its {@link #mode()}.
      */
     Class<? extends DecoratingHttpServiceFunction> value();
+
+    /**
+     * The instance {@link CreationMode} of {@link DecoratingHttpServiceFunction} specified in {@link #value()}.
+     */
+    CreationMode mode() default CreationMode.REFLECTION;
 
     /**
      * The order of decoration, where a {@link Decorator} of lower value will be applied first.
