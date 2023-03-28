@@ -540,8 +540,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     public static HttpHeaders statusToTrailers(
             ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
-        GrpcTrailersUtil.addStatusMessageToTrailers(
-                trailersBuilder, status.getCode().value(), status.getDescription());
         try {
             MetadataUtil.fillHeaders(metadata, trailersBuilder);
         } catch (Exception e) {
@@ -553,6 +551,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                     .set(GrpcHeaderNames.GRPC_STATUS, GRPC_STATUS_CODE_INTERNAL)
                     .build();
         }
+        GrpcTrailersUtil.addStatusMessageToTrailers(
+                trailersBuilder, status.getCode().value(), status.getDescription());
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
