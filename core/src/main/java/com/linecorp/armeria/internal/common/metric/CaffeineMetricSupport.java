@@ -31,12 +31,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.ToDoubleFunction;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -84,6 +86,8 @@ public final class CaffeineMetricSupport {
 
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
+        private final ReentrantLock lock = new ReentrantLock();
+        @GuardedBy("lock")
         private final List<CacheReference> cacheRefs = new ArrayList<>(2);
         private final AtomicBoolean hasLoadingCache = new AtomicBoolean();
 
@@ -111,7 +115,8 @@ public final class CaffeineMetricSupport {
         }
 
         void add(Cache<?, ?> cache, Ticker ticker) {
-            synchronized (cacheRefs) {
+            lock.lock();
+            try {
                 for (CacheReference ref : cacheRefs) {
                     if (ref.get() == cache) {
                         // Do not aggregate more than once for the same instance.
@@ -120,6 +125,8 @@ public final class CaffeineMetricSupport {
                 }
 
                 cacheRefs.add(new CacheReference(cache, ticker));
+            } finally {
+                lock.unlock();
             }
 
             if (cache instanceof LoadingCache && hasLoadingCache.compareAndSet(false, true)) {
@@ -139,7 +146,8 @@ public final class CaffeineMetricSupport {
                                                        ToDoubleFunction<CacheReference> valueFunction) {
             return value -> {
                 double sum = 0;
-                synchronized (cacheRefs) {
+                lock.lock();
+                try {
                     for (final Iterator<CacheReference> i = cacheRefs.iterator(); i.hasNext();) {
                         final CacheReference ref = i.next();
                         final boolean garbageCollected = ref.updateCacheStats();
@@ -167,6 +175,8 @@ public final class CaffeineMetricSupport {
                         // Add the value of the garbage-collected caches.
                         sum += statsForGarbageCollected[type.ordinal()];
                     }
+                } finally {
+                    lock.unlock();
                 }
 
                 return sum;
