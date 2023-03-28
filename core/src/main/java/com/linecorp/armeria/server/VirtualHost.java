@@ -34,6 +34,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -86,6 +87,7 @@ public final class VirtualHost {
     private final ScheduledExecutorService blockingTaskExecutor;
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
+    private final Function<RoutingContext, RequestId> requestIdGenerator;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
@@ -99,7 +101,8 @@ public final class VirtualHost {
                 AccessLogWriter accessLogWriter,
                 ScheduledExecutorService blockingTaskExecutor,
                 Path multipartUploadsLocation,
-                List<ShutdownSupport> shutdownSupports) {
+                List<ShutdownSupport> shutdownSupports,
+                Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         originalDefaultHostname = defaultHostname;
         originalHostnamePattern = hostnamePattern;
         if (port > 0) {
@@ -119,6 +122,10 @@ public final class VirtualHost {
         this.blockingTaskExecutor = blockingTaskExecutor;
         this.multipartUploadsLocation = multipartUploadsLocation;
         this.shutdownSupports = shutdownSupports;
+        @SuppressWarnings("unchecked")
+        final Function<RoutingContext, RequestId> castRequestIdGenerator =
+                (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        this.requestIdGenerator = castRequestIdGenerator;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(fallbackServiceConfig, "fallbackServiceConfig");
@@ -140,7 +147,8 @@ public final class VirtualHost {
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, multipartUploadsLocation,
-                               shutdownSupports);
+                               shutdownSupports,
+                               requestIdGenerator);
     }
 
     /**
@@ -371,6 +379,13 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the {@link Function} that generates a {@link RequestId}.
+     */
+    public Function<RoutingContext, RequestId> requestIdGenerator() {
+        return requestIdGenerator;
+    }
+
+    /**
      * Finds the {@link HttpService} whose {@link Router} matches the {@link RoutingContext}.
      *
      * @param routingCtx a context to find the {@link HttpService}.
@@ -477,7 +492,8 @@ public final class VirtualHost {
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, multipartUploadsLocation,
-                               shutdownSupports);
+                               shutdownSupports,
+                               requestIdGenerator);
     }
 
     @Override

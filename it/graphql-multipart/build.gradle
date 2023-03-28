@@ -1,5 +1,5 @@
 dependencies {
     implementation project(':graphql')
-    testImplementation libs.spring.boot2.starter.web
-    testImplementation libs.spring.boot2.starter.test
+    testImplementation libs.spring.boot3.starter.web
+    testImplementation libs.spring.boot3.starter.test
 }

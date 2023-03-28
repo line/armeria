@@ -106,11 +106,11 @@ final class DefaultServerConfig implements ServerConfig {
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private final Function<RoutingContext, RequestId> requestIdGenerator;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
     private final Function<String, String> absoluteUriTransformer;
+    private final Duration unhandledExceptionsReportInterval;
     private final List<ShutdownSupport> shutdownSupports;
 
     @Nullable
@@ -138,12 +138,12 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
-            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
+            Duration unhandledExceptionsReportInterval,
             List<ShutdownSupport> shutdownSupports) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -249,10 +249,6 @@ final class DefaultServerConfig implements ServerConfig {
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
 
-        @SuppressWarnings("unchecked")
-        final Function<RoutingContext, RequestId> castRequestIdGenerator =
-                (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
-        this.requestIdGenerator = castRequestIdGenerator;
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
@@ -261,6 +257,7 @@ final class DefaultServerConfig implements ServerConfig {
         final Function<String, String> castAbsoluteUriTransformer =
                 (Function<String, String>) requireNonNull(absoluteUriTransformer, "absoluteUriTransformer");
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
+        this.unhandledExceptionsReportInterval = unhandledExceptionsReportInterval;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
     }
 
@@ -621,7 +618,7 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Override
     public Function<RoutingContext, RequestId> requestIdGenerator() {
-        return requestIdGenerator;
+        return defaultVirtualHost.requestIdGenerator();
     }
 
     @Override
@@ -652,6 +649,11 @@ final class DefaultServerConfig implements ServerConfig {
         return absoluteUriTransformer;
     }
 
+    @Override
+    public Duration unhandledExceptionsReportInterval() {
+        return unhandledExceptionsReportInterval;
+    }
+
     List<ShutdownSupport> shutdownSupports() {
         return shutdownSupports;
     }
@@ -673,7 +675,7 @@ final class DefaultServerConfig implements ServerConfig {
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled(),
-                    dependencyInjector(), absoluteUriTransformer());
+                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportInterval());
         }
 
         return strVal;
@@ -697,7 +699,8 @@ final class DefaultServerConfig implements ServerConfig {
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean serverHeaderEnabled, boolean dateHeaderEnabled,
             @Nullable DependencyInjector dependencyInjector,
-            Function<? super String, String> absoluteUriTransformer) {
+            Function<? super String, String> absoluteUriTransformer,
+            Duration unhandledExceptionsReportInterval) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -796,6 +799,8 @@ final class DefaultServerConfig implements ServerConfig {
         }
         buf.append(", absoluteUriTransformer: ");
         buf.append(absoluteUriTransformer);
+        buf.append(", unhandledExceptionsReportInterval: ");
+        buf.append(unhandledExceptionsReportInterval);
         buf.append(')');
 
         return buf.toString();

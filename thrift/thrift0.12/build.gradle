@@ -26,6 +26,8 @@ dependencies {
     testImplementation libs.prometheus
 }
 
+tasks.processResources.from "${rootProject.projectDir}/thrift/thrift0.13/src/main/resources"
+
 // Use the test sources from ':thrift0.13'.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
