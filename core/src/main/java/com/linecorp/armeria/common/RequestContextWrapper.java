@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -168,6 +169,11 @@ public abstract class RequestContextWrapper<T extends RequestContext>
     @Override
     public String query() {
         return unwrap().query();
+    }
+
+    @Override
+    public URI uri() {
+        return unwrap().uri();
     }
 
     @Override
