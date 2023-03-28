@@ -50,9 +50,6 @@ project(':scalapb_2.13').projectDir = file('scalapb/scalapb_2.13')
 includeWithFlags ':scalapb_3',     'java', 'publish', 'relocate', 'no_aggregation', 'scala_3'
 project(':scalapb_3').projectDir = file('scalapb/scalapb_3')
 
-includeWithFlags ':spring:boot1-autoconfigure',          'java', 'publish', 'relocate', 'no_aggregation'
-includeWithFlags ':spring:boot1-starter',                'java', 'publish', 'relocate', 'no_aggregation'
-
 includeWithFlags ':spring:boot2-actuator-autoconfigure', 'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot2-actuator-starter',       'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot2-autoconfigure',          'java', 'publish', 'relocate', 'no_aggregation'

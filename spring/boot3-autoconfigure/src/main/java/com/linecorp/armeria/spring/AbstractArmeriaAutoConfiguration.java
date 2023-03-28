@@ -49,8 +49,7 @@ import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
- * Abstract class for implementing ArmeriaAutoConfiguration of boot2-autoconfigure module
- * and ArmeriaSpringBoot1AutoConfiguration of boot1-autoconfigure module.
+ * Abstract class for implementing ArmeriaAutoConfiguration.
  */
 public abstract class AbstractArmeriaAutoConfiguration {
 

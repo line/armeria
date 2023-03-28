@@ -115,7 +115,6 @@ shibboleth-utilities = "7.5.2"
 snappy = "1.1.9.1"
 slf4j = "1.7.36"
 spring = "5.3.25"
-spring-boot1 = "1.5.22.RELEASE"
 spring-boot2 = "2.7.8"
 spring-boot3 = "3.0.2"
 testng = "7.5"
@@ -1017,19 +1016,6 @@ version.ref = "slf4j"
 [libraries.spring-web]
 module = "org.springframework:spring-web"
 version.ref = "spring"
-
-[libraries.spring-boot1-autoconfigure]
-module = "org.springframework.boot:spring-boot-autoconfigure"
-version.ref = "spring-boot1"
-[libraries.spring-boot1-configuration-processor]
-module = "org.springframework.boot:spring-boot-configuration-processor"
-version.ref = "spring-boot1"
-[libraries.spring-boot1-starter]
-module = "org.springframework.boot:spring-boot-starter"
-version.ref = "spring-boot1"
-[libraries.spring-boot1-starter-test]
-module = "org.springframework.boot:spring-boot-starter-test"
-version.ref = "spring-boot1"
 
 [libraries.spring-boot2-actuator-autoconfigure]
 module = "org.springframework.boot:spring-boot-actuator-autoconfigure"
