@@ -36,7 +36,7 @@ final class FallbackService implements HttpService {
 
         if (routingCtx.status() == RoutingStatus.CORS_PREFLIGHT) {
             // '403 Forbidden' is better for a CORS preflight request than other statuses.
-            return HttpResponse.of(HttpStatus.FORBIDDEN);
+            return newHeadersOnlyResponse(HttpStatus.FORBIDDEN);
         }
 
         final HttpStatusException cause = routingCtx.deferredStatusException();
@@ -85,7 +85,7 @@ final class FallbackService implements HttpService {
         // 4) As the headers have already been written at 1), `fail()` resets the connection.
         // 5) A 413 status or a 404 status is expected to return but the client ends up with a
         //    `ClosedSessionException`.
-         return HttpResponse.of(ResponseHeaders.builder(status)
+        return HttpResponse.of(ResponseHeaders.builder(status)
                                               .endOfStream(true)
                                               .build());
     }
