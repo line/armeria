@@ -55,7 +55,9 @@ tasks.generateSources.dependsOn(generateTestSources)
 tasks.compileJava.dependsOn(generateSources)
 tasks.compileTestJava.dependsOn(generateSources)
 
-tasks.processResources.from "${thrift013ProjectDir}/src/main/resources"
+tasks.processResources.from("${thrift013ProjectDir}/src/main/resources") {
+    exclude '**/thrift-options.properties'
+}
 tasks.processTestResources.from "${thrift013ProjectDir}/src/test/resources"
 tasks.sourcesJar.from "${thrift013ProjectDir}/src/main/resources"
 
