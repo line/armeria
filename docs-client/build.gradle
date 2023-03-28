@@ -10,7 +10,6 @@ if (rootProject.hasProperty('noWeb')) {
 
 node {
     version = '18.15.0'
-    npmVersion = '9.6.2'
     download = true
     npmInstallCommand = "ci"
 
@@ -20,6 +19,8 @@ node {
         npmWorkDir = file("${gradle.gradleUserHomeDir}/caches/npm/${project.name}")
     }
 }
+
+tasks.npmInstall.args.add('--legacy-peer-deps')
 
 task buildWeb(type: NpmTask) {
     dependsOn tasks.npmInstall
