@@ -19,7 +19,7 @@ package com.linecorp.armeria.common;
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.common.metric.MoreMetrics;
+import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -39,8 +39,8 @@ public final class CommonPools {
 
     static {
         // Bind EventLoopMetrics for the common worker group.
-        MoreMetrics
-                .eventLoopMetrics("common", WORKER_GROUP)
+        MoreMeterBinders
+                .eventLoopMetrics(WORKER_GROUP, "common")
                 .bindTo(Flags.meterRegistry());
     }
 

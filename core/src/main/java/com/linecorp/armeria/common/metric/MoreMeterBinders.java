@@ -17,17 +17,18 @@
 package com.linecorp.armeria.common.metric;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.netty.channel.EventLoopGroup;
 
 /**
  *  Provides useful {@link MeterBinder}s to monitor various Armeria components.
  */
-public final class MoreMetrics {
+public final class MoreMeterBinders {
 
     /**
-     * A {@link MeterBinder} to observe Netty's {@link EventLoopGroup}s. The following stats are currently
-     * exported per registered {@link MeterIdPrefix}.
+     * Returns a new {@link MeterBinder} to observe Netty's {@link EventLoopGroup}s. The following stats are
+     * currently exported per registered {@link MeterIdPrefix}.
      *
      * <ul>
      *   <li>"event.loop.num.workers" (gauge) - the total number of Netty's event loops</li>
@@ -36,10 +37,10 @@ public final class MoreMetrics {
      * </ul>
      */
     @UnstableApi
-    public static MeterBinder eventLoopMetrics(String name, EventLoopGroup eventLoopGroup) {
-        return new EventLoopMetrics(name, eventLoopGroup);
+    public static MeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup, String name) {
+        return new EventLoopMetrics(eventLoopGroup, name);
     }
 
-    private MoreMetrics() {
+    private MoreMeterBinders() {
     }
 }

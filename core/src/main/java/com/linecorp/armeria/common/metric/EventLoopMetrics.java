@@ -43,15 +43,15 @@ import io.netty.util.concurrent.EventExecutor;
  **/
 final class EventLoopMetrics implements MeterBinder {
 
-    private final MeterIdPrefix idPrefix;
     private final EventLoopGroup eventLoopGroup;
+    private final MeterIdPrefix idPrefix;
 
     /**
      * Creates an instance of {@link EventLoopMetrics}.
      */
-    EventLoopMetrics(String name, EventLoopGroup eventLoopGroup) {
-        idPrefix = new MeterIdPrefix("armeria.netty").append(requireNonNull(name, "name"));
+    EventLoopMetrics(EventLoopGroup eventLoopGroup, String name) {
         this.eventLoopGroup = requireNonNull(eventLoopGroup, "eventLoopGroup");
+        idPrefix = new MeterIdPrefix("armeria.netty").append(requireNonNull(name, "name"));
     }
 
     @Override
