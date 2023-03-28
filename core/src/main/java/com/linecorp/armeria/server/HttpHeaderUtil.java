@@ -176,8 +176,6 @@ final class HttpHeaderUtil {
         }
     }
 
-    private HttpHeaderUtil() {}
-
     static String maybeTransformAbsoluteUri(
             String path, Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
 
@@ -231,4 +229,6 @@ final class HttpHeaderUtil {
         // We support only origin form and asterisk form.
         return path.charAt(0) == '/' || "*".equals(path);
     }
+
+    private HttpHeaderUtil() {}
 }

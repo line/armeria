@@ -565,7 +565,7 @@ public final class ArmeriaHttpUtil {
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-        // if pathAndQuery == null, then the request will fail later anyways
+        // if pathAndQuery == null, then either the path is invalid or *, and will be handled later.
         if (pathAndQuery != null) {
             builder.set(HttpHeaderNames.PATH, pathAndQuery.toString());
         }
@@ -623,6 +623,7 @@ public final class ArmeriaHttpUtil {
         out.sizeHint(inHeaders.size());
         out.method(HttpMethod.valueOf(in.method().name()))
            .scheme(scheme);
+        // if pathAndQuery == null, then either the path is invalid or *, and will be handled later.
         if (pathAndQuery == null) {
             out.path(in.uri());
         } else {
