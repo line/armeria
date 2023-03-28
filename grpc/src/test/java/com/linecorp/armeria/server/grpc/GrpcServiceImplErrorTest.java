@@ -122,42 +122,41 @@ class GrpcServiceImplErrorTest {
                 });
             });
 
-            { // Test from client side viewpoint.
-                final RequestLog log = clientCaptor.get().log().whenComplete().join();
-                assertThat(log.responseStatus()).isEqualTo(HttpStatus.OK);
-                assertThat(log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS)).isNull();
-                assertThat(log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
-                    assertThat(grpcStatus).isNotNull();
-                    assertThat(grpcStatus).isEqualTo(String.valueOf(Status.INTERNAL.getCode().value()));
-                });
-                assertThat(log.responseCause())
-                        .isInstanceOf(StatusRuntimeException.class)
-                        .satisfies(cause -> {
-                            assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
-                                    Status.INTERNAL.getCode());
-                            assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
-                                assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
-                            });
+            // Test from client side viewpoint.
+            final RequestLog log = clientCaptor.get().log().whenComplete().join();
+            assertThat(log.responseStatus()).isEqualTo(HttpStatus.OK);
+            assertThat(log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS)).isNull();
+            assertThat(log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
+                assertThat(grpcStatus).isNotNull();
+                assertThat(grpcStatus).isEqualTo(String.valueOf(Status.INTERNAL.getCode().value()));
+            });
+            assertThat(log.responseCause())
+                    .isInstanceOf(StatusRuntimeException.class)
+                    .satisfies(cause -> {
+                        assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
+                                Status.INTERNAL.getCode());
+                        assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
+                            assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
                         });
-            }
-            { // Test from server side viewpoint.
-                final ServiceRequestContextCaptor serviceCaptor = server.requestContextCaptor();
-                assertThat(serviceCaptor.size()).isEqualTo(1);
-                final ServiceRequestContext serviceCtx = serviceCaptor.take();
-                assertThat(serviceCtx.log().ensureComplete().responseCause())
-                        .isInstanceOf(StatusRuntimeException.class)
-                        .satisfies(cause -> {
-                            assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
-                                    Status.ABORTED.getCode());
-                            assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
-                                // metadata.keys() throws IndexOutOfBoundsException as metadata is corrupted.
-                                assertThat(metadata.containsKey(
-                                        InternalMetadata.keyOf(KEY_OF_CORRUPTED_METADATA,
-                                                               Metadata.ASCII_STRING_MARSHALLER)
-                                )).isTrue();
-                            });
+                    });
+
+            // Test from server side viewpoint.
+            final ServiceRequestContextCaptor serviceCaptor = server.requestContextCaptor();
+            assertThat(serviceCaptor.size()).isEqualTo(1);
+            final ServiceRequestContext serviceCtx = serviceCaptor.take();
+            assertThat(serviceCtx.log().ensureComplete().responseCause())
+                    .isInstanceOf(StatusRuntimeException.class)
+                    .satisfies(cause -> {
+                        assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
+                                Status.ABORTED.getCode());
+                        assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
+                            // metadata.keys() throws IndexOutOfBoundsException as metadata is corrupted.
+                            assertThat(metadata.containsKey(
+                                    InternalMetadata.keyOf(KEY_OF_CORRUPTED_METADATA,
+                                                           Metadata.ASCII_STRING_MARSHALLER)
+                            )).isTrue();
                         });
-            }
+                    });
         }
     }
 
@@ -301,5 +300,4 @@ class GrpcServiceImplErrorTest {
                     new StatusRuntimeException(Status.FAILED_PRECONDITION, corruptedMetadata));
         }
     }
-
 }
