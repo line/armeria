@@ -83,8 +83,7 @@ final class FallbackService implements HttpService {
         // 2) The client continues to send a payload that exceeds the maximum length.
         // 3) `Http{1,2}RequestDecoder` tries to fail the request with a 413 Request Entity Too Large response.
         // 4) As the headers have already been written at 1), `fail()` resets the connection.
-        // 5) A 413 status or a 404 status is expected to return but the client ends up with a
-        //    `ClosedSessionException`.
+        // 5) A 413 status or a 404 status is expected but the client ends up with a `ClosedSessionException`.
         return HttpResponse.of(ResponseHeaders.builder(status)
                                               .endOfStream(true)
                                               .build());
