@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
@@ -24,7 +27,16 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 final class PropagatingContextAwareBlockingTaskExecutor
         extends AbstractContextAwareBlockingTaskExecutor {
 
-    PropagatingContextAwareBlockingTaskExecutor(BlockingTaskExecutor executor) {
+    static PropagatingContextAwareBlockingTaskExecutor of(BlockingTaskExecutor executor) {
+        requireNonNull(executor, "executor");
+        if (executor instanceof PropagatingContextAwareBlockingTaskExecutor) {
+            return (PropagatingContextAwareBlockingTaskExecutor) executor;
+        } else {
+            return new PropagatingContextAwareBlockingTaskExecutor(executor);
+        }
+    }
+
+    private PropagatingContextAwareBlockingTaskExecutor(BlockingTaskExecutor executor) {
         super(executor);
     }
 

@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -22,7 +25,17 @@ import com.google.common.base.MoreObjects;
 
 final class PropagatingContextAwareScheduledExecutorService
         extends AbstractContextAwareScheduledExecutorService<ScheduledExecutorService> {
-    PropagatingContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
+
+    static PropagatingContextAwareScheduledExecutorService of(ScheduledExecutorService executor) {
+        requireNonNull(executor, "executor");
+        if (executor instanceof PropagatingContextAwareScheduledExecutorService) {
+            return (PropagatingContextAwareScheduledExecutorService) executor;
+        } else {
+            return new PropagatingContextAwareScheduledExecutorService(executor);
+        }
+    }
+
+    private PropagatingContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
         super(executor);
     }
 

@@ -96,7 +96,7 @@ public interface RequestContext extends Unwrappable {
      * {@link #makeContextAware(Executor)}
      */
     static Executor makeContextPropagating(Executor executor) {
-        return new PropagatingContextAwareExecutor(executor);
+        return PropagatingContextAwareExecutor.of(executor);
     }
 
     /**
@@ -106,7 +106,7 @@ public interface RequestContext extends Unwrappable {
      * {@link #makeContextAware(ExecutorService)}
      */
     static ExecutorService makeContextPropagating(ExecutorService executor) {
-        return new PropagatingContextAwareExecutorService(executor);
+        return PropagatingContextAwareExecutorService.of(executor);
     }
 
     /**
@@ -116,7 +116,7 @@ public interface RequestContext extends Unwrappable {
      * {@link #makeContextAware(ScheduledExecutorService)}
      */
     static ScheduledExecutorService makeContextPropagating(ScheduledExecutorService executor) {
-        return new PropagatingContextAwareScheduledExecutorService(executor);
+        return PropagatingContextAwareScheduledExecutorService.of(executor);
     }
 
     /**
@@ -126,7 +126,7 @@ public interface RequestContext extends Unwrappable {
      * {@link #makeContextAware(BlockingTaskExecutor)}
      */
     static BlockingTaskExecutor makeContextPropagating(BlockingTaskExecutor executor) {
-        return new PropagatingContextAwareBlockingTaskExecutor(executor);
+        return PropagatingContextAwareBlockingTaskExecutor.of(executor);
     }
 
     /**
@@ -564,7 +564,7 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
-     * Returns an {@link ContextAwareExecutorService} that will execute callbacks in the given {@code executor},
+     * Returns a {@link ContextAwareExecutorService} that will execute callbacks in the given {@code executor},
      * making sure to propagate this {@link RequestContext} into the callback execution.
      * If this executor service will be used for callbacks from several requests, use
      * {@link #makeContextPropagating(ExecutorService)} instead.

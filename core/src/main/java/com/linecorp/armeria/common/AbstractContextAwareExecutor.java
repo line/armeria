@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-abstract class AbstractContextAwareExecutor<ES extends Executor> implements Executor {
+abstract class AbstractContextAwareExecutor<E extends Executor> implements Executor {
     enum LogRequestContextWarningOnce implements Supplier<RequestContext> {
         INSTANCE;
 
@@ -58,16 +58,16 @@ abstract class AbstractContextAwareExecutor<ES extends Executor> implements Exec
     }
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractContextAwareExecutor.class);
-    private final ES executor;
+    private final E executor;
 
-    AbstractContextAwareExecutor(ES executor) {
+    AbstractContextAwareExecutor(E executor) {
         this.executor = requireNonNull(executor, "executor");
     }
 
     @Nullable
     abstract RequestContext contextOrNull();
 
-    public final ES withoutContext() {
+    public final E withoutContext() {
         return executor;
     }
 

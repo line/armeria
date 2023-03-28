@@ -33,7 +33,7 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
      * {@link CommonPools#blockingTaskExecutor()} returns.
      */
     static BlockingTaskExecutor of() {
-        return (BlockingTaskExecutor) CommonPools.blockingTaskExecutor();
+        return CommonPools.blockingTaskExecutor();
     }
 
     /**
@@ -41,7 +41,12 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
      * to schedule and submit tasks.
      */
     static BlockingTaskExecutor of(ScheduledExecutorService executor) {
-        return new DefaultBlockingTaskExecutor(requireNonNull(executor, "executor"));
+        requireNonNull(executor, "executor");
+        if (executor instanceof BlockingTaskExecutor) {
+            return (BlockingTaskExecutor) executor;
+        } else {
+            return new DefaultBlockingTaskExecutor(executor);
+        }
     }
 
     /**
