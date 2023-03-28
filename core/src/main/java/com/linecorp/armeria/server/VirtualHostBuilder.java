@@ -1109,7 +1109,8 @@ public final class VirtualHostBuilder implements TlsSetters {
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
-    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector) {
+    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
+                      @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
         requireNonNull(template, "template");
 
         if (defaultHostname == null) {
@@ -1217,7 +1218,8 @@ public final class VirtualHostBuilder implements TlsSetters {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
                                             successFunction, multipartUploadsLocation, defaultHeaders,
-                                            requestIdGenerator, defaultErrorHandler);
+                                            requestIdGenerator, defaultErrorHandler,
+                                            unhandledExceptionsReporter);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
@@ -1225,7 +1227,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
                                multipartUploadsLocation, defaultHeaders, requestIdGenerator,
-                               defaultErrorHandler);
+                               defaultErrorHandler, unhandledExceptionsReporter);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);

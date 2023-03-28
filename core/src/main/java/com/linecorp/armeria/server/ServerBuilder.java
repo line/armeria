@@ -212,8 +212,8 @@ public final class ServerBuilder implements TlsSetters {
     @Nullable
     private DependencyInjector dependencyInjector;
     private Function<? super String, String> absoluteUriTransformer = Function.identity();
-    private Duration unhandledExceptionsReportInterval = Duration.ofMillis(
-            Flags.defaultUnhandledExceptionsReportIntervalMillis());
+    private long unhandledExceptionsReportIntervalMillis =
+            Flags.defaultUnhandledExceptionsReportIntervalMillis();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     ServerBuilder() {
@@ -1857,24 +1857,31 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Sets the interval between reporting exceptions which is not handled or logged
      * by any decorators or services such as {@link LoggingService}.
-     * @param interval the interval between reports, or {@link Duration#ZERO} to disable this feature
+     * @param unhandledExceptionsReportInterval the interval between reports,
+     *        or {@link Duration#ZERO} to disable this feature
      * @throws IllegalArgumentException if specified {@code interval} is negative.
      */
-    public ServerBuilder unhandledExceptionsReportInterval(Duration interval) {
-        requireNonNull(interval, "interval");
-        checkArgument(!interval.isNegative());
-        unhandledExceptionsReportInterval = interval;
-        return this;
+    @UnstableApi
+    public ServerBuilder unhandledExceptionsReportInterval(Duration unhandledExceptionsReportInterval) {
+        requireNonNull(unhandledExceptionsReportInterval, "unhandledExceptionsReportInterval");
+        checkArgument(!unhandledExceptionsReportInterval.isNegative());
+        return unhandledExceptionsReportIntervalMillis(unhandledExceptionsReportInterval.toMillis());
     }
 
     /**
      * Sets the interval between reporting exceptions which is not handled or logged
      * by any decorators or services such as {@link LoggingService}.
-     * @param interval the interval between reports in milliseconds, or {@code 0} to disable this feature
+     * @param unhandledExceptionsReportIntervalMillis the interval between reports in milliseconds,
+     *        or {@code 0} to disable this feature
      * @throws IllegalArgumentException if specified {@code interval} is negative.
      */
-    public ServerBuilder unhandledExceptionsReportIntervalMillis(long interval) {
-        return unhandledExceptionsReportInterval(Duration.ofMillis(interval));
+    @UnstableApi
+    public ServerBuilder unhandledExceptionsReportIntervalMillis(long unhandledExceptionsReportIntervalMillis) {
+        checkArgument(unhandledExceptionsReportIntervalMillis >= 0,
+                      "unhandledExceptionsReportIntervalMillis: %s (expected: >= 0)",
+                      unhandledExceptionsReportIntervalMillis);
+        this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
+        return this;
     }
 
     /**
@@ -1896,11 +1903,22 @@ public final class ServerBuilder implements TlsSetters {
         assert extensions != null;
         final DependencyInjector dependencyInjector = dependencyInjectorOrReflective();
 
+        final UnhandledExceptionsReporter unhandledExceptionsReporter;
+        if (unhandledExceptionsReportIntervalMillis > 0) {
+            unhandledExceptionsReporter = UnhandledExceptionsReporter.of(
+                    meterRegistry, workerGroup, unhandledExceptionsReportIntervalMillis);
+            serverListeners.add(unhandledExceptionsReporter);
+        } else {
+            unhandledExceptionsReporter = null;
+        }
+
         final VirtualHost defaultVirtualHost =
-                defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector);
+                defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
+                                                unhandledExceptionsReporter);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
-                                   .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector))
+                                   .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
+                                                         unhandledExceptionsReporter))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -1989,20 +2007,6 @@ public final class ServerBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ServerErrorHandler errorHandler = this.errorHandler;
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
-        }
-
-        if (unhandledExceptionsReportInterval != Duration.ZERO) {
-            final ExceptionReportingServerErrorHandler reportingErrorHandler =
-                    new ExceptionReportingServerErrorHandler(meterRegistry, errorHandler,
-                                                             unhandledExceptionsReportInterval);
-            errorHandler = reportingErrorHandler;
-            serverListeners.add(reportingErrorHandler);
-        }
-
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
@@ -2017,7 +2021,7 @@ public final class ServerBuilder implements TlsSetters {
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportInterval, ImmutableList.copyOf(shutdownSupports));
+                unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
     }
 
     /**
@@ -2113,6 +2117,6 @@ public final class ServerBuilder implements TlsSetters {
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportInterval);
+                unhandledExceptionsReportIntervalMillis);
     }
 }

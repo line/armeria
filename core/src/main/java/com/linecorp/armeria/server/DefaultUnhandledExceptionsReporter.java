@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -25,31 +24,22 @@ import java.util.concurrent.atomic.LongAdder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
-import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.EventLoopGroup;
 
-/**
- * A {@link ServerErrorHandler} that wraps another {@link ServerErrorHandler}
- * to periodically report the exceptions that were not logged by decorators such as
- * {@link LoggingService}.
- */
-final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, ServerListener {
+final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsReporter {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
-    private static final AtomicIntegerFieldUpdater<ExceptionReportingServerErrorHandler> scheduledUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(ExceptionReportingServerErrorHandler.class,
+    private static final Logger logger = LoggerFactory.getLogger(DefaultUnhandledExceptionsReporter.class);
+    private static final AtomicIntegerFieldUpdater<DefaultUnhandledExceptionsReporter> scheduledUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(DefaultUnhandledExceptionsReporter.class,
                                                  "scheduled");
 
-    private final Duration interval;
-    private final ServerErrorHandler delegate;
+    private final EventLoopGroup workerGroup;
+    private final long intervalMillis;
     // Note: We keep both Micrometer Counter and our own counter because Micrometer Counter
     //       doesn't count anything if the MeterRegistry is a CompositeMeterRegistry
     //       without an actual MeterRegistry implementation.
@@ -63,35 +53,24 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
     @Nullable
     private Throwable thrownException;
 
-    ExceptionReportingServerErrorHandler(MeterRegistry meterRegistry, ServerErrorHandler serverErrorHandler,
-                                         Duration interval) {
-        assert !interval.isNegative() && !interval.isZero() : interval;
-        this.interval = interval;
-        delegate = serverErrorHandler;
+    DefaultUnhandledExceptionsReporter(MeterRegistry meterRegistry, EventLoopGroup workerGroup,
+                                       long intervalMillis) {
+        this.workerGroup = workerGroup;
+        this.intervalMillis = intervalMillis;
         micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unhandled");
         counter = new LongAdder();
     }
 
-    /**
-     * Increments both {@code micrometerCounter} and {@code counter} and stores unhandled exception
-     * that occurs. If multiple servers use the same {@link MeterRegistry}, then {@code micrometerCounter}
-     * will be shared across servers.
-     */
-    @Nullable
     @Override
-    public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (!ctx.shouldReportUnhandledExceptions()) {
-            return delegate.onServiceException(ctx, cause);
-        }
-
-        if ((cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
-            cause.getCause() != null) {
-            return delegate.onServiceException(ctx, cause);
+    public void report(Throwable cause) {
+        if (intervalMillis == 0) {
+            // disabled.
+            return;
         }
 
         if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
-            reportingTaskFuture = ctx.eventLoop().scheduleAtFixedRate(
-                    this::reportException, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
+            reportingTaskFuture = workerGroup.next().scheduleAtFixedRate(
+                    this::reportException, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
         }
 
         if (thrownException == null) {
@@ -100,16 +79,6 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
 
         micrometerCounter.increment();
         counter.increment();
-
-        return delegate.onServiceException(ctx, cause);
-    }
-
-    @Nullable
-    @Override
-    public AggregatedHttpResponse renderStatus(ServiceConfig config, @Nullable RequestHeaders headers,
-                                               HttpStatus status, @Nullable String description,
-                                               @Nullable Throwable cause) {
-        return delegate.renderStatus(config, headers, status, description, cause);
     }
 
     @Override
@@ -143,14 +112,15 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
             logger.warn("Observed {} unhandled exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs. " +
                         "One of the thrown exceptions:",
-                        newExceptionsCount, TextFormatter.elapsed(interval.toNanos()), exception);
+                        newExceptionsCount, TextFormatter.elapsedMillis(intervalMillis), exception);
             thrownException = null;
         } else {
             logger.warn("Observed {} unhandled exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs.",
-                        newExceptionsCount, TextFormatter.elapsed(interval.toNanos()));
+                        newExceptionsCount, TextFormatter.elapsedMillis(intervalMillis));
         }
 
         lastExceptionsCount = totalExceptionsCount;
     }
 }
+

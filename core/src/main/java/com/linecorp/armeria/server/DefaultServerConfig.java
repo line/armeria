@@ -110,7 +110,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
     private final Function<String, String> absoluteUriTransformer;
-    private final Duration unhandledExceptionsReportInterval;
+    private final long unhandledExceptionsReportIntervalMillis;
     private final List<ShutdownSupport> shutdownSupports;
 
     @Nullable
@@ -143,7 +143,7 @@ final class DefaultServerConfig implements ServerConfig {
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
-            Duration unhandledExceptionsReportInterval,
+            long unhandledExceptionsReportIntervalMillis,
             List<ShutdownSupport> shutdownSupports) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -257,7 +257,7 @@ final class DefaultServerConfig implements ServerConfig {
         final Function<String, String> castAbsoluteUriTransformer =
                 (Function<String, String>) requireNonNull(absoluteUriTransformer, "absoluteUriTransformer");
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
-        this.unhandledExceptionsReportInterval = unhandledExceptionsReportInterval;
+        this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
     }
 
@@ -650,8 +650,8 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public Duration unhandledExceptionsReportInterval() {
-        return unhandledExceptionsReportInterval;
+    public long unhandledExceptionsReportIntervalMillis() {
+        return unhandledExceptionsReportIntervalMillis;
     }
 
     List<ShutdownSupport> shutdownSupports() {
@@ -675,7 +675,7 @@ final class DefaultServerConfig implements ServerConfig {
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled(),
-                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportInterval());
+                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis());
         }
 
         return strVal;
@@ -700,7 +700,7 @@ final class DefaultServerConfig implements ServerConfig {
             boolean serverHeaderEnabled, boolean dateHeaderEnabled,
             @Nullable DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
-            Duration unhandledExceptionsReportInterval) {
+            long unhandledExceptionsReportIntervalMillis) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -799,8 +799,8 @@ final class DefaultServerConfig implements ServerConfig {
         }
         buf.append(", absoluteUriTransformer: ");
         buf.append(absoluteUriTransformer);
-        buf.append(", unhandledExceptionsReportInterval: ");
-        buf.append(unhandledExceptionsReportInterval);
+        buf.append(", unhandledExceptionsReportIntervalMillis: ");
+        buf.append(unhandledExceptionsReportIntervalMillis);
         buf.append(')');
 
         return buf.toString();

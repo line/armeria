@@ -36,12 +36,12 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 
-class ExceptionReportingServerErrorHandlerTest {
+class ExceptionReportingServiceErrorHandlerTest {
 
     @Spy
     final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
     final Logger errorHandlerLogger =
-            (Logger) LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
+            (Logger) LoggerFactory.getLogger(DefaultUnhandledExceptionsReporter.class);
     private static final long reportIntervalMillis = 1000;
     private static final long awaitIntervalMillis = 2000;
 

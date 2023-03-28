@@ -36,6 +36,14 @@ public final class TextFormatter {
 
     /**
      * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
+     * given as {@code elapsedMillis}.
+     */
+    public static StringBuilder elapsedMillis(long elapsedMillis) {
+        return elapsed(TimeUnit.MILLISECONDS.toNanos(elapsedMillis));
+    }
+
+    /**
+     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
      * given as {@code elapsed}.
      */
     public static StringBuilder elapsed(long elapsedNanos) {

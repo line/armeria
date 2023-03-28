@@ -146,13 +146,13 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeFoo.verboseResponses()).isTrue();
         assertThat(homeFoo.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+        final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                                .build();
         // serviceErrorHandler is composed with ServerErrorHandler so we cannot do the equality check.
-        assertThat(homeFoo.errorHandler().onServiceException(null, null)
+        assertThat(homeFoo.errorHandler().onServiceException(sctx, null)
                           .aggregate()
                           .join()
                           .status()).isSameAs(HttpStatus.OK);
-        final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                                                .build();
         assertThat(homeFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeFoo.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig homeBar = server.config().serviceConfigs().get(1);
@@ -162,7 +162,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.verboseResponses()).isTrue();
         assertThat(homeBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         // serviceErrorHandler is composed with ServerErrorHandler so we cannot do the equality check.
-        assertThat(homeBar.errorHandler().onServiceException(null, null)
+        assertThat(homeBar.errorHandler().onServiceException(sctx, null)
                           .aggregate()
                           .join()
                           .status()).isSameAs(HttpStatus.OK);

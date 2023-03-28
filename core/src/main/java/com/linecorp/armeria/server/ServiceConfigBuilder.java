@@ -270,7 +270,16 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         SuccessFunction defaultSuccessFunction,
                         Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
-                        ServiceErrorHandler defaultServiceErrorHandler) {
+                        ServiceErrorHandler defaultServiceErrorHandler,
+                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
+        ServiceErrorHandler errorHandler =
+                serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
+                                            : defaultServiceErrorHandler;
+        if (unhandledExceptionsReporter != null) {
+            errorHandler = new ExceptionReportingServiceErrorHandler(errorHandler,
+                                                                     unhandledExceptionsReporter);
+        }
+
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
@@ -284,9 +293,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
-                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator,
-                serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
-                                            : defaultServiceErrorHandler);
+                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler);
     }
 
     @Override
