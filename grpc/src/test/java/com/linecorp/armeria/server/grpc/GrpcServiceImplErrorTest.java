@@ -26,15 +26,12 @@ import java.util.Iterator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.protobuf.ByteString;
-
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
@@ -61,12 +58,6 @@ import io.grpc.stub.StreamObserver;
 
 class GrpcServiceImplErrorTest {
 
-    private static final StreamingOutputCallRequest STREAMING_OUTPUT_CALL_REQUEST_MESSAGE =
-            StreamingOutputCallRequest
-                    .newBuilder()
-                    .setPayload(
-                            Payload.newBuilder().setBody(ByteString.copyFromUtf8("ping1")).build())
-                    .build();
     // Valid metadata has even count of binaryValues.
     private static final Metadata validMetadata = InternalMetadata.newMetadata(
             "key1".getBytes(StandardCharsets.US_ASCII),
@@ -256,7 +247,7 @@ class GrpcServiceImplErrorTest {
                                 "http://127.0.0.1:" + server.httpPort(),
                                 TestServiceBlockingStub.class);
                 final Iterator<StreamingOutputCallResponse> it = client.streamingOutputCall(
-                        STREAMING_OUTPUT_CALL_REQUEST_MESSAGE);
+                        StreamingOutputCallRequest.newBuilder().build());
                 while (it.hasNext()) {
                     it.next();
                 }
@@ -268,10 +259,11 @@ class GrpcServiceImplErrorTest {
 
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.responseStatus()).isEqualTo(HttpStatus.OK);
-            assertThat(log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS)).isNull();
-            assertThat(log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
-                assertThat(grpcStatus).isNotNull();
+            assertThat(log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
                 assertThat(grpcStatus).isEqualTo(String.valueOf(Status.INTERNAL.getCode().value()));
+            });
+            assertThat(log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
+                assertThat(grpcStatus).isNull();
             });
             assertThat(log.responseCause())
                     .isInstanceOf(StatusRuntimeException.class)
@@ -305,17 +297,8 @@ class GrpcServiceImplErrorTest {
         @Override
         public void streamingOutputCall(StreamingOutputCallRequest request,
                                         StreamObserver<StreamingOutputCallResponse> responseObserver) {
-            responseObserver.onNext(StreamingOutputCallResponse.newBuilder().setPayload(
-                    Payload.newBuilder().setBody(ByteString.copyFromUtf8("pong1")).build()).build());
-            if (request.equals(STREAMING_OUTPUT_CALL_REQUEST_MESSAGE)) {
-                responseObserver.onError(
-                        new StatusRuntimeException(Status.FAILED_PRECONDITION, corruptedMetadata));
-                return; // onError must be the last call.
-            }
-            // The following lines are not reached.
-            responseObserver.onNext(StreamingOutputCallResponse.newBuilder().setPayload(
-                    Payload.newBuilder().setBody(ByteString.copyFromUtf8("pong2")).build()).build());
-            responseObserver.onCompleted();
+            responseObserver.onError(
+                    new StatusRuntimeException(Status.FAILED_PRECONDITION, corruptedMetadata));
         }
     }
 
