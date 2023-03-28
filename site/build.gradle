@@ -34,6 +34,9 @@ node {
     }
 }
 
+// Add the option that works around the dependency conflicts.
+tasks.npmInstall.args.add('--legacy-peer-deps')
+
 task npmClean(type: NpmTask) {
     dependsOn tasks.npmInstall
     args = ['run', 'clean']
