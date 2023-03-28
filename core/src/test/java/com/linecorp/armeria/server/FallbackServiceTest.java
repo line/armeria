@@ -162,9 +162,9 @@ class FallbackServiceTest {
         }
         streaming.close();
 
-        // If the request payload exceeds the maximum allowed length for non-exist paths and FallbackService did
-        // not return a response yet, Http{1,2}RequestDecoder will send a 413 Request Entity Too Large response
-        // instead.
+        // If the request payload exceeds the maximum allowed length for non-exist paths and `FallbackService`
+        // has not returned a response yet, Http{1,2}RequestDecoder will send a 413 Request Entity Too Large
+        // response instead.
         final AggregatedHttpResponse agg = response.aggregate().join();
         assertThat(agg.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         final ServiceRequestContext sctx = lengthLimitServerWithDecorator.requestContextCaptor().take();
