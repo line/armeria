@@ -1,0 +1,44 @@
+dependencies {
+    api libs.spring.boot3.actuator.autoconfigure
+    api libs.jakarta.inject
+    compileOnly libs.jakarta.validation
+
+    // TODO(anuraaga): Consider removing these since this module does not have related functionality.
+    optionalApi libs.micrometer.prometheus
+    optionalApi libs.dropwizard.metrics.json
+
+    implementation libs.spring.boot3.autoconfigure
+    optionalImplementation libs.reactor.core
+
+    testImplementation project(':spring:boot3-autoconfigure')
+    testImplementation libs.spring.boot3.starter.actuator
+    testImplementation libs.spring.boot3.starter.test
+    testImplementation libs.micrometer.prometheus
+    // Added for sharing test suites with boot2
+    testImplementation libs.javax.inject
+}
+
+// Copy common files from boot3-autoconfigure module to gen-src directory in order to use them as
+// a source/test set.
+task generateTestSources(type: Copy) {
+    from "${rootProject.projectDir}/spring/boot3-autoconfigure/src/test"
+    into "${project.ext.genSrcDir}/test"
+    include '**/RetryableArmeriaServerGracefulShutdownLifecycle.java'
+    include '**/RetryableArmeriaServerGracefulShutdownLifecycleConfiguration.java'
+    include '**/META-INF/spring/**'
+}
+
+task generateSources(type: Copy) {
+    dependsOn(generateTestSources)
+
+    from "${rootProject.projectDir}/spring/boot3-autoconfigure/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+    include '**/ArmeriaConfigurationNetUtil.java'
+    include '**/ArmeriaServerConfigurator.java'
+    include '**/ArmeriaSettings.java'
+    include '**/InternalServiceId.java'
+    include '**/SpringDependencyInjector.java'
+    include '**/Ssl.java'
+}
+
+tasks.compileJava.dependsOn(generateSources)
