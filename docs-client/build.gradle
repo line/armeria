@@ -9,7 +9,7 @@ if (rootProject.hasProperty('noWeb')) {
 }
 
 node {
-    version = '18.15.0'
+    version = '16.19.1'
     download = true
     npmInstallCommand = "ci"
 
