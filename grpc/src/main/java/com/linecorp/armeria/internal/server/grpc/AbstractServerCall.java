@@ -95,6 +95,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private static final Logger logger = LoggerFactory.getLogger(AbstractServerCall.class);
 
     private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
+    private static final String GRPC_STATUS_CODE_INTERNAL =
+            String.valueOf(Status.Code.INTERNAL.value());
 
     private final MethodDescriptor<I, O> method;
     private final String simpleMethodName;
@@ -540,13 +542,15 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
         GrpcTrailersUtil.addStatusMessageToTrailers(
                 trailersBuilder, status.getCode().value(), status.getDescription());
-
         try {
             MetadataUtil.fillHeaders(metadata, trailersBuilder);
         } catch (Exception e) {
+            // Continue by squashing Exception by catch,
+            // because server implementer could have set corrupted metadata.
+            logger.warn("{} {} status: {}", ctx, "Error at filling header with metadata.", status);
             // Catching exception is necessary, because server implementer could have set corrupted metadata.
             return trailersBuilder
-                    .set(GrpcHeaderNames.GRPC_STATUS, "13")
+                    .set(GrpcHeaderNames.GRPC_STATUS, GRPC_STATUS_CODE_INTERNAL)
                     .build();
         }
 
