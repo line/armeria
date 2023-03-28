@@ -233,6 +233,16 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public boolean shouldReportUnhandledExceptions() {
+        return unwrap().shouldReportUnhandledExceptions();
+    }
+
+    @Override
+    public void setShouldReportUnhandledExceptions(boolean value) {
+        unwrap().setShouldReportUnhandledExceptions(value);
+    }
+
+    @Override
     public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
         return unwrap().initiateConnectionShutdown(drainDurationMicros);
     }

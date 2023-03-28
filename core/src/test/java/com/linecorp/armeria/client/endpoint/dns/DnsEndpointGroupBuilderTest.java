@@ -48,9 +48,9 @@ class DnsEndpointGroupBuilderTest {
 
     @Test
     void eventLoop() {
-        assertThat(builder().eventLoop()).isNotNull();
+        assertThat(builder().getOrAcquireEventLoop()).isNotNull();
         final EventLoop loop = new NioEventLoopGroup().next();
-        assertThat(builder().eventLoop(loop).eventLoop()).isSameAs(loop);
+        assertThat(builder().eventLoop(loop).getOrAcquireEventLoop()).isSameAs(loop);
         assertThatThrownBy(() -> builder().eventLoop(new DefaultEventLoop()))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("unsupported");
     }

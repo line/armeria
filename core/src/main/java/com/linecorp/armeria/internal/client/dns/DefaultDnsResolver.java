@@ -85,6 +85,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
     }
 
     private CompletableFuture<List<DnsRecord>> resolveOne(DnsQuestionContext ctx, DnsQuestion question) {
+        assert executor.inEventLoop();
         final CompletableFuture<List<DnsRecord>> future = delegate.resolve(ctx, question);
         ctx.whenCancelled().handle((unused0, unused1) -> {
             if (!future.isDone()) {
@@ -104,6 +105,7 @@ public final class DefaultDnsResolver implements SafeCloseable {
     @VisibleForTesting
     CompletableFuture<List<DnsRecord>> resolveAll(DnsQuestionContext ctx, List<? extends DnsQuestion> questions,
                                                   String logPrefix) {
+        assert executor.inEventLoop();
         final CompletableFuture<List<DnsRecord>> future = new CompletableFuture<>();
         final Object[] results = new Object[questions.size()];
         for (int i = 0; i < questions.size(); i++) {

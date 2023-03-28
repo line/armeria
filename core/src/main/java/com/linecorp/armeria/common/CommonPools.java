@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -33,6 +34,13 @@ public final class CommonPools {
             BlockingTaskExecutor.builder().threadNamePrefix("armeria-common-blocking-tasks").build();
     private static final EventLoopGroup WORKER_GROUP =
             EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(), "armeria-common-worker", true);
+
+    static {
+        // Bind EventLoopMetrics for the common worker group.
+        MoreMeterBinders
+                .eventLoopMetrics(WORKER_GROUP, "common")
+                .bindTo(Flags.meterRegistry());
+    }
 
     /**
      * Returns the default common blocking task {@link BlockingTaskExecutor} which is used for

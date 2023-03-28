@@ -29,6 +29,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -154,6 +155,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        defaultServiceConfigSetters.requestIdGenerator(requestIdGenerator);
         return this;
     }
 

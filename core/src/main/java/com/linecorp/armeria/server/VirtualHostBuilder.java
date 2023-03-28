@@ -56,6 +56,7 @@ import javax.net.ssl.KeyManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
@@ -68,6 +69,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsSetters;
@@ -148,6 +151,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -1058,6 +1063,24 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @VisibleForTesting
+    Path multipartUploadsLocation() {
+        return multipartUploadsLocation;
+    }
+
+    /**
+     * Sets the {@link Function} which generates a {@link RequestId}.
+     * If not set, the value set via {@link ServerBuilder#requestIdGenerator(Function)} is used.
+     *
+     * @param requestIdGenerator the {@link Function} which generates a {@link RequestId}
+     * @see RequestContext#id()
+     */
+    public VirtualHostBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        return this;
+    }
+
     /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
@@ -1161,6 +1184,10 @@ public final class VirtualHostBuilder implements TlsSetters {
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
 
+        final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
+                this.requestIdGenerator != null ?
+                this.requestIdGenerator : template.requestIdGenerator;
+
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
@@ -1168,6 +1195,7 @@ public final class VirtualHostBuilder implements TlsSetters {
         assert blockingTaskExecutor != null;
         assert successFunction != null;
         assert multipartUploadsLocation != null;
+        assert requestIdGenerator != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -1188,14 +1216,15 @@ public final class VirtualHostBuilder implements TlsSetters {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, multipartUploadsLocation, defaultHeaders);
+                                            successFunction, multipartUploadsLocation, defaultHeaders,
+                                            requestIdGenerator);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               multipartUploadsLocation, defaultHeaders);
+                               multipartUploadsLocation, defaultHeaders, requestIdGenerator);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);
@@ -1206,7 +1235,8 @@ public final class VirtualHostBuilder implements TlsSetters {
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter,
-                                blockingTaskExecutor, builder.build());
+                                blockingTaskExecutor, multipartUploadsLocation, builder.build(),
+                                requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);

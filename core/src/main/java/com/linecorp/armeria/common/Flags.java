@@ -382,6 +382,10 @@ public final class Flags {
     private static final MeterRegistry METER_REGISTRY =
             getValue(FlagsProvider::meterRegistry, "meterRegistry");
 
+    private static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
+            getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
+                     "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
+
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
@@ -1324,6 +1328,19 @@ public final class Flags {
     @UnstableApi
     public static MeterRegistry meterRegistry() {
         return METER_REGISTRY;
+    }
+
+    /**
+     * Returns the default interval in milliseconds between the reports on unhandled exceptions.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUnhandledExceptionsReportIntervalMillis=<long>} JVM option to
+     * override the default value.</p>
+     */
+    @UnstableApi
+    public static long defaultUnhandledExceptionsReportIntervalMillis() {
+        return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
     }
 
     @Nullable

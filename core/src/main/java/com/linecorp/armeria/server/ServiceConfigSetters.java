@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -185,6 +186,14 @@ interface ServiceConfigSetters {
      */
     @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
+
+    /**
+     * Sets the {@link Function} which generates a {@link RequestId}.
+     *
+     * @param requestIdGenerator the {@link Function} that generates a request ID.
+     */
+    ServiceConfigSetters requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator);
 
     /**
      * Adds the default HTTP header for an {@link HttpResponse} served by this {@link Service}.

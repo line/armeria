@@ -49,7 +49,7 @@ gradle.buildFinished({ result ->
 allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
-        maxHeapSize = '512m'
+        maxHeapSize = '768m'
 
         if (rootProject.ext.testJavaVersion >= 9) {
             jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
