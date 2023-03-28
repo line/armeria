@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -59,24 +60,25 @@ public class RoutersBenchmark {
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of(),
-                                  HttpHeaders.of()),
+                                  HttpHeaders.of(), (ctx) -> RequestId.random()),
                 new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of(),
-                                  HttpHeaders.of())
+                                  HttpHeaders.of(), (ctx) -> RequestId.random())
         );
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
                                              defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              CommonPools.blockingTaskExecutor(),
                                              SuccessFunction.always(), multipartUploadsLocation,
-                                             ImmutableList.of(), HttpHeaders.of());
+                                             ImmutableList.of(), HttpHeaders.of(), (ctx) -> RequestId.random());
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
                 AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), multipartUploadsLocation,
-                ImmutableList.of());
+                ImmutableList.of(),
+                (ctx) -> RequestId.random());
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }
 

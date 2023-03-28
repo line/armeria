@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.same;
@@ -31,8 +32,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -42,6 +48,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
@@ -195,6 +202,27 @@ class BraveClientTest {
         assertThat(collector.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
+    @Test
+    void testEmptyEndpointTags() {
+        final SpanCollector collector = new SpanCollector();
+        final Tracing tracing = Tracing.newBuilder()
+                                       .addSpanHandler(collector)
+                                       .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
+                                       .sampler(Sampler.ALWAYS_SAMPLE)
+                                       .build();
+        final BlockingWebClient blockingWebClient =
+                WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
+                         .decorator(BraveClient.newDecorator(tracing)).build()
+                         .blocking();
+        assertThatThrownBy(() -> blockingWebClient.get("/"))
+                .isInstanceOf(UnprocessedRequestException.class)
+                .hasCauseInstanceOf(EmptyEndpointGroupException.class);
+        assertThat(collector.spans()).hasSize(1);
+        final MutableSpan span = collector.spans().poll();
+        assertThat(span.tag("http.host")).isEqualTo("UNKNOWN");
+        assertThat(span.tag("http.url")).isEqualTo("http:/");
+    }
+
     private static RequestLog testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
             throws Exception {
 
@@ -214,6 +242,10 @@ class BraveClientTest {
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
+        // the authority is extracted even when the request doesn't declare an authority
+        final RequestHeaders headersWithoutAuthority =
+                req.headers().toBuilder().removeAndThen(HttpHeaderNames.AUTHORITY).build();
+        ctx.updateRequest(req.withHeaders(headersWithoutAuthority));
         final HttpRequest actualReq = ctx.request();
         assertThat(actualReq).isNotNull();
 

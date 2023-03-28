@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 class HeadMethodLeakTest {
 
@@ -74,7 +75,7 @@ class HeadMethodLeakTest {
                     final HttpObject[] objs = new HttpObject[number + 1];
                     objs[0] = ResponseHeaders.of(HttpStatus.OK);
                     for (int i = 0; i < number; i++) {
-                        final ByteBuf buf = ctx.alloc().buffer().writeBytes(new byte[] { 1, 2, 3, 4 });
+                        final ByteBuf buf = Unpooled.buffer().writeBytes(new byte[] { 1, 2, 3, 4 });
                         bufs.add(buf);
                         objs[i + 1] = HttpData.wrap(buf);
                     }
@@ -129,7 +130,7 @@ class HeadMethodLeakTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             final Stream.Builder<Arguments> builder = Stream.builder();
-            for (int i = 0; i < 10; i++) {
+            for (int i = 0; i < 20; i++) {
                 for (SessionProtocol protocol : SessionProtocol.values()) {
                     if (protocol == SessionProtocol.PROXY) {
                         continue;
