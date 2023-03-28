@@ -132,13 +132,13 @@ class FallbackServiceTest {
     @ParameterizedTest
     void maxContentLengthWithFallbackService(SessionProtocol protocol) throws InterruptedException {
         final HttpRequestWriter streaming = HttpRequest.streaming(HttpMethod.POST, "/not-exist");
-        final HttpResponse response = WebClient.builder(lengthLimitServer.uri(protocol))
-                                               .build()
-                                               .execute(streaming);
         for (int i = 0; i < 4; i++) {
             streaming.write(HttpData.ofUtf8(Strings.repeat("a", 30)));
         }
         streaming.close();
+        final HttpResponse response = WebClient.builder(lengthLimitServer.uri(protocol))
+                                               .build()
+                                               .execute(streaming);
 
         // FallbackService to return a 404 Not Found response before the request payload exceeds the maximum
         // allowed length.
