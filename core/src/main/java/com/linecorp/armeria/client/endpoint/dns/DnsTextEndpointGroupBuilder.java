@@ -50,9 +50,10 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
      * Returns a newly created {@link DnsTextEndpointGroup}.
      */
     public DnsTextEndpointGroup build() {
+        final EventLoop eventLoop = getOrAcquireEventLoop();
         return new DnsTextEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
-                                        selectionTimeoutMillis(), buildResolver(),
-                                        eventLoop(), backoff(), minTtl(), maxTtl(),
+                                        selectionTimeoutMillis(), buildResolver(eventLoop),
+                                        eventLoop, backoff(), minTtl(), maxTtl(),
                                         hostname(), mapping, dnsQueryListeners());
     }
 

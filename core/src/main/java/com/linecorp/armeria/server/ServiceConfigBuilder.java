@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -70,6 +71,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private ServiceErrorHandler serviceErrorHandler;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
+    @Nullable
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
@@ -184,6 +187,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
@@ -259,6 +269,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
                         Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders,
+                        Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler) {
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
@@ -273,6 +284,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
+                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator,
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler);
     }

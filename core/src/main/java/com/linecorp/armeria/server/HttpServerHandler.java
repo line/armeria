@@ -352,7 +352,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                nextRequestId(routingCtx), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
@@ -651,14 +651,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return new DefaultServiceRequestContext(
                 serviceConfig,
                 channel, NoopMeterRegistry.get(), protocol(),
-                nextRequestId(routingCtx), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
-    private RequestId nextRequestId(RoutingContext routingCtx) {
+    private static RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {
         try {
-            final RequestId id = config.requestIdGenerator().apply(routingCtx);
+            final RequestId id = serviceConfig.requestIdGenerator().apply(routingCtx);
             if (id != null) {
                 return id;
             }

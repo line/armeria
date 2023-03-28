@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -64,6 +65,7 @@ public class ServiceTest {
                                   CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  ctx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);

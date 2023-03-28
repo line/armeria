@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -74,6 +75,7 @@ public final class ServiceConfig {
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
     private final HttpHeaders defaultHeaders;
+    private final Function<RoutingContext, RequestId> requestIdGenerator;
     private final ServiceErrorHandler serviceErrorHandler;
 
     /**
@@ -86,12 +88,15 @@ public final class ServiceConfig {
                   ScheduledExecutorService blockingTaskExecutor,
                   SuccessFunction successFunction,
                   Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
-                  HttpHeaders defaultHeaders, ServiceErrorHandler serviceErrorHandler) {
+                  HttpHeaders defaultHeaders,
+                  Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
+                  ServiceErrorHandler serviceErrorHandler) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction,
-             multipartUploadsLocation, shutdownSupports, defaultHeaders, serviceErrorHandler);
+             multipartUploadsLocation, shutdownSupports, defaultHeaders,
+                     requestIdGenerator, serviceErrorHandler);
     }
 
     /**
@@ -107,6 +112,7 @@ public final class ServiceConfig {
                           SuccessFunction successFunction,
                           Path multipartUploadsLocation,
                           List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
+                          Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
                           ServiceErrorHandler serviceErrorHandler) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
@@ -124,7 +130,11 @@ public final class ServiceConfig {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
-        this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
+        this.defaultHeaders = defaultHeaders;
+        @SuppressWarnings("unchecked")
+        final Function<RoutingContext, RequestId> castRequestIdGenerator =
+                (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        this.requestIdGenerator = castRequestIdGenerator;
         this.serviceErrorHandler = requireNonNull(serviceErrorHandler, "serviceErrorHandler");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
@@ -164,7 +174,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 serviceErrorHandler);
+                                 requestIdGenerator, serviceErrorHandler);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -175,7 +185,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 serviceErrorHandler);
+                                 requestIdGenerator, serviceErrorHandler);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -185,7 +195,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 serviceErrorHandler);
+                                 requestIdGenerator, serviceErrorHandler);
     }
 
     /**
@@ -396,6 +406,13 @@ public final class ServiceConfig {
      */
     public Path multipartUploadsLocation() {
         return multipartUploadsLocation;
+    }
+
+    /**
+     * Returns the {@link Function} that generates a {@link RequestId}.
+     */
+    public Function<RoutingContext, RequestId> requestIdGenerator() {
+        return requestIdGenerator;
     }
 
     ServiceErrorHandler errorHandler() {

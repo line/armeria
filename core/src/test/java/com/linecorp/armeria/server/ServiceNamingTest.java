@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -43,6 +44,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -58,6 +60,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -74,6 +77,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -89,6 +93,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -104,6 +109,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -119,6 +125,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -134,6 +141,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -150,6 +158,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -165,6 +174,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -180,6 +190,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
@@ -195,6 +206,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
@@ -210,6 +222,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
@@ -226,6 +239,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
@@ -242,6 +256,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
@@ -258,6 +273,7 @@ class ServiceNamingTest {
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);

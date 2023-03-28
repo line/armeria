@@ -147,6 +147,7 @@ abstract class AbstractHttpResponseHandler {
         }
 
         final HttpData content = res.content();
+        content.touch(reqCtx);
         // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
         assert !res.status().isContentAlwaysEmpty() || content.isEmpty();
         final boolean contentEmpty;
