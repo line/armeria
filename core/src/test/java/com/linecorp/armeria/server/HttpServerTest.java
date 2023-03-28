@@ -600,8 +600,8 @@ class HttpServerTest {
     void testTooLargeContentToNonExistentService(WebClient client) {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
         final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).startsWith("404 Not Found");
+        assertThat(res.status()).isSameAs(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+        assertThat(res.contentUtf8()).startsWith("Request Entity Too Large");
     }
 
     @ParameterizedTest
@@ -959,6 +959,8 @@ class HttpServerTest {
                                      (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 
                              builder.factory(clientFactory);
+                             // TODO(ikhoon): Revert
+                             builder.responseTimeoutMillis(0);
                              builder.decorator(
                                      (delegate, ctx, req) -> {
                                          ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);

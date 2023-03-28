@@ -264,39 +264,19 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final long maxContentLength = decodedReq.maxRequestLength();
                     final long transferredLength = decodedReq.transferredBytes();
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
-                        final Routed<ServiceConfig> routed = req.route();
-                        if (routed != null && routed.route().isFallback()) {
-                            // The client could be suspicious or an attacker. Gracefully close the connection
-                            // after a `404 Not Found` response is sent.
-                            encoder.keepAliveHandler().disconnectWhenFinished();
-                            if (encoder.isResponseHeadersSent(id, 1)) {
-                                // FallbackService returned a response.
-                                discarding = true;
-                                req = null;
-                            } else {
-                                // If `FallbackService` does not return a response until the maximum length
-                                // exceeds, a decorator might intercept the request. A 404 Bad Request is sent
-                                // here instead. The late response returned by the decorator will be blocked at
-                                // `encoder` level.
-                                fail(id, decodedReq.headers(), HttpStatus.NOT_FOUND, Http2Error.CANCEL, null,
-                                     null);
-                                decodedReq.abortResponse(HttpStatusException.of(HttpStatus.NOT_FOUND), true);
-                            }
-                        } else {
-                            final ContentTooLargeException cause =
-                                    ContentTooLargeException.builder()
-                                                            .maxContentLength(maxContentLength)
-                                                            .contentLength(req.headers())
-                                                            .transferred(transferredLength)
-                                                            .build();
-                            fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
-                                 Http2Error.CANCEL, null, cause);
-                            // Wrap the cause with the returned status to let LoggingService correctly log the
-                            // status.
-                            decodedReq.abortResponse(
-                                    HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
-                                    true);
-                        }
+                        final ContentTooLargeException cause =
+                                ContentTooLargeException.builder()
+                                                        .maxContentLength(maxContentLength)
+                                                        .contentLength(req.headers())
+                                                        .transferred(transferredLength)
+                                                        .build();
+                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
+                             Http2Error.CANCEL, null, cause);
+                        // Wrap the cause with the returned status to let LoggingService correctly log the
+                        // status.
+                        decodedReq.abortResponse(
+                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
+                                true);
                         return;
                     }
 

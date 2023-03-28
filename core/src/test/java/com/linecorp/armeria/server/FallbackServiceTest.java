@@ -140,9 +140,8 @@ class FallbackServiceTest {
         }
         streaming.close();
 
-        // If the request payload exceeds the maximum allowed length for non-exist paths,
-        // Http{1,2}RequestDecoder stops receiving subsequent messages and let FallbackService to return a
-        // 404 Not Found response.
+        // FallbackService to return a 404 Not Found response before the request payload exceeds the maximum
+        // allowed length.
         final AggregatedHttpResponse agg = response.aggregate().join();
         assertThat(agg.status()).isEqualTo(HttpStatus.NOT_FOUND);
         final ServiceRequestContext sctx = lengthLimitServer.requestContextCaptor().take();
@@ -163,18 +162,15 @@ class FallbackServiceTest {
         }
         streaming.close();
 
-        // If the request payload exceeds the maximum allowed length for non-exist paths,
-        // Http{1,2}RequestDecoder stops receiving subsequent messages and waits for FallbackService to return a
-        // 404 Not Found response.
-        // If the FallbackService does not return a response and the client keeps trying to send messages on the
-        // request, 413 Request Entity Too Large will be sent immediately by Http{1,2}RequestDecoder. The late
-        // response sent by the decorator will be ignored silently.
+        // If the request payload exceeds the maximum allowed length for non-exist paths and FallbackService did
+        // not return a response yet, Http{1,2}RequestDecoder will send a 413 Request Entity Too Large response
+        // instead.
         final AggregatedHttpResponse agg = response.aggregate().join();
-        assertThat(agg.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(agg.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         final ServiceRequestContext sctx = lengthLimitServerWithDecorator.requestContextCaptor().take();
         final RequestLog log = sctx.log().whenComplete().join();
         // Make sure that the response was correctly logged.
-        assertThat(log.responseStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(log.responseStatus()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
     }
 
     private static RequestHeaders preflightHeaders(String path) {

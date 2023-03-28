@@ -286,26 +286,16 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             assert encoder != null;
             final Http2Stream stream = encoder.findStream(streamId);
             if (isWritable(stream)) {
-                final Routed<ServiceConfig> routed = req.route();
-                if (routed != null && routed.route().isFallback()) {
-                    // If `FallbackService` does not return a response until the maximum length exceeds,
-                    // a decorator may intercept the request. A 404 Bad Request is sent here instead.
-                    // The late response returned by the decorator will be blocked at `encoder` level.
-                    writeErrorResponse(streamId, req.headers(), HttpStatus.NOT_FOUND, null, null);
-                    decodedReq.abortResponse(HttpStatusException.of(HttpStatus.NOT_FOUND), true);
-                } else {
-                    final ContentTooLargeException cause =
-                            ContentTooLargeException.builder()
-                                                    .maxContentLength(maxContentLength)
-                                                    .contentLength(req.headers())
-                                                    .transferred(transferredLength)
-                                                    .build();
+                final ContentTooLargeException cause =
+                        ContentTooLargeException.builder()
+                                                .maxContentLength(maxContentLength)
+                                                .contentLength(req.headers())
+                                                .transferred(transferredLength)
+                                                .build();
 
-                    writeErrorResponse(streamId, req.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null,
-                                       cause);
-                    decodedReq.abortResponse(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
-                                             true);
-                }
+                writeErrorResponse(streamId, req.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
+                decodedReq.abortResponse(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
+                                         true);
             } else {
                 // The response has been started already. Abort the request and let the response continue.
                 decodedReq.abort();
