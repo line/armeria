@@ -444,6 +444,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
     }
 
+    @Override
+    public Long defaultUnhandledExceptionsReportIntervalMillis() {
+        return getLong("defaultUnhandledExceptionsReportIntervalMillis");
+    }
+
     @Nullable
     private static Long getLong(String name) {
         return getAndParse(name, Long::parseLong);

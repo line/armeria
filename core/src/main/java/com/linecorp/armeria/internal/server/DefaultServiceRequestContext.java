@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
@@ -100,6 +101,8 @@ public final class DefaultServiceRequestContext
     private final ProxiedAddresses proxiedAddresses;
 
     private final InetAddress clientAddress;
+
+    private boolean shouldReportUnhandledExceptions = true;
 
     private final RequestLogBuilder log;
 
@@ -267,6 +270,13 @@ public final class DefaultServiceRequestContext
     @Override
     public String decodedMappedPath() {
         return routingResult.decodedPath();
+    }
+
+    @Override
+    public URI uri() {
+        final HttpRequest request = request();
+        assert request != null;
+        return request.uri();
     }
 
     @Nullable
@@ -437,6 +447,16 @@ public final class DefaultServiceRequestContext
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return proxiedAddresses;
+    }
+
+    @Override
+    public boolean shouldReportUnhandledExceptions() {
+        return shouldReportUnhandledExceptions;
+    }
+
+    @Override
+    public void setShouldReportUnhandledExceptions(boolean value) {
+        shouldReportUnhandledExceptions = value;
     }
 
     @Override

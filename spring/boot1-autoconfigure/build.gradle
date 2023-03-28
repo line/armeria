@@ -22,14 +22,14 @@ dependencies {
     testImplementation libs.spring.boot1.starter
     testImplementation libs.spring.boot1.starter.test
     // Enables cglib for testing
-    testImplementation libs.hibernate.validator
+    testImplementation libs.hibernate.validator6
 }
 
-// Use the sources from ':spring:boot2-autoconfigure'.
+// Use the sources from ':spring:boot3-autoconfigure'.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot2-autoconfigure"
+def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot3-autoconfigure"
 // Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as a source set.
 task generateSources(type: Copy) {
     from "${autoconfigureProjectDir}/src/main/java"
@@ -48,9 +48,9 @@ tasks.compileTestJava.source "${projectDir}/src/test/java",
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
 tasks.sourcesJar.from "${autoconfigureProjectDir}/src/main/resources"
 
-tasks.compileTestJava.dependsOn(project(':spring:boot2-autoconfigure').tasks.compileTestJava)
+tasks.compileTestJava.dependsOn(project(':spring:boot3-autoconfigure').tasks.compileTestJava)
 
-// Disable checkstyle because it's checked by ':spring:boot2-autoconfigure'.
+// Disable checkstyle because it's checked by ':spring:boot3-autoconfigure'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
 }
