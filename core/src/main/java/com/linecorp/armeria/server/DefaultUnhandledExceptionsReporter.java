@@ -63,11 +63,6 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
 
     @Override
     public void report(Throwable cause) {
-        if (intervalMillis == 0) {
-            // disabled.
-            return;
-        }
-
         if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
             reportingTaskFuture = workerGroup.next().scheduleAtFixedRate(
                     this::reportException, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
