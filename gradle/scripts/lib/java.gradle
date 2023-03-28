@@ -39,7 +39,7 @@ configure(rootProject) {
 /**
  * Checks each flag of the specified project for flags of format "java(\\d+)".
  * If such a flag exists, the minimum Java version is extracted and returned.
- * Otherwise, {@code defaultVersion} is returned.
+ * Otherwise, {@code null} is returned.
  */
 static def extractTargetJavaVersion(Project project) {
     def pattern = Pattern.compile('^java(\\d+)$')
@@ -70,7 +70,7 @@ configure(projectsWithFlags('java')) {
         delete project.ext.genSrcDir
     }
 
-    // parse flags for the targetJavaVersion or return the default version
+    // parse flags for the targetJavaVersion
     def targetJavaVersion = extractTargetJavaVersion(project)
     if (targetJavaVersion != null && targetJavaVersion < 8) {
         throw new IllegalArgumentException("The minimum target Java version ${version} specified " +

@@ -153,7 +153,8 @@ public abstract class TomcatService implements HttpService {
                                                    .findVirtual(Request.class, "setStartTimeNanos",
                                                                 MethodType.methodType(void.class, long.class));
             } catch (NoSuchMethodException | IllegalAccessException e) {
-                logger.debug("Failed to Request.setStarTimeNanos(long) in Tomcat {}", TomcatVersion.major(), e);
+                logger.debug("Failed to find Request.setStarTimeNanos(long) in Tomcat {}",
+                             TomcatVersion.major(), e);
             }
         }
         SET_START_TIME_NANOS_MH = setStartTimeNanosMH;
@@ -429,7 +430,7 @@ public abstract class TomcatService implements HttpService {
                         coyoteAdapter.service(coyoteReq, coyoteRes);
                         final HttpHeaders headers = convertResponse(coyoteRes);
                         if (res.tryWrite(headers)) {
-                            for (;;) {
+                            for (; ; ) {
                                 final HttpData d = data.poll();
                                 if (d == null || !res.tryWrite(d)) {
                                     break;
