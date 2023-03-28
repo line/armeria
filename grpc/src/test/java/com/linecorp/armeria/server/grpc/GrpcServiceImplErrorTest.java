@@ -42,8 +42,10 @@ import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.InternalMetadata;
@@ -72,14 +74,14 @@ class GrpcServiceImplErrorTest {
             "key2".getBytes(StandardCharsets.US_ASCII),
             "val2".getBytes(StandardCharsets.US_ASCII)
     );
-    private static final String KEY_OF_CORRUPTED_METADATA = "key1";
+    private static final String KEY_OF_CORRUPTED_METADATA = "grpc_service_impl_error_key";
     // 'usedNames' is 3, but size of 'binaryValues' is 2.
     // 'usedNames' and size of ('binaryValues'.length/2) must be equal, so this is corrupted metadata.
     private static final Metadata corruptedMetadata =
             InternalMetadata.newMetadata(
                     3,
                     KEY_OF_CORRUPTED_METADATA.getBytes(StandardCharsets.US_ASCII),
-                    "val1".getBytes(StandardCharsets.US_ASCII));
+                    "grpc_service_impl_error_val".getBytes(StandardCharsets.US_ASCII));
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -115,7 +117,7 @@ class GrpcServiceImplErrorTest {
     // Client cannot expect corrupted metadata is returned from server.
     @Test
     void clientUnaryCall2ForServerUsingCorruptedInterceptor() throws InterruptedException {
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+        try (ClientRequestContextCaptor clientCaptor = Clients.newContextCaptor()) {
             assertThatThrownBy(() -> {
                 final TestServiceBlockingStub client =
                         GrpcClients.builder("http://127.0.0.1:" + server.httpPort())
@@ -129,21 +131,42 @@ class GrpcServiceImplErrorTest {
                 });
             });
 
-            final RequestLog log = captor.get().log().whenComplete().join();
-            assertThat(log.responseStatus()).isEqualTo(HttpStatus.OK);
-            assertThat(log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS)).isNull();
-            assertThat(log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
-                assertThat(grpcStatus).isNotNull();
-                assertThat(grpcStatus).isEqualTo(String.valueOf(Status.INTERNAL.getCode().value()));
-            });
-            assertThat(log.responseCause())
-                    .isInstanceOf(StatusRuntimeException.class)
-                    .satisfies(cause -> {
-                        assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(Status.INTERNAL.getCode());
-                        assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
-                            assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
+            { // Test from client side viewpoint.
+                final RequestLog log = clientCaptor.get().log().whenComplete().join();
+                assertThat(log.responseStatus()).isEqualTo(HttpStatus.OK);
+                assertThat(log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS)).isNull();
+                assertThat(log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS)).satisfies(grpcStatus -> {
+                    assertThat(grpcStatus).isNotNull();
+                    assertThat(grpcStatus).isEqualTo(String.valueOf(Status.INTERNAL.getCode().value()));
+                });
+                assertThat(log.responseCause())
+                        .isInstanceOf(StatusRuntimeException.class)
+                        .satisfies(cause -> {
+                            assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
+                                    Status.INTERNAL.getCode());
+                            assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
+                                assertThat(metadata.keys()).doesNotContain(KEY_OF_CORRUPTED_METADATA);
+                            });
                         });
-                    });
+            }
+            { // Test from server side viewpoint.
+                final ServiceRequestContextCaptor serviceCaptor = server.requestContextCaptor();
+                assertThat(serviceCaptor.size()).isEqualTo(1);
+                final ServiceRequestContext serviceCtx = serviceCaptor.take();
+                assertThat(serviceCtx.log().ensureComplete().responseCause())
+                        .isInstanceOf(StatusRuntimeException.class)
+                        .satisfies(cause -> {
+                            assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(
+                                    Status.ABORTED.getCode());
+                            assertThat(Status.trailersFromThrowable(cause)).satisfies(metadata -> {
+                                // metadata.keys() throws IndexOutOfBoundsException as metadata is corrupted.
+                                assertThat(metadata.containsKey(
+                                        InternalMetadata.keyOf(KEY_OF_CORRUPTED_METADATA,
+                                                               Metadata.ASCII_STRING_MARSHALLER)
+                                )).isTrue();
+                            });
+                        });
+            }
         }
     }
 
