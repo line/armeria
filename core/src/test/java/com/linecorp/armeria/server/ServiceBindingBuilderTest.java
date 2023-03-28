@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 
 import org.assertj.core.util.Files;
 import org.junit.Test;
