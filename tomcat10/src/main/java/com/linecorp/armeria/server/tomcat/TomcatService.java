@@ -430,7 +430,7 @@ public abstract class TomcatService implements HttpService {
                         coyoteAdapter.service(coyoteReq, coyoteRes);
                         final HttpHeaders headers = convertResponse(coyoteRes);
                         if (res.tryWrite(headers)) {
-                            for (; ; ) {
+                            for (;;) {
                                 final HttpData d = data.poll();
                                 if (d == null || !res.tryWrite(d)) {
                                     break;
