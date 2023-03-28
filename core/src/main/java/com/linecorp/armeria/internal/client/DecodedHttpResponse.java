@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
@@ -25,22 +25,22 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
-final class DecodedHttpResponse extends DefaultHttpResponse {
+public final class DecodedHttpResponse extends DefaultHttpResponse {
 
     private final EventLoop eventLoop;
     @Nullable
     private InboundTrafficController inboundTrafficController;
     private long writtenBytes;
 
-    DecodedHttpResponse(EventLoop eventLoop) {
+    public DecodedHttpResponse(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
     }
 
-    void init(InboundTrafficController inboundTrafficController) {
+    public void init(InboundTrafficController inboundTrafficController) {
         this.inboundTrafficController = inboundTrafficController;
     }
 
-    long writtenBytes() {
+    public long writtenBytes() {
         return writtenBytes;
     }
 
