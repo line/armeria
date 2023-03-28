@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -311,6 +313,14 @@ public interface ServiceRequestContext extends RequestContext {
      * a reusable service bound at various path prefixes.
      */
     String decodedMappedPath();
+
+    /**
+     * Returns the {@link URI} associated with the current {@link Request}.
+     * Note that this method is a shortcut of calling {@link HttpRequest#uri()} on {@link #request()}.
+     */
+    @Override
+    @UnstableApi
+    URI uri();
 
     /**
      * Returns the negotiated producible media type. If the media type negotiation is not used for the
@@ -581,8 +591,20 @@ public interface ServiceRequestContext extends RequestContext {
     ProxiedAddresses proxiedAddresses();
 
     /**
+     * Returns whether exceptions should be reported.
+     * When {@link LoggingService} handles exceptions, this is set to false.
+     */
+    boolean shouldReportUnhandledExceptions();
+
+    /**
+     * Sets whether to report exceptions.
+     * @param value whether to report unhandled exceptions
+     */
+    void setShouldReportUnhandledExceptions(boolean value);
+
+    /**
      * Initiates graceful connection shutdown with a given drain duration in microseconds and returns
-     * {@link CompletableFuture} that completes when the channel is closed.
+     * {@link CompletableFuture} that completes when the connection associated with this context is closed.
      *
      * <p>
      * At the connection drain server signals the clients that the connection shutdown is imminent
@@ -610,7 +632,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates graceful connection shutdown with a given drain duration and returns {@link CompletableFuture}
-     * that completes when the channel is closed.
+     * that completes when the connection associated with this context is closed.
      *
      * @see #initiateConnectionShutdown()
      * @see #initiateConnectionShutdown(long)
@@ -623,12 +645,13 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates connection shutdown without overriding current configuration of the drain duration and returns
-     * {@link CompletableFuture} that completes when the channel is closed.
+     * {@link CompletableFuture} that completes when the connection associated with this context is closed.
      *
      * @see #initiateConnectionShutdown(long)
      * @see #initiateConnectionShutdown(Duration)
      */
     @UnstableApi
+    @Override
     CompletableFuture<Void> initiateConnectionShutdown();
 
     /**
