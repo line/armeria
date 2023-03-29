@@ -24,7 +24,8 @@ public final class ProtocolViolationException extends RuntimeException {
 
     private static final long serialVersionUID = 4674394621849790490L;
 
-    private static final ProtocolViolationException INSTANCE = new ProtocolViolationException(null, null, false, false);
+    private static final ProtocolViolationException INSTANCE =
+            new ProtocolViolationException(null, null, false, false);
 
     /**
      * Returns a {@link ProtocolViolationException} which may be a singleton or a new instance, depending on

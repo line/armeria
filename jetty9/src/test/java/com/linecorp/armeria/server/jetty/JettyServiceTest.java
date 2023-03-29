@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.jetty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchException;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.spy;
@@ -73,13 +72,11 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -229,6 +226,7 @@ class JettyServiceTest extends WebAppContainerTest {
                        newJettyService((req, res) -> res.closeOutput())
                                .decorate((delegate, ctx, req) -> {
                                    ctx = spy(ctx);
+                                   // relies on the fact that JettyService calls this method
                                    when(ctx.sessionProtocol()).thenThrow(RUNTIME_EXCEPTION);
                                    return delegate.serve(ctx, req);
                                }));
@@ -415,14 +413,9 @@ class JettyServiceTest extends WebAppContainerTest {
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
     void throwingHandler(SessionProtocol sessionProtocol) throws Exception {
-        final Exception exception = catchException(
-                () -> WebClient.builder(sessionProtocol, server.httpEndpoint())
-                               .build().blocking().get("/throwing"));
-        if (sessionProtocol.isMultiplex()) {
-            assertThat(exception).isInstanceOf(ClosedStreamException.class);
-        } else {
-            assertThat(exception).isInstanceOf(ClosedSessionException.class);
-        }
+        final AggregatedHttpResponse res = WebClient.builder(sessionProtocol, server.httpEndpoint())
+                                                    .build().blocking().get("/throwing");
+        assertThat(res.status().code()).isEqualTo(500);
 
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
         final ServiceRequestContext sctx = server.requestContextCaptor().poll();
