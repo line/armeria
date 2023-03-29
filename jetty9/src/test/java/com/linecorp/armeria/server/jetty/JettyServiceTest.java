@@ -18,8 +18,11 @@ package com.linecorp.armeria.server.jetty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchException;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -70,11 +73,13 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -116,6 +121,7 @@ class JettyServiceTest extends WebAppContainerTest {
      * Captures the exception raised in a Jetty handler block.
      */
     private static final AtomicReference<Throwable> capturedException = new AtomicReference<>();
+    private static final Exception RUNTIME_EXCEPTION = new RuntimeException("RUNTIME_EXCEPTION");
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -218,6 +224,14 @@ class JettyServiceTest extends WebAppContainerTest {
 
             sb.service("/stream/{totalSize}/{chunkSize}",
                        newJettyService(new AsyncStreamingHandlerFunction()));
+
+            sb.service("/throwing",
+                       newJettyService((req, res) -> res.closeOutput())
+                               .decorate((delegate, ctx, req) -> {
+                                   ctx = spy(ctx);
+                                   when(ctx.sessionProtocol()).thenThrow(RUNTIME_EXCEPTION);
+                                   return delegate.serve(ctx, req);
+                               }));
         }
     };
 
@@ -396,6 +410,25 @@ class JettyServiceTest extends WebAppContainerTest {
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentAscii()).hasSize(totalSize)
                                       .matches("^(?:0123456789abcdef)*$");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    void throwingHandler(SessionProtocol sessionProtocol) throws Exception {
+        final Exception exception = catchException(
+                () -> WebClient.builder(sessionProtocol, server.httpEndpoint())
+                               .build().blocking().get("/throwing"));
+        if (sessionProtocol.isMultiplex()) {
+            assertThat(exception).isInstanceOf(ClosedStreamException.class);
+        } else {
+            assertThat(exception).isInstanceOf(ClosedSessionException.class);
+        }
+
+        assertThat(server.requestContextCaptor().size()).isEqualTo(1);
+        final ServiceRequestContext sctx = server.requestContextCaptor().poll();
+        await().atMost(10, TimeUnit.SECONDS).until(() -> sctx.log().isComplete());
+        assertThat(sctx.log().ensureComplete().responseCause()).isSameAs(RUNTIME_EXCEPTION);
+        System.out.println(sctx.log().ensureComplete());
     }
 
     private static JettyService newJettyService(SimpleHandlerFunction func) {

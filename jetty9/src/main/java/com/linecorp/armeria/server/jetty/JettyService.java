@@ -318,6 +318,9 @@ public final class JettyService implements HttpService {
                 });
                 success = true;
                 return null;
+            } catch (Exception e) {
+                ctx.logBuilder().endResponse(e);
+                throw e;
             } finally {
                 if (!success) {
                     res.close();
