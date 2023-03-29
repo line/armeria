@@ -27,10 +27,32 @@ import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
 import io.grpc.MethodDescriptor;
 
+/**
+ * A {@link ClientInterceptor} that is able to asynchronously execute the interceptor without blocking the
+ * caller thread.
+ * For example:
+ * <pre>{@code
+ * class LongRunningTaskInterceptor implements AsyncClientInterceptor {
+ *
+ *    @Override
+ *    public <I, O> CompletableFuture<ClientCall<I, O>> asyncInterceptCall(MethodDescriptor<I, O> method,
+ *                                                                         CallOptions callOptions,
+ *                                                                         Channel next) {
+ *        return CompletableFuture.supplyAsync(() -> {
+ *            // long-running task
+ *            return next.newCall(method, callOptions);
+ *        });
+ *    }
+ * }
+ * }</pre>
+ */
 @UnstableApi
 @FunctionalInterface
 public interface AsyncClientInterceptor extends ClientInterceptor {
 
+    /**
+     * Asynchronously intercepts {@link ClientCall } dispatch by the {@code next} {@link Channel}.
+     */
     <I, O> CompletableFuture<ClientCall<I, O>> asyncInterceptCall(
             MethodDescriptor<I, O> method, CallOptions callOptions, Channel next);
 

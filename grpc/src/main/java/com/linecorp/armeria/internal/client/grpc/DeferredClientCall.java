@@ -35,7 +35,7 @@ public final class DeferredClientCall<I, O> extends ClientCall<I, O> {
     private final ReentrantLock lock = new ReentrantLock();
 
     @Nullable
-    private volatile ClientCall<I, O> delegate;
+    private volatile ArmeriaClientCall<I, O> delegate;
 
     public DeferredClientCall(CompletableFuture<ClientCall<I, O>> clientFuture) {
         clientFuture.handle((delegate, cause) -> {
@@ -43,9 +43,13 @@ public final class DeferredClientCall<I, O> extends ClientCall<I, O> {
                 // TODO
                 return null;
             }
+            if (!(delegate instanceof ArmeriaClientCall)) {
+                // TODO
+                return null;
+            }
             lock.lock();
             try {
-                this.delegate = delegate;
+                this.delegate = (ArmeriaClientCall<I, O>) delegate;
             } finally {
                 lock.unlock();
             }
@@ -105,7 +109,7 @@ public final class DeferredClientCall<I, O> extends ClientCall<I, O> {
             } else {
                 pendingTasks.add(this::halfClose);
             }
-        }finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -144,7 +148,7 @@ public final class DeferredClientCall<I, O> extends ClientCall<I, O> {
                 lock.unlock();
             }
             for (Runnable runnable : runnables) {
-                runnable.run();
+                delegate.ctx().makeContextAware(runnable).run();
             }
             runnables.clear();
         }
