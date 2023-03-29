@@ -437,8 +437,6 @@ class ArmeriaReactiveWebServerFactoryTest {
         RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
         beanFactory.registerBeanDefinition("armeriaSettings", rbd);
 
-        beanFactory.registerBeanDefinition("internalServices", rbd);
-
         rbd = new RootBeanDefinition(HealthCheckServiceConfigurator.class,
                                      () -> builder -> builder.updatable(true));
         beanFactory.registerBeanDefinition("healthCheckServiceConfigurator", rbd);
