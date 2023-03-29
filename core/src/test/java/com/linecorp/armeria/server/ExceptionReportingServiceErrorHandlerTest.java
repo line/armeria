@@ -58,10 +58,11 @@ class ExceptionReportingServiceErrorHandlerTest {
     }
 
     @Test
-    void exceptionShouldBeLoggedWhenNoLoggingServiceHandlesException() throws Exception {
+    void httpStatusExceptionWithCauseLogged() throws Exception {
         final Server server = Server.builder()
                                     .service("/hello", (ctx, req) -> {
-                                        throw new IllegalArgumentException("test");
+                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST,
+                                                                     new IllegalArgumentException("test"));
                                     })
                                     .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
                                     .build();
@@ -83,11 +84,10 @@ class ExceptionReportingServiceErrorHandlerTest {
     }
 
     @Test
-    void exceptionShouldNotBeLoggedWhenExceptionIsHandled() throws Exception {
+    void httpStatusExceptionWithoutCauseIsIgnored() throws Exception {
         final Server server = Server.builder()
                                     .service("/hello", (ctx, req) -> {
-                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST,
-                                                                     new IllegalArgumentException("test"));
+                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
                                     })
                                     .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
                                     .build();

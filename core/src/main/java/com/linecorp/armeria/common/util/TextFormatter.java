@@ -32,24 +32,25 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class TextFormatter {
 
-    private TextFormatter() {}
-
     /**
      * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
-     * given as {@code elapsedMillis}.
+     * given as {@code elapsed}.
      */
-    public static StringBuilder elapsedMillis(long elapsedMillis) {
-        return elapsed(TimeUnit.MILLISECONDS.toNanos(elapsedMillis));
+    public static StringBuilder elapsed(long elapsed, TimeUnit timeUnit) {
+        final StringBuilder buf = new StringBuilder(16);
+        appendElapsed(buf, timeUnit.toNanos(elapsed));
+        return buf;
     }
 
     /**
      * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
      * given as {@code elapsed}.
+     *
+     * @deprecated Use {@link #elapsed(long, TimeUnit)}.
      */
+    @Deprecated
     public static StringBuilder elapsed(long elapsedNanos) {
-        final StringBuilder buf = new StringBuilder(16);
-        appendElapsed(buf, elapsedNanos);
-        return buf;
+        return elapsed(elapsedNanos, TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -57,7 +58,7 @@ public final class TextFormatter {
      * between the specified {@code startTimeNanos} and {@code endTimeNanos}.
      */
     public static StringBuilder elapsed(long startTimeNanos, long endTimeNanos) {
-        return elapsed(endTimeNanos - startTimeNanos);
+        return elapsed(endTimeNanos - startTimeNanos, TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -273,4 +274,6 @@ public final class TextFormatter {
         // The host name and IP address equals; append only the first part.
         buf.append(str, 0, slashPos);
     }
+
+    private TextFormatter() {}
 }

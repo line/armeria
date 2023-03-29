@@ -24,12 +24,12 @@ import java.util.concurrent.atomic.LongAdder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.channel.EventLoopGroup;
 
 final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsReporter {
 
@@ -38,7 +38,6 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
             AtomicIntegerFieldUpdater.newUpdater(DefaultUnhandledExceptionsReporter.class,
                                                  "scheduled");
 
-    private final EventLoopGroup workerGroup;
     private final long intervalMillis;
     // Note: We keep both Micrometer Counter and our own counter because Micrometer Counter
     //       doesn't count anything if the MeterRegistry is a CompositeMeterRegistry
@@ -53,9 +52,7 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     @Nullable
     private Throwable thrownException;
 
-    DefaultUnhandledExceptionsReporter(MeterRegistry meterRegistry, EventLoopGroup workerGroup,
-                                       long intervalMillis) {
-        this.workerGroup = workerGroup;
+    DefaultUnhandledExceptionsReporter(MeterRegistry meterRegistry, long intervalMillis) {
         this.intervalMillis = intervalMillis;
         micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unhandled");
         counter = new LongAdder();
@@ -64,7 +61,7 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     @Override
     public void report(Throwable cause) {
         if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
-            reportingTaskFuture = workerGroup.next().scheduleAtFixedRate(
+            reportingTaskFuture = CommonPools.workerGroup().next().scheduleAtFixedRate(
                     this::reportException, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
         }
 
@@ -107,12 +104,13 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
             logger.warn("Observed {} unhandled exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs. " +
                         "One of the thrown exceptions:",
-                        newExceptionsCount, TextFormatter.elapsedMillis(intervalMillis), exception);
+                        newExceptionsCount,
+                        TextFormatter.elapsed(intervalMillis, TimeUnit.MILLISECONDS), exception);
             thrownException = null;
         } else {
             logger.warn("Observed {} unhandled exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs.",
-                        newExceptionsCount, TextFormatter.elapsedMillis(intervalMillis));
+                        newExceptionsCount, TextFormatter.elapsed(intervalMillis, TimeUnit.MILLISECONDS));
         }
 
         lastExceptionsCount = totalExceptionsCount;

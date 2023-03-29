@@ -17,13 +17,11 @@
 package com.linecorp.armeria.server;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.channel.EventLoopGroup;
 
 interface UnhandledExceptionsReporter extends ServerListener {
 
-    static UnhandledExceptionsReporter of(MeterRegistry meterRegistry, EventLoopGroup workerGroup,
-                                          long intervalMillis) {
-        return new DefaultUnhandledExceptionsReporter(meterRegistry, workerGroup, intervalMillis);
+    static UnhandledExceptionsReporter of(MeterRegistry meterRegistry, long intervalMillis) {
+        return new DefaultUnhandledExceptionsReporter(meterRegistry, intervalMillis);
     }
 
     void report(Throwable cause);

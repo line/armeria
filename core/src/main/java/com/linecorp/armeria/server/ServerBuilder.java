@@ -1906,7 +1906,7 @@ public final class ServerBuilder implements TlsSetters {
         final UnhandledExceptionsReporter unhandledExceptionsReporter;
         if (unhandledExceptionsReportIntervalMillis > 0) {
             unhandledExceptionsReporter = UnhandledExceptionsReporter.of(
-                    meterRegistry, workerGroup, unhandledExceptionsReportIntervalMillis);
+                    meterRegistry, unhandledExceptionsReportIntervalMillis);
             serverListeners.add(unhandledExceptionsReporter);
         } else {
             unhandledExceptionsReporter = null;
