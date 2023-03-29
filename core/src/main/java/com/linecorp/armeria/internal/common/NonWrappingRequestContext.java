@@ -56,16 +56,16 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
 
     private final MeterRegistry meterRegistry;
     private final ConcurrentAttributes attrs;
-    private final SessionProtocol sessionProtocol;
+    private SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
-    private final String path;
+    private String path;
     private final ExchangeType exchangeType;
 
     @Nullable
     private String decodedPath;
     @Nullable
-    private final String query;
+    private String query;
     @Nullable
     private volatile HttpRequest req;
     @Nullable
@@ -115,7 +115,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     }
 
     @Override
-    public final void updateRequest(HttpRequest req) {
+    public void updateRequest(HttpRequest req) {
         requireNonNull(req, "req");
         validateHeaders(req.headers());
         unsafeUpdateRequest(req);
@@ -141,13 +141,17 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
      * Replaces the {@link HttpRequest} associated with this context with the specified one
      * without any validation. Internal use only. Use it at your own risk.
      */
-    protected final void unsafeUpdateRequest(HttpRequest req) {
+    protected void unsafeUpdateRequest(HttpRequest req) {
         this.req = req;
     }
 
     @Override
     public final SessionProtocol sessionProtocol() {
         return sessionProtocol;
+    }
+
+    protected void sessionProtocol(SessionProtocol sessionProtocol) {
+        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
     }
 
     /**
@@ -188,6 +192,10 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return path;
     }
 
+    protected void path(String path) {
+        this.path = requireNonNull(path, "path");
+    }
+
     @Override
     public final String decodedPath() {
         final String decodedPath = this.decodedPath;
@@ -201,6 +209,10 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public final String query() {
         return query;
+    }
+
+    protected void query(@Nullable String query) {
+        this.query = query;
     }
 
     @Override

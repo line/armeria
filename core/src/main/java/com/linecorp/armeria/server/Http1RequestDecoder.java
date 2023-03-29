@@ -40,6 +40,7 @@ import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
 
 import io.netty.buffer.ByteBuf;
@@ -160,10 +161,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // immutability.
                     final boolean hasInvalidExpectHeader = !handle100Continue(id, nettyReq);
 
+                    final String path = HttpHeaderUtil
+                            .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
+                    final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
+
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(),
-                                                      cfg.absoluteUriTransformer());
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), pathAndQuery);
 
                     // Do not accept a CONNECT request.
                     if (headers.method() == HttpMethod.CONNECT) {
@@ -199,7 +203,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     // Close the request early when it is certain there will be neither content nor trailers.
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
+                                                                        headers, pathAndQuery);
                     if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.

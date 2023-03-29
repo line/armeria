@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.netty.channel.Channel;
@@ -29,29 +30,23 @@ import io.netty.channel.Channel;
 final class ServiceRouteUtil {
 
     static RoutingContext newRoutingContext(ServerConfig serverConfig, Channel channel,
-                                            RequestHeaders headers) {
+                                            RequestHeaders headers,
+                                            @Nullable PathAndQuery pathAndQuery) {
 
         final String hostname = hostname(headers);
         final int port = ((InetSocketAddress) channel.localAddress()).getPort();
         final String originalPath = headers.path();
 
-        PathAndQuery pathAndQuery = null;
         final RoutingStatus routingStatus;
-        if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
-            // 'OPTIONS * HTTP/1.1' will be handled by HttpServerHandler
-            if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
-                routingStatus = RoutingStatus.OPTIONS;
+        if (pathAndQuery != null) {
+            if (isCorsPreflightRequest(headers)) {
+                routingStatus = RoutingStatus.CORS_PREFLIGHT;
             } else {
-                routingStatus = RoutingStatus.INVALID_PATH;
+                routingStatus = RoutingStatus.OK;
             }
         } else {
-            pathAndQuery = PathAndQuery.parse(originalPath);
-            if (pathAndQuery != null) {
-                if (isCorsPreflightRequest(headers)) {
-                    routingStatus = RoutingStatus.CORS_PREFLIGHT;
-                } else {
-                    routingStatus = RoutingStatus.OK;
-                }
+            if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
+                routingStatus = RoutingStatus.OPTIONS;
             } else {
                 routingStatus = RoutingStatus.INVALID_PATH;
             }
