@@ -277,6 +277,7 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     @Override
+    @Deprecated
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
     }
