@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -84,7 +85,7 @@ public final class VirtualHost {
     private final long maxRequestLength;
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
-    private final ScheduledExecutorService blockingTaskExecutor;
+    private final BlockingTaskExecutor blockingTaskExecutor;
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
@@ -99,7 +100,7 @@ public final class VirtualHost {
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
-                ScheduledExecutorService blockingTaskExecutor,
+                BlockingTaskExecutor blockingTaskExecutor,
                 Path multipartUploadsLocation,
                 List<ShutdownSupport> shutdownSupports,
                 Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
@@ -361,7 +362,7 @@ public final class VirtualHost {
      *
      * @see ServiceConfig#blockingTaskExecutor()
      */
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public BlockingTaskExecutor blockingTaskExecutor() {
         return blockingTaskExecutor;
     }
 

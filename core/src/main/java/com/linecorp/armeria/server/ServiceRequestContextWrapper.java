@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
-import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
+import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -100,7 +100,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ContextAwareScheduledExecutorService blockingTaskExecutor() {
+    public ContextAwareBlockingTaskExecutor blockingTaskExecutor() {
         return unwrap().blockingTaskExecutor();
     }
 

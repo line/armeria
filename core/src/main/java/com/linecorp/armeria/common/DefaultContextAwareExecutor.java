@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,37 +15,38 @@
  */
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
+import java.util.concurrent.Executor;
 
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Function;
+import javax.annotation.Nonnull;
 
 import com.google.common.base.MoreObjects;
 
-final class PropagatingContextAwareScheduledExecutorService
-        extends AbstractContextAwareScheduledExecutorService<ScheduledExecutorService> {
+final class DefaultContextAwareExecutor
+        extends AbstractContextAwareExecutor<Executor>
+        implements ContextAwareExecutor {
 
-    static PropagatingContextAwareScheduledExecutorService of(ScheduledExecutorService executor) {
-        requireNonNull(executor, "executor");
-        if (executor instanceof PropagatingContextAwareScheduledExecutorService) {
-            return (PropagatingContextAwareScheduledExecutorService) executor;
-        } else {
-            return new PropagatingContextAwareScheduledExecutorService(executor);
-        }
-    }
+    private final RequestContext context;
 
-    private PropagatingContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
+    DefaultContextAwareExecutor(RequestContext context, Executor executor) {
         super(executor);
+        this.context = context;
     }
 
     @Override
+    public RequestContext context() {
+        return context;
+    }
+
+    @Override
+    @Nonnull
     RequestContext contextOrNull() {
-        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);
+        return context;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .add("context", context)
                           .add("executor", withoutContext())
                           .toString();
     }

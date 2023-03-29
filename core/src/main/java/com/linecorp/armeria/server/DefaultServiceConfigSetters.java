@@ -65,7 +65,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     @Nullable
-    private ScheduledExecutorService blockingTaskExecutor;
+    private BlockingTaskExecutor blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
@@ -177,6 +177,13 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                     boolean shutdownOnStop) {
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return blockingTaskExecutor(BlockingTaskExecutor.of(blockingTaskExecutor), shutdownOnStop);
+    }
+
+    @Override
+    public ServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
                                                      boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (shutdownOnStop) {
