@@ -34,12 +34,12 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.util.SocketUtils;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaSettings;
@@ -202,7 +202,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
 
         @DynamicPropertySource
         static void registerPortProperties(DynamicPropertyRegistry registry) {
-            final int port = SocketUtils.findAvailableTcpPort();
+            final int port = PortUtil.unusedTcpPort();
             registry.add("armeria.internal-services.port", () -> port);
             registry.add("management.server.port", () -> port);
         }
