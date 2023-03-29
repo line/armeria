@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
@@ -309,7 +310,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
             responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR)
                            .addListener(future -> {
                                try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                                   tryComplete(null);
+                                   fail(ProtocolViolationException.get());
                                }
                            });
             ctx.flush();
@@ -397,10 +398,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         maybeLogFirstResponseBytesTransferred();
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
-                    if (tryComplete(cause)) {
-                        endLogRequestAndResponse(cause);
-                        maybeWriteAccessLog();
-                    }
+                    fail(cause);
                 }
             });
         }
