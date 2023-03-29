@@ -16,13 +16,14 @@
 
 package com.linecorp.armeria.internal.client.grpc;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.grpc.ClientCall;
 import io.grpc.Metadata;
@@ -30,7 +31,7 @@ import io.grpc.Metadata;
 @UnstableApi
 public final class DeferredClientCall<I, O> extends ClientCall<I, O> {
 
-    private List<Runnable> pendingTasks = new ArrayList<>();
+    private final Deque<Runnable> pendingTasks = new ArrayDeque<>();
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -129,28 +130,17 @@ public final class DeferredClientCall<I, O> extends ClientCall<I, O> {
     }
 
     private void drainPendingTasks() {
-        List<Runnable> runnables = new ArrayList<>();
-        while (true) {
-            lock.lock();
-            try {
-                if (pendingTasks.isEmpty()) {
-                    break;
-                }
-            } finally {
-                lock.unlock();
+        for (;;) {
+            final Runnable runnable = pendingTasks.poll();
+            if (runnable == null) {
+                break;
             }
-            lock.lock();
-            try {
-                final List<Runnable> tmp = runnables;
-                runnables = pendingTasks;
-                pendingTasks = tmp;
-            } finally {
-                lock.unlock();
+            try (SafeCloseable ignore = delegate.ctx().push()) {
+                runnable.run();
+            } catch (Throwable t) {
+                cancel("Canceled due to the failure of the asynchronously executed task", t);
+                break;
             }
-            for (Runnable runnable : runnables) {
-                delegate.ctx().makeContextAware(runnable).run();
-            }
-            runnables.clear();
         }
     }
 }
