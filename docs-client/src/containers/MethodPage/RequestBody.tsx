@@ -16,7 +16,7 @@
 
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
-import React, { ChangeEvent, useEffect } from 'react';
+import React, { ChangeEvent, useMemo } from 'react';
 
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
@@ -25,13 +25,11 @@ import { Tooltip } from '@material-ui/core';
 import Editor, { loader, useMonaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
-import jsonPrettify from '../../lib/json-prettify';
 import { truncate } from '../../lib/strings';
 import { Method, ServiceType } from '../../lib/specification';
 
 loader.config({ monaco });
 
-const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
 
 interface Props {
   exampleRequests: string[];
@@ -58,11 +56,10 @@ const RequestBody: React.FunctionComponent<Props> = ({
 }) => {
   const monacoEditor = useMonaco();
 
-  useEffect(() => {
-    if (
-      serviceType === ServiceType.GRPC ||
-      serviceType === ServiceType.THRIFT
-    ) {
+  const supportsJsonSchema = serviceType === ServiceType.GRPC ||
+      serviceType === ServiceType.THRIFT;
+  useMemo(() => {
+    if (supportsJsonSchema) {
       const schema = jsonSchemas.find((s: any) => s.$id === method.id) || {};
 
       monacoEditor?.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -113,14 +110,13 @@ const RequestBody: React.FunctionComponent<Props> = ({
           <Typography variant="body2" paragraph />
           <Editor
             height="30vh"
-            language="json"
+            language={ supportsJsonSchema ? "json" : undefined}
             theme="vs-light"
             options={{
               minimap: { enabled: false },
               fontSize: 14,
             }}
             value={requestBody}
-            defaultValue={jsonPlaceHolder}
             onChange={(val) => val && onDebugFormChange(val)}
           />
         </>
