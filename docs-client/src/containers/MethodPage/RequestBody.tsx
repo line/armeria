@@ -30,7 +30,6 @@ import { Method, ServiceType } from '../../lib/specification';
 
 loader.config({ monaco });
 
-
 interface Props {
   exampleRequests: string[];
   onSelectedRequestBodyChange: (e: ChangeEvent<{ value: unknown }>) => void;
@@ -56,8 +55,8 @@ const RequestBody: React.FunctionComponent<Props> = ({
 }) => {
   const monacoEditor = useMonaco();
 
-  const supportsJsonSchema = serviceType === ServiceType.GRPC ||
-      serviceType === ServiceType.THRIFT;
+  const supportsJsonSchema =
+    serviceType === ServiceType.GRPC || serviceType === ServiceType.THRIFT;
   useMemo(() => {
     if (supportsJsonSchema) {
       const schema = jsonSchemas.find((s: any) => s.$id === method.id) || {};
@@ -77,7 +76,7 @@ const RequestBody: React.FunctionComponent<Props> = ({
         validate: false,
       });
     }
-  }, [monacoEditor, jsonSchemas, method.id, serviceType]);
+  }, [monacoEditor, jsonSchemas, method.id, supportsJsonSchema]);
 
   return (
     <>
@@ -110,7 +109,7 @@ const RequestBody: React.FunctionComponent<Props> = ({
           <Typography variant="body2" paragraph />
           <Editor
             height="30vh"
-            language={ supportsJsonSchema ? "json" : undefined}
+            language={supportsJsonSchema ? 'json' : undefined}
             theme="vs-light"
             options={{
               minimap: { enabled: false },
