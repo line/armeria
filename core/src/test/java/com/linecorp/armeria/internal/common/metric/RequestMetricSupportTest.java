@@ -198,13 +198,9 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure,service=none}",
                                1.0)
                 .containsEntry("foo.actual.requests#count{http.status=500,method=POST,service=none}", 2.0)
-                .containsEntry("foo.successAttempts#count{http.status=500,method=POST," +
-                               "result=success,service=none}", 1.0)
-                .containsEntry("foo.successAttempts#total{http.status=500,method=POST," +
-                               "result=success,service=none}", 0.0)
-                .containsEntry("foo.failureAttempts#count{http.status=500,method=POST," +
+                .containsEntry("foo.actual.requests.attempts#count{http.status=500,method=POST," +
                                "result=failure,service=none}", 1.0)
-                .containsEntry("foo.failureAttempts#total{http.status=500,method=POST," +
+                .containsEntry("foo.actual.requests.attempts#total{http.status=500,method=POST," +
                                "result=failure,service=none}", 2.0);
     }
 
@@ -232,14 +228,10 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.requests#count{http.status=200,method=POST,result=failure,service=none}",
                                0.0)
                 .containsEntry("foo.actual.requests#count{http.status=200,method=POST,service=none}", 2.0)
-                .containsEntry("foo.successAttempts#count{http.status=200,method=POST," +
+                .containsEntry("foo.actual.requests.attempts#count{http.status=200,method=POST," +
                                "result=success,service=none}", 1.0)
-                .containsEntry("foo.successAttempts#total{http.status=200,method=POST," +
-                               "result=success,service=none}", 1.0)
-                .containsEntry("foo.failureAttempts#count{http.status=200,method=POST," +
-                               "result=failure,service=none}", 1.0)
-                .containsEntry("foo.failureAttempts#total{http.status=200,method=POST," +
-                               "result=failure,service=none}", 1.0);
+                .containsEntry("foo.actual.requests.attempts#total{http.status=200,method=POST," +
+                               "result=success,service=none}", 2.0);
     }
 
     @Test

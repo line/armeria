@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -140,9 +139,7 @@ public final class RequestMetricSupport {
 
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
-            updateRetryingClientMetrics(ctx, log,
-                                        new DefaultClientRequestMetrics(registry, idPrefix, true),
-                                        childrenSize, successFunction);
+            updateRetryingClientMetrics(ctx, log, metrics, childrenSize, successFunction);
         }
     }
 
@@ -166,21 +163,15 @@ public final class RequestMetricSupport {
             RequestContext ctx, RequestLog log,
             ClientRequestMetrics metrics, int childrenSize,
             SuccessFunction successFunction) {
-        int successAttempts = 0;
-        int failureAttempts = 0;
 
         metrics.actualRequests().increment(childrenSize);
 
-        for (RequestLogAccess child : log.children()) {
-            if (successFunction.isSuccess(ctx, child.ensureComplete())) {
-                successAttempts++;
-            } else {
-                failureAttempts++;
-            }
+        final boolean success = successFunction.isSuccess(ctx, log);
+        if (success) {
+            metrics.successAttempts().record(log.children().size());
+        } else {
+            metrics.failureAttempts().record(log.children().size());
         }
-
-        metrics.successAttempts().record(successAttempts);
-        metrics.failureAttempts().record(failureAttempts);
     }
 
     private RequestMetricSupport() {}
@@ -300,30 +291,18 @@ public final class RequestMetricSupport {
         private final Counter responseTimeouts;
 
         @Nullable
-        private volatile Counter actualRequests;
+        private Counter actualRequests;
 
         @Nullable
-        private volatile DistributionSummary successAttempts;
+        private DistributionSummary successAttempts;
 
         @Nullable
-        private volatile DistributionSummary failureAttempts;
+        private DistributionSummary failureAttempts;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
-            this(parent, idPrefix, false);
-        }
-
-        DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix, Boolean retryable) {
             super(parent, idPrefix);
             this.parent = parent;
             this.idPrefix = idPrefix;
-
-            if (retryable) {
-                actualRequests = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
-                successAttempts = parent.summary(idPrefix.name("successAttempts"),
-                                                 idPrefix.tags("result", "success"));
-                failureAttempts = parent.summary(idPrefix.name("failureAttempts"),
-                                                 idPrefix.tags("result", "failure"));
-            }
 
             connectionAcquisitionDuration = newTimer(
                     parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags());
@@ -341,7 +320,7 @@ public final class RequestMetricSupport {
 
         @Override
         public Counter actualRequests() {
-            return actualRequests;
+            return parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
         }
 
         @Override
@@ -376,12 +355,14 @@ public final class RequestMetricSupport {
 
         @Override
         public DistributionSummary successAttempts() {
-            return successAttempts;
+            return parent.summary(idPrefix.name("actual.requests.attempts"),
+                                  idPrefix.tags("result", "success"));
         }
 
         @Override
         public DistributionSummary failureAttempts() {
-            return failureAttempts;
+            return parent.summary(idPrefix.name("actual.requests.attempts"),
+                                  idPrefix.tags("result", "failure"));
         }
     }
 
