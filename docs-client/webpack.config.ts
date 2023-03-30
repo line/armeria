@@ -4,7 +4,7 @@ import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
 import CompressionWebpackPlugin from 'compression-webpack-plugin';
-import { Configuration, DefinePlugin } from 'webpack';
+import { Configuration, DefinePlugin, optimize } from 'webpack';
 import WebpackDevServer from 'webpack-dev-server';
 import { docServiceDebug } from './src/lib/header-provider';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
@@ -201,6 +201,10 @@ if (enableAnalyzer) {
   const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
   plugins.push(new BundleAnalyzerPlugin())
 }
+
+plugins.push(new optimize.LimitChunkCountPlugin({
+  maxChunks: 1,
+}));
 
 plugins.push(new DefinePlugin({
   'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
