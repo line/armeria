@@ -39,11 +39,6 @@ import { docServiceDebug } from '../../lib/header-provider';
 // Required for graphQL plugin to load properly.
 loader.config({ monaco });
 
-const graphqlPlaceHolder = `{
-  field(arg: "value") {
-    subField
-  }
-}`;
 const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
 
 interface Props {
@@ -192,7 +187,6 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
                 minimap: { enabled: false },
                 fontSize: 14,
               }}
-              defaultValue={graphqlPlaceHolder}
               onChange={(val) => val && onQueryFromChange(val)}
             />
           )}
