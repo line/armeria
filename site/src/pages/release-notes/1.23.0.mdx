@@ -17,17 +17,18 @@ date: 2023-03-xx
 - Unhandled exceptions are logged periodically out of the box. #4324 #4687
   - You can change the interval of the periodic logging
     using <type://ServerBuilder#unhandledExceptionsReportIntervalMillis(long)>.
-    ```java
-    ServerBuilder sb = ...
-    // Log every 10 seconds.
-    sb.unhandledExceptionsReportIntervalMillis(10000L);
-    ```
+  ```java
+  ServerBuilder sb = ...
+  // Log every 10 seconds.
+  sb.unhandledExceptionsReportIntervalMillis(10000L);
+  ```
 - You can now use Spring Boot 3 with Armeria. #4574
-  - Use `com.linecorp.armeria:armeria-spring-boot3-autoconfigure:1.23.0`
+  - Use `com.linecorp.armeria:armeria-spring-boot3-autoconfigure:1.23.0` dependency for the integration.
 - You can now disconnect connections gracefully
   using <type://ClientRequestContext#initiateConnectionShutdown()>. #4555 #4708
   ```java
   ClientRequestContext ctx = ...
+  // The connection will be gracefully shut down after the current request is finished.
   ctx.initiateConnectionShutdown();
   ```
 - You can now use <type://ServiceErrorHandler> to configure per-service or per-virtual host level
