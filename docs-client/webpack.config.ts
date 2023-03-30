@@ -134,10 +134,7 @@ if (!isWindows) {
       warnings: true,
       errors: true,
     },
-    excludedPackageTest: (packageName: string) => {
-      // @monaco-editor/react and monaco-editor are the same package and causes license duplication.
-      return packageName.includes("monaco-editor");
-    },
+    perChunkOutput: false,
     outputFilename: '../../../licenses/web-licenses.txt',
   }) as any);
 }
