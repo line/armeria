@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -274,6 +275,14 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder blockingTaskExecutor(
             ScheduledExecutorService blockingTaskExecutor,
+            boolean shutdownOnStop) {
+        return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor,
+                                                                             shutdownOnStop);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder blockingTaskExecutor(
+            BlockingTaskExecutor blockingTaskExecutor,
             boolean shutdownOnStop) {
         return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor,
                                                                              shutdownOnStop);

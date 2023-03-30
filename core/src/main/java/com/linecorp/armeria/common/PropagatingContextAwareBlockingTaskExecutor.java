@@ -17,24 +17,25 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
-final class PropagatingContextAwareScheduledExecutorService
-        extends AbstractContextAwareScheduledExecutorService<ScheduledExecutorService> {
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
-    static PropagatingContextAwareScheduledExecutorService of(ScheduledExecutorService executor) {
+final class PropagatingContextAwareBlockingTaskExecutor
+        extends AbstractContextAwareBlockingTaskExecutor {
+
+    static PropagatingContextAwareBlockingTaskExecutor of(BlockingTaskExecutor executor) {
         requireNonNull(executor, "executor");
-        if (executor instanceof PropagatingContextAwareScheduledExecutorService) {
-            return (PropagatingContextAwareScheduledExecutorService) executor;
+        if (executor instanceof PropagatingContextAwareBlockingTaskExecutor) {
+            return (PropagatingContextAwareBlockingTaskExecutor) executor;
         } else {
-            return new PropagatingContextAwareScheduledExecutorService(executor);
+            return new PropagatingContextAwareBlockingTaskExecutor(executor);
         }
     }
 
-    private PropagatingContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
+    private PropagatingContextAwareBlockingTaskExecutor(BlockingTaskExecutor executor) {
         super(executor);
     }
 
