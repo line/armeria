@@ -19,8 +19,8 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
@@ -40,7 +40,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     // by non-`sequentialExecutor()` thread, access the values. Because `maybeAddPendingTask()` double-checks
     // the status of the values in the `sequentialExecutor()`.
     @Nullable
-    private ConcurrentLinkedQueue<Consumer<Listener<I>>> pendingTasks = new ConcurrentLinkedQueue<>();
+    private ArrayDeque<Consumer<Listener<I>>> pendingQueue = new ArrayDeque<>();
 
     private boolean shouldBePending = true;
 
@@ -73,8 +73,13 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
 
             this.delegate = delegate;
             try {
-                while (!pendingTasks.isEmpty()) {
-                    pendingTasks.poll().accept(delegate);
+                for(;;) {
+                    final Consumer<Listener<I>> task = pendingQueue.poll();
+                    if (task != null) {
+                        task.accept(delegate);
+                    } else {
+                        break;
+                    }
                 }
             } catch (Throwable ex) {
                 callClosed = true;
@@ -82,7 +87,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                 return null;
             } finally {
                 shouldBePending = false;
-                pendingTasks = null;
+                pendingQueue = null;
             }
             return null;
         }, sequentialExecutor());
@@ -141,7 +146,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     }
 
     private void addPendingTask(Consumer<ServerCall.Listener<I>> task) {
-        pendingTasks.add(task);
+        pendingQueue.add(task);
     }
 
     private boolean shouldBePending() {
