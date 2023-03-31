@@ -117,34 +117,26 @@ class HttpServiceTest {
                             return HttpResponse.of(HttpStatus.NO_CONTENT);
                         }
                     }.decorate(LoggingService.newDecorator()));
-            sb.service("/empty/UNARY", new HttpService() {
-                @Override
-                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    final HttpResponseWriter writer = HttpResponse.streaming();
-                    writer.close();
-                    return writer;
-                }
-
-                @Override
-                public ExchangeType exchangeType(RoutingContext routingContext) {
-                    return ExchangeType.UNARY;
-                }
-            });
-            sb.service("/empty/BIDI_STREAMING", new HttpService() {
-                @Override
-                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    final HttpResponseWriter writer = HttpResponse.streaming();
-                    writer.close();
-                    return writer;
-                }
-
-                @Override
-                public ExchangeType exchangeType(RoutingContext routingContext) {
-                    return ExchangeType.BIDI_STREAMING;
-                }
-            });
+            sb.service("/empty/BIDI_STREAMING", emptyService(ExchangeType.BIDI_STREAMING));
+            sb.service("/empty/UNARY", emptyService(ExchangeType.UNARY));
         }
     };
+
+    private static HttpService emptyService(ExchangeType exchangeType) {
+        return new HttpService() {
+            @Override
+            public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                final HttpResponseWriter writer = HttpResponse.streaming();
+                writer.close();
+                return writer;
+            }
+
+            @Override
+            public ExchangeType exchangeType(RoutingContext routingContext) {
+                return exchangeType;
+            }
+        };
+    }
 
     @Test
     void testHello() throws Exception {
