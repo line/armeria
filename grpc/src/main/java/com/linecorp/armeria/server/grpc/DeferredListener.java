@@ -42,8 +42,6 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     @Nullable
     private ArrayDeque<Consumer<Listener<I>>> pendingQueue = new ArrayDeque<>();
 
-    private boolean shouldBePending = true;
-
     @Nullable
     private Listener<I> delegate;
     private boolean callClosed;
@@ -86,7 +84,6 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                 armeriaServerCall.close(ex);
                 return null;
             } finally {
-                shouldBePending = false;
                 pendingQueue = null;
             }
             return null;
@@ -150,7 +147,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     }
 
     private boolean shouldBePending() {
-        return shouldBePending;
+        return delegate == null;
     }
 
     private Executor sequentialExecutor() {
