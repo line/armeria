@@ -34,11 +34,13 @@ import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.EmptyHttpResponseContentException;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -47,7 +49,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -116,10 +117,31 @@ class HttpServiceTest {
                             return HttpResponse.of(HttpStatus.NO_CONTENT);
                         }
                     }.decorate(LoggingService.newDecorator()));
-            sb.service("/empty", (ctx, req) -> {
-                final HttpResponseWriter writer = HttpResponse.streaming();
-                writer.close();
-                return writer;
+            sb.service("/empty/UNARY", new HttpService() {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    final HttpResponseWriter writer = HttpResponse.streaming();
+                    writer.close();
+                    return writer;
+                }
+
+                @Override
+                public ExchangeType exchangeType(RoutingContext routingContext) {
+                    return ExchangeType.UNARY;
+                }
+            });
+            sb.service("/empty/BIDI_STREAMING", new HttpService() {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    final HttpResponseWriter writer = HttpResponse.streaming();
+                    writer.close();
+                    return writer;
+                }
+
+                @Override
+                public ExchangeType exchangeType(RoutingContext routingContext) {
+                    return ExchangeType.BIDI_STREAMING;
+                }
             });
         }
     };
@@ -194,13 +216,13 @@ class HttpServiceTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
-    void emptyResponseCompletes(SessionProtocol sessionProtocol) throws Exception {
+    @CsvSource({"H1C,UNARY", "H2C,UNARY", "H1C,BIDI_STREAMING", "H2C,BIDI_STREAMING"})
+    void emptyResponseCompletes(SessionProtocol sessionProtocol, ExchangeType exchangeType) throws Exception {
         // an exception is thrown since the server closed the connection without sending any data
         // which violates the http protocol
         final Exception exception = catchException(
                 () -> WebClient.builder(sessionProtocol, server.httpEndpoint()).build()
-                               .blocking().get("/empty"));
+                               .blocking().get("/empty/" + exchangeType));
         if (sessionProtocol.isMultiplex()) {
             assertThat(exception).isInstanceOf(ClosedStreamException.class);
         } else {
@@ -209,6 +231,7 @@ class HttpServiceTest {
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
         final ServiceRequestContext sctx = server.requestContextCaptor().poll();
         await().atMost(10, TimeUnit.SECONDS).until(() -> sctx.log().isComplete());
-        assertThat(sctx.log().ensureComplete().responseCause()).isInstanceOf(ProtocolViolationException.class);
+        assertThat(sctx.log().ensureComplete().responseCause())
+                .isInstanceOf(EmptyHttpResponseContentException.class);
     }
 }

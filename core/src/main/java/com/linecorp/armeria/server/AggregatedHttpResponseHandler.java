@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
+import com.linecorp.armeria.common.EmptyHttpResponseContentException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -104,6 +105,10 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         } else if (Exceptions.isStreamCancelling(cause)) {
             resetAndFail(cause);
         } else {
+            if (cause instanceof EmptyHttpResponseContentException) {
+                resetAndFail(cause);
+                return;
+            }
             if (!(cause instanceof CancellationException)) {
                 logger.warn("{} Unexpected exception from a service or a response publisher: {}",
                             ctx.channel(), service(), cause);

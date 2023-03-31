@@ -18,26 +18,11 @@ package com.linecorp.armeria.common;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * A {@link RuntimeException} raised when a local or remote peer violated the current {@link SessionProtocol}.
+ * A {@link RuntimeException} raised when a remote peer violated the current {@link SessionProtocol}.
  */
 public final class ProtocolViolationException extends RuntimeException {
 
     private static final long serialVersionUID = 4674394621849790490L;
-
-    private static final ProtocolViolationException INSTANCE =
-            new ProtocolViolationException(null, null, false, false);
-
-    /**
-     * Returns a {@link ProtocolViolationException} which may be a singleton or a new instance, depending on
-     * {@link Flags#verboseExceptionSampler()}'s decision.
-     */
-    public static ProtocolViolationException get() {
-        return isSampled() ? new ProtocolViolationException(null, null, true, true) : INSTANCE;
-    }
-
-    private static boolean isSampled() {
-        return Flags.verboseExceptionSampler().isSampled(ProtocolViolationException.class);
-    }
 
     /**
      * Creates a new exception.
@@ -71,10 +56,5 @@ public final class ProtocolViolationException extends RuntimeException {
             super.fillInStackTrace();
         }
         return this;
-    }
-
-    private ProtocolViolationException(@Nullable String message, @Nullable Throwable cause,
-                                       boolean enableSuppression, boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

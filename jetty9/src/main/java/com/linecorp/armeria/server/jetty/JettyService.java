@@ -319,7 +319,7 @@ public final class JettyService implements HttpService {
                 success = true;
                 return null;
             } catch (Exception e) {
-                res.close(e);
+                res.abort(e);
                 throw e;
             } finally {
                 if (!success) {

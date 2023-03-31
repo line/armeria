@@ -32,13 +32,13 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.EmptyHttpResponseContentException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
@@ -306,11 +306,10 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
         final State oldState = setDone(false);
         if (oldState == State.NEEDS_HEADERS) {
-            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
             responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR)
                            .addListener(future -> {
                                try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                                   fail(ProtocolViolationException.get());
+                                   fail(EmptyHttpResponseContentException.get());
                                }
                            });
             ctx.flush();
