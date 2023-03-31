@@ -16,23 +16,22 @@
 
 package com.linecorp.armeria.server;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import javax.net.ssl.SSLEngine;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
+import org.testng.util.Strings;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.client.SessionProtocolNegotiationException;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -40,10 +39,10 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
@@ -61,29 +60,37 @@ class ServerChildChannelPipelineCustomizerTest {
                     pipeline ->  pipeline.addFirst(new ChannelTrafficShapingHandler(1024, 0)));
             sb.service("/", new AbstractHttpService() {
                 @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                        throws Exception {
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(
-                        ResponseHeaders.of(HttpStatus.OK, "header1", Strings.repeat("a", 2048)));
+                            ResponseHeaders.of(HttpStatus.OK, "header1", Strings.repeat("a", 2048)));
                 }
             });
         }
     };
 
-    static final SSLEngine sslEngine =  SslContextUtil.createSslContext(
-            SslContextBuilder::forClient,
-            /* forceHttp1 */ true,
-            /* tlsAllowUnsafeCiphers */ false,
-            ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
+    @RegisterExtension
+    @Order(0)
+    static final SelfSignedCertificateExtension ssc = new SelfSignedCertificateExtension();
 
     @RegisterExtension
-    static ServerExtension server2 = new ServerExtension() {
+    @Order(1)
+    static ServerExtension serverWithSslHandler = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(8080);
+            final SslContext sslCtx = SslContextBuilder
+                            .forServer(ssc.privateKey(), ssc.certificate())
+                            .startTls(true)
+                            .build();
+
+            sb.http(0);
+            sb.tlsSelfSigned();
             sb.childChannelPipelineCustomizer(
-                    pipeline ->  pipeline.addFirst(new SslHandler(sslEngine)));
-            sb.service("/", (ctx, req) -> HttpResponse.of("content"));
+                    pipeline -> {
+                        final SSLEngine engine = sslCtx.newEngine(pipeline.channel().alloc());
+                        engine.setUseClientMode(false);
+                        pipeline.addLast(new SslHandler(engine));
+                    });
+            sb.service(Route.ofCatchAll(), (ctx, req) -> HttpResponse.of(200));
         }
     };
 
@@ -107,14 +114,14 @@ class ServerChildChannelPipelineCustomizerTest {
 
     @Test
     void testSessionProtocolNegotiationException() {
-        final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.GET, "/");
+        final ClientFactory clientFactory = ClientFactory.insecure();
 
-        // using h2c
-        assertThatThrownBy(() -> WebClient.builder(server2.uri(SessionProtocol.H2C))
-                 .build()
-                 .blocking()
-                 .execute(requestHeaders, "content"))
-        .isInstanceOf(UnprocessedRequestException.class)
-        .hasCauseInstanceOf(SessionProtocolNegotiationException.class);
+        final AggregatedHttpResponse response = WebClient
+                                      .builder(SessionProtocol.HTTP, serverWithSslHandler.httpEndpoint())
+                                      .factory(clientFactory)
+                                      .build()
+                                      .blocking()
+                                      .execute(RequestHeaders.of(HttpMethod.GET, "/"), "content");
+        assertThat(response.status().code()).isEqualTo(200);
     }
 }
