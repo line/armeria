@@ -62,7 +62,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     @Nullable
-    private ScheduledExecutorService blockingTaskExecutor;
+    private BlockingTaskExecutor blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
@@ -156,6 +156,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                     boolean shutdownOnStop) {
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return blockingTaskExecutor(BlockingTaskExecutor.of(blockingTaskExecutor), shutdownOnStop);
+    }
+
+    @Override
+    public ServiceConfigBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
                                                      boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (shutdownOnStop) {
@@ -266,7 +273,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
                         AccessLogWriter defaultAccessLogWriter,
-                        ScheduledExecutorService defaultBlockingTaskExecutor,
+                        BlockingTaskExecutor defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
                         Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.ScheduledExecutorService;
-
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -45,10 +43,10 @@ public final class CommonPools {
     }
 
     /**
-     * Returns the default common blocking task {@link ScheduledExecutorService} which is used for
+     * Returns the default common blocking task {@link BlockingTaskExecutor} which is used for
      * potentially long-running tasks which may block I/O threads.
      */
-    public static ScheduledExecutorService blockingTaskExecutor() {
+    public static BlockingTaskExecutor blockingTaskExecutor() {
         return BLOCKING_TASK_EXECUTOR;
     }
 

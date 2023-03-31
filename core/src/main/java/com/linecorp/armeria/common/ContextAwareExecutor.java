@@ -18,42 +18,38 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executor;
 
 /**
- * A delegating {@link ScheduledExecutorService} that sets the {@link RequestContext} before executing any
- * submitted tasks.
+ * A delegating {@link Executor} that makes sure all submitted tasks are
+ * executed within the {@link RequestContext}.
  */
-public interface ContextAwareScheduledExecutorService
-        extends ScheduledExecutorService, ContextAwareExecutorService {
+public interface ContextAwareExecutor extends Executor, ContextHolder {
 
     /**
-     * Returns a new {@link ContextAwareScheduledExecutorService} that sets the specified
+     * Returns a new {@link ContextAwareExecutor} that sets the specified
      * {@link RequestContext} before executing any submitted tasks.
      */
-    static ContextAwareScheduledExecutorService of(
-            RequestContext context, ScheduledExecutorService executor) {
+    static ContextAwareExecutor of(RequestContext context, Executor executor) {
         requireNonNull(context, "context");
         requireNonNull(executor, "executor");
-        if (executor instanceof ContextAwareScheduledExecutorService) {
-            ensureSameCtx(context, (ContextAwareScheduledExecutorService) executor,
-                          ContextAwareScheduledExecutorService.class);
-            return (ContextAwareScheduledExecutorService) executor;
+        if (executor instanceof ContextAwareExecutor) {
+            ensureSameCtx(context, (ContextAwareExecutor) executor, ContextAwareExecutor.class);
+            return (ContextAwareExecutor) executor;
         }
-        return new DefaultContextAwareScheduledExecutorService(context, executor);
+        return new DefaultContextAwareExecutor(context, executor);
     }
 
     /**
      * Returns the {@link RequestContext} that was specified when creating
-     * this {@link ContextAwareScheduledExecutorService}.
+     * this {@link ContextAwareExecutor}.
      */
     @Override
     RequestContext context();
 
     /**
-     * Returns the {@link ScheduledExecutorService} that executes the submitted tasks without setting the
-     * {@link RequestContext}.
+     * Returns the {@link Executor} that executes the submitted tasks without setting
+     * the {@link RequestContext}.
      */
-    @Override
-    ScheduledExecutorService withoutContext();
+    Executor withoutContext();
 }

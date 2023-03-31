@@ -828,6 +828,20 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link BlockingTaskExecutor} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link BlockingTaskExecutor} when the
+     *                       {@link Server} stops
+     */
+    public ServerBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                              boolean shutdownOnStop) {
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        virtualHostTemplate.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    /**
      * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
      * the execution of blocking tasks or invocations.
      * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
@@ -2007,7 +2021,7 @@ public final class ServerBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
+        final BlockingTaskExecutor blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,

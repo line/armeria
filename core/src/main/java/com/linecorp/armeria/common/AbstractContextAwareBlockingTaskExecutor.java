@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,14 +15,12 @@
  */
 package com.linecorp.armeria.common;
 
-final class RequestContextUtil {
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
-    static void ensureSameCtx(RequestContext ctx, ContextHolder contextHolder, Class<?> type) {
-        if (ctx != contextHolder.context()) {
-            throw new IllegalArgumentException(
-                    "cannot create a " + type.getSimpleName() + " using another " + contextHolder);
-        }
+abstract class AbstractContextAwareBlockingTaskExecutor
+        extends AbstractContextAwareScheduledExecutorService<BlockingTaskExecutor>
+        implements BlockingTaskExecutor {
+    AbstractContextAwareBlockingTaskExecutor(BlockingTaskExecutor executor) {
+        super(executor);
     }
-
-    private RequestContextUtil() {}
 }
