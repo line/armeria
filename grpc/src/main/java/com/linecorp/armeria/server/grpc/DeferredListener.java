@@ -71,7 +71,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
 
             this.delegate = delegate;
             try {
-                for(;;) {
+                for (;;) {
                     final Consumer<Listener<I>> task = pendingQueue.poll();
                     if (task != null) {
                         task.accept(delegate);
