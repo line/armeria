@@ -331,6 +331,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.decorators(decorators);
     }
 
+    @Override
+    public ServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        return (ServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
     /**
      * Sets the {@link HttpService} and returns the {@link ServerBuilder} that this
      * {@link ServiceBindingBuilder} was created from.

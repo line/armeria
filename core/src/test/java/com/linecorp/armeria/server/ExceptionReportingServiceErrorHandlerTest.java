@@ -36,12 +36,12 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 
-class ExceptionReportingServerErrorHandlerTest {
+class ExceptionReportingServiceErrorHandlerTest {
 
     @Spy
     final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
     final Logger errorHandlerLogger =
-            (Logger) LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
+            (Logger) LoggerFactory.getLogger(DefaultUnhandledExceptionsReporter.class);
     private static final long reportIntervalMillis = 1000;
     private static final long awaitIntervalMillis = 2000;
 
@@ -58,10 +58,11 @@ class ExceptionReportingServerErrorHandlerTest {
     }
 
     @Test
-    void exceptionShouldBeLoggedWhenNoLoggingServiceHandlesException() throws Exception {
+    void httpStatusExceptionWithCauseLogged() throws Exception {
         final Server server = Server.builder()
                                     .service("/hello", (ctx, req) -> {
-                                        throw new IllegalArgumentException("test");
+                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST,
+                                                                     new IllegalArgumentException("test"));
                                     })
                                     .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
                                     .build();
@@ -83,11 +84,10 @@ class ExceptionReportingServerErrorHandlerTest {
     }
 
     @Test
-    void exceptionShouldNotBeLoggedWhenExceptionIsHandled() throws Exception {
+    void httpStatusExceptionWithoutCauseIsIgnored() throws Exception {
         final Server server = Server.builder()
                                     .service("/hello", (ctx, req) -> {
-                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST,
-                                                                     new IllegalArgumentException("test"));
+                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
                                     })
                                     .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
                                     .build();

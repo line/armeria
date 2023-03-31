@@ -77,6 +77,7 @@ public final class ServiceConfig {
     private final List<ShutdownSupport> shutdownSupports;
     private final HttpHeaders defaultHeaders;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
+    private final ServiceErrorHandler serviceErrorHandler;
 
     /**
      * Creates a new instance.
@@ -89,12 +90,14 @@ public final class ServiceConfig {
                   SuccessFunction successFunction,
                   Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
                   HttpHeaders defaultHeaders,
-                  Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+                  Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
+                  ServiceErrorHandler serviceErrorHandler) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction,
-             multipartUploadsLocation, shutdownSupports, defaultHeaders, requestIdGenerator);
+             multipartUploadsLocation, shutdownSupports, defaultHeaders,
+                     requestIdGenerator, serviceErrorHandler);
     }
 
     /**
@@ -110,7 +113,8 @@ public final class ServiceConfig {
                           SuccessFunction successFunction,
                           Path multipartUploadsLocation,
                           List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
-                          Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+                          Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
+                          ServiceErrorHandler serviceErrorHandler) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
@@ -132,6 +136,7 @@ public final class ServiceConfig {
         final Function<RoutingContext, RequestId> castRequestIdGenerator =
                 (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
+        this.serviceErrorHandler = requireNonNull(serviceErrorHandler, "serviceErrorHandler");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -170,7 +175,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 requestIdGenerator);
+                                 requestIdGenerator, serviceErrorHandler);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -181,7 +186,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 requestIdGenerator);
+                                 requestIdGenerator, serviceErrorHandler);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -191,7 +196,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 requestIdGenerator);
+                                 requestIdGenerator, serviceErrorHandler);
     }
 
     /**
@@ -411,6 +416,10 @@ public final class ServiceConfig {
         return requestIdGenerator;
     }
 
+    ServiceErrorHandler errorHandler() {
+        return serviceErrorHandler;
+    }
+
     List<ShutdownSupport> shutdownSupports() {
         return shutdownSupports;
     }
@@ -444,6 +453,7 @@ public final class ServiceConfig {
                              .add("blockingTaskExecutor", blockingTaskExecutor)
                              .add("successFunction", successFunction)
                              .add("multipartUploadsLocation", multipartUploadsLocation)
+                             .add("serviceErrorHandler", serviceErrorHandler)
                              .add("shutdownSupports", shutdownSupports)
                              .toString();
     }

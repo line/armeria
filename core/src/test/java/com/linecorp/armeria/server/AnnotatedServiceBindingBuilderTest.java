@@ -122,6 +122,7 @@ class AnnotatedServiceBindingBuilderTest {
         final String defaultServiceName = "TestService";
         final String defaultLogName = "TestLog";
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
+        final ServiceErrorHandler serviceErrorHandler = (ctx, cause) -> HttpResponse.of(HttpStatus.OK);
 
         final Server server = Server.builder()
                                     .annotatedService()
@@ -134,6 +135,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .defaultServiceName(defaultServiceName)
                                     .defaultLogName(defaultLogName)
                                     .multipartUploadsLocation(multipartUploadsLocation)
+                                    .errorHandler(serviceErrorHandler)
                                     .build(new TestService())
                                     .build();
 
@@ -146,6 +148,11 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
+        // serviceErrorHandler is composed with ServerErrorHandler so we cannot do the equality check.
+        assertThat(homeFoo.errorHandler().onServiceException(sctx, null)
+                          .aggregate()
+                          .join()
+                          .status()).isSameAs(HttpStatus.OK);
         assertThat(homeFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeFoo.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig homeBar = server.config().serviceConfigs().get(1);
@@ -154,6 +161,11 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeBar.verboseResponses()).isTrue();
         assertThat(homeBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+        // serviceErrorHandler is composed with ServerErrorHandler so we cannot do the equality check.
+        assertThat(homeBar.errorHandler().onServiceException(sctx, null)
+                          .aggregate()
+                          .join()
+                          .status()).isSameAs(HttpStatus.OK);
         assertThat(homeBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeBar.defaultLogName()).isEqualTo(defaultLogName);
 

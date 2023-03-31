@@ -153,6 +153,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     private Path multipartUploadsLocation;
     @Nullable
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
+    @Nullable
+    private ServiceErrorHandler errorHandler;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -822,6 +824,14 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link ServiceErrorHandler} that handles exceptions thrown in this virtual host.
+     */
+    public VirtualHostBuilder errorHandler(ServiceErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        return this;
+    }
+
+    /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
      * an {@link HttpService} at a certain {@link Route} is rejected. If not set,
      * the {@link RejectedRouteHandler} set via
@@ -1112,7 +1122,8 @@ public final class VirtualHostBuilder implements TlsSetters {
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
-    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector) {
+    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
+                      @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
         requireNonNull(template, "template");
 
         if (defaultHostname == null) {
@@ -1187,6 +1198,9 @@ public final class VirtualHostBuilder implements TlsSetters {
         final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
                 this.requestIdGenerator != null ?
                 this.requestIdGenerator : template.requestIdGenerator;
+        final ServiceErrorHandler serverErrorHandler = serverBuilder.errorHandler().asServiceErrorHandler();
+        final ServiceErrorHandler defaultErrorHandler =
+                errorHandler != null ? errorHandler.orElse(serverErrorHandler) : serverErrorHandler;
 
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
@@ -1217,14 +1231,16 @@ public final class VirtualHostBuilder implements TlsSetters {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
                                             successFunction, multipartUploadsLocation, defaultHeaders,
-                                            requestIdGenerator);
+                                            requestIdGenerator, defaultErrorHandler,
+                                            unhandledExceptionsReporter);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               multipartUploadsLocation, defaultHeaders, requestIdGenerator);
+                               multipartUploadsLocation, defaultHeaders, requestIdGenerator,
+                               defaultErrorHandler, unhandledExceptionsReporter);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);
