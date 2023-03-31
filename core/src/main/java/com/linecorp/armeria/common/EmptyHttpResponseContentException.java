@@ -17,11 +17,13 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An exception which is thrown when a {@link HttpResponse} without any headers
  * or body is attempted to be sent over the wire.
  */
+@UnstableApi
 public final class EmptyHttpResponseContentException extends RuntimeException {
 
     private static final long serialVersionUID = -6959143965708016166L;
