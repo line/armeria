@@ -108,17 +108,24 @@ public final class ArmeriaConfigurationNetUtil {
     /**
      * Returns a newly created {@link Port}.
      * {@code null} if the specified {@code code} is either {@code null} or a negative number.
-     * Note that if the given {@code port} is zero, an available port randomly selected will be assigned.
+     * Note that if the given {@code portNumber} is zero, an available portNumber randomly selected will be
+     * assigned.
      */
     @Nullable
-    public static Port maybeNewPort(@Nullable Integer port, SessionProtocol protocol) {
-        if (port == null || port < 0) {
+    public static Port maybeNewPort(@Nullable Integer portNumber, @Nullable InetAddress serverAddress,
+                                    boolean enableSsl) {
+        if (portNumber == null || portNumber < 0) {
             return null;
         }
-        if (port == 0) {
-            port = PortUtil.unusedTcpPort();
+        if (portNumber == 0) {
+            portNumber = PortUtil.unusedTcpPort();
         }
-        return new Port().setPort(port).setProtocol(protocol);
+
+        final Port port = new Port().setPort(portNumber);
+        if (serverAddress != null) {
+            port.setAddress(serverAddress);
+        }
+        return port.setProtocol(enableSsl ? SessionProtocol.HTTPS : SessionProtocol.HTTP);
     }
 
     private ArmeriaConfigurationNetUtil() {}

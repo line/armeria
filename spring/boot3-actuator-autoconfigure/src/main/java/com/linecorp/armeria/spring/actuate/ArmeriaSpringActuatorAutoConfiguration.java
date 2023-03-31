@@ -19,6 +19,7 @@ package com.linecorp.armeria.spring.actuate;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.maybeNewPort;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.HAS_WEB_SERVER_NAMESPACE;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.toMediaType;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.addAdditionalPath;
@@ -33,6 +34,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
@@ -71,15 +74,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -102,6 +104,8 @@ import com.linecorp.armeria.spring.InternalServiceId;
         ArmeriaSettings.class
 })
 public class ArmeriaSpringActuatorAutoConfiguration {
+
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaSpringActuatorAutoConfiguration.class);
 
     @VisibleForTesting
     static final MediaType ACTUATOR_MEDIA_TYPE;
@@ -179,28 +183,23 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             ManagementServerProperties serverProperties,
             BeanFactory beanFactory,
             ArmeriaSettings armeriaSettings) {
-        final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
-        final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
         return sb -> {
+            if (serverProperties.getSsl() != null && serverProperties.getSsl().getKeyStore() != null) {
+                logger.warn("Armeria doesn't support management.server.ssl using different keystore, " +
+                            "it will use the keystore from armeria.ssl instead.");
+            }
             final Integer managementPort = obtainManagementServerPort(sb, beanFactory, serverProperties);
             if (managementPort != null) {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
             }
+
             final Integer internalServicePort = getExposedInternalServicePort(beanFactory, armeriaSettings);
             final CorsServiceBuilder cors = corsServiceBuilder(corsProperties);
-            final List<Integer> exposedPorts = Stream.of(managementPort, internalServicePort)
-                                                     .filter(Objects::nonNull)
-                                                     .collect(toImmutableList());
-            endpoints.stream()
-                     .flatMap(endpoint -> endpoint.getOperations().stream())
-                     .forEach(operation -> {
-                         final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
-                         final String path = endpointMapping.createSubPath(predicate.getPath());
-                         addOperationService(sb, exposedPorts, operation, statusMapper,
-                                             predicate, path, ImmutableMap.of(), cors);
-                     });
-
+            final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
             if (HAS_WEB_SERVER_NAMESPACE) {
+                final List<Integer> exposedPorts = Stream.of(managementPort, internalServicePort)
+                                                         .filter(Objects::nonNull)
+                                                         .collect(toImmutableList());
                 // We can add additional path for health endpoint groups only when server namespace exists.
                 healthEndpointGroups.ifPresent(groups -> {
                     if (!groups.getNames().isEmpty()) {
@@ -213,32 +212,80 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 });
             }
 
-            if (StringUtils.hasText(endpointMapping.getPath())) {
-                final Route route = route(
-                        HttpMethod.GET.name(),
-                        endpointMapping.getPath(),
-                        ImmutableList.of(),
-                        mediaTypes.getProduced()
-                );
-                final HttpService linksService = (ctx, req) -> {
-                    final Map<String, Link> links =
-                            new EndpointLinksResolver(endpoints).resolveLinks(req.path());
-                    return HttpResponse.ofJson(ACTUATOR_MEDIA_TYPE, ImmutableMap.of("_links", links));
-                };
-                if (exposedPorts.isEmpty()) {
-                    sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
-                } else {
-                    exposedPorts.forEach(port -> sb.virtualHost(port).route().addRoute(route)
-                                                   .defaultServiceName("LinksService").build(linksService));
+            final ImmutableList.Builder<Map.Entry<EndpointMapping, Integer>> endpointMappingBuilder =
+                    ImmutableList.builder();
+
+            if (internalServicePort == null && managementPort == null) {
+                endpointMappingBuilder.add(
+                        Maps.immutableEntry(new EndpointMapping(properties.getBasePath()), null));
+            } else {
+                if (managementPort != null) {
+                    endpointMappingBuilder.add(
+                            Maps.immutableEntry(new EndpointMapping(serverProperties.getBasePath() +
+                                                                    properties.getBasePath()),
+                                                managementPort));
                 }
-                if (cors != null) {
-                    cors.route(endpointMapping.getPath());
+                // If internal-services.port != management.server.port or management.server has its own address
+                // We need to add actuator to internal-services port without base-path,
+                if (internalServicePort != null &&
+                    (!internalServicePort.equals(managementPort) ||
+                     serverProperties.getAddress() != null)) {
+                    endpointMappingBuilder.add(
+                            Maps.immutableEntry(new EndpointMapping(properties.getBasePath()),
+                                                internalServicePort));
                 }
             }
+            endpointMappingBuilder.build()
+                                  .forEach(entry -> configureExposableWebEndpoint(sb, entry.getValue(),
+                                                                                  endpoints, statusMapper,
+                                                                                  mediaTypes, entry.getKey(),
+                                                                                  cors));
+
             if (cors != null) {
                 sb.routeDecorator().pathPrefix("/").build(cors.newDecorator());
             }
         };
+    }
+
+    private static void configureExposableWebEndpoint(ServerBuilder sb, @Nullable Integer targetPort,
+                                                      Collection<ExposableWebEndpoint> endpoints,
+                                                      SimpleHttpCodeStatusMapper statusMapper,
+                                                      EndpointMediaTypes mediaTypes,
+                                                      EndpointMapping endpointMapping,
+                                                      @Nullable CorsServiceBuilder cors) {
+        final List<Integer> ports = targetPort == null ? ImmutableList.of() : ImmutableList.of(targetPort);
+        endpoints.stream()
+                 .flatMap(endpoint -> endpoint.getOperations().stream())
+                 .forEach(operation -> {
+                     final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
+                     final String path = endpointMapping.createSubPath(predicate.getPath());
+                     addOperationService(sb, ports, operation, statusMapper,
+                                         predicate, path, ImmutableMap.of(), cors);
+                 });
+
+        if (StringUtils.hasText(endpointMapping.getPath())) {
+            final Route route = route(
+                    HttpMethod.GET.name(),
+                    endpointMapping.getPath(),
+                    ImmutableList.of(),
+                    mediaTypes.getProduced()
+            );
+            final HttpService linksService = (ctx, req) -> {
+                final Map<String, Link> links =
+                        new EndpointLinksResolver(endpoints).resolveLinks(req.path());
+                return HttpResponse.ofJson(ACTUATOR_MEDIA_TYPE, ImmutableMap.of("_links", links));
+            };
+            if (targetPort == null) {
+                sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
+            } else {
+                sb.virtualHost(targetPort).route().addRoute(route)
+                  .defaultServiceName("LinksService")
+                  .build(linksService);
+            }
+            if (cors != null) {
+                cors.route(endpointMapping.getPath());
+            }
+        }
     }
 
     @Nullable
@@ -251,15 +298,13 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         }
 
         if (internalServices == null) {
-            Integer port = properties.getPort();
-            if (port == null || port < 0) {
+            // The management port was not configured by ArmeriaAutoConfiguration
+            final Port managementPort =
+                    maybeNewPort(properties.getPort(), properties.getAddress(),
+                                 properties.getSsl() != null && properties.getSsl().isEnabled());
+            if (managementPort == null) {
                 return null;
             }
-            if (port == 0) {
-                port = PortUtil.unusedTcpPort();
-            }
-            // The management port was not configured by ArmeriaAutoConfiguration
-            final Port managementPort = new Port().setPort(port).setProtocol(SessionProtocol.HTTP);
             configurePorts(serverBuilder, ImmutableList.of(managementPort));
             return managementPort.getPort();
         }
