@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
+import java.util.ArrayList;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.AfterAll;
@@ -57,6 +58,7 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -68,10 +70,12 @@ import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
+import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguration;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -258,6 +262,22 @@ class ArmeriaReactiveWebServerFactoryTest {
         }
     }
 
+    private static void registerInternalServices(DefaultListableBeanFactory beanFactory) {
+        final RootBeanDefinition rbd = new RootBeanDefinition(InternalServices.class, () ->
+                InternalServices.of(
+                        beanFactory.getBean(ArmeriaSettings.class),
+                        beanFactory.getBeanProvider(MeterRegistry.class)
+                                   .getIfAvailable(Flags::meterRegistry),
+                        new ArrayList<>(beanFactory.getBeansOfType(HealthChecker.class).values()),
+                        new ArrayList<>(
+                                beanFactory.getBeansOfType(HealthCheckServiceConfigurator.class).values()),
+                        new ArrayList<>(beanFactory.getBeansOfType(DocServiceConfigurator.class).values()),
+                        null,
+                        null,
+                        false));
+        beanFactory.registerBeanDefinition("internalServices", rbd);
+    }
+
     static class EchoHandler implements HttpHandler {
         static final EchoHandler INSTANCE = new EchoHandler();
 
@@ -317,6 +337,8 @@ class ArmeriaReactiveWebServerFactoryTest {
         rbd.setPrimary(true);
         beanFactory.registerBeanDefinition("meterRegistry2", rbd);
 
+        registerInternalServices(beanFactory);
+
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);
             validateEchoResponse(sendPostRequest(client));
@@ -341,11 +363,13 @@ class ArmeriaReactiveWebServerFactoryTest {
 
         rbd = new RootBeanDefinition(DocServiceConfigurator.class,
                                      () -> builder -> builder.examplePaths(
-                                             HelloService.class,
-                                             "hello",
-                                             "/hello/foo")
+                                                                     HelloService.class,
+                                                                     "hello",
+                                                                     "/hello/foo")
                                                              .build());
         beanFactory.registerBeanDefinition("docServiceConfigurator", rbd);
+
+        registerInternalServices(beanFactory);
 
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);
@@ -382,6 +406,8 @@ class ArmeriaReactiveWebServerFactoryTest {
                                                              .build(new HelloService()));
         beanFactory.registerBeanDefinition("armeriaServerConfigurator", rbd);
 
+        registerInternalServices(beanFactory);
+
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);
             final AggregatedHttpResponse res = client.get("/internal/docs/specification.json")
@@ -414,6 +440,8 @@ class ArmeriaReactiveWebServerFactoryTest {
         rbd = new RootBeanDefinition(HealthCheckServiceConfigurator.class,
                                      () -> builder -> builder.updatable(true));
         beanFactory.registerBeanDefinition("healthCheckServiceConfigurator", rbd);
+
+        registerInternalServices(beanFactory);
 
         runEchoServer(factory, server -> {
             final WebClient client = httpClient(server);

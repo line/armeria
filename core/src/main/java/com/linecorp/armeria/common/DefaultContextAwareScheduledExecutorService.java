@@ -22,7 +22,8 @@ import javax.annotation.Nonnull;
 import com.google.common.base.MoreObjects;
 
 final class DefaultContextAwareScheduledExecutorService
-        extends AbstractContextAwareScheduledExecutorService implements ContextAwareScheduledExecutorService {
+        extends AbstractContextAwareScheduledExecutorService<ScheduledExecutorService>
+        implements ContextAwareScheduledExecutorService {
 
     private final RequestContext context;
 
@@ -38,20 +39,15 @@ final class DefaultContextAwareScheduledExecutorService
 
     @Override
     @Nonnull
-    public RequestContext contextOrNull() {
+    RequestContext contextOrNull() {
         return context;
-    }
-
-    @Override
-    public ScheduledExecutorService withoutContext() {
-        return executor;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("executor", executor)
                           .add("context", context)
+                          .add("executor", withoutContext())
                           .toString();
     }
 }

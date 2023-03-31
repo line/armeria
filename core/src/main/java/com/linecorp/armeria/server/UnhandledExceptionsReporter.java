@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,30 +14,15 @@
  * under the License.
  */
 
-.CodeMirror {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
-}
+package com.linecorp.armeria.server;
 
-.CodeMirror:hover {
-  border-bottom: 2px solid rgba(0, 0, 0, 0.87);
-}
+import io.micrometer.core.instrument.MeterRegistry;
 
-.CodeMirror.CodeMirror-focused {
-  border-bottom: 2px solid #3f51b5;
-}
+interface UnhandledExceptionsReporter extends ServerListener {
 
-.CodeMirror pre.CodeMirror-placeholder {
-  color: #999;
-}
+    static UnhandledExceptionsReporter of(MeterRegistry meterRegistry, long intervalMillis) {
+        return new DefaultUnhandledExceptionsReporter(meterRegistry, intervalMillis);
+    }
 
-.CodeMirror div.CodeMirror-linenumber {
-  padding: 0 3px 0 0;
-}
-
-.CodeMirror pre.CodeMirror-line, .CodeMirror pre.CodeMirror-line-like {
-  font-size: 16px;
-}
-
-.CodeMirror-focused .CodeMirror-selected {
-  background: #b3d7fe;
+    void report(Throwable cause);
 }

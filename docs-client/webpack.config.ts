@@ -4,9 +4,10 @@ import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { LicenseWebpackPlugin } from 'license-webpack-plugin';
 import CompressionWebpackPlugin from 'compression-webpack-plugin';
-import { Configuration, DefinePlugin } from 'webpack';
+import { Configuration, DefinePlugin, optimize } from 'webpack';
 import WebpackDevServer from 'webpack-dev-server';
 import { docServiceDebug } from './src/lib/header-provider';
+import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 
 declare module 'webpack' {
   interface Configuration {
@@ -75,7 +76,7 @@ const config: Configuration = {
       },
       {
         test: /\.(eot|otf|ttf|woff|woff2)$/,
-        use: 'file-loader',
+        type: 'asset/resource',
       },
     ],
   },
@@ -97,6 +98,7 @@ const config: Configuration = {
           !!req.headers[docServiceDebug] ||
           pathname.endsWith('specification.json') ||
           pathname.endsWith('versions.json') ||
+          pathname.endsWith('schemas.json') ||
           pathname.endsWith('injected.js'),
         target: `http://127.0.0.1:${armeriaPort}`,
         changeOrigin: true,
@@ -124,6 +126,7 @@ plugins.push(new FaviconsWebpackPlugin({
   mode: 'light',
   devMode: 'light',
 }));
+
 // Do not add LicenseWebpackPlugin on Windows, because otherwise it will fail with a known issue.
 if (!isWindows) {
   plugins.push(new LicenseWebpackPlugin({
@@ -131,12 +134,79 @@ if (!isWindows) {
       warnings: true,
       errors: true,
     },
+    perChunkOutput: false,
     outputFilename: '../../../licenses/web-licenses.txt',
   }) as any);
 }
+
+plugins.push(
+  new MonacoWebpackPlugin({
+    languages: ['json', 'graphql'],
+    publicPath: isDev ? '/' : '',
+    customLanguages: [
+      {
+        label: 'graphql',
+        entry: undefined,
+        worker: {
+          id: 'graphql',
+          entry: require.resolve('monaco-graphql/esm/graphql.worker.js'),
+        },
+      },
+    ],
+    features: [
+      "!accessibilityHelp",
+      "!bracketMatching",
+      "!browser",
+      "!caretOperations",
+      "!clipboard",
+      "!codeAction",
+      "!codelens",
+      "!colorPicker",
+      "!comment",
+      "!contextmenu",
+      "!cursorUndo",
+      "!dnd",
+      "!find",
+      "!folding",
+      "!fontZoom",
+      "!gotoError",
+      "!gotoLine",
+      "!gotoSymbol",
+      "!iPadShowKeyboard",
+      "!inPlaceReplace",
+      "!inspectTokens",
+      "!linesOperations",
+      "!links",
+      "!multicursor",
+      "!parameterHints",
+      "!quickCommand",
+      "!quickOutline",
+      "!readOnlyMessage",
+      "!referenceSearch",
+      "!rename",
+      "!smartSelect",
+      "!toggleHighContrast",
+      "!toggleTabFocusMode",
+      "!wordOperations",
+      "!wordPartOperations",
+    ],
+  })
+)
+
+const enableAnalyzer = !!process.env.WEBPACK_ANALYZER;
+if (enableAnalyzer) {
+  const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+  plugins.push(new BundleAnalyzerPlugin())
+}
+
+plugins.push(new optimize.LimitChunkCountPlugin({
+  maxChunks: 1,
+}));
+
 plugins.push(new DefinePlugin({
   'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
 }));
+
 // Do not add CompressionWebpackPlugin on dev
 if (!isDev) {
   plugins.push(new CompressionWebpackPlugin({
@@ -147,5 +217,6 @@ if (!isDev) {
     deleteOriginalAssets: true
   }) as any);
 }
+
 
 export default config;

@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 
 import org.assertj.core.util.Files;
 import org.junit.Test;
@@ -40,6 +39,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -50,7 +50,7 @@ public class ServiceBindingBuilderTest {
         final ServerBuilder sb = Server.builder();
         final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
         when(accessLogWriter.shutdown()).thenReturn(UnmodifiableFuture.completedFuture(null));
-        final ScheduledExecutorService blockingTaskExecutor = mock(ScheduledExecutorService.class);
+        final BlockingTaskExecutor blockingTaskExecutor = mock(BlockingTaskExecutor.class);
         when(blockingTaskExecutor.isTerminated()).thenReturn(true);
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
 
