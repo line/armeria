@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -640,5 +641,47 @@ class ServerBuilderTest {
         assertThat(childChannelOptions)
                 .containsExactly(entry(TCP_USER_TIMEOUT, userDefinedValue),
                                  entry(SO_LINGER, lingerMillis));
+    }
+
+    @Test
+    void exceptionReportInterval() {
+        final Server server1 = Server.builder()
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .unhandledExceptionsReportInterval(Duration.ofMillis(1000))
+                                     .build();
+        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+
+        final Server server2 = Server.builder()
+                                     .unhandledExceptionsReportInterval(Duration.ofMillis(0))
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+
+        assertThrows(IllegalArgumentException.class, () ->
+                Server.builder()
+                      .unhandledExceptionsReportInterval(Duration.ofMillis(-1000))
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .build());
+    }
+
+    @Test
+    void exceptionReportIntervalMilliSeconds() {
+        final Server server1 = Server.builder()
+                                     .unhandledExceptionsReportIntervalMillis(1000)
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+
+        final Server server2 = Server.builder()
+                                     .unhandledExceptionsReportIntervalMillis(0)
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+
+        assertThrows(IllegalArgumentException.class, () ->
+                Server.builder()
+                      .unhandledExceptionsReportIntervalMillis(-1000)
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .build());
     }
 }

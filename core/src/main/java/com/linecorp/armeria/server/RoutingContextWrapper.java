@@ -28,8 +28,11 @@ class RoutingContextWrapper implements RoutingContext {
 
     private final RoutingContext delegate;
 
+    private final int hashcode;
+
     RoutingContextWrapper(RoutingContext delegate) {
         this.delegate = delegate;
+        hashcode = DefaultRoutingContext.hashCode(this);
     }
 
     @Override
@@ -95,8 +98,8 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public RoutingContext overridePath(String path) {
-        return delegate.overridePath(path);
+    public RoutingContext withPath(String path) {
+        return delegate.withPath(path);
     }
 
     @Override
@@ -131,7 +134,7 @@ class RoutingContextWrapper implements RoutingContext {
 
     @Override
     public int hashCode() {
-        return DefaultRoutingContext.hashCode(this);
+        return hashcode;
     }
 
     @Override

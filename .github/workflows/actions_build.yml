@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
@@ -93,7 +93,7 @@ jobs:
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
-      - if: ${{ matrix.snapshot && github.ref_name == 'master' }}
+      - if: ${{ matrix.snapshot && github.ref_name == 'main' }}
         name: Publish snapshots
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=1 publish
@@ -215,7 +215,7 @@ jobs:
 
       - name: Run flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoWeb -PnoLint -PflakyTests=true
+          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoLint -PflakyTests=true
 
       - name: Summarize the failed tests
         if: failure()

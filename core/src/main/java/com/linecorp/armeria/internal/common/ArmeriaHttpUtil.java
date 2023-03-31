@@ -47,6 +47,9 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.BiConsumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.annotations.VisibleForTesting;
@@ -98,6 +101,8 @@ import io.netty.util.internal.StringUtil;
 public final class ArmeriaHttpUtil {
 
     // Forked from Netty 4.1.34 at 4921f62c8ab8205fd222439dcd1811760b05daf1
+
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaHttpUtil.class);
 
     /**
      * The default case-insensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
@@ -551,7 +556,8 @@ public final class ArmeriaHttpUtil {
      */
     public static RequestHeaders toArmeriaRequestHeaders(ChannelHandlerContext ctx, Http2Headers headers,
                                                          boolean endOfStream, String scheme,
-                                                         ServerConfig cfg) {
+                                                         ServerConfig cfg,
+                                                         @Nullable PathAndQuery pathAndQuery) {
         assert headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
         builder.endOfStream(endOfStream);
@@ -559,7 +565,10 @@ public final class ArmeriaHttpUtil {
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-
+        // if pathAndQuery == null, then either the path is invalid or *, and will be handled later.
+        if (pathAndQuery != null) {
+            builder.set(HttpHeaderNames.PATH, pathAndQuery.toString());
+        }
         if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
@@ -605,21 +614,21 @@ public final class ArmeriaHttpUtil {
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
-    public static RequestHeaders toArmeria(ChannelHandlerContext ctx, HttpRequest in,
-                                           ServerConfig cfg, String scheme) throws URISyntaxException {
-
-        final String path = in.uri();
-        if (path.charAt(0) != '/' && !"*".equals(path)) {
-            // We support only origin form and asterisk form.
-            throw new URISyntaxException(path, "neither origin form nor asterisk form");
-        }
+    public static RequestHeaders toArmeria(
+            ChannelHandlerContext ctx, HttpRequest in,
+            ServerConfig cfg, String scheme, @Nullable PathAndQuery pathAndQuery) throws URISyntaxException {
 
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final RequestHeadersBuilder out = RequestHeaders.builder();
         out.sizeHint(inHeaders.size());
         out.method(HttpMethod.valueOf(in.method().name()))
-           .path(path)
            .scheme(scheme);
+        // if pathAndQuery == null, then either the path is invalid or *, and will be handled later.
+        if (pathAndQuery == null) {
+            out.path(in.uri());
+        } else {
+            out.path(pathAndQuery.toString());
+        }
 
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
@@ -856,9 +865,9 @@ public final class ArmeriaHttpUtil {
      */
     public static void toNettyHttp1ServerHeaders(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            Http1HeaderNaming http1HeaderNaming) {
+            Http1HeaderNaming http1HeaderNaming, boolean keepAlive) {
         toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, false);
-        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
+        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, keepAlive);
     }
 
     /**
@@ -900,7 +909,6 @@ public final class ArmeriaHttpUtil {
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming) {
         toNettyHttp1Client(inputHeaders, outputHeaders, http1HeaderNaming, false);
-        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
     /**

@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -38,6 +37,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 /**
  * Builds a {@link JettyService}. Use {@link JettyService#of(Server)} if you have a configured Jetty
@@ -271,7 +271,7 @@ public final class JettyServiceBuilder {
         final List<LifeCycle.Listener> lifeCycleListeners = this.lifeCycleListeners.build();
         final List<Consumer<? super Server>> customizers = this.customizers.build();
 
-        final Function<ScheduledExecutorService, Server> serverFactory = blockingTaskExecutor -> {
+        final Function<BlockingTaskExecutor, Server> serverFactory = blockingTaskExecutor -> {
             final Server server = new Server(new ArmeriaThreadPool(blockingTaskExecutor));
 
             if (dumpAfterStart != null) {
