@@ -24,16 +24,15 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -227,7 +226,7 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public BlockingTaskExecutor blockingTaskExecutor() {
         return delegate.blockingTaskExecutor();
     }
 
@@ -272,7 +271,7 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public Supplier<RequestId> requestIdGenerator() {
+    public Function<RoutingContext, RequestId> requestIdGenerator() {
         return delegate.requestIdGenerator();
     }
 
@@ -289,6 +288,16 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public DependencyInjector dependencyInjector() {
         return delegate.dependencyInjector();
+    }
+
+    @Override
+    public Function<String, String> absoluteUriTransformer() {
+        return delegate.absoluteUriTransformer();
+    }
+
+    @Override
+    public long unhandledExceptionsReportIntervalMillis() {
+        return delegate.unhandledExceptionsReportIntervalMillis();
     }
 
     @Override
