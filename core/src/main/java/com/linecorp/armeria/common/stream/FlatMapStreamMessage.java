@@ -400,8 +400,6 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
             canceled = true;
 
-            subscription.cancel();
-
             parent.onError(cause);
         }
 
