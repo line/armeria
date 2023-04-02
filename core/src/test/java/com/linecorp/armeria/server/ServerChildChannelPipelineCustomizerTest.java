@@ -24,8 +24,6 @@ import javax.net.ssl.SSLEngine;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.testng.util.Strings;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -50,31 +48,12 @@ import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 class ServerChildChannelPipelineCustomizerTest {
 
     @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(0);
-            sb.https(0);
-            sb.tlsSelfSigned();
-            sb.childChannelPipelineCustomizer(
-                    pipeline ->  pipeline.addFirst(new ChannelTrafficShapingHandler(1024, 0)));
-            sb.service("/", new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of(
-                            ResponseHeaders.of(HttpStatus.OK, "header1", Strings.repeat("a", 2048)));
-                }
-            });
-        }
-    };
-
-    @RegisterExtension
     @Order(0)
     static final SelfSignedCertificateExtension ssc = new SelfSignedCertificateExtension();
 
     @RegisterExtension
     @Order(1)
-    static ServerExtension serverWithSslHandler = new ServerExtension() {
+    static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final SslContext sslCtx = SslContextBuilder
@@ -84,44 +63,52 @@ class ServerChildChannelPipelineCustomizerTest {
 
             sb.http(0);
             sb.tlsSelfSigned();
+
             sb.childChannelPipelineCustomizer(
                     pipeline -> {
                         final SSLEngine engine = sslCtx.newEngine(pipeline.channel().alloc());
                         engine.setUseClientMode(false);
-                        pipeline.addLast(new SslHandler(engine));
+                        pipeline.addFirst(new SslHandler(engine));
                     });
-            sb.service(Route.ofCatchAll(), (ctx, req) -> HttpResponse.of(200));
+            sb.childChannelPipelineCustomizer(
+                    pipeline -> pipeline.addFirst(new ChannelTrafficShapingHandler(1024, 0)));
+
+            sb.service("/SslHandler", (ctx, req) -> HttpResponse.of(200));
+            sb.service("/TrafficShapingHandler", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return HttpResponse.of(
+                            ResponseHeaders.of(HttpStatus.OK, "header1", Strings.repeat("a", 2048)));
+                }
+            });
         }
     };
-
-    @EnumSource(value = SessionProtocol.class, names = {"H1", "H1C"})
-    @ParameterizedTest
-    void testResponseTimeout(SessionProtocol protocol) {
-        final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.GET, "/");
-        final ClientFactory clientFactory = ClientFactory.builder()
-                                                         .tlsNoVerify()
-                                                         .build();
-
-        // using h1 or h1c since http2 compresses headers
-        assertThatThrownBy(() -> WebClient.builder(server.uri(protocol))
-                                          .responseTimeoutMillis(1000)
-                                          .factory(clientFactory)
-                                          .build()
-                                          .blocking()
-                                          .execute(requestHeaders, "content"))
-                .isInstanceOf(ResponseTimeoutException.class);
-    }
 
     @Test
     void testSessionProtocolNegotiationException() {
         final ClientFactory clientFactory = ClientFactory.insecure();
 
         final AggregatedHttpResponse response = WebClient
-                                      .builder(SessionProtocol.HTTP, serverWithSslHandler.httpEndpoint())
-                                      .factory(clientFactory)
-                                      .build()
-                                      .blocking()
-                                      .execute(RequestHeaders.of(HttpMethod.GET, "/"), "content");
+                .builder(SessionProtocol.H1, server.httpEndpoint())
+                .factory(clientFactory)
+                .build()
+                .blocking()
+                .execute(RequestHeaders.of(HttpMethod.GET, "/SslHandler"), "content");
         assertThat(response.status().code()).isEqualTo(200);
+    }
+
+    @Test
+    void testResponseTimeout() {
+        final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.GET, "/TrafficShapingHandler");
+        final ClientFactory clientFactory = ClientFactory.insecure();
+
+        // using h1 or h1c since http2 compresses headers
+        assertThatThrownBy(() -> WebClient.builder(SessionProtocol.H1, server.httpEndpoint())
+                                          .responseTimeoutMillis(1000)
+                                          .factory(clientFactory)
+                                          .build()
+                                          .blocking()
+                                          .execute(requestHeaders, "content"))
+                .isInstanceOf(ResponseTimeoutException.class);
     }
 }

@@ -162,7 +162,7 @@ public final class ServerBuilder implements TlsSetters {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
-    private static final Consumer<? super ChannelPipeline> DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER =
+    private static final Consumer<ChannelPipeline> DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER =
             v -> { /* no-op */ };
 
     @VisibleForTesting
@@ -185,7 +185,7 @@ public final class ServerBuilder implements TlsSetters {
     private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
-    private Consumer<? super ChannelPipeline> childChannelPipelineCustomizer =
+    private Consumer<ChannelPipeline> childChannelPipelineCustomizer =
             DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER;
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
@@ -487,7 +487,8 @@ public final class ServerBuilder implements TlsSetters {
     public ServerBuilder childChannelPipelineCustomizer(
             Consumer<? super ChannelPipeline> childChannelPipelineCustomizer) {
         requireNonNull(childChannelPipelineCustomizer, "childChannelPipelineCustomizer");
-        this.childChannelPipelineCustomizer = childChannelPipelineCustomizer;
+        this.childChannelPipelineCustomizer =
+                this.childChannelPipelineCustomizer.andThen(childChannelPipelineCustomizer);
         return this;
     }
 
