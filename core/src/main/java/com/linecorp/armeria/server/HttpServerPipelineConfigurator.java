@@ -207,7 +207,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                                                                maxConnectionAgeMillis,
                                                                maxNumRequestsPerConnection);
         } else {
-            keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
+            keepAliveHandler = new NoopKeepAliveHandler();
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler,
@@ -514,7 +514,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                                                                    maxConnectionAgeMillis,
                                                                    maxNumRequestsPerConnection);
             } else {
-                keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
+                keepAliveHandler = new NoopKeepAliveHandler();
             }
 
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(

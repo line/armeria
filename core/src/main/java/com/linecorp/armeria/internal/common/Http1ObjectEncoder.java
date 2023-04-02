@@ -145,18 +145,15 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                     final Throwable firstCause = first.cause();
                     final Throwable secondCause = second.cause();
 
-                    Throwable combinedCause = null;
-                    if (firstCause != null) {
+                    final Throwable combinedCause;
+                    if (firstCause == null) {
+                        combinedCause = secondCause;
+                    } else {
+                        if (secondCause != null && secondCause != firstCause) {
+                            firstCause.addSuppressed(secondCause);
+                        }
                         combinedCause = firstCause;
                     }
-                    if (secondCause != null) {
-                        if (combinedCause == null) {
-                            combinedCause = secondCause;
-                        } else {
-                            combinedCause.addSuppressed(secondCause);
-                        }
-                    }
-
                     if (combinedCause != null) {
                         promise.setFailure(combinedCause);
                     } else {

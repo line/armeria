@@ -34,12 +34,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.http.Header;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.Header;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -259,7 +259,7 @@ class InitiateConnectionShutdownTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpUriRequest req = new HttpGet(goAwayServer.httpUri() + path);
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(res.containsHeader("Connection")).isTrue();
                 assertThat(res.getHeaders("Connection"))
                         .extracting(Header::getValue).containsExactly("close");
@@ -285,7 +285,7 @@ class InitiateConnectionShutdownTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpUriRequest req = new HttpGet(goAwayServerNoopKeepAliveHandler.httpUri() + path);
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(res.containsHeader("Connection")).isTrue();
                 assertThat(res.getHeaders("Connection"))
                         .extracting(Header::getValue).containsExactly("close");

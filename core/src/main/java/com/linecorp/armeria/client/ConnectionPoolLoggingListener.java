@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -82,7 +83,7 @@ final class ConnectionPoolLoggingListener implements ConnectionPoolListener {
             final long elapsedNanos = closeNanos - attrs.attr(OPEN_NANOS).get();
             logger.info("[L:{} ! R:{}][{}] CLOSED (lasted for: {}, active channels: {})",
                         localAddr, remoteAddr, protocol.uriText(),
-                        TextFormatter.elapsed(elapsedNanos), activeChannels);
+                        TextFormatter.elapsed(elapsedNanos, TimeUnit.NANOSECONDS), activeChannels);
         }
     }
 }

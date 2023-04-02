@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;

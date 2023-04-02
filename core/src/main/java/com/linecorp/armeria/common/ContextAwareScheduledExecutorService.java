@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.RequestContextUtil.ensureSameCtx;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ScheduledExecutorService;
@@ -44,15 +44,16 @@ public interface ContextAwareScheduledExecutorService
     }
 
     /**
-     * Returns the {@link ScheduledExecutorService} that is executing submitted tasks without setting
-     * the {@link RequestContext}.
-     */
-    ScheduledExecutorService withoutContext();
-
-    /**
-     * Returns the {@link RequestContext} that is specified when creating
+     * Returns the {@link RequestContext} that was specified when creating
      * this {@link ContextAwareScheduledExecutorService}.
      */
     @Override
     RequestContext context();
+
+    /**
+     * Returns the {@link ScheduledExecutorService} that executes the submitted tasks without setting the
+     * {@link RequestContext}.
+     */
+    @Override
+    ScheduledExecutorService withoutContext();
 }

@@ -1,20 +1,17 @@
 package example.springframework.boot.minimal.kotlin
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+import jakarta.validation.ValidationException
 import java.time.Instant
-import javax.validation.ValidationException
 
 /**
  * A sample exception handler which handles a [ValidationException].
  */
 class ValidationExceptionHandler : ExceptionHandlerFunction {
-
-    private val mapper = jacksonObjectMapper()
 
     override fun handleException(ctx: ServiceRequestContext, req: HttpRequest, cause: Throwable): HttpResponse {
         return if (cause is ValidationException) {

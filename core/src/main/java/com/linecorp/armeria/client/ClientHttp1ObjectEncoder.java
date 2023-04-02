@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -42,13 +41,13 @@ import io.netty.handler.codec.http.HttpVersion;
 final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements ClientHttpObjectEncoder {
 
     private final Http1HeaderNaming http1HeaderNaming;
+    private final KeepAliveHandler keepAliveHandler;
 
-    // A proper keepAliveHandler will be set by setKeepAliveHandler()
-    private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
-
-    ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, Http1HeaderNaming http1HeaderNaming) {
+    ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, Http1HeaderNaming http1HeaderNaming,
+                             KeepAliveHandler keepAliveHandler) {
         super(ch, protocol);
         this.http1HeaderNaming = http1HeaderNaming;
+        this.keepAliveHandler = keepAliveHandler;
     }
 
     @Override
@@ -114,13 +113,9 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
         return keepAliveHandler;
     }
 
-    void setKeepAliveHandler(KeepAliveHandler keepAliveHandler) {
-        assert keepAliveHandler instanceof Http1ClientKeepAliveHandler;
-        this.keepAliveHandler = keepAliveHandler;
-    }
-
     @Override
     protected boolean isPing(int id) {
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
         return keepAliveHandler instanceof Http1ClientKeepAliveHandler &&
                ((Http1ClientKeepAliveHandler) keepAliveHandler).isPing(id);
     }

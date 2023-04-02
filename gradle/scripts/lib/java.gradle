@@ -39,19 +39,19 @@ configure(rootProject) {
 /**
  * Checks each flag of the specified project for flags of format "java(\\d+)".
  * If such a flag exists, the minimum Java version is extracted and returned.
- * Otherwise, {@code defaultVersion} is returned.
+ * Otherwise, {@code null} is returned.
  */
-static def extractTargetJavaVersion(Project project, int defaultVersion) {
+static def extractTargetJavaVersion(Project project) {
     def pattern = Pattern.compile('^java(\\d+)$')
     def flags = project.ext.flags
-    for (def flag: flags) {
+    for (def flag : flags) {
         def matcher = pattern.matcher(flag)
         if (!matcher.matches()) {
             continue
         }
-        return Integer.parseInt(matcher.group(1))
+        return Integer.valueOf(matcher.group(1))
     }
-    return defaultVersion
+    return null
 }
 
 configure(projectsWithFlags('java')) {
@@ -70,14 +70,9 @@ configure(projectsWithFlags('java')) {
         delete project.ext.genSrcDir
     }
 
-    // the default targetJavaVersion is 'javaTargetCompatibility'
-    String defaultTargetJavaVersionStr = project.findProperty('javaTargetCompatibility') ?: '1.8'
-    def defaultTargetJavaVersion = Integer.parseInt(
-            JavaVersion.toVersion(defaultTargetJavaVersionStr).majorVersion)
-
-    // parse flags for the targetJavaVersion or return the default version
-    def targetJavaVersion = extractTargetJavaVersion(project, defaultTargetJavaVersion)
-    if (targetJavaVersion < 8) {
+    // parse flags for the targetJavaVersion
+    def targetJavaVersion = extractTargetJavaVersion(project)
+    if (targetJavaVersion != null && targetJavaVersion < 8) {
         throw new IllegalArgumentException("The minimum target Java version ${version} specified " +
                 "for '${project.name}' cannot be smaller than 8")
     }
@@ -123,12 +118,16 @@ configure(projectsWithFlags('java')) {
 
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
-        def targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
-        sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: targetJavaVersionStr
-        targetCompatibility = project.findProperty('javaTargetCompatibility') ?: targetJavaVersionStr
+        def targetJavaVersionStr = null
+        if (targetJavaVersion != null) {
+            targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
+        }
+        sourceCompatibility = targetJavaVersionStr ?: project.findProperty('javaSourceCompatibility') ?: '1.8'
+        // the default targetJavaVersion is 'javaTargetCompatibility'
+        targetCompatibility = targetJavaVersionStr ?: project.findProperty('javaTargetCompatibility') ?: '1.8'
         if (buildJdkVersion >= 9) {
             // Supported since java 9 https://openjdk.org/jeps/247
-            options.release.set(targetJavaVersion)
+            options.release.set(Integer.valueOf(JavaVersion.toVersion(targetCompatibility).majorVersion))
         }
         options.encoding = 'UTF-8'
         options.warnings = false

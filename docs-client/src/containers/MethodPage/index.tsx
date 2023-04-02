@@ -24,12 +24,15 @@ import Grid from '@material-ui/core/Grid';
 import {
   Method,
   Service,
+  ServiceType,
   simpleName,
   Specification,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
 import { GRAPHQL_HTTP_MIME_TYPE } from '../../lib/transports/grahpql-http';
+import { TTEXT_MIME_TYPE } from '../../lib/transports/thrift';
+import { GRPC_UNFRAMED_MIME_TYPE } from '../../lib/transports/grpc-unframed';
 import { SelectOption } from '../../lib/types';
 
 import Section from '../../components/Section';
@@ -42,6 +45,7 @@ import ReturnType from './ReturnType';
 
 interface OwnProps {
   specification: Specification;
+  jsonSchemas: any[];
 }
 
 function getExampleHeaders(
@@ -145,12 +149,24 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     return <>Not found.</>;
   }
   const debugTransport = TRANSPORTS.getDebugTransport(method);
-  const isAnnotatedService =
-    debugTransport !== undefined &&
-    debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
-  const isGraphqlService =
-    debugTransport !== undefined &&
-    debugTransport.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE);
+
+  let serviceType: ServiceType = ServiceType.UNKNOWN;
+
+  if (debugTransport?.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE)) {
+    serviceType = ServiceType.HTTP;
+  }
+
+  if (debugTransport?.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE)) {
+    serviceType = ServiceType.GRAPHQL;
+  }
+
+  if (debugTransport?.supportsMimeType(GRPC_UNFRAMED_MIME_TYPE)) {
+    serviceType = ServiceType.GRPC;
+  }
+
+  if (debugTransport?.supportsMimeType(TTEXT_MIME_TYPE)) {
+    serviceType = ServiceType.THRIFT;
+  }
 
   const parameterVariables = method.parameters.map((param) => {
     const childFieldInfos = props.specification.getStructByName(
@@ -194,7 +210,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
         />
       </Section>
       <ReturnType method={method} specification={props.specification} />
-      {!isAnnotatedService && (
+      {serviceType !== ServiceType.HTTP && (
         <Exceptions method={method} specification={props.specification} />
       )}
       <Endpoints method={method} />
@@ -202,8 +218,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
         <DebugPage
           {...props}
           method={method}
-          isAnnotatedService={isAnnotatedService}
-          isGraphqlService={isGraphqlService}
+          serviceType={serviceType}
           exampleHeaders={getExampleHeaders(
             props.specification,
             service,
@@ -216,7 +231,8 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             method,
           )}
           exactPathMapping={
-            isAnnotatedService || isGraphqlService
+            serviceType === ServiceType.HTTP ||
+            serviceType === ServiceType.GRAPHQL
               ? isSingleExactPathMapping(method)
               : false
           }

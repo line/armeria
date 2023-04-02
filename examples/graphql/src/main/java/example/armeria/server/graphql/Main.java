@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
-import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.graphql.GraphqlService;
 
 public class Main {
@@ -38,10 +37,6 @@ public class Main {
             c.type("Query",
                    typeWiring -> typeWiring.dataFetcher("user", new UserDataFetcher()));
         }).build());
-
-        // Browsing and invoking GraphQL services using GraphQL Playground.
-        sb.service("/graphql/playground", HttpFile.of(Main.class.getClassLoader(), "/graphql-playground.html")
-                                                  .asService());
 
         sb.serviceUnder("/docs", DocService.builder().build());
     }

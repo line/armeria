@@ -463,15 +463,16 @@ class PathAndQueryTest {
 
     @Test
     void sharp() {
+        // '#' must be encoded into '%23'.
         final PathAndQuery res = parse("/#?a=b#1");
         assertThat(res).isNotNull();
-        assertThat(res.path()).isEqualTo("/#");
-        assertThat(res.query()).isEqualTo("a=b#1");
+        assertThat(res.path()).isEqualTo("/%23");
+        assertThat(res.query()).isEqualTo("a=b%231");
 
-        // '%23' in a query string should never be decoded into '#'.
+        // '%23' should never be decoded into '#'.
         final PathAndQuery res2 = parse("/%23?a=b%231");
         assertThat(res2).isNotNull();
-        assertThat(res2.path()).isEqualTo("/#");
+        assertThat(res2.path()).isEqualTo("/%23");
         assertThat(res2.query()).isEqualTo("a=b%231");
     }
 
@@ -479,14 +480,14 @@ class PathAndQueryTest {
     void allReservedCharacters() {
         final PathAndQuery res = parse("/#/:@!$&'()*+,;=?a=/#/:[]@!$&'()*+,;=");
         assertThat(res).isNotNull();
-        assertThat(res.path()).isEqualTo("/#/:@!$&'()*+,;=");
-        assertThat(res.query()).isEqualTo("a=/#/:[]@!$&'()*+,;=");
+        assertThat(res.path()).isEqualTo("/%23/:@!$&'()*+,;=");
+        assertThat(res.query()).isEqualTo("a=/%23/:[]@!$&'()*+,;=");
 
         final PathAndQuery res2 =
                 parse("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
                       "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
         assertThat(res2).isNotNull();
-        assertThat(res2.path()).isEqualTo("/#%2F:@!$&'()*+,;=?");
+        assertThat(res2.path()).isEqualTo("/%23%2F:@!$&'()*+,;=?");
         assertThat(res2.query()).isEqualTo("a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
     }
 
@@ -547,13 +548,25 @@ class PathAndQueryTest {
 
     @Test
     void assertSquareBracketsInPath() {
-        final PathAndQuery res = parse("/#/:@[]!$&'()*+,;=");
+        final PathAndQuery res = parse("/@/:[]!$&'()*+,;=");
         assertThat(res).isNotNull();
-        assertThat(res.path()).isEqualTo("/#/:@%5B%5D!$&'()*+,;=");
+        assertThat(res.path()).isEqualTo("/@/:%5B%5D!$&'()*+,;=");
 
         final PathAndQuery res2 =
-                parse("/%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
+                parse("/%40%2F%3A%5B%5D%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
         assertThat(res2).isNotNull();
-        assertThat(res2.path()).isEqualTo("/#%2F:%5B%5D@!$&'()*+,;=?");
+        assertThat(res2.path()).isEqualTo("/@%2F:%5B%5D!$&'()*+,;=?");
+    }
+
+    @Test
+    void toStringAppendsQueryCorrectly() {
+        PathAndQuery res = parse("/");
+        assertThat(res.toString()).isEqualTo("/");
+
+        res = parse("/?");
+        assertThat(res.toString()).isEqualTo("/?");
+
+        res = parse("/?a=b");
+        assertThat(res.toString()).isEqualTo("/?a=b");
     }
 }

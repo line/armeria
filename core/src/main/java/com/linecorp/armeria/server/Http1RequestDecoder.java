@@ -36,11 +36,11 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
 
 import io.netty.buffer.ByteBuf;
@@ -100,12 +100,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.handlerRemoved(ctx);
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         maybeInitializeKeepAliveHandler(ctx);
         super.channelActive(ctx);
@@ -118,13 +112,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // Ignored if the stream has already been closed.
             ((HttpRequestWriter) req).close(ClosedSessionException.get());
         }
-        destroyKeepAliveHandler();
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.channelInactive(ctx);
     }
 
     @Override
@@ -174,9 +161,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // immutability.
                     final boolean hasInvalidExpectHeader = !handle100Continue(id, nettyReq);
 
+                    final String path = HttpHeaderUtil
+                            .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
+                    final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
+
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), pathAndQuery);
 
                     // Do not accept a CONNECT request.
                     if (headers.method() == HttpMethod.CONNECT) {
@@ -212,7 +203,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     // Close the request early when it is certain there will be neither content nor trailers.
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
+                                                                        headers, pathAndQuery);
                     if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.
@@ -409,8 +401,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // HTTP/1 doesn't support draining that signals clients about connection shutdown but still
             // accepts in flight requests. Simply destroy KeepAliveHandler which causes next response
             // to have a "Connection: close" header and connection to be closed after the next response.
-            destroyKeepAliveHandler();
-            ((ServerHttp1ObjectEncoder) encoder).initiateConnectionShutdown();
+            encoder.keepAliveHandler().disconnectWhenFinished();
             return;
         }
 
@@ -419,16 +410,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         final KeepAliveHandler keepAliveHandler = encoder.keepAliveHandler();
-        if (keepAliveHandler != NoopKeepAliveHandler.INSTANCE &&
+        if (!(keepAliveHandler instanceof NoopKeepAliveHandler) &&
             ctx.channel().isActive() && ctx.channel().isRegistered()) {
             keepAliveHandler.initialize(ctx);
-        }
-    }
-
-    private void destroyKeepAliveHandler() {
-        if (encoder instanceof Http1ObjectEncoder) {
-            // Http2ObjectEncoder will be destroyed by Http2RequestDecoder.
-            encoder.keepAliveHandler().destroy();
         }
     }
 }

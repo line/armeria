@@ -43,7 +43,7 @@ class StreamMessageDuplicatorCloseTest {
 
     @Test
     void closedDuplicator_elementsAreNotReleasedUntilSubscribedByAllSubscribers() {
-        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
         final ArrayList<ByteBuf> byteBufs = new ArrayList<>(60);
         for (int i = 0; i < 60; i++) { // More than 50 that is the REQUEST_REMOVAL_THRESHOLD.
             final ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer(4).writeInt(i);

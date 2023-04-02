@@ -239,18 +239,16 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         requireNonNull(exceptionClasses, "exceptionClasses");
         requireNonNull(endpoints, "endpoints");
 
-        //noinspection unchecked,RedundantCast
         final List<FieldInfo> parameters =
-                FieldMetaData.getStructMetaDataMap((Class<T>) argsClass).values().stream()
-                             .map(fieldMetaData -> newFieldInfo(argsClass, fieldMetaData))
-                             .collect(toImmutableList());
+                ThriftMetadataAccess.getStructMetaDataMap(argsClass).values().stream()
+                                    .map(fieldMetaData -> newFieldInfo(argsClass, fieldMetaData))
+                                    .collect(toImmutableList());
 
         // Find the 'success' field.
         FieldInfo fieldInfo = null;
         if (resultClass != null) { // Function isn't "oneway" function
-            //noinspection unchecked,RedundantCast
-            final Map<? extends TFieldIdEnum, FieldMetaData> resultMetaData =
-                    FieldMetaData.getStructMetaDataMap((Class<T>) resultClass);
+            final Map<?, FieldMetaData> resultMetaData =
+                    ThriftMetadataAccess.getStructMetaDataMap(resultClass);
 
             for (FieldMetaData fieldMetaData : resultMetaData.values()) {
                 if ("success".equals(fieldMetaData.fieldName)) {

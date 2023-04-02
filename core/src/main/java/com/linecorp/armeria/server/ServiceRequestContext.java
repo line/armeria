@@ -21,11 +21,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -37,7 +37,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
+import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -51,9 +51,11 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -291,14 +293,14 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the {@link ContextAwareScheduledExecutorService} that could be used for executing
-     * a potentially long-running task. The {@link ContextAwareScheduledExecutorService}
-     * sets this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
-     * If you want to use {@link ScheduledExecutorService} without setting this context,
-     * call {@link ContextAwareScheduledExecutorService#withoutContext()} and use the returned
-     * {@link ScheduledExecutorService}.
+     * Returns the {@link ContextAwareBlockingTaskExecutor} that could be used for executing
+     * a potentially long-running task. The {@link ContextAwareBlockingTaskExecutor} sets
+     * this {@link ServiceRequestContext} as the current context before executing any submitted tasks.
+     * If you want to use {@link BlockingTaskExecutor} without setting this context,
+     * call {@link ContextAwareBlockingTaskExecutor#withoutContext()} and use the returned
+     * {@link BlockingTaskExecutor}.
      */
-    ContextAwareScheduledExecutorService blockingTaskExecutor();
+    ContextAwareBlockingTaskExecutor blockingTaskExecutor();
 
     /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable
@@ -311,6 +313,14 @@ public interface ServiceRequestContext extends RequestContext {
      * a reusable service bound at various path prefixes.
      */
     String decodedMappedPath();
+
+    /**
+     * Returns the {@link URI} associated with the current {@link Request}.
+     * Note that this method is a shortcut of calling {@link HttpRequest#uri()} on {@link #request()}.
+     */
+    @Override
+    @UnstableApi
+    URI uri();
 
     /**
      * Returns the negotiated producible media type. If the media type negotiation is not used for the
@@ -581,8 +591,20 @@ public interface ServiceRequestContext extends RequestContext {
     ProxiedAddresses proxiedAddresses();
 
     /**
+     * Returns whether exceptions should be reported.
+     * When {@link LoggingService} handles exceptions, this is set to false.
+     */
+    boolean shouldReportUnhandledExceptions();
+
+    /**
+     * Sets whether to report exceptions.
+     * @param value whether to report unhandled exceptions
+     */
+    void setShouldReportUnhandledExceptions(boolean value);
+
+    /**
      * Initiates graceful connection shutdown with a given drain duration in microseconds and returns
-     * {@link CompletableFuture} that completes when the channel is closed.
+     * {@link CompletableFuture} that completes when the connection associated with this context is closed.
      *
      * <p>
      * At the connection drain server signals the clients that the connection shutdown is imminent
@@ -610,7 +632,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates graceful connection shutdown with a given drain duration and returns {@link CompletableFuture}
-     * that completes when the channel is closed.
+     * that completes when the connection associated with this context is closed.
      *
      * @see #initiateConnectionShutdown()
      * @see #initiateConnectionShutdown(long)
@@ -623,12 +645,13 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates connection shutdown without overriding current configuration of the drain duration and returns
-     * {@link CompletableFuture} that completes when the channel is closed.
+     * {@link CompletableFuture} that completes when the connection associated with this context is closed.
      *
      * @see #initiateConnectionShutdown(long)
      * @see #initiateConnectionShutdown(Duration)
      */
     @UnstableApi
+    @Override
     CompletableFuture<Void> initiateConnectionShutdown();
 
     /**
