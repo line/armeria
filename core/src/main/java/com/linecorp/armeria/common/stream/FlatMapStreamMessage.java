@@ -124,10 +124,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         @Nullable
         private volatile Subscription upstream;
-        private volatile boolean closed;
 
         private long requestedByDownstream;
         private int pendingSubscriptions;
+        private boolean closed;
         private boolean completing;
         private boolean initialized;
         private boolean publishedAny;
@@ -220,10 +220,6 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            if (closed) {
-                return;
-            }
-
             if (executor.inEventLoop()) {
                 handleRequest(n);
             } else {
@@ -232,6 +228,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         private void handleRequest(long n) {
+            if (closed) {
+                return;
+            }
+
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
             flush();
 
