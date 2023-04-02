@@ -124,7 +124,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         @Nullable
         private volatile Subscription upstream;
-        private volatile boolean canceled;
+        private volatile boolean closed;
 
         private long requestedByDownstream;
         private int pendingSubscriptions;
@@ -168,7 +168,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         public void onNext(T item) {
             requireNonNull(item, "item");
 
-            if (canceled) {
+            if (closed) {
                 StreamMessageUtil.closeOrAbort(item);
                 return;
             }
@@ -182,10 +182,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         public void onError(Throwable cause) {
             requireNonNull(cause, "cause");
 
-            if (canceled) {
+            if (closed) {
                 return;
             }
-            canceled = true;
+            closed = true;
 
             completionFuture.completeExceptionally(cause);
             cancelChildSubscribersAndBuffer();
@@ -194,16 +194,21 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onComplete() {
-            if (canceled) {
+            if (closed) {
                 return;
             }
 
             if (canComplete()) {
-                downstream.onComplete();
-                completionFuture.complete(null);
+                complete();
             } else {
                 completing = true;
             }
+        }
+
+        private void complete() {
+            downstream.onComplete();
+            completionFuture.complete(null);
+            closed = true;
         }
 
         @Override
@@ -215,7 +220,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            if (canceled) {
+            if (closed) {
                 return;
             }
 
@@ -248,11 +253,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         private void cancel0() {
-            if (canceled) {
+            if (closed) {
                 return;
             }
 
-            canceled = true;
+            closed = true;
             upstream.cancel();
             completionFuture.completeExceptionally(CancelledSubscriptionException.get());
             cancelChildSubscribersAndBuffer();
@@ -313,8 +318,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             if (completing && canComplete()) {
-                downstream.onComplete();
-                completionFuture.complete(null);
+                complete();
             }
         }
 
@@ -322,11 +326,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             childSubscribers.remove(child);
 
             if (completing && canComplete()) {
-                downstream.onComplete();
-                completionFuture.complete(null);
+                complete();
             }
 
-            if (!canceled && !completing) {
+            if (!closed && !completing) {
                 upstream.request(1);
             }
         }
@@ -347,7 +350,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         private void publishDownstream(U item) {
-            if (canceled) {
+            if (closed) {
                 StreamMessageUtil.closeOrAbort(item);
                 return;
             }
