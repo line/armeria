@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
@@ -119,6 +120,8 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         private final CompletableFuture<Void> completionFuture;
         private final SubscriptionOption[] options;
 
+        private final boolean notifyCancellation;
+
         @Nullable
         private volatile Subscription upstream;
         private volatile boolean canceled;
@@ -146,6 +149,8 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             this.maxConcurrency = maxConcurrency;
             this.completionFuture = completionFuture;
             this.options = options;
+
+            notifyCancellation = containsNotifyCancellation(options);
 
             childSubscribers = new HashSet<>();
             buffer = new ArrayDeque<>();
@@ -249,7 +254,12 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
             canceled = true;
             upstream.cancel();
+            completionFuture.completeExceptionally(CancelledSubscriptionException.get());
             cancelChildSubscribersAndBuffer();
+
+            if (notifyCancellation) {
+                downstream.onError(CancelledSubscriptionException.get());
+            }
         }
 
         private void cancelChildSubscribersAndBuffer() {
