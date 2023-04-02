@@ -62,12 +62,16 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public boolean isOpen() {
-        return source.isOpen();
+        return !completionFuture.isDone();
     }
 
     @Override
     public boolean isEmpty() {
-        return source.isEmpty();
+        if (isOpen()) {
+            return false;
+        }
+
+        return innerSubscriber.publishedAny;
     }
 
     @Override
@@ -123,6 +127,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         private int pendingSubscriptions;
         private boolean completing;
         private boolean initialized;
+        private boolean publishedAny;
 
         FlatMapAggregatingSubscriber(Subscriber<? super U> downstream,
                                      Function<T, StreamMessage<U>> function,
@@ -336,6 +341,8 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 StreamMessageUtil.closeOrAbort(item);
                 return;
             }
+
+            publishedAny = true;
 
             downstream.onNext(item);
 
