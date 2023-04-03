@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.EmptyHttpResponseContentException;
+import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -309,7 +309,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
             responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR)
                            .addListener(future -> {
                                try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                                   fail(EmptyHttpResponseContentException.get());
+                                   fail(EmptyHttpResponseException.get());
                                }
                            });
             ctx.flush();

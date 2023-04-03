@@ -20,31 +20,31 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * An exception which is thrown when a {@link HttpResponse} without any headers
+ * An exception which is thrown when an {@link HttpResponse} without any headers
  * or body is attempted to be sent over the wire.
  */
 @UnstableApi
-public final class EmptyHttpResponseContentException extends RuntimeException {
+public final class EmptyHttpResponseException extends RuntimeException {
 
     private static final long serialVersionUID = -6959143965708016166L;
 
-    private static final EmptyHttpResponseContentException INSTANCE =
-            new EmptyHttpResponseContentException(null, null, false, false);
+    private static final EmptyHttpResponseException INSTANCE =
+            new EmptyHttpResponseException(null, null, false, false);
 
     /**
-     * Returns a {@link EmptyHttpResponseContentException} which may be a singleton or a new instance,
+     * Returns a {@link EmptyHttpResponseException} which may be a singleton or a new instance,
      * depending on {@link Flags#verboseExceptionSampler()}'s decision.
      */
-    public static EmptyHttpResponseContentException get() {
-        return isSampled() ? new EmptyHttpResponseContentException(null, null, true, true) : INSTANCE;
+    public static EmptyHttpResponseException get() {
+        return isSampled() ? new EmptyHttpResponseException(null, null, true, true) : INSTANCE;
     }
 
     private static boolean isSampled() {
         return Flags.verboseExceptionSampler().isSampled(ClosedSessionException.class);
     }
 
-    private EmptyHttpResponseContentException(@Nullable String message, @Nullable Throwable cause,
-                                              boolean enableSuppression, boolean writableStackTrace) {
+    private EmptyHttpResponseException(@Nullable String message, @Nullable Throwable cause,
+                                       boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 }

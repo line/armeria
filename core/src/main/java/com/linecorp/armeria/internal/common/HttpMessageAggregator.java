@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.EmptyHttpResponseContentException;
+import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -107,7 +107,7 @@ public final class HttpMessageAggregator {
                                                            @Nullable ByteBufAllocator alloc) {
         final int size = objects.size();
         if (size == 0) {
-            throw EmptyHttpResponseContentException.get();
+            throw EmptyHttpResponseException.get();
         }
 
         final ResponseHeaders headers = (ResponseHeaders) objects.get(0);

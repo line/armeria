@@ -39,7 +39,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.EmptyHttpResponseContentException;
+import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -224,6 +224,6 @@ class HttpServiceTest {
         final ServiceRequestContext sctx = server.requestContextCaptor().poll();
         await().atMost(10, TimeUnit.SECONDS).until(() -> sctx.log().isComplete());
         assertThat(sctx.log().ensureComplete().responseCause())
-                .isInstanceOf(EmptyHttpResponseContentException.class);
+                .isInstanceOf(EmptyHttpResponseException.class);
     }
 }
