@@ -17,7 +17,6 @@
 package com.linecorp.armeria.testing.junit5.client;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.util.function.Function;
 
@@ -65,68 +64,64 @@ class WebTestClientTest {
 
     @Test
     void restApi() {
-        assertThatCode(() -> {
-            final WebTestClientPreparation preparation = server.webTestClient().prepare();
-            // HTTP methods used for REST APIs
-            // See: https://restfulapi.net/http-methods/
-            for (HttpMethod method : ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
-                                                      HttpMethod.DELETE, HttpMethod.PATCH)) {
-                switch (method) {
-                    case GET:
-                        preparation.get("/rest/{id}");
-                        break;
-                    case POST:
-                        preparation.post("/rest/{id}");
-                        break;
-                    case PUT:
-                        preparation.put("/rest/{id}");
-                        break;
-                    case PATCH:
-                        preparation.patch("/rest/{id}");
-                        break;
-                    case DELETE:
-                        preparation.delete("/rest/{id}");
-                        break;
-                }
-                assert preparation != null;
-                preparation.content("content-value")
-                           .header("x-header", "header-value")
-                           .pathParam("id", "1")
-                           .queryParam("query", "query-value")
-                           .execute()
-                           .assertStatus().isOk()
-                           .assertHeaders().contains("x-header", "header-value")
-                           .assertContent().stringUtf8IsEqualTo("{\"id\":\"1\"," +
-                                                                "\"query\":\"query-value\"," +
-                                                                "\"content\":\"content-value\"}")
-                           .assertTrailers().isEmpty();
+        final WebTestClientPreparation preparation = server.webTestClient().prepare();
+        // HTTP methods used for REST APIs
+        // See: https://restfulapi.net/http-methods/
+        for (HttpMethod method : ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
+                                                  HttpMethod.DELETE, HttpMethod.PATCH)) {
+            switch (method) {
+                case GET:
+                    preparation.get("/rest/{id}");
+                    break;
+                case POST:
+                    preparation.post("/rest/{id}");
+                    break;
+                case PUT:
+                    preparation.put("/rest/{id}");
+                    break;
+                case PATCH:
+                    preparation.patch("/rest/{id}");
+                    break;
+                case DELETE:
+                    preparation.delete("/rest/{id}");
+                    break;
             }
-        }).doesNotThrowAnyException();
+            assert preparation != null;
+            preparation.content("content-value")
+                       .header("x-header", "header-value")
+                       .pathParam("id", "1")
+                       .queryParam("query", "query-value")
+                       .execute()
+                       .assertStatus().isOk()
+                       .assertHeaders().contains("x-header", "header-value")
+                       .assertContent().stringUtf8IsEqualTo("{\"id\":\"1\"," +
+                                                            "\"query\":\"query-value\"," +
+                                                            "\"content\":\"content-value\"}")
+                       .assertTrailers().isEmpty();
+        }
     }
 
     @Test
     void testUploadFile() {
-        assertThatCode(() -> {
-            final Multipart multipart = Multipart.of(
-                    BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"),
-                    BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar"),
-                    BodyPart.of(ContentDisposition.of("form-data", "multipartFile1", "qux.txt"), "qux"),
-                    BodyPart.of(ContentDisposition.of("form-data", "multipartFile2", "quz.txt"), "quz"),
-                    BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"),
+                BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile1", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile2", "quz.txt"), "quz"),
+                BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
 
-            );
-            server.webTestClient()
-                  .execute(multipart.toHttpRequest("/uploadWithMultipartObject"))
-                  .assertStatus().isOk()
-                  .assertHeaders().contentLengthIsEqualTo(110)
-                  .assertHeaders().contentTypeIsEqualTo(MediaType.JSON)
-                  .assertContent().stringUtf8IsEqualTo("{\"file1\":\"foo\"," +
-                                                       "\"path1\":\"bar\"," +
-                                                       "\"multipartFile1\":\"qux.txt_qux\"," +
-                                                       "\"multipartFile2\":\"quz.txt_quz\"," +
-                                                       "\"param1\":\"armeria\"}")
-                  .assertTrailers().isEmpty();
-        }).doesNotThrowAnyException();
+        );
+        server.webTestClient()
+              .execute(multipart.toHttpRequest("/uploadWithMultipartObject"))
+              .assertStatus().isOk()
+              .assertHeaders().contentLengthIsEqualTo(110)
+              .assertHeaders().contentTypeIsEqualTo(MediaType.JSON)
+              .assertContent().stringUtf8IsEqualTo("{\"file1\":\"foo\"," +
+                                                   "\"path1\":\"bar\"," +
+                                                   "\"multipartFile1\":\"qux.txt_qux\"," +
+                                                   "\"multipartFile2\":\"quz.txt_quz\"," +
+                                                   "\"param1\":\"armeria\"}")
+              .assertTrailers().isEmpty();
     }
 
     @Test
@@ -161,7 +156,9 @@ class WebTestClientTest {
                                     ServiceRequestContext ctx) {
             return HttpResponse.of(
                     ResponseHeaders.of(HttpStatus.OK, "x-header", header),
-                    HttpData.ofUtf8("{\"id\":\"" + id + "\",\"query\":\"" + query + "\",\"content\":\"" + content + "\"}"));
+                    HttpData.ofUtf8(
+                            "{\"id\":\"" + id + "\",\"query\":\"" + query + "\",\"content\":\"" + content
+                            + "\"}"));
         }
 
         @Post

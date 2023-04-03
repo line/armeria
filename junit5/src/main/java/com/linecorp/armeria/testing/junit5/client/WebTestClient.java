@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.testing.junit5.client;
 
-import static com.linecorp.armeria.testing.junit5.client.DefaultWebTestClient.RESPONSE_STREAMING_REQUEST_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -41,7 +40,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 
 public interface WebTestClient extends ClientBuilderParams, Unwrappable {
 
@@ -279,13 +277,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse execute(HttpRequest req) {
-        final RequestOptions requestOptions;
-        if (req instanceof FixedStreamMessage) {
-            requestOptions = RESPONSE_STREAMING_REQUEST_OPTIONS;
-        } else {
-            requestOptions = RequestOptions.of();
-        }
-        return execute(req, requestOptions);
+        return execute(req, RequestOptions.of());
     }
 
     /**

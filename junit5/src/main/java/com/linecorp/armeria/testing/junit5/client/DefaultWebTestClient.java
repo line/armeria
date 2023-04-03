@@ -25,7 +25,6 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
 
@@ -33,11 +32,6 @@ import com.linecorp.armeria.common.Scheme;
 final class DefaultWebTestClient implements WebTestClient {
 
     static final WebTestClient DEFAULT = new DefaultWebTestClient(BlockingWebClient.of());
-
-    static final RequestOptions RESPONSE_STREAMING_REQUEST_OPTIONS =
-            RequestOptions.builder()
-                          .exchangeType(ExchangeType.RESPONSE_STREAMING)
-                          .build();
 
     private final BlockingWebClient delegate;
 
