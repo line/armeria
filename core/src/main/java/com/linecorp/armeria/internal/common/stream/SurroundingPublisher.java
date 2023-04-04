@@ -85,7 +85,6 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
 
         private volatile long requested;
         private volatile long needToPublish;
-        private boolean subscribed;
         private volatile boolean cancelled;
 
         SurroundingSubscriber(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail,
