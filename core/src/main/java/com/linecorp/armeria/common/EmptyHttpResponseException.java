@@ -40,7 +40,7 @@ public final class EmptyHttpResponseException extends RuntimeException {
     }
 
     private static boolean isSampled() {
-        return Flags.verboseExceptionSampler().isSampled(ClosedSessionException.class);
+        return Flags.verboseExceptionSampler().isSampled(EmptyHttpResponseException.class);
     }
 
     private EmptyHttpResponseException(@Nullable String message, @Nullable Throwable cause,
