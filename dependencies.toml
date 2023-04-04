@@ -114,10 +114,10 @@ shadow-gradle-plugin = "7.1.2"
 shibboleth-utilities = "7.5.2"
 snappy = "1.1.9.1"
 slf4j = "1.7.36"
-spring = "5.3.26"
+spring6 = "6.0.6"
 spring-boot1 = "1.5.22.RELEASE"
 spring-boot2 = "2.7.10"
-spring-boot3 = "3.0.2"
+spring-boot3 = "3.0.5"
 testng = "7.5"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
@@ -1014,9 +1014,9 @@ version.ref = "slf4j"
 module = "org.slf4j:slf4j-simple"
 version.ref = "slf4j"
 
-[libraries.spring-web]
+[libraries.spring6-web]
 module = "org.springframework:spring-web"
-version.ref = "spring"
+version.ref = "spring6"
 
 [libraries.spring-boot1-autoconfigure]
 module = "org.springframework.boot:spring-boot-autoconfigure"
