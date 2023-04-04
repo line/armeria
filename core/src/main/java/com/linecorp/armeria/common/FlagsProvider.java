@@ -368,6 +368,11 @@ public interface FlagsProvider {
         return null;
     }
 
+    @Nullable
+    default Boolean defaultClientKeepAliveOnPing() {
+        return null;
+    }
+
     /**
      * Returns the default maximum length of an HTTP/1 initial line.
      * Note that this flag has no effect if a user specified the value explicitly via

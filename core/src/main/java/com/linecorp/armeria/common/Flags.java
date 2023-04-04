@@ -237,6 +237,9 @@ public final class Flags {
             getValue(FlagsProvider::defaultClientIdleTimeoutMillis, "defaultClientIdleTimeoutMillis",
                      value -> value >= 0);
 
+    private static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING =
+            getValue(FlagsProvider::defaultClientKeepAliveOnPing, "defaultClientKeepAliveOnPing");
+
     private static final long DEFAULT_PING_INTERVAL_MILLIS =
             getValue(FlagsProvider::defaultPingIntervalMillis, "defaultPingIntervalMillis",
                      value -> value >= 0);
@@ -713,6 +716,10 @@ public final class Flags {
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
+    }
+
+    public static boolean defaultClientKeepAliveOnPing() {
+        return DEFAULT_CLIENT_KEEP_ALIVE_ON_PING;
     }
 
     /**

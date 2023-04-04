@@ -161,6 +161,9 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<Long> IDLE_TIMEOUT_MILLIS =
             ClientFactoryOption.define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
+    public static final ClientFactoryOption<Boolean> KEEP_ALIVE_ON_PING =
+            ClientFactoryOption.define("KEEP_ALIVE_ON_PING", Flags.defaultClientKeepAliveOnPing());
+
     /**
      * The PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
@@ -454,6 +457,10 @@ public final class ClientFactoryOptions
      */
     public long idleTimeoutMillis() {
         return get(IDLE_TIMEOUT_MILLIS);
+    }
+
+    public boolean keepAliveOnPing() {
+        return get(KEEP_ALIVE_ON_PING);
     }
 
     /**

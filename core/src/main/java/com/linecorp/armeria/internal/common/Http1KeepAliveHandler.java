@@ -24,7 +24,7 @@ public abstract class Http1KeepAliveHandler extends AbstractKeepAliveHandler {
                                     long pingIntervalMillis, long maxConnectionAgeMillis,
                                     long maxNumRequestsPerConnection) {
         super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
-              maxNumRequestsPerConnection);
+              maxNumRequestsPerConnection, false);
     }
 
     @Override

@@ -619,6 +619,14 @@ public final class ClientFactoryBuilder implements TlsSetters {
         return idleTimeoutMillis(idleTimeout.toMillis());
     }
 
+    public ClientFactoryBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
+        requireNonNull(idleTimeout, "idleTimeout");
+        checkArgument(!idleTimeout.isNegative(), "idleTimeout: %s (expected: >= 0)", idleTimeout);
+        option(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS, idleTimeout.toMillis());
+        option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);
+        return this;
+    }
+
     /**
      * Sets the idle timeout of a socket connection in milliseconds. The connection is closed if there is no
      * request in progress for this amount of time.
@@ -626,6 +634,11 @@ public final class ClientFactoryBuilder implements TlsSetters {
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis) {
         checkArgument(idleTimeoutMillis >= 0, "idleTimeoutMillis: %s (expected: >= 0)", idleTimeoutMillis);
         option(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS, idleTimeoutMillis);
+        return this;
+    }
+
+    public ClientFactoryBuilder keepAliveOnPing(boolean keepAliveOnPing) {
+        option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);
         return this;
     }
 
