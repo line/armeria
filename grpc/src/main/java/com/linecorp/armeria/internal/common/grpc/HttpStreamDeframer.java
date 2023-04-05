@@ -94,7 +94,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
         final HttpStatus status = HttpStatus.valueOf(statusText);
         if (!status.equals(HttpStatus.OK)) {
-            // Just mark trailers as received since non-OK response may not have trailers.
+            // Just mark trailers as received since a non-OK response may not have trailers.
             trailersReceived = true;
             transportStatusListener.transportReportStatus(
                     GrpcStatus.httpStatusToGrpcStatus(status.code()));
