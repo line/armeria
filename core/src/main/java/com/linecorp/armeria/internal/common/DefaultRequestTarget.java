@@ -477,7 +477,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                 // path?query
                 if ((query = decodePercentsAndEncodeToUtf8(
                         reqTarget, queryPos + 1, reqTarget.length(),
-                        ComponentType.QUERY, SLASH_BYTES)) == null) {
+                        ComponentType.QUERY, EMPTY_BYTES)) == null) {
                     return null;
                 }
                 fragment = null;

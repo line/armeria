@@ -464,16 +464,29 @@ class DefaultRequestTargetTest {
         assertRejected(forClient("http:///"));     // empty authority
     }
 
-    @Test
-    void testToString() {
-        assertThat(forServer("/")).asString().isEqualTo("/");
-        assertThat(forServer("/?")).asString().isEqualTo("/?");
-        assertThat(forServer("/?a=b")).asString().isEqualTo("/?a=b");
+    @ParameterizedTest
+    @EnumSource(Mode.class)
+    void shouldYieldEmptyStringForEmptyQueryAndFragment(Mode mode) {
+        assertAccepted(parse(mode, "/?"), "/", "");
+        if (mode == Mode.CLIENT) {
+            assertAccepted(forClient("/#"), "/", null, "");
+            assertAccepted(forClient("/?#"), "/", "", "");
+        }
+    }
 
-        assertThat(forClient("/#")).asString().isEqualTo("/#");
-        assertThat(forClient("/?#")).asString().isEqualTo("/?#");
-        assertThat(forClient("/?a=b#c=d")).asString().isEqualTo("/?a=b#c=d");
-        assertThat(forClient("http://foo/bar?a=b#c=d")).asString().isEqualTo("http://foo/bar?a=b#c=d");
+    @ParameterizedTest
+    @EnumSource(Mode.class)
+    void testToString(Mode mode) {
+        assertThat(parse(mode, "/")).asString().isEqualTo("/");
+        assertThat(parse(mode, "/?")).asString().isEqualTo("/?");
+        assertThat(parse(mode, "/?a=b")).asString().isEqualTo("/?a=b");
+
+        if (mode == Mode.CLIENT) {
+            assertThat(forClient("/#")).asString().isEqualTo("/#");
+            assertThat(forClient("/?#")).asString().isEqualTo("/?#");
+            assertThat(forClient("/?a=b#c=d")).asString().isEqualTo("/?a=b#c=d");
+            assertThat(forClient("http://foo/bar?a=b#c=d")).asString().isEqualTo("http://foo/bar?a=b#c=d");
+        }
     }
 
     private static void assertAccepted(@Nullable RequestTarget res, String expectedPath) {
