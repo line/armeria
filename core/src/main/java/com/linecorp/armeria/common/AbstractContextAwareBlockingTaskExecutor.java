@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,19 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.common;
 
-package com.linecorp.armeria.spring;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
-import java.time.Duration;
-
-import org.springframework.core.convert.converter.Converter;
-
-/**
- * Convert {@link String} to {@link Duration}.
- */
-class StringToDurationConverter implements Converter<String, Duration> {
-    @Override
-    public Duration convert(String source) {
-        return DurationStyle.detect(source).parse(source);
+abstract class AbstractContextAwareBlockingTaskExecutor
+        extends AbstractContextAwareScheduledExecutorService<BlockingTaskExecutor>
+        implements BlockingTaskExecutor {
+    AbstractContextAwareBlockingTaskExecutor(BlockingTaskExecutor executor) {
+        super(executor);
     }
 }

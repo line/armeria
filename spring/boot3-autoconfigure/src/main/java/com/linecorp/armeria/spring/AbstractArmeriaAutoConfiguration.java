@@ -18,6 +18,7 @@ package com.linecorp.armeria.spring;
 
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -49,8 +50,7 @@ import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
- * Abstract class for implementing ArmeriaAutoConfiguration of boot2-autoconfigure module
- * and ArmeriaSpringBoot1AutoConfiguration of boot1-autoconfigure module.
+ * Abstract class for implementing ArmeriaAutoConfiguration.
  */
 public abstract class AbstractArmeriaAutoConfiguration {
 
@@ -131,12 +131,14 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
             Optional<List<DocServiceConfigurator>> docServiceConfigurators,
-            @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort) {
-
+            @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort,
+            @Value("${management.server.address:#{null}}") @Nullable InetAddress managementServerAddress,
+            @Value("${management.server.ssl.enabled:#{false}}") boolean enableManagementServerSsl) {
         return InternalServices.of(settings, meterRegistry.orElse(Flags.meterRegistry()),
                                    healthCheckers.orElse(ImmutableList.of()),
                                    healthCheckServiceConfigurators.orElse(ImmutableList.of()),
-                                   docServiceConfigurators.orElse(ImmutableList.of()), managementServerPort);
+                                   docServiceConfigurators.orElse(ImmutableList.of()),
+                                   managementServerPort, managementServerAddress, enableManagementServerSsl);
     }
 
     /**

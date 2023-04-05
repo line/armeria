@@ -358,7 +358,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-            final ServerErrorHandler serverErrorHandler = config.errorHandler();
             HttpResponse serviceResponse;
             try {
                 req.init(reqCtx);
@@ -377,7 +376,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Store the cause to set as the log.responseCause().
                 CapturedServiceException.set(reqCtx, cause);
                 // Recover the failed response with the error handler.
-                return serverErrorHandler.onServiceException(reqCtx, cause);
+                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
             });
             final HttpResponse res = serviceResponse;
             final EventLoop eventLoop = channel.eventLoop();

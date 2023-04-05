@@ -16,14 +16,14 @@
 
 package com.linecorp.armeria.server.jetty;
 
-import java.util.concurrent.ScheduledExecutorService;
-
 import org.eclipse.jetty.util.thread.ThreadPool;
 
-final class ArmeriaThreadPool implements ThreadPool {
-    private final ScheduledExecutorService blockingTaskExecutor;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
-    ArmeriaThreadPool(ScheduledExecutorService blockingTaskExecutor) {
+final class ArmeriaThreadPool implements ThreadPool {
+    private final BlockingTaskExecutor blockingTaskExecutor;
+
+    ArmeriaThreadPool(BlockingTaskExecutor blockingTaskExecutor) {
         this.blockingTaskExecutor = blockingTaskExecutor;
     }
 

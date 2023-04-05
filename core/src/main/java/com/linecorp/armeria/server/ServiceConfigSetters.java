@@ -153,6 +153,16 @@ interface ServiceConfigSetters {
                                               boolean shutdownOnStop);
 
     /**
+     * Sets an {@link BlockingTaskExecutor executor} to be used when executing blocking tasks.
+     *
+     * @param blockingTaskExecutor the {@link BlockingTaskExecutor executor} to be used.
+     * @param shutdownOnStop whether to shut down the {@link BlockingTaskExecutor} when the {@link Server}
+     *                       stops.
+     */
+    ServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                              boolean shutdownOnStop);
+
+    /**
      * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
      * the execution of blocking tasks or invocations.
      * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
@@ -226,4 +236,10 @@ interface ServiceConfigSetters {
     @UnstableApi
     ServiceConfigSetters setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
+
+    /**
+     * Sets the default {@link ServiceErrorHandler} served by this {@link Service}.
+     * @param serviceErrorHandler the default {@link ServiceErrorHandler}
+     */
+    ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler);
 }

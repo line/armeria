@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -38,8 +37,8 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
-import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -54,6 +53,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -109,7 +109,7 @@ public final class DefaultServiceRequestContext
     @Nullable
     private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
-    private ContextAwareScheduledExecutorService blockingTaskExecutor;
+    private ContextAwareBlockingTaskExecutor blockingTaskExecutor;
     private long maxRequestLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
@@ -253,13 +253,13 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public ContextAwareScheduledExecutorService blockingTaskExecutor() {
+    public ContextAwareBlockingTaskExecutor blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        final ScheduledExecutorService executor = config().blockingTaskExecutor();
-        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(this, executor);
+        final BlockingTaskExecutor executor = config().blockingTaskExecutor();
+        return blockingTaskExecutor = ContextAwareBlockingTaskExecutor.of(this, executor);
     }
 
     @Override

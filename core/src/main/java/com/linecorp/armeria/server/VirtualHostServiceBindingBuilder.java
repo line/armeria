@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -280,6 +281,14 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder blockingTaskExecutor(
+            BlockingTaskExecutor blockingTaskExecutor,
+            boolean shutdownOnStop) {
+        return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor,
+                                                                             shutdownOnStop);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
     }
@@ -320,6 +329,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     public VirtualHostServiceBindingBuilder setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         return (VirtualHostServiceBindingBuilder) super.setHeaders(defaultHeaders);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        return (VirtualHostServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
     }
 
     /**
