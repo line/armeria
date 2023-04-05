@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.common.grpc;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -35,6 +34,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
@@ -50,6 +50,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Nullable
     private StreamMessage<DeframedMessage> deframedStreamMessage;
+    private boolean server;
     private boolean trailersReceived;
 
     public HttpStreamDeframer(
@@ -63,6 +64,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
         this.statusFunction = statusFunction;
+        server = ctx instanceof ServiceRequestContext;
     }
 
     /**
@@ -92,6 +94,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
         final HttpStatus status = HttpStatus.valueOf(statusText);
         if (!status.equals(HttpStatus.OK)) {
+            // Just mark trailers as received since non-OK response may not have trailers.
+            trailersReceived = true;
             transportStatusListener.transportReportStatus(
                     GrpcStatus.httpStatusToGrpcStatus(status.code()));
             return;
@@ -154,7 +158,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     @Override
     public void processOnComplete(StreamDecoderInput in, StreamDecoderOutput<DeframedMessage> out)
             throws Exception {
-        if (ctx instanceof ClientRequestContext && !trailersReceived) {
+        if (!server && !trailersReceived) {
+            // A gRPC response should contain grpc-status in trailers if HTTP status is OK.
             final Status status = Status.INTERNAL.withDescription("Missing gRPC status code");
             transportStatusListener.transportReportStatus(status);
             // Raise an exception to clean up `in` and `out`.

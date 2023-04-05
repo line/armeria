@@ -33,7 +33,7 @@ import io.grpc.StatusRuntimeException;
 class InvalidGrpcResponseTest {
 
     @Test
-    void shouldFailIfGrpcStatusIsMissing() {
+    void shouldFailIfGrpcStatusIsMissingForOkHttpStatus() {
         final TestServiceBlockingStub client =
                 GrpcClients.builder("http://127.0.0.1:8080")
                            .decorator((delegate, ctx, req) -> {
@@ -46,5 +46,21 @@ class InvalidGrpcResponseTest {
                                      StatusRuntimeException.class);
         assertThat(cause).hasMessageContaining("Missing gRPC status code");
         assertThat(cause.getStatus().getCode()).isEqualTo(Code.INTERNAL);
+    }
+
+    @Test
+    void allowNoGrpcStatusForNonOkHttpStatus() {
+        final TestServiceBlockingStub client =
+                GrpcClients.builder("http://127.0.0.1:8080")
+                           .decorator((delegate, ctx, req) -> {
+                               // Return a headers-only response without "grpc-status".
+                               return HttpResponse.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
+                           })
+                           .build(TestServiceBlockingStub.class);
+        final StatusRuntimeException cause =
+                catchThrowableOfType(() -> client.unaryCall(SimpleRequest.getDefaultInstance()),
+                                     StatusRuntimeException.class);
+        assertThat(cause).hasMessageContaining("UNAUTHENTICATED: HTTP status code 401");
+        assertThat(cause.getStatus().getCode()).isEqualTo(Code.UNAUTHENTICATED);
     }
 }
