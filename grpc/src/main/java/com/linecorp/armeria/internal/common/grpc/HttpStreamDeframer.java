@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common.grpc;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -31,6 +32,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -48,6 +50,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Nullable
     private StreamMessage<DeframedMessage> deframedStreamMessage;
+    private boolean trailersReceived;
 
     public HttpStreamDeframer(
             DecompressorRegistry decompressorRegistry,
@@ -97,6 +100,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
+            trailersReceived = true;
             GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
         }
 
@@ -135,6 +139,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
+            trailersReceived = true;
             GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
         }
     }
@@ -144,6 +149,17 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         final Metadata metadata = new Metadata();
         transportStatusListener.transportReportStatus(
                 GrpcStatus.fromThrowable(statusFunction, ctx, cause, metadata), metadata);
+    }
+
+    @Override
+    public void processOnComplete(StreamDecoderInput in, StreamDecoderOutput<DeframedMessage> out)
+            throws Exception {
+        if (ctx instanceof ClientRequestContext && !trailersReceived) {
+            final Status status = Status.INTERNAL.withDescription("Missing gRPC status code");
+            transportStatusListener.transportReportStatus(status);
+            // Raise an exception to clean up `in` and `out`.
+            throw status.asRuntimeException();
+        }
     }
 
     @Override
