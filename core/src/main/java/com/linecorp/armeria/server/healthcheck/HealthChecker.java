@@ -88,10 +88,6 @@ public interface HealthChecker {
                                           requireNonNull(eventExecutor, "eventExecutor"));
     }
 
-    static DefaultCpuHealthChecker of(int targetCpuUsage, int targetProcessCpuUsage) {
-        return new DefaultCpuHealthChecker(targetCpuUsage, targetProcessCpuUsage);
-    }
-
     /**
      * Returns {@code true} if and only if the {@link Server} is healthy.
      */

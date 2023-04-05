@@ -15,7 +15,8 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.lang.reflect.Method;
 
@@ -25,7 +26,7 @@ class DefaultCpuHealthCheckerTest {
 
     @Test
     void testGatheringCpuUsageInformation() {
-        final DefaultCpuHealthChecker cpuHealthChecker = HealthChecker.of(10, 10);
+        final DefaultCpuHealthChecker cpuHealthChecker = DefaultCpuHealthChecker.of(10, 10);
         final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
         final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
         assertNotNull(processCpuUsage);

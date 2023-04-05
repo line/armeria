@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * final boolean healthy = cpuHealthChecker.isHealthy();
  */
 // Forked from <a href="https://github.com/micrometer-metrics/micrometer/blob/8339d57bef8689beb8d7a18b429a166f6595f2af/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/system/ProcessorMetrics.java">ProcessorMetrics.java</a> in the micrometer core.
-class DefaultCpuHealthChecker implements HealthChecker {
+final class DefaultCpuHealthChecker implements HealthChecker {
 
     private static final List<String> OPERATING_SYSTEM_BEAN_CLASS_NAMES = ImmutableList.of(
             "com.ibm.lang.management.OperatingSystemMXBean", // J9
@@ -65,13 +65,17 @@ class DefaultCpuHealthChecker implements HealthChecker {
      * @param targetCpuUsage the target cpu usage
      * @param targetProcessCpuLoad the target process cpu usage
      */
-    public DefaultCpuHealthChecker(int targetCpuUsage, int targetProcessCpuLoad) {
+    private DefaultCpuHealthChecker(int targetCpuUsage, int targetProcessCpuLoad) {
         this.targetCpuUsage = targetCpuUsage;
         this.targetProcessCpuLoad = targetProcessCpuLoad;
         this.operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
         this.operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
         this.systemCpuUsage = detectMethod("getSystemCpuLoad");
         this.processCpuUsage = detectMethod("getProcessCpuLoad");
+    }
+
+    public static DefaultCpuHealthChecker of(int targetCpuUsage, int targetProcessCpuLoad) {
+        return new DefaultCpuHealthChecker(targetCpuUsage, targetProcessCpuLoad);
     }
 
     /**
