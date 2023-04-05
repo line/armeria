@@ -74,8 +74,6 @@ public final class AbstractRuleBuilderUtil {
             this.hasResponseFilter = hasResponseFilter;
         }
 
-        // TODO(trustin): Figure out why apply() is called more than once for each client call
-        //                and reduce the number of calls if possible.
         @Override
         public Boolean apply(ClientRequestContext ctx, Throwable cause) {
             final RequestLog log = ctx.log().partial();
