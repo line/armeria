@@ -82,7 +82,7 @@ class CircuitBreakerClientRuleTest {
 
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .build()
                          .blocking();
 
@@ -98,7 +98,7 @@ class CircuitBreakerClientRuleTest {
 
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .build();
 
         assertThat(client.get("/503").aggregate().join().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
@@ -118,7 +118,7 @@ class CircuitBreakerClientRuleTest {
 
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .build();
 
         assertThat(client.get("/trailers").aggregate().join().trailers()).containsExactly(
@@ -139,7 +139,7 @@ class CircuitBreakerClientRuleTest {
 
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .build()
                          .blocking();
 
@@ -162,7 +162,7 @@ class CircuitBreakerClientRuleTest {
 
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .build()
                          .blocking();
 
@@ -184,7 +184,7 @@ class CircuitBreakerClientRuleTest {
 
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .decorator((delegate, ctx, req) -> {
                              InternalGrpcWebTrailers.set(ctx, HttpHeaders.of("grpc-status", 11));
                              return delegate.execute(ctx, req);
@@ -206,13 +206,9 @@ class CircuitBreakerClientRuleTest {
     @Test
     void openCircuitWithException() {
         final CircuitBreakerRule rule = CircuitBreakerRule.onException(ResponseTimeoutException.class);
-
-        final CircuitBreaker circuitBreaker = CircuitBreaker.builder()
-                                                            .minimumRequestThreshold(0)
-                                                            .build();
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(circuitBreaker, rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .responseTimeoutMillis(2000)
                          .build();
 
@@ -224,5 +220,9 @@ class CircuitBreakerClientRuleTest {
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(FailFastException.class);
         });
+    }
+
+    private static CircuitBreaker superSensitiveCircuitBreaker() {
+        return CircuitBreaker.builder().minimumRequestThreshold(0).build();
     }
 }
