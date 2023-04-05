@@ -175,8 +175,7 @@ public abstract class AbstractRuleBuilder {
     }
 
     private static <T> BiPredicate<ClientRequestContext, T> combinePredicates(
-            @Nullable
-            BiPredicate<ClientRequestContext, T> firstPredicate,
+            @Nullable BiPredicate<ClientRequestContext, T> firstPredicate,
             BiPredicate<? super ClientRequestContext, ? super T> secondPredicate,
             String paramName) {
 

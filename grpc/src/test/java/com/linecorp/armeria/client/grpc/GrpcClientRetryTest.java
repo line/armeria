@@ -76,18 +76,10 @@ final class GrpcClientRetryTest {
     }
 
     private static RetryRuleWithContent<HttpResponse> retryRuleWithContent() {
-        return RetryRuleWithContent.<HttpResponse>builder()
-                                   .onResponseHeaders((ctx, headers) -> {
-                                       // Trailers may be sent together with response headers, with no
-                                       // message in the body.
-                                       final Integer grpcStatus = headers.getInt(GrpcHeaderNames.GRPC_STATUS);
-                                       return grpcStatus != null && grpcStatus != 0;
-                                   })
-                                   .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
-                                       final HttpHeaders trailers = aggregatedRes.trailers();
-                                       return trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
-                                   }))
-                                   .thenBackoff();
+        return RetryRuleWithContent
+                .<HttpResponse>builder()
+                .onGrpcTrailers((ctx, trailers) -> trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0)
+                .thenBackoff();
     }
 
     private static class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {

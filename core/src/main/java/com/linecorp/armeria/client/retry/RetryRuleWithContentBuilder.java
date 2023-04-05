@@ -84,7 +84,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         final boolean hasResponseFilter = responseFilter != null;
         if (decision != RetryDecision.noRetry() && exceptionFilter() == null &&
             responseHeadersFilter() == null && responseTrailersFilter() == null &&
-            !hasResponseFilter) {
+            grpcTrailersFilter() == null && !hasResponseFilter) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
 

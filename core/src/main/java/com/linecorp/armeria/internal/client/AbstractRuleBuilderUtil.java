@@ -96,7 +96,7 @@ public final class AbstractRuleBuilderUtil {
             return applySlow(ctx, cause, log);
         }
 
-        private boolean applySlow(ClientRequestContext ctx, Throwable cause, RequestLog log) {
+        private boolean applySlow(ClientRequestContext ctx, @Nullable Throwable cause, RequestLog log) {
             if (cause != null && exceptionFilter != null &&
                 exceptionFilter.test(ctx, Exceptions.peel(cause))) {
                 return true;
