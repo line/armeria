@@ -37,6 +37,8 @@ import com.linecorp.armeria.spring.DeprecatedIpTest.TestConfiguration;
 
 /**
  * Tests for keeping the behavior of deprecated {@link Port#getIp()}.
+ *
+ * TODO(ikhoon): Migarate Junit 4 to Junit 5.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
