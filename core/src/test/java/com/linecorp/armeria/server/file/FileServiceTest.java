@@ -32,13 +32,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.HttpHeaders;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.http.HttpHeaders;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -300,21 +300,21 @@ class FileServiceTest {
             // Ensure auto-redirect without query works as expected.
             HttpUriRequest req = new HttpGet(baseUri + "/fs/auto_index");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusCode(res, 307);
+                assertStatusLine(res, "HTTP/1.1 307 Temporary Redirect");
                 assertThat(header(res, "location")).isEqualTo(basePath + "/fs/auto_index/");
             }
 
             // Ensure auto-redirect with query works as expected.
             req = new HttpGet(baseUri + "/fs/auto_index?foobar=1");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusCode(res, 307);
+                assertStatusLine(res, "HTTP/1.1 307 Temporary Redirect");
                 assertThat(header(res, "location")).isEqualTo(basePath + "/fs/auto_index/?foobar=1");
             }
 
             // Ensure directory listing works as expected.
             req = new HttpGet(baseUri + "/fs/auto_index/");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusCode(res, 200);
+                assertStatusLine(res, "HTTP/1.1 200 OK");
                 final String content = contentString(res);
                 assertThat(content)
                         .contains("Directory listing: " + basePath + "/fs/auto_index/")
@@ -329,7 +329,7 @@ class FileServiceTest {
             // Ensure directory listing on an empty directory works as expected.
             req = new HttpGet(baseUri + "/fs/auto_index/empty_child_dir/");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusCode(res, 200);
+                assertStatusLine(res, "HTTP/1.1 200 OK");
                 final String content = contentString(res);
                 assertThat(content)
                         .contains("Directory listing: " + basePath + "/fs/auto_index/empty_child_dir/")
@@ -341,7 +341,7 @@ class FileServiceTest {
             // even with query parameters.
             req = new HttpGet(baseUri + "/fs/auto_index/empty_child_dir/?foo=1");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusCode(res, 200);
+                assertStatusLine(res, "HTTP/1.1 200 OK");
                 final String content = contentString(res);
                 assertThat(content)
                         .contains("Directory listing: " + basePath + "/fs/auto_index/empty_child_dir/")
@@ -352,7 +352,7 @@ class FileServiceTest {
             // Ensure custom index.html takes precedence over auto-generated directory listing.
             req = new HttpGet(baseUri + "/fs/auto_index/child_dir_with_custom_index/");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusCode(res, 200);
+                assertStatusLine(res, "HTTP/1.1 200 OK");
                 assertThat(contentString(res)).isEqualTo("custom_index_file");
             }
 
@@ -360,7 +360,7 @@ class FileServiceTest {
             // even with query parameters.
             req = new HttpGet(baseUri + "/fs/auto_index/child_dir_with_custom_index/?foo=1");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusCode(res, 200);
+                assertStatusLine(res, "HTTP/1.1 200 OK");
                 assertThat(contentString(res)).isEqualTo("custom_index_file");
             }
         }
@@ -659,7 +659,7 @@ class FileServiceTest {
                                     @Nullable String expectedContentType,
                                     Consumer<String> contentAssertions) throws Exception {
 
-        assertStatusCode(res, 200);
+        assertStatusLine(res, "HTTP/1.1 200 OK");
 
         // Ensure that the 'Date' header exists and is well-formed.
         final String date = headerOrNull(res, HttpHeaders.DATE);
@@ -731,7 +731,7 @@ class FileServiceTest {
 
         try (CloseableHttpResponse res = hc.execute(req5)) {
             // Should not receive '304 Not Modified' because the etag did not match.
-            assertStatusCode(res, 200);
+            assertStatusLine(res, "HTTP/1.1 200 OK");
 
             // Read the content fully so that Apache HC does not close the connection prematurely.
             ByteStreams.exhaust(res.getEntity().getContent());
@@ -741,7 +741,7 @@ class FileServiceTest {
     private static void assert304NotModified(
             CloseableHttpResponse res, String expectedEtag, String expectedLastModified) {
 
-        assertStatusCode(res, 304);
+        assertStatusLine(res, "HTTP/1.1 304 Not Modified");
 
         // Ensure that the 'ETag' header did not change.
         assertThat(headerOrNull(res, HttpHeaders.ETAG)).isEqualTo(expectedEtag);
@@ -757,13 +757,13 @@ class FileServiceTest {
     }
 
     private static void assert404NotFound(CloseableHttpResponse res) {
-        assertStatusCode(res, 404);
+        assertStatusLine(res, "HTTP/1.1 404 Not Found");
         // Ensure that the 'Last-Modified' header does not exist.
         assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED)).isNull();
     }
 
-    private static void assertStatusCode(CloseableHttpResponse res, int expectedStatus) {
-        assertThat(res.getCode()).isEqualTo(expectedStatus);
+    private static void assertStatusLine(CloseableHttpResponse res, String expectedStatusLine) {
+        assertThat(res.getStatusLine().toString()).isEqualTo(expectedStatusLine);
     }
 
     private static String header(CloseableHttpResponse res, String name) {

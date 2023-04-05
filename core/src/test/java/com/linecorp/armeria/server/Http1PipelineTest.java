@@ -44,8 +44,7 @@ import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
-import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.StreamWriter;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class Http1PipelineTest {
@@ -111,7 +110,7 @@ class Http1PipelineTest {
                                               .factory(factory)
                                               .build();
 
-            final StreamWriter<HttpData> stream = StreamMessage.streaming();
+            final DefaultStreamMessage<HttpData> stream = new DefaultStreamMessage<>();
             final HttpResponse response =
                     client.prepare()
                           .post("/length-limit")

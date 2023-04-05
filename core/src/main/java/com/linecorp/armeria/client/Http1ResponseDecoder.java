@@ -26,10 +26,10 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
@@ -61,8 +61,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     /** The response being decoded currently. */
     @Nullable
     private HttpResponseWrapper res;
-    @Nullable
-    private KeepAliveHandler keepAliveHandler;
+    private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
     private int resId = 1;
     private int lastPingReqId = -1;
     private State state = State.NEED_HEADERS;
@@ -163,7 +162,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         if (!HttpUtil.isKeepAlive(nettyRes)) {
-                            session().deactivate();
+                            disconnectWhenFinished();
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
@@ -321,35 +320,25 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     void setKeepAliveHandler(ChannelHandlerContext ctx, KeepAliveHandler keepAliveHandler) {
+        assert keepAliveHandler instanceof Http1ClientKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
-        if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
-            maybeInitializeKeepAliveHandler(ctx);
-        }
+        maybeInitializeKeepAliveHandler(ctx);
     }
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         if (ctx.channel().isActive()) {
-            final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-            if (keepAliveHandler != null) {
-                keepAliveHandler.initialize(ctx);
-            }
+            keepAliveHandler.initialize(ctx);
         }
     }
 
     private void destroyKeepAliveHandler() {
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.destroy();
-        }
+        keepAliveHandler.destroy();
     }
 
     private void onPingRead(Object msg) {
         if (msg instanceof HttpResponse) {
-            final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-            // Ping can not be activated with NoopKeepAliveHandler.
-            if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
-                keepAliveHandler.onPing();
-            }
+            assert keepAliveHandler != NoopKeepAliveHandler.INSTANCE;
+            keepAliveHandler.onPing();
         }
         if (msg instanceof LastHttpContent) {
             onPingComplete();

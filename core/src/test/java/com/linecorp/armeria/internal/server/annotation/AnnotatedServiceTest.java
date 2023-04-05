@@ -15,9 +15,6 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
-import static org.apache.hc.core5.http.HttpHeaders.ACCEPT;
-import static org.apache.hc.core5.http.HttpHeaders.CONTENT_TYPE;
-import static org.apache.hc.core5.http.HttpHeaders.IF_MATCH;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -33,24 +30,23 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
-import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.NameValuePair;
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.BlockingWebClient;
@@ -1095,8 +1091,8 @@ class AnnotatedServiceTest {
     @Test
     void testRequestHeaderInjection() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpUriRequestBase request = get("/11/aHeader");
-            request.setHeader(IF_MATCH, "737060cd8c284d8af7ad3082f209582d");
+            HttpRequestBase request = get("/11/aHeader");
+            request.setHeader(org.apache.http.HttpHeaders.IF_MATCH, "737060cd8c284d8af7ad3082f209582d");
             testBody(hc, request, "matched");
 
             request = post("/11/customHeader1");
@@ -1244,44 +1240,46 @@ class AnnotatedServiceTest {
         NORMAL
     }
 
-    static void testBodyAndContentType(CloseableHttpClient hc, HttpUriRequestBase req,
-                                       String body, String contentType) throws IOException, ParseException {
+    static void testBodyAndContentType(CloseableHttpClient hc, HttpRequestBase req,
+                                       String body, String contentType) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, body, null, contentType);
         }
     }
 
-    static void testBody(CloseableHttpClient hc, HttpUriRequestBase req,
-                         String body) throws IOException, ParseException {
+    static void testBody(CloseableHttpClient hc, HttpRequestBase req,
+                         String body) throws IOException {
         testBody(hc, req, body, null);
     }
 
-    static void testBody(CloseableHttpClient hc, HttpUriRequestBase req,
-                         String body, @Nullable Charset encoding) throws IOException, ParseException {
+    static void testBody(CloseableHttpClient hc, HttpRequestBase req,
+                         String body, @Nullable Charset encoding) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, body, encoding, null);
         }
     }
 
-    static void testStatusCode(CloseableHttpClient hc, HttpUriRequestBase req,
-                               int statusCode) throws IOException, ParseException {
+    static void testStatusCode(CloseableHttpClient hc, HttpRequestBase req,
+                               int statusCode) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, statusCode, null, null, null);
         }
     }
 
-    static void testForm(CloseableHttpClient hc, HttpPost req) throws IOException, ParseException {
+    static void testForm(CloseableHttpClient hc, HttpPost req) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, EntityUtils.toString(req.getEntity()), null, null);
         }
     }
 
-    static void checkResult(CloseableHttpResponse res,
+    static void checkResult(org.apache.http.HttpResponse res,
                             int statusCode,
                             @Nullable String body,
                             @Nullable Charset encoding,
-                            @Nullable String contentType) throws IOException, ParseException {
-        assertThat(res.getCode()).isEqualTo(statusCode);
+                            @Nullable String contentType) throws IOException {
+        final HttpStatus status = HttpStatus.valueOf(statusCode);
+        assertThat(res.getStatusLine().toString()).isEqualTo(
+                "HTTP/1.1 " + status);
         if (body != null) {
             if (encoding != null) {
                 assertThat(EntityUtils.toString(res.getEntity(), encoding))
@@ -1291,7 +1289,7 @@ class AnnotatedServiceTest {
             }
         }
 
-        final org.apache.hc.core5.http.Header header = res.getFirstHeader(CONTENT_TYPE);
+        final org.apache.http.Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
         if (contentType != null) {
             assertThat(MediaType.parse(header.getValue())).isEqualTo(MediaType.parse(contentType));
         } else if (statusCode >= 400) {
@@ -1301,23 +1299,23 @@ class AnnotatedServiceTest {
         }
     }
 
-    static HttpUriRequestBase get(String path) {
+    static HttpRequestBase get(String path) {
         return request(HttpMethod.GET, path, null, null);
     }
 
-    static HttpUriRequestBase get(String path, @Nullable String accept) {
+    static HttpRequestBase get(String path, @Nullable String accept) {
         return request(HttpMethod.GET, path, null, accept);
     }
 
-    static HttpUriRequestBase post(String path) {
+    static HttpRequestBase post(String path) {
         return request(HttpMethod.POST, path, null, null);
     }
 
-    static HttpUriRequestBase post(String path, @Nullable String contentType) {
+    static HttpRequestBase post(String path, @Nullable String contentType) {
         return request(HttpMethod.POST, path, contentType, null);
     }
 
-    static HttpUriRequestBase post(String path, @Nullable String contentType, @Nullable String accept) {
+    static HttpRequestBase post(String path, @Nullable String contentType, @Nullable String accept) {
         return request(HttpMethod.POST, path, contentType, accept);
     }
 
@@ -1333,19 +1331,19 @@ class AnnotatedServiceTest {
             params.add(new BasicNameValuePair(kv[i], kv[i + 1]));
         }
         // HTTP.DEF_CONTENT_CHARSET = ISO-8859-1
-        final Charset encoding = charset == null ? Charsets.ISO_8859_1 : charset;
+        final Charset encoding = charset == null ? HTTP.DEF_CONTENT_CHARSET : charset;
         final UrlEncodedFormEntity entity = new UrlEncodedFormEntity(params, encoding);
         req.setEntity(entity);
         return req;
     }
 
-    static HttpUriRequestBase request(HttpMethod method, String path, @Nullable String contentType) {
+    static HttpRequestBase request(HttpMethod method, String path, @Nullable String contentType) {
         return request(method, path, contentType, null);
     }
 
-    static HttpUriRequestBase request(HttpMethod method, String path,
-                                      @Nullable String contentType, @Nullable String accept) {
-        final HttpUriRequestBase req;
+    static HttpRequestBase request(HttpMethod method, String path,
+                                   @Nullable String contentType, @Nullable String accept) {
+        final HttpRequestBase req;
         switch (method) {
             case GET:
                 req = new HttpGet(server.httpUri().resolve(path));
@@ -1357,10 +1355,10 @@ class AnnotatedServiceTest {
                 throw new Error("Unexpected method: " + method);
         }
         if (contentType != null) {
-            req.setHeader(CONTENT_TYPE, contentType);
+            req.setHeader(org.apache.http.HttpHeaders.CONTENT_TYPE, contentType);
         }
         if (accept != null) {
-            req.setHeader(ACCEPT, accept);
+            req.setHeader(org.apache.http.HttpHeaders.ACCEPT, accept);
         }
         return req;
     }

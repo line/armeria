@@ -348,7 +348,7 @@ class StreamMessageInputStreamTest {
     @Test
     void maybeRequest_when_not_enough_data() throws IOException {
         final StreamMessage<String> streamMessage1 = StreamMessage.of("12", "34");
-        final StreamWriter<String> streamMessage2 = StreamMessage.streaming();
+        final DefaultStreamMessage<String> streamMessage2 = new DefaultStreamMessage<>();
         streamMessage2.write("56");
         streamMessage2.write("78");
         final AtomicBoolean consumed = new AtomicBoolean();

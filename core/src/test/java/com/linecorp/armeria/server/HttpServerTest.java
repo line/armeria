@@ -126,8 +126,6 @@ class HttpServerTest {
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
-            sb.requestTimeoutMillis(0);
-            sb.idleTimeoutMillis(0);
 
             sb.service("/delay/{delay}", new AbstractHttpService() {
                 @Override
@@ -774,8 +772,7 @@ class HttpServerTest {
             assertThat(new String(ByteStreams.toByteArray(in)))
                     .isEqualTo("HTTP/1.1 200 OK\r\n" +
                                "content-type: text/plain; charset=utf-8\r\n" +
-                               "content-length: 6\r\n" +
-                               "connection: close\r\n\r\n");
+                               "content-length: 6\r\n\r\n");
         }
     }
 
@@ -812,7 +809,7 @@ class HttpServerTest {
 
         final int port = server.httpPort();
         try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
-            s.setSoTimeout(Integer.MAX_VALUE);
+            s.setSoTimeout(10000);
             final InputStream in = s.getInputStream();
             final OutputStream out = s.getOutputStream();
             // Send 4 pipelined requests with 'Expect: 100-continue' header.
@@ -824,20 +821,12 @@ class HttpServerTest {
                        "Content-Length: 0\r\n" +
                        "Connection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
 
-            final StringBuilder responses = new StringBuilder();
-            for (int i = 0; i < 4; i++) {
-                responses.append("HTTP/1.1 100 Continue\r\n\r\n")
-                         .append("HTTP/1.1 200 OK\r\n")
-                         .append("content-type: text/plain; charset=utf-8\r\n")
-                         .append("content-length: 6\r\n");
-                if (i == 3) {
-                    responses.append("connection: close\r\n");
-                }
-                responses.append("\r\n200 OK");
-            }
             // '100 Continue' responses must appear once for each '200 OK' response.
             assertThat(new String(ByteStreams.toByteArray(in)))
-                    .isEqualTo(responses.toString());
+                    .isEqualTo(Strings.repeat("HTTP/1.1 100 Continue\r\n\r\n" +
+                                              "HTTP/1.1 200 OK\r\n" +
+                                              "content-type: text/plain; charset=utf-8\r\n" +
+                                              "content-length: 6\r\n\r\n200 OK", 4));
         }
     }
 

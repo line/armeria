@@ -1,3 +1,0 @@
-dependencies {
-    api project(':spring:boot3-webflux-autoconfigure')
-}

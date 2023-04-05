@@ -4,6 +4,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
 
+import javax.validation.ValidationException;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -12,8 +14,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-
-import jakarta.validation.ValidationException;
 
 /**
  * A sample exception handler which handles a {@link ValidationException}.

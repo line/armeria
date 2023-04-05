@@ -26,77 +26,69 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
-abstract class AbstractContextAwareExecutorService<ES extends ExecutorService>
-        extends AbstractContextAwareExecutor<ES> implements ExecutorService {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+
+abstract class AbstractContextAwareExecutorService<ES extends ExecutorService> implements ExecutorService {
+    enum LogRequestContextWarningOnce implements Supplier<RequestContext> {
+        INSTANCE;
+
+        @Override
+        @Nullable
+        public RequestContext get() {
+            ClassLoaderHack.loadMe();
+            return null;
+        }
+
+        /**
+         * This won't be referenced until {@link #get()} is called. If there's only one classloader, the
+         * initializer will only be called once.
+         */
+        private static final class ClassLoaderHack {
+            static void loadMe() {}
+
+            static {
+                logger.warn(
+                        "Attempted to propagate request context to an executor task, " +
+                        "but no request context available. " +
+                        "If this executor is used for non-request-related tasks then it's safe to ignore this",
+                        new NoRequestContextException());
+            }
+        }
+
+        private static final class NoRequestContextException extends RuntimeException {
+            private static final long serialVersionUID = 2804189311774982052L;
+        }
+    }
+
+    private static final Logger logger = LoggerFactory.getLogger(
+            AbstractContextAwareScheduledExecutorService.class);
+    final ES executor;
 
     AbstractContextAwareExecutorService(ES executor) {
-        super(executor);
+        this.executor = requireNonNull(executor, "executor");
     }
+
+    @Nullable
+    abstract RequestContext contextOrNull();
 
     @Override
     public final void shutdown() {
-        withoutContext().shutdown();
+        executor.shutdown();
     }
 
     @Override
     public final List<Runnable> shutdownNow() {
-        return withoutContext().shutdownNow();
+        return executor.shutdownNow();
     }
 
-    @Override
-    public Future<?> submit(Runnable task) {
-        return withoutContext().submit(makeContextAware(task));
-    }
-
-    @Override
-    public <T> Future<T> submit(Runnable task, T result) {
-        return withoutContext().submit(makeContextAware(task), result);
-    }
-
-    @Override
-    public <T> Future<T> submit(Callable<T> task) {
-        return withoutContext().submit(makeContextAware(task));
-    }
-
-    @Override
-    public final boolean isShutdown() {
-        return withoutContext().isShutdown();
-    }
-
-    @Override
-    public final boolean isTerminated() {
-        return withoutContext().isTerminated();
-    }
-
-    @Override
-    public final boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        return withoutContext().awaitTermination(timeout, unit);
-    }
-
-    @Override
-    public final <T> List<Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks) throws InterruptedException {
-        return withoutContext().invokeAll(makeContextAware(tasks));
-    }
-
-    @Override
-    public final <T> List<Future<T>> invokeAll(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
-        return withoutContext().invokeAll(makeContextAware(tasks), timeout, unit);
-    }
-
-    @Override
-    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException, ExecutionException {
-        return withoutContext().invokeAny(makeContextAware(tasks));
-    }
-
-    @Override
-    public final <T> T invokeAny(
-            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
-        return withoutContext().invokeAny(makeContextAware(tasks), timeout, unit);
+    final Runnable makeContextAware(Runnable task) {
+        final RequestContext context = contextOrNull();
+        return context == null ? task : context.makeContextAware(task);
     }
 
     final <T> Callable<T> makeContextAware(Callable<T> task) {
@@ -106,9 +98,67 @@ abstract class AbstractContextAwareExecutorService<ES extends ExecutorService>
 
     private <T> Collection<? extends Callable<T>> makeContextAware(
             Collection<? extends Callable<T>> tasks) {
-        return requireNonNull(tasks, "tasks")
-                .stream()
-                .map(this::makeContextAware)
-                .collect(toImmutableList());
+        return requireNonNull(tasks, "tasks").stream().map(this::makeContextAware)
+                                             .collect(toImmutableList());
+    }
+
+    @Override
+    public Future<?> submit(Runnable task) {
+        return executor.submit(makeContextAware(task));
+    }
+
+    @Override
+    public <T> Future<T> submit(Runnable task, T result) {
+        return executor.submit(makeContextAware(task), result);
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+        return executor.submit(makeContextAware(task));
+    }
+
+    @Override
+    public final boolean isShutdown() {
+        return executor.isShutdown();
+    }
+
+    @Override
+    public final boolean isTerminated() {
+        return executor.isTerminated();
+    }
+
+    @Override
+    public final boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        return executor.awaitTermination(timeout, unit);
+    }
+
+    @Override
+    public final <T> List<Future<T>> invokeAll(
+            Collection<? extends Callable<T>> tasks) throws InterruptedException {
+        return executor.invokeAll(makeContextAware(tasks));
+    }
+
+    @Override
+    public final <T> List<Future<T>> invokeAll(
+            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
+        return executor.invokeAll(makeContextAware(tasks), timeout, unit);
+    }
+
+    @Override
+    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks)
+            throws InterruptedException, ExecutionException {
+        return executor.invokeAny(makeContextAware(tasks));
+    }
+
+    @Override
+    public final <T> T invokeAny(
+            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        return executor.invokeAny(makeContextAware(tasks), timeout, unit);
+    }
+
+    @Override
+    public final void execute(Runnable command) {
+        executor.execute(makeContextAware(command));
     }
 }

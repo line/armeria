@@ -149,7 +149,7 @@ class SubscriptionOptionTest {
         }
 
         private static Arguments defaultStream() {
-            final StreamWriter<HttpData> defaultStream = StreamMessage.streaming();
+            final DefaultStreamMessage<HttpData> defaultStream = new DefaultStreamMessage<>();
             final ByteBuf buf = newPooledBuffer();
             final HttpData data = HttpData.wrap(buf).withEndOfStream();
             defaultStream.write(data);
@@ -166,7 +166,7 @@ class SubscriptionOptionTest {
 
         private static Arguments deferredStream() {
             final DeferredStreamMessage<HttpData> deferredStream = new DeferredStreamMessage<>();
-            final StreamWriter<HttpData> d = StreamMessage.streaming();
+            final DefaultStreamMessage<HttpData> d = new DefaultStreamMessage<>();
             deferredStream.delegate(d);
             final ByteBuf buf = newPooledBuffer();
             final HttpData data = HttpData.wrap(buf).withEndOfStream();

@@ -21,7 +21,6 @@ import static org.reflections.ReflectionUtils.withParametersCount;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +34,23 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public final class ReflectiveDependencyInjector implements DependencyInjector {
 
     private static final Logger logger = LoggerFactory.getLogger(ReflectiveDependencyInjector.class);
+
+    private final Map<Class<?>, Object> instances = new HashMap<>();
+
+    private boolean isShutdown;
+
+    @Override
+    public synchronized <T> T getInstance(Class<T> type) {
+        if (isShutdown) {
+            throw new IllegalStateException("Already shut down");
+        }
+        final Object instance = instances.get(type);
+        if (instance != null) {
+            //noinspection unchecked
+            return (T) instance;
+        }
+        return create(type, instances);
+    }
 
     @Nullable
     public static <T> T create(Class<? extends T> type, @Nullable Map<Class<?>, Object> instanceStorage) {
@@ -57,51 +73,22 @@ public final class ReflectiveDependencyInjector implements DependencyInjector {
         return instance;
     }
 
-    private final ReentrantLock lock = new ReentrantLock();
-
-    private final Map<Class<?>, Object> instances = new HashMap<>();
-
-    private boolean isShutdown;
-
     @Override
-    public <T> T getInstance(Class<T> type) {
-        lock.lock();
-        try {
-            if (isShutdown) {
-                throw new IllegalStateException("Already shut down");
-            }
-            final Object instance = instances.get(type);
-            if (instance != null) {
-                //noinspection unchecked
-                return (T) instance;
-            }
-            return create(type, instances);
-        } finally {
-            lock.unlock();
+    public synchronized void close() {
+        if (isShutdown) {
+            return;
         }
-    }
-
-    @Override
-    public void close() {
-        lock.lock();
-        try {
-            if (isShutdown) {
-                return;
-            }
-            isShutdown = true;
-            for (Object instance : instances.values()) {
-                if (instance instanceof AutoCloseable) {
-                    try {
-                        ((AutoCloseable) instance).close();
-                    } catch (Exception e) {
-                        logger.warn("Unexpected exception while closing {}", instance);
-                    }
+        isShutdown = true;
+        for (Object instance : instances.values()) {
+            if (instance instanceof AutoCloseable) {
+                try {
+                    ((AutoCloseable) instance).close();
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception while closing {}", instance);
                 }
             }
-            instances.clear();
-        } finally {
-            lock.unlock();
         }
+        instances.clear();
     }
 
     @Override

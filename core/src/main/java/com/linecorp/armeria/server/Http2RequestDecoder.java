@@ -38,7 +38,6 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -70,7 +69,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final KeepAliveHandler keepAliveHandler;
     private final Http2GoAwayHandler goAwayHandler;
-    private final IntObjectMap<@Nullable DecodedHttpRequest> requests = new IntObjectHashMap<>();
+    private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, String scheme, KeepAliveHandler keepAliveHandler) {
@@ -126,12 +125,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            final PathAndQuery pathAndQuery = PathAndQuery.parse(nettyHeaders.path().toString());
-
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
-                    ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream,
-                                                            scheme, cfg, pathAndQuery);
+                    ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream, scheme, cfg);
 
             // Accept a CONNECT request only when it has a :protocol header, as defined in:
             // https://datatracker.ietf.org/doc/html/rfc8441#section-4
@@ -162,7 +158,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers, pathAndQuery);
+            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
             if (routingCtx.status().routeMustExist()) {
                 try {
                     // Find the service that matches the path.

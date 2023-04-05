@@ -90,7 +90,7 @@ class StreamMessagePeekTest {
                     .expectErrorMatches(cause -> cause == third)
                     .verify();
 
-        final StreamWriter<Integer> defaultStream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> defaultStream = new DefaultStreamMessage<>();
         defaultStream.write(1);
         defaultStream.write(2);
         defaultStream.close(first);

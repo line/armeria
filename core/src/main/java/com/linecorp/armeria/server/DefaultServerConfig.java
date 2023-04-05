@@ -34,6 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
@@ -45,6 +46,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import io.micrometer.core.instrument.internal.TimedScheduledExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -92,7 +94,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
 
-    private final BlockingTaskExecutor blockingTaskExecutor;
+    private final ScheduledExecutorService blockingTaskExecutor;
 
     private final MeterRegistry meterRegistry;
 
@@ -107,11 +109,10 @@ final class DefaultServerConfig implements ServerConfig {
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
+    private final Supplier<RequestId> requestIdGenerator;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
-    private final Function<String, String> absoluteUriTransformer;
-    private final long unhandledExceptionsReportIntervalMillis;
     private final List<ShutdownSupport> shutdownSupports;
 
     @Nullable
@@ -130,7 +131,7 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            BlockingTaskExecutor blockingTaskExecutor,
+            ScheduledExecutorService blockingTaskExecutor,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
@@ -140,12 +141,11 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
+            Supplier<? extends RequestId> requestIdGenerator,
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
-            Function<? super String, String> absoluteUriTransformer,
-            long unhandledExceptionsReportIntervalMillis,
             List<ShutdownSupport> shutdownSupports) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -253,15 +253,14 @@ final class DefaultServerConfig implements ServerConfig {
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
 
+        @SuppressWarnings("unchecked")
+        final Supplier<RequestId> castRequestIdGenerator =
+                (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        this.requestIdGenerator = castRequestIdGenerator;
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
-        @SuppressWarnings("unchecked")
-        final Function<String, String> castAbsoluteUriTransformer =
-                (Function<String, String>) requireNonNull(absoluteUriTransformer, "absoluteUriTransformer");
-        this.absoluteUriTransformer = castAbsoluteUriTransformer;
-        this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
     }
 
@@ -316,13 +315,23 @@ final class DefaultServerConfig implements ServerConfig {
         return mappingBuilder.build();
     }
 
-    private static BlockingTaskExecutor monitorBlockingTaskExecutor(BlockingTaskExecutor executor,
-                                                                    MeterRegistry meterRegistry) {
+    private static ScheduledExecutorService monitorBlockingTaskExecutor(ScheduledExecutorService executor,
+                                                                        MeterRegistry meterRegistry) {
+        final ScheduledExecutorService unwrappedExecutor;
+        if (executor instanceof BlockingTaskExecutor) {
+            unwrappedExecutor = ((BlockingTaskExecutor) executor).unwrap();
+        } else {
+            unwrappedExecutor = executor;
+        }
+
         new ExecutorServiceMetrics(
-                executor.unwrap(),
+                unwrappedExecutor,
                 "blockingTaskExecutor", "armeria", ImmutableList.of())
                 .bindTo(meterRegistry);
-        return executor;
+        executor = new TimedScheduledExecutorService(meterRegistry, executor,
+                                                     "blockingTaskExecutor", "armeria.",
+                                                     ImmutableList.of());
+        return UnstoppableScheduledExecutorService.from(executor);
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -571,7 +580,7 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public BlockingTaskExecutor blockingTaskExecutor() {
+    public ScheduledExecutorService blockingTaskExecutor() {
         return blockingTaskExecutor;
     }
 
@@ -616,8 +625,8 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public Function<RoutingContext, RequestId> requestIdGenerator() {
-        return defaultVirtualHost.requestIdGenerator();
+    public Supplier<RequestId> requestIdGenerator() {
+        return requestIdGenerator;
     }
 
     @Override
@@ -643,16 +652,6 @@ final class DefaultServerConfig implements ServerConfig {
         return dependencyInjector;
     }
 
-    @Override
-    public Function<String, String> absoluteUriTransformer() {
-        return absoluteUriTransformer;
-    }
-
-    @Override
-    public long unhandledExceptionsReportIntervalMillis() {
-        return unhandledExceptionsReportIntervalMillis;
-    }
-
     List<ShutdownSupport> shutdownSupports() {
         return shutdownSupports;
     }
@@ -673,8 +672,7 @@ final class DefaultServerConfig implements ServerConfig {
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
-                    isServerHeaderEnabled(), isDateHeaderEnabled(),
-                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis());
+                    isServerHeaderEnabled(), isDateHeaderEnabled(), dependencyInjector());
         }
 
         return strVal;
@@ -689,7 +687,7 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            @Nullable BlockingTaskExecutor blockingTaskExecutor,
+            @Nullable ScheduledExecutorService blockingTaskExecutor,
             @Nullable MeterRegistry meterRegistry,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
@@ -697,9 +695,7 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean serverHeaderEnabled, boolean dateHeaderEnabled,
-            @Nullable DependencyInjector dependencyInjector,
-            Function<? super String, String> absoluteUriTransformer,
-            long unhandledExceptionsReportIntervalMillis) {
+            @Nullable DependencyInjector dependencyInjector) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -796,10 +792,6 @@ final class DefaultServerConfig implements ServerConfig {
             buf.append(", dependencyInjector: ");
             buf.append(dependencyInjector);
         }
-        buf.append(", absoluteUriTransformer: ");
-        buf.append(absoluteUriTransformer);
-        buf.append(", unhandledExceptionsReportIntervalMillis: ");
-        buf.append(unhandledExceptionsReportIntervalMillis);
         buf.append(')');
 
         return buf.toString();

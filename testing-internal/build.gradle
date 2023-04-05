@@ -4,7 +4,7 @@ dependencies {
 
     api libs.json.unit
     api libs.json.unit.fluent
-    api libs.apache.httpclient5
+    api libs.apache.httpclient
     api libs.assertj
     api libs.junit5.jupiter.params
     api libs.mockito.junit.jupiter

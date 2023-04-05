@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.MustBeClosed;
 
-import com.linecorp.armeria.common.ContextHolder;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -237,13 +236,6 @@ public final class RequestContextUtil {
         }
 
         return closeable;
-    }
-
-    public static void ensureSameCtx(RequestContext ctx, ContextHolder contextHolder, Class<?> type) {
-        if (ctx != contextHolder.context()) {
-            throw new IllegalArgumentException(
-                    "cannot create a " + type.getSimpleName() + " using another " + contextHolder);
-        }
     }
 
     private RequestContextUtil() {}

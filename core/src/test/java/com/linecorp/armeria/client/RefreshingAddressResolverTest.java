@@ -33,7 +33,6 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -397,7 +396,7 @@ class RefreshingAddressResolverTest {
     }
 
     @Test
-    void shouldRefreshWhenDnsCacheIsExpired() throws ExecutionException, InterruptedException {
+    void shouldRefreshWhenDnsCacheIsExpired() {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))
@@ -419,12 +418,12 @@ class RefreshingAddressResolverTest {
             final Future<InetSocketAddress> foo0 = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com", 36462));
             await().untilAsserted(() -> assertThat(foo0.isSuccess()).isTrue());
-            final InetSocketAddress fooAddress0 = foo0.get();
+            final InetSocketAddress fooAddress0 = foo0.getNow();
             final CacheEntry fooCache0 = cache.getIfPresent("foo.com");
 
             final Future<InetSocketAddress> foo1 = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com", 36462));
-            final InetSocketAddress fooAddress1 = foo1.get();
+            final InetSocketAddress fooAddress1 = foo1.getNow();
             assertThat(fooAddress1).isEqualTo(fooAddress0);
             final CacheEntry fooCache1 = cache.getIfPresent("foo.com");
             assertThat(fooCache1.address()).isSameAs(fooCache0.address());
@@ -437,7 +436,7 @@ class RefreshingAddressResolverTest {
             final Future<InetSocketAddress> foo2 = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com", 36462));
             await().untilAsserted(() -> assertThat(foo2.isSuccess()).isTrue());
-            final InetSocketAddress fooAddress2 = foo2.get();
+            final InetSocketAddress fooAddress2 = foo2.getNow();
             final CacheEntry fooCache2 = cache.getIfPresent("foo.com");
             // The address has been refreshed.
             assertThat(fooCache2.address()).isNotSameAs(fooCache1.address());
@@ -447,7 +446,7 @@ class RefreshingAddressResolverTest {
     }
 
     @Test
-    void shouldRefreshWhenSearchDnsCacheIsExpired() throws InterruptedException, ExecutionException {
+    void shouldRefreshWhenSearchDnsCacheIsExpired() throws InterruptedException {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1")),
@@ -487,12 +486,12 @@ class RefreshingAddressResolverTest {
                     InetSocketAddress.createUnresolved("foo.com", 36462));
             // Should resolve search domain IP
             assertIpAddress(foo0).isEqualTo("2.2.2.2");
-            final InetSocketAddress fooAddress0 = foo0.get();
+            final InetSocketAddress fooAddress0 = foo0.getNow();
 
             final CacheEntry fooCache0 = cache.getIfPresent("foo.com");
             final Future<InetSocketAddress> foo1 = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com", 36462));
-            final InetSocketAddress fooAddress1 = foo1.get();
+            final InetSocketAddress fooAddress1 = foo1.getNow();
             assertThat(fooAddress1).isEqualTo(fooAddress0);
             final CacheEntry fooCache1 = cache.getIfPresent("foo.com");
             assertThat(fooCache1.address()).isSameAs(fooCache0.address());

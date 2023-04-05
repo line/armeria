@@ -31,7 +31,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.BlockingWebClient;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -51,7 +50,6 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 class CustomServerErrorHandlerTest {
 
     private static final int MAX_REQUEST_LENGTH = 10;
-    private static final String TEST_HOST = "foo.com";
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -74,12 +72,6 @@ class CustomServerErrorHandlerTest {
             });
             sb.service("/post", (ctx, req) -> HttpResponse.from(
                     req.aggregate().thenApply(aggregated -> HttpResponse.of(HttpStatus.OK))));
-
-            sb.virtualHost(TEST_HOST)
-              .service("/bar", (ctx, req) -> {
-                  throw new RuntimeException();
-              })
-              .errorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.BAD_REQUEST));
 
             sb.errorHandler(new CustomServerErrorHandler());
         }
@@ -142,16 +134,6 @@ class CustomServerErrorHandlerTest {
         assertThatJson(res1.content().toStringUtf8()).isEqualTo(
                 "{ \"code\": 413, \"message\": \"<null>\", \"user-id\": \"24\" }");
         assertThat(res1.trailers()).contains(Maps.immutableEntry(HttpHeaderNames.of("charlie"), "daniel"));
-    }
-
-    @ParameterizedTest
-    @CsvSource({ "H1C", "H2C" })
-    void defaultVirtualHost(SessionProtocol protocol) {
-        final Endpoint endpoint = Endpoint.of(TEST_HOST, server.httpPort()).withIpAddr("127.0.0.1");
-        final WebClient webClientTest = WebClient.of(protocol, endpoint);
-        final AggregatedHttpResponse response = webClientTest.get("/foo").aggregate().join();
-
-        assertThat(response.status()).isSameAs(HttpStatus.BAD_REQUEST);
     }
 
     private static class CustomServerErrorHandler implements ServerErrorHandler {

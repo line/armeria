@@ -20,11 +20,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
-import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
@@ -56,6 +54,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -82,7 +81,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 
@@ -128,10 +126,6 @@ public final class DefaultClientRequestContext
     private final HttpHeaders defaultRequestHeaders;
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
     private volatile HttpHeaders additionalRequestHeaders;
-
-    private static final HttpHeaders defaultInternalRequestHeaders =
-            HttpHeaders.of(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT.toString());
-    private HttpHeaders internalRequestHeaders = defaultInternalRequestHeaders;
 
     @Nullable
     private String strVal;
@@ -424,7 +418,13 @@ public final class DefaultClientRequestContext
 
     // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
     private void autoFillSchemeAndAuthority() {
-        final String authority = authority();
+        final HttpRequest req = request();
+        if (req == null) {
+            return;
+        }
+
+        final RequestHeaders headers = req.headers();
+        final String authority = getAuthority(headers);
         if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
             // The connection will be established with the IP address but `host` set to the `Endpoint`
             // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
@@ -435,12 +435,36 @@ public final class DefaultClientRequestContext
             }
         }
 
-        final HttpHeadersBuilder headersBuilder = internalRequestHeaders.toBuilder();
-        headersBuilder.set(HttpHeaderNames.SCHEME, getScheme(sessionProtocol()));
-        if (endpoint != null) {
-            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpoint.authority());
+        if (authority == null || headers.scheme() == null) {
+            final RequestHeadersBuilder headersBuilder = headers.toBuilder();
+            if (headers.scheme() == null) {
+                headersBuilder.scheme(sessionProtocol());
+            }
+            if (authority == null) {
+                final String authority0 = endpoint != null ? endpoint.authority() : "UNKNOWN";
+                headersBuilder.authority(authority0);
+            }
+            unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
-        internalRequestHeaders = headersBuilder.build();
+    }
+
+    @Nullable
+    private String getAuthority(RequestHeaders headers) {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        if (authority == null) {
+            authority = additionalRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        if (authority == null) {
+            authority = headers.authority();
+        }
+        if (authority == null) {
+            authority = defaultRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        }
+        if (authority == null) {
+            authority = defaultRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        return authority;
     }
 
     private static String removeUserInfo(String authority) {
@@ -570,44 +594,13 @@ public final class DefaultClientRequestContext
 
     @Override
     protected void validateHeaders(RequestHeaders headers) {
-        // no need to validate since internal headers will contain
-        // the default host and session protocol headers set by endpoints.
-    }
-
-    @Override
-    protected void unsafeUpdateRequest(HttpRequest req) {
-        final PathAndQuery pathAndQuery;
-        final SessionProtocol sessionProtocol;
-        final String authority;
-        if (isAbsoluteUri(req.path())) {
-            final URI uri = URI.create(req.path());
-            checkArgument(uri.getScheme() != null, "missing scheme");
-            checkArgument(uri.getAuthority() != null, "missing authority");
-            checkArgument(!uri.getAuthority().isEmpty(), "empty authority");
-            final String rawQuery = uri.getRawQuery();
-            final String pathWithQuery = pathWithQuery(uri, rawQuery);
-            pathAndQuery = PathAndQuery.parse(pathWithQuery);
-            sessionProtocol = Scheme.parse(uri.getScheme()).sessionProtocol();
-            authority = uri.getAuthority();
-        } else {
-            pathAndQuery = PathAndQuery.parse(req.path());
-            sessionProtocol = null;
-            authority = null;
-        }
-        if (pathAndQuery == null) {
-            throw new IllegalArgumentException("invalid path: " + req.path());
+        // Do not validate if the context is not fully initialized yet,
+        // because init() will trigger this method again via updateEndpoint().
+        if (!initialized) {
+            return;
         }
 
-        // all validation is complete at this point
-        super.unsafeUpdateRequest(req);
-        path(pathAndQuery.path());
-        query(pathAndQuery.query());
-        if (sessionProtocol != null) {
-            sessionProtocol(sessionProtocol);
-        }
-        if (authority != null) {
-            updateEndpoint(Endpoint.parse(authority));
-        }
+        super.validateHeaders(headers);
     }
 
     @Override
@@ -664,42 +657,6 @@ public final class DefaultClientRequestContext
     @Nullable
     public String fragment() {
         return fragment;
-    }
-
-    @Override
-    public String authority() {
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-        if (authority == null) {
-            authority = additionalRequestHeaders.get(HttpHeaderNames.HOST);
-        }
-        final HttpRequest request = request();
-        if (authority == null && request != null) {
-            authority = request.authority();
-        }
-        if (authority == null) {
-            authority = defaultRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-        }
-        if (authority == null) {
-            authority = defaultRequestHeaders.get(HttpHeaderNames.HOST);
-        }
-        if (authority == null) {
-            authority = internalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-        }
-        if (authority == null) {
-            authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
-        }
-        return authority;
-    }
-
-    @Override
-    public URI uri() {
-        final String scheme = getScheme(sessionProtocol());
-        try {
-            return new URI(scheme, authority(), path(), query(), fragment());
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("not a valid URI", e);
-        }
     }
 
     @Override
@@ -761,11 +718,6 @@ public final class DefaultClientRequestContext
     @Override
     public HttpHeaders additionalRequestHeaders() {
         return additionalRequestHeaders;
-    }
-
-    @Override
-    public HttpHeaders internalRequestHeaders() {
-        return internalRequestHeaders;
     }
 
     @Override
@@ -896,36 +848,5 @@ public final class DefaultClientRequestContext
 
             return buf.toString();
         }
-    }
-
-    @Override
-    public CompletableFuture<Void> initiateConnectionShutdown() {
-        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-
-        setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        log().whenRequestComplete().thenAccept(log -> {
-            final Channel ch = log.channel();
-            if (ch == null) {
-                final Throwable ex = log.requestCause();
-                if (ex == null) {
-                    completableFuture.completeExceptionally(new IllegalStateException(
-                            "A request has failed before a connection is established."));
-                } else {
-                    completableFuture.completeExceptionally(ex);
-                }
-            } else {
-                ch.closeFuture().addListener(f -> {
-                    if (f.cause() == null) {
-                        completableFuture.complete(null);
-                    } else {
-                        completableFuture.completeExceptionally(f.cause());
-                    }
-                });
-                // To deactivate the channel when initiateShutdown is called after the RequestHeaders is sent.
-                // The next request will trigger shutdown.
-                HttpSession.get(ch).deactivate();
-            }
-        });
-        return completableFuture;
     }
 }

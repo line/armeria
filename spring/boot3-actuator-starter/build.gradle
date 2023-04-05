@@ -1,4 +1,0 @@
-dependencies {
-    implementation project(':spring:boot3-actuator-autoconfigure')
-    api libs.spring.boot3.starter.actuator
-}

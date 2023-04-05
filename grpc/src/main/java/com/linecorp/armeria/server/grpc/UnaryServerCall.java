@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
-import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -94,7 +93,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     }
 
     @Override
-    public void startDeframing() {
+    void startDeframing() {
         req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
            .handle((aggregatedHttpRequest, cause) -> {
                if (cause != null) {
@@ -139,7 +138,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     }
 
     @Override
-    public void doClose(Status status, Metadata metadata, boolean completed) {
+    void doClose(Status status, Metadata metadata, boolean completed) {
         final ResponseHeaders responseHeaders = responseHeaders();
         final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         final HttpResponse response;
@@ -181,7 +180,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Nullable
     @Override
-    protected O firstResponse() {
+    O firstResponse() {
         return responseMessage;
     }
 }

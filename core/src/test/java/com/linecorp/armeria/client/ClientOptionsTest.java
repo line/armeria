@@ -23,7 +23,6 @@ import static com.linecorp.armeria.client.ClientOptions.REQUEST_ID_GENERATOR;
 import static com.linecorp.armeria.client.ClientOptions.RESPONSE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOptions.WRITE_TIMEOUT_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -85,23 +84,6 @@ class ClientOptionsTest {
         assertThatThrownBy(() -> {
             ClientOptions.of(MAX_RESPONSE_LENGTH.newValue(null));
         }).isInstanceOf(NullPointerException.class);
-    }
-
-    @Test
-    void allowOnlyConnectionHeader() {
-        assertThatCode(() -> {
-            ClientOptions.of(HEADERS.newValue(
-                    HttpHeaders.of(HttpHeaderNames.CONNECTION, "close")));
-            ClientOptions.of(HEADERS.newValue(
-                    HttpHeaders.of(HttpHeaderNames.CONNECTION, "Close")));
-            ClientOptions.of(HEADERS.newValue(
-                    HttpHeaders.of(HttpHeaderNames.CONNECTION, "CLOSE")));
-        }).doesNotThrowAnyException();
-
-        assertThatThrownBy(() -> {
-            ClientOptions.of(HEADERS.newValue(
-                    HttpHeaders.of(HttpHeaderNames.CONNECTION, "others")));
-        }).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest

@@ -45,13 +45,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -246,13 +245,13 @@ class ServerTest {
         assertThat(numBossThreads).isEqualTo(oldNumBossThreads);
     }
 
-    private static void testInvocation0(String path) throws IOException, ParseException {
+    private static void testInvocation0(String path) throws IOException {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpPost req = new HttpPost(server.httpUri().resolve(path));
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, world!");
             }
         }
@@ -265,7 +264,8 @@ class ServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getCode())).isNotEqualTo(HttpStatusClass.SUCCESS);
+                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()))
+                        .isNotEqualTo(HttpStatusClass.SUCCESS);
             }
         }
     }
@@ -277,7 +277,8 @@ class ServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getCode())).isEqualTo(HttpStatusClass.SUCCESS);
+                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()))
+                        .isEqualTo(HttpStatusClass.SUCCESS);
             }
         }
     }

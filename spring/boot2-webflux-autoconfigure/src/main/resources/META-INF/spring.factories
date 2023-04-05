@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactoryAutoConfiguration,\
+  com.linecorp.armeria.spring.web.reactive.ArmeriaClientAutoConfiguration

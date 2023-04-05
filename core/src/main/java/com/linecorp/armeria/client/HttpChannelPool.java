@@ -54,8 +54,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
-import com.linecorp.armeria.internal.client.HttpSession;
-import com.linecorp.armeria.internal.client.PooledChannel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -295,7 +293,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     private static boolean isHealthy(PooledChannel pooledChannel) {
         final Channel ch = pooledChannel.get();
-        return ch.isActive() && HttpSession.get(ch).isAcquirable();
+        return ch.isActive() && HttpSession.get(ch).canSendRequest();
     }
 
     @Nullable

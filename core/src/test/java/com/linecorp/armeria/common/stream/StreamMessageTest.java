@@ -213,7 +213,7 @@ class StreamMessageTest {
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
     void releaseWithZeroDemand(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
-            ((StreamWriter<HttpData>) stream).write(data);
+            ((StreamWriter<Object>) stream).write(data);
         }
         stream.subscribe(new Subscriber<Object>() {
             @Override
@@ -247,8 +247,8 @@ class StreamMessageTest {
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
     void releaseWithZeroDemandAndClosedStream(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
-            ((StreamWriter<HttpData>) stream).write(data);
-            ((StreamWriter<HttpData>) stream).close();
+            ((StreamWriter<Object>) stream).write(data);
+            ((StreamWriter<Object>) stream).close();
         }
 
         stream.subscribe(new Subscriber<Object>() {
@@ -387,7 +387,7 @@ class StreamMessageTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
-                    arguments(StreamMessage.streaming(), TEN_INTEGERS),
+                    arguments(new DefaultStreamMessage<>(), TEN_INTEGERS),
                     arguments(StreamMessage.of(), ImmutableList.of()),
                     arguments(StreamMessage.of(0), ImmutableList.of(0)),
                     arguments(StreamMessage.of(0, 1), ImmutableList.of(0, 1)),
@@ -400,7 +400,7 @@ class StreamMessageTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             final ByteBuf defaultBuf = newPooledBuffer();
             final HttpData defaultData = HttpData.wrap(defaultBuf).withEndOfStream();
-            final StreamWriter<HttpData> defaultStream = StreamMessage.streaming();
+            final DefaultStreamMessage<HttpData> defaultStream = new DefaultStreamMessage<>();
 
             final ByteBuf fixedBuf = newPooledBuffer();
             final HttpData fixedData = HttpData.wrap(fixedBuf).withEndOfStream();

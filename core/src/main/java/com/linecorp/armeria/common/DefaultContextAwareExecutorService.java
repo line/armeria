@@ -21,10 +21,8 @@ import javax.annotation.Nonnull;
 
 import com.google.common.base.MoreObjects;
 
-final class DefaultContextAwareExecutorService
-        extends AbstractContextAwareExecutorService<ExecutorService>
+class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorService<ExecutorService>
         implements ContextAwareExecutorService {
-
     private final RequestContext context;
 
     DefaultContextAwareExecutorService(RequestContext context, ExecutorService executor) {
@@ -33,7 +31,7 @@ final class DefaultContextAwareExecutorService
     }
 
     @Override
-    public RequestContext context() {
+    public final RequestContext context() {
         return context;
     }
 
@@ -47,7 +45,7 @@ final class DefaultContextAwareExecutorService
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("context", context)
-                          .add("executor", withoutContext())
+                          .add("executor", executor)
                           .toString();
     }
 }

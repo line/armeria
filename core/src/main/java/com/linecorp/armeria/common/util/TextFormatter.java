@@ -32,25 +32,16 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class TextFormatter {
 
-    /**
-     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
-     * given as {@code elapsed}.
-     */
-    public static StringBuilder elapsed(long elapsed, TimeUnit timeUnit) {
-        final StringBuilder buf = new StringBuilder(16);
-        appendElapsed(buf, timeUnit.toNanos(elapsed));
-        return buf;
-    }
+    private TextFormatter() {}
 
     /**
      * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
      * given as {@code elapsed}.
-     *
-     * @deprecated Use {@link #elapsed(long, TimeUnit)}.
      */
-    @Deprecated
     public static StringBuilder elapsed(long elapsedNanos) {
-        return elapsed(elapsedNanos, TimeUnit.NANOSECONDS);
+        final StringBuilder buf = new StringBuilder(16);
+        appendElapsed(buf, elapsedNanos);
+        return buf;
     }
 
     /**
@@ -58,7 +49,7 @@ public final class TextFormatter {
      * between the specified {@code startTimeNanos} and {@code endTimeNanos}.
      */
     public static StringBuilder elapsed(long startTimeNanos, long endTimeNanos) {
-        return elapsed(endTimeNanos - startTimeNanos, TimeUnit.NANOSECONDS);
+        return elapsed(endTimeNanos - startTimeNanos);
     }
 
     /**
@@ -274,6 +265,4 @@ public final class TextFormatter {
         // The host name and IP address equals; append only the first part.
         buf.append(str, 0, slashPos);
     }
-
-    private TextFormatter() {}
 }

@@ -52,7 +52,6 @@ class ThriftClientAdditionalAuthorityTest {
             assertThat(client.hello("")).isEqualTo(expectedAuthority);
             assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
                     .isEqualTo(expectedAuthority);
-            assertThat(captor.get().authority()).isEqualTo(expectedAuthority);
         }
     }
 
@@ -68,7 +67,6 @@ class ThriftClientAdditionalAuthorityTest {
             assertThat(client.hello("")).isEqualTo("foo.com");
             assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
                     .isEqualTo("foo.com");
-            assertThat(captor.get().authority()).isEqualTo("foo.com");
         }
     }
 
@@ -85,7 +83,6 @@ class ThriftClientAdditionalAuthorityTest {
             assertThat(client.hello("")).isEqualTo("bar.com");
             assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
                     .isEqualTo("bar.com");
-            assertThat(captor.get().authority()).isEqualTo("bar.com");
         }
     }
 }

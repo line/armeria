@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -130,6 +129,7 @@ public final class ClientOptions
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
+            HttpHeaderNames.CONNECTION,
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
             HttpHeaderNames.PATH,
@@ -155,26 +155,7 @@ public final class ClientOptions
                         throw new IllegalArgumentException("prohibited header name: " + name);
                     }
                 }
-
-                boolean hasUnnormalizedCloseValue = false;
-                for (String connectionOption : newHeaders.getAll(HttpHeaderNames.CONNECTION)) {
-                    // - Disallow connection headers apart from "Connection: close".
-                    // - Connection options are case-insensitive.
-                    if ("close".equalsIgnoreCase(connectionOption)) {
-                        if (!"close".equals(connectionOption)) {
-                            hasUnnormalizedCloseValue = true;
-                        }
-                    } else {
-                        throw new IllegalArgumentException(
-                                "prohibited 'Connection' header value: " + connectionOption);
-                    }
-                }
-
-                if (hasUnnormalizedCloseValue) {
-                    return newHeaders.toBuilder().set(HttpHeaderNames.CONNECTION, CLOSE_STRING).build();
-                } else {
-                    return newHeaders;
-                }
+                return newHeaders;
             }, (oldValue, newValue) -> {
                 final HttpHeaders newHeaders = newValue.value();
                 if (newHeaders.isEmpty()) {

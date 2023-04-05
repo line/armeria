@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
@@ -165,15 +164,13 @@ class HttpResponseWrapperTest {
     }
 
     private static class TestHttpResponseDecoder extends HttpResponseDecoder {
-        private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler();
-
         TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
             super(channel, inboundTrafficController);
         }
 
         @Override
         KeepAliveHandler keepAliveHandler() {
-            return keepAliveHandler;
+            return NoopKeepAliveHandler.INSTANCE;
         }
     }
 }

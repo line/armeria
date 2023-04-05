@@ -71,16 +71,15 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
      * Returns a newly created {@link DnsAddressEndpointGroup}.
      */
     public DnsAddressEndpointGroup build() {
-        final EventLoop eventLoop = getOrAcquireEventLoop();
         final DefaultDnsResolver resolver = buildResolver(builder -> {
             if (resolvedAddressTypes != null) {
                 builder.resolvedAddressTypes(resolvedAddressTypes);
             }
-        }, eventLoop);
+        });
         return new DnsAddressEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
                                            selectionTimeoutMillis(), resolver,
-                                           eventLoop, backoff(), minTtl(), maxTtl(),
-                                           resolvedAddressTypes, hostname(), port, dnsQueryListeners());
+                                           eventLoop(), backoff(), minTtl(), maxTtl(),
+                                           resolvedAddressTypes, hostname(), port);
     }
 
     // Override the return type of the chaining methods in the DnsEndpointGroupBuilder.
@@ -253,16 +252,5 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     @Override
     public DnsAddressEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         return (DnsAddressEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
-    }
-
-    @Override
-    public DnsAddressEndpointGroupBuilder addDnsQueryListeners(
-            Iterable<? extends DnsQueryListener> dnsQueryListeners) {
-        return (DnsAddressEndpointGroupBuilder) super.addDnsQueryListeners(dnsQueryListeners);
-    }
-
-    @Override
-    public DnsAddressEndpointGroupBuilder addDnsQueryListeners(DnsQueryListener... dnsQueryListeners) {
-        return (DnsAddressEndpointGroupBuilder) super.addDnsQueryListeners(dnsQueryListeners);
     }
 }

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -64,16 +63,6 @@ public class ClientRequestContextWrapper
     @Override
     public String fragment() {
         return unwrap().fragment();
-    }
-
-    @Override
-    public String authority() {
-        return unwrap().authority();
-    }
-
-    @Override
-    public URI uri() {
-        return unwrap().uri();
     }
 
     @Override

@@ -60,6 +60,8 @@ final class PathStreamMessage implements ByteStreamMessage {
     private static final AtomicIntegerFieldUpdater<PathStreamMessage> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(PathStreamMessage.class, "subscribed");
 
+    static final int DEFAULT_FILE_BUFFER_SIZE = 8192;
+
     private static final Set<StandardOpenOption> READ_OPERATION = ImmutableSet.of(StandardOpenOption.READ);
 
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
@@ -242,7 +244,7 @@ final class PathStreamMessage implements ByteStreamMessage {
             this.downstream = downstream;
             this.executor = executor;
             this.bufferSize = bufferSize;
-            end = LongMath.saturatedAdd(offset, length);
+            end = offset + length;
 
             this.notifyCancellation = notifyCancellation;
             this.withPooledObjects = withPooledObjects;

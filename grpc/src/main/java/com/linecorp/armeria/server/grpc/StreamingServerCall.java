@@ -42,7 +42,6 @@ import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
-import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -123,7 +122,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void startDeframing() {
+    void startDeframing() {
         deframedRequest.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
@@ -184,7 +183,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void doClose(Status status, Metadata metadata, boolean completed) {
+    void doClose(Status status, Metadata metadata, boolean completed) {
         final boolean trailersOnly;
         if (firstResponse != null) {
             // ResponseHeaders was written successfully.
@@ -225,7 +224,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    protected @Nullable O firstResponse() {
+    @Nullable O firstResponse() {
         return firstResponse;
     }
 

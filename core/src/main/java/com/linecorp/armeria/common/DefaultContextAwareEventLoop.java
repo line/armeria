@@ -19,8 +19,6 @@ import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nonnull;
-
 import com.google.common.base.MoreObjects;
 
 import io.netty.channel.Channel;
@@ -35,24 +33,18 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 
 final class DefaultContextAwareEventLoop
-        extends AbstractContextAwareExecutorService<EventLoop> implements ContextAwareEventLoop {
+        extends DefaultContextAwareExecutorService implements ContextAwareEventLoop {
 
-    private final RequestContext context;
+    private final EventLoop eventLoop;
 
     DefaultContextAwareEventLoop(RequestContext context, EventLoop eventLoop) {
-        super(eventLoop);
-        this.context = context;
+        super(context, eventLoop);
+        this.eventLoop = eventLoop;
     }
 
     @Override
-    public RequestContext context() {
-        return context;
-    }
-
-    @Override
-    @Nonnull
-    public RequestContext contextOrNull() {
-        return context;
+    public EventLoop withoutContext() {
+        return eventLoop;
     }
 
     @Override
@@ -62,63 +54,63 @@ final class DefaultContextAwareEventLoop
 
     @Override
     public EventLoopGroup parent() {
-        return withoutContext().parent();
+        return eventLoop.parent();
     }
 
     @Override
     public boolean inEventLoop() {
-        return withoutContext().inEventLoop();
+        return eventLoop.inEventLoop();
     }
 
     @Override
     public boolean inEventLoop(Thread thread) {
-        return withoutContext().inEventLoop(thread);
+        return eventLoop.inEventLoop(thread);
     }
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new ContextAwarePromise<>(context, withoutContext().newPromise());
+        return new ContextAwarePromise<>(context(), eventLoop.newPromise());
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new ContextAwareProgressivePromise<>(context, withoutContext().newProgressivePromise());
+        return new ContextAwareProgressivePromise<>(context(), eventLoop.newProgressivePromise());
     }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return new ContextAwareFuture<>(context, withoutContext().newSucceededFuture(result));
+        return new ContextAwareFuture<>(context(), eventLoop.newSucceededFuture(result));
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new ContextAwareFuture<>(context, withoutContext().newFailedFuture(cause));
+        return new ContextAwareFuture<>(context(), eventLoop.newFailedFuture(cause));
     }
 
     @Override
     public boolean isShuttingDown() {
-        return withoutContext().isShuttingDown();
+        return eventLoop.isShuttingDown();
     }
 
     @Override
     public Future<?> shutdownGracefully() {
-        return withoutContext().shutdownGracefully();
+        return eventLoop.shutdownGracefully();
     }
 
     @Override
     public Future<?> shutdownGracefully(long quietPeriod, long timeout,
                                         TimeUnit unit) {
-        return withoutContext().shutdownGracefully(quietPeriod, timeout, unit);
+        return eventLoop.shutdownGracefully(quietPeriod, timeout, unit);
     }
 
     @Override
     public Future<?> terminationFuture() {
-        return withoutContext().terminationFuture();
+        return eventLoop.terminationFuture();
     }
 
     @Override
     public Iterator<EventExecutor> iterator() {
-        return withoutContext().iterator();
+        return eventLoop.iterator();
     }
 
     @Override
@@ -138,49 +130,50 @@ final class DefaultContextAwareEventLoop
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return withoutContext().schedule(context.makeContextAware(command), delay, unit);
+        return eventLoop.schedule(context().makeContextAware(command), delay, unit);
     }
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return withoutContext().schedule(context.makeContextAware(callable), delay, unit);
+        return eventLoop.schedule(context().makeContextAware(callable), delay, unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(
             Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return withoutContext().scheduleAtFixedRate(context.makeContextAware(command), initialDelay, period,
-                                                    unit);
+        return eventLoop.scheduleAtFixedRate(context().makeContextAware(command), initialDelay, period,
+                                             unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(
             Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return withoutContext().scheduleWithFixedDelay(context.makeContextAware(command), initialDelay, delay,
-                                                       unit);
+        return eventLoop.scheduleWithFixedDelay(context().makeContextAware(command), initialDelay, delay,
+                                                unit);
     }
 
     @Override
     public ChannelFuture register(Channel channel) {
-        return withoutContext().register(channel);
+        return eventLoop.register(channel);
     }
 
     @Override
     public ChannelFuture register(ChannelPromise channelPromise) {
-        return withoutContext().register(channelPromise);
+        return eventLoop.register(channelPromise);
     }
 
     @Override
     public ChannelFuture register(Channel channel,
                                   ChannelPromise channelPromise) {
-        return withoutContext().register(channel, channelPromise);
+        return eventLoop.register(channel, channelPromise);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("context", context)
-                          .add("eventLoop", withoutContext())
+                          .add("context", context())
+                          .add("eventLoop", eventLoop)
                           .toString();
     }
 }
+

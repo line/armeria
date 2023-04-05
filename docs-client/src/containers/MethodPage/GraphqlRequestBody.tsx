@@ -14,15 +14,10 @@
  * under the License.
  */
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
+import loadable from '@loadable/component';
 
 import {
   buildClientSchema,
@@ -30,16 +25,17 @@ import {
   getIntrospectionQuery,
 } from 'graphql';
 import TextField from '@material-ui/core/TextField';
-import Editor, { useMonaco, loader } from '@monaco-editor/react';
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import 'monaco-graphql';
 import jsonPrettify from '../../lib/json-prettify';
 import { docServiceDebug } from '../../lib/header-provider';
 
-// Required for graphQL plugin to load properly.
-loader.config({ monaco });
-
+const graphqlPlaceHolder = `{
+  field(arg: "value") {
+    subField
+  }
+}`;
 const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
+
+const QueryEditor = loadable(() => import('./QueryEditor'));
 
 interface Props {
   requestBodyOpen: boolean;
@@ -80,19 +76,6 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
   const [variables, setVariables] = useState({});
   const [variablesText, setVariablesText] = useState('');
   const [schema, setSchema] = useState<GraphQLSchema | undefined>();
-
-  const monacoEditor = useMonaco();
-
-  useMemo(() => {
-    // @ts-ignore
-    monacoEditor?.languages?.graphql?.api.setSchemaConfig([
-      {
-        schema,
-        fileMatch: ['*'],
-        uri: '*',
-      },
-    ]);
-  }, [monacoEditor, schema]);
 
   useEffect(() => {
     (async () => {
@@ -178,16 +161,12 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
             # Query
           </Button>
           {queryOpen && (
-            <Editor
-              height="30vh"
-              language="graphql"
-              theme="vs-light"
+            <QueryEditor
+              height={200}
               value={query}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-              }}
-              onChange={(val) => val && onQueryFromChange(val)}
+              placeholder={graphqlPlaceHolder}
+              onChange={onQueryFromChange}
+              schema={schema}
             />
           )}
           <Typography variant="body2" paragraph />
@@ -198,7 +177,7 @@ const GraphqlRequestBody: React.FunctionComponent<Props> = ({
             <TextField
               multiline
               fullWidth
-              minRows={5}
+              rows={5}
               value={variablesText}
               placeholder={jsonPlaceHolder}
               onChange={(e) => {

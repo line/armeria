@@ -172,11 +172,4 @@ public final class ServiceRequestContextCaptor {
     public ServiceRequestContext poll(long timeout, TimeUnit unit) throws InterruptedException {
         return serviceContexts.poll(timeout, unit);
     }
-
-    /**
-     * Returns whether there is any captured {@link ServiceRequestContext}.
-     */
-    public boolean isEmpty() {
-        return serviceContexts.isEmpty();
-    }
 }

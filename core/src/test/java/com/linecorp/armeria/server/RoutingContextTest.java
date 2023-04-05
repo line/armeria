@@ -90,30 +90,6 @@ class RoutingContextTest {
         assertThat(ctx1).isEqualTo(ctx2);
     }
 
-    @Test
-    void hashcodeRecalculateWhenMethodChange() {
-        final VirtualHost virtualHost = virtualHost();
-        final RoutingContext ctx1 =
-                new DefaultRoutingContext(virtualHost, "example.com",
-                                          RequestHeaders.of(HttpMethod.GET, "/hello",
-                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                                            HttpHeaderNames.ACCEPT,
-                                                            MediaType.JSON_UTF_8 + ", " +
-                                                            MediaType.XML_UTF_8 + "; q=0.8"),
-                                          "/hello", null, null, RoutingStatus.OK);
-        final RoutingContext ctx2 =
-                new DefaultRoutingContext(virtualHost, "example.com",
-                                          RequestHeaders.of(HttpMethod.POST, "/hello",
-                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                                            HttpHeaderNames.ACCEPT,
-                                                            MediaType.JSON_UTF_8 + ", " +
-                                                            MediaType.XML_UTF_8 + "; q=0.8"),
-                                          "/hello", null, null, RoutingStatus.OK);
-        final RoutingContext ctx3 = ctx1.withMethod(HttpMethod.POST);
-        assertThat(ctx1.hashCode()).isNotEqualTo(ctx3.hashCode());
-        assertThat(ctx2.hashCode()).isEqualTo(ctx3.hashCode());
-    }
-
     static RoutingContext create(String path) {
         return create(path, null);
     }

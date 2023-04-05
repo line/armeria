@@ -64,7 +64,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         if (!needsKeepAliveHandler) {
-            return new NoopKeepAliveHandler();
+            return NoopKeepAliveHandler.INSTANCE;
         }
 
         final Timer keepAliveTimer =

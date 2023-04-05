@@ -22,13 +22,13 @@ import Typography from '@material-ui/core/Typography';
 import React, { ChangeEvent } from 'react';
 
 import { SelectOption } from '../../lib/types';
-import { ServiceType } from '../../lib/specification';
 
 const endpointPathPlaceHolder = '/foo/bar';
 
 interface Props {
   editable: boolean;
-  serviceType: ServiceType;
+  isAnnotatedService: boolean;
+  isGraphqlService: boolean;
   endpointPathOpen: boolean;
   examplePaths: SelectOption[];
   additionalPath: string;
@@ -46,8 +46,7 @@ const EndpointPath: React.FunctionComponent<Props> = (props) => (
     {props.endpointPathOpen && (
       // eslint-disable-next-line react/jsx-no-useless-fragment
       <>
-        {props.serviceType === ServiceType.HTTP ||
-        props.serviceType === ServiceType.GRAPHQL ? (
+        {props.isAnnotatedService || props.isGraphqlService ? (
           <>
             {props.examplePaths.length > 0 && (
               <>

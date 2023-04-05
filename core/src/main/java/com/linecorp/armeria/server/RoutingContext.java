@@ -49,23 +49,6 @@ public interface RoutingContext {
     HttpMethod method();
 
     /**
-     * Returns a wrapped {@link RoutingContext} which holds the specified {@link HttpMethod}.
-     */
-    @UnstableApi
-    default RoutingContext withMethod(HttpMethod method) {
-        requireNonNull(method, "method");
-        if (method == method()) {
-            return this;
-        }
-        return new RoutingContextWrapper(this) {
-            @Override
-            public HttpMethod method() {
-                return method;
-            }
-        };
-    }
-
-    /**
      * Returns the absolute path retrieved from the request,
      * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
@@ -123,28 +106,14 @@ public interface RoutingContext {
      * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
      * It is usually used to find an {@link HttpService} with a prefix-stripped path.
      */
-    default RoutingContext withPath(String path) {
+    default RoutingContext overridePath(String path) {
         requireNonNull(path, "path");
-        if (path.equals(path())) {
-            return this;
-        }
         return new RoutingContextWrapper(this) {
             @Override
             public String path() {
                 return path;
             }
         };
-    }
-
-    /**
-     * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
-     * It is usually used to find an {@link HttpService} with a prefix-stripped path.
-     *
-     * @deprecated Use {@link #withPath}.
-     */
-    @Deprecated
-    default RoutingContext overridePath(String path) {
-        return withPath(path);
     }
 
     /**

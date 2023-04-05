@@ -1,5 +1,0 @@
-dependencies {
-    implementation project(':spring:boot3-starter')
-    implementation project(':spring:boot3-webflux-starter')
-    testImplementation libs.spring.boot3.starter.test
-}

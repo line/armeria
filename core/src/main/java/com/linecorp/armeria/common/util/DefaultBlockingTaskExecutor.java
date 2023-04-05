@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -30,7 +31,7 @@ final class DefaultBlockingTaskExecutor implements BlockingTaskExecutor {
 
     private final ScheduledExecutorService delegate;
 
-    DefaultBlockingTaskExecutor(ScheduledExecutorService delegate) {
+    DefaultBlockingTaskExecutor(ScheduledThreadPoolExecutor delegate) {
         this.delegate = delegate;
     }
 

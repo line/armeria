@@ -21,7 +21,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,11 +35,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
-import com.linecorp.armeria.internal.client.DecodedHttpResponse;
-import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -51,7 +47,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.EventExecutor;
 
 abstract class HttpResponseDecoder {
 
@@ -61,10 +56,8 @@ abstract class HttpResponseDecoder {
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
 
-    @Nullable
-    private HttpSession httpSession;
-
     private int unfinishedResponses;
+    private boolean disconnectWhenFinished;
     private boolean closing;
 
     HttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
@@ -88,10 +81,7 @@ abstract class HttpResponseDecoder {
                 new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.increaseNumRequests();
-        }
+        keepAliveHandler().increaseNumRequests();
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
@@ -152,18 +142,18 @@ abstract class HttpResponseDecoder {
         }
     }
 
-    HttpSession session() {
-        if (httpSession != null) {
-            return httpSession;
-        }
-        return httpSession = HttpSession.get(channel);
-    }
-
-    @Nullable
     abstract KeepAliveHandler keepAliveHandler();
 
+    final void disconnectWhenFinished() {
+        disconnectWhenFinished = true;
+    }
+
     final boolean needsToDisconnectNow() {
-        return !session().isAcquirable() && !hasUnfinishedResponses();
+        return needsToDisconnectWhenFinished() && !hasUnfinishedResponses();
+    }
+
+    final boolean needsToDisconnectWhenFinished() {
+        return disconnectWhenFinished || keepAliveHandler().needToCloseConnection();
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {
@@ -195,6 +185,10 @@ abstract class HttpResponseDecoder {
             this.responseTimeoutMillis = responseTimeoutMillis;
         }
 
+        CompletableFuture<Void> whenComplete() {
+            return delegate.whenComplete();
+        }
+
         long maxContentLength() {
             return maxContentLength;
         }
@@ -220,37 +214,6 @@ abstract class HttpResponseDecoder {
         @Override
         public boolean isOpen() {
             return delegate.isOpen();
-        }
-
-        @Override
-        public boolean isEmpty() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public long demand() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public CompletableFuture<Void> whenComplete() {
-            return delegate.whenComplete();
-        }
-
-        @Override
-        public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                              SubscriptionOption... options) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void abort() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void abort(Throwable cause) {
-            throw new UnsupportedOperationException();
         }
 
         /**

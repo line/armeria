@@ -115,7 +115,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void closePublisherNormally() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -132,7 +132,7 @@ class StreamMessageDuplicatorTest {
         duplicator.abort();
     }
 
-    private static void writeData(StreamWriter<HttpData> publisher) {
+    private static void writeData(DefaultStreamMessage<HttpData> publisher) {
         publisher.write(httpData("Armeria "));
         publisher.write(httpData("is "));
         publisher.write(httpData("awesome."));
@@ -140,7 +140,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void closePublisherExceptionally() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -159,7 +159,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void subscribeAfterPublisherClosed() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -179,7 +179,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void childStreamIsNotClosedWhenDemandIsNotEnough() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -203,7 +203,7 @@ class StreamMessageDuplicatorTest {
     @Test
     void abortPublisherWithSubscribers() {
         for (Throwable abortCause : ABORT_CAUSES) {
-            final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+            final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
             final StreamMessageDuplicator<HttpData> duplicator =
                     publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -227,7 +227,7 @@ class StreamMessageDuplicatorTest {
     @Test
     void abortPublisherWithoutSubscriber() {
         for (Throwable abortCause : ABORT_CAUSES) {
-            final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+            final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
             final StreamMessageDuplicator<HttpData> duplicator =
                     publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
             if (abortCause == null) {
@@ -251,7 +251,7 @@ class StreamMessageDuplicatorTest {
     @Test
     void abortChildStream() {
         for (Throwable abortCause : ABORT_CAUSES) {
-            final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+            final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
             final StreamMessageDuplicator<HttpData> duplicator =
                     publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -286,7 +286,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void abortedChildStreamShouldNotLeakPublisherElements() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         publisher.write(httpData(0));
 
         try (StreamMessageDuplicator<HttpData> duplicator =
@@ -306,7 +306,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void duplicateToClosedDuplicator() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -394,7 +394,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void publishedSignalsCleanedUpWhenDuplicatorIsClosed() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -422,7 +422,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void closingDuplicatorDoesNotAbortDuplicatedStream() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
         final HttpDataSubscriber subscriber = new HttpDataSubscriber();
@@ -439,7 +439,7 @@ class StreamMessageDuplicatorTest {
 
     @Test
     void raiseExceptionInOnNext() {
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
@@ -460,7 +460,7 @@ class StreamMessageDuplicatorTest {
     void withPooledObjects() {
         final HttpData httpData = httpData(0);
         final ByteBuf byteBuf = httpData.byteBuf();
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
         publisher.write(httpData);
@@ -508,7 +508,7 @@ class StreamMessageDuplicatorTest {
     void unpooledByDefault() {
         final HttpData httpData = httpData(0);
         final ByteBuf byteBuf = httpData.byteBuf();
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
         publisher.write(httpData);
@@ -555,7 +555,7 @@ class StreamMessageDuplicatorTest {
     @Test
     void notifyCancellation() {
         final ByteBuf data = newPooledBuffer();
-        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
         publisher.write(HttpData.wrap(data));

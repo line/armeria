@@ -43,8 +43,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
 
@@ -69,7 +69,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void resumeOnError() {
-        final StreamWriter<Integer> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         final StreamMessage<Integer> recoverable = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
@@ -80,7 +80,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void recoverStreamMessageShortcut() {
-        final StreamWriter<Integer> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         final StreamMessage<Integer> recoverable =
                 stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(5, 6, 7));
         stream.write(1);
@@ -93,7 +93,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void recoverStreamMessagesShortcutHandleSubClassExceptions() {
-        final StreamWriter<Integer> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         final StreamMessage<Integer> recoverable =
                 stream.recoverAndResume(RuntimeException.class, cause -> StreamMessage.of(5, 6, 7));
         stream.write(1);
@@ -106,7 +106,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void thrownTypeMismatchRecoverStreamMessageShortcut() {
-        final StreamWriter<Integer> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         final StreamMessage<Integer> recoverable =
                 stream.recoverAndResume(IllegalStateException.class, cause -> null);
         stream.write(1);
@@ -125,7 +125,7 @@ class RecoverableStreamMessageTest {
     @CsvSource({ "true", "false" })
     @ParameterizedTest
     void shouldNotResumeOnAbortion(boolean abort) {
-        final StreamWriter<Integer> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         final StreamMessage<Integer> aborted = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
@@ -178,7 +178,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void backPressure() {
-        final StreamWriter<Integer> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         final StreamMessage<Integer> recoverable = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
@@ -234,7 +234,7 @@ class RecoverableStreamMessageTest {
     void disallowResuming_nonEmtpyStream() {
         // Resume is disabled.
         // The fallback function should be not invoked if some items are written before an error occurs.
-        final StreamWriter<Integer> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         stream.write(1);
         stream.write(2);
         stream.write(3);
@@ -439,7 +439,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void shortcutRecoverableChainStreamMessage() {
-        final StreamWriter<Integer> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         final IllegalStateException ex1 = new IllegalStateException("oops1");
         final IllegalStateException ex2 = new IllegalStateException("oops2");
         final IllegalArgumentException ex3 = new IllegalArgumentException("oops3");

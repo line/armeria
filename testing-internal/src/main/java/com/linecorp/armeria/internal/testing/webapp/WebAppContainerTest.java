@@ -33,15 +33,15 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLSession;
 
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.io.entity.StringEntity;
-import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -140,7 +140,7 @@ public abstract class WebAppContainerTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(
                     server().httpUri() + "/jsp/" + URLEncoder.encode("日本語", "UTF-8") + "/index.jsp"))) {
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
                 final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
@@ -163,7 +163,7 @@ public abstract class WebAppContainerTest {
             try (CloseableHttpResponse res = hc.execute(
                     new HttpGet(server().httpUri() + "/jsp/query_string.jsp?foo=%31&bar=%32"))) {
 
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
                 final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
@@ -198,7 +198,7 @@ public abstract class WebAppContainerTest {
                     Collections.singletonList(new BasicNameValuePair("bar", "4")), StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(post)) {
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
                 final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
@@ -234,7 +234,7 @@ public abstract class WebAppContainerTest {
             post.setEntity(new StringEntity("test"));
 
             try (CloseableHttpResponse res = hc.execute(post)) {
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
                 final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
@@ -254,7 +254,7 @@ public abstract class WebAppContainerTest {
             final HttpPost post = new HttpPost(server().httpUri() + "/jsp/echo_post.jsp");
 
             try (CloseableHttpResponse res = hc.execute(post)) {
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
                 final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
@@ -274,7 +274,7 @@ public abstract class WebAppContainerTest {
             try (CloseableHttpResponse res = hc.execute(
                     new HttpGet(server().httpUri() + "/jsp/addrs_and_ports.jsp"))) {
 
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
                 final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
@@ -301,7 +301,7 @@ public abstract class WebAppContainerTest {
             final HttpGet request = new HttpGet(server().httpUri() + "/jsp/addrs_and_ports.jsp");
             request.setHeader("Host", "localhost:1111");
             try (CloseableHttpResponse res = hc.execute(request)) {
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");
                 final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
@@ -335,7 +335,7 @@ public abstract class WebAppContainerTest {
     protected void testLarge(String path, boolean requiresContentLength) throws IOException {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server().httpUri().resolve(path)))) {
-                assertThat(res.getCode()).isEqualTo(200);
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/plain");
 

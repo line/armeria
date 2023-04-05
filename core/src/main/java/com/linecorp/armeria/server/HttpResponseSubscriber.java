@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
@@ -115,7 +114,6 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
         if (failIfStreamOrSessionClosed()) {
             PooledObjects.close(o);
-            setDone(true);
             return;
         }
 
@@ -158,17 +156,13 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         state = State.NEEDS_DATA_OR_TRAILERS;
                     }
                     if (endOfStream) {
-                        setDone(true);
+                        setDone(false);
                     }
                     final ServerConfig config = reqCtx.config().server().config();
                     merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),
                                                   reqCtx.config().defaultHeaders(),
                                                   config.isServerHeaderEnabled(),
                                                   config.isDateHeaderEnabled());
-                    final String connectionOption = merged.get(HttpHeaderNames.CONNECTION);
-                    if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
-                        disconnectWhenFinished();
-                    }
                     logBuilder().responseHeaders(merged);
                 }
 
@@ -210,7 +204,6 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                    .addListener(writeHeadersFutureListener(true));
                 } else {
                     final HttpData data = (HttpData) o;
-                    data.touch(reqCtx);
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {

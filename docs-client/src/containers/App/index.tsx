@@ -386,13 +386,11 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
 interface RouterServicesProps {
   versions: Versions | undefined;
   specification: Specification;
-  jsonSchemas: any[];
 }
 
 const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
   versions,
   specification,
-  jsonSchemas,
 }) => {
   return (
     <div>
@@ -411,13 +409,7 @@ const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
       />
       <Route
         path="/methods/:serviceName/:methodName/:httpMethod"
-        render={(p) => (
-          <MethodPage
-            {...p}
-            specification={specification}
-            jsonSchemas={jsonSchemas}
-          />
-        )}
+        render={(p) => <MethodPage {...p} specification={specification} />}
       />
       <Route
         path="/structs/:name"
@@ -443,7 +435,6 @@ const dummySpecification = new Specification({
 
 const App: React.FunctionComponent<Props> = (props) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [jsonSchemas, setJsonSchemas] = useState<any[]>([]);
   const [specification, setSpecification] =
     useState<Specification>(dummySpecification);
   const [specLoadingStatus, setSpecLoadingStatus] = useState<SpecLoadingStatus>(
@@ -476,17 +467,6 @@ const App: React.FunctionComponent<Props> = (props) => {
         setSpecLoadingStatus(SpecLoadingStatus.FAILED);
         return;
       }
-
-      try {
-        const schemaData: any[] = await fetch(`/docs/schemas.json`).then((r) =>
-          r.json(),
-        );
-        setJsonSchemas(schemaData);
-      } catch (e) {
-        // Ignore the error and continue
-        setJsonSchemas([]);
-      }
-
       setSpecLoadingStatus(SpecLoadingStatus.SUCCESS);
     })();
   }, []);
@@ -652,11 +632,7 @@ const App: React.FunctionComponent<Props> = (props) => {
           status={specLoadingStatus}
           failureMessage="Failed to load specifications. Try refreshing!"
         >
-          <RouterServices
-            versions={versions}
-            specification={specification}
-            jsonSchemas={jsonSchemas}
-          />
+          <RouterServices versions={versions} specification={specification} />
         </LoadingContainer>
       </main>
     </div>

@@ -232,10 +232,7 @@ public final class ClientUtil {
     }
 
     public static String pathWithQuery(URI uri, @Nullable String query) {
-        return pathWithQuery(uri.getRawPath(), query);
-    }
-
-    public static String pathWithQuery(String path, @Nullable String query) {
+        String path = uri.getRawPath();
         if (Strings.isNullOrEmpty(path)) {
             path = query == null ? "/" : "/?" + query;
         } else if (query != null) {

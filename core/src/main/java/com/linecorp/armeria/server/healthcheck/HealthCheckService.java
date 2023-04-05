@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -137,7 +136,6 @@ public final class HealthCheckService implements TransientHttpService {
     private final long maxLongPollingTimeoutMillis;
     private final double longPollingTimeoutJitterRate;
     private final long pingIntervalMillis;
-    private final ReentrantLock lock = new ReentrantLock();
     @Nullable
     private final Consumer<HealthChecker> healthCheckerListener;
     @Nullable
@@ -354,8 +352,7 @@ public final class HealthCheckService implements TransientHttpService {
             assert pendingUnhealthyResponses != null : "pendingUnhealthyResponses is null.";
 
             // If healthy, wait until it becomes unhealthy, and vice versa.
-            lock.lock();
-            try {
+            synchronized (healthCheckerListener) {
                 final boolean currentHealthiness = isHealthy();
                 if (isHealthy == currentHealthiness) {
                     final HttpResponseWriter res = HttpResponse.streaming();
@@ -385,11 +382,8 @@ public final class HealthCheckService implements TransientHttpService {
                             new PendingResponse(method, res, pingFuture, timeoutFuture);
                     pendingResponses.add(pendingResponse);
                     timeoutFuture.addListener((FutureListener<Object>) f -> {
-                        lock.lock();
-                        try {
+                        synchronized (healthCheckerListener) {
                             pendingResponses.remove(pendingResponse);
-                        } finally {
-                            lock.unlock();
                         }
                     });
 
@@ -406,8 +400,6 @@ public final class HealthCheckService implements TransientHttpService {
                     // State has been changed before we acquire the lock.
                     // Fall through because there's no need for long polling.
                 }
-            } finally {
-                lock.unlock();
             }
         }
 
@@ -535,8 +527,7 @@ public final class HealthCheckService implements TransientHttpService {
 
         final boolean isHealthy = isHealthy();
         final PendingResponse[] pendingResponses;
-        lock.lock();
-        try {
+        synchronized (healthCheckerListener) {
             final Set<PendingResponse> set = isHealthy ? pendingHealthyResponses
                                                        : pendingUnhealthyResponses;
             if (!set.isEmpty()) {
@@ -545,8 +536,6 @@ public final class HealthCheckService implements TransientHttpService {
             } else {
                 pendingResponses = EMPTY_PENDING_RESPONSES;
             }
-        } finally {
-            lock.unlock();
         }
 
         final AggregatedHttpResponse res = getResponse(isHealthy);

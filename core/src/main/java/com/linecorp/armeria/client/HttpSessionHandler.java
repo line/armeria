@@ -43,13 +43,7 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.client.DecodedHttpResponse;
-import com.linecorp.armeria.internal.client.HttpSession;
-import com.linecorp.armeria.internal.client.PooledChannel;
-import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.core.instrument.Tag;
@@ -90,9 +84,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private SocketAddress proxyDestinationAddress;
 
     /**
-     * Whether a new request can acquire this channel from {@link HttpChannelPool}.
+     * Whether the current channel is active or not.
      */
-    private volatile boolean isAcquirable;
+    private volatile boolean active;
 
     /**
      * The current negotiated {@link SessionProtocol}.
@@ -167,19 +161,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public boolean canSendRequest() {
         assert responseDecoder != null;
-        if (!channel.isActive()) {
-            return false;
-        }
-
-        if (responseDecoder instanceof Http2ResponseDecoder) {
-            // New requests that have already acquired this session can be sent over this session before a
-            // GOAWAY is sent or received.
-            final Http2GoAwayHandler goAwayHandler = ((Http2ResponseDecoder) responseDecoder).goAwayHandler();
-            return !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
-        } else {
-            // Don't allow to send a request if a connection is closed or about to be closed for HTTP/1.
-            return isAcquirable();
-        }
+        return active && !responseDecoder.needsToDisconnectWhenFinished();
     }
 
     @Override
@@ -205,7 +187,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                     useHttp1Pipelining ? req.whenComplete()
                                        : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
             completionFuture.handle((ret, cause) -> {
-                if (isAcquirable()) {
+                if (!responseDecoder.needsToDisconnectWhenFinished()) {
                     pooledChannel.release();
                 }
                 return null;
@@ -277,32 +259,23 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public boolean isAcquirable() {
-        if (!isAcquirable) {
-            return false;
-        }
-        // responseDecoder and keepAliveHandler are set before this session is added to the pool.
-        assert responseDecoder != null;
-        final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
-        assert keepAliveHandler != null;
-        return !keepAliveHandler.needsDisconnection();
+    public boolean isActive() {
+        return active;
     }
 
     @Override
     public void deactivate() {
-        if (isAcquirable) {
-            isAcquirable = false;
-        }
+        active = false;
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        isAcquirable = channel.isActive();
+        active = channel.isActive();
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        isAcquirable = true;
+        active = true;
     }
 
     @Override
@@ -345,6 +318,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
+                final ClientHttp1ObjectEncoder requestEncoder =
+                        new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming());
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
 
                 final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
@@ -355,27 +330,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                         needsKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
                                               maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
-                final KeepAliveHandler keepAliveHandler;
                 if (needsKeepAliveHandler) {
                     final Timer keepAliveTimer =
                             MoreMeters.newTimer(clientFactory.meterRegistry(),
                                                 "armeria.client.connections.lifespan",
                                                 ImmutableList.of(Tag.of("protocol", protocol.uriText())));
-                    keepAliveHandler = new Http1ClientKeepAliveHandler(
-                            channel, responseDecoder, keepAliveTimer, idleTimeoutMillis,
-                            pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
-                } else {
-                    keepAliveHandler = new NoopKeepAliveHandler();
+                    final Http1ClientKeepAliveHandler keepAliveHandler =
+                            new Http1ClientKeepAliveHandler(
+                                    channel, requestEncoder, responseDecoder,
+                                    keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
+                                    maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                    requestEncoder.setKeepAliveHandler(keepAliveHandler);
+                    responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
                 }
-
-                final ClientHttp1ObjectEncoder requestEncoder =
-                        new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming(),
-                                                     keepAliveHandler);
-                if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
-                    ((Http1ClientKeepAliveHandler) keepAliveHandler).setEncoder(requestEncoder);
-                }
-
-                responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
 
                 this.requestEncoder = requestEncoder;
                 this.responseDecoder = responseDecoder;
@@ -439,7 +406,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        isAcquirable = false;
+        active = false;
 
         // Protocol upgrade has failed, but needs to retry.
         if (needsRetryWithH1C) {

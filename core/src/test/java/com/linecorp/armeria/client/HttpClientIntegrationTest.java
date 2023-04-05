@@ -421,20 +421,16 @@ class HttpClientIntegrationTest {
         testEndpointWithAlternateAuthority(group);
     }
 
-    private static void testEndpointWithAlternateAuthority(EndpointGroup group) throws Exception {
-        final String authority = "255.255.255.255.xip.io";
+    private static void testEndpointWithAlternateAuthority(EndpointGroup group) {
         final BlockingWebClient client = WebClient.builder(SessionProtocol.HTTP, group)
                                                   .setHeader(HttpHeaderNames.AUTHORITY,
-                                                             authority)
+                                                             "255.255.255.255.xip.io")
                                                   .build()
                                                   .blocking();
 
         final AggregatedHttpResponse res = client.get("/hello/world");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("success");
-        assertThat(server.requestContextCaptor().size()).isEqualTo(1);
-        final ServiceRequestContext ctx = server.requestContextCaptor().poll();
-        assertThat(ctx.request().authority()).isEqualTo(authority);
     }
 
     @Test

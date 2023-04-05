@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -34,6 +35,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 /**
  * The default {@link ServerErrorHandler} that is used when a user didn't specify one.
@@ -64,6 +66,10 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         final boolean isAnnotatedService = serviceConfig.service().as(AnnotatedService.class) != null;
         if (isAnnotatedService) {
             if (cause instanceof IllegalArgumentException) {
+                if (needsToWarn()) {
+                    logger.warn("{} Failed processing a request:", ctx, cause);
+                }
+
                 return internalRenderStatus(serviceConfig, ctx.request().headers(),
                                             HttpStatus.BAD_REQUEST, cause);
             }
@@ -91,8 +97,18 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
                                         HttpStatus.SERVICE_UNAVAILABLE, cause);
         }
 
+        if (isAnnotatedService && needsToWarn() && !Exceptions.isExpected(cause)) {
+            logger.warn("{} Unhandled exception from a service:", ctx, cause);
+        }
+
         return internalRenderStatus(serviceConfig, ctx.request().headers(),
                                     HttpStatus.INTERNAL_SERVER_ERROR, cause);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static boolean needsToWarn() {
+        return Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
+               logger.isWarnEnabled();
     }
 
     private static HttpResponse internalRenderStatus(ServiceConfig serviceConfig,

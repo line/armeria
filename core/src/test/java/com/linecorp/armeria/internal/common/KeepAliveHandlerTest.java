@@ -204,7 +204,7 @@ class KeepAliveHandlerTest {
         keepAliveHandler.initialize(ctx);
 
         await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#count", 0));
-        assertThat(keepAliveHandler.needsDisconnection()).isFalse();
+        assertThat(keepAliveHandler.needToCloseConnection()).isFalse();
     }
 
     @Test
@@ -239,7 +239,7 @@ class KeepAliveHandlerTest {
         keepAliveHandler.initialize(ctx);
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
-        await().untilAsserted(() -> assertThat(keepAliveHandler.needsDisconnection()).isTrue());
+        await().untilAsserted(() -> assertThat(keepAliveHandler.needToCloseConnection()).isTrue());
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isBetween(500L, 1000L);
     }
 

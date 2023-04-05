@@ -1,2 +1,0 @@
-com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactoryAutoConfiguration
-com.linecorp.armeria.spring.web.reactive.ArmeriaClientAutoConfiguration

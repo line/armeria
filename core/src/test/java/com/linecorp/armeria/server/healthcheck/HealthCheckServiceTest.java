@@ -167,10 +167,7 @@ class HealthCheckServiceTest {
                              "HTTP/1.1 200 OK\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 16\r\n" +
-                             // As Armeria is not fully compatible with HTTP/1.0,
-                             // an HTTP/1.1 response including "connection: close" header is returned.
-                             "connection: close\r\n\r\n" +
+                             "content-length: 16\r\n\r\n" +
                              "{\"healthy\":true}");
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
@@ -183,8 +180,7 @@ class HealthCheckServiceTest {
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 17\r\n" +
-                             "connection: close\r\n\r\n" +
+                             "content-length: 17\r\n\r\n" +
                              "{\"healthy\":false}");
         await().untilAsserted(() -> {
             verify(logger).debug(anyString(), any(), any());
@@ -197,8 +193,7 @@ class HealthCheckServiceTest {
                              "HTTP/1.1 200 OK\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 16\r\n" +
-                             "connection: close\r\n\r\n");
+                             "content-length: 16\r\n\r\n");
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
@@ -210,8 +205,7 @@ class HealthCheckServiceTest {
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 17\r\n" +
-                             "connection: close\r\n\r\n");
+                             "content-length: 17\r\n\r\n");
         verify(logger).debug(anyString(), any(), any());
     }
 
@@ -444,8 +438,7 @@ class HealthCheckServiceTest {
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 17\r\n" +
-                             "connection: close\r\n\r\n" +
+                             "content-length: 17\r\n\r\n" +
                              "{\"healthy\":false}");
     }
 

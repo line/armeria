@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.util;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.common.CommonPools;
@@ -33,20 +31,7 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
      * {@link CommonPools#blockingTaskExecutor()} returns.
      */
     static BlockingTaskExecutor of() {
-        return CommonPools.blockingTaskExecutor();
-    }
-
-    /**
-     * Returns a new {@link BlockingTaskExecutor} that uses the specified {@link ScheduledExecutorService}
-     * to schedule and submit tasks.
-     */
-    static BlockingTaskExecutor of(ScheduledExecutorService executor) {
-        requireNonNull(executor, "executor");
-        if (executor instanceof BlockingTaskExecutor) {
-            return (BlockingTaskExecutor) executor;
-        } else {
-            return new DefaultBlockingTaskExecutor(executor);
-        }
+        return (BlockingTaskExecutor) CommonPools.blockingTaskExecutor();
     }
 
     /**

@@ -76,8 +76,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private boolean isMaxConnectionAgeExceeded;
 
     private boolean isInitialized;
-    private boolean closed;
-    private boolean disconnectWhenFinished;
     private PingState pingState = PingState.IDLE;
 
     @Nullable
@@ -125,7 +123,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         final long connectionStartTimeNanos = System.nanoTime();
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
-            destroy();
         });
 
         lastConnectionIdleTime = lastPingIdleTime = connectionStartTimeNanos;
@@ -145,11 +142,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public final void destroy() {
-        if (closed) {
-            return;
-        }
-
-        closed = true;
         isInitialized = true;
         if (connectionIdleTimeout != null) {
             connectionIdleTimeout.cancel(false);
@@ -208,14 +200,9 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     }
 
     @Override
-    public void disconnectWhenFinished() {
-        disconnectWhenFinished = true;
-    }
-
-    @Override
-    public final boolean needsDisconnection() {
-        return disconnectWhenFinished || pingState == PingState.SHUTDOWN || isMaxConnectionAgeExceeded ||
-               (currentNumRequests > 0 && currentNumRequests >= maxNumRequestsPerConnection);
+    public final boolean needToCloseConnection() {
+        return isMaxConnectionAgeExceeded || (currentNumRequests > 0 && currentNumRequests >=
+                                                                        maxNumRequestsPerConnection);
     }
 
     @Override
@@ -455,5 +442,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 logger.warn("Unexpected error occurred while closing a connection exceeding the max age", e);
             }
         }
+    }
+
+    enum KeepAliveType {
+        HTTP2_SERVER,
+        HTTP1_SERVER,
+        HTTP2_CLIENT,
+        HTTP1_CLIENT
     }
 }

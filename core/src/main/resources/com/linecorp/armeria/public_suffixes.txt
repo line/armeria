@@ -4791,6 +4791,7 @@ limo
 lincoln
 lincoln.museum
 lindas.no
+linde
 lindesnes.no
 link
 linkyard-cloud.ch
@@ -4922,6 +4923,7 @@ macapa.br
 maceio.br
 macerata.it
 machida.tokyo.jp
+macys
 mad.museum
 madrid
 madrid.museum

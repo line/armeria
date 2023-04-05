@@ -136,6 +136,7 @@ public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeI
         return new ExceptionInfo(name, fields);
     }
 
+    @VisibleForTesting
     static FieldInfo newFieldInfo(Class<?> parentType, FieldMetaData fieldMetaData) {
         requireNonNull(fieldMetaData, "fieldMetaData");
         final FieldValueMetaData fieldValueMetaData = fieldMetaData.valueMetaData;
@@ -317,7 +318,8 @@ public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeI
     static <T extends TBase<T, F>, F extends TFieldIdEnum> StructInfo newStructInfo(Class<?> structClass) {
         final String name = structClass.getName();
 
-        final Map<?, FieldMetaData> metaDataMap = ThriftMetadataAccess.getStructMetaDataMap(structClass);
+        //noinspection unchecked
+        final Map<?, FieldMetaData> metaDataMap = FieldMetaData.getStructMetaDataMap((Class<T>) structClass);
         final List<FieldInfo> fields =
                 metaDataMap.values().stream()
                            .map(fieldMetaData -> newFieldInfo(structClass, fieldMetaData))

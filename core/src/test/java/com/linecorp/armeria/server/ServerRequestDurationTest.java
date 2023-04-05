@@ -36,8 +36,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.StreamWriter;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ServerRequestDurationTest {
@@ -95,7 +94,7 @@ class ServerRequestDurationTest {
     @ParameterizedTest
     void requestDuration(String path) throws InterruptedException {
         final WebClient client = server.webClient(cb -> cb.responseTimeoutMillis(100_000));
-        final StreamWriter<HttpData> stream = StreamMessage.streaming();
+        final DefaultStreamMessage<HttpData> stream = new DefaultStreamMessage<>();
         final CompletableFuture<ResponseEntity<String>> future =
                 client.prepare()
                       .post(path)

@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -73,7 +74,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
         assert response != null;
         if (failIfStreamOrSessionClosed()) {
-            response.content().close();
+            PooledObjects.close(response.content());
             return;
         }
 

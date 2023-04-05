@@ -146,7 +146,6 @@ final class DefaultClientFactory implements ClientFactory {
     }
 
     @Override
-    @Deprecated
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         httpClientFactory.setMeterRegistry(meterRegistry);
     }

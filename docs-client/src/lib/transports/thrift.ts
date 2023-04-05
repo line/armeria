@@ -18,7 +18,7 @@ import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
 
-export const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
+const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
 
 export default class ThriftTransport extends Transport {
   private static thriftMethod(endpoint: Endpoint, method: Method) {

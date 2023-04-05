@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
-import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
+import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -100,7 +100,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ContextAwareBlockingTaskExecutor blockingTaskExecutor() {
+    public ContextAwareScheduledExecutorService blockingTaskExecutor() {
         return unwrap().blockingTaskExecutor();
     }
 
@@ -230,16 +230,6 @@ public class ServiceRequestContextWrapper
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return unwrap().proxiedAddresses();
-    }
-
-    @Override
-    public boolean shouldReportUnhandledExceptions() {
-        return unwrap().shouldReportUnhandledExceptions();
-    }
-
-    @Override
-    public void setShouldReportUnhandledExceptions(boolean value) {
-        unwrap().setShouldReportUnhandledExceptions(value);
     }
 
     @Override

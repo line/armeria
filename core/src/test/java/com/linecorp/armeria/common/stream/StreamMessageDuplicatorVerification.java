@@ -35,7 +35,7 @@ public class StreamMessageDuplicatorVerification extends StreamMessageVerificati
 
     @Override
     public StreamMessage<Long> createFailedPublisher() {
-        final StreamMessage<Long> source = StreamMessage.streaming();
+        final StreamMessage<Long> source = new DefaultStreamMessage<>();
         final StreamMessageDuplicator<Long> duplicator = source.toDuplicator(ImmediateEventExecutor.INSTANCE);
         final StreamMessage<Long> duplicate = duplicator.duplicate();
         duplicate.subscribe(new NoopSubscriber<>());

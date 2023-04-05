@@ -161,7 +161,7 @@ public class StreamMessageBenchmark {
     static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
         switch (streamObjects.streamType) {
             case DEFAULT_STREAM_MESSAGE:
-                return StreamMessage.streaming();
+                return new DefaultStreamMessage<>();
             case FIXED_STREAM_MESSAGE:
                 switch (streamObjects.num) {
                     case 0:

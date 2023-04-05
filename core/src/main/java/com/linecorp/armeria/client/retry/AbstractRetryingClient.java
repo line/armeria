@@ -82,7 +82,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final RetryConfig<O> config = mapping.get(ctx, req);
         requireNonNull(config, "mapping.get() returned null");
 
-        final State state = new State(config, ctx.responseTimeoutMillis());
+        final State state = new State(
+                config.maxTotalAttempts(),
+                config.responseTimeoutMillisForEachAttempt(),
+                ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
         return doExecute(ctx, req);
     }
@@ -117,14 +120,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final RetryRule retryRule = retryConfig.retryRule();
         checkState(retryRule != null, "retryRule is not set.");
         return retryRule;
-    }
-
-    /**
-     * Fetches the {@link RetryConfig} that was mapped by the configured {@link RetryConfigMapping} for a given
-     * logical request.
-     */
-    final RetryConfig<O> mappedRetryConfig(ClientRequestContext ctx) {
-        return (RetryConfig<O>) ctx.attr(STATE).config;
     }
 
     /**
@@ -219,7 +214,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final int currentAttemptNo = state.currentAttemptNoWith(backoff);
 
         if (currentAttemptNo < 0) {
-            logger.debug("Exceeded the default number of max attempt: {}", state.config.maxTotalAttempts());
+            logger.debug("Exceeded the default number of max attempt: {}", state.maxTotalAttempts);
             return -1;
         }
 
@@ -263,7 +258,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
 
     private static final class State {
 
-        private final RetryConfig<?> config;
+        private final int maxTotalAttempts;
+        private final long responseTimeoutMillisForEachAttempt;
         private final long deadlineNanos;
         private final boolean isTimeoutEnabled;
 
@@ -272,8 +268,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         private int currentAttemptNoWithLastBackoff;
         private int totalAttemptNo;
 
-        State(RetryConfig<?> config, long responseTimeoutMillis) {
-            this.config = config;
+        State(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis) {
+            this.maxTotalAttempts = maxTotalAttempts;
+            this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
 
             if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
                 deadlineNanos = 0;
@@ -286,7 +283,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
 
         /**
-         * Returns the smaller value between {@link RetryConfig#responseTimeoutMillisForEachAttempt()} and
+         * Returns the smaller value between {@link #responseTimeoutMillisForEachAttempt} and
          * remaining {@link #responseTimeoutMillis}.
          *
          * @return 0 if the response timeout for both of each request and whole retry is disabled or
@@ -294,7 +291,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
          */
         long responseTimeoutMillis() {
             if (!timeoutForWholeRetryEnabled()) {
-                return config.responseTimeoutMillisForEachAttempt();
+                return responseTimeoutMillisForEachAttempt;
             }
 
             final long actualResponseTimeoutMillis = actualResponseTimeoutMillis();
@@ -304,8 +301,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                 return -1;
             }
 
-            if (config.responseTimeoutMillisForEachAttempt() > 0) {
-                return Math.min(config.responseTimeoutMillisForEachAttempt(), actualResponseTimeoutMillis);
+            if (responseTimeoutMillisForEachAttempt > 0) {
+                return Math.min(responseTimeoutMillisForEachAttempt, actualResponseTimeoutMillis);
             }
 
             return actualResponseTimeoutMillis;
@@ -320,7 +317,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         }
 
         int currentAttemptNoWith(Backoff backoff) {
-            if (totalAttemptNo++ >= config.maxTotalAttempts()) {
+            if (totalAttemptNo++ >= maxTotalAttempts) {
                 return -1;
             }
             if (lastBackoff != backoff) {
