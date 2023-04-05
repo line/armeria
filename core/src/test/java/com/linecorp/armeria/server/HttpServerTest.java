@@ -86,7 +86,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -457,7 +457,7 @@ class HttpServerTest {
         serverMaxRequestLength = MAX_CONTENT_LENGTH;
         clientMaxResponseLength = MAX_CONTENT_LENGTH;
 
-        PathAndQuery.clearCachedPaths();
+        RequestTargetCache.clearCachedPaths();
     }
 
     @AfterEach
@@ -900,7 +900,7 @@ class HttpServerTest {
     void testExactPathCached(WebClient client) throws Exception {
         assertThat(client.get("/cached-exact-path")
                          .aggregate().get().status()).isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths()).contains("/cached-exact-path");
+        assertThat(RequestTargetCache.cachedServerPaths()).contains("/cached-exact-path");
     }
 
     @ParameterizedTest
@@ -908,7 +908,7 @@ class HttpServerTest {
     void testPrefixPathNotCached(WebClient client) throws Exception {
         assertThat(client.get("/not-cached-paths/hoge")
                          .aggregate().get().status()).isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths()).doesNotContain("/not-cached-paths/hoge");
+        assertThat(RequestTargetCache.cachedServerPaths()).doesNotContain("/not-cached-paths/hoge");
     }
 
     @ParameterizedTest
@@ -916,7 +916,7 @@ class HttpServerTest {
     void testPrefixPath_cacheForced(WebClient client) throws Exception {
         assertThat(client.get("/cached-paths/hoge")
                          .aggregate().get().status()).isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths()).contains("/cached-paths/hoge");
+        assertThat(RequestTargetCache.cachedServerPaths()).contains("/cached-paths/hoge");
     }
 
     @ParameterizedTest

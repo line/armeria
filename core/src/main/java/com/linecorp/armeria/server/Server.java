@@ -69,14 +69,13 @@ import com.spotify.futures.CompletableFutures;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.Gauge;
@@ -130,10 +129,8 @@ public final class Server implements ListenableAsyncCloseable {
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
-        // Server-wide cache metrics.
-        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsed.path.cache");
-        PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
-
+        // Server-wide metrics.
+        RequestTargetCache.registerServerMetrics(config.meterRegistry());
         setupVersionMetrics();
 
         for (VirtualHost virtualHost : config().virtualHosts()) {

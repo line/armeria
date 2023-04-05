@@ -63,8 +63,8 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
@@ -328,17 +328,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (!routingStatus.routeMustExist()) {
             final ServiceRequestContext reqCtx =
                     newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
-            switch (routingStatus) {
-                case OPTIONS:
-                    // Handle 'OPTIONS * HTTP/1.1'.
-                    handleOptions(ctx, reqCtx);
-                    return;
-                case INVALID_PATH:
-                    rejectInvalidPath(ctx, reqCtx);
-                    return;
-                default:
-                    throw new Error(); // Should never reach here.
+
+            // Handle 'OPTIONS * HTTP/1.1'.
+            if (routingStatus == RoutingStatus.OPTIONS) {
+                handleOptions(ctx, reqCtx);
+                return;
             }
+
+            throw new Error(); // Should never reach here.
         }
 
         // Find the service that matches the path.
@@ -394,9 +391,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 reqCtx.log().whenComplete().thenAccept(log -> {
                     final int statusCode = log.responseHeaders().status().code();
                     if (statusCode >= 200 && statusCode < 400 && routingCtx instanceof DefaultRoutingContext) {
-                        final PathAndQuery pathAndQuery = ((DefaultRoutingContext) routingCtx).pathAndQuery();
-                        assert pathAndQuery != null;
-                        pathAndQuery.storeInCache(req.path());
+                        RequestTargetCache.putForServer(req.path(), routingCtx.requestTarget());
                     }
                 });
             }

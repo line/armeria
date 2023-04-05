@@ -287,7 +287,7 @@ class ClientRequestContextTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"https:/path?a=b", "http:///"})
+    @ValueSource(strings = {"%", "http:///"})
     void updateRequestWithInvalidPath(String path) {
         final ClientRequestContext clientRequestContext = clientRequestContext();
         assertThat(clientRequestContext.path()).isEqualTo("/");

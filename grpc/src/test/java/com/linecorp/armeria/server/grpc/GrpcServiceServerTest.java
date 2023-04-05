@@ -89,7 +89,7 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
@@ -545,7 +545,7 @@ class GrpcServiceServerTest {
         COMPLETED.set(false);
         CLIENT_CLOSED.set(false);
 
-        PathAndQuery.clearCachedPaths();
+        RequestTargetCache.clearCachedPaths();
     }
 
     @AfterEach
@@ -564,7 +564,7 @@ class GrpcServiceServerTest {
         assertThat(blockingClient.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
 
         // Confirm gRPC paths are cached despite using serviceUnder
-        await().untilAsserted(() -> assertThat(PathAndQuery.cachedPaths())
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedServerPaths())
                 .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall"));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {

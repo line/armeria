@@ -18,8 +18,6 @@ package com.linecorp.armeria.internal.client;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
 import static java.util.Objects.requireNonNull;
 
@@ -57,6 +55,8 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
@@ -72,7 +72,6 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -114,8 +113,6 @@ public final class DefaultClientRequestContext
     private Endpoint endpoint;
     @Nullable
     private ContextAwareEventLoop contextAwareEventLoop;
-    @Nullable
-    private final String fragment;
     @Nullable
     private final ServiceRequestContext root;
 
@@ -161,12 +158,12 @@ public final class DefaultClientRequestContext
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, requestOptions, serviceRequestContext(),
+             id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
              responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -185,30 +182,29 @@ public final class DefaultClientRequestContext
      */
     public DefaultClientRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, requestOptions,
+             id, method, reqTarget, options, req, rpcReq, requestOptions,
              serviceRequestContext(), /* responseCancellationScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros);
     }
 
     private DefaultClientRequestContext(
             @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
-            SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
-            @Nullable String query, @Nullable String fragment, ClientOptions options,
+            SessionProtocol sessionProtocol, RequestId id, HttpMethod method,
+            RequestTarget reqTarget, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        super(meterRegistry, sessionProtocol, id, method, path, query,
+        super(meterRegistry, sessionProtocol, id, method, reqTarget,
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq,
               getAttributes(root));
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
-        this.fragment = fragment;
         this.root = root;
 
         log = RequestLog.builder(this);
@@ -460,8 +456,8 @@ public final class DefaultClientRequestContext
                                         @Nullable RpcRequest rpcReq,
                                         @Nullable Endpoint endpoint, @Nullable EndpointGroup endpointGroup,
                                         SessionProtocol sessionProtocol, HttpMethod method,
-                                        String path, @Nullable String query, @Nullable String fragment) {
-        super(ctx.meterRegistry(), sessionProtocol, id, method, path, query, ctx.exchangeType(),
+                                        RequestTarget reqTarget) {
+        super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
               req, rpcReq, getAttributes(ctx.root()));
 
         // The new requests cannot be null if it was previously non-null.
@@ -475,7 +471,6 @@ public final class DefaultClientRequestContext
 
         eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
-        this.fragment = fragment;
         root = ctx.root();
 
         log = RequestLog.builder(this);
@@ -533,39 +528,37 @@ public final class DefaultClientRequestContext
                                                   @Nullable Endpoint endpoint) {
         if (req != null) {
             final RequestHeaders newHeaders = req.headers();
+            final String oldPath = requestTarget().pathAndQuery();
             final String newPath = newHeaders.path();
-            if (!path().equals(newPath)) {
+            if (!oldPath.equals(newPath)) {
                 // path is changed.
+                final RequestTarget reqTarget = RequestTarget.forClient(newPath);
+                checkArgument(reqTarget != null, "invalid path: %s", newPath);
 
-                if (!isAbsoluteUri(newPath)) {
-                    return newDerivedContext(id, req, rpcReq, newHeaders, sessionProtocol(), endpoint, newPath);
+                if (reqTarget.form() != RequestTargetForm.ABSOLUTE) {
+                    // Not an absolute URI.
+                    return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, null,
+                                                           sessionProtocol(), newHeaders.method(), reqTarget);
                 }
-                final URI uri = URI.create(req.path());
-                final Scheme scheme = Scheme.parse(uri.getScheme());
-                final SessionProtocol protocol = scheme.sessionProtocol();
-                final Endpoint newEndpoint = Endpoint.parse(uri.getAuthority());
-                final String rawQuery = uri.getRawQuery();
-                final String pathWithQuery = pathWithQuery(uri, rawQuery);
-                final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(pathWithQuery));
-                return newDerivedContext(id, newReq, rpcReq, newHeaders, protocol,
-                                         newEndpoint, pathWithQuery);
+
+                // Recalculate protocol and endpoint from the absolute URI.
+                final String scheme = reqTarget.scheme();
+                final String authority = reqTarget.authority();
+                assert scheme != null;
+                assert authority != null;
+
+                final SessionProtocol protocol = Scheme.parse(scheme).sessionProtocol();
+                final Endpoint newEndpoint = Endpoint.parse(authority);
+                final HttpRequest newReq = req.withHeaders(req.headers()
+                                                              .toBuilder()
+                                                              .path(reqTarget.pathAndQuery()));
+                return new DefaultClientRequestContext(this, id, newReq, rpcReq, newEndpoint, null,
+                                                       protocol, newHeaders.method(), reqTarget);
             }
         }
 
         return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
-                                               sessionProtocol(), method(), path(), query(), fragment());
-    }
-
-    private ClientRequestContext newDerivedContext(RequestId id, HttpRequest req, @Nullable RpcRequest rpcReq,
-                                                   RequestHeaders newHeaders, SessionProtocol protocol,
-                                                   @Nullable Endpoint endpoint, String pathWithQuery) {
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(pathWithQuery);
-        if (pathAndQuery == null) {
-            throw new IllegalArgumentException("invalid path: " + req.path());
-        }
-        return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, null,
-                                               protocol, newHeaders.method(), pathAndQuery.path(),
-                                               pathAndQuery.query(), null);
+                                               sessionProtocol(), method(), requestTarget());
     }
 
     @Override
@@ -576,37 +569,27 @@ public final class DefaultClientRequestContext
 
     @Override
     protected void unsafeUpdateRequest(HttpRequest req) {
-        final PathAndQuery pathAndQuery;
-        final SessionProtocol sessionProtocol;
-        final String authority;
-        if (isAbsoluteUri(req.path())) {
-            final URI uri = URI.create(req.path());
-            checkArgument(uri.getScheme() != null, "missing scheme");
-            checkArgument(uri.getAuthority() != null, "missing authority");
-            checkArgument(!uri.getAuthority().isEmpty(), "empty authority");
-            final String rawQuery = uri.getRawQuery();
-            final String pathWithQuery = pathWithQuery(uri, rawQuery);
-            pathAndQuery = PathAndQuery.parse(pathWithQuery);
-            sessionProtocol = Scheme.parse(uri.getScheme()).sessionProtocol();
-            authority = uri.getAuthority();
-        } else {
-            pathAndQuery = PathAndQuery.parse(req.path());
-            sessionProtocol = null;
-            authority = null;
-        }
-        if (pathAndQuery == null) {
-            throw new IllegalArgumentException("invalid path: " + req.path());
-        }
+        final String rawPath = req.path();
+        final RequestTarget reqTarget = RequestTarget.forClient(rawPath);
+        checkArgument(reqTarget != null, "invalid path: %s", rawPath);
 
-        // all validation is complete at this point
-        super.unsafeUpdateRequest(req);
-        path(pathAndQuery.path());
-        query(pathAndQuery.query());
-        if (sessionProtocol != null) {
+        if (reqTarget.form() == RequestTargetForm.ABSOLUTE) {
+            final String authority = reqTarget.authority();
+            final String scheme = reqTarget.scheme();
+            assert authority != null;
+            assert scheme != null;
+
+            final SessionProtocol sessionProtocol = Scheme.parse(scheme).sessionProtocol();
+            final Endpoint endpoint = Endpoint.parse(authority);
+
+            // all validation is complete at this point
+            super.unsafeUpdateRequest(req);
+            requestTarget(reqTarget);
             sessionProtocol(sessionProtocol);
-        }
-        if (authority != null) {
-            updateEndpoint(Endpoint.parse(authority));
+            updateEndpoint(endpoint);
+        } else {
+            super.unsafeUpdateRequest(req);
+            requestTarget(reqTarget);
         }
     }
 
@@ -663,7 +646,7 @@ public final class DefaultClientRequestContext
     @Override
     @Nullable
     public String fragment() {
-        return fragment;
+        return requestTarget().fragment();
     }
 
     @Override

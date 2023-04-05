@@ -76,6 +76,7 @@ class HttpClientWithRequestLogTest {
                 WebClient.builder(LOCAL_HOST)
                          .decorator((delegate, ctx, req) -> {
                              final HttpRequest badReq = req.withHeaders(req.headers().toBuilder().path("/%"));
+                             ctx.updateRequest(badReq);
                              return delegate.execute(ctx, badReq);
                          })
                          .decorator(new ExceptionHoldingDecorator())
@@ -83,14 +84,13 @@ class HttpClientWithRequestLogTest {
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
-                .hasCauseInstanceOf(UnprocessedRequestException.class)
-                .hasRootCauseExactlyInstanceOf(IllegalArgumentException.class)
+                .hasCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("invalid path");
 
         await().untilAsserted(() -> assertThat(
-                requestCauseHolder.get()).hasRootCauseExactlyInstanceOf(IllegalArgumentException.class));
+                requestCauseHolder.get()).isExactlyInstanceOf(IllegalArgumentException.class));
         await().untilAsserted(() -> assertThat(
-                responseCauseHolder.get()).hasRootCauseExactlyInstanceOf(IllegalArgumentException.class));
+                responseCauseHolder.get()).isExactlyInstanceOf(IllegalArgumentException.class));
         await().untilAsserted(() -> assertThat(req.isComplete()).isTrue());
     }
 

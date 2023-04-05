@@ -160,8 +160,8 @@ public final class DefaultServiceRequestContext
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
         super(meterRegistry, sessionProtocol, id,
-              requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
-              requireNonNull(routingResult, "routingResult").query(), exchangeType,
+              requireNonNull(routingContext, "routingContext").method(),
+              routingContext.requestTarget(), exchangeType,
               requireNonNull(req, "req"), null, null);
 
         this.ch = requireNonNull(ch, "ch");

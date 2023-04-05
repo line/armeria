@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -59,13 +60,11 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     private SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
-    private String path;
+    private RequestTarget reqTarget;
     private final ExchangeType exchangeType;
 
     @Nullable
     private String decodedPath;
-    @Nullable
-    private String query;
     @Nullable
     private volatile HttpRequest req;
     @Nullable
@@ -83,7 +82,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, HttpMethod method, String path, @Nullable String query, ExchangeType exchangeType,
+            RequestId id, HttpMethod method, RequestTarget reqTarget, ExchangeType exchangeType,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             @Nullable AttributesGetters rootAttributeMap) {
 
@@ -97,8 +96,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");
-        this.path = requireNonNull(path, "path");
-        this.query = query;
+        this.reqTarget = requireNonNull(reqTarget, "reqTarget");
         this.exchangeType = requireNonNull(exchangeType, "exchangeType");
         this.req = req;
         this.rpcReq = rpcReq;
@@ -189,11 +187,16 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
 
     @Override
     public final String path() {
-        return path;
+        return reqTarget.path();
     }
 
-    protected void path(String path) {
-        this.path = requireNonNull(path, "path");
+    protected final RequestTarget requestTarget() {
+        return reqTarget;
+    }
+
+    protected final void requestTarget(RequestTarget reqTarget) {
+        this.reqTarget = requireNonNull(reqTarget, "reqTarget");
+        decodedPath = null;
     }
 
     @Override
@@ -203,16 +206,12 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
             return decodedPath;
         }
 
-        return this.decodedPath = ArmeriaHttpUtil.decodePath(path);
+        return this.decodedPath = ArmeriaHttpUtil.decodePath(path());
     }
 
     @Override
     public final String query() {
-        return query;
-    }
-
-    protected void query(@Nullable String query) {
-        this.query = query;
+        return reqTarget.query();
     }
 
     @Override
