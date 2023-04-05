@@ -44,21 +44,16 @@ import io.netty.handler.codec.http.HttpVersion;
 
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
     private final KeepAliveHandler keepAliveHandler;
-    private final boolean enableServerHeader;
-    private final boolean enableDateHeader;
     private final Http1HeaderNaming http1HeaderNaming;
 
     private boolean sentConnectionCloseHeader;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
-                             boolean enableDateHeader, boolean enableServerHeader,
                              Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
         assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
                keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
-        this.enableServerHeader = enableServerHeader;
-        this.enableDateHeader = enableDateHeader;
         this.http1HeaderNaming = http1HeaderNaming;
     }
 

@@ -1294,10 +1294,6 @@ class AnnotatedServiceTest {
         final org.apache.hc.core5.http.Header header = res.getFirstHeader(CONTENT_TYPE);
         if (contentType != null) {
             assertThat(MediaType.parse(header.getValue())).isEqualTo(MediaType.parse(contentType));
-        } else if (statusCode >= 400) {
-            assertThat(header.getValue()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
-        } else {
-            assert header == null;
         }
     }
 

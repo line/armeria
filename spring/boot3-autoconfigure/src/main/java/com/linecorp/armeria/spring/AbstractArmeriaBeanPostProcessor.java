@@ -46,8 +46,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 
 /**
- * Abstract class for implementing ArmeriaBeanPostProcessor of boot2-autoconfigure module
- * and ArmeriaSpringBoot1BeanPostProcessor of boot1-autoconfigure module.
+ * Abstract class for implementing ArmeriaBeanPostProcessor.
  */
 abstract class AbstractArmeriaBeanPostProcessor {
 
