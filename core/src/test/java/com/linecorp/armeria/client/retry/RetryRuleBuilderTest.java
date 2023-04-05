@@ -121,7 +121,6 @@ class RetryRuleBuilderTest {
         assertBackoff(rule.shouldRetry(ctx2, null)).isNull();
     }
 
-
     @Test
     void onGrpcTrailers() {
         final Backoff backoff = Backoff.fixed(1000);
