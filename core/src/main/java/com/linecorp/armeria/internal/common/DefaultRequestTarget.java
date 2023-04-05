@@ -118,6 +118,14 @@ public final class DefaultRequestTarget implements RequestTarget {
     private static final Bytes EMPTY_BYTES = new Bytes(0);
     private static final Bytes SLASH_BYTES = new Bytes(new byte[] { '/' });
 
+    private static final RequestTarget INSTANCE_ASTERISK = createWithoutValidation(
+            RequestTargetForm.ASTERISK,
+            null,
+            null,
+            "*",
+            null,
+            null);
+
     /**
      * The main implementation of {@link RequestTarget#forServer(String)}.
      */
@@ -333,12 +341,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         // Reject a relative path and accept an asterisk (e.g. OPTIONS * HTTP/1.1).
         if (isRelativePath(path)) {
             if (query == null && path.length == 1 && path.data[0] == '*') {
-                return new DefaultRequestTarget(RequestTargetForm.ASTERISK,
-                                                null,
-                                                null,
-                                                "*",
-                                                null,
-                                                null);
+                return INSTANCE_ASTERISK;
             } else {
                 // Do not accept a relative path.
                 return null;
@@ -507,12 +510,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
         // Accept an asterisk (e.g. OPTIONS * HTTP/1.1).
         if (query == null && path.length == 1 && path.data[0] == '*') {
-            return new DefaultRequestTarget(RequestTargetForm.ASTERISK,
-                                            null,
-                                            null,
-                                            "*",
-                                            null,
-                                            null);
+            return INSTANCE_ASTERISK;
         }
 
         final String encodedPath;
