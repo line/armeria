@@ -20,8 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.File;
 import java.net.URL;
-import java.util.Collection;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -72,7 +70,9 @@ class KeyStoreUtilTest {
             "keystore.jks, my-first-password, _",
             "keystore-different-password.jks, my-first-password, my-key-password",
     })
-    void shouldLoadKeyStoreWithOneKeyPair(String filename, @Nullable String keyStorePassword, @Nullable String keyPassword) throws Exception {
+    void shouldLoadKeyStoreWithOneKeyPair(String filename,
+                                          @Nullable String keyStorePassword,
+                                          @Nullable String keyPassword) throws Exception {
         final KeyPair keyPair = KeyStoreUtil.load(getFile(filename),
                                                   underscoreToNull(keyStorePassword),
                                                   underscoreToNull(keyPassword),
@@ -84,7 +84,7 @@ class KeyStoreUtilTest {
 
     @ParameterizedTest
     @CsvSource({"first, foo.com", "second, bar.com"})
-    void shouldLoadKeyStoreWithTwoKeyPairsIfCorrectAliasIsGiven(String alias, String expectedCN) throws Exception {
+    void shouldLoadKeyStoreWithTwoKeyPairsIfAliasIsGiven(String alias, String expectedCN) throws Exception {
         final KeyPair keyPair = KeyStoreUtil.load(getFile("keystore-two-keys.p12"),
                                                   "my-second-password",
                                                   null,
