@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
@@ -58,13 +57,13 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             RequestContext ctx,
             TransportStatusListener transportStatusListener,
             @Nullable GrpcStatusFunction statusFunction,
-            int maxMessageLength, boolean grpcWebText) {
+            int maxMessageLength, boolean grpcWebText, boolean server) {
         super(maxMessageLength, ctx.alloc(), grpcWebText);
         this.ctx = requireNonNull(ctx, "ctx");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
         this.statusFunction = statusFunction;
-        server = ctx instanceof ServiceRequestContext;
+        this.server = server;
     }
 
     /**
