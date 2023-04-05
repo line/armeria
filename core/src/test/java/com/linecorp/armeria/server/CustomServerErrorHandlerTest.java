@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class CustomServerErrorHandlerTest {
@@ -77,9 +78,14 @@ class CustomServerErrorHandlerTest {
 
             sb.virtualHost(TEST_HOST)
               .service("/bar", (ctx, req) -> {
-                  throw new RuntimeException();
+                  throw new AnticipatedException();
               })
-              .errorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.BAD_REQUEST));
+              .errorHandler((ctx, cause) -> {
+                  if (cause instanceof AnticipatedException) {
+                      return HttpResponse.of(HttpStatus.BAD_REQUEST);
+                  }
+                  return null;
+              });
 
             sb.errorHandler(new CustomServerErrorHandler());
         }
@@ -148,8 +154,8 @@ class CustomServerErrorHandlerTest {
     @CsvSource({ "H1C", "H2C" })
     void defaultVirtualHost(SessionProtocol protocol) {
         final Endpoint endpoint = Endpoint.of(TEST_HOST, server.httpPort()).withIpAddr("127.0.0.1");
-        final WebClient webClientTest = WebClient.of(protocol, endpoint);
-        final AggregatedHttpResponse response = webClientTest.get("/foo").aggregate().join();
+        final BlockingWebClient webClientTest = WebClient.of(protocol, endpoint).blocking();
+        final AggregatedHttpResponse response = webClientTest.get("/bar");
 
         assertThat(response.status()).isSameAs(HttpStatus.BAD_REQUEST);
     }
