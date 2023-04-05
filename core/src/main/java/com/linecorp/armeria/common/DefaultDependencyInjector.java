@@ -32,7 +32,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
 
     private final Map<Class<?>, Object> singletons = new HashMap<>();
 
-    private final ReentrantLock reentrantLock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantLock();
     private boolean isShutdown;
 
     DefaultDependencyInjector(Iterable<Object> singletons) {
@@ -45,7 +45,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
 
     @Override
     public <T> T getInstance(Class<T> type) {
-        reentrantLock.lock();
+        lock.lock();
         try {
             if (isShutdown) {
                 throw new IllegalStateException("Already shut down");
@@ -57,13 +57,13 @@ final class DefaultDependencyInjector implements DependencyInjector {
             }
             return null;
         } finally {
-            reentrantLock.unlock();
+            lock.unlock();
         }
     }
 
     @Override
     public void close() {
-        reentrantLock.lock();
+        lock.lock();
         try {
             if (isShutdown) {
                 return;
@@ -76,7 +76,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
             }
             singletons.clear();
         } finally {
-            reentrantLock.unlock();
+            lock.unlock();
         }
     }
 

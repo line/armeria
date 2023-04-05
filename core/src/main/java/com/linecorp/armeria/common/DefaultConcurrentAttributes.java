@@ -378,7 +378,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
     }
 
     @VisibleForTesting
-    static final class DefaultAttribute<T> implements Entry<AttributeKey<T>, T> {
+    static final class DefaultAttribute<T> extends ReentrantLock implements Entry<AttributeKey<T>, T> {
 
         @Nullable
         private final AttributeKey<T> key;
@@ -388,8 +388,6 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
 
         @Nullable
         private DefaultAttribute<?> next;
-
-        private final ReentrantLock reentrantLock = new ReentrantLock();
 
         DefaultAttribute(AttributeKey<T> key, @Nullable T value) {
             this.key = key;
@@ -420,14 +418,6 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             final T old = this.value;
             this.value = value;
             return old;
-        }
-
-        public void lock() {
-            reentrantLock.lock();
-        }
-
-        public void unlock() {
-            reentrantLock.unlock();
         }
 
         @Override
