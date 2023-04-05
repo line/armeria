@@ -271,7 +271,6 @@ public final class JettyService implements HttpService {
                 return null;
             }
 
-            boolean success = false;
             try {
                 final ArmeriaHttpTransport transport = new ArmeriaHttpTransport(ctx, res);
                 final HttpChannel httpChannel = new HttpChannel(
@@ -316,15 +315,10 @@ public final class JettyService implements HttpService {
                         logger.warn("{} Failed to handle a request:", ctx, t);
                     }
                 });
-                success = true;
                 return null;
-            } catch (Exception e) {
-                res.abort(e);
-                throw e;
-            } finally {
-                if (!success) {
-                    res.close();
-                }
+            } catch (Throwable t) {
+                res.abort(t);
+                throw t;
             }
         }).exceptionally(CompletionActions::log);
 

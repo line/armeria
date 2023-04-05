@@ -445,7 +445,7 @@ public abstract class TomcatService implements HttpService {
                 });
             } catch (Throwable t) {
                 logger.warn("{} Failed to invoke Tomcat:", ctx, t);
-                res.close();
+                res.abort(t);
             }
 
             return null;

@@ -16,10 +16,14 @@
 package com.linecorp.armeria.server.tomcat;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.catalina.Service;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -29,10 +33,16 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AppRootFinder;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -44,6 +54,8 @@ class ManagedTomcatServiceTest extends WebAppContainerTest {
     private static final String SERVICE_NAME = "TomcatServiceTest";
 
     private static final List<Service> tomcatServices = new ArrayList<>();
+
+    private static final RuntimeException RUNTIME_EXCEPTION = new RuntimeException();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -74,6 +86,16 @@ class ManagedTomcatServiceTest extends WebAppContainerTest {
                                  .serviceName("TomcatServiceTest-JAR-AltRoot")
                                  .build()
                                  .decorate(LoggingService.newDecorator()));
+
+            sb.service("/throwing",
+                       TomcatService.builder(webAppRoot())
+                                    .build()
+                                    .decorate((delegate, ctx, req) -> {
+                                        ctx = spy(ctx);
+                                        // relies on the fact that TomcatService calls this method
+                                        when(ctx.sessionProtocol()).thenThrow(RUNTIME_EXCEPTION);
+                                        return delegate.serve(ctx, req);
+                                    }));
         }
     };
 
@@ -116,5 +138,20 @@ class ManagedTomcatServiceTest extends WebAppContainerTest {
                 EntityUtils.consume(res.getEntity());
             }
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C"})
+    void throwingExceptionIsLogged(SessionProtocol sessionProtocol) throws Exception {
+        final AggregatedHttpResponse res = WebClient.builder(sessionProtocol, server.httpEndpoint())
+                                                    .build().blocking().get("/throwing");
+        assertThat(res.status().code()).isEqualTo(500);
+
+
+        assertThat(server.requestContextCaptor().size()).isEqualTo(1);
+        final ServiceRequestContext sctx = server.requestContextCaptor().poll();
+        await().atMost(10, TimeUnit.SECONDS).until(() -> sctx.log().isComplete());
+        assertThat(sctx.log().ensureComplete().responseCause()).isSameAs(RUNTIME_EXCEPTION);
+        System.out.println(sctx.log().ensureComplete());
     }
 }
