@@ -74,8 +74,9 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), exceptionFilter(), false);
-        return build(ruleFilter, decision, responseTrailersFilter() != null);
+                                                    responseTrailersFilter(), grpcTrailersFilter(),
+                                                    exceptionFilter(), false);
+        return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
     static CircuitBreakerRule build(
@@ -129,6 +130,18 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     public CircuitBreakerRuleBuilder onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (CircuitBreakerRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code grpcTrailersFilter} for a {@link CircuitBreakerRule}.
+     * If the specified {@code grpcTrailersFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @Override
+    public CircuitBreakerRuleBuilder onGrpcTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+        return (CircuitBreakerRuleBuilder) super.onGrpcTrailers(grpcTrailersFilter);
     }
 
     /**

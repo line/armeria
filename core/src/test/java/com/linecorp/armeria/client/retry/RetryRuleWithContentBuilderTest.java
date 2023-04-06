@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -86,6 +87,23 @@ class RetryRuleWithContentBuilderTest {
                 () -> RetryRuleWithContent.builder().build(RetryDecision.retry(Backoff.ofDefault())))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should set at least one retry rule");
+    }
+
+    @Test
+    void onGrpcTrailers() {
+        final RetryRuleWithContent<HttpResponse> rule = RetryRuleWithContent
+                .<HttpResponse>builder()
+                .onGrpcTrailers((unused, trailers) -> trailers.containsInt("grpc-status", 3))
+                .thenBackoff(backoff);
+
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK, "grpc-status", 3));
+        ctx1.logBuilder().responseTrailers(HttpHeaders.of());
+        assertBackoff(rule.shouldRetry(ctx1, null, null)).isSameAs(backoff);
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().responseTrailers(HttpHeaders.of("grpc-status", 0));
+        assertBackoff(rule.shouldRetry(ctx2, null, null)).isNull();
     }
 
     @Test
