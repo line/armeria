@@ -207,6 +207,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultServerKeepAliveOnPing() {
+        return DEFAULT_SERVER_KEEP_ALIVE_ON_PING;
+    }
+
+    @Override
     public Boolean defaultClientKeepAliveOnPing() {
         return DEFAULT_CLIENT_KEEP_ALIVE_ON_PING;
     }

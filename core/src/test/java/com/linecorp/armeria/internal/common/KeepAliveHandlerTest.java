@@ -81,7 +81,8 @@ class KeepAliveHandlerTest {
         keepAliveTimer = MoreMeters.newTimer(meterRegistry, CONNECTION_LIFETIME, ImmutableList.of());
 
         // Warm up the event loop to reduce timing errors.
-        eventLoop.submit(() -> {}).syncUninterruptibly();
+        eventLoop.submit(() -> {
+        }).syncUninterruptibly();
     }
 
     @AfterEach
@@ -342,6 +343,57 @@ class KeepAliveHandlerTest {
         await().timeout(idleTimeout * 2, TimeUnit.MILLISECONDS).untilAtomic(idleCounter, Matchers.is(1));
         await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#count", 1));
         idleTimeoutScheduler.destroy();
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void testKeepAliveOnPing(boolean keepAliveOnPing) throws InterruptedException {
+        final AtomicLong lastIdleEventTime = new AtomicLong();
+        final AtomicInteger idleCounter = new AtomicInteger();
+        final long idleTimeout = 2000;
+
+        final AbstractKeepAliveHandler idleTimeoutScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout,
+                                             0, 0, 0, keepAliveOnPing) {
+
+                    @Override
+                    public boolean isHttp2() {
+                        return true;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
+                    @Override
+                    protected boolean pingResetsPreviousPing() {
+                        return true;
+                    }
+
+                    @Override
+                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+                        // Should never reach here.
+                        throw new Error();
+                    }
+
+                    @Override
+                    protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+                        idleCounter.incrementAndGet();
+                        return false;
+                    }
+                };
+
+        lastIdleEventTime.set(System.nanoTime());
+        idleTimeoutScheduler.initialize(ctx);
+
+        for (int i = 0; i < 10; i++) {
+            idleTimeoutScheduler.onPing();
+            Thread.sleep(idleTimeout - 1000);
+            // Make sure that a connection was not closed by an idle timeout handler base on keepAliveOnPing.
+            if (i != 0) {
+                // When keepAliveOnPing is false, the connection will be closed after the first iteration.
+                assertThat(idleTimeoutScheduler.isClosing()).isEqualTo(!keepAliveOnPing);
+            }
+        }
     }
 
     @ParameterizedTest
