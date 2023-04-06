@@ -28,8 +28,10 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -227,6 +229,12 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                      boolean shutdownOnStop) {
+        return (ServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+    }
+
+    @Override
     public ServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         return (ServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
     }
@@ -269,6 +277,12 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (ServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public ServiceBindingBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        return (ServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
     }
 
     @Override
@@ -315,6 +329,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     public ServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         return (ServiceBindingBuilder) super.decorators(decorators);
+    }
+
+    @Override
+    public ServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        return (ServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
     }
 
     /**

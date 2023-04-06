@@ -209,9 +209,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             keepAliveHandler = new NoopKeepAliveHandler();
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
-                p.channel(), H1C, keepAliveHandler,
-                config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
-                config.http1HeaderNaming()
+                p.channel(), H1C, keepAliveHandler, config.http1HeaderNaming()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
@@ -517,8 +515,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             }
 
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
-                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
-                    config.http1HeaderNaming());
+                    ch, H1, keepAliveHandler, config.http1HeaderNaming());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),

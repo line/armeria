@@ -279,6 +279,32 @@ public interface ClientRequestContext extends RequestContext {
     String fragment();
 
     /**
+     * Returns the authority which will eventually be sent when a {@link Client} sends an {@link HttpRequest}.
+     * This method checks the following locations and returns the first non-null value.
+     * <ol>
+     *     <li>Either the {@link HttpHeaderNames#HOST} or {@link HttpHeaderNames#AUTHORITY} value from
+     *         {@link ClientRequestContext#additionalRequestHeaders()}.</li>
+     *     <li>The {@link HttpRequest#authority()} from {@link ClientRequestContext#request()}.</li>
+     *     <li>{@link ClientRequestContext#defaultRequestHeaders()}.</li>
+     *     <li>{@link Endpoint#authority()}.</li>
+     * </ol>
+     */
+    @Nullable
+    @UnstableApi
+    String authority();
+
+    /**
+     * Returns the {@link URI} constructed based on {@link ClientRequestContext#sessionProtocol()},
+     * {@link ClientRequestContext#authority()}, {@link ClientRequestContext#path()} and
+     * {@link ClientRequestContext#query()}.
+     *
+     * @throws IllegalStateException if the resulting URI is not valid.
+     */
+    @Override
+    @UnstableApi
+    URI uri();
+
+    /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */

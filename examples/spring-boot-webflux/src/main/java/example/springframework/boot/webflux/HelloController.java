@@ -1,13 +1,12 @@
 package example.springframework.boot.webflux;
 
-import javax.inject.Inject;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 
+import jakarta.inject.Inject;
 import reactor.core.publisher.Mono;
 
 /**

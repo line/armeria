@@ -35,10 +35,12 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -87,10 +89,11 @@ public final class VirtualHost {
     private final long maxRequestLength;
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
-    private final ScheduledExecutorService blockingTaskExecutor;
+    private final BlockingTaskExecutor blockingTaskExecutor;
     private final SuccessFunction successFunction;
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
+    private final Function<RoutingContext, RequestId> requestIdGenerator;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
@@ -103,10 +106,11 @@ public final class VirtualHost {
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
-                ScheduledExecutorService blockingTaskExecutor,
+                BlockingTaskExecutor blockingTaskExecutor,
                 SuccessFunction successFunction,
                 Path multipartUploadsLocation,
-                List<ShutdownSupport> shutdownSupports) {
+                List<ShutdownSupport> shutdownSupports,
+                Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         originalDefaultHostname = defaultHostname;
         originalHostnamePattern = hostnamePattern;
         if (port > 0) {
@@ -128,6 +132,10 @@ public final class VirtualHost {
         this.successFunction = successFunction;
         this.multipartUploadsLocation = multipartUploadsLocation;
         this.shutdownSupports = shutdownSupports;
+        @SuppressWarnings("unchecked")
+        final Function<RoutingContext, RequestId> castRequestIdGenerator =
+                (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        this.requestIdGenerator = castRequestIdGenerator;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(fallbackServiceConfig, "fallbackServiceConfig");
@@ -149,7 +157,8 @@ public final class VirtualHost {
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction, multipartUploadsLocation,
-                               shutdownSupports);
+                               shutdownSupports,
+                               requestIdGenerator);
     }
 
     /**
@@ -377,7 +386,7 @@ public final class VirtualHost {
      *
      * @see ServiceConfig#blockingTaskExecutor()
      */
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public BlockingTaskExecutor blockingTaskExecutor() {
         return blockingTaskExecutor;
     }
 
@@ -400,6 +409,13 @@ public final class VirtualHost {
      */
     public SuccessFunction successFunction() {
         return successFunction;
+    }
+
+    /**
+     * Returns the {@link Function} that generates a {@link RequestId}.
+     */
+    public Function<RoutingContext, RequestId> requestIdGenerator() {
+        return requestIdGenerator;
     }
 
     /**
@@ -509,7 +525,8 @@ public final class VirtualHost {
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction, multipartUploadsLocation,
-                               shutdownSupports);
+                               shutdownSupports,
+                               requestIdGenerator);
     }
 
     @Override

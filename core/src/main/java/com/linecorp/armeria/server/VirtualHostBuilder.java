@@ -69,6 +69,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsSetters;
@@ -148,11 +150,15 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Nullable
     private AnnotatedServiceExtensions annotatedServiceExtensions;
     @Nullable
-    private ScheduledExecutorService blockingTaskExecutor;
+    private BlockingTaskExecutor blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
+    @Nullable
+    private ServiceErrorHandler errorHandler;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -822,6 +828,14 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link ServiceErrorHandler} that handles exceptions thrown in this virtual host.
+     */
+    public VirtualHostBuilder errorHandler(ServiceErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        return this;
+    }
+
+    /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
      * an {@link HttpService} at a certain {@link Route} is rejected. If not set,
      * the {@link RejectedRouteHandler} set via
@@ -1023,6 +1037,19 @@ public final class VirtualHostBuilder implements TlsSetters {
      */
     public VirtualHostBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                    boolean shutdownOnStop) {
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return blockingTaskExecutor(BlockingTaskExecutor.of(blockingTaskExecutor), shutdownOnStop);
+    }
+
+    /**
+     * Sets the {@link BlockingTaskExecutor} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link BlockingTaskExecutor} when the
+     *                       {@link Server} stops
+     */
+    public VirtualHostBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                   boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
@@ -1077,6 +1104,19 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link Function} which generates a {@link RequestId}.
+     * If not set, the value set via {@link ServerBuilder#requestIdGenerator(Function)} is used.
+     *
+     * @param requestIdGenerator the {@link Function} which generates a {@link RequestId}
+     * @see RequestContext#id()
+     */
+    public VirtualHostBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        return this;
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -1107,7 +1147,8 @@ public final class VirtualHostBuilder implements TlsSetters {
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
-    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector) {
+    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
+                      @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
         requireNonNull(template, "template");
 
         if (defaultHostname == null) {
@@ -1161,7 +1202,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                 annotatedServiceExtensions != null ?
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
 
-        final ScheduledExecutorService blockingTaskExecutor;
+        final BlockingTaskExecutor blockingTaskExecutor;
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
         } else {
@@ -1182,6 +1223,13 @@ public final class VirtualHostBuilder implements TlsSetters {
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
 
+        final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
+                this.requestIdGenerator != null ?
+                this.requestIdGenerator : template.requestIdGenerator;
+        final ServiceErrorHandler serverErrorHandler = serverBuilder.errorHandler().asServiceErrorHandler();
+        final ServiceErrorHandler defaultErrorHandler =
+                errorHandler != null ? errorHandler.orElse(serverErrorHandler) : serverErrorHandler;
+
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
@@ -1189,6 +1237,7 @@ public final class VirtualHostBuilder implements TlsSetters {
         assert blockingTaskExecutor != null;
         assert successFunction != null;
         assert multipartUploadsLocation != null;
+        assert requestIdGenerator != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -1209,14 +1258,17 @@ public final class VirtualHostBuilder implements TlsSetters {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, multipartUploadsLocation, defaultHeaders);
+                                            successFunction, multipartUploadsLocation, defaultHeaders,
+                                            requestIdGenerator, defaultErrorHandler,
+                                            unhandledExceptionsReporter);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               multipartUploadsLocation, defaultHeaders);
+                               multipartUploadsLocation, defaultHeaders, requestIdGenerator,
+                               defaultErrorHandler, unhandledExceptionsReporter);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);
@@ -1228,7 +1280,8 @@ public final class VirtualHostBuilder implements TlsSetters {
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter,
                                 blockingTaskExecutor, successFunction, multipartUploadsLocation,
-                                builder.build());
+                                builder.build(),
+                                requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);
