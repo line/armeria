@@ -6,7 +6,7 @@ dependencies {
     implementation project(':grpc')
     implementation project(':grpc-protocol')
     implementation project(':retrofit2')
-    implementation project(':thrift0.17')
+    implementation project(':thrift0.18')
     implementation project(':kotlin')
 
     implementation libs.retrofit2.converter.jackson
