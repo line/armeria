@@ -6,7 +6,7 @@ date: 2023-03-xx
 
 - <type://DocService> now supports auto-completion for gRPC and Thrift services. #4516
   - Check out this awesome demo video by [@Dogacel](https://github.com/dogacel) to learn more.
-  <AspectRatio width={18} height={9} maxWidth="42rem">
+  <AspectRatio width={18} height={9} maxWidth="21rem">
     <video controls>
       <source src="https://user-images.githubusercontent.com/7023385/201191726-1cc4d893-0394-4392-b6be-8e981583b20e.mov" />
     </video>
@@ -92,6 +92,15 @@ date: 2023-03-xx
   // context-propagating
   RequestContext.makeContextPropagating(blockingTaskExecutor);
   ```
+- You can now write a circuit breaker or retry rule that makes a decision based on gRPC trailers,
+  regardless of whether it's a gRPC response with/without body or even gRPC Web response. #4496 #4535
+  ```java
+  final RetryRule rule =
+    RetryRule.builder()
+             .onGrpcTrailers((unused, trailers) -> trailers.containsInt(
+                "grpc-status", 13)) // Retry for internal error.
+             .thenBackoff(backoff);
+  ```
 - You can now use <type://StreamMessage#of(InputStream)> to convert an `InputStream`
   to <type://StreamMessage>. #3937 #4703
   ```java
@@ -172,6 +181,15 @@ date: 2023-03-xx
 
 ## 📈 Improvements
 
+- Armeria client doesn't normalize consecutive slashes (e.g. `foo//bar`) in a client request path anymore. #4789
+
+  <Tip>
+
+  Please make sure that your server or service handles consecutive slashes properly before an upgrade.
+  Armeria server always cleans up such a path for you, so you don't need to worry.
+
+  </Tip>
+Note:
 - The debug page of <type://DocService> is now a pop-up for easier access. #4599
 - You can now use `Connection: close` header to close a connection after receiving a response. #4131 #4454 #4471 #4531
 - Armeria now exports the gauge metrics of <type://CommonPools#workerGroup()>. #4675 #4750
@@ -181,6 +199,7 @@ date: 2023-03-xx
 
 ## 🛠️ Bug fixes
 
+- Armeria client now handles the fragment part of URI consistently. #4789
 - The <type://RetryConfig> from <type://RetryConfigMapping> is retrieved only once for a retry session
   and reused. #4753 #4778
 - Fixed a memory leak of the response body for HEAD requests. #4771
@@ -196,6 +215,8 @@ date: 2023-03-xx
 - No more deadlocks occur in Thrift versions 14 and below when loading <type://DocService>. #4688
 - <type://HttpStatusException> is not raised anymore when there is no matching route for a request. #4548 #4552
   - Normal 404 Not Found response is sent instead.
+- A gRPC call is now correctly terminated with `Status.INTERLAL` when an invalid response is received. #4808
+- A server-side <type://RequestLog> is completed correctly when an empty response is sent. #4807
 
 ## 🏚️ Deprecations
 
@@ -214,6 +235,14 @@ date: 2023-03-xx
   - `makeContextAware(Executor)` returns <type://ContextAwareExecutor> instead of `Executor`.
   - `makeContextAware(ScheduledExecutorService)` returns <type://ContextAwareScheduledExecutorService>
     instead of `ScheduledExecutorService`.
+- The signatures of `UserClient.execute()` have been changed. #4789
+  - It now contains the newly added <type://RequestTarget> as a parameter instead of the `path`, `query`,
+    and `fragment`.
+- The names of path cache meters have been changed. #4789
+  - Old meter name: `armeria.server.parsed.path.cache`
+  - New meter names:
+    - `armeria.path.cache{type=client}`
+    - `armeria.path.cache{type=server}`
 
 ## ⛓ Dependencies
 
@@ -224,12 +253,12 @@ date: 2023-03-xx
 - GraphQL Kotlin 6.3.5 → 6.4.0
 - java-jwt 4.2.2 → 4.3.0
 - Micrometer 1.10.3 → 1.10.5
-- Netty 4.1.87.Final → 4.1.90.Final
+- Netty 4.1.87.Final → 4.1.91.Final
 - Reactor Kotlin 1.2.1 → 1.2.2
 - Sangria 3.5.0 → 3.5.3
-- Spring 5.3.25 → 5.3.26
+- Spring 5.3.25 → 6.0.6
 - Spring Boot
-  - 3.0.2
+  - 3.0.5
   - 2.7.8 → 2.7.10
 
 ## 🙇 Thank you
@@ -256,6 +285,7 @@ date: 2023-03-xx
   'mitrofmep',
   'mscheong01',
   'nao0811ta',
+  'opus53',
   'SeanWhoCodes',
   'seonwoo960000',
   'ta7uw',
