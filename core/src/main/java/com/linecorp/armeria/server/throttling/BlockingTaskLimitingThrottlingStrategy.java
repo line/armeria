@@ -44,9 +44,7 @@ final class BlockingTaskLimitingThrottlingStrategy<T extends Request> extends Th
 
     @Override
     public CompletionStage<Boolean> accept(ServiceRequestContext ctx, T request) {
-        final BlockingTaskExecutor executor =
-                (BlockingTaskExecutor) ctx.blockingTaskExecutor().withoutContext();
-        if (limitSupplier.getAsInt() <= executor.numPendingTasks()) {
+        if (limitSupplier.getAsInt() <= ctx.blockingTaskExecutor().numPendingTasks()) {
             return UnmodifiableFuture.completedFuture(false);
         }
 
