@@ -315,11 +315,10 @@ public final class JettyService implements HttpService {
                         logger.warn("{} Failed to handle a request:", ctx, t);
                     }
                 });
-                return null;
             } catch (Throwable t) {
                 res.abort(t);
-                throw t;
             }
+            return null;
         }).exceptionally(CompletionActions::log);
 
         return res;

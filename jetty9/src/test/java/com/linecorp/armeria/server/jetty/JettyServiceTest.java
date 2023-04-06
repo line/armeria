@@ -421,7 +421,6 @@ class JettyServiceTest extends WebAppContainerTest {
         final ServiceRequestContext sctx = server.requestContextCaptor().poll();
         await().atMost(10, TimeUnit.SECONDS).until(() -> sctx.log().isComplete());
         assertThat(sctx.log().ensureComplete().responseCause()).isSameAs(RUNTIME_EXCEPTION);
-        System.out.println(sctx.log().ensureComplete());
     }
 
     private static JettyService newJettyService(SimpleHandlerFunction func) {
