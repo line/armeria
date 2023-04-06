@@ -147,7 +147,6 @@ class ManagedTomcatServiceTest extends WebAppContainerTest {
                                                     .build().blocking().get("/throwing");
         assertThat(res.status().code()).isEqualTo(500);
 
-
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
         final ServiceRequestContext sctx = server.requestContextCaptor().poll();
         await().atMost(10, TimeUnit.SECONDS).until(() -> sctx.log().isComplete());
