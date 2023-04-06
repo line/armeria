@@ -1,5 +1,6 @@
 ---
-date: 2023-04-x07---
+date: 2023-04-07
+---
 
 ## 🌸 Highlights
 
@@ -13,6 +14,15 @@ date: 2023-04-x07---
 
 ## 🌟 New features
 
+- You can now write a circuit breaker or retry rule that makes a decision based on gRPC trailers,
+regardless of whether it's a gRPC response with/without body or even gRPC Web response. #4496 #4535
+```java
+final RetryRule rule =
+  RetryRule.builder()
+           .onGrpcTrailers((unused, trailers) -> trailers.containsInt(
+              "grpc-status", 13)) // Retry for internal error.
+           .thenBackoff(backoff);
+  ```
 - Unhandled exceptions are logged periodically out of the box. #4324 #4687
   - You can change the interval of the periodic logging
     using <type://ServerBuilder#unhandledExceptionsReportIntervalMillis(long)>.
@@ -89,15 +99,6 @@ date: 2023-04-x07---
   // context-propagating
   RequestContext.makeContextPropagating(blockingTaskExecutor);
   ```
-- You can now write a circuit breaker or retry rule that makes a decision based on gRPC trailers,
-  regardless of whether it's a gRPC response with/without body or even gRPC Web response. #4496 #4535
-  ```java
-  final RetryRule rule =
-    RetryRule.builder()
-             .onGrpcTrailers((unused, trailers) -> trailers.containsInt(
-                "grpc-status", 13)) // Retry for internal error.
-             .thenBackoff(backoff);
-  ```
 - You can now use <type://StreamMessage#of(InputStream)> to convert an `InputStream`
   to <type://StreamMessage>. #3937 #4703
   ```java
@@ -121,7 +122,9 @@ date: 2023-04-x07---
   ```java
   ServerBuilder sb = ...
   sb.requestIdGenerator((routingCtx, req) -> {
-    return RequestId.of(routingCtx.headers().getLong("requestId"));
+    // Create a request ID from the trace ID of an OpenTelemetry headers.
+    return RequestId.of(
+      requestId(routingCtx.headers().get("traceparent")));
   });
   ```
 - You can now collect metrics of open and closed client connections
@@ -178,22 +181,22 @@ date: 2023-04-x07---
 
 ## 📈 Improvements
 
+- The debug page of <type://DocService> is now a pop-up for easier access. #4599
+- You can now use `Connection: close` header to close a connection after receiving a response. #4131 #4454 #4471 #4531
+- Armeria now exports the gauge metrics of <type://CommonPools#workerGroup()>. #4675 #4750
+  - The metric names:
+    - `armeria.netty.common.event.loop.workers`
+    - `armeria.netty.common.event.loop.pending.tasks`
+- If the mapping for a HEAD request is not found, the request is rerouted to the service bound to the
+  GET method on the same path. #4038 #4706
 - Armeria client doesn't normalize consecutive slashes (e.g. `foo//bar`) in a client request path anymore. #4789
 
   <Tip>
 
-  Please make sure that your server or service handles consecutive slashes properly before an upgrade.
-  Armeria server always cleans up such a path for you, so you don't need to worry.
+    Please make sure that your server or service handles consecutive slashes properly before an upgrade.
+    Armeria server always cleans up such a path for you, so you don't need to worry.
 
   </Tip>
-Note:
-- The debug page of <type://DocService> is now a pop-up for easier access. #4599
-- You can now use `Connection: close` header to close a connection after receiving a response. #4131 #4454 #4471 #4531
-- Armeria now exports the gauge metrics of <type://CommonPools#workerGroup()>. #4675 #4750
-  - The metric names are:
-    `armeria.netty.common.event.loop.workers` and `armeria.netty.common.event.loop.pending.tasks`
-- If the mapping for a HEAD request is not found, the request is rerouted to the service bound to the
-  GET method on the same path. #4038 #4706
 
 ## 🛠️ Bug fixes
 
@@ -237,7 +240,7 @@ Note:
   - It now contains the newly added <type://RequestTarget> as a parameter instead of the `path`, `query`,
     and `fragment`.
 - The names of path cache meters have been changed. #4789
-  - Old meter name: `armeria.server.parsed.path.cache`
+  - The old meter name: `armeria.server.parsed.path.cache`
   - New meter names:
     - `armeria.path.cache{type=client}`
     - `armeria.path.cache{type=server}`
