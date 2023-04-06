@@ -1,5 +1,10 @@
 dependencies {
-    testImplementation project(':thrift0.18')
+
+    if (rootProject.ext.testJavaVersion >= 11) {
+        testImplementation project(':thrift0.18')
+    } else {
+        testImplementation project(':thrift0.17')
+    }
     // Logback
     api libs.logback
 }
