@@ -387,7 +387,7 @@ class KeepAliveHandlerTest {
 
         for (int i = 0; i < 10; i++) {
             idleTimeoutScheduler.onPing();
-            Thread.sleep(idleTimeout - 1000);
+            Thread.sleep(idleTimeout - 500);
             // Make sure that a connection was not closed by an idle timeout handler base on keepAliveOnPing.
             if (i != 0) {
                 // When keepAliveOnPing is false, the connection will be closed after the first iteration.
