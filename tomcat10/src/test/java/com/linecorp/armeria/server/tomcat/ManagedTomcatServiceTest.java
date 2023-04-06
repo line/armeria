@@ -150,6 +150,8 @@ class ManagedTomcatServiceTest extends WebAppContainerTest {
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
         final ServiceRequestContext sctx = server.requestContextCaptor().poll();
         await().atMost(10, TimeUnit.SECONDS).until(() -> sctx.log().isComplete());
-        assertThat(sctx.log().ensureComplete().responseCause()).isSameAs(RUNTIME_EXCEPTION);
+        assertThat(sctx.log().ensureComplete().responseCause())
+                .isInstanceOf(IllegalStateException.class)
+                .hasCause(RUNTIME_EXCEPTION);
     }
 }
