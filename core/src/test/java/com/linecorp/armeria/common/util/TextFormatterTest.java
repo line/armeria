@@ -37,11 +37,14 @@ class TextFormatterTest {
     @Test
     void elapsed() throws Exception {
         assertThat(TextFormatter.elapsed(1, 100).toString()).isEqualTo("99ns");
-        assertThat(TextFormatter.elapsed(TimeUnit.MICROSECONDS.toNanos(100) + 1).toString())
+        assertThat(TextFormatter.elapsed(TimeUnit.MICROSECONDS.toNanos(100) + 1,
+                                         TimeUnit.NANOSECONDS).toString())
                 .isEqualTo("100\u00B5s(100001ns)"); // microsecs
-        assertThat(TextFormatter.elapsed(TimeUnit.MILLISECONDS.toNanos(100) + 1).toString())
+        assertThat(TextFormatter.elapsed(TimeUnit.MILLISECONDS.toNanos(100) + 1,
+                                         TimeUnit.NANOSECONDS).toString())
                 .isEqualTo("100ms(100000001ns)");
-        assertThat(TextFormatter.elapsed(TimeUnit.SECONDS.toNanos(100) + 1).toString())
+        assertThat(TextFormatter.elapsed(TimeUnit.SECONDS.toNanos(100) + 1,
+                                         TimeUnit.NANOSECONDS).toString())
                 .isEqualTo("100s(100000000001ns)");
     }
 

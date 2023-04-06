@@ -18,6 +18,7 @@ package com.linecorp.armeria.spring;
 
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.maybeNewPort;
 
+import java.net.InetAddress;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -26,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.PortUtil;
@@ -70,7 +70,9 @@ public final class InternalServices {
             List<HealthChecker> healthCheckers,
             List<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
             List<DocServiceConfigurator> docServiceConfigurators,
-            @Nullable Integer managementServerPort) {
+            @Nullable Integer managementServerPort,
+            @Nullable InetAddress managementServerAddress,
+            boolean enableManagementServerSsl) {
 
         DocService docService = null;
         if (!Strings.isNullOrEmpty(settings.getDocsPath())) {
@@ -126,7 +128,9 @@ public final class InternalServices {
         }
         return new InternalServices(docService, expositionService,
                                     healthCheckService, internalPort,
-                                    maybeNewPort(managementServerPort, SessionProtocol.HTTP));
+                                    maybeNewPort(managementServerPort,
+                                                 managementServerAddress,
+                                                 enableManagementServerSsl));
     }
 
     @Nullable

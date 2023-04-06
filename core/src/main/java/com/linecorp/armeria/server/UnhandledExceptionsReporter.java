@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,18 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring;
+package com.linecorp.armeria.server;
 
-import java.time.Duration;
+import io.micrometer.core.instrument.MeterRegistry;
 
-import org.springframework.core.convert.converter.Converter;
+interface UnhandledExceptionsReporter extends ServerListener {
 
-/**
- * Convert {@link Long} to {@link Duration}.
- */
-class NumberToDurationConverter implements Converter<Number, Duration> {
-    @Override
-    public Duration convert(Number source) {
-        return Duration.ofMillis(source.longValue());
+    static UnhandledExceptionsReporter of(MeterRegistry meterRegistry, long intervalMillis) {
+        return new DefaultUnhandledExceptionsReporter(meterRegistry, intervalMillis);
     }
+
+    void report(Throwable cause);
 }

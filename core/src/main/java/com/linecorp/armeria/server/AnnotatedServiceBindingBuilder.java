@@ -314,6 +314,12 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         return this;
     }
 
+    @Override
+    public AnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
+        return this;
+    }
+
     /**
      * Registers the given service to {@link ServerBuilder} and return {@link ServerBuilder}
      * to continue building {@link Server}.

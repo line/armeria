@@ -316,6 +316,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
         return this;
     }
 
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
+        return this;
+    }
+
     /**
      * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *

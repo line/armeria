@@ -32,11 +32,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.common.util.PortUtil;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
@@ -147,6 +151,126 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     }
 
     @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "basePathTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class BasePathTest {
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void exposeActuatorServiceHasCustomPrefix() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(internalServicePort.getPort()).isNotEqualTo(actuatorPort);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+            assertThat(internalServices.managementServerPort().getPort()).isEqualTo(actuatorPort);
+
+            assertActuatorStatus(actuatorPort, 200, "/foo");
+            assertInternalServiceStatus(actuatorPort, 200, settings, false);
+            assertActuatorStatus(internalServicePort.getPort(), 200);
+            assertInternalServiceStatus(internalServicePort.getPort(), 200, settings, false);
+            assertActuatorStatus(internalServicePort.getPort(), 404, "/foo");
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "basePathSamePortTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    @FlakyTest
+    static class BasePathSamePortTest {
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @DynamicPropertySource
+        static void registerPortProperties(DynamicPropertyRegistry registry) {
+            final int port = PortUtil.unusedTcpPort();
+            registry.add("armeria.internal-services.port", () -> port);
+            registry.add("management.server.port", () -> port);
+        }
+
+        @Test
+        void exposeActuatorServiceHasSingleCustomPrefixAtInternalPort() throws Exception {
+            final Port internalServicePortSetting = internalServices.internalServicePort();
+            assertThat(internalServicePortSetting).isNotNull();
+            assertThat(internalServicePortSetting.getProtocols()).containsExactly(SessionProtocol.HTTP);
+
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+
+            final int internalServicesPort = internalServicePortSetting.getPort();
+            assertActuatorStatus(internalServicesPort, 200, "/foo");
+            assertInternalServiceStatus(internalServicesPort, 200, settings, false);
+            assertActuatorStatus(internalServicesPort, 404);
+
+            assertThat(internalServicesPort).isEqualTo(actuatorPort);
+            assertThat(internalServices.managementServerPort().getPort()).isEqualTo(actuatorPort);
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "basePathWithoutPortTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class BasePathWithoutPortTest {
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void exposeActuatorServiceIgnoreBasePathSettingWithoutPort() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+            assertThat(internalServices.managementServerPort()).isNull();
+
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final int actuatorStatus;
+                      final int internalServiceStatus;
+                      if (internalServicePort.getPort() == port) {
+                          actuatorStatus = 200;
+                          internalServiceStatus = 200;
+                      } else {
+                          actuatorStatus = 404;
+                          internalServiceStatus = 404;
+                      }
+                      assertActuatorStatus(port, actuatorStatus);
+                      assertInternalServiceStatus(port, internalServiceStatus, settings, false);
+                  });
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "allInternalServices" })
     @DirtiesContext
     @AutoConfigureMetrics
@@ -231,11 +355,48 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
+    @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "managementLocalhostTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class ManagementLocalhostTest {
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void bindToLocalhost() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(internalServicePort.getPort()).isNotEqualTo(actuatorPort);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+            assertThat(internalServices.managementServerPort().getPort()).isEqualTo(actuatorPort);
+
+            assertActuatorStatus(actuatorPort, 200);
+            assertInternalServiceStatus(actuatorPort, 200, settings, false);
+            assertActuatorStatus(internalServicePort.getPort(), 200);
+            assertInternalServiceStatus(internalServicePort.getPort(), 200, settings, false);
+        }
+    }
+
     private static void assertActuatorStatus(int port, int actuatorStatus) {
-        assertStatus(port, "/actuator", actuatorStatus);
-        assertStatus(port, "/actuator/health", actuatorStatus);
-        assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, actuatorStatus);
-        assertStatus(port, "/actuator/prometheus", actuatorStatus);
+        assertActuatorStatus(port, actuatorStatus, "");
+    }
+
+    private static void assertActuatorStatus(int port, int actuatorStatus, String basePath) {
+        assertStatus(port, basePath + "/actuator", actuatorStatus);
+        assertStatus(port, basePath + "/actuator/health", actuatorStatus);
+        assertStatus(port, basePath + "/actuator/loggers/" + TEST_LOGGER_NAME, actuatorStatus);
+        assertStatus(port, basePath + "/actuator/prometheus", actuatorStatus);
     }
 
     private static void assertInternalServiceStatus(int port, int internalServiceStatus,
