@@ -263,26 +263,13 @@ class DefaultClientRequestContextTest {
         assertThat(ctx.uri().toString()).isEqualTo("http://example.com:8080/foo");
 
         final HttpRequest request = HttpRequest.of(RequestHeaders.of(
-                HttpMethod.POST, "https://path.com/a/b/c",
+                HttpMethod.POST, "/a/b/c?q1=p1&q2=p2#fragment1",
                 HttpHeaderNames.SCHEME, "http",
                 HttpHeaderNames.AUTHORITY, "request.com"));
         ctx.updateRequest(request);
-        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
         assertThat(ctx.authority()).isEqualTo("request.com");
-        assertThat(ctx.uri().toString()).isEqualTo("https://request.com/a/b/c");
-        assertThat(ctx.endpoint().authority()).isEqualTo("path.com");
-    }
-
-    @Test
-    void uriIncludesAllComponents() {
-        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
-                HttpMethod.POST, "https://path.com/a/b/c?q1=p1&q2=p2#fragment1",
-                HttpHeaderNames.SCHEME, "http",
-                HttpHeaderNames.AUTHORITY, "request.com"));
-        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request);
-        ctx.updateRequest(request);
-        assertThat(ctx.uri().toString()).isEqualTo("https://request.com/a/b/c?q1=p1&q2=p2#fragment1");
-        assertThat(ctx.endpoint().authority()).isEqualTo("path.com");
+        assertThat(ctx.uri().toString()).isEqualTo("http://request.com/a/b/c?q1=p1&q2=p2#fragment1");
+        assertThat(ctx.endpoint().authority()).isEqualTo("example.com:8080");
     }
 
     @Test

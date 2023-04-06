@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.URI;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -265,29 +264,7 @@ class ClientRequestContextTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"https://host.com/path?a=b", "http://host.com/path?a=b",
-                            "http://1.2.3.4:8080/path?a=b"})
-    void updateRequestWithAbsolutePath(String path) {
-        final ClientRequestContext clientRequestContext = clientRequestContext();
-        assertThat(clientRequestContext.path()).isEqualTo("/");
-        final HttpRequest request =
-                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
-
-        final URI uri = URI.create(path);
-
-        clientRequestContext.updateRequest(request);
-
-        // absolute path updates the authority, session protocol
-        assertThat(clientRequestContext.authority()).isEqualTo(uri.getAuthority());
-        assertThat(clientRequestContext.sessionProtocol().toString()).isEqualTo(uri.getScheme());
-        assertThat(clientRequestContext.path()).isEqualTo("/path");
-        assertThat(clientRequestContext.query()).isEqualTo("a=b");
-        assertThat(clientRequestContext.uri().toString()).isEqualTo(path);
-        assertThat(clientRequestContext.endpoint().authority()).isEqualTo(uri.getAuthority());
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"%", "http:///"})
+    @ValueSource(strings = {"%", "http:///", "http://foo.com/bar"})
     void updateRequestWithInvalidPath(String path) {
         final ClientRequestContext clientRequestContext = clientRequestContext();
         assertThat(clientRequestContext.path()).isEqualTo("/");
@@ -295,7 +272,8 @@ class ClientRequestContextTest {
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
 
         assertThatThrownBy(() -> clientRequestContext.updateRequest(request))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid path");
     }
 
     private static void assertUnwrapAllCurrentCtx(@Nullable RequestContext ctx) {

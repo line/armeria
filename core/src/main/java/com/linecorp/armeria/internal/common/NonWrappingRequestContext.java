@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
@@ -35,6 +34,7 @@ import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -113,10 +113,22 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     }
 
     @Override
-    public void updateRequest(HttpRequest req) {
+    public final void updateRequest(HttpRequest req) {
         requireNonNull(req, "req");
-        validateHeaders(req.headers());
-        unsafeUpdateRequest(req);
+        final RequestHeaders headers = req.headers();
+        final RequestTarget reqTarget = validateHeaders(headers);
+
+        if (reqTarget == null) {
+            throw new IllegalArgumentException("invalid path: " + headers.path());
+        }
+        if (reqTarget.form() == RequestTargetForm.ABSOLUTE) {
+            throw new IllegalArgumentException("invalid path: " + headers.path() +
+                                               " (must not contain scheme or authority)");
+        }
+
+        this.req = req;
+        this.reqTarget = reqTarget;
+        decodedPath = null;
     }
 
     @Override
@@ -126,22 +138,11 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     }
 
     /**
-     * Validates the specified {@link RequestHeaders}. By default, this method will raise
-     * an {@link IllegalArgumentException} if it does not have {@code ":scheme"} or {@code ":authority"}
-     * header.
+     * Validates the specified {@link RequestHeaders} and returns the {@link RequestTarget}
+     * returned by {@link RequestTarget#forClient(String)} or {@link RequestTarget#forServer(String)}.
      */
-    protected void validateHeaders(RequestHeaders headers) {
-        checkArgument(headers.scheme() != null && headers.authority() != null,
-                      "must set ':scheme' and ':authority' headers");
-    }
-
-    /**
-     * Replaces the {@link HttpRequest} associated with this context with the specified one
-     * without any validation. Internal use only. Use it at your own risk.
-     */
-    protected void unsafeUpdateRequest(HttpRequest req) {
-        this.req = req;
-    }
+    @Nullable
+    protected abstract RequestTarget validateHeaders(RequestHeaders headers);
 
     @Override
     public final SessionProtocol sessionProtocol() {
@@ -192,11 +193,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
 
     protected final RequestTarget requestTarget() {
         return reqTarget;
-    }
-
-    protected final void requestTarget(RequestTarget reqTarget) {
-        this.reqTarget = requireNonNull(reqTarget, "reqTarget");
-        decodedPath = null;
     }
 
     @Override

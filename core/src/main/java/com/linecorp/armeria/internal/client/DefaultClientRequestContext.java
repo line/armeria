@@ -562,35 +562,10 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    protected void validateHeaders(RequestHeaders headers) {
+    protected RequestTarget validateHeaders(RequestHeaders headers) {
         // no need to validate since internal headers will contain
         // the default host and session protocol headers set by endpoints.
-    }
-
-    @Override
-    protected void unsafeUpdateRequest(HttpRequest req) {
-        final String rawPath = req.path();
-        final RequestTarget reqTarget = RequestTarget.forClient(rawPath);
-        checkArgument(reqTarget != null, "invalid path: %s", rawPath);
-
-        if (reqTarget.form() == RequestTargetForm.ABSOLUTE) {
-            final String authority = reqTarget.authority();
-            final String scheme = reqTarget.scheme();
-            assert authority != null;
-            assert scheme != null;
-
-            final SessionProtocol sessionProtocol = Scheme.parse(scheme).sessionProtocol();
-            final Endpoint endpoint = Endpoint.parse(authority);
-
-            // all validation is complete at this point
-            super.unsafeUpdateRequest(req);
-            requestTarget(reqTarget);
-            sessionProtocol(sessionProtocol);
-            updateEndpoint(endpoint);
-        } else {
-            super.unsafeUpdateRequest(req);
-            requestTarget(reqTarget);
-        }
+        return RequestTarget.forClient(headers.path());
     }
 
     @Override
