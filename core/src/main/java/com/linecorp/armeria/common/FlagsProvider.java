@@ -355,6 +355,19 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default option to whether prevent server staying in idle state when PING frame is received
+     * or not. Note that this flag has no effect if server uses HTTP/1 connection.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_SERVER_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    default Boolean defaultServerKeepAliveOnPing() {
+        return null;
+    }
+
+    /**
      * Returns the default client-side idle timeout of a connection for keep-alive in milliseconds.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
@@ -368,6 +381,14 @@ public interface FlagsProvider {
         return null;
     }
 
+    /**
+     * Returns the default option to whether prevent client staying in idle state when PING frame is received
+     * or not. Note that this flag has no effect if server uses HTTP/1 connection.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_CLIENT_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
     @Nullable
     default Boolean defaultClientKeepAliveOnPing() {
         return null;

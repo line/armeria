@@ -184,6 +184,7 @@ public final class ServerBuilder implements TlsSetters {
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
+    private boolean keepAliveOnPing = Flags.defaultServerKeepAliveOnPing();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
     private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
@@ -529,6 +530,16 @@ public final class ServerBuilder implements TlsSetters {
      */
     public ServerBuilder idleTimeoutMillis(long idleTimeoutMillis) {
         return idleTimeout(Duration.ofMillis(idleTimeoutMillis));
+    }
+
+    /**
+     * Sets whether to prevent connection going idle when a PING frame is received.
+     *
+     * @param keepAliveOnPing whether to reset idle timeout on PING frame or not.
+     */
+    public ServerBuilder keepAliveOnPing(boolean keepAliveOnPing) {
+        this.keepAliveOnPing = keepAliveOnPing;
+        return this;
     }
 
     /**
@@ -2025,7 +2036,8 @@ public final class ServerBuilder implements TlsSetters {
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
+                maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,

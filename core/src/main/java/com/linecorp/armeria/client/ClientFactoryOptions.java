@@ -161,6 +161,9 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<Long> IDLE_TIMEOUT_MILLIS =
             ClientFactoryOption.define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
+    /**
+     * Whether to reset idle time to keep connection alive when PING frame is received.
+     */
     public static final ClientFactoryOption<Boolean> KEEP_ALIVE_ON_PING =
             ClientFactoryOption.define("KEEP_ALIVE_ON_PING", Flags.defaultClientKeepAliveOnPing());
 
@@ -459,6 +462,9 @@ public final class ClientFactoryOptions
         return get(IDLE_TIMEOUT_MILLIS);
     }
 
+    /**
+     * Returns whether to keep connection alive when PING frame is received.
+     */
     public boolean keepAliveOnPing() {
         return get(KEEP_ALIVE_ON_PING);
     }

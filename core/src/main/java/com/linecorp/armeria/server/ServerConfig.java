@@ -137,6 +137,11 @@ public interface ServerConfig {
     long idleTimeoutMillis();
 
     /**
+ * Returns whether to keep connection alive when PING frame is received.
+     */
+    boolean keepAliveOnPing();
+
+    /**
      * Returns the HTTP/2 PING interval in milliseconds.
      */
     long pingIntervalMillis();

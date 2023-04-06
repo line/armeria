@@ -51,6 +51,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     // Use slightly greater value than the client-side default so that clients close the connection more often.
     static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
+    static final boolean DEFAULT_SERVER_KEEP_ALIVE_ON_PING = false;
     static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS = 10000; // 10 seconds
     static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING = false;
     static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds

@@ -233,6 +233,9 @@ public final class Flags {
             getValue(FlagsProvider::defaultServerIdleTimeoutMillis, "defaultServerIdleTimeoutMillis",
                      value -> value >= 0);
 
+    private static final boolean DEFAULT_SERVER_KEEP_ALIVE_ON_PING =
+            getValue(FlagsProvider::defaultServerKeepAliveOnPing, "defaultServerKeepAliveOnPing");
+
     private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultClientIdleTimeoutMillis, "defaultClientIdleTimeoutMillis",
                      value -> value >= 0);
@@ -706,6 +709,18 @@ public final class Flags {
     }
 
     /**
+     * Returns the default option to whether prevent server staying in idle state when PING frame is received
+     * or not. Note that this flag has no effect if server uses HTTP/1 connection.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_SERVER_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
+    public static boolean defaultServerKeepAliveOnPing() {
+        return DEFAULT_SERVER_KEEP_ALIVE_ON_PING;
+    }
+
+    /**
      * Returns the default client-side idle timeout of a connection for keep-alive in milliseconds.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
@@ -718,6 +733,14 @@ public final class Flags {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
     }
 
+    /**
+     * Returns the default option to whether prevent client staying in idle state when PING frame is received
+     * or not. Note that this flag has no effect if server uses HTTP/1 connection.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_CLIENT_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
     public static boolean defaultClientKeepAliveOnPing() {
         return DEFAULT_CLIENT_KEEP_ALIVE_ON_PING;
     }
@@ -1356,7 +1379,7 @@ public final class Flags {
     }
 
     private static String nonnullCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
-        final String spec = caffeineSpec(method, flagName,false);
+        final String spec = caffeineSpec(method, flagName, false);
         assert spec != null; // Can never be null if allowOff is false.
         return spec;
     }
