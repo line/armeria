@@ -155,6 +155,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingHandler.INSTANCE);
         configurePipeline(p, port.protocols(), null);
+        config.childChannelPipelineCustomizer().accept(p);
     }
 
     private void configurePipeline(ChannelPipeline p, Set<SessionProtocol> protocols,
