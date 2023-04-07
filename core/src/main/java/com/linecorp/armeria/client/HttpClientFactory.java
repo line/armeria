@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -166,6 +167,7 @@ final class HttpClientFactory implements ClientFactory {
         this.options = options;
 
         clientDelegate = new HttpClientDelegate(this, addressResolverGroup);
+        RequestTargetCache.registerClientMetrics(meterRegistry);
     }
 
     /**
