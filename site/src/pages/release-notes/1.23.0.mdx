@@ -14,12 +14,11 @@ date: 2023-04-07
 
 ## 🌟 New features
 
-- You can now write a circuit breaker or retry rule that makes a decision based on gRPC trailers,
-regardless of whether it's a gRPC response with/without body or even gRPC Web response. #4496 #4535
+- You can now write a circuit breaker or retry rule that makes a decision based on gRPC trailers. #4496 #4535
 ```java
 final RetryRule rule =
   RetryRule.builder()
-           .onGrpcTrailers((unused, trailers) -> trailers.containsInt(
+           .onGrpcTrailers((ctx, trailers) -> trailers.containsInt(
               "grpc-status", 13)) // Retry for internal error.
            .thenBackoff(backoff);
   ```
@@ -76,6 +75,7 @@ final RetryRule rule =
     .addDnsQueryListeners(new DnsQueryListener() {
       @Override
       void onSuccess(...) {...}
+
       @Override
       public void onFailure(...) {
         logger.warn("DNS query failed");
@@ -104,7 +104,7 @@ final RetryRule rule =
   ```java
   InputStream in = ...
   // The input stream is divided into chunks of 8192 bytes by default.
-  StreamMessage<HttpData> stream = StreamMessage.of(in);
+  ByteStreamMessage stream = StreamMessage.of(in);
   ```
 - You can now use <type://StreamMessage#streaming()> to create <type://StreamWriter> for writing
   streaming messages. #4253 #4696
@@ -182,20 +182,23 @@ final RetryRule rule =
 ## 📈 Improvements
 
 - The debug page of <type://DocService> is now a pop-up for easier access. #4599
-- You can now use `Connection: close` header to close a connection after receiving a response. #4131 #4454 #4471 #4531
+- You can now use `Connection: close` header to close a connection after sending or receiving a response.
+  #4131 #4454 #4471 #4531
 - Armeria now exports the gauge metrics of <type://CommonPools#workerGroup()>. #4675 #4750
   - The metric names:
     - `armeria.netty.common.event.loop.workers`
     - `armeria.netty.common.event.loop.pending.tasks`
 - If the mapping for a HEAD request is not found, the request is rerouted to the service bound to the
   GET method on the same path. #4038 #4706
-- Armeria client doesn't normalize consecutive slashes (e.g. `foo//bar`) in a client request path anymore. #4789
 
   <Tip>
 
-    Please make sure that your server or service handles consecutive slashes properly before an upgrade.
-    Armeria server always cleans up such a path for you, so you don't need to worry.
+    Please make sure your server or service is capable of handling consecutive slashes (`//`) in request paths
+    correctly prior to upgrading. In some instances, consecutive slashes may cause unexpected behavior or
+    routing issues if not handled properly.
 
+    Fortunately, Armeria server automatically cleans up and normalizes request paths containing
+    consecutive slashes for you.
   </Tip>
 
 ## 🛠️ Bug fixes
@@ -221,12 +224,12 @@ final RetryRule rule =
 
 ## 🏚️ Deprecations
 
-- Spring Boot 1 integration is no longer supported. #4651 #4787
 - <type://ClientFactory#setMeterRegistry(MeterRegistry)> is now deprecated in favor of
   <type://FlagsProvider#meterRegistry()>. #4785
 
 ## ☢️ Breaking changes
 
+- Spring Boot 1 integration is no longer supported. #4651 #4787
 - The type of `blockingTaskExecutor` property such as <type://ServiceConfig#blockingTaskExecutor()> is
   changed from `ScheduledExecutorService` to <type://BlockingTaskExecutor>. #4760
   - Simply recompiling your code should be enough in most cases because <type://BlockingTaskExecutor>
@@ -236,6 +239,7 @@ final RetryRule rule =
   - `makeContextAware(Executor)` returns <type://ContextAwareExecutor> instead of `Executor`.
   - `makeContextAware(ScheduledExecutorService)` returns <type://ContextAwareScheduledExecutorService>
     instead of `ScheduledExecutorService`.
+- Armeria client doesn't normalize consecutive slashes (e.g. `foo//bar`) in a client request path anymore. #4789
 - The signatures of `UserClient.execute()` have been changed. #4789
   - It now contains the newly added <type://RequestTarget> as a parameter instead of the `path`, `query`,
     and `fragment`.
