@@ -33,7 +33,12 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationSecureTest.TestConfiguration;
 
-@SpringBootTest(classes = TestConfiguration.class)
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+
+@SpringBootTest(
+        classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "ssl" })
 @DirtiesContext
 @AutoConfigureMetrics
@@ -49,6 +54,19 @@ class ArmeriaSpringActuatorAutoConfigurationSslTest {
 
     @Test
     void usingSsl() {
+        int numRetries = 3; // maximum number of retries
+        int port = actuatorPort;
+        while (numRetries-- > 0) {
+            // Check if the port is available
+            try (ServerSocket serverSocket = new ServerSocket()) {
+                serverSocket.bind(new InetSocketAddress(port));
+                actuatorPort = port; // update the @LocalManagementPort value
+                break; // use this port
+            } catch (IOException e) {
+                // Port is not available, try another port
+                port++;
+            }
+        }
         try (ClientFactory clientFactory = ClientFactory.builder()
                                                         .tlsNoVerify()
                                                         .build()) {
