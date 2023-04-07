@@ -191,16 +191,6 @@ final RetryRule rule =
 - If the mapping for a HEAD request is not found, the request is rerouted to the service bound to the
   GET method on the same path. #4038 #4706
 
-  <Tip>
-
-    Please make sure your server or service is capable of handling consecutive slashes (`//`) in request paths
-    correctly prior to upgrading. In some instances, consecutive slashes may cause unexpected behavior or
-    routing issues if not handled properly.
-
-    Fortunately, Armeria server automatically cleans up and normalizes request paths containing
-    consecutive slashes for you.
-  </Tip>
-
 ## 🛠️ Bug fixes
 
 - Armeria client now handles the fragment part of URI consistently. #4789
@@ -239,7 +229,6 @@ final RetryRule rule =
   - `makeContextAware(Executor)` returns <type://ContextAwareExecutor> instead of `Executor`.
   - `makeContextAware(ScheduledExecutorService)` returns <type://ContextAwareScheduledExecutorService>
     instead of `ScheduledExecutorService`.
-- Armeria client doesn't normalize consecutive slashes (e.g. `foo//bar`) in a client request path anymore. #4789
 - The signatures of `UserClient.execute()` have been changed. #4789
   - It now contains the newly added <type://RequestTarget> as a parameter instead of the `path`, `query`,
     and `fragment`.
@@ -248,6 +237,17 @@ final RetryRule rule =
   - New meter names:
     - `armeria.path.cache{type=client}`
     - `armeria.path.cache{type=server}`
+- Armeria client doesn't normalize consecutive slashes (e.g. `foo//bar`) in a client request path anymore. #4789
+
+  <Tip>
+
+    Please make sure your server or service is capable of handling consecutive slashes (`//`) in request paths
+    correctly prior to upgrading. In some instances, consecutive slashes may cause unexpected behavior or
+    routing issues if not handled properly.
+
+    Fortunately, Armeria server automatically cleans up and normalizes request paths containing
+    consecutive slashes for you.
+  </Tip>
 
 ## ⛓ Dependencies
 
