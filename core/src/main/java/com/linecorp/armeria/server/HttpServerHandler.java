@@ -390,7 +390,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
                 reqCtx.log().whenComplete().thenAccept(log -> {
                     final int statusCode = log.responseHeaders().status().code();
-                    if (statusCode >= 200 && statusCode < 400 && routingCtx instanceof DefaultRoutingContext) {
+                    if (statusCode >= 200 && statusCode < 400) {
                         RequestTargetCache.putForServer(req.path(), routingCtx.requestTarget());
                     }
                 });
