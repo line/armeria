@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -49,25 +48,20 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final GraphQL graphQL;
 
-    @Nullable
     private final Function<? super ServiceRequestContext,
                            ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
-
-    @Nullable
-    private final DataLoaderRegistry dataLoaderRegistry;
 
     private final boolean useBlockingTaskExecutor;
 
     private final GraphqlErrorHandler errorHandler;
 
     DefaultGraphqlService(GraphQL graphQL,
-                          @Nullable Function<? super ServiceRequestContext,
-                                             ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
-                          @Nullable DataLoaderRegistry dataLoaderRegistry,
+                          Function<? super ServiceRequestContext,
+                                   ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
                           boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
-        this.dataLoaderRegistryFunction = dataLoaderRegistryFunction;
-        this.dataLoaderRegistry = dataLoaderRegistry;
+        this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
+                                                         "dataLoaderRegistryFunction");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.errorHandler = errorHandler;
     }
@@ -100,17 +94,9 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final ExecutionInput executionInput =
                 builder.context(ctx)
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                       .dataLoaderRegistry(dataLoaderRegistry(ctx))
+                       .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
                        .build();
         return execute(ctx, executionInput, produceType);
-    }
-
-    @Nullable
-    private DataLoaderRegistry dataLoaderRegistry(ServiceRequestContext ctx) {
-        if (dataLoaderRegistryFunction != null) {
-            return dataLoaderRegistryFunction.apply(ctx);
-        }
-        return dataLoaderRegistry;
     }
 
     private HttpResponse execute(
