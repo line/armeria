@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -32,9 +33,9 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -45,9 +46,13 @@ public final class MethodInfo {
 
     // FIXME(trustin): Return types and exception types should also have docstrings like params have them.
 
+    private final String id;
     private final String name;
     private final TypeSignature returnTypeSignature;
+
     private final List<FieldInfo> parameters;
+    private final boolean useParameterAsRoot;
+
     private final Set<TypeSignature> exceptionTypeSignatures;
     private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHeaders;
@@ -57,28 +62,49 @@ public final class MethodInfo {
     private final HttpMethod httpMethod;
     private final DescriptionInfo descriptionInfo;
 
+    // TODO(minwoox): consider using fluent builder.
+
     /**
      * Creates a new instance.
      */
-    public MethodInfo(String name,
-                      TypeSignature returnTypeSignature,
+    public MethodInfo(String serviceName, String name,
+                      int overloadId, TypeSignature returnTypeSignature,
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
-                /* exampleHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
-                /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
-             httpMethod, descriptionInfo);
+        this(name, returnTypeSignature, parameters, false, exceptionTypeSignatures,
+             endpoints, ImmutableList.of(),
+             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), httpMethod, descriptionInfo,
+             createId(serviceName, name, overloadId, httpMethod)
+        );
     }
 
     /**
      * Creates a new instance.
      */
-    public MethodInfo(String name,
+    public MethodInfo(String serviceName, String name,
+                      int overloadId, TypeSignature returnTypeSignature,
+                      Iterable<FieldInfo> parameters,
+                      Iterable<EndpointInfo> endpoints,
+                      Iterable<String> examplePaths,
+                      Iterable<String> exampleQueries,
+                      HttpMethod httpMethod,
+                      DescriptionInfo descriptionInfo) {
+        this(name, returnTypeSignature, parameters, false, ImmutableList.of(), endpoints, ImmutableList.of(),
+             ImmutableList.of(), examplePaths, exampleQueries, httpMethod, descriptionInfo,
+             createId(serviceName, name, overloadId, httpMethod)
+        );
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public MethodInfo(String serviceName, String name,
                       TypeSignature returnTypeSignature,
                       Iterable<FieldInfo> parameters,
+                      boolean useParameterAsRoot,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
                       Iterable<HttpHeaders> exampleHeaders,
@@ -87,10 +113,26 @@ public final class MethodInfo {
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
+        this(name, returnTypeSignature, parameters, useParameterAsRoot,
+             exceptionTypeSignatures, endpoints, exampleHeaders,
+             exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
+             createId(serviceName, name, 0, httpMethod));
+    }
+
+    MethodInfo(String name, TypeSignature returnTypeSignature,
+               Iterable<FieldInfo> parameters, boolean useParameterAsRoot,
+               Iterable<TypeSignature> exceptionTypeSignatures, Iterable<EndpointInfo> endpoints,
+               Iterable<HttpHeaders> exampleHeaders, Iterable<String> exampleRequests,
+               Iterable<String> examplePaths, Iterable<String> exampleQueries, HttpMethod httpMethod,
+               DescriptionInfo descriptionInfo, String id) {
+        this.id = requireNonNull(id, "id");
         this.name = requireNonNull(name, "name");
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
         this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters"));
+        assert !useParameterAsRoot || this.parameters.size() == 1;
+        this.useParameterAsRoot = useParameterAsRoot;
+
         this.exceptionTypeSignatures =
                 ImmutableSortedSet.copyOf(
                         comparing(TypeSignature::signature),
@@ -105,9 +147,9 @@ public final class MethodInfo {
         final ImmutableList.Builder<String> examplePathsBuilder =
                 ImmutableList.builderWithExpectedSize(Iterables.size(examplePaths));
         for (String path : examplePaths) {
-            final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
-            checkArgument(pathAndQuery != null, "examplePaths contains an invalid path: %s", path);
-            examplePathsBuilder.add(pathAndQuery.path());
+            final RequestTarget reqTarget = RequestTarget.forServer(path);
+            checkArgument(reqTarget != null, "examplePaths contains an invalid path: %s", path);
+            examplePathsBuilder.add(reqTarget.path());
         }
         this.examplePaths = examplePathsBuilder.build();
 
@@ -115,14 +157,23 @@ public final class MethodInfo {
         final ImmutableList.Builder<String> exampleQueriesBuilder =
                 ImmutableList.builderWithExpectedSize(Iterables.size(exampleQueries));
         for (String query : exampleQueries) {
-            final PathAndQuery pathAndQuery = PathAndQuery.parse('?' + query);
-            checkArgument(pathAndQuery != null, "exampleQueries contains an invalid query string: %s", query);
-            exampleQueriesBuilder.add(pathAndQuery.query());
+            final RequestTarget reqTarget = RequestTarget.forServer("/?" + query);
+            checkArgument(reqTarget != null, "exampleQueries contains an invalid query string: %s", query);
+            exampleQueriesBuilder.add(reqTarget.query());
         }
         this.exampleQueries = exampleQueriesBuilder.build();
 
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
+    }
+
+    /**
+     * Returns the id of this function. It's a form of {@code serviceName/methodName/httpMethod}.
+     * The {@code methodName} might have {@code -x} suffix if the method is overloaded.
+     */
+    @JsonProperty
+    public String id() {
+        return id;
     }
 
     /**
@@ -158,8 +209,18 @@ public final class MethodInfo {
     }
 
     /**
-     * Returns a new {@link MethodInfo} with the specified {@link DescriptionInfo}.
-     * Returns {@code this} if this {@link MethodInfo} has the same {@link DescriptionInfo}.
+     * Tells whether the {@link #parameters()} is used as the root when creating
+     * <a href="https://json-schema.org/">JSON schema</a>. The size of the {@link #parameters()} must be one
+     * if this returns {@code true}.
+     */
+    @JsonIgnore
+    public boolean useParameterAsRoot() {
+        return useParameterAsRoot;
+    }
+
+    /**
+     * Returns a new {@link MethodInfo} with the specified {@code parameters}.
+     * Returns {@code this} if this {@link MethodInfo} has the same {@code parameters}.
      */
     public MethodInfo withParameters(Iterable<FieldInfo> parameters) {
         requireNonNull(parameters, "parameters");
@@ -167,9 +228,10 @@ public final class MethodInfo {
             return this;
         }
 
-        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+        return new MethodInfo(name, returnTypeSignature, parameters, useParameterAsRoot,
+                              exceptionTypeSignatures, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
-                              descriptionInfo);
+                              descriptionInfo, id);
     }
 
     /**
@@ -239,9 +301,10 @@ public final class MethodInfo {
             return this;
         }
 
-        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+        return new MethodInfo(name, returnTypeSignature, parameters, useParameterAsRoot,
+                              exceptionTypeSignatures, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
-                              descriptionInfo);
+                              descriptionInfo, id);
     }
 
     @Override
@@ -255,9 +318,11 @@ public final class MethodInfo {
         }
 
         final MethodInfo that = (MethodInfo) o;
-        return name().equals(that.name()) &&
+        return id().equals(that.id()) &&
+               name().equals(that.name()) &&
                returnTypeSignature().equals(that.returnTypeSignature()) &&
                parameters().equals(that.parameters()) &&
+               useParameterAsRoot() == that.useParameterAsRoot() &&
                exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
                endpoints().equals(that.endpoints()) &&
                httpMethod() == that.httpMethod() &&
@@ -266,20 +331,32 @@ public final class MethodInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(name(), returnTypeSignature(), parameters(), exceptionTypeSignatures(),
-                            endpoints(), httpMethod(), descriptionInfo());
+        return Objects.hash(id(), name(), returnTypeSignature(), parameters(), useParameterAsRoot(),
+                            exceptionTypeSignatures(), endpoints(), httpMethod(), descriptionInfo());
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("id", id())
                           .add("name", name())
                           .add("returnTypeSignature", returnTypeSignature())
                           .add("parameters", parameters())
+                          .add("useParameterAsRoot", useParameterAsRoot())
                           .add("exceptionTypeSignatures", exceptionTypeSignatures())
                           .add("endpoints", endpoints())
                           .add("httpMethod", httpMethod())
                           .add("descriptionInfo", descriptionInfo())
                           .toString();
+    }
+
+    private static String createId(String serviceName, String name, int overloadId, HttpMethod httpMethod) {
+        final String methodName;
+        if (overloadId > 0) {
+            methodName = name + '-' + overloadId;
+        } else {
+            methodName = name;
+        }
+        return serviceName + '/' + methodName + '/' + httpMethod.name();
     }
 }

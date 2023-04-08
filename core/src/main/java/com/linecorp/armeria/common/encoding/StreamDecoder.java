@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.common.encoding;
 
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An interface for objects that apply HTTP content decoding to incoming {@link HttpData}.
@@ -26,13 +28,27 @@ public interface StreamDecoder extends com.linecorp.armeria.client.encoding.Stre
 
     /**
      * Decodes an {@link HttpData} and returns the decoded {@link HttpData}.
+     *
+     * @throws ContentTooLargeException if the total length of the decoded {@link HttpData} exceeds
+     *                                  {@link #maxLength()}.
      */
     @Override
     HttpData decode(HttpData obj);
 
     /**
      * Closes the decoder and returns any decoded data that may be left over.
+     *
+     * @throws ContentTooLargeException if the total length of the decoded {@link HttpData} exceeds
+     *                                  {@link #maxLength()}.
      */
     @Override
     HttpData finish();
+
+    /**
+     * Returns the maximum allowed length of the content decoded.
+     * {@code 0} means unlimited.
+     */
+    @Override
+    @UnstableApi
+    int maxLength();
 }

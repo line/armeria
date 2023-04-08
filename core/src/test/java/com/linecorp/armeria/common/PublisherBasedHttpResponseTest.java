@@ -75,6 +75,6 @@ class PublisherBasedHttpResponseTest {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
                                                          .get("/empty-content").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.content()).isEqualTo(HttpData.empty());
+        assertThat(response.content()).isEqualTo(HttpData.empty().withEndOfStream());
     }
 }

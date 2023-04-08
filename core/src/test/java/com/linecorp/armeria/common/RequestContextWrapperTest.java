@@ -49,7 +49,7 @@ class RequestContextWrapperTest {
         @Override
         @MustBeClosed
         public SafeCloseable push() {
-            return delegate().push();
+            return unwrap().push();
         }
     }
 

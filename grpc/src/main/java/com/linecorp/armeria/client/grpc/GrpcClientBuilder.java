@@ -208,7 +208,8 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      * which means unlimited.
      */
     public GrpcClientBuilder maxRequestMessageLength(int maxRequestMessageLength) {
-        checkArgument(maxRequestMessageLength >= -1, "maxRequestMessageLength: %s (expected: >= -1)");
+        checkArgument(maxRequestMessageLength >= -1, "maxRequestMessageLength: %s (expected: >= -1)",
+                      maxRequestMessageLength);
         return option(MAX_OUTBOUND_MESSAGE_SIZE_BYTES.newValue(maxRequestMessageLength));
     }
 
@@ -218,7 +219,8 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      * which means 'use {@link ClientOptions#MAX_RESPONSE_LENGTH}'.
      */
     public GrpcClientBuilder maxResponseMessageLength(int maxResponseMessageLength) {
-        checkArgument(maxResponseMessageLength >= -1, "maxResponseMessageLength: %s (expected: >= -1)");
+        checkArgument(maxResponseMessageLength >= -1, "maxResponseMessageLength: %s (expected: >= -1)",
+                      maxResponseMessageLength);
         return option(MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(maxResponseMessageLength));
     }
 

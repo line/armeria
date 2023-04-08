@@ -303,6 +303,18 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
+     * Returns a new endpoint with the specified host.
+     */
+    @UnstableApi
+    public Endpoint withHost(String host) {
+        requireNonNull(host, "host");
+        if (host.equals(this.host)) {
+            return this;
+        }
+        return new Endpoint(host, ipAddr, port, weight, hostType, attributes);
+    }
+
+    /**
      * Returns the IP address of this endpoint.
      *
      * @return the IP address, or {@code null} if the host name is not resolved yet

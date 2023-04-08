@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -27,7 +28,9 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -246,6 +249,12 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
 
     @Override
     public VirtualHostServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (VirtualHostServiceBindingBuilder) super.decorator(decoratingHttpServiceFunction);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder decorator(
             Function<? super HttpService, ? extends HttpService> decorator) {
         return (VirtualHostServiceBindingBuilder) super.decorator(decorator);
     }
@@ -272,6 +281,14 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder blockingTaskExecutor(
+            BlockingTaskExecutor blockingTaskExecutor,
+            boolean shutdownOnStop) {
+        return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor,
+                                                                             shutdownOnStop);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
     }
@@ -284,6 +301,39 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (VirtualHostServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        return (VirtualHostServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        return (VirtualHostServiceBindingBuilder) super.addHeader(name, value);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        return (VirtualHostServiceBindingBuilder) super.addHeaders(defaultHeaders);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        return (VirtualHostServiceBindingBuilder) super.setHeader(name, value);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        return (VirtualHostServiceBindingBuilder) super.setHeaders(defaultHeaders);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        return (VirtualHostServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
     }
 
     /**

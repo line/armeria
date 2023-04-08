@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -27,8 +28,10 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -226,6 +229,12 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                      boolean shutdownOnStop) {
+        return (ServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+    }
+
+    @Override
     public ServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         return (ServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
     }
@@ -271,6 +280,40 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        return (ServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
+    }
+
+    @Override
+    public ServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        return (ServiceBindingBuilder) super.addHeader(name, value);
+    }
+
+    @Override
+    public ServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        return (ServiceBindingBuilder) super.addHeaders(defaultHeaders);
+    }
+
+    @Override
+    public ServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        return (ServiceBindingBuilder) super.setHeader(name, value);
+    }
+
+    @Override
+    public ServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        return (ServiceBindingBuilder) super.setHeaders(defaultHeaders);
+    }
+
+    @Override
+    public ServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (ServiceBindingBuilder) super.decorator(decoratingHttpServiceFunction);
+    }
+
+    @Override
     public ServiceBindingBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         return (ServiceBindingBuilder) super.decorator(decorator);
     }
@@ -286,6 +329,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     public ServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         return (ServiceBindingBuilder) super.decorators(decorators);
+    }
+
+    @Override
+    public ServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        return (ServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
     }
 
     /**

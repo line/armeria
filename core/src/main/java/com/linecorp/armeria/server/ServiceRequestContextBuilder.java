@@ -210,7 +210,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         if (route != null) {
             serviceBindingBuilder = serverBuilder.route().addRoute(route);
         } else {
-            serviceBindingBuilder = serverBuilder.route().path(path());
+            serviceBindingBuilder = serverBuilder.route().path(requestTarget().path());
         }
 
         if (defaultServiceNaming != null) {
@@ -236,15 +236,17 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final RoutingContext routingCtx = DefaultRoutingContext.of(
                 server.config().defaultVirtualHost(),
                 ((InetSocketAddress) localAddress()).getHostString(),
-                path(),
-                query(),
+                requestTarget(),
                 req.headers(),
                 RoutingStatus.OK);
 
         final RoutingResult routingResult =
                 this.routingResult != null ? this.routingResult
-                                           : RoutingResult.builder().path(path()).query(query()).build();
-        final Route route = Route.builder().path(path()).build();
+                                           : RoutingResult.builder()
+                                                          .path(requestTarget().path())
+                                                          .query(requestTarget().query())
+                                                          .build();
+        final Route route = Route.builder().path(requestTarget().path()).build();
         final Routed<ServiceConfig> routed = Routed.of(route, routingResult, serviceCfg);
         routingCtx.setResult(routed);
         final ExchangeType exchangeType = service.exchangeType(routingCtx);

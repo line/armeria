@@ -1,0 +1,31 @@
+spring:
+  main:
+    web-application-type: NONE
+
+armeria:
+  ports:
+    - port: 8080
+      protocols:
+        - http
+  internal-services:
+    include: health, metrics
+    port: 8080
+
+resilience4j.circuitbreaker:
+  tags:
+    my-tag: custom-tag
+  configs:
+    defaultA:
+      slidingWindowSize: 3
+    defaultB:
+      slidingWindowSize: 5
+  backends:
+    backendA:
+      baseConfig: defaultA
+      failureRateThreshold: 60
+    actuator:
+      slidingWindowSize: 2
+      registerHealthIndicator: true
+      allowHealthIndicatorToFail: false
+
+management.health.circuitbreakers.enabled: true

@@ -16,25 +16,19 @@
 
 package com.linecorp.armeria.common.grpc.protocol;
 
-import static java.util.Objects.requireNonNull;
-
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-
-import io.netty.util.AttributeKey;
+import com.linecorp.armeria.internal.common.InternalGrpcWebTrailers;
 
 /**
  * Retrieves <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a> trailers.
  */
 @UnstableApi
 public final class GrpcWebTrailers {
-
-    private static final AttributeKey<HttpHeaders> GRPC_WEB_TRAILERS = AttributeKey.valueOf(
-            GrpcWebTrailers.class, "GRPC_WEB_TRAILERS");
 
     /**
      * Returns the gRPC-Web trailers which was set to the specified {@link RequestContext} using
@@ -68,17 +62,14 @@ public final class GrpcWebTrailers {
      */
     @Nullable
     public static HttpHeaders get(RequestContext ctx) {
-        requireNonNull(ctx, "ctx");
-        return ctx.attr(GRPC_WEB_TRAILERS);
+        return InternalGrpcWebTrailers.get(ctx);
     }
 
     /**
      * Sets the specified gRPC-Web trailers to the {@link RequestContext}.
      */
     public static void set(RequestContext ctx, HttpHeaders trailers) {
-        requireNonNull(ctx, "ctx");
-        requireNonNull(trailers, "trailers");
-        ctx.setAttr(GRPC_WEB_TRAILERS, trailers);
+        InternalGrpcWebTrailers.set(ctx, trailers);
     }
 
     private GrpcWebTrailers() {}

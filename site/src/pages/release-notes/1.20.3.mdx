@@ -1,0 +1,28 @@
+---
+date: 2022-11-10
+---
+
+## 📈 Improvements
+
+- You can now see HTTP/2 stream error logs at the debug level. #4515
+- You can now see <type://FieldInfo> of parameter types and return types in the debug form without 
+  visiting the detail page. #4481 #4484
+
+## 🛠️ Bug fixes
+
+- You no longer see `ConcurrentModificationException` when a connection is closed in a server. #4524
+- Fixed a potential <type://RequestContext> leak when an incomplete <type://HttpResponse> is returned. #4527
+- <type://FieldInfo> is created correctly for renamed object fields in <type://DocService>. #4506 #4507 
+- You can throw an exception from `ServerInterceptor` and utilize <type://GrpcStatusFunction> without 
+  encountering a warn log. #4492
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Dogacel',
+  'ikhoon',
+  'jrhee17',
+  'ks-yim',
+  'minwoox',
+  'nao0811ta'
+]} />

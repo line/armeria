@@ -17,11 +17,6 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-
-import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -32,7 +27,6 @@ public final class FieldInfoBuilder {
 
     private final String name;
     private final TypeSignature typeSignature;
-    private final List<FieldInfo> childFieldInfos;
 
     private FieldRequirement requirement = FieldRequirement.UNSPECIFIED;
     private FieldLocation location = FieldLocation.UNSPECIFIED;
@@ -41,17 +35,6 @@ public final class FieldInfoBuilder {
     FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = requireNonNull(typeSignature, "typeSignature");
-        childFieldInfos = ImmutableList.of();
-    }
-
-    FieldInfoBuilder(String name, TypeSignature typeSignature, FieldInfo... childFieldInfos) {
-        this(name, typeSignature, ImmutableList.copyOf(childFieldInfos));
-    }
-
-    FieldInfoBuilder(String name, TypeSignature typeSignature, Iterable<FieldInfo> childFieldInfos) {
-        this.name = requireNonNull(name, "name");
-        this.typeSignature = typeSignature;
-        this.childFieldInfos = ImmutableList.copyOf(childFieldInfos);
     }
 
     /**
@@ -82,19 +65,6 @@ public final class FieldInfoBuilder {
      * Returns a newly-created {@link FieldInfo} based on the properties of this builder.
      */
     public FieldInfo build() {
-        return new FieldInfo(name, location, requirement, typeSignature,
-                             childFieldInfos, descriptionInfo);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("name", name)
-                          .add("location", location)
-                          .add("requirement", requirement)
-                          .add("typeSignature", typeSignature)
-                          .add("childFieldInfos", childFieldInfos)
-                          .add("descriptionInfo", descriptionInfo)
-                          .toString();
+        return new FieldInfo(name, location, requirement, typeSignature, descriptionInfo);
     }
 }

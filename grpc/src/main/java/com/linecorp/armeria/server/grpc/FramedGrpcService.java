@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
+import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
@@ -272,7 +273,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             SerializationFormat serializationFormat) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         final Executor blockingExecutor;
-        if (useBlockingTaskExecutor) {
+        if (useBlockingTaskExecutor || registry.needToUseBlockingTaskExecutor(methodDef)) {
             blockingExecutor = MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor());
         } else {
             blockingExecutor = null;
@@ -298,11 +299,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                 .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
         } catch (Throwable t) {
             call.setListener((Listener<I>) EMPTY_LISTENER);
-            final Metadata metadata = new Metadata();
-            call.close(GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata), metadata);
-            logger.warn(
-                    "Exception thrown from streaming request stub method before processing any request data" +
-                    " - this is likely a bug in the stub implementation.", t);
+            call.close(t);
             return;
         }
         if (listener == null) {

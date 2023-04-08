@@ -1,0 +1,241 @@
+{
+  "services": [
+    {
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$JsonService",
+      "methods": [
+        {
+          "name": "json",
+          "id" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$JsonService/json/POST",
+          "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse>",
+          "parameters": [
+            {
+              "name": "req",
+              "location": "UNSPECIFIED",
+              "requirement": "REQUIRED",
+              "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
+              "descriptionInfo": {
+                "docString": "",
+                "markup": "NONE"
+              }
+            }
+          ],
+          "exceptionTypeSignatures": [ ],
+          "endpoints": [
+            {
+              "hostnamePattern": "*",
+              "pathMapping": "exact:/json",
+              "availableMimeTypes": [ "application/json", "application/json; charset=utf-8" ]
+            }
+          ],
+          "exampleHeaders": [ ],
+          "exampleRequests": [ ],
+          "examplePaths": [ ],
+          "exampleQueries": [ ],
+          "httpMethod": "POST",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }
+      ],
+      "exampleHeaders": [ ],
+      "descriptionInfo": {
+        "docString": "",
+        "markup": "NONE"
+      }
+    }
+  ],
+  "enums": [ ],
+  "structs": [
+    {
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse",
+      "fields": [
+        {
+          "name": "getterField",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "string",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }, {
+          "name": "getterNullableField",
+          "location": "UNSPECIFIED",
+          "requirement": "OPTIONAL",
+          "typeSignature": "string",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }, {
+          "name": "intField",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "int",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }, {
+          "name": "sameName",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }, {
+          "name": "rename",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }, {
+          "name": "collection",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner>",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }, {
+          "name": "nullableField",
+          "location": "UNSPECIFIED",
+          "requirement": "OPTIONAL",
+          "typeSignature": "string",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }, {
+          "name": "optionalField",
+          "location": "UNSPECIFIED",
+          "requirement": "OPTIONAL",
+          "typeSignature": "string",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }, {
+          "name": "circular",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }
+      ],
+      "descriptionInfo": {
+        "docString": "",
+        "markup": "NONE"
+      }
+    }, {
+      "name" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
+      "fields" : [ {
+        "name" : "intField",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "int",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "stringField",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "sameName",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "rename",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "collection",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "list<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner>",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "nullableField",
+        "location" : "UNSPECIFIED",
+        "requirement" : "OPTIONAL",
+        "typeSignature" : "string",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "optionalField",
+        "location" : "UNSPECIFIED",
+        "requirement" : "OPTIONAL",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "circular",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      } ],
+      "descriptionInfo" : {
+        "docString" : "",
+        "markup" : "NONE"
+      }
+    }, {
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+      "fields": [
+        {
+          "name": "innerValue",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "boolean",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
+        }
+      ],
+      "descriptionInfo": {
+        "docString": "",
+        "markup": "NONE"
+      }
+    }
+  ],
+  "exceptions": [ ],
+  "exampleHeaders": [ ]
+}

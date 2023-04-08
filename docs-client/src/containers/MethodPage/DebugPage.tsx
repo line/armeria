@@ -14,8 +14,6 @@
  * under the License.
  */
 
-import Alert from '@material-ui/lab/Alert';
-import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
 import Snackbar from '@material-ui/core/Snackbar';
@@ -26,6 +24,7 @@ import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, {
   ChangeEvent,
+  Dispatch,
   useCallback,
   useEffect,
   useMemo,
@@ -38,10 +37,18 @@ import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
-import Section from '../../components/Section';
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+} from '@material-ui/core';
+import Button from '@material-ui/core/Button';
+import Alert from '@material-ui/lab/Alert';
+import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
-import { Method } from '../../lib/specification';
+import { Method, ServiceType } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
 import EndpointPath from './EndpointPath';
@@ -50,17 +57,31 @@ import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
 import GraphqlRequestBody from './GraphqlRequestBody';
 
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    actionDialog: {
+      justifyContent: 'space-between',
+      margin: theme.spacing(1),
+    },
+    responseGrid: {
+      borderLeft: `2px solid ${theme.palette.divider}`,
+    },
+  }),
+);
+
 SyntaxHighlighter.registerLanguage('json', json);
 
 interface OwnProps {
   method: Method;
-  isAnnotatedService: boolean;
-  isGraphqlService: boolean;
+  serviceType: ServiceType;
   exampleHeaders: SelectOption[];
   examplePaths: SelectOption[];
   exampleQueries: SelectOption[];
   exactPathMapping: boolean;
   useRequestBody: boolean;
+  debugFormIsOpen: boolean;
+  setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
+  jsonSchemas: any[];
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -92,13 +113,6 @@ const copyTextToClipboard = (text: string) => {
   document.body.removeChild(textArea);
 };
 
-const scrollToDebugForm = () => {
-  const scrollNode = document.getElementById('debug-form');
-  if (scrollNode) {
-    scrollNode.scrollIntoView({ behavior: 'smooth' });
-  }
-};
-
 const toggle = (prev: boolean, override: unknown) => {
   if (typeof override === 'boolean') {
     return override;
@@ -118,13 +132,15 @@ const DebugPage: React.FunctionComponent<Props> = ({
   exampleHeaders,
   examplePaths,
   exampleQueries,
-  isAnnotatedService,
-  isGraphqlService,
+  serviceType,
   history,
   location,
   match,
   method,
   useRequestBody,
+  debugFormIsOpen,
+  setDebugFormIsOpen,
+  jsonSchemas,
 }) => {
   const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [requestBody, setRequestBody] = useState('');
@@ -149,6 +165,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
     false,
   );
 
+  const classes = useStyles();
+
   const transport = TRANSPORTS.getDebugTransport(method);
   if (!transport) {
     throw new Error("This method doesn't have a debug transport.");
@@ -157,16 +175,18 @@ const DebugPage: React.FunctionComponent<Props> = ({
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
 
-    let urlRequestBody;
+    let urlRequestBody = '';
     if (useRequestBody) {
       if (urlParams.has('request_body')) {
         urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-        scrollToDebugForm();
       }
     }
 
     let urlPath;
-    if (isAnnotatedService || isGraphqlService) {
+    if (
+      serviceType === ServiceType.HTTP ||
+      serviceType === ServiceType.GRAPHQL
+    ) {
       if (exactPathMapping) {
         urlPath = extractUrlPath(method);
       } else {
@@ -180,7 +200,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
         )?.pathMapping || '';
     }
 
-    const urlQueries = isAnnotatedService ? urlParams.get('queries') : '';
+    const urlQueries =
+      serviceType === ServiceType.HTTP ? urlParams.get('queries') ?? '' : '';
 
     if (!keepDebugResponse) {
       setDebugResponse('');
@@ -190,17 +211,20 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
+    setDebugFormIsOpen(
+      (isOpen) => isOpen || urlRequestBody !== '' || urlQueries !== '',
+    );
   }, [
     exactPathMapping,
     exampleQueries.length,
-    isAnnotatedService,
-    isGraphqlService,
+    serviceType,
     location.search,
     match.params,
     method,
     transport,
     useRequestBody,
     keepDebugResponse,
+    setDebugFormIsOpen,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */
@@ -263,6 +287,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
     [],
   );
 
+  const onSelectedRequestBodyChange = useCallback(
+    (e: ChangeEvent<{ value: unknown }>) => {
+      setRequestBody(e.target.value as string);
+    },
+    [],
+  );
+
   const onHeadersFormChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       setAdditionalHeaders(e.target.value);
@@ -297,7 +328,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
       let uri;
       let endpoint;
 
-      if (isAnnotatedService || isGraphqlService) {
+      if (
+        serviceType === ServiceType.HTTP ||
+        serviceType === ServiceType.GRAPHQL
+      ) {
         const queries = additionalQueries;
         if (exactPathMapping) {
           endpoint = transport.getDebugMimeTypeEndpoint(method);
@@ -330,7 +364,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       if (process.env.WEBPACK_DEV === 'true') {
         headers[docServiceDebug] = 'true';
       }
-      if (isGraphqlService) {
+      if (serviceType === ServiceType.GRAPHQL) {
         headers.Accept = 'application/json';
       }
 
@@ -359,8 +393,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     method,
     transport,
     requestBody,
-    isAnnotatedService,
-    isGraphqlService,
+    serviceType,
     showSnackbar,
     additionalQueries,
     exactPathMapping,
@@ -391,7 +424,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
       let queries;
       let executedEndpointPath;
-      if (isAnnotatedService) {
+      if (serviceType === ServiceType.HTTP) {
         queries = params.get('queries') || '';
         if (!exactPathMapping) {
           executedEndpointPath = params.get('endpoint_path') || undefined;
@@ -421,7 +454,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
       setDebugResponse(executedDebugResponse);
     },
-    [useRequestBody, isAnnotatedService, exactPathMapping, method, transport],
+    [useRequestBody, serviceType, exactPathMapping, method, transport],
   );
 
   const onSubmit = useCallback(async () => {
@@ -445,7 +478,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         params.set('request_body', jsonMinify(requestBody) || '{}');
       }
 
-      if (isAnnotatedService) {
+      if (serviceType === ServiceType.HTTP) {
         if (queries) {
           params.set('queries', queries);
         } else {
@@ -506,7 +539,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     stickyHeaders,
     executeRequest,
     useRequestBody,
-    isAnnotatedService,
+    serviceType,
     requestBody,
     exactPathMapping,
     additionalPath,
@@ -516,7 +549,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
   ]);
 
   const supportedExamplePaths = useMemo(() => {
-    if (isAnnotatedService || isGraphqlService) {
+    if (
+      serviceType === ServiceType.HTTP ||
+      serviceType === ServiceType.GRAPHQL
+    ) {
       return examplePaths;
     }
     return transport.listDebugMimeTypeEndpoint(method).map((endpoint) => {
@@ -525,18 +561,24 @@ const DebugPage: React.FunctionComponent<Props> = ({
         value: endpoint.pathMapping,
       };
     });
-  }, [isAnnotatedService, isGraphqlService, transport, method, examplePaths]);
+  }, [serviceType, transport, method, examplePaths]);
+
+  const [debugAlertIsOpen, setDebugAlertIsOpen] = React.useState(true);
 
   return (
-    <Section>
-      <div id="debug-form">
-        <Typography variant="body2" paragraph />
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="h6" paragraph>
-              Debug
-            </Typography>
-            <Alert severity="info">
+    <div>
+      <Dialog
+        onClose={() => setDebugFormIsOpen(false)}
+        open={debugFormIsOpen}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle id="customized-dialog-title">
+          <Typography variant="h6" paragraph>
+            Debug
+          </Typography>
+          {debugAlertIsOpen && (
+            <Alert severity="info" onClose={() => setDebugAlertIsOpen(false)}>
               You can set the default values by{' '}
               <a
                 href="https://armeria.dev/docs/server-docservice/#example-requests-and-headers"
@@ -547,110 +589,135 @@ const DebugPage: React.FunctionComponent<Props> = ({
               </a>
               .
             </Alert>
-            <EndpointPath
-              examplePaths={supportedExamplePaths}
-              editable={!exactPathMapping}
-              isAnnotatedService={isAnnotatedService}
-              isGraphqlService={isGraphqlService}
-              endpointPathOpen={endpointPathOpen}
-              additionalPath={additionalPath}
-              onEditEndpointPathClick={toggleEndpointPathOpen}
-              onPathFormChange={onPathFormChange}
-              onSelectedPathChange={onSelectedPathChange}
-            />
-            {isAnnotatedService && (
-              <HttpQueryString
-                exampleQueries={exampleQueries}
-                additionalQueriesOpen={additionalQueriesOpen}
-                additionalQueries={additionalQueries}
-                onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
-                onQueriesFormChange={onQueriesFormChange}
-                onSelectedQueriesChange={onSelectedQueriesChange}
-              />
-            )}
-            <HttpHeaders
-              exampleHeaders={exampleHeaders}
-              additionalHeadersOpen={additionalHeadersOpen}
-              additionalHeaders={additionalHeaders}
-              stickyHeaders={stickyHeaders}
-              onEditHttpHeadersClick={toggleAdditionalHeadersOpen}
-              onSelectedHeadersChange={onSelectedHeadersChange}
-              onHeadersFormChange={onHeadersFormChange}
-              onStickyHeadersChange={toggleStickyHeaders}
-            />
-            {useRequestBody && isGraphqlService ? (
-              <GraphqlRequestBody
-                requestBodyOpen={requestBodyOpen}
-                requestBody={requestBody}
-                onEditRequestBodyClick={toggleRequestBodyOpen}
-                onDebugFormChange={onDebugFormChange}
-                schemaUrlPath={extractUrlPath(method)}
-              />
-            ) : (
-              <RequestBody
-                requestBodyOpen={requestBodyOpen}
-                requestBody={requestBody}
-                onEditRequestBodyClick={toggleRequestBodyOpen}
-                onDebugFormChange={onDebugFormChange}
-              />
-            )}
+          )}
+        </DialogTitle>
+        <DialogContent dividers>
+          <div id="debug-form">
             <Typography variant="body2" paragraph />
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <EndpointPath
+                  examplePaths={supportedExamplePaths}
+                  editable={!exactPathMapping}
+                  serviceType={serviceType}
+                  endpointPathOpen={endpointPathOpen}
+                  additionalPath={additionalPath}
+                  onEditEndpointPathClick={toggleEndpointPathOpen}
+                  onPathFormChange={onPathFormChange}
+                  onSelectedPathChange={onSelectedPathChange}
+                />
+                {serviceType === ServiceType.HTTP && (
+                  <HttpQueryString
+                    exampleQueries={exampleQueries}
+                    additionalQueriesOpen={additionalQueriesOpen}
+                    additionalQueries={additionalQueries}
+                    onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
+                    onQueriesFormChange={onQueriesFormChange}
+                    onSelectedQueriesChange={onSelectedQueriesChange}
+                  />
+                )}
+                <HttpHeaders
+                  exampleHeaders={exampleHeaders}
+                  additionalHeadersOpen={additionalHeadersOpen}
+                  additionalHeaders={additionalHeaders}
+                  stickyHeaders={stickyHeaders}
+                  onEditHttpHeadersClick={toggleAdditionalHeadersOpen}
+                  onSelectedHeadersChange={onSelectedHeadersChange}
+                  onHeadersFormChange={onHeadersFormChange}
+                  onStickyHeadersChange={toggleStickyHeaders}
+                />
+                {useRequestBody && serviceType === ServiceType.GRAPHQL ? (
+                  <GraphqlRequestBody
+                    requestBodyOpen={requestBodyOpen}
+                    requestBody={requestBody}
+                    onEditRequestBodyClick={toggleRequestBodyOpen}
+                    onDebugFormChange={onDebugFormChange}
+                    schemaUrlPath={extractUrlPath(method)}
+                  />
+                ) : (
+                  <RequestBody
+                    exampleRequests={method.exampleRequests}
+                    onSelectedRequestBodyChange={onSelectedRequestBodyChange}
+                    requestBodyOpen={requestBodyOpen}
+                    requestBody={requestBody}
+                    onEditRequestBodyClick={toggleRequestBodyOpen}
+                    onDebugFormChange={onDebugFormChange}
+                    method={method}
+                    serviceType={serviceType}
+                    jsonSchemas={jsonSchemas}
+                  />
+                )}
+                <Typography variant="body2" paragraph />
+              </Grid>
+              <Grid item xs={12} sm={6} className={classes.responseGrid}>
+                <Grid container spacing={1}>
+                  <Grid item xs="auto">
+                    <Tooltip title="Copy response">
+                      <div>
+                        <IconButton
+                          onClick={onCopy}
+                          disabled={debugResponse.length === 0}
+                        >
+                          <FileCopyIcon />
+                        </IconButton>
+                      </div>
+                    </Tooltip>
+                  </Grid>
+                  <Grid item xs="auto">
+                    <Tooltip title="Clear response">
+                      <div>
+                        <IconButton
+                          onClick={onClear}
+                          disabled={debugResponse.length === 0}
+                        >
+                          <DeleteSweepIcon />
+                        </IconButton>
+                      </div>
+                    </Tooltip>
+                  </Grid>
+                </Grid>
+                <SyntaxHighlighter
+                  language="json"
+                  style={githubGist}
+                  wrapLines={false}
+                >
+                  {debugResponse}
+                </SyntaxHighlighter>
+              </Grid>
+            </Grid>
+            <Snackbar
+              open={snackbarOpen}
+              message={snackbarMessage}
+              autoHideDuration={3000}
+              onClose={dismissSnackbar}
+              action={
+                <IconButton color="inherit" onClick={dismissSnackbar}>
+                  <CloseIcon />
+                </IconButton>
+              }
+            />
+          </div>
+        </DialogContent>
+        <DialogActions className={classes.actionDialog}>
+          <div>
             <Button variant="contained" color="primary" onClick={onSubmit}>
               Submit
             </Button>
             <Button variant="text" color="secondary" onClick={onExport}>
               Copy as a curl command
             </Button>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Grid container spacing={1}>
-              <Grid item xs="auto">
-                <Tooltip title="Copy response">
-                  <div>
-                    <IconButton
-                      onClick={onCopy}
-                      disabled={debugResponse.length === 0}
-                    >
-                      <FileCopyIcon />
-                    </IconButton>
-                  </div>
-                </Tooltip>
-              </Grid>
-              <Grid item xs="auto">
-                <Tooltip title="Clear response">
-                  <div>
-                    <IconButton
-                      onClick={onClear}
-                      disabled={debugResponse.length === 0}
-                    >
-                      <DeleteSweepIcon />
-                    </IconButton>
-                  </div>
-                </Tooltip>
-              </Grid>
-            </Grid>
-            <SyntaxHighlighter
-              language="json"
-              style={githubGist}
-              wrapLines={false}
-            >
-              {debugResponse}
-            </SyntaxHighlighter>
-          </Grid>
-        </Grid>
-        <Snackbar
-          open={snackbarOpen}
-          message={snackbarMessage}
-          autoHideDuration={3000}
-          onClose={dismissSnackbar}
-          action={
-            <IconButton color="inherit" onClick={dismissSnackbar}>
-              <CloseIcon />
-            </IconButton>
-          }
-        />
-      </div>
-    </Section>
+          </div>
+          <Button
+            autoFocus
+            onClick={() => setDebugFormIsOpen(false)}
+            variant="contained"
+            color="primary"
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </div>
   );
 };
 

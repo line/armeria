@@ -129,95 +129,98 @@ internal class FlowAnnotatedServiceTest {
             override fun configure(sb: ServerBuilder) {
                 @Suppress("unused")
                 sb.apply {
-                    annotatedService("/flow", object {
-                        @Get("/byte-streaming")
-                        @ProducesOctetStream
-                        fun byteStreaming(): Flow<ByteArray> = flow {
-                            emit("hello".toByteArray())
-                            emit("world".toByteArray())
-                        }
+                    annotatedService(
+                        "/flow",
+                        object {
+                            @Get("/byte-streaming")
+                            @ProducesOctetStream
+                            fun byteStreaming(): Flow<ByteArray> = flow {
+                                emit("hello".toByteArray())
+                                emit("world".toByteArray())
+                            }
 
-                        @Get("/json-string-streaming")
-                        @ProducesJsonSequences
-                        fun jsonStreamingString(): Flow<String> = flow {
-                            emit("hello")
-                            emit("world")
-                        }
-
-                        @Get("/json-obj-streaming")
-                        @ProducesJsonSequences
-                        fun jsonStreamingObj(): Flow<Member> = flow {
-                            emit(Member(name = "foo", age = 10))
-                            emit(Member(name = "bar", age = 20))
-                            emit(Member(name = "baz", age = 30))
-                        }
-
-                        @Get("/event-streaming")
-                        @ProducesEventStream
-                        fun eventStreaming(): Flow<ServerSentEvent> = flow {
-                            emit(
-                                ServerSentEvent
-                                    .builder()
-                                    .id("1")
-                                    .event("MESSAGE_DELIVERED")
-                                    .data("{\"message_id\":1}")
-                                    .build()
-                            )
-                            emit(
-                                ServerSentEvent
-                                    .builder()
-                                    .id("2")
-                                    .event("FOLLOW_REQUEST")
-                                    .data("{\"user_id\":123}")
-                                    .build()
-                            )
-                        }
-
-                        @Get("/aggregated-json-obj")
-                        @ProducesJson
-                        fun aggregatedJson() = flow {
-                            emit(Member(name = "foo", age = 10))
-                            emit(Member(name = "bar", age = 20))
-                            emit(Member(name = "baz", age = 30))
-                        }
-
-                        @Get("/custom-context")
-                        @ProducesText
-                        fun userContext() = flow {
-                            val user = checkNotNull(coroutineContext[User])
-                            assertThat(user.name).isEqualTo("Armeria")
-                            assertThat(user.role).isEqualTo("Admin")
-                            emit("OK")
-                        }
-
-                        @Get("/custom-dispatcher")
-                        @ProducesText
-                        fun dispatcherContext() = flow {
-                            assertThat(Thread.currentThread().name).contains("custom-thread")
-                            emit("OK")
-                        }
-
-                        @Get("/cancellation")
-                        @ProducesJsonSequences
-                        fun cancellation() = flow {
-                            try {
-                                emit("OK")
-                                delay(2500L)
+                            @Get("/json-string-streaming")
+                            @ProducesJsonSequences
+                            fun jsonStreamingString(): Flow<String> = flow {
+                                emit("hello")
                                 emit("world")
-                            } catch (e: CancellationException) {
-                                cancelled.set(true)
-                                throw e
+                            }
+
+                            @Get("/json-obj-streaming")
+                            @ProducesJsonSequences
+                            fun jsonStreamingObj(): Flow<Member> = flow {
+                                emit(Member(name = "foo", age = 10))
+                                emit(Member(name = "bar", age = 20))
+                                emit(Member(name = "baz", age = 30))
+                            }
+
+                            @Get("/event-streaming")
+                            @ProducesEventStream
+                            fun eventStreaming(): Flow<ServerSentEvent> = flow {
+                                emit(
+                                    ServerSentEvent
+                                        .builder()
+                                        .id("1")
+                                        .event("MESSAGE_DELIVERED")
+                                        .data("{\"message_id\":1}")
+                                        .build()
+                                )
+                                emit(
+                                    ServerSentEvent
+                                        .builder()
+                                        .id("2")
+                                        .event("FOLLOW_REQUEST")
+                                        .data("{\"user_id\":123}")
+                                        .build()
+                                )
+                            }
+
+                            @Get("/aggregated-json-obj")
+                            @ProducesJson
+                            fun aggregatedJson() = flow {
+                                emit(Member(name = "foo", age = 10))
+                                emit(Member(name = "bar", age = 20))
+                                emit(Member(name = "baz", age = 30))
+                            }
+
+                            @Get("/custom-context")
+                            @ProducesText
+                            fun userContext() = flow {
+                                val user = checkNotNull(coroutineContext[User])
+                                assertThat(user.name).isEqualTo("Armeria")
+                                assertThat(user.role).isEqualTo("Admin")
+                                emit("OK")
+                            }
+
+                            @Get("/custom-dispatcher")
+                            @ProducesText
+                            fun dispatcherContext() = flow {
+                                assertThat(Thread.currentThread().name).contains("custom-thread")
+                                emit("OK")
+                            }
+
+                            @Get("/cancellation")
+                            @ProducesJsonSequences
+                            fun cancellation() = flow {
+                                try {
+                                    emit("OK")
+                                    delay(2500L)
+                                    emit("world")
+                                } catch (e: CancellationException) {
+                                    cancelled.set(true)
+                                    throw e
+                                }
+                            }
+
+                            @Get("/runs-within-event-loop")
+                            @ProducesText
+                            fun runsWithinEventLoop() = flow {
+                                ServiceRequestContext.current()
+                                assertThat(Thread.currentThread().name).contains("armeria-common-worker")
+                                emit("OK")
                             }
                         }
-
-                        @Get("/runs-within-event-loop")
-                        @ProducesText
-                        fun runsWithinEventLoop() = flow {
-                            ServiceRequestContext.current()
-                            assertThat(Thread.currentThread().name).contains("armeria-common-worker")
-                            emit("OK")
-                        }
-                    })
+                    )
                     decorator(
                         Route.builder().path("/flow", "/custom-context").build(),
                         CoroutineContextService.newDecorator { User(name = "Armeria", role = "Admin") }

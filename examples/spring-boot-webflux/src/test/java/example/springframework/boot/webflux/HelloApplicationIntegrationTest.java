@@ -1,15 +1,15 @@
 package example.springframework.boot.webflux;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
 
 @ActiveProfiles("testbed")
 @SpringBootTest(webEnvironment = WebEnvironment.DEFINED_PORT)

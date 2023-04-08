@@ -70,16 +70,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
 
-            if (stream instanceof PublisherBasedStreamMessage ||
-                stream instanceof SplitHttpResponse ||
-                stream instanceof PathStreamMessage ||
-                "com.linecorp.armeria.common.multipart.MultipartDecoder".equals(stream.getClass().getName())) {
-                // It's impossible for the above StreamMessages to tell if the streams are
-                // closed or empty yet because the data could be created when the first request is made.
-            } else {
-                assertThat(stream.isOpen()).isFalse();
-                assertThat(stream.isEmpty()).isTrue();
-            }
+            checkStreamEmpty(stream);
 
             if (!(stream instanceof DefaultStreamMessageDuplicator.ChildStreamMessage)) {
                 await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompleted());
@@ -91,6 +82,28 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             assertThat(stream.isEmpty()).isTrue();
             sub.expectNone();
         });
+    }
+
+    private static void checkStreamEmpty(StreamMessage<?> stream) {
+        if (stream instanceof PublisherBasedStreamMessage ||
+            stream instanceof SplitHttpResponse ||
+            stream instanceof PathStreamMessage) {
+            // It's impossible for the above StreamMessages to tell if the streams are
+            // closed or empty yet because the data could be created when the first request is made.
+            return;
+        }
+        if (stream instanceof FuseableStreamMessage) {
+            final String className = ((FuseableStreamMessage<?, ?>) stream).upstream()
+                                                                           .getClass()
+                                                                           .getName();
+            if ("com.linecorp.armeria.common.multipart.MultipartDecoder".equals(className)) {
+                // It's impossible for the MultipartDecoder to tell if the streams are
+                // closed or empty yet because the data could be created when the first request is made.
+                return;
+            }
+        }
+        assertThat(stream.isOpen()).isFalse();
+        assertThat(stream.isEmpty()).isTrue();
     }
 
     @Test
