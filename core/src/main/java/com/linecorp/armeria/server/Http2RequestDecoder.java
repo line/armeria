@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -38,7 +39,6 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -119,25 +119,38 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            // Reject a request with an unsupported method.
-            final HttpMethod method = HttpMethod.tryParse(methodText.toString());
-            if (method == null) {
-                writeErrorResponse(streamId, null, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+            // Parse and normalize the request path.
+            final String path = nettyHeaders.path().toString();
+            final RequestTarget reqTarget = RequestTarget.forServer(path);
+            if (reqTarget == null) {
+                writeInvalidRequestPathResponse(streamId, null);
                 return;
             }
-
-            final PathAndQuery pathAndQuery = PathAndQuery.parse(nettyHeaders.path().toString());
 
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
                     ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream,
-                                                            scheme, cfg, pathAndQuery);
+                                                            scheme, cfg, reqTarget);
 
-            // Accept a CONNECT request only when it has a :protocol header, as defined in:
-            // https://datatracker.ietf.org/doc/html/rfc8441#section-4
-            if (method == HttpMethod.CONNECT && !nettyHeaders.contains(HttpHeaderNames.PROTOCOL)) {
-                writeErrorResponse(streamId, headers, HttpStatus.METHOD_NOT_ALLOWED,
-                                   "Unsupported method", null);
+            // Reject a request with an unsupported method.
+            final HttpMethod method = headers.method();
+            switch (method) {
+                case CONNECT:
+                    // Accept a CONNECT request only when it has a :protocol header, as defined in:
+                    // https://datatracker.ietf.org/doc/html/rfc8441#section-4
+                    if (!nettyHeaders.contains(HttpHeaderNames.PROTOCOL)) {
+                        writeUnsupportedMethodResponse(streamId, headers);
+                        return;
+                    }
+                    break;
+                case UNKNOWN:
+                    writeUnsupportedMethodResponse(streamId, headers);
+                    return;
+            }
+
+            // Do not accept the request path '*' for a non-OPTIONS request.
+            if (method != HttpMethod.OPTIONS && "*".equals(path)) {
+                writeInvalidRequestPathResponse(streamId, headers);
                 return;
             }
 
@@ -162,7 +175,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers, pathAndQuery);
+            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers, reqTarget);
             if (routingCtx.status().routeMustExist()) {
                 try {
                     // Find the service that matches the path.
@@ -188,9 +201,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {
                 // Silently ignore the following HEADERS Frames of non-DecodedHttpRequestWriter. The request
-                // stream is closed when receiving the first HEADERS Frame and some responses might be sent
-                // already.
-                logger.debug("{} received a HEADERS Frame for an invalid stream: {}", ctx.channel(), streamId);
+                // stream is closed when receiving the first HEADERS frame, but the client might send
+                // more frames before realizing it.
+                logger.debug("{} Received a HEADERS frame for a finished stream: {}", ctx.channel(), streamId);
                 return;
             }
             final HttpHeaders trailers = ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream);
@@ -255,18 +268,27 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             int padding, boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead(false);
 
+        final int dataLength = data.readableBytes();
         final DecodedHttpRequest req = requests.get(streamId);
+        final boolean logInvalidStream;
         if (req == null) {
-            throw connectionError(PROTOCOL_ERROR, "received a DATA Frame for an unknown stream: %d",
-                                  streamId);
+            if (encoder == null || encoder.findStream(streamId) == null) {
+                throw connectionError(PROTOCOL_ERROR, "received a DATA frame for an unknown stream: %d",
+                                      streamId);
+            } else {
+                // Received a frame for the stream we rejected.
+                logInvalidStream = true;
+            }
+        } else {
+            // Silently ignore the following DATA Frames of non-DecodedHttpRequestWriter.
+            // The request stream is closed when receiving the HEADERS frame, but the client might send
+            // more frames before realizing it.
+            logInvalidStream = !(req instanceof DecodedHttpRequestWriter);
         }
 
-        final int dataLength = data.readableBytes();
-        if (!(req instanceof DecodedHttpRequestWriter)) {
-            // Silently ignore the following DATA Frames of non-DecodedHttpRequestWriter. The request stream is
-            // closed when receiving the HEADERS Frame and some responses might be sent already.
-            logger.debug("{} received a DATA Frame for an invalid stream: {}. headers: {}",
-                         ctx.channel(), streamId, req.headers());
+        if (logInvalidStream) {
+            logger.debug("{} Received a DATA frame for a finished stream: {} / headers: {}",
+                         ctx.channel(), streamId, req != null ? req.headers() : "<unknown>");
             return dataLength + padding;
         }
 
@@ -335,6 +357,16 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
     }
 
+    private void writeInvalidRequestPathResponse(int streamId, @Nullable RequestHeaders headers) {
+        writeErrorResponse(streamId, headers, HttpStatus.BAD_REQUEST,
+                           "Invalid request path", null);
+    }
+
+    private void writeUnsupportedMethodResponse(int streamId, RequestHeaders headers) {
+        writeErrorResponse(streamId, headers, HttpStatus.METHOD_NOT_ALLOWED,
+                           "Unsupported method", null);
+    }
+
     private void writeErrorResponse(int streamId, @Nullable RequestHeaders headers,
                                     HttpStatus status, @Nullable String message,
                                     @Nullable Throwable cause) {
@@ -349,8 +381,15 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         keepAliveChannelRead(false);
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
-            throw connectionError(PROTOCOL_ERROR,
-                                  "received a RST_STREAM frame for an unknown stream: %d", streamId);
+            if (encoder == null || encoder.findStream(streamId) == null) {
+                throw connectionError(PROTOCOL_ERROR,
+                                      "received a RST_STREAM frame for an unknown stream: %d", streamId);
+            } else {
+                // Received a frame for the stream we rejected.
+                logger.debug("{} Received a RST_STREAM frame for a finished stream: {}",
+                             ctx.channel(), streamId);
+                return;
+            }
         }
 
         final ClosedStreamException cause =

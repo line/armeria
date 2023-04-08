@@ -46,7 +46,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -160,8 +162,8 @@ public final class DefaultServiceRequestContext
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
         super(meterRegistry, sessionProtocol, id,
-              requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
-              requireNonNull(routingResult, "routingResult").query(), exchangeType,
+              requireNonNull(routingContext, "routingContext").method(),
+              routingContext.requestTarget(), exchangeType,
               requireNonNull(req, "req"), null, null);
 
         this.ch = requireNonNull(ch, "ch");
@@ -191,6 +193,13 @@ public final class DefaultServiceRequestContext
         maxRequestLength = cfg.maxRequestLength();
         this.additionalResponseHeaders = additionalResponseHeaders;
         this.additionalResponseTrailers = additionalResponseTrailers;
+    }
+
+    @Override
+    protected RequestTarget validateHeaders(RequestHeaders headers) {
+        checkArgument(headers.scheme() != null && headers.authority() != null,
+                      "must set ':scheme' and ':authority' headers");
+        return RequestTarget.forServer(headers.path());
     }
 
     @Nullable

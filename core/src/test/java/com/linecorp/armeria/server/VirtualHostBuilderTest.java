@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.RequestTarget;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
@@ -319,6 +320,9 @@ class VirtualHostBuilderTest {
     void precedenceOfDuplicateRoute() {
         final Route routeA = Route.builder().path("/").build();
         final Route routeB = Route.builder().path("/").build();
+        final RequestTarget reqTarget = RequestTarget.forServer("/");
+        assertThat(reqTarget).isNotNull();
+
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), true)
                 .service(routeA, (ctx, req) -> HttpResponse.of(OK))
                 .service(routeB, (ctx, req) -> HttpResponse.of(OK))
@@ -326,8 +330,7 @@ class VirtualHostBuilderTest {
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
                                                                         RequestHeaders.of(HttpMethod.GET, "/"),
-                                                                        "/", null, null,
-                                                                        RoutingStatus.OK);
+                                                                        reqTarget, RoutingStatus.OK);
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
         final Route route = serviceConfig.route();
         assertThat(route).isSameAs(routeA);

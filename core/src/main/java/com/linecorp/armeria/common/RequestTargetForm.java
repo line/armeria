@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,41 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A routing status of an incoming HTTP request.
+ * {@link RequestTarget} form, as defined in
+ * <a href="https://datatracker.ietf.org/doc/html/rfc9112#section-3.2">Section 3.2, RFC 9112</a>.
+ *
+ * <p>Note: This enum doesn't support the
+ * <a href="https://datatracker.ietf.org/doc/html/rfc9112#section-3.2.3">authority form</a>.
  */
 @UnstableApi
-public enum RoutingStatus {
+public enum RequestTargetForm {
     /**
-     * The routing completed successfully.
+     * An absolute path followed by a query and a fragment.
      */
-    OK(true),
-
+    ORIGIN,
     /**
-     * A <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS">CORS</a> preflight request.
+     * An absolute URI that has scheme, authority and absolute path followed by a query and a fragment.
      */
-    CORS_PREFLIGHT(true),
-
+    ABSOLUTE,
     /**
-     * An {@code "OPTIONS * HTTP/1.1"} request.
+     * {@code "*"}, used for a server-side {@code OPTIONS} request.
      */
-    OPTIONS(false);
-
-    private final boolean routeMustExist;
-
-    RoutingStatus(boolean routeMustExist) {
-        this.routeMustExist = routeMustExist;
-    }
-
-    /**
-     * Returns {@code true} if a {@link Route} must exist for the incoming HTTP request.
-     */
-    public boolean routeMustExist() {
-        return routeMustExist;
-    }
+    ASTERISK
 }
