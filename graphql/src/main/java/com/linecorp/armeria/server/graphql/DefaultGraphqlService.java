@@ -20,7 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
+import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -46,18 +49,25 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final GraphQL graphQL;
 
-    private final DataLoaderRegistryCreationStrategy dataLoaderRegistryCreationStrategy;
+    @Nullable
+    private final Function<? super ServiceRequestContext,
+                           ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
+
+    @Nullable
+    private final DataLoaderRegistry dataLoaderRegistry;
 
     private final boolean useBlockingTaskExecutor;
 
     private final GraphqlErrorHandler errorHandler;
 
     DefaultGraphqlService(GraphQL graphQL,
-                          DataLoaderRegistryCreationStrategy dataLoaderRegistryCreationStrategy,
+                          @Nullable Function<? super ServiceRequestContext,
+                                             ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
+                          @Nullable DataLoaderRegistry dataLoaderRegistry,
                           boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
-        this.dataLoaderRegistryCreationStrategy = requireNonNull(dataLoaderRegistryCreationStrategy,
-                                                                 "dataLoaderRegistryStrategy");
+        this.dataLoaderRegistryFunction = dataLoaderRegistryFunction;
+        this.dataLoaderRegistry = dataLoaderRegistry;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.errorHandler = errorHandler;
     }
@@ -90,9 +100,17 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final ExecutionInput executionInput =
                 builder.context(ctx)
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                       .dataLoaderRegistry(dataLoaderRegistryCreationStrategy.apply(ctx))
+                       .dataLoaderRegistry(dataLoaderRegistry(ctx))
                        .build();
         return execute(ctx, executionInput, produceType);
+    }
+
+    @Nullable
+    private DataLoaderRegistry dataLoaderRegistry(ServiceRequestContext ctx) {
+        if (dataLoaderRegistryFunction != null) {
+            return dataLoaderRegistryFunction.apply(ctx);
+        }
+        return dataLoaderRegistry;
     }
 
     private HttpResponse execute(

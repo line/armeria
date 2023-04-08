@@ -30,6 +30,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ResourceUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
@@ -77,7 +79,7 @@ public final class GraphqlServiceBuilder {
     private boolean useBlockingTaskExecutor;
 
     @Nullable
-    private DataLoaderRegistryCreationStrategy dataLoaderRegistryCreationStrategy;
+    private Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory;
 
     @Nullable
     private GraphQLSchema schema;
@@ -149,19 +151,19 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Sets {@link DataLoaderRegistry} strategy.
+     * Sets {@link DataLoaderRegistry} function.
      */
     public GraphqlServiceBuilder dataLoaderRegistry(
-            DataLoaderRegistryCreationStrategy dataLoaderRegistryCreationStrategy) {
-        this.dataLoaderRegistryCreationStrategy =
-                requireNonNull(dataLoaderRegistryCreationStrategy, "dataLoaderRegistryStrategy");
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory) {
+        this.dataLoaderRegistryFactory =
+                requireNonNull(dataLoaderRegistryFactory, "dataLoaderRegistryFactory");
         return this;
     }
 
     /**
-     * Adds the {@link DataLoaderRegistry} consumers.
+     * Adds the {@link DataLoaderRegistry} creation function.
      *
-     * @deprecated Use {@link #dataLoaderRegistry(DataLoaderRegistryCreationStrategy)} instead.
+     * @deprecated Use {@link #dataLoaderRegistry(Function)} instead.
      */
     @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(Consumer<DataLoaderRegistry>... configurers) {
@@ -172,7 +174,7 @@ public final class GraphqlServiceBuilder {
     /**
      * Adds the {@link DataLoaderRegistry} consumers.
      *
-     * @deprecated Use {@link #dataLoaderRegistry(DataLoaderRegistryCreationStrategy)} instead.
+     * @deprecated Use {@link #dataLoaderRegistry(Function)} instead.
      */
     @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(
@@ -277,19 +279,31 @@ public final class GraphqlServiceBuilder {
             configurer.configure(builder);
         }
 
-        if (dataLoaderRegistryCreationStrategy == null) {
-            dataLoaderRegistryCreationStrategy =
-                    DataLoaderRegistryCreationStrategy.ofFixed(dataLoaderRegistryConsumers.build());
+        final List<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers =
+                this.dataLoaderRegistryConsumers.build();
+        if (dataLoaderRegistryFactory != null && !dataLoaderRegistryConsumers.isEmpty()) {
+            throw new IllegalStateException("Can't set dataLoaderRegistryFactory and "
+                                            + "dataLoaderRegistryConsumers together.");
+        }
+        final DataLoaderRegistry dataLoaderRegistry;
+        if (!dataLoaderRegistryConsumers.isEmpty()) {
+            dataLoaderRegistry = new DataLoaderRegistry();
+            for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers) {
+                configurer.accept(dataLoaderRegistry);
+            }
+        } else {
+            dataLoaderRegistry = null;
         }
 
-final GraphqlErrorHandler errorHandler;
+        final GraphqlErrorHandler errorHandler;
         if (this.errorHandler == null) {
             errorHandler = GraphqlErrorHandler.of();
         } else {
             errorHandler = this.errorHandler.orElse(GraphqlErrorHandler.of());
         }
         return new DefaultGraphqlService(builder.build(),
-                                         dataLoaderRegistryCreationStrategy,
+                                         dataLoaderRegistryFactory,
+                                         dataLoaderRegistry,
                                          useBlockingTaskExecutor,
                                          errorHandler);
     }
