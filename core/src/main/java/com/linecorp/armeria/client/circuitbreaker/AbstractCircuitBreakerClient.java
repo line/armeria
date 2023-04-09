@@ -115,6 +115,10 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
         return fromRuleWithContent;
     }
 
+    final CircuitBreakerClientHandler handler() {
+        return handler;
+    }
+
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
         final CircuitBreakerCallback callback = handler.tryRequest(ctx, req);

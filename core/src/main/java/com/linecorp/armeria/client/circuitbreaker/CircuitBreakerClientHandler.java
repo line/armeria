@@ -98,4 +98,8 @@ public interface CircuitBreakerClientHandler {
      */
     @Nullable
     CircuitBreakerCallback tryRequest(ClientRequestContext ctx, Request req);
+
+    default boolean isCircuitBreakerException(Exception ex) {
+        return ex instanceof FailFastException;
+    }
 }

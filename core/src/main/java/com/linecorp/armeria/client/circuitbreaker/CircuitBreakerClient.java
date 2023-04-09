@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -277,6 +278,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
 
     private final boolean needsContentInRule;
     private final int maxContentLength;
+    private final Optional<BiFunction<ClientRequestContext, HttpRequest, HttpResponse>> fallback;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
@@ -286,6 +288,15 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         super(delegate, handler, rule);
         needsContentInRule = false;
         maxContentLength = 0;
+        fallback = Optional.empty();
+    }
+
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler,
+                         CircuitBreakerRule rule, Optional<BiFunction<ClientRequestContext, HttpRequest, HttpResponse>> fallback) {
+        super(delegate, handler, rule);
+        needsContentInRule = false;
+        maxContentLength = 0;
+        this.fallback = fallback;
     }
 
     /**
@@ -293,17 +304,18 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler,
                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
-        this(delegate, handler, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
+        this(delegate, handler, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH, Optional.empty());
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler,
-                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
+                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength, Optional<BiFunction<ClientRequestContext, HttpRequest, HttpResponse>> fallback) {
         super(delegate, handler, ruleWithContent);
         needsContentInRule = true;
         this.maxContentLength = maxContentLength;
+        this.fallback = fallback;
     }
 
     @Override
@@ -315,6 +327,9 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
+            if (cause instanceof Exception && handler().isCircuitBreakerException((Exception) cause) && fallback.isPresent()) {
+                return fallback.get().apply(ctx, req);
+            }
             reportSuccessOrFailure(callback, rule.shouldReportAsSuccess(ctx, cause), ctx, cause);
             throw cause;
         }

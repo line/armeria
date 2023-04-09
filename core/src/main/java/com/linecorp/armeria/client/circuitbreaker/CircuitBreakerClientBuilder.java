@@ -16,10 +16,15 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -34,6 +39,8 @@ public final class CircuitBreakerClientBuilder
 
     private final boolean needsContentInRule;
     private final int maxContentLength;
+    private Optional<BiFunction<ClientRequestContext, HttpRequest, HttpResponse>> fallback =
+            Optional.empty();
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
@@ -60,9 +67,9 @@ public final class CircuitBreakerClientBuilder
      */
     public CircuitBreakerClient build(HttpClient delegate) {
         if (needsContentInRule) {
-            return new CircuitBreakerClient(delegate, handler(), ruleWithContent(), maxContentLength);
+            return new CircuitBreakerClient(delegate, handler(), ruleWithContent(), maxContentLength, fallback);
         }
-        return new CircuitBreakerClient(delegate, handler(), rule());
+        return new CircuitBreakerClient(delegate, handler(), rule(), fallback);
     }
 
     /**
@@ -71,6 +78,12 @@ public final class CircuitBreakerClientBuilder
      */
     public Function<? super HttpClient, CircuitBreakerClient> newDecorator() {
         return this::build;
+    }
+
+    public CircuitBreakerClientBuilder recover(
+            BiFunction<ClientRequestContext, HttpRequest, HttpResponse> fallback) {
+        this.fallback = Optional.of(requireNonNull(fallback, "fallback"));
+        return this;
     }
 
     // Methods that were overridden to change the return type.
