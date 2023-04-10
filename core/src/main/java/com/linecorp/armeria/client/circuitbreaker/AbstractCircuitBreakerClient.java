@@ -120,7 +120,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     }
 
     @Override
-    public final O execute(ClientRequestContext ctx, I req) throws Exception {
+    public O execute(ClientRequestContext ctx, I req) throws Exception {
         final CircuitBreakerCallback callback = handler.tryRequest(ctx, req);
         if (callback == null) {
             return unwrap().execute(ctx, req);

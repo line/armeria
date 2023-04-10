@@ -80,6 +80,11 @@ public final class CircuitBreakerClientBuilder
         return this::build;
     }
 
+    /**
+     * Sets the {@link BiFunction}. This is invoked when adding the fallback strategy.
+     *
+     * @return {@code this} to support method chaining.
+     */
     public CircuitBreakerClientBuilder recover(
             BiFunction<ClientRequestContext, HttpRequest, HttpResponse> fallback) {
         this.fallback = Optional.of(requireNonNull(fallback, "fallback"));
