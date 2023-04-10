@@ -286,14 +286,13 @@ public final class GraphqlServiceBuilder {
             throw new IllegalStateException("Can't set dataLoaderRegistryFactory and " +
                                             "dataLoaderRegistryConsumers together.");
         }
-        if (!dataLoaderRegistryConsumers.isEmpty()) {
+        if (dataLoaderRegistryFactory == null) {
             final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
             for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers) {
                 configurer.accept(dataLoaderRegistry);
             }
             dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
         }
-        assert dataLoaderRegistryFactory != null;
 
         final GraphqlErrorHandler errorHandler;
         if (this.errorHandler == null) {
