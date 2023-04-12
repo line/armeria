@@ -140,6 +140,42 @@ class RetryingRpcClientTest {
     }
 
     @Test
+    void evaluatesMappingOnce() throws Exception {
+        final AtomicInteger evaluations = new AtomicInteger(0);
+        final HelloService.Iface client = helloClient(
+                (ctx, req) -> {
+                    evaluations.incrementAndGet();
+                    return RetryConfig
+                            .builderForRpc(retryOnException)
+                            .maxTotalAttempts(3)
+                            .build();
+                }
+        );
+
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenReturn("Hey");
+
+        assertThat(client.hello("Alice")).isEqualTo("Hey");
+        // 1 logical request; 3 retries
+        assertThat(evaluations.get()).isEqualTo(1);
+        verify(serviceHandler, times(3)).hello("Alice");
+
+        serviceRetryCount.set(0);
+
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenReturn("Hey");
+
+        assertThat(client.hello("Alice")).isEqualTo("Hey");
+        // 2 logical requests total; 6 retries total
+        assertThat(evaluations.get()).isEqualTo(2);
+        verify(serviceHandler, times(6)).hello("Alice");
+    }
+
+    @Test
     void execute_retry() throws Exception {
         final HelloService.Iface client = helloClient(retryOnException, 100);
         when(serviceHandler.hello(anyString()))

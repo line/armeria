@@ -126,21 +126,17 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             new Http2FrameLogger(LogLevel.TRACE, "com.linecorp.armeria.logging.traffic.server.http2");
 
     private final ServerPort port;
-    private final ServerConfig config;
-    @Nullable
-    private final Mapping<String, SslContext> sslContexts;
+    private final UpdatableServerConfig config;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     /**
      * Creates a new instance.
      */
     HttpServerPipelineConfigurator(
-            ServerConfig config, ServerPort port,
-            @Nullable Mapping<String, SslContext> sslContexts,
+            UpdatableServerConfig config, ServerPort port,
             GracefulShutdownSupport gracefulShutdownSupport) {
         this.config = config;
         this.port = requireNonNull(port, "port");
-        this.sslContexts = sslContexts;
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
     }
 
@@ -210,12 +206,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                                                                maxConnectionAgeMillis,
                                                                maxNumRequestsPerConnection);
         } else {
-            keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
+            keepAliveHandler = new NoopKeepAliveHandler();
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
-                p.channel(), H1C, keepAliveHandler,
-                config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
-                config.http1HeaderNaming()
+                p.channel(), H1C, keepAliveHandler, config.http1HeaderNaming()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
@@ -231,7 +225,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        assert sslContexts != null;
+        final Mapping<String, SslContext> sslContexts =
+                requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
         p.addLast(new SniHandler(sslContexts));
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
@@ -516,12 +511,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                                                                    maxConnectionAgeMillis,
                                                                    maxNumRequestsPerConnection);
             } else {
-                keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
+                keepAliveHandler = new NoopKeepAliveHandler();
             }
 
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
-                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
-                    config.http1HeaderNaming());
+                    ch, H1, keepAliveHandler, config.http1HeaderNaming());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),

@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 class RoutingContextTest {
@@ -50,6 +51,8 @@ class RoutingContextTest {
     @Test
     void testEquals() {
         final VirtualHost virtualHost = virtualHost();
+        final RequestTarget reqTarget = RequestTarget.forServer("/hello");
+        assertThat(reqTarget).isNotNull();
 
         final RoutingContext ctx1 =
                 new DefaultRoutingContext(virtualHost, "example.com",
@@ -58,7 +61,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.JSON_UTF_8 + ", " +
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
-                                          "/hello", null, null, RoutingStatus.OK);
+                                          reqTarget, RoutingStatus.OK);
         final RoutingContext ctx2 =
                 new DefaultRoutingContext(virtualHost, "example.com",
                                           RequestHeaders.of(HttpMethod.GET, "/hello",
@@ -66,7 +69,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.JSON_UTF_8 + ", " +
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
-                                          "/hello", null, null, RoutingStatus.OK);
+                                          reqTarget, RoutingStatus.OK);
         final RoutingContext ctx3 =
                 new DefaultRoutingContext(virtualHost, "example.com",
                                           RequestHeaders.of(HttpMethod.GET, "/hello",
@@ -74,7 +77,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.XML_UTF_8 + ", " +
                                                             MediaType.JSON_UTF_8 + "; q=0.8"),
-                                          "/hello", null, null, RoutingStatus.OK);
+                                          reqTarget, RoutingStatus.OK);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
@@ -90,6 +93,33 @@ class RoutingContextTest {
         assertThat(ctx1).isEqualTo(ctx2);
     }
 
+    @Test
+    void hashcodeRecalculateWhenMethodChange() {
+        final VirtualHost virtualHost = virtualHost();
+        final RequestTarget reqTarget = RequestTarget.forServer("/hello");
+        assertThat(reqTarget).isNotNull();
+
+        final RoutingContext ctx1 =
+                new DefaultRoutingContext(virtualHost, "example.com",
+                                          RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                                            HttpHeaderNames.ACCEPT,
+                                                            MediaType.JSON_UTF_8 + ", " +
+                                                            MediaType.XML_UTF_8 + "; q=0.8"),
+                                          reqTarget, RoutingStatus.OK);
+        final RoutingContext ctx2 =
+                new DefaultRoutingContext(virtualHost, "example.com",
+                                          RequestHeaders.of(HttpMethod.POST, "/hello",
+                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                                            HttpHeaderNames.ACCEPT,
+                                                            MediaType.JSON_UTF_8 + ", " +
+                                                            MediaType.XML_UTF_8 + "; q=0.8"),
+                                          reqTarget, RoutingStatus.OK);
+        final RoutingContext ctx3 = ctx1.withMethod(HttpMethod.POST);
+        assertThat(ctx1.hashCode()).isNotEqualTo(ctx3.hashCode());
+        assertThat(ctx2.hashCode()).isEqualTo(ctx3.hashCode());
+    }
+
     static RoutingContext create(String path) {
         return create(path, null);
     }
@@ -100,9 +130,12 @@ class RoutingContextTest {
 
     static RoutingContext create(VirtualHost virtualHost, String path, @Nullable String query) {
         final String requestPath = query != null ? path + '?' + query : path;
+        final RequestTarget reqTarget = RequestTarget.forServer(requestPath);
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, requestPath);
+        assertThat(reqTarget).isNotNull();
+
         return DefaultRoutingContext.of(virtualHost, "example.com",
-                                        path, query, headers, RoutingStatus.OK);
+                                        reqTarget, headers, RoutingStatus.OK);
     }
 
     static VirtualHost virtualHost() {

@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
@@ -89,6 +91,8 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         final String defaultServiceName = "TestService";
         final String defaultLogName = "TestLog";
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
+        final Function<? super RoutingContext, ? extends RequestId>
+                serviceRequestIdGenerator = (ctx) -> RequestId.of(101L);
 
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), false)
                 .annotatedService()
@@ -101,8 +105,9 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .defaultServiceName(defaultServiceName)
                 .defaultLogName(defaultLogName)
                 .multipartUploadsLocation(multipartUploadsLocation)
+                .requestIdGenerator(serviceRequestIdGenerator)
                 .build(new TestService())
-                .build(template, noopDependencyInjector);
+                .build(template, noopDependencyInjector, null);
 
         assertThat(virtualHost.serviceConfigs()).hasSize(2);
         final ServiceConfig pathBar = virtualHost.serviceConfigs().get(0);
@@ -112,6 +117,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(pathBar.verboseResponses()).isTrue();
         assertThat(pathBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+        assertThat(pathBar.requestIdGenerator()).isSameAs(serviceRequestIdGenerator);
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
         assertThat(pathBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
@@ -125,6 +131,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(pathFoo.defaultLogName()).isEqualTo(defaultLogName);
         assertThat(pathFoo.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+        assertThat(pathFoo.requestIdGenerator()).isSameAs(serviceRequestIdGenerator);
     }
 
     @Test

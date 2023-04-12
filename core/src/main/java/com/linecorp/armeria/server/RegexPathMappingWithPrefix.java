@@ -66,7 +66,7 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
             return null;
         }
 
-        return mapping.apply(routingCtx.overridePath(path.substring(pathPrefix.length() - 1)));
+        return mapping.apply(routingCtx.withPath(path.substring(pathPrefix.length() - 1)));
     }
 
     @Override

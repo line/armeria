@@ -29,8 +29,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -40,33 +40,16 @@ final class DefaultRoutingContext implements RoutingContext {
     /**
      * Returns a new {@link RoutingContext} instance.
      */
-    static RoutingContext of(VirtualHost virtualHost, String hostname,
-                             String path, @Nullable String query,
+    static RoutingContext of(VirtualHost virtualHost, String hostname, RequestTarget reqTarget,
                              RequestHeaders headers, RoutingStatus routingStatus) {
-        return new DefaultRoutingContext(virtualHost, hostname, headers, path, query, null,
-                                         routingStatus);
-    }
-
-    /**
-     * Returns a new {@link RoutingContext} instance.
-     */
-    static RoutingContext of(VirtualHost virtualHost, String hostname,
-                             PathAndQuery pathAndQuery,
-                             RequestHeaders headers, RoutingStatus routingStatus) {
-        requireNonNull(pathAndQuery, "pathAndQuery");
-        return new DefaultRoutingContext(virtualHost, hostname, headers, pathAndQuery.path(),
-                                         pathAndQuery.query(), pathAndQuery, routingStatus);
+        return new DefaultRoutingContext(virtualHost, hostname, headers, reqTarget, routingStatus);
     }
 
     private final VirtualHost virtualHost;
     private final String hostname;
     private final HttpMethod method;
     private final RequestHeaders headers;
-    private final String path;
-    @Nullable
-    private final String query;
-    @Nullable
-    private final PathAndQuery pathAndQuery;
+    private final RequestTarget reqTarget;
     @Nullable
     private final MediaType contentType;
     private final List<MediaType> acceptTypes;
@@ -81,14 +64,11 @@ final class DefaultRoutingContext implements RoutingContext {
     private final int hashCode;
 
     DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
-                          String path, @Nullable String query, @Nullable PathAndQuery pathAndQuery,
-                          RoutingStatus routingStatus) {
+                          RequestTarget reqTarget, RoutingStatus routingStatus) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
         this.headers = requireNonNull(headers, "headers");
-        this.path = requireNonNull(path, "path");
-        this.query = query;
-        this.pathAndQuery = pathAndQuery;
+        this.reqTarget = requireNonNull(reqTarget, "reqTarget");
         this.routingStatus = routingStatus;
         method = headers.method();
         contentType = headers.contentType();
@@ -112,25 +92,26 @@ final class DefaultRoutingContext implements RoutingContext {
     }
 
     @Override
+    public RequestTarget requestTarget() {
+        return reqTarget;
+    }
+
+    @Override
     public String path() {
-        return path;
+        return reqTarget.path();
     }
 
     @Nullable
     @Override
     public String query() {
-        return query;
-    }
-
-    @Nullable
-    PathAndQuery pathAndQuery() {
-        return pathAndQuery;
+        return reqTarget.query();
     }
 
     @Override
     public QueryParams params() {
         QueryParams queryParams = this.queryParams;
         if (queryParams == null) {
+            final String query = reqTarget.query();
             if (query == null) {
                 queryParams = QueryParams.of();
             } else {
@@ -269,8 +250,7 @@ final class DefaultRoutingContext implements RoutingContext {
         if (!routingCtx.acceptTypes().isEmpty()) {
             helper.add("acceptTypes", routingCtx.acceptTypes());
         }
-        helper.add("isCorsPreflight", routingCtx.isCorsPreflight())
-              .add("requiresMatchingParamsPredicates", routingCtx.requiresMatchingParamsPredicates())
+        helper.add("requiresMatchingParamsPredicates", routingCtx.requiresMatchingParamsPredicates())
               .add("requiresMatchingHeadersPredicates", routingCtx.requiresMatchingHeadersPredicates());
         return helper.toString();
     }

@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -61,13 +62,17 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     @Nullable
-    private ScheduledExecutorService blockingTaskExecutor;
+    private BlockingTaskExecutor blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private ServiceErrorHandler serviceErrorHandler;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
+    @Nullable
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
@@ -152,6 +157,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Override
     public ServiceConfigBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                      boolean shutdownOnStop) {
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return blockingTaskExecutor(BlockingTaskExecutor.of(blockingTaskExecutor), shutdownOnStop);
+    }
+
+    @Override
+    public ServiceConfigBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                     boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
@@ -178,6 +190,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Override
     public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         this.multipartUploadsLocation = multipartUploadsLocation;
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }
 
@@ -218,6 +237,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        requireNonNull(serviceErrorHandler, "serviceErrorHandler");
+        this.serviceErrorHandler = serviceErrorHandler;
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
@@ -247,9 +273,20 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
                         AccessLogWriter defaultAccessLogWriter,
-                        ScheduledExecutorService defaultBlockingTaskExecutor,
+                        BlockingTaskExecutor defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
-                        Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders) {
+                        Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders,
+                        Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
+                        ServiceErrorHandler defaultServiceErrorHandler,
+                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
+        ServiceErrorHandler errorHandler =
+                serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
+                                            : defaultServiceErrorHandler;
+        if (unhandledExceptionsReporter != null) {
+            errorHandler = new ExceptionReportingServiceErrorHandler(errorHandler,
+                                                                     unhandledExceptionsReporter);
+        }
+
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
@@ -262,7 +299,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 successFunction != null ? successFunction : defaultSuccessFunction,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
-                mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()));
+                mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
+                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler);
     }
 
     @Override
@@ -280,6 +318,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("multipartUploadsLocation", multipartUploadsLocation)
                           .add("shutdownSupports", shutdownSupports)
                           .add("defaultHeaders", defaultHeaders)
+                          .add("serviceErrorHandler", serviceErrorHandler)
                           .toString();
     }
 }

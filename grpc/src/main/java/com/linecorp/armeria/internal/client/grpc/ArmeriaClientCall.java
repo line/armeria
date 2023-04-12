@@ -68,6 +68,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
@@ -238,8 +239,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        final HttpStreamDeframer deframer = new HttpStreamDeframer(decompressorRegistry, ctx, this, null,
-                                                                   maxInboundMessageSizeBytes, grpcWebText);
+        final HttpStreamDeframer deframer = new HttpStreamDeframer(
+                decompressorRegistry, ctx, this, null,
+                maxInboundMessageSizeBytes, grpcWebText, false);
         final StreamMessage<DeframedMessage> deframed = res.decode(deframer, ctx.alloc());
         deframer.setDeframedStreamMessage(deframed);
 
@@ -421,7 +423,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             }
         } catch (Throwable t) {
             final Status status = GrpcStatus.fromThrowable(t);
-            req.close(status.asException());
+            req.close(status.asRuntimeException());
             close(status, new Metadata());
         }
 
@@ -490,11 +492,12 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
+        logBuilder.responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
         if (status.isOk()) {
             req.abort();
         } else {
-            req.abort(status.asRuntimeException(metadata));
+            req.abort(statusAndMetadata.asRuntimeException());
         }
         if (upstream != null) {
             upstream.cancel();

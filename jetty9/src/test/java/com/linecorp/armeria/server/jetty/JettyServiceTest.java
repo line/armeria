@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -116,6 +118,7 @@ class JettyServiceTest extends WebAppContainerTest {
      * Captures the exception raised in a Jetty handler block.
      */
     private static final AtomicReference<Throwable> capturedException = new AtomicReference<>();
+    private static final Exception RUNTIME_EXCEPTION = new RuntimeException("RUNTIME_EXCEPTION");
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -218,6 +221,15 @@ class JettyServiceTest extends WebAppContainerTest {
 
             sb.service("/stream/{totalSize}/{chunkSize}",
                        newJettyService(new AsyncStreamingHandlerFunction()));
+
+            sb.service("/throwing",
+                       newJettyService((req, res) -> res.closeOutput())
+                               .decorate((delegate, ctx, req) -> {
+                                   ctx = spy(ctx);
+                                   // relies on the fact that JettyService calls this method
+                                   when(ctx.sessionProtocol()).thenThrow(RUNTIME_EXCEPTION);
+                                   return delegate.serve(ctx, req);
+                               }));
         }
     };
 
@@ -396,6 +408,19 @@ class JettyServiceTest extends WebAppContainerTest {
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentAscii()).hasSize(totalSize)
                                       .matches("^(?:0123456789abcdef)*$");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    void throwingHandler(SessionProtocol sessionProtocol) throws Exception {
+        final AggregatedHttpResponse res = WebClient.builder(sessionProtocol, server.httpEndpoint())
+                                                    .build().blocking().get("/throwing");
+        assertThat(res.status().code()).isEqualTo(500);
+
+        assertThat(server.requestContextCaptor().size()).isEqualTo(1);
+        final ServiceRequestContext sctx = server.requestContextCaptor().poll();
+        await().atMost(10, TimeUnit.SECONDS).until(() -> sctx.log().isComplete());
+        assertThat(sctx.log().ensureComplete().responseCause()).isSameAs(RUNTIME_EXCEPTION);
     }
 
     private static JettyService newJettyService(SimpleHandlerFunction func) {

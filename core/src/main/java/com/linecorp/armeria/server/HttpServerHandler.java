@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -62,8 +63,8 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
@@ -121,6 +122,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         logException(ch, cause);
         safeClose(ch);
     };
+
+    private static boolean warnedRequestIdGenerateFailure;
 
     private static boolean warnedNullRequestId;
 
@@ -299,6 +302,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void handleRequest(ChannelHandlerContext ctx, DecodedHttpRequest req) throws Exception {
+        final ServerHttpObjectEncoder responseEncoder = this.responseEncoder;
+        assert responseEncoder != null;
+
         // Ignore the request received after the last request,
         // because we are going to close the connection after sending the last response.
         if (handledLastRequest) {
@@ -309,6 +315,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // we should not accept a request anymore.
         if (!req.isKeepAlive()) {
             handledLastRequest = true;
+            responseEncoder.keepAliveHandler().disconnectWhenFinished();
         }
 
         final Channel channel = ctx.channel();
@@ -316,29 +323,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
-        // Handle max connection age for HTTP/1.
-        if (!protocol.isMultiplex() &&
-            ((ServerHttp1ObjectEncoder) responseEncoder).isSentConnectionCloseHeader()) {
-            channel.close();
-            return;
-        }
-
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
             final ServiceRequestContext reqCtx =
                     newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
-            switch (routingStatus) {
-                case OPTIONS:
-                    // Handle 'OPTIONS * HTTP/1.1'.
-                    handleOptions(ctx, reqCtx);
-                    return;
-                case INVALID_PATH:
-                    rejectInvalidPath(ctx, reqCtx);
-                    return;
-                default:
-                    throw new Error(); // Should never reach here.
+
+            // Handle 'OPTIONS * HTTP/1.1'.
+            if (routingStatus == RoutingStatus.OPTIONS) {
+                handleOptions(ctx, reqCtx);
+                return;
             }
+
+            throw new Error(); // Should never reach here.
         }
 
         // Find the service that matches the path.
@@ -352,13 +349,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                nextRequestId(), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-            final ServerErrorHandler serverErrorHandler = config.errorHandler();
             HttpResponse serviceResponse;
             try {
                 req.init(reqCtx);
@@ -377,7 +373,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Store the cause to set as the log.responseCause().
                 CapturedServiceException.set(reqCtx, cause);
                 // Recover the failed response with the error handler.
-                return serverErrorHandler.onServiceException(reqCtx, cause);
+                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
             });
             final HttpResponse res = serviceResponse;
             final EventLoop eventLoop = channel.eventLoop();
@@ -394,10 +390,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
                 reqCtx.log().whenComplete().thenAccept(log -> {
                     final int statusCode = log.responseHeaders().status().code();
-                    if (statusCode >= 200 && statusCode < 400 && routingCtx instanceof DefaultRoutingContext) {
-                        final PathAndQuery pathAndQuery = ((DefaultRoutingContext) routingCtx).pathAndQuery();
-                        assert pathAndQuery != null;
-                        pathAndQuery.storeInCache(req.path());
+                    if (statusCode >= 200 && statusCode < 400) {
+                        RequestTargetCache.putForServer(req.path(), routingCtx.requestTarget());
                     }
                 });
             }
@@ -438,8 +432,24 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         unfinishedRequests.remove(req);
                     }
 
-                    if (unfinishedRequests.isEmpty() && handledLastRequest) {
-                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                    final boolean needsDisconnection =
+                            ctx.channel().isActive() &&
+                            (handledLastRequest || responseEncoder.keepAliveHandler().needsDisconnection());
+                    if (needsDisconnection) {
+                        // Graceful shutdown mode: If a connection needs to be closed by `KeepAliveHandler`
+                        // such as a max connection age or `ServiceRequestContext.initiateConnectionShutdown()`,
+                        // new requests will be ignored and the connection is closed after completing all
+                        // unfinished requests.
+                        if (protocol.isMultiplex()) {
+                            // Initiates channel close, connection will be closed after all streams are closed.
+                            ctx.channel().close();
+                        } else {
+                            // Stop receiving new requests.
+                            handledLastRequest = true;
+                            if (unfinishedRequests.isEmpty()) {
+                                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                            }
+                        }
                     }
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception:", t);
@@ -451,7 +461,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // when the peer cancels the stream.
             req.setResponse(res);
 
-            assert responseEncoder != null;
             if (reqCtx.exchangeType().isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
                         new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
@@ -512,9 +521,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                          ResponseHeadersBuilder resHeaders, HttpData resContent,
                          @Nullable Throwable cause) {
         if (!handledLastRequest) {
-            respond(reqCtx, true, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
+            respond(reqCtx, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
         } else {
-            respond(reqCtx, false, resHeaders, resContent, cause).addListener(CLOSE);
+            respond(reqCtx, resHeaders, resContent, cause).addListener(CLOSE);
         }
 
         if (!isReading) {
@@ -522,9 +531,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ChannelFuture respond(ServiceRequestContext reqCtx, boolean addKeepAlive,
-                                  ResponseHeadersBuilder resHeaders, HttpData resContent,
-                                  @Nullable Throwable cause) {
+    private ChannelFuture respond(ServiceRequestContext reqCtx, ResponseHeadersBuilder resHeaders,
+                                  HttpData resContent, @Nullable Throwable cause) {
         // No need to consume further since the response is ready.
         final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
         if (req instanceof HttpRequestWriter) {
@@ -541,9 +549,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         logBuilder.startResponse();
         assert responseEncoder != null;
-        if (addKeepAlive) {
-            addKeepAliveHeaders(resHeaders);
+        if (handledLastRequest) {
+            addConnectionCloseHeaders(resHeaders);
         }
+
         // Note that it is perfectly fine not to set the 'content-length' header to the last response
         // of an HTTP/1 connection. We set it anyway to work around overly strict HTTP clients that always
         // require a 'content-length' header for non-chunked responses.
@@ -572,13 +581,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return future;
     }
 
-    /**
-     * Sets the keep alive header as per:
-     * - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
-     */
-    private void addKeepAliveHeaders(ResponseHeadersBuilder headers) {
+    private void addConnectionCloseHeaders(ResponseHeadersBuilder headers) {
         if (protocol == H1 || protocol == H1C) {
-            headers.set(HttpHeaderNames.CONNECTION, "keep-alive");
+            headers.set(HttpHeaderNames.CONNECTION, CLOSE_STRING);
         } else {
             // Do not add the 'connection' header for HTTP/2 responses.
             // See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2
@@ -641,21 +646,30 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return new DefaultServiceRequestContext(
                 serviceConfig,
                 channel, NoopMeterRegistry.get(), protocol(),
-                nextRequestId(), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
-    private RequestId nextRequestId() {
-        final RequestId id = config.requestIdGenerator().get();
-        if (id == null) {
+    private static RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {
+        try {
+            final RequestId id = serviceConfig.requestIdGenerator().apply(routingCtx);
+            if (id != null) {
+                return id;
+            }
+
             if (!warnedNullRequestId) {
                 warnedNullRequestId = true;
-                logger.warn("requestIdGenerator.get() returned null; using RequestId.random()");
+                logger.warn("requestIdGenerator.apply(routingCtx) returned null; using RequestId.random()");
             }
             return RequestId.random();
-        } else {
-            return id;
+        } catch (Exception e) {
+            if (!warnedRequestIdGenerateFailure) {
+                warnedRequestIdGenerateFailure = true;
+                logger.warn("requestIdGenerator.apply(routingCtx) threw an exception; using RequestId.random()",
+                            e);
+            }
+            return RequestId.random();
         }
     }
 }

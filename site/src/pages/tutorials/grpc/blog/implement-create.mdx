@@ -32,9 +32,8 @@ Let's implement a service method `createBlogPost()` in `BlogService.java`.
   import java.util.Map;
   import java.util.concurrent.ConcurrentHashMap;
   import java.util.concurrent.atomic.AtomicInteger;
-  
+
   public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
-    private static final Logger logger = LoggerFactory.getLogger(BlogService.class);
     private final AtomicInteger idGenerator = new AtomicInteger();
     private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
   }
@@ -102,7 +101,7 @@ Now, let's make a call from the client. Note the code is minimal to keep things 
     blogClient.testRun();
   }
 
-  void testRun(){
+  void testRun() {
     createBlogPost("Another blog post", "Creating a post via createBlogPost().");
   }
   ```
@@ -113,11 +112,6 @@ Now, let's make a call from the client. Note the code is minimal to keep things 
 3. Run the client. You'll see only a single message for blog posting, because we haven't added logging for creating a post in the `main()` method.
   ```bash
   [main] INFO  e.a.client.blog.grpc.BlogClient - [Create response] Title: Another blog post Content: Creating a post via createBlogPost().
-  ```
-  You can check that indeed two posts have been created by checking the server side.
-  ```bash
-  [armeria-common-worker-nio-2-1] INFO  e.a.server.blog.grpc.ServerMain - Created at 0 - My first blog
-  [armeria-common-worker-nio-2-1] INFO  e.a.server.blog.grpc.ServerMain - Created at 1 - Another blog post
   ```
 
 ## What's next
