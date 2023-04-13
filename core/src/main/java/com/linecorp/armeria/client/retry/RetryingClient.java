@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -372,10 +373,15 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                 @Nullable AggregatedHttpResponse aggregatedRes) {
         assert response != null || aggregatedRes != null;
         final RequestLogProperty logProperty =
-                retryConfig.requiresResponseTrailers() ?
-                RequestLogProperty.RESPONSE_TRAILERS : RequestLogProperty.RESPONSE_HEADERS;
+                retryConfig.requiresResponseTrailers() ? null : RequestLogProperty.RESPONSE_HEADERS;
 
-        derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
+        final CompletableFuture<RequestLog> logFuture;
+        if (logProperty == null) {
+            logFuture = derivedCtx.log().whenComplete();
+        } else {
+            logFuture = derivedCtx.log().whenAvailable(logProperty);
+        }
+        logFuture.thenAccept(log -> {
             final Throwable responseCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             if (retryConfig.needsContentInRule() && responseCause == null) {

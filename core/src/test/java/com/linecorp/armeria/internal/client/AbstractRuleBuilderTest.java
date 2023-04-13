@@ -56,6 +56,7 @@ class AbstractRuleBuilderTest {
                                                           !"onResponseTrailers".equals(method.getName()) &&
                                                           !"onGrpcTrailers".equals(method.getName()) &&
                                                           !"onUnprocessed".equals(method.getName()) &&
+                                                          !"onRequestLog".equals(method.getName()) &&
                                                           !method.isVarArgs());
 
             final List<Method> ruleMethods =

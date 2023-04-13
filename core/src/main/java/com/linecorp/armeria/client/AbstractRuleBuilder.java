@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * A skeletal builder implementation for {@link RetryRule}, {@link RetryRuleWithContent},
@@ -55,6 +57,8 @@ public abstract class AbstractRuleBuilder {
     private BiPredicate<ClientRequestContext, Throwable> exceptionFilter;
     @Nullable
     private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
+    @Nullable
+    private BiPredicate<ClientRequestContext, RequestLog> requestLogFilter;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -198,6 +202,15 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
+     * Adds the specified {@code requestLogFilter}.
+     */
+    public AbstractRuleBuilder onRequestLog(
+            BiPredicate<? super ClientRequestContext, ? super RequestLog> requestLogFilter) {
+        this.requestLogFilter = combinePredicates(this.requestLogFilter, requestLogFilter, "requestLogFilter");
+        return this;
+    }
+
+    /**
      * Returns the {@link BiPredicate} of a {@link RequestHeaders}.
      */
     protected final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter() {
@@ -237,10 +250,19 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
+     * Returns then {@link Predicate} of a {@link RequestLog}.
+     */
+    @Nullable
+    protected final BiPredicate<ClientRequestContext, RequestLog> requestLogFilter() {
+        return requestLogFilter;
+    }
+
+    /**
      * Returns whether this rule being built requires HTTP response trailers.
      */
     protected final boolean requiresResponseTrailers() {
         return responseTrailersFilter != null ||
-               grpcTrailersFilter != null;
+               grpcTrailersFilter != null ||
+               requestLogFilter != null;
     }
 }

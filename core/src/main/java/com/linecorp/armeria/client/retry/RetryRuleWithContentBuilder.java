@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -91,8 +92,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), hasResponseFilter);
-
+                                                    exceptionFilter(), requestLogFilter(), hasResponseFilter);
         final RetryRule first = RetryRuleBuilder.build(
                 ruleFilter, decision, requiresResponseTrailers());
 
@@ -252,5 +252,16 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     @Override
     public RetryRuleWithContentBuilder<T> onUnprocessed() {
         return (RetryRuleWithContentBuilder<T>) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code requestLogFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code requestLogFilter} returns {@code true}.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onRequestLog(
+            BiPredicate<? super ClientRequestContext, ? super RequestLog> requestLogFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onRequestLog(requestLogFilter);
     }
 }

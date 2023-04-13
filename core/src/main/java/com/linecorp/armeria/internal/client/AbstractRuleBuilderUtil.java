@@ -44,10 +44,11 @@ public final class AbstractRuleBuilderUtil {
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
                 @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
+                @Nullable BiPredicate<ClientRequestContext, RequestLog> requestLogFilter,
                 boolean hasResponseFilter) {
 
         return new Filter(requestHeadersFilter, exceptionFilter, responseHeadersFilter,
-                          responseTrailersFilter, grpcTrailersFilter, hasResponseFilter);
+                          responseTrailersFilter, grpcTrailersFilter, requestLogFilter, hasResponseFilter);
     }
 
     private AbstractRuleBuilderUtil() {}
@@ -58,6 +59,7 @@ public final class AbstractRuleBuilderUtil {
         private final @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter;
         private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter;
         private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
+        private final @Nullable BiPredicate<ClientRequestContext, RequestLog> requestLogFilter;
         private final boolean hasResponseFilter;
 
         Filter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
@@ -65,12 +67,14 @@ public final class AbstractRuleBuilderUtil {
                @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
+               @Nullable BiPredicate<ClientRequestContext, RequestLog> requestLogFilter,
                boolean hasResponseFilter) {
             this.requestHeadersFilter = requestHeadersFilter;
             this.exceptionFilter = exceptionFilter;
             this.responseHeadersFilter = responseHeadersFilter;
             this.responseTrailersFilter = responseTrailersFilter;
             this.grpcTrailersFilter = grpcTrailersFilter;
+            this.requestLogFilter = requestLogFilter;
             this.hasResponseFilter = hasResponseFilter;
         }
 
@@ -87,6 +91,7 @@ public final class AbstractRuleBuilderUtil {
             // Safe to return true since no filters are set
             if (exceptionFilter == null && responseHeadersFilter == null &&
                 responseTrailersFilter == null && grpcTrailersFilter == null &&
+                requestLogFilter == null &&
                 !hasResponseFilter) {
                 return true;
             }
@@ -135,7 +140,7 @@ public final class AbstractRuleBuilderUtil {
                 }
             }
 
-            return false;
+            return requestLogFilter != null && requestLogFilter.test(ctx, log);
         }
     }
 }

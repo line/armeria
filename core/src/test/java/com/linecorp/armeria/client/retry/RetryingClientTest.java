@@ -363,6 +363,18 @@ class RetryingClientTest {
     }
 
     @Test
+    void retryWhenRequestLogMatched() {
+        final WebClient client =
+                client(RetryRule.builder()
+                                .onRequestLog((unused, requestLog) -> {
+                                    return requestLog.responseDurationNanos() > 100;
+                                })
+                                .thenBackoff());
+        final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+    }
+
+    @Test
     void disableResponseTimeout() {
         final WebClient client = client(RetryRule.failsafe(), 0, 0, 100);
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();

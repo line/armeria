@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
@@ -71,13 +72,13 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     private RetryRule build(RetryDecision decision) {
         if (decision != RetryDecision.noRetry() &&
             exceptionFilter() == null && responseHeadersFilter() == null &&
-            responseTrailersFilter() == null && grpcTrailersFilter() == null) {
+            responseTrailersFilter() == null && grpcTrailersFilter() == null && requestLogFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), false);
+                                                    exceptionFilter(), requestLogFilter(), false);
         return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
@@ -228,5 +229,15 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     @Override
     public RetryRuleBuilder onUnprocessed() {
         return (RetryRuleBuilder) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code requestLogFilter} for a {@link RetryRule} which will retry
+     * if the {@code requestLogFilter} returns {@code true}.
+     */
+    @Override
+    public RetryRuleBuilder onRequestLog(
+            BiPredicate<? super ClientRequestContext, ? super RequestLog> requestLogFilter) {
+        return (RetryRuleBuilder) super.onRequestLog(requestLogFilter);
     }
 }

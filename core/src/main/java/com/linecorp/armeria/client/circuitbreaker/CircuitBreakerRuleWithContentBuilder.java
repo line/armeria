@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -76,8 +77,7 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), hasResponseFilter);
-
+                                                    exceptionFilter(), requestLogFilter(), hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
                 ruleFilter, decision, requiresResponseTrailers());
         if (!hasResponseFilter) {
@@ -272,5 +272,18 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onUnprocessed() {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code requestLogFilter} for a {@link CircuitBreakerRuleWithContent}.
+     * If the specified {@code requestLogFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public CircuitBreakerRuleWithContentBuilder<T> onRequestLog(
+            BiPredicate<? super ClientRequestContext, ? super RequestLog> requestLogFilter) {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onRequestLog(requestLogFilter);
     }
 }
