@@ -123,6 +123,8 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                                     permit.close();
                                     numActiveRequests.decrementAndGet();
                                     resFuture.completeExceptionally(t);
+                                    ctx.logBuilder().endRequest(t);
+                                    ctx.logBuilder().endResponse(t);
                                 }
                             }
                             return null;
