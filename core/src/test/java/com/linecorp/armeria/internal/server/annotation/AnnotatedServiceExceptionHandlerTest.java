@@ -20,14 +20,18 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTe
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -40,6 +44,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
@@ -51,12 +56,19 @@ import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.RequestConverter;
+import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class AnnotatedServiceExceptionHandlerTest {
+
+    private static final RuntimeException EXCEPTION = new RuntimeException();
+
+    private static final AtomicReference<Throwable> capturedException = new AtomicReference<>();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -66,7 +78,8 @@ class AnnotatedServiceExceptionHandlerTest {
               .annotatedService("/2", new MyService2())
               .annotatedService("/3", new MyService3())
               .annotatedService("/4", new MyService4())
-              .annotatedService("/5", new MyService5());
+              .annotatedService("/5", new MyService5())
+              .annotatedService("/6", new MyService6());
 
             sb.decorator(LoggingService.newDecorator())
               .requestTimeoutMillis(500L);
@@ -78,6 +91,7 @@ class AnnotatedServiceExceptionHandlerTest {
     @BeforeEach
     void setUp() {
         client = BlockingWebClient.of(server.httpUri());
+        capturedException.set(null);
     }
 
     @Test
@@ -185,6 +199,14 @@ class AnnotatedServiceExceptionHandlerTest {
         assertThat(response.contentUtf8()).isEqualTo("handler3");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"/6/simple", "/6/composite", "/6/throwing-setter"})
+    void requestConverter(String path) {
+        final AggregatedHttpResponse res = server.blockingWebClient().post(path, "asdf");
+        assertThat(res.status().code()).isEqualTo(200);
+        assertThat(capturedException).hasValue(EXCEPTION);
+    }
+
     @ResponseConverter(UnformattedStringConverterFunction.class)
     @ExceptionHandler(NoExceptionHandler.class)
     @ExceptionHandler(AnticipatedExceptionHandler1.class)
@@ -277,6 +299,26 @@ class AnnotatedServiceExceptionHandlerTest {
         }
     }
 
+    @LoggingDecorator
+    @ExceptionHandler(CapturingExceptionHandler.class)
+    public static class MyService6 extends MyService1 {
+        @Post("/simple")
+        @RequestConverter(ThrowingRequestConverterFunction.class)
+        public HttpResponse post1(SimpleRequest simpleRequest) {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/composite")
+        public HttpResponse post2(CompositeRequest compositeRequest) {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/throwing-setter")
+        public HttpResponse post3(ThrowingSetter throwingSetter) {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+
     public static final class ExceptionThrowingDecorator implements DecoratingHttpServiceFunction {
 
         @Override
@@ -364,5 +406,41 @@ class AnnotatedServiceExceptionHandlerTest {
             ctx.eventLoop().schedule((Runnable) response::close, 10, TimeUnit.SECONDS);
             return response;
         }
+    }
+
+    static class CapturingExceptionHandler implements ExceptionHandlerFunction {
+        @Override
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+            capturedException.set(cause);
+            return HttpResponse.of(200);
+        }
+    }
+
+    static class ThrowingRequestConverterFunction implements RequestConverterFunction {
+
+        @Override
+        public @Nullable Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
+                                               Class<?> expectedResultType,
+                                               @Nullable ParameterizedType expectedParameterizedResultType)
+                throws Exception {
+            throw EXCEPTION;
+        }
+    }
+
+    static class ThrowingSetter {
+
+        @RequestConverter(ThrowingRequestConverterFunction.class)
+        public void setField(String field) {
+            throw EXCEPTION;
+        }
+    }
+
+    static class CompositeRequest {
+        @RequestConverter(ThrowingRequestConverterFunction.class)
+        SimpleRequest simpleRequest;
+    }
+
+    static class SimpleRequest {
+        String hello;
     }
 }
