@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
- * Captures the {@code ServiceRequestContext}s.
+ * Captures the {@code ServiceRequestContext}.
  *
  * <p>Example:
  * <pre>{@code
