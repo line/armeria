@@ -26,6 +26,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServerBuilder;
 
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
+
 /**
  * Builds an implementing class of {@link AbstractMetricCollectingBuilder} instance.
  */
@@ -35,6 +37,9 @@ public abstract class AbstractMetricCollectingBuilder {
 
     @Nullable
     private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
+
+    @Nullable
+    private DistributionStatisticConfig distributionStatisticConfig;
 
     /**
      * Creates a new instance with the specified {@link MeterIdPrefixFunction}.
@@ -56,6 +61,14 @@ public abstract class AbstractMetricCollectingBuilder {
     @Nullable
     protected final BiPredicate<? super RequestContext, ? super RequestLog> successFunction() {
         return successFunction;
+    }
+
+    /**
+     * Returns the {@code distributionStatisticConfig}.
+     */
+    @Nullable
+    protected final DistributionStatisticConfig distributionStatisticConfig() {
+        return distributionStatisticConfig;
     }
 
     /**
@@ -81,6 +94,16 @@ public abstract class AbstractMetricCollectingBuilder {
     public AbstractMetricCollectingBuilder successFunction(
             BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         this.successFunction = requireNonNull(successFunction, "successFunction");
+        return this;
+    }
+
+    /**
+     * Defines a custom {@link DistributionStatisticConfig} to use for the distribution config.
+     */
+    public AbstractMetricCollectingBuilder distributionStatisticConfig(
+            DistributionStatisticConfig distributionStatisticConfig) {
+        this.distributionStatisticConfig = requireNonNull(distributionStatisticConfig,
+                                                          "distributionStatisticConfig");
         return this;
     }
 }
