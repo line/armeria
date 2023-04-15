@@ -32,6 +32,7 @@ import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
@@ -416,5 +417,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultUnhandledExceptionsReportIntervalMillis() {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    @Override
+    public DistributionStatisticConfig distributionStatisticConfig() {
+        return DistributionStatisticConfig.DEFAULT;
     }
 }
