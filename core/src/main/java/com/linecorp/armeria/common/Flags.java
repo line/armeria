@@ -73,6 +73,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -385,6 +386,9 @@ public final class Flags {
     private static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
             getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
                      "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
+
+    private static final DistributionStatisticConfig DISTRIBUTION_STATISTIC_CONFIG =
+            getValue(FlagsProvider::distributionStatisticConfig, "distributionStatisticConfig");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1341,6 +1345,16 @@ public final class Flags {
     @UnstableApi
     public static long defaultUnhandledExceptionsReportIntervalMillis() {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    /**
+     * Returns the {@link DistributionStatisticConfig} where armeria utilizes.
+     *
+     * <p>The default value of this flag is {@link DistributionStatisticConfig#DEFAULT}</p>
+     */
+    @UnstableApi
+    public static DistributionStatisticConfig distributionStatisticConfig() {
+        return DISTRIBUTION_STATISTIC_CONFIG;
     }
 
     @Nullable
