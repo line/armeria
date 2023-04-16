@@ -335,11 +335,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                  future, derivedCtx, HttpResponse.ofFailure(cause), cause);
                     return null;
                 }
+                derivedCtx.logBuilder().responseContent(null, null);
                 handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
                                null, aggregated);
                 return null;
             });
         } else {
+            derivedCtx.logBuilder().responseContent(null, null);
             handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                            future, derivedCtx, response, null);
         }
