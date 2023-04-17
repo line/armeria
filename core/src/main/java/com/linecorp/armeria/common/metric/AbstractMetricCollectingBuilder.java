@@ -64,14 +64,6 @@ public abstract class AbstractMetricCollectingBuilder {
     }
 
     /**
-     * Returns the {@code distributionStatisticConfig}.
-     */
-    @Nullable
-    protected final DistributionStatisticConfig distributionStatisticConfig() {
-        return distributionStatisticConfig;
-    }
-
-    /**
      * Defines a custom {@link BiPredicate} to allow custom definition of successful responses.
      * In other words, specify which responses should increment {@code metrics.success()}
      * and which - {@code metrics.failure()}.
@@ -95,6 +87,14 @@ public abstract class AbstractMetricCollectingBuilder {
             BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         return this;
+    }
+
+    /**
+     * Returns the {@code distributionStatisticConfig}.
+     */
+    @Nullable
+    protected final DistributionStatisticConfig distributionStatisticConfig() {
+        return distributionStatisticConfig;
     }
 
     /**
