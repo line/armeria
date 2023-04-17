@@ -55,37 +55,22 @@ final class AnnotatedBeanFactory<T> {
         return new SimpleImmutableEntry<>(entry);
     }
 
-    T create(ResolverContext resolverContext) {
+    T create(ResolverContext resolverContext) throws Exception {
         final Object[] constructorArgs = AnnotatedValueResolver.toArguments(
                 constructor.getValue(), resolverContext);
-        final T instance;
-        try {
-            instance = constructor.getKey().newInstance(constructorArgs);
-        } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    "cannot instantiate a new object: " + beanFactoryId, e);
-        }
+        final T instance = constructor.getKey().newInstance(constructorArgs);
 
         for (final Entry<Method, List<AnnotatedValueResolver>> method : methods.entrySet()) {
             final Object[] methodArgs = AnnotatedValueResolver.toArguments(
                     method.getValue(), resolverContext);
-            try {
-                method.getKey().invoke(instance, methodArgs);
-            } catch (Exception e) {
-                throw new IllegalArgumentException(
-                        "cannot invoke method: " + beanFactoryId + '.' + method.getKey().getName(), e);
-            }
+            method.getKey().invoke(instance, methodArgs);
         }
 
         for (final Entry<Field, AnnotatedValueResolver> field : fields.entrySet()) {
             final Object fieldArg = field.getValue().resolve(resolverContext);
-            try {
-                field.getKey().set(instance, fieldArg);
-            } catch (Exception e) {
-                throw new IllegalArgumentException(
-                        "cannot set field: " + beanFactoryId + '.' + field.getKey().getName(), e);
-            }
+            field.getKey().set(instance, fieldArg);
         }
+
         return instance;
     }
 
