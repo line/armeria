@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -69,14 +70,14 @@ public final class GraphqlServiceBuilder {
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators =
             ImmutableList.builder();
-    @Deprecated
-    private final ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers =
-            ImmutableList.builder();
     private final ImmutableList.Builder<GraphQLTypeVisitor> typeVisitors = ImmutableList.builder();
     private final ImmutableList.Builder<Instrumentation> instrumentations = ImmutableList.builder();
     private final ImmutableList.Builder<GraphqlConfigurator> graphqlBuilderConsumers =
             ImmutableList.builder();
 
+    @Deprecated
+    @Nullable
+    private ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers;
     private boolean useBlockingTaskExecutor;
 
     @Nullable
@@ -156,6 +157,8 @@ public final class GraphqlServiceBuilder {
      */
     public GraphqlServiceBuilder dataLoaderRegistry(
             Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory) {
+        checkArgument(dataLoaderRegistryConsumers == null,
+                "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
         this.dataLoaderRegistryFactory =
                 requireNonNull(dataLoaderRegistryFactory, "dataLoaderRegistryFactory");
         return this;
@@ -180,6 +183,11 @@ public final class GraphqlServiceBuilder {
     @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(
             Iterable<? extends Consumer<? super DataLoaderRegistry>> configurers) {
+        checkArgument(dataLoaderRegistryFactory == null,
+                "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+        if (dataLoaderRegistryConsumers == null) {
+            dataLoaderRegistryConsumers = ImmutableList.builder();
+        }
         dataLoaderRegistryConsumers.addAll(requireNonNull(configurers, "configurers"));
         return this;
     }
@@ -280,17 +288,15 @@ public final class GraphqlServiceBuilder {
             configurer.configure(builder);
         }
 
-        final List<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers =
-                this.dataLoaderRegistryConsumers.build();
-        if (dataLoaderRegistryFactory != null && !dataLoaderRegistryConsumers.isEmpty()) {
-            throw new IllegalStateException("Can't set dataLoaderRegistryFactory and " +
-                                            "dataLoaderRegistryConsumers together.");
+        if (dataLoaderRegistryConsumers != null) {
+            final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
+            for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers.build()) {
+                configurer.accept(dataLoaderRegistry);
+            }
+            dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
         }
         if (dataLoaderRegistryFactory == null) {
             final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
-            for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers) {
-                configurer.accept(dataLoaderRegistry);
-            }
             dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
         }
 

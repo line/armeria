@@ -55,10 +55,10 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final GraphqlErrorHandler errorHandler;
 
-    DefaultGraphqlService(GraphQL graphQL,
-                          Function<? super ServiceRequestContext,
-                                   ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
-                          boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
+    DefaultGraphqlService(
+            GraphQL graphQL,
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
+            boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
                                                          "dataLoaderRegistryFunction");
