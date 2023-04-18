@@ -85,7 +85,7 @@ class ServerChildChannelPipelineCustomizerTest {
     };
 
     @Test
-    void testSessionProtocolNegotiationException() {
+    void testWithSslHandler() {
         final ClientFactory clientFactory = ClientFactory.insecure();
 
         final AggregatedHttpResponse response = WebClient
