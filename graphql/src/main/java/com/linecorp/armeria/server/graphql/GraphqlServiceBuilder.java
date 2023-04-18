@@ -158,7 +158,7 @@ public final class GraphqlServiceBuilder {
     public GraphqlServiceBuilder dataLoaderRegistry(
             Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory) {
         checkArgument(dataLoaderRegistryConsumers == null,
-                "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+                      "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
         this.dataLoaderRegistryFactory =
                 requireNonNull(dataLoaderRegistryFactory, "dataLoaderRegistryFactory");
         return this;
@@ -184,7 +184,7 @@ public final class GraphqlServiceBuilder {
     public GraphqlServiceBuilder configureDataLoaderRegistry(
             Iterable<? extends Consumer<? super DataLoaderRegistry>> configurers) {
         checkArgument(dataLoaderRegistryFactory == null,
-                "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+                      "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
         if (dataLoaderRegistryConsumers == null) {
             dataLoaderRegistryConsumers = ImmutableList.builder();
         }
@@ -288,14 +288,16 @@ public final class GraphqlServiceBuilder {
             configurer.configure(builder);
         }
 
-        if (dataLoaderRegistryConsumers != null) {
+        final Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory;
+        if (this.dataLoaderRegistryFactory != null) {
+            dataLoaderRegistryFactory = this.dataLoaderRegistryFactory;
+        } else if (dataLoaderRegistryConsumers != null) {
             final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
             for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers.build()) {
                 configurer.accept(dataLoaderRegistry);
             }
             dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
-        }
-        if (dataLoaderRegistryFactory == null) {
+        } else {
             final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
             dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
         }
