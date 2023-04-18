@@ -27,6 +27,8 @@ import java.util.stream.Stream;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.Flags;
+
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.DistributionSummary.Builder;
 import io.micrometer.core.instrument.Measurement;
@@ -45,6 +47,18 @@ public final class MoreMeters {
 
     private static final boolean MICROMETER_1_5;
 
+    private static volatile DistributionStatisticConfig DEFAULT_DIST_STAT_CFG =
+            DistributionStatisticConfig.builder()
+                                       .percentilesHistogram(false)
+                                       .sla()
+                                       .percentiles(PERCENTILES)
+                                       .percentilePrecision(2)
+                                       .minimumExpectedValue(1L)
+                                       .maximumExpectedValue(Long.MAX_VALUE)
+                                       .expiry(Duration.ofMinutes(3))
+                                       .bufferLength(3)
+                                       .build();
+
     static {
         MICROMETER_1_5 = Stream.of(Builder.class.getMethods())
                                .anyMatch(method -> method != null &&
@@ -62,17 +76,7 @@ public final class MoreMeters {
      *       (i.e. rotate every 40 seconds) does not make much sense.</li>
      * </ul>
      */
-    private static volatile DistributionStatisticConfig distStatCfg =
-            DistributionStatisticConfig.builder()
-                                       .percentilesHistogram(false)
-                                       .sla()
-                                       .percentiles(PERCENTILES)
-                                       .percentilePrecision(2)
-                                       .minimumExpectedValue(1L)
-                                       .maximumExpectedValue(Long.MAX_VALUE)
-                                       .expiry(Duration.ofMinutes(3))
-                                       .bufferLength(3)
-                                       .build();
+    private static volatile DistributionStatisticConfig distStatCfg = Flags.distributionStatisticConfig();
 
     /**
      * Sets the {@link DistributionStatisticConfig} to use when the factory methods in {@link MoreMeters} create
@@ -89,6 +93,13 @@ public final class MoreMeters {
      */
     public static DistributionStatisticConfig distributionStatisticConfig() {
         return distStatCfg;
+    }
+
+    /**
+     * Returns the default {@link DistributionStatisticConfig} where armeria utilizes.
+     */
+    public static DistributionStatisticConfig defaultDistributionStatisticConfig() {
+        return DEFAULT_DIST_STAT_CFG;
     }
 
     /**

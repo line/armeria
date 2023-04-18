@@ -39,7 +39,7 @@ public abstract class AbstractMetricCollectingBuilder {
     private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
 
     @Nullable
-    private DistributionStatisticConfig distributionStatisticConfig;
+    private DistributionStatisticConfig distributionStatisticConfig = MoreMeters.distributionStatisticConfig();
 
     /**
      * Creates a new instance with the specified {@link MeterIdPrefixFunction}.
