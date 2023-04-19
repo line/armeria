@@ -22,6 +22,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import net.openhft.hashing.LongHashFunction;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;

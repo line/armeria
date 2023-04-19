@@ -100,6 +100,9 @@ dependencies {
     // Caffeine
     implementation libs.caffeine
 
+    // https://mvnrepository.com/artifact/net.openhft/zero-allocation-hashing
+    implementation 'net.openhft:zero-allocation-hashing:0.16'
+
     // Jackson
     api libs.jackson.core
     api libs.jackson.annotations
