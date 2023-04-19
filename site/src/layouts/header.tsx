@@ -3,7 +3,7 @@ import {
   GithubOutlined,
   TwitterOutlined,
   MenuOutlined,
-  SlackOutlined,
+  MessageOutlined
 } from '@ant-design/icons';
 import { RouteComponentProps } from '@reach/router';
 import { Layout, Menu, Drawer, Button, Typography } from 'antd';
@@ -115,8 +115,8 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
             <OutboundLink href="https://github.com/line/armeria">
               <GithubOutlined />
             </OutboundLink>
-            <Link to="/s/slack">
-              <SlackOutlined />
+            <Link to="/s/discord">
+              <MessageOutlined />
             </Link>
             <OutboundLink href="https://twitter.com/armeria_project">
               <TwitterOutlined />
@@ -155,8 +155,8 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
                   <OutboundLink href="https://github.com/line/armeria">
                     <GithubOutlined />
                   </OutboundLink>
-                  <Link to="/s/slack">
-                    <SlackOutlined />
+                  <Link to="/s/discord">
+                    <MessageOutlined />
                   </Link>
                   <OutboundLink href="https://twitter.com/armeria_project">
                     <TwitterOutlined />
