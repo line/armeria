@@ -54,6 +54,6 @@ public class HelloConfiguration {
      */
     @Bean
     public ArmeriaServerConfigurator armeriaServiceInitializer(TomcatService tomcatService) {
-        return sb -> sb.service("prefix:/", tomcatService);
+        return sb -> sb.serviceUnder("/", tomcatService);
     }
 }
