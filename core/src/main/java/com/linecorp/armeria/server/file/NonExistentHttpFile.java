@@ -18,8 +18,10 @@ package com.linecorp.armeria.server.file;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -29,16 +31,18 @@ import io.netty.buffer.ByteBufAllocator;
 
 final class NonExistentHttpFile implements HttpFile {
 
-    static final NonExistentHttpFile INSTANCE = new NonExistentHttpFile(null);
+    static final NonExistentHttpFile INSTANCE = new NonExistentHttpFile(null, false);
 
     private static final CompletableFuture<AggregatedHttpFile> AGGREGATED_FUTURE =
             UnmodifiableFuture.completedFuture(NonExistentAggregatedHttpFile.INSTANCE);
 
     @Nullable
     private final String location;
+    private final boolean isRedirect;
 
-    NonExistentHttpFile(@Nullable String location) {
+    NonExistentHttpFile(@Nullable String location, boolean isRedirect) {
         this.location = location;
+        this.isRedirect = isRedirect;
     }
 
     @Override
@@ -59,17 +63,21 @@ final class NonExistentHttpFile implements HttpFile {
     @Override
     public HttpService asService() {
         return (ctx, req) -> {
-            switch (req.method()) {
-                case HEAD:
-                case GET:
-                    if (location == null) {
-                        return HttpResponse.of(HttpStatus.NOT_FOUND);
-                    } else {
-                        return HttpResponse.ofRedirect(location);
-                    }
-                default:
-                    return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+            final HttpMethod method = ctx.method();
+            if (method != HttpMethod.GET && method != HttpMethod.HEAD) {
+                return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
             }
+
+            if (location != null && isRedirect) {
+                return HttpResponse.ofRedirect(location);
+            }
+
+            if (location != null){
+                return HttpResponse.of(HttpStatus.NOT_FOUND, MediaType.PLAIN_TEXT_UTF_8,
+                    String.format("No file are available for the location. location is %s ", location));
+            }
+
+            return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         };
     }
 

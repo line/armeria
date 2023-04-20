@@ -125,11 +125,19 @@ public interface HttpFile {
     }
 
     /**
+     * Returns an {@link HttpFile} which represents a non-existent file.
+     * Contains additional {@code location} information.
+     */
+    static HttpFile nonExistent(String location) {
+        return new NonExistentHttpFile(location, false);
+    }
+
+    /**
      * Returns an {@link HttpFile} redirected to the specified {@code location}.
      */
     static HttpFile ofRedirect(String location) {
         requireNonNull(location, "location");
-        return new NonExistentHttpFile(location);
+        return new NonExistentHttpFile(location, true);
     }
 
     /**
