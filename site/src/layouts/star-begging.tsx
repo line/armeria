@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import Iframe from 'react-iframe-click';
-
 import * as styles from './star-begging.module.less';
 
 // Forked from https://github.com/javalin/javalin.github.io/blob/36bc38763043bd9326b1b8c8d7acca84db3e5cc1/_includes/starBegging.html
