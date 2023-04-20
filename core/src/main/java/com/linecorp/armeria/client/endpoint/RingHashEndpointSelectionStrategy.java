@@ -17,8 +17,6 @@
 package com.linecorp.armeria.client.endpoint;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -31,7 +29,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy{
 
     static final RingHashEndpointSelectionStrategy INSTANCE = new RingHashEndpointSelectionStrategy();
-
     private RingHashEndpointSelectionStrategy() {}
 
     @Override
@@ -40,12 +37,13 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
     }
     
     static class RingHashSelector extends AbstractEndpointSelector {
-
         private volatile WeightedRingEndpoint weightedRingEndpoint;
 
         RingHashSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            endpointGroup.addListener(endpoints -> weightedRingEndpoint = new WeightedRingEndpoint(endpoints),true);
+            endpointGroup.addListener(endpoints -> 
+                weightedRingEndpoint = new WeightedRingEndpoint(endpoints), true
+            );
         }
 
         @Override
@@ -55,11 +53,10 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
         }
         
         private final class WeightedRingEndpoint {
-
             private final SortedMap<Integer, Endpoint> ring = new ConcurrentSkipListMap<>();
 
             Endpoint select(Endpoint point) {
-                final int key = getMD5Hash(point.host());
+                final int key = getXXHash(point.host());
                 final SortedMap<Integer, Endpoint> tailMap = ring.tailMap(key);
                 return tailMap.isEmpty() ? ring.get(ring.firstKey()) : tailMap.get(tailMap.firstKey());
             }
@@ -71,30 +68,18 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                     // If weight is 3, place 3 times in the ring, if weight is 1, place once in the ring
                     for (int i = 0; i < weight; i++) {
                         final String weightedHost = host + weight;
-                        final int hash = getMD5Hash(weightedHost);
+                        final int hash = getXXHash(weightedHost);
                         ring.put(hash, endpoint);
                     }
                 }
             }
 
             // Returned int values range from -2,147,483,648 to 2,147,483,647, same as java int type
-            int getMD5Hash(String input) {
-                try {
-                    final MessageDigest md = MessageDigest.getInstance("MD5");
-                    final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
-                    // Calculate the MD5 hash value
-                    final byte[] hashBytes = md.digest(inputBytes);
-                    
-                    // convert the leading 4 bytes (32 bits) to an int value
-                    int hashInt = 0;
-                    for (int i = 0; i < 4; i++) {
-                        hashInt |= ((hashBytes[i] & 0xFF) << (8 * (3 - i)));
-                    }
-        
-                    return hashInt;
-                } catch (NoSuchAlgorithmException e) {
-                    throw new RuntimeException("MD5 algorithm is not supported.", e);
-                }
+            int getXXHash(String input) {
+                final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
+                final LongHashFunction xxHash = LongHashFunction.xx();
+                final long hashBytes = xxHash.hashBytes(inputBytes);
+                return (int) (hashBytes >>> 32);
             }
         }
     }
