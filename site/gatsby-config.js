@@ -8,12 +8,8 @@ module.exports = {
     siteUrl: 'https://armeria.dev/',
     shortUrls: [
       {
-        name: 'slack',
-        href: 'https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LWRlMGRjMzIwOTIzMzA2NDA1NGMwMTg2MTA3MzE4MDYyMjUxMjRlNWRiZTc1N2Q3ZGRjNDA5ZDZhZTI1NGEwODk',
-      },
-      {
-              name: 'discord',
-              href: 'https://discord.gg/7FH8c6npmg',
+        name: 'discord',
+        href: 'https://discord.gg/7FH8c6npmg',
       },
     ],
   },
