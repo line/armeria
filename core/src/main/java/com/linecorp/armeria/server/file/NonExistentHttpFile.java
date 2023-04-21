@@ -63,7 +63,7 @@ final class NonExistentHttpFile implements HttpFile {
     @Override
     public HttpService asService() {
         return (ctx, req) -> {
-            final HttpMethod method = ctx.method();
+            final HttpMethod method = req.method();
             if (method != HttpMethod.GET && method != HttpMethod.HEAD) {
                 return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
             }
@@ -77,7 +77,7 @@ final class NonExistentHttpFile implements HttpFile {
                     String.format("No file are available for the location. location is %s ", location));
             }
 
-            return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
         };
     }
 
