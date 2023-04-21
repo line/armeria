@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 final class DefaultHealthCheckerContext
         extends AbstractExecutorService implements HealthCheckerContext, ScheduledExecutorService {
@@ -58,7 +60,6 @@ final class DefaultHealthCheckerContext
 
     /**
      * Keeps the {@link Future}s which were scheduled via this {@link ScheduledExecutorService}.
-     * Note that this field is also used as a lock.
      */
     @GuardedBy("lock")
     private final Map<Future<?>, Boolean> scheduledFutures = new IdentityHashMap<>();
@@ -104,30 +105,7 @@ final class DefaultHealthCheckerContext
 
     private CompletableFuture<Void> destroy() {
         assert handle != null : handle;
-        return handle.closeAsync().handle((unused1, unused2) -> {
-            lock.lock();
-            try {
-                if (destroyed) {
-                    return null;
-                }
-
-                destroyed = true;
-
-                // Cancel all scheduled tasks. Make a copy to prevent ConcurrentModificationException
-                // when the future's handler removes it from scheduledFutures as a result of
-                // the cancellation, which may happen on this thread.
-                if (!scheduledFutures.isEmpty()) {
-                    final ImmutableList<Future<?>> copy = ImmutableList.copyOf(scheduledFutures.keySet());
-                    copy.forEach(f -> f.cancel(false));
-                }
-            } finally {
-                lock.unlock();
-            }
-
-            onUpdateHealth.accept(originalEndpoint, false);
-
-            return null;
-        });
+        return handle.closeAsync().handle(new DestroyHandler());
     }
 
     @Override
@@ -287,14 +265,7 @@ final class DefaultHealthCheckerContext
     @SuppressWarnings("GuardedBy")
     private <T extends Future<U>, U> T add(T future) {
         scheduledFutures.put(future, Boolean.TRUE);
-        future.addListener(f -> {
-            lock.lock();
-            try {
-                scheduledFutures.remove(f);
-            } finally {
-                lock.unlock();
-            }
-        });
+        future.addListener(new RemovingFutureListener<>());
         return future;
     }
 
@@ -330,5 +301,47 @@ final class DefaultHealthCheckerContext
                           .add("destroyed", destroyed)
                           .add("refCnt", refCnt)
                           .toString();
+    }
+
+    private class DestroyHandler implements BiFunction<Object, Throwable, Void> {
+
+        @Override
+        public Void apply(Object unused, Throwable throwable) {
+            lock.lock();
+            try {
+                if (destroyed) {
+                    return null;
+                }
+
+                destroyed = true;
+
+                // Cancel all scheduled tasks. Make a copy to prevent ConcurrentModificationException
+                // when the future's handler removes it from scheduledFutures as a result of
+                // the cancellation, which may happen on this thread.
+                if (!scheduledFutures.isEmpty()) {
+                    final ImmutableList<Future<?>> copy = ImmutableList.copyOf(scheduledFutures.keySet());
+                    copy.forEach(f -> f.cancel(false));
+                }
+            } finally {
+                lock.unlock();
+            }
+
+            onUpdateHealth.accept(originalEndpoint, false);
+
+            return null;
+        }
+    }
+
+    private class RemovingFutureListener<T extends Future<U>, U> implements GenericFutureListener<T> {
+
+        @Override
+        public void operationComplete(T future) throws Exception {
+            lock.lock();
+            try {
+                scheduledFutures.remove(future);
+            } finally {
+                lock.unlock();
+            }
+        }
     }
 }
