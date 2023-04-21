@@ -26,9 +26,9 @@ import java.util.function.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.metric.DistributionStatisticConfigUtil;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -422,6 +422,6 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public DistributionStatisticConfig distributionStatisticConfig() {
-        return MoreMeters.defaultDistributionStatisticConfig();
+        return DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG;
     }
 }

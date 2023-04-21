@@ -42,22 +42,7 @@ import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
  * Provides utilities for accessing {@link MeterRegistry}.
  */
 public final class MoreMeters {
-
-    private static final double[] PERCENTILES = { 0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0 };
-
     private static final boolean MICROMETER_1_5;
-
-    private static volatile DistributionStatisticConfig DEFAULT_DIST_STAT_CFG =
-            DistributionStatisticConfig.builder()
-                                       .percentilesHistogram(false)
-                                       .sla()
-                                       .percentiles(PERCENTILES)
-                                       .percentilePrecision(2)
-                                       .minimumExpectedValue(1L)
-                                       .maximumExpectedValue(Long.MAX_VALUE)
-                                       .expiry(Duration.ofMinutes(3))
-                                       .bufferLength(3)
-                                       .build();
 
     static {
         MICROMETER_1_5 = Stream.of(Builder.class.getMethods())
@@ -93,13 +78,6 @@ public final class MoreMeters {
      */
     public static DistributionStatisticConfig distributionStatisticConfig() {
         return distStatCfg;
-    }
-
-    /**
-     * Returns the default {@link DistributionStatisticConfig} where armeria utilizes.
-     */
-    public static DistributionStatisticConfig defaultDistributionStatisticConfig() {
-        return DEFAULT_DIST_STAT_CFG;
     }
 
     /**
