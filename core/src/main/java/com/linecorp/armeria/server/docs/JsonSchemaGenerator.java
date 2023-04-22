@@ -207,7 +207,9 @@ final class JsonSchemaGenerator {
             currentPath = path + '/' + field.name();
         }
 
-        fieldNode.put("description", field.descriptionInfo().docString());
+        if (!field.descriptionInfo().docString().isEmpty()) {
+            fieldNode.put("description", field.descriptionInfo().docString());
+        }
 
         // Fill required fields for the current object.
         if (required != null && field.requirement() == FieldRequirement.REQUIRED) {
