@@ -139,6 +139,35 @@ class JsonSchemaGeneratorTest {
     }
 
     @Test
+    void testGenerateSimpleMethodWithPrimitiveParametersFlatDefs() {
+        final List<FieldInfo> parameters = ImmutableList.of(
+                FieldInfo.of("param1", TypeSignature.ofBase("int"), DescriptionInfo.of("param1 description")),
+                FieldInfo.of("param2", TypeSignature.ofBase("double"),
+                             DescriptionInfo.of("param2 description")),
+                FieldInfo.of("param3", TypeSignature.ofBase("string"),
+                             DescriptionInfo.of("param3 description")),
+                FieldInfo.of("param4", TypeSignature.ofBase("boolean"),
+                             DescriptionInfo.of("param4 description")));
+        final StructInfo structInfo = newStructInfo(methodName, parameters);
+
+        final ServiceSpecification serviceSpecification = generateServiceSpecification(structInfo);
+        final JsonNode defs = JsonSchemaGenerator.generateDefs(serviceSpecification);
+
+        // Method specific properties
+        assertThatJson(defs).matches(
+                new CustomTypeSafeMatcher<JsonMap>("has 1 key") {
+                    @Override
+                    protected boolean matchesSafely(JsonMap item) {
+                        return item.keySet().size() == 1;
+                    }
+                });
+        assertThatJson(defs).node("test-method.properties.param1.type").isEqualTo("integer");
+        assertThatJson(defs).node("test-method.properties.param2.type").isEqualTo("number");
+        assertThatJson(defs).node("test-method.properties.param3.type").isEqualTo("string");
+        assertThatJson(defs).node("test-method.properties.param4.type").isEqualTo("boolean");
+    }
+
+    @Test
     void testMethodWithRecursivePath() {
         final Object commonTypeObjectForRecursion = new Object();
         final List<FieldInfo> parameters = ImmutableList.of(
@@ -161,5 +190,69 @@ class JsonSchemaGeneratorTest {
         assertThatJson(jsonSchema).node("properties.paramRecursive.properties.inner-param1").isPresent();
         assertThatJson(jsonSchema).node("properties.paramRecursive.properties.inner-recurse.$ref").isEqualTo(
                 "#/properties/paramRecursive");
+    }
+
+    @Test
+    void testMethodWithRecursivePathFlat() {
+        final Object commonTypeObjectForRecursion = new Object();
+        final List<FieldInfo> parameters = ImmutableList.of(
+                FieldInfo.of("param1", TypeSignature.ofBase("int"), DescriptionInfo.of("param1 description")),
+                FieldInfo.builder("paramRecursive", TypeSignature.ofStruct("rec", commonTypeObjectForRecursion))
+                         .build()
+        );
+
+        final StructInfo structInfo = newStructInfo(methodName, parameters);
+
+        final List<FieldInfo> parametersOfRec = ImmutableList.of(
+                FieldInfo.of("inner-param1", TypeSignature.ofBase("int32")),
+                FieldInfo.of("inner-recurse", TypeSignature.ofStruct("rec", commonTypeObjectForRecursion))
+        );
+        final StructInfo rec = newStructInfo("rec", parametersOfRec);
+
+        final ServiceSpecification serviceSpecification = generateServiceSpecification(structInfo, rec);
+        final JsonNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification, true).get(0);
+
+        assertThatJson(jsonSchema).node("$defs.rec.properties.inner-param1").isPresent();
+        assertThatJson(jsonSchema).node("$defs.rec.properties.inner-recurse.$ref").isEqualTo(
+                "#/$defs/rec");
+    }
+
+    @Test
+    void testFlatDefsGeneration() {
+        final Object commonTypeObjectForRecursion = new Object();
+        final List<FieldInfo> parameters = ImmutableList.of(
+                FieldInfo.of("param1", TypeSignature.ofBase("int"), DescriptionInfo.of("param1 description")),
+                FieldInfo.builder("param2",
+                                  TypeSignature.ofStruct("param2Struct", commonTypeObjectForRecursion))
+                         .build()
+        );
+
+        final StructInfo param1StructInfo = newStructInfo("param1Struct", parameters);
+        final StructInfo param2StructInfo = newStructInfo("param2Struct", parameters);
+
+        final List<FieldInfo> parametersOfRec = ImmutableList.of(
+                FieldInfo.of("inner-param1", TypeSignature.ofBase("int32")),
+                FieldInfo.of("inner-recurse", TypeSignature.ofStruct("rec", commonTypeObjectForRecursion))
+        );
+        final StructInfo rec = newStructInfo("rec", parametersOfRec);
+
+        final ServiceSpecification serviceSpecification = generateServiceSpecification(param1StructInfo,
+                                                                                       param2StructInfo, rec);
+        final JsonNode defs = JsonSchemaGenerator.generateDefs(serviceSpecification);
+
+        assertThatJson(defs).matches(
+                new CustomTypeSafeMatcher<JsonMap>("has 3 keys") {
+                    @Override
+                    protected boolean matchesSafely(JsonMap item) {
+                        return item.keySet().size() == 3;
+                    }
+                });
+        assertThatJson(defs).node("param1Struct").isPresent();
+        assertThatJson(defs).node("param2Struct").isPresent();
+        assertThatJson(defs).node("rec").isPresent();
+        assertThatJson(defs).node("rec.properties.inner-param1").isPresent();
+        assertThatJson(defs).node("rec.properties.inner-recurse").isPresent();
+        assertThatJson(defs).node("param1Struct.properties.param2.$ref").isEqualTo("#/$defs/param2Struct");
+        assertThatJson(defs).node("param2Struct.properties.param2.$ref").isEqualTo("#/$defs/param2Struct");
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -52,6 +52,8 @@ final class JsonSchemaGenerator {
 
     private static final List<String> MEMORIZED_JSON_TYPES = ImmutableList.of("array", "object");
 
+    private static final String DEFS_PATH = "#/$defs";
+
     /**
      * Generate an array of json schema specifications for each method inside the service.
      *
@@ -60,21 +62,22 @@ final class JsonSchemaGenerator {
      * @return ArrayNode that contains service specifications
      */
     static ArrayNode generate(ServiceSpecification serviceSpecification) {
-        // TODO: Test for Thrift and annotated services
-        final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification);
-        return generator.generate();
+        return generate(serviceSpecification, false);
     }
 
-    private final Set<ServiceInfo> serviceInfos;
-    private final Map<String, StructInfo> typeSignatureToStructMapping;
-    private final Map<String, EnumInfo> typeNameToEnumMapping;
-
-    private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
-        serviceInfos = serviceSpecification.services();
-        typeSignatureToStructMapping = serviceSpecification.structs().stream().collect(
-                toImmutableMap(StructInfo::name, Function.identity()));
-        typeNameToEnumMapping = serviceSpecification.enums().stream().collect(
-                toImmutableMap(EnumInfo::name, Function.identity()));
+    /**
+     * Generate an array of json schema specifications for each method inside the service.
+     *
+     * @param serviceSpecification the service specification to generate the json schema from.
+     * @param useFlatSchema whether to use flat schema or not. If true, the generated schema will have "$defs"
+     *                      with max depth of 1 definition.
+     *
+     * @return ArrayNode that contains service specifications
+     */
+    static ArrayNode generate(ServiceSpecification serviceSpecification, boolean useFlatSchema) {
+        // TODO: Test for Thrift and annotated services
+        final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification, useFlatSchema);
+        return generator.generate();
     }
 
     private ArrayNode generate() {
@@ -82,10 +85,57 @@ final class JsonSchemaGenerator {
 
         final Set<ObjectNode> methodDefinitions =
                 serviceInfos.stream()
-                            .flatMap(serviceInfo -> serviceInfo.methods().stream().map(this::generate))
+                            .flatMap(serviceInfo -> serviceInfo.methods().stream()
+                                                               .map(this::generateMethodBodySchema))
                             .collect(toImmutableSet());
 
         return definitions.addAll(methodDefinitions);
+    }
+
+    /**
+     * Generates a json object that contains the "$defs" object as described in <a href="https://json-schema.org/understanding-json-schema/structuring.html#defs"> JSON Schema specifications </a>. Note that this method will only generate the "$defs" object and not the schema object.
+     *
+     * @param serviceSpecification The specification to fetch structs from.
+     *
+     * @return a json object that contains the "$defs" object.
+     */
+    static ObjectNode generateDefs(ServiceSpecification serviceSpecification) {
+        final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification, true);
+
+        for (final StructInfo structInfo : serviceSpecification.structs()) {
+            final ObjectNode structNode = mapper.createObjectNode();
+            generator.generateStructFields(structNode, structInfo, DEFS_PATH);
+            generator.defsNode.set(structInfo.name(), structNode);
+        }
+
+        return generator.defsNode;
+    }
+
+    private final Set<ServiceInfo> serviceInfos;
+    private final Map<String, StructInfo> typeSignatureToStructMapping;
+    private final Map<String, EnumInfo> typeNameToEnumMapping;
+
+    private final Map<TypeSignature, String> visited = new HashMap<>();
+
+    private final boolean useFlatSchema;
+    private final ObjectNode defsNode = mapper.createObjectNode();
+
+    /**
+     * Generate an array of json schema specifications for each method inside the service.
+     *
+     * @param serviceSpecification the service specification to generate the json schema from.
+     *                              Used to find structs and enums.
+     * @param useFlatSchema whether to use flat schema or not. If true, the generated schema will put type
+     *                      definitions under "$defs". Else schema is generated greedily, which means it will
+     *                      put type definitions under the first reference.
+     */
+    private JsonSchemaGenerator(ServiceSpecification serviceSpecification, Boolean useFlatSchema) {
+        serviceInfos = serviceSpecification.services();
+        typeSignatureToStructMapping = serviceSpecification.structs().stream().collect(
+                toImmutableMap(StructInfo::name, Function.identity()));
+        typeNameToEnumMapping = serviceSpecification.enums().stream().collect(
+                toImmutableMap(EnumInfo::name, Function.identity()));
+        this.useFlatSchema = useFlatSchema;
     }
 
     /**
@@ -95,7 +145,7 @@ final class JsonSchemaGenerator {
      *
      * @return ObjectNode containing the JSON schema for the parameter type.
      */
-    private ObjectNode generate(MethodInfo methodInfo) {
+    private ObjectNode generateMethodBodySchema(MethodInfo methodInfo) {
         final ObjectNode root = mapper.createObjectNode();
 
         root.put("$id", methodInfo.id())
@@ -107,7 +157,8 @@ final class JsonSchemaGenerator {
             .put("type", "object");
 
         final List<FieldInfo> methodFields;
-        final Map<TypeSignature, String> visited = new HashMap<>();
+        visited.clear();
+        defsNode.removeAll();
         final String currentPath = "#";
 
         if (methodInfo.useParameterAsRoot()) {
@@ -126,7 +177,12 @@ final class JsonSchemaGenerator {
             methodFields = methodInfo.parameters();
         }
 
-        generateProperties(methodFields, visited, currentPath, root);
+        generateProperties(methodFields, currentPath, root);
+
+        if (useFlatSchema) {
+            root.set("$defs", defsNode);
+        }
+
         return root;
     }
 
@@ -135,16 +191,21 @@ final class JsonSchemaGenerator {
      * and add required fields to the {@link ArrayNode}.
      *
      * @param field field to generate schema for
-     * @param visited map of visited types and their paths
      * @param path current path in tree traversal of fields
      * @param parent the parent to add schema properties
      * @param required the array node to add required field names, if parent doesn't support, it is null.
      */
-    private void generateField(FieldInfo field, Map<TypeSignature, String> visited, String path,
-                               ObjectNode parent,
-                               @Nullable ArrayNode required) {
+    private void generateField(FieldInfo field, String path, ObjectNode parent, @Nullable ArrayNode required) {
         final ObjectNode fieldNode = mapper.createObjectNode();
         final TypeSignature fieldTypeSignature = field.typeSignature();
+        final String schemaType = getSchemaType(fieldTypeSignature);
+        final String currentPath;
+
+        if (field.name().isEmpty()) {
+            currentPath = path;
+        } else {
+            currentPath = path + '/' + field.name();
+        }
 
         fieldNode.put("description", field.descriptionInfo().docString());
 
@@ -153,25 +214,32 @@ final class JsonSchemaGenerator {
             required.add(field.name());
         }
 
+        final boolean shouldFlatten = useFlatSchema &&
+                                      MEMORIZED_JSON_TYPES.contains(schemaType) &&
+                                      currentPath.chars().filter(c -> c == '/').count() > 1;
+        if (shouldFlatten) {
+            // If field is already visited, add a reference to the field instead of iterating its children.
+            if (!visited.containsKey(fieldTypeSignature)) {
+                final ObjectNode defsFieldNode = mapper.createObjectNode();
+                final String currentDefsPath = DEFS_PATH + '/' + fieldTypeSignature.signature();
+                visited.put(fieldTypeSignature, currentDefsPath);
+
+                generateTypeFields(defsFieldNode, field, schemaType, currentDefsPath);
+
+                defsNode.set(fieldTypeSignature.signature(), defsFieldNode);
+            }
+        }
+
         if (visited.containsKey(fieldTypeSignature)) {
             // If field is already visited, add a reference to the field instead of iterating its children.
             final String pathName = visited.get(fieldTypeSignature);
             fieldNode.put("$ref", pathName);
         } else {
-            final String schemaType = getSchemaType(field.typeSignature());
-
             // Field is not visited, create a new type definition for it.
             fieldNode.put("type", schemaType);
 
-            if (field.typeSignature().type() == TypeSignatureType.ENUM) {
+            if (fieldTypeSignature.type() == TypeSignatureType.ENUM) {
                 fieldNode.set("enum", getEnumType(field.typeSignature()));
-            }
-
-            final String currentPath;
-            if (field.name().isEmpty()) {
-                currentPath = path;
-            } else {
-                currentPath = path + '/' + field.name();
             }
 
             // Only Struct types map to custom objects to we need reference to those structs.
@@ -180,16 +248,7 @@ final class JsonSchemaGenerator {
                 visited.put(fieldTypeSignature, currentPath);
             }
 
-            // Based on field type, we need to call the appropriate method to generate the schema.
-            // For example maps have `additionalProperties` field, arrays have `items` field and structs
-            // have `properties` field.
-            if (field.typeSignature().type() == TypeSignatureType.MAP) {
-                generateMapFields(fieldNode, field, visited, currentPath);
-            } else if (field.typeSignature().type() == TypeSignatureType.ITERABLE) {
-                generateArrayFields(fieldNode, field, visited, currentPath);
-            } else if ("object".equals(schemaType)) {
-                generateStructFields(fieldNode, field, visited, currentPath);
-            }
+            generateTypeFields(fieldNode, field, schemaType, currentPath);
         }
 
         // Set current field inside the returned object.
@@ -208,23 +267,36 @@ final class JsonSchemaGenerator {
      * Generate properties for the given fields and writes to the object node.
      *
      * @param fields list of fields that the child has.
-     * @param visited a map of visited fields, required for cycle detection.
      * @param path current path as defined in JSON Schema spec, required for cyclic references.
      * @param parent object node that the results will be written to.
      */
-    private void generateProperties(List<FieldInfo> fields, Map<TypeSignature, String> visited, String path,
-                                    ObjectNode parent) {
+    private void generateProperties(List<FieldInfo> fields, String path, ObjectNode parent) {
         final ObjectNode objectNode = mapper.createObjectNode();
         final ArrayNode required = mapper.createArrayNode();
 
         for (FieldInfo field : fields) {
             if (VALID_FIELD_LOCATIONS.contains(field.location())) {
-                generateField(field, visited, path + "/properties", objectNode, required);
+                generateField(field, path + "/properties", objectNode, required);
             }
         }
 
         parent.set("properties", objectNode);
         parent.set("required", required);
+    }
+
+    private void generateTypeFields(ObjectNode fieldNode, FieldInfo field, String schemaType,
+                                    String currentPath) {
+        final TypeSignatureType type = field.typeSignature().type();
+        // Based on field type, we need to call the appropriate method to generate the schema.
+        // For example maps have `additionalProperties` field, arrays have `items` field and structs
+        // have `properties` field.
+        if (type == TypeSignatureType.MAP) {
+            generateMapFields(fieldNode, field, currentPath);
+        } else if (type == TypeSignatureType.ITERABLE) {
+            generateArrayFields(fieldNode, field, currentPath);
+        } else if ("object".equals(schemaType)) {
+            generateStructFields(fieldNode, field, currentPath);
+        }
     }
 
     /**
@@ -233,8 +305,7 @@ final class JsonSchemaGenerator {
      *
      * @see <a href="https://json-schema.org/understanding-json-schema/reference/object.html#additional-properties">JSON Schema</a>
      */
-    private void generateMapFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
-                                   String path) {
+    private void generateMapFields(ObjectNode fieldNode, FieldInfo field, String path) {
         final ObjectNode additionalProperties = mapper.createObjectNode();
 
         // Keys are always converted to strings.
@@ -246,7 +317,7 @@ final class JsonSchemaGenerator {
                                                   .build();
 
         // Recursively generate the field.
-        generateField(valueFieldInfo, visited, path + "/additionalProperties", additionalProperties, null);
+        generateField(valueFieldInfo, path + "/additionalProperties", additionalProperties, null);
 
         fieldNode.set("additionalProperties", additionalProperties);
     }
@@ -257,8 +328,7 @@ final class JsonSchemaGenerator {
      *
      * @see <a href="https://json-schema.org/understanding-json-schema/reference/array.html">JSON Schema</a>
      */
-    private void generateArrayFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
-                                     String path) {
+    private void generateArrayFields(ObjectNode fieldNode, FieldInfo field, String path) {
         final ObjectNode items = mapper.createObjectNode();
 
         final TypeSignature itemsType =
@@ -269,7 +339,7 @@ final class JsonSchemaGenerator {
                                                  .requirement(FieldRequirement.OPTIONAL)
                                                  .build();
 
-        generateField(itemFieldInfo, visited, path + "/items", items, null);
+        generateField(itemFieldInfo, path + "/items", items, null);
 
         fieldNode.set("items", items);
     }
@@ -280,20 +350,23 @@ final class JsonSchemaGenerator {
      *
      * @see <a href="https://json-schema.org/understanding-json-schema/reference/object.html#properties">JSON Schema</a>
      */
-    private void generateStructFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
-                                      String path) {
-
+    private void generateStructFields(ObjectNode fieldNode, FieldInfo field, String path) {
         final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().signature());
-        fieldNode.put("additionalProperties", fieldStructInfo == null);
 
         if (fieldStructInfo == null) {
             logger.debug("Could not find struct with signature: {}",
                          field.typeSignature().signature());
         }
 
+        generateStructFields(fieldNode, fieldStructInfo, path);
+    }
+
+    private void generateStructFields(ObjectNode fieldNode, @Nullable StructInfo structInfo, String path) {
+        fieldNode.put("additionalProperties", structInfo == null);
+
         // Iterate over each child field, generate their definitions.
-        if (fieldStructInfo != null && !fieldStructInfo.fields().isEmpty()) {
-            generateProperties(fieldStructInfo.fields(), visited, path, fieldNode);
+        if (structInfo != null && !structInfo.fields().isEmpty()) {
+            generateProperties(structInfo.fields(), path, fieldNode);
         }
     }
 
