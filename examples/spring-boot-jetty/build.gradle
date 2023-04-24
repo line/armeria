@@ -8,7 +8,7 @@ dependencies {
     implementation project(':jetty11')
 
     implementation libs.slf4j2.api
-    implementation('org.springframework.boot:spring-boot-starter-jetty:3.0.5') {
+    implementation(libs.spring.boot3.starter.jetty) {
         exclude group: 'jakarta.websocket', module: 'jakarta.websocket-api'
         exclude group: 'jakarta.websocket', module: 'jakarta.websocket-client-api'
         exclude group: 'org.eclipse.jetty.websocket', module: 'websocket-jetty-server'

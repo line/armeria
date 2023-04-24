@@ -1118,6 +1118,9 @@ javadocs = "https://docs.spring.io/spring/docs/current/javadoc-api/"
 [libraries.spring-boot3-starter-actuator]
 module = "org.springframework.boot:spring-boot-starter-actuator"
 version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-jetty]
+module = "org.springframework.boot:spring-boot-starter-jetty"
+version.ref = "spring-boot3"
 [libraries.spring-boot3-starter-security]
 module = "org.springframework.boot:spring-boot-starter-security"
 version.ref = "spring-boot3"
