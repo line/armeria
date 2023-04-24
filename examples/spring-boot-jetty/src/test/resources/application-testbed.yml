@@ -1,0 +1,12 @@
+# Use-legacy-processing to use this application-testbed.yml file instead of application.yml
+spring:
+  config:
+    use-legacy-processing: true
+
+# Prevent the embedded Tomcat from opening a TCP/IP port.
+server.port: -1
+---
+armeria:
+  ports:
+    - port: 0
+      protocol: HTTP

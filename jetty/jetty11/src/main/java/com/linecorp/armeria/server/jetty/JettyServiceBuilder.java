@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.EventListener;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -31,7 +32,6 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.SessionIdManager;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -260,80 +260,65 @@ public final class JettyServiceBuilder {
         final List<EventListener> eventListeners = this.eventListeners.build();
         final List<Consumer<? super Server>> customizers = this.customizers.build();
 
-        final Function<BlockingTaskExecutor, Server> serverFactory = blockingTaskExecutor -> {
-            final Server server = new Server(new ArmeriaThreadPool(blockingTaskExecutor));
+        final Function<BlockingTaskExecutor, Server> serverFactory = new Function<>() {
 
-            if (dumpAfterStart != null) {
-                server.setDumpAfterStart(dumpAfterStart);
-            }
-            if (dumpBeforeStop != null) {
-                server.setDumpBeforeStop(dumpBeforeStop);
-            }
-            if (stopTimeoutMillis != null) {
-                server.setStopTimeout(stopTimeoutMillis);
-            }
+            private final ReentrantLock lock = new ReentrantLock();
+            @Nullable
+            private Server server;
 
-            if (handler != null) {
-                server.setHandler(handler);
-            }
-            if (requestLog != null) {
-                server.setRequestLog(requestLog);
-            }
-            if (sessionIdManagerFactory != null) {
-                server.setSessionIdManager(sessionIdManagerFactory.apply(server));
-            }
+            @Override
+            public Server apply(BlockingTaskExecutor blockingTaskExecutor) {
+                lock.lock();
+                try {
+                    if (server != null) {
+                        return server;
+                    }
+                    server = new Server(new ArmeriaThreadPool(blockingTaskExecutor));
 
-            handlerWrappers.forEach(server::insertHandler);
-            attrs.forEach(server::setAttribute);
-            beans.forEach(bean -> {
-                final Boolean managed = bean.isManaged();
-                if (managed == null) {
-                    server.addBean(bean.bean());
-                } else {
-                    server.addBean(bean.bean(), managed);
+                    if (dumpAfterStart != null) {
+                        server.setDumpAfterStart(dumpAfterStart);
+                    }
+                    if (dumpBeforeStop != null) {
+                        server.setDumpBeforeStop(dumpBeforeStop);
+                    }
+                    if (stopTimeoutMillis != null) {
+                        server.setStopTimeout(stopTimeoutMillis);
+                    }
+
+                    if (handler != null) {
+                        server.setHandler(handler);
+                    }
+                    if (requestLog != null) {
+                        server.setRequestLog(requestLog);
+                    }
+                    if (sessionIdManagerFactory != null) {
+                        server.setSessionIdManager(sessionIdManagerFactory.apply(server));
+                    }
+
+                    handlerWrappers.forEach(server::insertHandler);
+                    attrs.forEach(server::setAttribute);
+                    beans.forEach(bean -> {
+                        final Boolean managed = bean.isManaged();
+                        if (managed == null) {
+                            server.addBean(bean.bean());
+                        } else {
+                            server.addBean(bean.bean(), managed);
+                        }
+                    });
+
+                    eventListeners.forEach(server::addEventListener);
+
+                    customizers.forEach(c -> c.accept(server));
+                    return server;
+                } finally {
+                    lock.unlock();
                 }
-            });
-
-            eventListeners.forEach(server::addEventListener);
-
-            customizers.forEach(c -> c.accept(server));
-
-            return server;
-        };
-
-        final Consumer<Server> postStopTask = server -> {
-            try {
-                JettyService.logger.info("Destroying an embedded Jetty: {}", server);
-                server.destroy();
-            } catch (Exception e) {
-                JettyService.logger.warn("Failed to destroy an embedded Jetty: {}", server, e);
             }
         };
-
-        return new JettyService(hostname, tlsReverseDnsLookup, serverFactory, postStopTask);
+        return new JettyService(hostname, tlsReverseDnsLookup, serverFactory, null, null);
     }
 
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("hostname", hostname)
-                          .add("dumpAfterStart", dumpAfterStart)
-                          .add("dumpBeforeStop", dumpBeforeStop)
-                          .add("stopTimeoutMillis", stopTimeoutMillis)
-                          .add("handler", handler)
-                          .add("requestLog", requestLog)
-                          .add("sessionIdManagerFactory", sessionIdManagerFactory)
-                          .add("attrs", attrs)
-                          .add("beans", beans)
-                          .add("handlerWrappers", handlerWrappers)
-                          .add("eventListeners", eventListeners)
-                          .add("tlsReverseDnsLookup", tlsReverseDnsLookup)
-                          .add("customizers", customizers)
-                          .toString();
-    }
-
-    static final class Bean {
+    private static final class Bean {
 
         private final Object bean;
         @Nullable
