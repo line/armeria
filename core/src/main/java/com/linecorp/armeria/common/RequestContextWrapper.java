@@ -19,8 +19,10 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 
 import javax.net.ssl.SSLSession;
 
@@ -170,6 +172,11 @@ public abstract class RequestContextWrapper<T extends RequestContext>
     }
 
     @Override
+    public URI uri() {
+        return unwrap().uri();
+    }
+
+    @Override
     public RequestLogAccess log() {
         return unwrap().log();
     }
@@ -223,6 +230,11 @@ public abstract class RequestContextWrapper<T extends RequestContext>
     @Override
     public ExchangeType exchangeType() {
         return unwrap().exchangeType();
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return unwrap().initiateConnectionShutdown();
     }
 
     @Override

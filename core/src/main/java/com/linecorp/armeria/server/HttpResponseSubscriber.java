@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeResponse;
@@ -31,6 +32,8 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
+import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -40,6 +43,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -114,6 +118,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
         if (failIfStreamOrSessionClosed()) {
             PooledObjects.close(o);
+            setDone(true);
             return;
         }
 
@@ -137,6 +142,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                 " (service: " + service() + ')'), true);
                         return;
                     }
+
                     // TODO(minwoox): Add an implementation of AbstractHttpResponseHandler for WebSocket.
                     // Only HTTP/1.x uses informational status for the WebSocket response.
                     if (!(reqCtx.sessionProtocol().isHttp1() && isHttp1WebSocketUpgradeResponse(headers))) {
@@ -148,7 +154,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                 }
 
                 if (responseEncoder.isResponseHeadersSent(req.id(), req.streamId())) {
-                    // The response is sent by the HttpRequestDecoder so we just cancel the stream message.
+                    // The response is sent by the HttpRequestDecoder, so we just cancel the stream message.
                     tryComplete(new CancelledSubscriptionException(
                             "An HTTP response was sent already. ctx: " + reqCtx));
                     setDone(true);
@@ -171,6 +177,10 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                              reqCtx.config().defaultHeaders(),
                                              config.isServerHeaderEnabled(),
                                              config.isDateHeaderEnabled());
+                final String connectionOption = merged.get(HttpHeaderNames.CONNECTION);
+                if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
+                    disconnectWhenFinished();
+                }
                 logBuilder().responseHeaders(merged);
 
                 responseEncoder.writeHeaders(req.id(), req.streamId(), merged, endOfStream,
@@ -211,6 +221,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                    .addListener(writeHeadersFutureListener(true));
                 } else {
                     final HttpData data = (HttpData) o;
+                    data.touch(reqCtx);
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
@@ -305,11 +316,10 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
         final State oldState = setDone(false);
         if (oldState == State.NEEDS_HEADERS) {
-            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
             responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR)
                            .addListener(future -> {
                                try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                                   tryComplete(null);
+                                   fail(EmptyHttpResponseException.get());
                                }
                            });
             ctx.flush();
@@ -332,15 +342,37 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                 responseEncoder.writeTrailers(req.id(), req.streamId(), additionalTrailers)
                                .addListener(writeHeadersFutureListener(true));
                 ctx.flush();
-            } else if (isWritable()) {
-                writeEmptyData().addListener(writeDataFutureListener(true, true));
-                ctx.flush();
+            } else {
+                if (isWritable()) {
+                    writeEmptyData().addListener(writeDataFutureListener(true, true));
+                    ctx.flush();
+                } else {
+                    if (!reqCtx.sessionProtocol().isMultiplex()) {
+                        // An HTTP/1 connection is closed by a remote peer after all data is sent,
+                        // so we can assume the HTTP/1 request is complete successfully.
+                        succeed();
+                    } else {
+                        fail(ClosedStreamException.get());
+                    }
+                }
             }
         }
     }
 
     private ChannelFuture writeEmptyData() {
         return responseEncoder.writeData(req.id(), req.streamId(), HttpData.empty(), true);
+    }
+
+    private void succeed() {
+        if (tryComplete(null)) {
+            final Throwable capturedException = CapturedServiceException.get(reqCtx);
+            if (capturedException != null) {
+                endLogRequestAndResponse(capturedException);
+            } else {
+                endLogRequestAndResponse();
+            }
+            maybeWriteAccessLog();
+        }
     }
 
     @Override
@@ -387,10 +419,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         maybeLogFirstResponseBytesTransferred();
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
-                    if (tryComplete(cause)) {
-                        endLogRequestAndResponse(cause);
-                        maybeWriteAccessLog();
-                    }
+                    fail(cause);
                 }
             });
         }
@@ -455,9 +484,13 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                     //    3) and the protocol is HTTP/1,
                     // it is very likely that a client closed the connection after receiving the
                     // complete content, which is not really a problem.
+                    final Throwable cause = future.cause();
                     isSuccess = endOfStream && wroteEmptyData &&
-                                future.cause() instanceof ClosedChannelException &&
-                                reqCtx.sessionProtocol().isHttp1();
+                                reqCtx.sessionProtocol().isHttp1() &&
+                                (cause instanceof ClosedChannelException ||
+                                 // A ClosedSessionException may be raised by HttpObjectEncoder
+                                 // if a channel was closed.
+                                 cause instanceof ClosedSessionException);
                 }
                 handleWriteComplete(future, endOfStream, isSuccess);
             }
@@ -472,15 +505,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
             maybeLogFirstResponseBytesTransferred();
 
             if (endOfStream) {
-                if (tryComplete(null)) {
-                    final Throwable capturedException = CapturedServiceException.get(reqCtx);
-                    if (capturedException != null) {
-                        endLogRequestAndResponse(capturedException);
-                    } else {
-                        endLogRequestAndResponse();
-                    }
-                    maybeWriteAccessLog();
-                }
+                succeed();
             }
 
             if (!isSubscriptionCompleted) {

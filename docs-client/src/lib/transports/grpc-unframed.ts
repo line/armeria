@@ -17,7 +17,7 @@ import { Method } from '../specification';
 
 import Transport from './transport';
 
-const GRPC_UNFRAMED_MIME_TYPE =
+export const GRPC_UNFRAMED_MIME_TYPE =
   'application/json; charset=utf-8; protocol=gRPC';
 
 export default class GrpcUnframedTransport extends Transport {

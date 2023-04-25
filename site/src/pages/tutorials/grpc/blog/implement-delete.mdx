@@ -46,7 +46,7 @@ Let's implement a service method `deleteBlogPost()` in `BlogService.java` we've 
       final BlogPost removed = blogPosts.remove(request.getId());
       if (removed == null) {
         responseObserver.onError(
-          throw new IllegalArgumentException("The blog post does not exist. ID: " + request.getId());
+          new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
       } else {
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();

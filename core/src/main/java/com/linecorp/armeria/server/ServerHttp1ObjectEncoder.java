@@ -53,25 +53,19 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private static final Logger logger = LoggerFactory.getLogger(ServerHttp1ObjectEncoder.class);
 
     private final KeepAliveHandler keepAliveHandler;
-    private final boolean enableServerHeader;
-    private final boolean enableDateHeader;
     private final Http1HeaderNaming http1HeaderNaming;
     private final WebSocketUpgradeContext webSocketUpgradeContext;
 
-    private boolean shouldSendConnectionCloseHeader;
     private boolean sentConnectionCloseHeader;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
-                             boolean hasWebSocketService, boolean enableDateHeader,
-                             boolean enableServerHeader, Http1HeaderNaming http1HeaderNaming) {
+                             boolean hasWebSocketService, Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
         assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
                keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         webSocketUpgradeContext = hasWebSocketService ? new DefaultWebSocketUpgradeContext()
                                                       : WebSocketUpgradeContext.noop();
-        this.enableServerHeader = enableServerHeader;
-        this.enableDateHeader = enableDateHeader;
         this.http1HeaderNaming = http1HeaderNaming;
     }
 
@@ -82,10 +76,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     WebSocketUpgradeContext webSocketUpgradeContext() {
         return webSocketUpgradeContext;
-    }
-
-    void initiateConnectionShutdown() {
-        shouldSendConnectionCloseHeader = true;
     }
 
     @Override
@@ -110,10 +100,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             return write(id, converted, false);
         }
 
-        if (shouldSendConnectionCloseHeader || keepAliveHandler.needToCloseConnection()) {
-            converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-            sentConnectionCloseHeader = true;
-        }
         return writeNonInformationalHeaders(id, converted, endStream, channel().newPromise());
     }
 
@@ -131,7 +117,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         if (headers.status().isInformational()) {
             final HttpResponse res = new DefaultFullHttpResponse(
                     HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
-            ArmeriaHttpUtil.toNettyHttp1ServerHeaders(headers, res.headers(), http1HeaderNaming);
+            ArmeriaHttpUtil.toNettyHttp1ServerHeaders(headers, res.headers(), http1HeaderNaming, true);
             return res;
         }
 
@@ -162,7 +148,11 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     private void convertHeaders(HttpHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
                                 boolean isTrailersEmpty) {
-        ArmeriaHttpUtil.toNettyHttp1ServerHeaders(inHeaders, outHeaders, http1HeaderNaming);
+        if (keepAliveHandler.needsDisconnection()) {
+            sentConnectionCloseHeader = true;
+        }
+        ArmeriaHttpUtil.toNettyHttp1ServerHeaders(inHeaders, outHeaders, http1HeaderNaming,
+                                                  !sentConnectionCloseHeader);
 
         if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
@@ -207,10 +197,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return false;
     }
 
-    boolean isSentConnectionCloseHeader() {
-        return sentConnectionCloseHeader;
-    }
-
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
         return id <= lastResponseHeadersId();
@@ -219,14 +205,14 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     @Override
     public ChannelFuture writeErrorResponse(int id, int streamId,
                                             ServiceConfig serviceConfig,
-                                            RequestHeaders headers,
+                                            @Nullable RequestHeaders headers,
                                             HttpStatus status,
                                             @Nullable String message,
                                             @Nullable Throwable cause) {
 
-        // Destroy keepAlive handler before writing headers so that ServerHttp1ObjectEncoder sets
+        // Mark keepAlive handler as disconnected before writing headers so that ServerHttp1ObjectEncoder sets
         // "Connection: close" to the response headers
-        keepAliveHandler().destroy();
+        keepAliveHandler().disconnectWhenFinished();
 
         final ChannelFuture future = ServerHttpObjectEncoder.super.writeErrorResponse(
                 id, streamId, serviceConfig, headers, status, message, cause);

@@ -2,11 +2,12 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
   pull_request:
+  merge_group:
 
 concurrency:
   # Cancel the previous builds in the same PR.
@@ -92,7 +93,7 @@ jobs:
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
-      - if: ${{ matrix.snapshot && github.ref_name == 'master' }}
+      - if: ${{ matrix.snapshot && github.ref_name == 'main' }}
         name: Publish snapshots
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=1 publish
@@ -125,7 +126,7 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
 
       - name: Upload the coverage report to Codecov
@@ -134,7 +135,7 @@ jobs:
 
       - name: Collect the test reports
         if: failure()
-        run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+        run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' -or -path '*/javadoc.options' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
         shell: bash
 
       - name: Upload the artifacts
@@ -214,7 +215,7 @@ jobs:
 
       - name: Run flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoWeb -PnoLint -PflakyTests=true
+          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoLint -PflakyTests=true
 
       - name: Summarize the failed tests
         if: failure()
@@ -230,5 +231,5 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash

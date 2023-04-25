@@ -56,9 +56,9 @@ import javax.net.ssl.KeyManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
@@ -69,6 +69,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsSetters;
@@ -106,6 +108,7 @@ public final class VirtualHostBuilder implements TlsSetters {
 
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
+    private final boolean portBased;
     private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
@@ -143,11 +146,15 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Nullable
     private AnnotatedServiceExtensions annotatedServiceExtensions;
     @Nullable
-    private ScheduledExecutorService blockingTaskExecutor;
+    private BlockingTaskExecutor blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
+    @Nullable
+    private ServiceErrorHandler errorHandler;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -158,6 +165,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     VirtualHostBuilder(ServerBuilder serverBuilder, boolean defaultVirtualHost) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.defaultVirtualHost = defaultVirtualHost;
+        portBased = false;
     }
 
     /**
@@ -169,6 +177,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     VirtualHostBuilder(ServerBuilder serverBuilder, int port) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.port = port;
+        portBased = true;
         defaultVirtualHost = true;
     }
 
@@ -303,6 +312,9 @@ public final class VirtualHostBuilder implements TlsSetters {
     private VirtualHostBuilder tls(Supplier<SslContextBuilder> sslContextBuilderSupplier) {
         requireNonNull(sslContextBuilderSupplier, "sslContextBuilderSupplier");
         checkState(this.sslContextBuilderSupplier == null, "TLS has been configured already.");
+        checkState(!portBased,
+                   "Cannot configure TLS to a port-based virtual host. Please configure to %s.tls()",
+                   ServerBuilder.class.getSimpleName());
         this.sslContextBuilderSupplier = sslContextBuilderSupplier;
         return this;
     }
@@ -314,8 +326,7 @@ public final class VirtualHostBuilder implements TlsSetters {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tlsSelfSigned() {
-        tlsSelfSigned = true;
-        return this;
+        return tlsSelfSigned(true);
     }
 
     /**
@@ -325,6 +336,8 @@ public final class VirtualHostBuilder implements TlsSetters {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tlsSelfSigned(boolean tlsSelfSigned) {
+        checkState(!portBased, "Cannot configure self-signed to a port-based virtual host." +
+                               " Please configure to %s.tlsSelfSigned()", ServerBuilder.class.getSimpleName());
         this.tlsSelfSigned = tlsSelfSigned;
         return this;
     }
@@ -332,6 +345,9 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Override
     public VirtualHostBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
+        checkState(!portBased,
+                   "Cannot configure TLS to a port-based virtual host. Please configure to %s.tlsCustomizer()",
+                   ServerBuilder.class.getSimpleName());
         tlsCustomizers.add(tlsCustomizer);
         return this;
     }
@@ -808,6 +824,14 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link ServiceErrorHandler} that handles exceptions thrown in this virtual host.
+     */
+    public VirtualHostBuilder errorHandler(ServiceErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        return this;
+    }
+
+    /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
      * an {@link HttpService} at a certain {@link Route} is rejected. If not set,
      * the {@link RejectedRouteHandler} set via
@@ -993,6 +1017,19 @@ public final class VirtualHostBuilder implements TlsSetters {
      */
     public VirtualHostBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                    boolean shutdownOnStop) {
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return blockingTaskExecutor(BlockingTaskExecutor.of(blockingTaskExecutor), shutdownOnStop);
+    }
+
+    /**
+     * Sets the {@link BlockingTaskExecutor} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link BlockingTaskExecutor} when the
+     *                       {@link Server} stops
+     */
+    public VirtualHostBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                   boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
@@ -1036,6 +1073,24 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @VisibleForTesting
+    Path multipartUploadsLocation() {
+        return multipartUploadsLocation;
+    }
+
+    /**
+     * Sets the {@link Function} which generates a {@link RequestId}.
+     * If not set, the value set via {@link ServerBuilder#requestIdGenerator(Function)} is used.
+     *
+     * @param requestIdGenerator the {@link Function} which generates a {@link RequestId}
+     * @see RequestContext#id()
+     */
+    public VirtualHostBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        return this;
+    }
+
     /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
@@ -1067,7 +1122,8 @@ public final class VirtualHostBuilder implements TlsSetters {
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
-    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector) {
+    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
+                      @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
         requireNonNull(template, "template");
 
         if (defaultHostname == null) {
@@ -1118,7 +1174,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                 annotatedServiceExtensions != null ?
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
 
-        final ScheduledExecutorService blockingTaskExecutor;
+        final BlockingTaskExecutor blockingTaskExecutor;
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
         } else {
@@ -1139,12 +1195,21 @@ public final class VirtualHostBuilder implements TlsSetters {
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
 
+        final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
+                this.requestIdGenerator != null ?
+                this.requestIdGenerator : template.requestIdGenerator;
+        final ServiceErrorHandler serverErrorHandler = serverBuilder.errorHandler().asServiceErrorHandler();
+        final ServiceErrorHandler defaultErrorHandler =
+                errorHandler != null ? errorHandler.orElse(serverErrorHandler) : serverErrorHandler;
+
+        assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
         assert blockingTaskExecutor != null;
         assert successFunction != null;
         assert multipartUploadsLocation != null;
+        assert requestIdGenerator != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -1165,15 +1230,59 @@ public final class VirtualHostBuilder implements TlsSetters {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, multipartUploadsLocation, defaultHeaders);
+                                            successFunction, multipartUploadsLocation, defaultHeaders,
+                                            requestIdGenerator, defaultErrorHandler,
+                                            unhandledExceptionsReporter);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               multipartUploadsLocation, defaultHeaders);
+                               multipartUploadsLocation, defaultHeaders, requestIdGenerator,
+                               defaultErrorHandler, unhandledExceptionsReporter);
 
+        final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
+        builder.addAll(shutdownSupports);
+        builder.addAll(template.shutdownSupports);
+
+        final VirtualHost virtualHost =
+                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
+                                serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
+                                accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
+                                maxRequestLength, verboseResponses, accessLogWriter,
+                                blockingTaskExecutor, multipartUploadsLocation, builder.build(),
+                                requestIdGenerator);
+
+        final Function<? super HttpService, ? extends HttpService> decorator =
+                getRouteDecoratingService(template);
+        return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
+    }
+
+    static HttpHeaders mergeDefaultHeaders(HttpHeadersBuilder lowPriorityHeaders,
+                                           HttpHeaders highPriorityHeaders) {
+        if (lowPriorityHeaders.isEmpty()) {
+            return highPriorityHeaders;
+        }
+
+        if (highPriorityHeaders.isEmpty()) {
+            return lowPriorityHeaders.build();
+        }
+
+        final HttpHeadersBuilder headersBuilder = highPriorityHeaders.toBuilder();
+        for (final AsciiString name : lowPriorityHeaders.names()) {
+            if (!headersBuilder.contains(name)) {
+                headersBuilder.add(name, lowPriorityHeaders.getAll(name));
+            }
+        }
+        return headersBuilder.build();
+    }
+
+    @Nullable
+    private SslContext sslContext(VirtualHostBuilder template) {
+        if (portBased) {
+            return null;
+        }
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
         try {
@@ -1234,48 +1343,13 @@ public final class VirtualHostBuilder implements TlsSetters {
                 validateSslContext(sslContext);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
-
-            final Builder<ShutdownSupport> builder = ImmutableList.builder();
-            builder.addAll(shutdownSupports);
-            builder.addAll(template.shutdownSupports);
-
-            final VirtualHost virtualHost =
-                    new VirtualHost(defaultHostname, hostnamePattern, port, sslContext,
-                                    serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                    accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
-                                    maxRequestLength, verboseResponses, accessLogWriter,
-                                    blockingTaskExecutor, builder.build());
-
-            final Function<? super HttpService, ? extends HttpService> decorator =
-                    getRouteDecoratingService(template);
-            final VirtualHost decoratedVirtualHost = decorator != null ? virtualHost.decorate(decorator)
-                                                                       : virtualHost;
             releaseSslContextOnFailure = false;
-            return decoratedVirtualHost;
         } finally {
             if (releaseSslContextOnFailure) {
                 ReferenceCountUtil.release(sslContext);
             }
         }
-    }
-
-    static HttpHeaders mergeDefaultHeaders(HttpHeadersBuilder lowPriorityHeaders,
-                                           HttpHeaders highPriorityHeaders) {
-        if (lowPriorityHeaders.isEmpty()) {
-            return highPriorityHeaders;
-        }
-
-        if (highPriorityHeaders.isEmpty()) {
-            return lowPriorityHeaders.build();
-        }
-
-        final HttpHeadersBuilder headersBuilder = highPriorityHeaders.toBuilder();
-        for (final AsciiString name : lowPriorityHeaders.names()) {
-            if (!headersBuilder.contains(name)) {
-                headersBuilder.add(name, lowPriorityHeaders.getAll(name));
-            }
-        }
-        return headersBuilder.build();
+        return sslContext;
     }
 
     private SelfSignedCertificate selfSignedCertificate() throws CertificateException {

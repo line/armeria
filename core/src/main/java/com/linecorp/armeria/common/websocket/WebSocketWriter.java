@@ -16,14 +16,14 @@
 package com.linecorp.armeria.common.websocket;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
+import com.linecorp.armeria.common.stream.StreamWriter;
 
 /**
  * A {@link WebSocket} that you can write {@link WebSocketFrame}s to it.
  * Use {@link WebSocket#streaming()} to construct.
  */
 @UnstableApi
-public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSocketFrame> {
+public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame> {
 
     /**
      * Write a text {@link WebSocketFrame} to this {@link WebSocket}.

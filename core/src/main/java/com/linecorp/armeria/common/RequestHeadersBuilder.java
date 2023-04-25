@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.internal.common.HttpHeadersUtil;
 
 /**
  * Builds a {@link RequestHeaders}.
@@ -61,21 +62,7 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
      */
     default RequestHeadersBuilder scheme(SessionProtocol sessionProtocol) {
         requireNonNull(sessionProtocol, "sessionProtocol");
-        switch (sessionProtocol) {
-            case HTTPS:
-            case H2:
-            case H1:
-                scheme("https");
-                break;
-            case HTTP:
-            case H2C:
-            case H1C:
-                scheme("http");
-                break;
-            default:
-                throw new IllegalArgumentException("sessionProtocol: " + sessionProtocol +
-                                                   " (expected: HTTPS, H2, H1, HTTP, H2C or H1C)");
-        }
+        scheme(HttpHeadersUtil.getScheme(sessionProtocol));
         return this;
     }
 

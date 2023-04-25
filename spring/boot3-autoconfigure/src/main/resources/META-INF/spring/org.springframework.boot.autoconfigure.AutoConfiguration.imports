@@ -1,0 +1,2 @@
+com.linecorp.armeria.spring.ArmeriaAutoConfiguration
+com.linecorp.armeria.spring.ArmeriaBeanPostProcessorConfiguration

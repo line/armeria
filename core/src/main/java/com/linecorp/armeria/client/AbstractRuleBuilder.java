@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -54,6 +53,8 @@ public abstract class AbstractRuleBuilder {
     private BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter;
     @Nullable
     private BiPredicate<ClientRequestContext, Throwable> exceptionFilter;
+    @Nullable
+    private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -69,15 +70,8 @@ public abstract class AbstractRuleBuilder {
      */
     public AbstractRuleBuilder onResponseHeaders(
             BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
-        requireNonNull(responseHeadersFilter, "responseHeadersFilter");
-        if (this.responseHeadersFilter != null) {
-            this.responseHeadersFilter = this.responseHeadersFilter.or(responseHeadersFilter);
-        } else {
-            @SuppressWarnings("unchecked")
-            final BiPredicate<ClientRequestContext, ResponseHeaders> cast =
-                    (BiPredicate<ClientRequestContext, ResponseHeaders>) responseHeadersFilter;
-            this.responseHeadersFilter = cast;
-        }
+        this.responseHeadersFilter = combinePredicates(this.responseHeadersFilter, responseHeadersFilter,
+                                                       "responseHeadersFilter");
         return this;
     }
 
@@ -86,15 +80,18 @@ public abstract class AbstractRuleBuilder {
      */
     public AbstractRuleBuilder onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
-        requireNonNull(responseTrailersFilter, "responseTrailersFilter");
-        if (this.responseTrailersFilter != null) {
-            this.responseTrailersFilter = this.responseTrailersFilter.or(responseTrailersFilter);
-        } else {
-            @SuppressWarnings("unchecked")
-            final BiPredicate<ClientRequestContext, HttpHeaders> cast =
-                    (BiPredicate<ClientRequestContext, HttpHeaders>) responseTrailersFilter;
-            this.responseTrailersFilter = cast;
-        }
+        this.responseTrailersFilter = combinePredicates(this.responseTrailersFilter, responseTrailersFilter,
+                                                        "responseTrailersFilter");
+        return this;
+    }
+
+    /**
+     * Adds the specified {@code grpcTrailersFilter}.
+     */
+    public AbstractRuleBuilder onGrpcTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+        this.grpcTrailersFilter = combinePredicates(this.grpcTrailersFilter, grpcTrailersFilter,
+                                                    "grpcTrailersFilter");
         return this;
     }
 
@@ -166,15 +163,7 @@ public abstract class AbstractRuleBuilder {
      */
     public AbstractRuleBuilder onException(
             BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
-        requireNonNull(exceptionFilter, "exceptionFilter");
-        if (this.exceptionFilter != null) {
-            this.exceptionFilter = this.exceptionFilter.or(exceptionFilter);
-        } else {
-            @SuppressWarnings("unchecked")
-            final BiPredicate<ClientRequestContext, Throwable> cast =
-                    (BiPredicate<ClientRequestContext, Throwable>) exceptionFilter;
-            this.exceptionFilter = cast;
-        }
+        this.exceptionFilter = combinePredicates(this.exceptionFilter, exceptionFilter, "exceptionFilter");
         return this;
     }
 
@@ -185,6 +174,22 @@ public abstract class AbstractRuleBuilder {
         return onException((unused1, unused2) -> true);
     }
 
+    private static <T> BiPredicate<ClientRequestContext, T> combinePredicates(
+            @Nullable BiPredicate<ClientRequestContext, T> firstPredicate,
+            BiPredicate<? super ClientRequestContext, ? super T> secondPredicate,
+            String paramName) {
+
+        requireNonNull(secondPredicate, paramName);
+        if (firstPredicate != null) {
+            return firstPredicate.or(secondPredicate);
+        }
+
+        @SuppressWarnings("unchecked")
+        final BiPredicate<ClientRequestContext, T> cast =
+                (BiPredicate<ClientRequestContext, T>) secondPredicate;
+        return cast;
+    }
+
     /**
      * Adds an {@link UnprocessedRequestException}.
      */
@@ -193,14 +198,14 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Returns the {@link Predicate} of a {@link RequestHeaders}.
+     * Returns the {@link BiPredicate} of a {@link RequestHeaders}.
      */
     protected final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter() {
         return requestHeadersFilter;
     }
 
     /**
-     * Returns the {@link Predicate} of a {@link ResponseHeaders}.
+     * Returns the {@link BiPredicate} of a {@link ResponseHeaders}.
      */
     @Nullable
     protected final BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter() {
@@ -208,7 +213,7 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Returns the {@link Predicate} of a response trailers.
+     * Returns the {@link BiPredicate} of a response trailers.
      */
     @Nullable
     protected final BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter() {
@@ -216,10 +221,26 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Returns the {@link Predicate} of an {@link Exception}.
+     * Returns the {@link BiPredicate} of an {@link Exception}.
      */
     @Nullable
     protected final BiPredicate<ClientRequestContext, Throwable> exceptionFilter() {
         return exceptionFilter;
+    }
+
+    /**
+     * Returns the {@link BiPredicate} of gRPC trailers.
+     */
+    @Nullable
+    protected final BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter() {
+        return grpcTrailersFilter;
+    }
+
+    /**
+     * Returns whether this rule being built requires HTTP response trailers.
+     */
+    protected final boolean requiresResponseTrailers() {
+        return responseTrailersFilter != null ||
+               grpcTrailersFilter != null;
     }
 }

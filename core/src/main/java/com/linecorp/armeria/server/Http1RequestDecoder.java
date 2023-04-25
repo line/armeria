@@ -35,10 +35,10 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -65,6 +65,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.TooLongHttpHeaderException;
 import io.netty.handler.codec.http.TooLongHttpLineException;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Error;
@@ -120,12 +121,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.handlerRemoved(ctx);
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         maybeInitializeKeepAliveHandler(ctx);
         super.channelActive(ctx);
@@ -138,13 +133,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
             // Ignored if the stream has already been closed.
             req.close(ClosedSessionException.get());
         }
-        destroyKeepAliveHandler();
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.channelInactive(ctx);
     }
 
     @Override
@@ -180,16 +168,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                         final Throwable cause = nettyReq.decoderResult().cause();
                         if (cause instanceof TooLongHttpLineException) {
                             fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, "Too Long URI", cause);
+                        } else if (cause instanceof TooLongHttpHeaderException) {
+                            fail(id, null, HttpStatus.REQUEST_HEADER_FIELDS_TOO_LARGE,
+                                 "Request header fields too large", cause);
                         } else {
                             fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", cause);
                         }
-                        return;
-                    }
-
-                    // Do not accept unsupported methods.
-                    final io.netty.handler.codec.http.HttpMethod nettyMethod = nettyReq.method();
-                    if (!HttpMethod.isSupported(nettyMethod.name())) {
-                        fail(id, null, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
                         return;
                     }
 
@@ -199,13 +183,31 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                     // immutability.
                     final boolean hasInvalidExpectHeader = !handle100Continue(id, nettyReq);
 
+                    final String path = HttpHeaderUtil
+                            .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
+
+                    // Parse and normalize the request path.
+                    final RequestTarget reqTarget = RequestTarget.forServer(path);
+                    if (reqTarget == null) {
+                        failWithInvalidRequestPath(id, null);
+                        return;
+                    }
+
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), reqTarget);
+                    // Do not accept unsupported methods.
+                    final HttpMethod method = headers.method();
+                    switch (method) {
+                        case CONNECT:
+                        case UNKNOWN:
+                            fail(id, headers, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                            return;
+                    }
 
-                    // Do not accept a CONNECT request.
-                    if (headers.method() == HttpMethod.CONNECT) {
-                        fail(id, headers, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                    // Do not accept the request path '*' for a non-OPTIONS request.
+                    if (method != HttpMethod.OPTIONS && "*".equals(path)) {
+                        failWithInvalidRequestPath(id, headers);
                         return;
                     }
 
@@ -240,7 +242,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
 
                     // Close the request early when it is certain there will be neither content nor trailers.
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
+                                                                        headers, reqTarget);
                     if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.
@@ -301,8 +304,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    fail(id, decodedReq.headers(), HttpStatus.BAD_REQUEST,
-                         Http2Error.PROTOCOL_ERROR, "Decoder failure", null);
+                    fail(id, decodedReq.headers(), HttpStatus.BAD_REQUEST, "Decoder failure", null);
                     final ProtocolViolationException cause =
                             new ProtocolViolationException(decoderResult.cause());
                     decodedReq.close(HttpStatusException.of(HttpStatus.BAD_REQUEST, cause));
@@ -322,11 +324,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                                                         .contentLength(req.headers())
                                                         .transferred(transferredLength)
                                                         .build();
-                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
-                             Http2Error.CANCEL, null, cause);
+                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
-                        decodedReq.close(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));
+                        decodedReq.abortResponse(
+                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
+                                true);
                         return;
                     }
 
@@ -352,17 +355,17 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
             }
         } catch (URISyntaxException e) {
             if (req != null) {
-                fail(id, req.headers(), HttpStatus.BAD_REQUEST, Http2Error.CANCEL, "Invalid request path", e);
+                fail(id, req.headers(), HttpStatus.BAD_REQUEST, "Invalid request path", e);
                 req.close(HttpStatusException.of(HttpStatus.BAD_REQUEST, e));
             } else {
-                fail(id, null, HttpStatus.BAD_REQUEST, Http2Error.CANCEL, "Invalid request path", e);
+                fail(id, null, HttpStatus.BAD_REQUEST, "Invalid request path", e);
             }
         } catch (Throwable t) {
             if (req != null) {
-                fail(id, req.headers(), HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR, null, t);
+                fail(id, req.headers(), HttpStatus.INTERNAL_SERVER_ERROR, null, t);
                 req.close(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR, t));
             } else {
-                fail(id, null, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR, null, t);
+                fail(id, null, HttpStatus.INTERNAL_SERVER_ERROR, null, t);
                 logger.warn("Unexpected exception:", t);
             }
         } finally {
@@ -396,25 +399,23 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
         return true;
     }
 
-    private void fail(int id, @Nullable RequestHeaders headers, HttpStatus status, Http2Error error,
-                      @Nullable String message, @Nullable Throwable cause) {
-        if (encoder.isResponseHeadersSent(id, 1)) {
-            // The response is sent or being sent by HttpResponseSubscriber so we cannot send
-            // the error response.
-            encoder.writeReset(id, 1, error);
-        } else {
-            fail(id, headers, status, message, cause);
-        }
+    private void failWithInvalidRequestPath(int id, @Nullable RequestHeaders headers) {
+        fail(id, headers, HttpStatus.BAD_REQUEST, "Invalid request path", null);
     }
 
     private void fail(int id, @Nullable RequestHeaders headers, HttpStatus status,
                       @Nullable String message, @Nullable Throwable cause) {
-        discarding = true;
-        req = null;
-
-        // FIXME(trustin): Use a different verboseResponses for a different virtual host.
-        encoder.writeErrorResponse(id, 1, cfg.defaultVirtualHost().fallbackServiceConfig(),
-                                   headers, status, message, cause);
+        if (encoder.isResponseHeadersSent(id, 1)) {
+            // The response is sent or being sent by HttpResponseSubscriber, so we cannot send
+            // the error response.
+            encoder.writeReset(id, 1, Http2Error.PROTOCOL_ERROR);
+        } else {
+            discarding = true;
+            req = null;
+            // FIXME(trustin): Use a different verboseResponses for a different virtual host.
+            encoder.writeErrorResponse(id, 1, cfg.defaultVirtualHost().fallbackServiceConfig(),
+                                       headers, status, message, cause);
+        }
     }
 
     @Override
@@ -457,8 +458,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
             // HTTP/1 doesn't support draining that signals clients about connection shutdown but still
             // accepts in flight requests. Simply destroy KeepAliveHandler which causes next response
             // to have a "Connection: close" header and connection to be closed after the next response.
-            destroyKeepAliveHandler();
-            ((ServerHttp1ObjectEncoder) encoder).initiateConnectionShutdown();
+            encoder.keepAliveHandler().disconnectWhenFinished();
             return;
         }
 
@@ -467,16 +467,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         final KeepAliveHandler keepAliveHandler = encoder.keepAliveHandler();
-        if (keepAliveHandler != NoopKeepAliveHandler.INSTANCE &&
+        if (!(keepAliveHandler instanceof NoopKeepAliveHandler) &&
             ctx.channel().isActive() && ctx.channel().isRegistered()) {
             keepAliveHandler.initialize(ctx);
-        }
-    }
-
-    private void destroyKeepAliveHandler() {
-        if (encoder instanceof Http1ObjectEncoder) {
-            // Http2ObjectEncoder will be destroyed by Http2RequestDecoder.
-            encoder.keepAliveHandler().destroy();
         }
     }
 }

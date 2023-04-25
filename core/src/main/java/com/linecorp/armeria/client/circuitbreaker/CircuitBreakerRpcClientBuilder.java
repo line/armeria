@@ -55,7 +55,7 @@ public final class CircuitBreakerRpcClientBuilder
     }
 
     @Override
-    public CircuitBreakerRpcClientBuilder handler(CircuitBreakerClientHandler<RpcRequest> handler) {
+    public CircuitBreakerRpcClientBuilder handler(CircuitBreakerClientHandler handler) {
         return (CircuitBreakerRpcClientBuilder) super.handler(handler);
     }
 }
