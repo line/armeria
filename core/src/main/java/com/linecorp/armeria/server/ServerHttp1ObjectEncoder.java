@@ -146,7 +146,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return res;
     }
 
-    private void convertHeaders(HttpHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
+    private void convertHeaders(ResponseHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
                                 boolean isTrailersEmpty) {
         if (keepAliveHandler.needsDisconnection()) {
             sentConnectionCloseHeader = true;
