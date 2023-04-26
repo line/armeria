@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExceptionHandlerTest.CompositeRequest.SimpleRequest;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -201,8 +202,8 @@ class AnnotatedServiceExceptionHandlerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"/6/simple", "/6/composite", "/6/throwing-setter"})
-    void requestConverter(String path) {
-        final AggregatedHttpResponse res = server.blockingWebClient().post(path, "asdf");
+    void requestConverterExceptionIsRelayed(String path) {
+        final AggregatedHttpResponse res = server.blockingWebClient().post(path, "content");
         assertThat(res.status().code()).isEqualTo(200);
         assertThat(capturedException).hasValue(EXCEPTION);
     }
@@ -438,9 +439,9 @@ class AnnotatedServiceExceptionHandlerTest {
     static class CompositeRequest {
         @RequestConverter(ThrowingRequestConverterFunction.class)
         SimpleRequest simpleRequest;
-    }
 
-    static class SimpleRequest {
-        String hello;
+        public static class SimpleRequest {
+            String hello;
+        }
     }
 }
