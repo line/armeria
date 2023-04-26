@@ -1,0 +1,5 @@
+{
+    "componentChunkName": "component---src-pages-tutorials-grpc-blog-define-service-mdx",
+    "path": "/tutorials/grpc/blog/define-service/",
+    "result": {"pageContext":{"frontmatter":{"menuTitle":"Define service","order":1,"type":"step","targetLang":"java"}}},
+    "staticQueryHashes": ["1552981879","3172452987","512065377","636866790"]}

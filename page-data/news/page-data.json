@@ -1,0 +1,5 @@
+{
+    "componentChunkName": "component---src-pages-news-index-tsx",
+    "path": "/news/",
+    "result": {"pageContext":{"hrefs":{"next":{"label":"Older: 20220714-newsletter-4","href":"/news/20220714-newsletter-4"}}}},
+    "staticQueryHashes": []}

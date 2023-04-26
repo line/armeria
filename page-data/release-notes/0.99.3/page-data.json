@@ -1,0 +1,5 @@
+{
+    "componentChunkName": "component---src-pages-release-notes-0-99-3-mdx",
+    "path": "/release-notes/0.99.3/",
+    "result": {"pageContext":{"frontmatter":{"date":"2020-04-14T00:00:00.000Z"},"hrefs":{"prev":{"label":"Newer: 0.99.4","href":"/release-notes/0.99.4"},"next":{"label":"Older: 0.99.2","href":"/release-notes/0.99.2"}}}},
+    "staticQueryHashes": ["1552981879","512065377","636866790"]}
