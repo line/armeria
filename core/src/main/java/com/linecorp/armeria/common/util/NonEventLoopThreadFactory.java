@@ -21,6 +21,8 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.netty.util.concurrent.FastThreadLocalThread;
+
 /**
  * {@link ThreadFactory} that creates non event loop threads.
  */
@@ -33,6 +35,11 @@ final class NonEventLoopThreadFactory extends AbstractThreadFactory {
 
     @Override
     Thread newThread(@Nullable ThreadGroup threadGroup, Runnable r, String name) {
-        return new BlockingFastThreadLocalThread(threadGroup, r, name);
+        return new FastThreadLocalThread(threadGroup, r, name) {
+            @Override
+            public boolean permitBlockingCalls() {
+                return true;
+            }
+        };
     }
 }

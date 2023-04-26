@@ -42,6 +42,8 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "join");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
                                          "acquireUninterruptibly");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
+                                         "await");
 
         // sometimes we make assertions in tests which should never reach production code and is thus safe.
         builder.allowBlockingCallsInside("org.assertj.core.api.Assertions", "assertThat");

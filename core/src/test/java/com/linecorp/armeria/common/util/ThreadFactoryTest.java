@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.internal.common.util.EventLoopThread;
 
+import io.netty.util.concurrent.FastThreadLocalThread;
+
 public class ThreadFactoryTest {
 
     @Test
@@ -66,7 +68,7 @@ public class ThreadFactoryTest {
                                                          .build()
                                                          .newThread(() -> {});
 
-        assertThat(nonEventLoopThread.getClass()).isSameAs(BlockingFastThreadLocalThread.class);
+        assertThat(nonEventLoopThread.getClass()).isSameAs(FastThreadLocalThread.class);
         assertThat(nonEventLoopThread.getName()).startsWith("normal-thread");
         assertThat(nonEventLoopThread.getPriority()).isEqualTo(Thread.NORM_PRIORITY);
         assertThat(nonEventLoopThread.isDaemon()).isFalse();
@@ -80,7 +82,7 @@ public class ThreadFactoryTest {
                                                                .build()
                                                                .newThread(() -> {});
 
-        assertThat(nonEventLoopCustomThread.getClass()).isSameAs(BlockingFastThreadLocalThread.class);
+        assertThat(nonEventLoopCustomThread.getClass()).isSameAs(FastThreadLocalThread.class);
         assertThat(nonEventLoopCustomThread.getName()).startsWith("custom-thread");
         assertThat(nonEventLoopCustomThread.getPriority()).isEqualTo(Thread.MAX_PRIORITY);
         assertThat(nonEventLoopCustomThread.isDaemon()).isTrue();

@@ -24,13 +24,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 
 class EventLoopMetricsTest {
+
+    @RegisterExtension
+    static EventLoopGroupExtension eventLoopGroup =
+            new EventLoopGroupExtension(2, ThreadFactories.builder("block-me")
+                                                          .eventLoop(false)
+                                                          .build());
 
     private class BlockMe extends CountDownLatch implements Runnable {
 
@@ -61,7 +70,7 @@ class EventLoopMetricsTest {
 
         final BlockMe task = new BlockMe();
 
-        final EventLoopGroup workers = new DefaultEventLoopGroup(2);
+        final EventLoopGroup workers = eventLoopGroup.get();
         // Block both executors
         workers.submit(task);
         workers.submit(task);
@@ -89,7 +98,5 @@ class EventLoopMetricsTest {
                     MoreMeters.measureAll(registry))
                     .containsEntry("foo.event.loop.workers#value", 2.0)
                     .containsEntry("foo.event.loop.pending.tasks#value", 0.0));
-
-        workers.shutdownGracefully();
     }
 }

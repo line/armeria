@@ -44,6 +44,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -96,7 +97,7 @@ class FixedStreamMessageTest {
             public void onSubscribe(Subscription s) {
                 try {
                     // Wait for `abort()` to be called.
-                    latch.await();
+                    BlockingUtils.await(latch);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }

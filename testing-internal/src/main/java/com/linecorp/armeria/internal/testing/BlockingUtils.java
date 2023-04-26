@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.testing;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 public final class BlockingUtils {
@@ -31,6 +32,10 @@ public final class BlockingUtils {
 
     public static void acquireUninterruptibly(Semaphore semaphore) {
         semaphore.acquireUninterruptibly();
+    }
+
+    public static void await(CountDownLatch countDownLatch) throws InterruptedException {
+        countDownLatch.await();
     }
 
     private BlockingUtils() {}
