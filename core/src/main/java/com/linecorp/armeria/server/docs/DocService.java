@@ -22,13 +22,17 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
@@ -36,11 +40,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -51,11 +59,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
-import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -93,14 +102,14 @@ public final class DocService extends SimpleDecoratingHttpService {
     static final List<DocServicePlugin> plugins = ImmutableList.copyOf(ServiceLoader.load(
             DocServicePlugin.class, DocService.class.getClassLoader()));
 
-    static final List<NamedTypeInfoProvider> spiNamedTypeInfoProviders =
+    static final List<DescriptiveTypeInfoProvider> SPI_DESCRIPTIVE_TYPE_INFO_PROVIDERS =
             ImmutableList.copyOf(ServiceLoader.load(
-                    NamedTypeInfoProvider.class, DocService.class.getClassLoader()));
+                    DescriptiveTypeInfoProvider.class, DocService.class.getClassLoader()));
 
     static {
         logger.debug("Available {}s: {}", DocServicePlugin.class.getSimpleName(), plugins);
-        logger.debug("Available {}s: {}", NamedTypeInfoProvider.class.getSimpleName(),
-                     spiNamedTypeInfoProviders);
+        logger.debug("Available {}s: {}", DescriptiveTypeInfoProvider.class.getSimpleName(),
+                     SPI_DESCRIPTIVE_TYPE_INFO_PROVIDERS);
     }
 
     /**
@@ -110,11 +119,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         return new DocServiceBuilder();
     }
 
-    private final ExampleSupport exampleSupport;
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers;
-    private final DocServiceFilter filter;
-    private final NamedTypeInfoProvider namedTypeInfoProvider;
-
     @Nullable
     private Server server;
 
@@ -136,19 +141,29 @@ public final class DocService extends SimpleDecoratingHttpService {
                Map<String, ListMultimap<String, String>> examplePaths,
                Map<String, ListMultimap<String, String>> exampleQueries,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-               DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
+               DocServiceFilter filter, @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+        this(new ExampleSupport(immutableCopyOf(exampleHeaders, "exampleHeaders"),
+                                immutableCopyOf(exampleRequests, "exampleRequests"),
+                                immutableCopyOf(examplePaths, "examplePaths"),
+                                immutableCopyOf(exampleQueries, "exampleQueries")),
+             injectedScriptSuppliers, filter, descriptiveTypeInfoProvider);
+    }
 
-        super(FileService.builder(new DocServiceVfs())
+    private DocService(ExampleSupport exampleSupport,
+                       List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
+                       DocServiceFilter filter,
+                       @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+        this(new SpecificationLoader(exampleSupport, filter, descriptiveTypeInfoProvider),
+             injectedScriptSuppliers);
+    }
+
+    private DocService(SpecificationLoader specificationLoader,
+                       List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers) {
+        super(FileService.builder(new DocServiceVfs(specificationLoader))
                          .serveCompressedFiles(true)
                          .autoDecompress(true)
                          .build());
-        exampleSupport = new ExampleSupport(immutableCopyOf(exampleHeaders, "exampleHeaders"),
-                                            immutableCopyOf(exampleRequests, "exampleRequests"),
-                                            immutableCopyOf(examplePaths, "examplePaths"),
-                                            immutableCopyOf(exampleQueries, "exampleQueries"));
         this.injectedScriptSuppliers = requireNonNull(injectedScriptSuppliers, "injectedScriptSuppliers");
-        this.filter = requireNonNull(filter, "filter");
-        this.namedTypeInfoProvider = composeNamedTypeInfoProvider(namedTypeInfoProvider);
     }
 
     private static <T> Map<String, ListMultimap<String, T>> immutableCopyOf(
@@ -157,27 +172,6 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         return map.entrySet().stream().collect(toImmutableMap(
                 Entry::getKey, e -> ImmutableListMultimap.copyOf(e.getValue())));
-    }
-
-    private static NamedTypeInfoProvider composeNamedTypeInfoProvider(
-            @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
-        return typeDescriptor -> {
-            if (namedTypeInfoProvider != null) {
-                // Respect user-defined provider first.
-                final NamedTypeInfo namedTypeInfo = namedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
-                if (namedTypeInfo != null) {
-                    return namedTypeInfo;
-                }
-            }
-
-            for (NamedTypeInfoProvider provider : spiNamedTypeInfoProviders) {
-                final NamedTypeInfo namedTypeInfo = provider.newNamedTypeInfo(typeDescriptor);
-                if (namedTypeInfo != null) {
-                    return namedTypeInfo;
-                }
-            }
-            return null;
-        };
     }
 
     @Override
@@ -195,39 +189,22 @@ public final class DocService extends SimpleDecoratingHttpService {
         server = cfg.server();
 
         // Build the Specification after all the services are added to the server.
-        server.addListener(new ServerListenerAdapter() {
-            @Override
-            public void serverStarting(Server server) throws Exception {
-                final ServerConfig config = server.config();
-                final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
+        final ServerConfig config = server.config();
+        final List<VirtualHost> virtualHosts = config.findVirtualHosts(this);
 
-                final List<ServiceConfig> services =
-                        config.serviceConfigs().stream()
-                              .filter(se -> virtualHosts.contains(se.virtualHost()))
-                              .collect(toImmutableList());
-
-                final DocStringSupport docStringSupport = new DocStringSupport(services);
-                ServiceSpecification spec = generate(services);
-                spec = docStringSupport.addDocStrings(spec);
-                spec = exampleSupport.addExamples(spec);
-
-                final List<Version> versions = ImmutableList.copyOf(
-                        Version.getAll(DocService.class.getClassLoader()).values());
-
-                vfs().put("/specification.json",
-                          jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(spec));
-                vfs().put("/versions.json",
-                          jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(versions));
+        final List<ServiceConfig> services =
+                config.serviceConfigs().stream()
+                      .filter(se -> virtualHosts.contains(se.virtualHost()))
+                      .collect(toImmutableList());
+        final ExecutorService executorService = Executors.newSingleThreadExecutor(
+                ThreadFactories.newThreadFactory("docservice-loader", true));
+        vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
+            if (e != null) {
+                logger.warn("Failed to load specifications completely: ", e);
             }
+            executorService.shutdown();
+            return null;
         });
-    }
-
-    private ServiceSpecification generate(List<ServiceConfig> services) {
-        return ServiceSpecification.merge(
-                plugins.stream()
-                       .map(plugin -> plugin.generateSpecification(
-                               findSupportedServices(plugin, services), filter, namedTypeInfoProvider))
-                       .collect(toImmutableList()));
     }
 
     private DocServiceVfs vfs() {
@@ -259,12 +236,171 @@ public final class DocService extends SimpleDecoratingHttpService {
         return unwrap().serve(ctx, req);
     }
 
-    static final class DocServiceVfs extends AbstractHttpVfs {
+    static final class SpecificationLoader {
 
+        private static final String VERSIONS_PATH = "/versions.json";
+        private static final String SPECIFICATION_PATH = "/specification.json";
+        private static final String SCHEMAS_PATH = "/schemas.json";
+        private static final Set<String> TARGET_PATHS = ImmutableSet.of(VERSIONS_PATH, SPECIFICATION_PATH,
+                                                                        SCHEMAS_PATH);
+        private static final CompletableFuture<AggregatedHttpFile> loadFailedFuture =
+                UnmodifiableFuture.exceptionallyCompletedFuture(
+                        new IllegalStateException("File load not triggered"));
+
+        private final ExampleSupport exampleSupport;
+        private final DocServiceFilter filter;
+        private final DescriptiveTypeInfoProvider descriptiveTypeInfoProvider;
+        private final Map<String, CompletableFuture<AggregatedHttpFile>> files = new ConcurrentHashMap<>();
+        private List<ServiceConfig> services = Collections.emptyList();
+
+        SpecificationLoader(
+                ExampleSupport exampleSupport,
+                DocServiceFilter filter,
+                @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+            this.exampleSupport = exampleSupport;
+            this.filter = filter;
+            this.descriptiveTypeInfoProvider = composeDescriptiveTypeInfoProvider(descriptiveTypeInfoProvider);
+        }
+
+        boolean contains(String path) {
+            return TARGET_PATHS.contains(path);
+        }
+
+        CompletableFuture<List<AggregatedHttpFile>> updateServices(List<ServiceConfig> services,
+                                                                   Executor executor) {
+            this.services = services;
+
+            final CompletableFuture<ServiceSpecification> serviceSpecificationFuture =
+                    generateServiceSpecification(executor);
+
+            final List<CompletableFuture<AggregatedHttpFile>> files =
+                    TARGET_PATHS.stream()
+                                .map(path -> load(path, executor, serviceSpecificationFuture))
+                                .collect(toImmutableList());
+            return CompletableFutures.allAsList(files);
+        }
+
+        CompletableFuture<AggregatedHttpFile> get(String path) {
+            assert TARGET_PATHS.contains(path);
+            return files.getOrDefault(path, loadFailedFuture);
+        }
+
+        private CompletableFuture<AggregatedHttpFile> load(
+                String path, Executor executor,
+                CompletableFuture<ServiceSpecification> serviceSpecificationFuture) {
+            if (VERSIONS_PATH.equals(path)) {
+                return loadVersions(executor);
+            } else if (SPECIFICATION_PATH.equals(path)) {
+                return loadSpecifications(serviceSpecificationFuture);
+            } else if (SCHEMAS_PATH.equals(path)) {
+                return loadSchemas(serviceSpecificationFuture);
+            } else {
+                throw new Error(); // Should never reach here.
+            }
+        }
+
+        private CompletableFuture<AggregatedHttpFile> loadVersions(Executor executor) {
+            return files.computeIfAbsent(VERSIONS_PATH, key -> CompletableFuture.supplyAsync(() -> {
+                final List<Version> versions = ImmutableList.copyOf(
+                        Version.getAll(DocService.class.getClassLoader()).values());
+                try {
+                    final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
+                                                     .writeValueAsBytes(versions);
+                    return toFile(content, MediaType.JSON_UTF_8);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            }, executor));
+        }
+
+        private CompletableFuture<ServiceSpecification> generateServiceSpecification(Executor executor) {
+            return CompletableFuture.supplyAsync(() -> {
+                final DocStringSupport docStringSupport = new DocStringSupport(services);
+                ServiceSpecification spec = generate(services);
+                spec = docStringSupport.addDocStrings(spec);
+                spec = exampleSupport.addExamples(spec);
+                return spec;
+            }, executor);
+        }
+
+        private CompletableFuture<AggregatedHttpFile> loadSpecifications(
+                CompletableFuture<ServiceSpecification> specificationFuture) {
+            return files.computeIfAbsent(SPECIFICATION_PATH, key -> specificationFuture.thenApply(spec -> {
+                try {
+                    final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
+                                                     .writeValueAsBytes(spec);
+                    return toFile(content, MediaType.JSON_UTF_8);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        }
+
+        private CompletableFuture<AggregatedHttpFile> loadSchemas(
+                CompletableFuture<ServiceSpecification> specificationFuture) {
+            return files.computeIfAbsent(SCHEMAS_PATH, key -> specificationFuture.thenApply(spec -> {
+                try {
+                    final ArrayNode jsonSpec = JsonSchemaGenerator.generate(spec);
+
+                    final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
+                                                     .writeValueAsBytes(jsonSpec);
+                    return toFile(content, MediaType.JSON_UTF_8);
+                } catch (JsonProcessingException e) {
+                    logger.warn("Failed to generate JSON schemas:", e);
+                    return toFile("[]".getBytes(), MediaType.JSON_UTF_8);
+                }
+            }));
+        }
+
+        private static AggregatedHttpFile toFile(byte[] content, MediaType mediaType) {
+            return AggregatedHttpFile
+                    .builder(HttpData.wrap(content))
+                    .contentType(mediaType)
+                    .cacheControl(ServerCacheControl.REVALIDATED)
+                    .build();
+        }
+
+        private ServiceSpecification generate(List<ServiceConfig> services) {
+            return ServiceSpecification.merge(
+                    plugins.stream()
+                           .map(plugin -> plugin.generateSpecification(
+                                   findSupportedServices(plugin, services),
+                                   filter, descriptiveTypeInfoProvider))
+                           .collect(toImmutableList()));
+        }
+
+        private static DescriptiveTypeInfoProvider composeDescriptiveTypeInfoProvider(
+                @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+            return typeDescriptor -> {
+                if (descriptiveTypeInfoProvider != null) {
+                    // Respect user-defined provider first.
+                    final DescriptiveTypeInfo descriptiveTypeInfo =
+                            descriptiveTypeInfoProvider.newDescriptiveTypeInfo(typeDescriptor);
+                    if (descriptiveTypeInfo != null) {
+                        return descriptiveTypeInfo;
+                    }
+                }
+
+                for (DescriptiveTypeInfoProvider provider : SPI_DESCRIPTIVE_TYPE_INFO_PROVIDERS) {
+                    final DescriptiveTypeInfo descriptiveTypeInfo =
+                            provider.newDescriptiveTypeInfo(typeDescriptor);
+                    if (descriptiveTypeInfo != null) {
+                        return descriptiveTypeInfo;
+                    }
+                }
+                return null;
+            };
+        }
+    }
+
+    static final class DocServiceVfs extends AbstractHttpVfs {
+        private final SpecificationLoader specificationLoader;
         private final HttpVfs staticFiles = HttpVfs.of(DocService.class.getClassLoader(),
                                                        "com/linecorp/armeria/server/docs");
 
-        private final Map<String, AggregatedHttpFile> files = new ConcurrentHashMap<>();
+        DocServiceVfs(SpecificationLoader specificationLoader) {
+            this.specificationLoader = specificationLoader;
+        }
 
         @Deprecated
         @Override
@@ -280,20 +416,20 @@ public final class DocService extends SimpleDecoratingHttpService {
                 Executor fileReadExecutor, String path, Clock clock,
                 @Nullable String contentEncoding, HttpHeaders additionalHeaders,
                 MediaTypeResolver mediaTypeResolver) {
-            final AggregatedHttpFile file = files.get(path);
-            if (file != null) {
-                assert file != AggregatedHttpFile.nonExistent();
-
-                final HttpFileBuilder builder = HttpFile.builder(file.content(),
-                                                                 file.attributes().lastModifiedMillis());
-                builder.autoDetectedContentType(false);
-                builder.clock(clock);
-                builder.setHeaders(file.headers());
-                builder.setHeaders(additionalHeaders);
-                if (contentEncoding != null) {
-                    builder.setHeader(HttpHeaderNames.CONTENT_ENCODING, contentEncoding);
-                }
-                return builder.build();
+            if (specificationLoader.contains(path)) {
+                return HttpFile.from(specificationLoader.get(path).thenApply(file -> {
+                    assert file != AggregatedHttpFile.nonExistent();
+                    final HttpFileBuilder builder = HttpFile.builder(file.content(),
+                                                                     file.attributes().lastModifiedMillis());
+                    builder.autoDetectedContentType(false);
+                    builder.clock(clock);
+                    builder.setHeaders(file.headers());
+                    builder.setHeaders(additionalHeaders);
+                    if (contentEncoding != null) {
+                        builder.setHeader(HttpHeaderNames.CONTENT_ENCODING, contentEncoding);
+                    }
+                    return builder.build();
+                }));
             }
 
             final HttpHeadersBuilder headers = additionalHeaders.toBuilder();
@@ -306,17 +442,6 @@ public final class DocService extends SimpleDecoratingHttpService {
         @Override
         public String meterTag() {
             return DocService.class.getSimpleName();
-        }
-
-        void put(String path, byte[] content) {
-            put(path, content, MediaType.JSON_UTF_8);
-        }
-
-        private void put(String path, byte[] content, MediaType mediaType) {
-            files.put(path, AggregatedHttpFile.builder(HttpData.wrap(content))
-                                              .contentType(mediaType)
-                                              .cacheControl(ServerCacheControl.REVALIDATED)
-                                              .build());
         }
     }
 }

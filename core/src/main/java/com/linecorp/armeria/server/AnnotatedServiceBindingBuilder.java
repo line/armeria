@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -30,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -156,8 +158,15 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
      */
     @UnstableApi
     public AnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
-        this.queryDelimiter = requireNonNull(delimiter, "delimiter");
+        queryDelimiter = requireNonNull(delimiter, "delimiter");
         return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (AnnotatedServiceBindingBuilder) AnnotatedServiceConfigSetters.super.decorator(
+                decoratingHttpServiceFunction);
     }
 
     @Override
@@ -245,6 +254,13 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     }
 
     @Override
+    public AnnotatedServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                               boolean shutdownOnStop) {
+        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    @Override
     public AnnotatedServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
@@ -262,6 +278,45 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     @Override
     public AnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        defaultServiceConfigSetters.requestIdGenerator(requestIdGenerator);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.addHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.setHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.setHeaders(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
         return this;
     }
 

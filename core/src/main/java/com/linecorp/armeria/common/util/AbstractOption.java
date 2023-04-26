@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -235,40 +236,64 @@ public abstract class AbstractOption<
 
         private final Class<?> type;
         private final BiMap<String, AbstractOption<?, ?, ?>> options;
+        private final ReentrantLock reentrantLock = new ReentrantLock();
 
         Pool(Class<?> type) {
             this.type = type;
             options = HashBiMap.create();
         }
 
-        synchronized <T extends AbstractOption<T, U, V>, U extends AbstractOptionValue<U, T, V>, V>
+        <T extends AbstractOption<T, U, V>, U extends AbstractOptionValue<U, T, V>, V>
         T define(Factory<T, U, V> optionFactory, String name, V defaultValue,
                  Function<V, V> validator, BiFunction<U, U, U> mergeFunction) {
-            final AbstractOption<?, ?, ?> oldOption = options.get(name);
-            if (oldOption != null) {
-                throw new IllegalStateException(
-                        '\'' + type.getName() + '#' + name + "' exists already.");
-            }
+            lock();
+            try {
+                final AbstractOption<?, ?, ?> oldOption = options.get(name);
+                if (oldOption != null) {
+                    throw new IllegalStateException(
+                            '\'' + type.getName() + '#' + name + "' exists already.");
+                }
 
-            final T newOption = optionFactory.get(name, defaultValue, validator, mergeFunction);
-            checkArgument(type.isInstance(newOption),
-                          "OptionFactory.newOption() must return an instance of %s.", type);
-            options.put(name, newOption);
-            return newOption;
+                final T newOption = optionFactory.get(name, defaultValue, validator, mergeFunction);
+                checkArgument(type.isInstance(newOption),
+                              "OptionFactory.newOption() must return an instance of %s.", type);
+                options.put(name, newOption);
+                return newOption;
+            } finally {
+                unlock();
+            }
         }
 
-        synchronized AbstractOption<?, ?, ?> get(String name) {
-            final AbstractOption<?, ?, ?> option = options.get(name);
-            if (option == null) {
-                throw new NoSuchElementException(
-                        '\'' + type.getName() + '#' + name + "' does not exist.");
-            }
+        AbstractOption<?, ?, ?> get(String name) {
+            lock();
+            try {
+                final AbstractOption<?, ?, ?> option = options.get(name);
+                if (option == null) {
+                    throw new NoSuchElementException(
+                            '\'' + type.getName() + '#' + name + "' does not exist.");
+                }
 
-            return option;
+                return option;
+            } finally {
+                unlock();
+            }
         }
 
-        synchronized Set<AbstractOption<?, ?, ?>> getAll() {
-            return ImmutableSet.copyOf(options.values());
+        Set<AbstractOption<?, ?, ?>> getAll() {
+            lock();
+            try {
+                return ImmutableSet.copyOf(options.values());
+            } finally {
+                unlock();
+            }
+        }
+
+        void lock() {
+            reentrantLock.lock();
+        }
+
+        void unlock() {
+            reentrantLock.unlock();
         }
     }
 }

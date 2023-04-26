@@ -194,8 +194,8 @@ class AccessLogFormatsTest {
                                      .id(id)
                                      .build();
         ctx.setAttr(Attr.ATTR_KEY, new Attr("line"));
-
         final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.authenticatedUser("foo");
         logBuilder.endRequest();
         ctx.log().ensureRequestComplete();
 
@@ -218,12 +218,13 @@ class AccessLogFormatsTest {
 
         message = AccessLogger.format(AccessLogFormats.COMMON, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024");
+                localhostAddress + " - foo " + timestamp + " \"GET /armeria/log#" + logName +
+                " h2c\" 200 1024");
 
         message = AccessLogger.format(AccessLogFormats.COMBINED, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
-                " \"http://log.example.com\" \"armeria/x.y.z\" \"a=1;b=2\"");
+                localhostAddress + " - foo " + timestamp + " \"GET /armeria/log#" + logName +
+                " h2c\" 200 1024 \"http://log.example.com\" \"armeria/x.y.z\" \"a=1;b=2\"");
 
         // Check conditions with custom formats.
         format = AccessLogFormats.parseCustom(
@@ -232,16 +233,16 @@ class AccessLogFormatsTest {
 
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
-                " \"http://log.example.com\" \"-\" some-text -");
+                localhostAddress + " - foo " + timestamp + " \"GET /armeria/log#" + logName +
+                " h2c\" 200 1024 \"http://log.example.com\" \"-\" some-text -");
 
         format = AccessLogFormats.parseCustom(
                 "%h %l %u %t \"%r\" %s %b \"%!200,302{Referer}i\" \"%200,304{User-Agent}i\"" +
                 " some-text %{Non-Existing-Header}i");
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
-                " \"-\" \"armeria/x.y.z\" some-text -");
+                localhostAddress + " - foo " + timestamp + " \"GET /armeria/log#" + logName +
+                " h2c\" 200 1024 \"-\" \"armeria/x.y.z\" some-text -");
 
         format = AccessLogFormats.parseCustom(
                 "%{com.linecorp.armeria.server.logging.AccessLogFormatsTest$Attr#KEY" +

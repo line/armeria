@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
@@ -25,9 +26,12 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
@@ -47,19 +51,50 @@ abstract class AbstractHttpResponseHandler {
     final DefaultServiceRequestContext reqCtx;
     final DecodedHttpRequest req;
 
+    private final CompletableFuture<Void> completionFuture;
+    private boolean isComplete;
+    private boolean needsDisconnection;
+
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
-                                DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                                DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                                CompletableFuture<Void> completionFuture) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.reqCtx = reqCtx;
         this.req = req;
+        this.completionFuture = completionFuture;
     }
 
     /**
      * Returns whether a response has been finished.
      */
-    abstract boolean isDone();
+    boolean isDone() {
+        return isComplete;
+    }
+
+    void disconnectWhenFinished() {
+        needsDisconnection = true;
+    }
+
+    final boolean tryComplete(@Nullable Throwable cause) {
+        if (isComplete) {
+            return false;
+        }
+        isComplete = true;
+        if (cause == null) {
+            completionFuture.complete(null);
+        } else {
+            completionFuture.completeExceptionally(cause);
+        }
+
+        // Force shutdown mode: If a user explicitly sets `Connection: close` in the response headers, it is
+        // assumed that the connection should be closed after sending the response.
+        if (needsDisconnection) {
+            ctx.channel().close();
+        }
+        return true;
+    }
 
     /**
      * Fails a request and a response with the specified {@link Throwable}.
@@ -101,9 +136,31 @@ abstract class AbstractHttpResponseHandler {
         final int id = req.id();
         final int streamId = req.streamId();
 
-        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
+        final ServerConfig config = reqCtx.config().server().config();
+        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders(),
+                                                       reqCtx.config().defaultHeaders(),
+                                                       config.isServerHeaderEnabled(),
+                                                       config.isDateHeaderEnabled());
+        final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
+        if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
+            disconnectWhenFinished();
+        }
+
         final HttpData content = res.content();
-        final boolean contentEmpty = content.isEmpty();
+        content.touch(reqCtx);
+        // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
+        assert !res.status().isContentAlwaysEmpty() || content.isEmpty();
+        final boolean contentEmpty;
+        if (content.isEmpty()) {
+            contentEmpty = true;
+        } else if (req.method() == HttpMethod.HEAD) {
+            contentEmpty = true;
+            // Need to release the body because we're not passing it over to the encoder.
+            content.close();
+        } else {
+            contentEmpty = false;
+        }
+
         final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
         final boolean trailersEmpty = trailers.isEmpty();
 
@@ -144,9 +201,9 @@ abstract class AbstractHttpResponseHandler {
         final HttpStatus status = cause.httpStatus();
         final Throwable cause0 = firstNonNull(cause.getCause(), cause);
         final ServiceConfig serviceConfig = reqCtx.config();
-        final AggregatedHttpResponse response =
-                serviceConfig.server().config().errorHandler()
-                             .renderStatus(serviceConfig, req.headers(), status, null, cause0);
+        final AggregatedHttpResponse response = serviceConfig.errorHandler()
+                                                             .renderStatus(serviceConfig, req.headers(), status,
+                                                                           null, cause0);
         assert response != null;
         return response;
     }

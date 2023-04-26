@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.server.annotation
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING
 import com.linecorp.armeria.server.annotation.Description
 import com.linecorp.armeria.server.docs.DescriptionInfo
@@ -33,8 +34,8 @@ class DataClassDefaultNameTypeInfoProviderTest {
     @CsvSource(value = ["true", "false"])
     @ParameterizedTest
     fun dataClass(request: Boolean) {
-        val provider = DefaultNamedTypeInfoProvider(request)
-        val struct: StructInfo = (provider.newNamedTypeInfo(DescriptionResult::class.java) as StructInfo)
+        val provider = DefaultDescriptiveTypeInfoProvider(request)
+        val struct: StructInfo = (provider.newDescriptiveTypeInfo(DescriptionResult::class.java) as StructInfo)
 
         assertThat(struct.name()).isEqualTo(DescriptionResult::class.java.name)
         assertThat(struct.descriptionInfo()).isEqualTo(DescriptionInfo.of("Class description"))
@@ -55,6 +56,14 @@ class DataClassDefaultNameTypeInfoProviderTest {
             FieldInfo.builder("defaultValue2", STRING)
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("default value 2 description"))
+                .build(),
+            FieldInfo.builder("renamedNonnull", STRING)
+                .requirement(FieldRequirement.REQUIRED)
+                .descriptionInfo(DescriptionInfo.of("renamed nonnull description"))
+                .build(),
+            FieldInfo.builder("renamedNullable", STRING)
+                .requirement(FieldRequirement.OPTIONAL)
+                .descriptionInfo(DescriptionInfo.of("renamed nullable description"))
                 .build()
         )
     }
@@ -62,9 +71,9 @@ class DataClassDefaultNameTypeInfoProviderTest {
     @CsvSource(value = ["true", "false"])
     @ParameterizedTest
     fun enumClass(request: Boolean) {
-        val requestProvider = DefaultNamedTypeInfoProvider(request)
+        val requestProvider = DefaultDescriptiveTypeInfoProvider(request)
         val enumInfo: EnumInfo =
-            (requestProvider.newNamedTypeInfo(EnumParam::class.java) as EnumInfo)
+            (requestProvider.newDescriptiveTypeInfo(EnumParam::class.java) as EnumInfo)
         assertThat(enumInfo.name()).isEqualTo(EnumParam::class.java.name)
         assertThat(enumInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("Enum description"))
         assertThat(enumInfo.values()).containsExactlyInAnyOrder(
@@ -82,7 +91,13 @@ class DataClassDefaultNameTypeInfoProviderTest {
         @Description(value = "default value description")
         val defaultValue: String = "Hello",
         @Description(value = "default value 2 description")
-        val defaultValue2: String = "Hello2"
+        val defaultValue2: String = "Hello2",
+        @JsonProperty("renamedNonnull")
+        @Description("renamed nonnull description")
+        val nonnullName: String,
+        @JsonProperty("renamedNullable")
+        @Description("renamed nullable description")
+        val nullableName: String?
     )
 
     @Description("Enum description")

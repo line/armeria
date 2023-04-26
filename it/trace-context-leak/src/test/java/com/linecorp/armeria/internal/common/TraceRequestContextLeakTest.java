@@ -78,7 +78,7 @@ class TraceRequestContextLeakTest {
             try (SafeCloseable ignore = anotherCtx.push()) {
                 final ClientRequestContext clientCtx = newClientCtx("/3");
                 try (SafeCloseable ignore2 = clientCtx.push()) {
-                    // Ignore
+                    assertThat(ClientRequestContext.current().unwrapAll()).isSameAs(clientCtx);
                 }
             } catch (Exception ex) {
                 isThrown.set(true);
@@ -220,7 +220,7 @@ class TraceRequestContextLeakTest {
         final ServiceRequestContext sctx2 = newCtx("/2");
         try (SafeCloseable ignored = sctx1.push()) {
             assertThatThrownBy(sctx2::push).isInstanceOf(IllegalStateException.class)
-                                           .hasMessageContaining("pushed at the following stacktrace");
+                                           .hasMessageContaining("but context is currently set to");
         }
     }
 
@@ -232,7 +232,7 @@ class TraceRequestContextLeakTest {
             final ClientRequestContext cctx1 = newClientCtx("/3");
             try (SafeCloseable ignore3 = cctx1.push()) {
                 assertThatThrownBy(sctx2::push).isInstanceOf(IllegalStateException.class)
-                                               .hasMessageContaining("pushed at the following stacktrace");
+                                               .hasMessageContaining("but context is currently set to");
             }
         }
     }

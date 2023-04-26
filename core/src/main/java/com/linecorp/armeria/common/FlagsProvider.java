@@ -54,6 +54,8 @@ import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -974,6 +976,31 @@ public interface FlagsProvider {
     @UnstableApi
     @Nullable
     default Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link MeterRegistry} where armeria records metrics to by default.
+     *
+     * <p>The default value of this flag is {@link Metrics#globalRegistry}.
+     */
+    @Nullable
+    @UnstableApi
+    default MeterRegistry meterRegistry() {
+        return null;
+    }
+
+    /**
+     * Returns the default interval in milliseconds between the reports on unhandled exceptions.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUnhandledExceptionsReportIntervalMillis=<long>} JVM option to
+     * override the default value.</p>
+     */
+    @Nullable
+    @UnstableApi
+    default Long defaultUnhandledExceptionsReportIntervalMillis() {
         return null;
     }
 }

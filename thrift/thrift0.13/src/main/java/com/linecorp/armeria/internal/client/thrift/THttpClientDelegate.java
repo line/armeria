@@ -42,7 +42,6 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
@@ -149,11 +148,9 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                 Exceptions.throwUnsafely(t);
             }
 
-            final Endpoint endpoint = ctx.endpoint();
             final HttpRequest httpReq = HttpRequest.of(
                     RequestHeaders.builder(HttpMethod.POST, ctx.path())
                                   .scheme(ctx.sessionProtocol())
-                                  .authority(endpoint != null ? endpoint.authority() : "UNKNOWN")
                                   .contentType(mediaType)
                                   .build(),
                     HttpData.wrap(buf).withEndOfStream());

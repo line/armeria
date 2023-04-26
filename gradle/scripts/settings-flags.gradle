@@ -1,6 +1,7 @@
-import org.gradle.util.GradleVersion;
+import org.gradle.util.GradleVersion
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.regex.Pattern
 
 import static java.util.Objects.requireNonNull
 
@@ -104,6 +105,22 @@ static def addFlags(Set<String> actualFlags, ...flags) {
     // 'version-catalog' implies 'publish'.
     if (actualFlags.contains('version-catalog')) {
         actualFlags.add('publish')
+    }
+
+    // 'java(\\d+)' implies 'java'
+    if (!actualFlags.contains('java')) {
+        def pattern = Pattern.compile('^java(\\d+)$')
+        for (String flag: actualFlags) {
+            if (pattern.matcher(flag).matches()) {
+                actualFlags.add('java')
+                break
+            }
+        }
+    }
+
+    // 'kotlin' implies 'java'
+    if (actualFlags.contains('kotlin')) {
+        actualFlags.add('java')
     }
 
     return Collections.unmodifiableSet(actualFlags)

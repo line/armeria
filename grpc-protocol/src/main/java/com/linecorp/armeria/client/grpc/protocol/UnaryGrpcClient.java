@@ -193,7 +193,9 @@ public final class UnaryGrpcClient {
                                        }
 
                                        try {
-                                           return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
+                                           final HttpRequest framedReq = HttpRequest.of(req.headers(), framed);
+                                           ctx.updateRequest(framedReq);
+                                           return unwrap().execute(ctx, framedReq)
                                                           .aggregate(aggregationOptions);
                                        } catch (Exception e) {
                                            throw new ArmeriaStatusException(StatusCodes.INTERNAL,

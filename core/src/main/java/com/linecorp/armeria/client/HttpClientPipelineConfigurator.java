@@ -44,7 +44,9 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.HttpSession;
+import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
@@ -428,7 +430,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     remoteAddress.getHostString(), remoteAddress.getPort(), H1C.defaultPort());
 
             upgradeReq.headers().set(HttpHeaderNames.HOST, host);
-            upgradeReq.headers().set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT);
+            upgradeReq.headers().set(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT);
 
             ctx.writeAndFlush(upgradeReq);
 

@@ -16,11 +16,18 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -80,6 +87,18 @@ interface ServiceConfigSetters {
     /**
      * Decorates an {@link HttpService} with the specified {@code decorator}.
      *
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}s
+     */
+    default ServiceConfigSetters decorator(DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
+        return decorator(
+                delegate -> new FunctionalDecoratingHttpService(delegate, decoratingHttpServiceFunction));
+    }
+
+    /**
+     * Decorates an {@link HttpService} with the specified {@code decorator}.
+     *
      * @param decorator the {@link Function} that decorates the {@link HttpService}
      */
     ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator);
@@ -134,6 +153,16 @@ interface ServiceConfigSetters {
                                               boolean shutdownOnStop);
 
     /**
+     * Sets an {@link BlockingTaskExecutor executor} to be used when executing blocking tasks.
+     *
+     * @param blockingTaskExecutor the {@link BlockingTaskExecutor executor} to be used.
+     * @param shutdownOnStop whether to shut down the {@link BlockingTaskExecutor} when the {@link Server}
+     *                       stops.
+     */
+    ServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                              boolean shutdownOnStop);
+
+    /**
      * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
      * the execution of blocking tasks or invocations.
      * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
@@ -157,4 +186,60 @@ interface ServiceConfigSetters {
      */
     @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
+
+    /**
+     * Sets the {@link Function} which generates a {@link RequestId}.
+     *
+     * @param requestIdGenerator the {@link Function} that generates a request ID.
+     */
+    ServiceConfigSetters requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator);
+
+    /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by this {@link Service}.
+     *
+     * <p>Note that the value could be overridden if the same {@link HttpHeaderNames} are defined in
+     * the {@link ResponseHeaders} of the {@link HttpResponse} or
+     * {@link ServiceRequestContext#additionalResponseHeaders()}.
+     */
+    @UnstableApi
+    ServiceConfigSetters addHeader(CharSequence name, Object value);
+
+    /**
+     * Adds the default HTTP headers for an {@link HttpResponse} served by this {@link Service}.
+     *
+     * <p>Note that the value could be overridden if the same {@link HttpHeaderNames} are defined in
+     * the {@link ResponseHeaders} of the {@link HttpResponse} or
+     * {@link ServiceRequestContext#additionalResponseHeaders()}.
+     */
+    @UnstableApi
+    ServiceConfigSetters addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
+
+    /**
+     * Sets the default HTTP header for an {@link HttpResponse} served by this {@link Service}.
+     *
+     * <p>Note that the value could be overridden if the same {@link HttpHeaderNames} are defined in
+     * the {@link ResponseHeaders} of the {@link HttpResponse} or
+     * {@link ServiceRequestContext#additionalResponseHeaders()}.
+     */
+    @UnstableApi
+    ServiceConfigSetters setHeader(CharSequence name, Object value);
+
+    /**
+     * Sets the default HTTP headers for an {@link HttpResponse} served by this {@link Service}.
+     *
+     * <p>Note that the value could be overridden if the same {@link HttpHeaderNames} are defined in
+     * the {@link ResponseHeaders} of the {@link HttpResponse} or
+     * {@link ServiceRequestContext#additionalResponseHeaders()}.
+     */
+    @UnstableApi
+    ServiceConfigSetters setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
+
+    /**
+     * Sets the default {@link ServiceErrorHandler} served by this {@link Service}.
+     * @param serviceErrorHandler the default {@link ServiceErrorHandler}
+     */
+    ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler);
 }

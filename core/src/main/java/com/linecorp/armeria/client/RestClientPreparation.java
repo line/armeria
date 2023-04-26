@@ -28,6 +28,7 @@ import org.reactivestreams.Publisher;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.ExchangeType;
@@ -172,14 +173,15 @@ public final class RestClientPreparation implements RequestPreparationSetters {
 
     @Override
     @FormatMethod
-    public RestClientPreparation content(String format, Object... content) {
+    public RestClientPreparation content(@FormatString String format, Object... content) {
         delegate.content(format, content);
         return this;
     }
 
     @Override
     @FormatMethod
-    public RestClientPreparation content(MediaType contentType, String format, Object... content) {
+    public RestClientPreparation content(MediaType contentType, @FormatString String format,
+                                         Object... content) {
         delegate.content(contentType, format, content);
         return this;
     }

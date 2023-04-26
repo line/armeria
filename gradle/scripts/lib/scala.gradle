@@ -76,7 +76,7 @@ configure(scala212) {
 
 configure(scala213) {
     dependencies {
-        implementation 'org.scala-lang:scala-library:2.13.9'
+        implementation 'org.scala-lang:scala-library:2.13.10'
         if (managedVersions.containsKey('org.scalameta:munit_2.13')) {
             testImplementation "org.scalameta:munit_2.13:${managedVersions['org.scalameta:munit_2.13']}"
         }

@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -26,6 +27,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A restartable thread utility class.
  */
 final class RestartableThread {
+
+    private final ReentrantLock lock = new ReentrantLock();
 
     @Nullable
     private Thread thread;
@@ -45,35 +48,45 @@ final class RestartableThread {
     /**
      * Starts a thread with the supplied runnable if it isn't running yet.
      */
-    synchronized void start() {
-        if (!isRunning()) {
-            checkState(thread == null, "trying to start thread without cleanup");
-            thread = new Thread(runnableSupplier.get(), name);
-            thread.setDaemon(true);
-            thread.start();
+    void start() {
+        lock();
+        try {
+            if (!isRunning()) {
+                checkState(thread == null, "trying to start thread without cleanup");
+                thread = new Thread(runnableSupplier.get(), name);
+                thread.setDaemon(true);
+                thread.start();
+            }
+        } finally {
+            unlock();
         }
     }
 
     /**
      * Stops the current running thread if available.
      */
-    synchronized void stop() {
-        if (isRunning()) {
-            checkState(thread != null, "tried to stop null thread");
-            boolean interrupted = false;
-            thread.interrupt();
-            while (thread.isAlive()) {
-                try {
-                    thread.join(1000);
-                } catch (InterruptedException e) {
-                    interrupted = true;
+    void stop() {
+        lock();
+        try {
+            if (isRunning()) {
+                checkState(thread != null, "tried to stop null thread");
+                boolean interrupted = false;
+                thread.interrupt();
+                while (thread.isAlive()) {
+                    try {
+                        thread.join(1000);
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    }
+                }
+
+                thread = null;
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
                 }
             }
-
-            thread = null;
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
+        } finally {
+            unlock();
         }
     }
 
@@ -83,5 +96,13 @@ final class RestartableThread {
      */
     boolean isRunning() {
         return thread != null && thread.isAlive();
+    }
+
+    private void lock() {
+        lock.lock();
+    }
+
+    private void unlock() {
+        lock.unlock();
     }
 }

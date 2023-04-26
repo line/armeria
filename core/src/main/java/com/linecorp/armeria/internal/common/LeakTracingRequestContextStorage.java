@@ -40,6 +40,7 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
     /**
      * Creates a new instance.
+     *
      * @param delegate the underlying {@link RequestContextStorage} that stores {@link RequestContext}
      * @param sampler the {@link Sampler} that determines whether to retain the stacktrace of the context leaks
      */
@@ -54,9 +55,19 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
     public <T extends RequestContext> T push(RequestContext toPush) {
         requireNonNull(toPush, "toPush");
         if (sampler.isSampled(toPush)) {
-            return delegate.push(wrapRequestContext(toPush));
+            return delegate.push(wrapRequestContext(unwrapTraceableRequestContext(toPush)));
         }
         return delegate.push(toPush);
+    }
+
+    private static RequestContext unwrapTraceableRequestContext(RequestContext ctx) {
+        while (true) {
+            final RequestContext unwrapped = ctx.unwrap();
+            if (!(unwrapped instanceof TraceableRequestContext)) {
+                return unwrapped;
+            }
+            ctx = unwrapped;
+        }
     }
 
     @Override
@@ -77,39 +88,43 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
     }
 
     private static RequestContextWrapper<?> wrapRequestContext(RequestContext ctx) {
-        return ctx instanceof ClientRequestContext ?
-               new TraceableClientRequestContext((ClientRequestContext) ctx)
-               : new TraceableServiceRequestContext((ServiceRequestContext) ctx);
+        if (ctx instanceof ClientRequestContext) {
+            return new TraceableClientRequestContext((ClientRequestContext) ctx);
+        }
+        assert ctx instanceof ServiceRequestContext;
+        return new TraceableServiceRequestContext((ServiceRequestContext) ctx);
     }
 
     private static String stacktraceToString(StackTraceElement[] stackTrace,
                                              RequestContext unwrap) {
         final StringBuilder builder = new StringBuilder(512);
-        builder.append(unwrap).append(System.lineSeparator())
-               .append("The previous RequestContext is pushed at the following stacktrace")
-               .append(System.lineSeparator());
+        builder.append(unwrap).append(System.lineSeparator());
         for (int i = 1; i < stackTrace.length; i++) {
             builder.append("\tat ").append(stackTrace[i]).append(System.lineSeparator());
         }
         return builder.toString();
     }
 
-    private static final class TraceableClientRequestContext extends ClientRequestContextWrapper {
+    private interface TraceableRequestContext {}
 
-            private final StackTraceElement[] stackTrace;
+    private static final class TraceableClientRequestContext
+            extends ClientRequestContextWrapper implements TraceableRequestContext {
 
-            private TraceableClientRequestContext(ClientRequestContext delegate) {
-                super(delegate);
-                stackTrace = currentThread().getStackTrace();
-            }
+        private final StackTraceElement[] stackTrace;
 
-            @Override
-            public String toString() {
-                return stacktraceToString(stackTrace, unwrap());
-            }
+        private TraceableClientRequestContext(ClientRequestContext delegate) {
+            super(delegate);
+            stackTrace = currentThread().getStackTrace();
         }
 
-    private static final class TraceableServiceRequestContext extends ServiceRequestContextWrapper {
+        @Override
+        public String toString() {
+            return stacktraceToString(stackTrace, unwrap());
+        }
+    }
+
+    private static final class TraceableServiceRequestContext
+            extends ServiceRequestContextWrapper implements TraceableRequestContext {
 
         private final StackTraceElement[] stackTrace;
 

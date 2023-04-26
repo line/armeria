@@ -32,12 +32,17 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {}
 
 Build a service and server using Armeria's <type://ServerBuilder> to serve our service.
 
-1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/grpc/src/main/java/example/armeria/server/blog/grpc/BlogService.java).
+1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/src/main/java/example/armeria/server/blog/grpc/BlogService.java).
 
   ```java filename=Main.java
   package example.armeria.blog.grpc;
 
-  public final class Main {}
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
+  public final class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+  }
   ```
 2. Create a service instance using Armeria's <type://GrpcService#builder()>.
   ```java filename=Main.java
@@ -113,7 +118,7 @@ We've only tested running the service on a server. This time, let's try calling 
   }
   ```
 3. Although we haven't implemented any service methods, we'll call one just to check whether our client can communicate with the server.
-  ```java
+  ```java filename=BlogClient.java
   import example.armeria.blog.grpc.Blog.BlogPost;
   import example.armeria.blog.grpc.Blog.CreateBlogPostRequest;
 
@@ -123,7 +128,7 @@ We've only tested running the service on a server. This time, let's try calling 
                                                          .setTitle("My first blog")
                                                          .setContent("Yay")
                                                          .build();
-    BlogPost response = blogService.createBlogPost(request);
+    BlogPost response = client.createBlogPost(request);
   }
   ```
 

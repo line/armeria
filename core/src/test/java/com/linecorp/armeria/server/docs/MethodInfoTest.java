@@ -30,12 +30,9 @@ import com.linecorp.armeria.common.HttpMethod;
 class MethodInfoTest {
 
     private static MethodInfo newMethodInfo(List<String> examplePaths, List<String> exampleQueries) {
-        return new MethodInfo("foo", TypeSignature.ofBase("T"),
-                              /* parameters */ ImmutableList.of(), /* exceptionSignatures */ ImmutableList.of(),
-                              /* endpoints */ ImmutableList.of(), /* exampleHeaders */ ImmutableList.of(),
-                              /* exampleRequests */ ImmutableList.of(),
-                              examplePaths, exampleQueries,
-                              HttpMethod.GET, DescriptionInfo.empty());
+        return new MethodInfo("foo", TypeSignature.ofBase("T"), ImmutableList.of(), false, ImmutableList.of(),
+                              ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), examplePaths,
+                              exampleQueries, HttpMethod.GET, DescriptionInfo.empty(), "id");
     }
 
     @Test
@@ -60,5 +57,19 @@ class MethodInfoTest {
             assertThat(newMethodInfo(ImmutableList.of(), ImmutableList.of(queryString)).exampleQueries())
                     .containsOnly(queryString);
         }
+    }
+
+    @Test
+    void methodId() {
+        final MethodInfo methodInfo = methodInfo(0);
+        assertThat(methodInfo.id()).isEqualTo("com.MyService/foo/GET");
+        final MethodInfo methodInfo1 = methodInfo(1);
+        assertThat(methodInfo1.id()).isEqualTo("com.MyService/foo-1/GET");
+    }
+
+    private static MethodInfo methodInfo(int overloadId) {
+        return new MethodInfo("com.MyService", "foo", overloadId, TypeSignature.ofBase("T"),
+                              ImmutableList.of(), ImmutableList.of(),
+                              ImmutableList.of(), HttpMethod.GET, DescriptionInfo.empty());
     }
 }

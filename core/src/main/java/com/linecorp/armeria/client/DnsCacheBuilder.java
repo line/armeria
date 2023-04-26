@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.ThreadFactories;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 
 /**
  * A builder for {@link DnsCache}.
@@ -43,7 +42,7 @@ public final class DnsCacheBuilder {
     static final DnsCache DEFAULT_CACHE = DnsCache.builder().build();
 
     private String cacheSpec = Flags.dnsCacheSpec();
-    private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private MeterRegistry meterRegistry = Flags.meterRegistry();
     private ScheduledExecutorService executor = DEFAULT_EXECUTOR;
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
@@ -62,7 +61,7 @@ public final class DnsCacheBuilder {
 
     /**
      * Sets the {@link MeterRegistry} that collects cache stats.
-     * If unspecified, {@link Metrics#globalRegistry} is used.
+     * If unspecified, {@link Flags#meterRegistry()} is used.
      */
     public DnsCacheBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
