@@ -28,18 +28,12 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "pool");
 
         // a single blocking call is incurred for the first invocation, but the result is cached.
-        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.JacksonUtil",
-                                         "newDefaultObjectMapper");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
                                          "get");
-        builder.allowBlockingCallsInside("org.joda.time.DateTime", "now");
-        builder.allowBlockingCallsInside("org.opensaml.xmlsec.signature.support.Signer",
-                                         "getSignerProvider");
-
-        // graphql
-        builder.allowBlockingCallsInside("graphql.i18n.I18n", "i18n");
-        builder.allowBlockingCallsInside("graphql.execution.ExecutionId", "generate");
-        builder.allowBlockingCallsInside("sangria.parser.QueryParser$", "parse");
+        builder.allowBlockingCallsInside("java.util.ServiceLoader$LazyClassPathLookupIterator",
+                                         "parse");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.util.ReentrantShortLock",
+                                         "lock");
 
         // custom implementations for test class usage.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",

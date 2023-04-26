@@ -77,6 +77,7 @@ import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -114,7 +115,7 @@ public final class Server implements ListenableAsyncCloseable {
     private final UpdatableServerConfig config;
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;

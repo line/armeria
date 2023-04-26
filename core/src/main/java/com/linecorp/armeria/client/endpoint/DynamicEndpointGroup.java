@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
@@ -66,7 +67,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     private final EndpointSelectionStrategy selectionStrategy;
     private final AtomicReference<EndpointSelector> selector = new AtomicReference<>();
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
-    private final Lock endpointsLock = new ReentrantLock();
+    private final Lock endpointsLock = new ReentrantShortLock();
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new InitialEndpointsFuture();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
