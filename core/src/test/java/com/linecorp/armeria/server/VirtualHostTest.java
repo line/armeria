@@ -69,5 +69,4 @@ class VirtualHostTest {
 
         assertThat(virtualHostMethods).hasSameElementsAs(serviceConfigMethods);
     }
-
 }
