@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.internal.testing;
 
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.ResourceBundle;
+import java.util.UUID;
 
-import io.netty.util.concurrent.GlobalEventExecutor;
 import reactor.blockhound.BlockHound.Builder;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
@@ -38,6 +37,8 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "parse");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.util.ReentrantShortLock",
                                          "lock");
+        builder.allowBlockingCallsInside(ResourceBundle.class.getName(), "getBundle");
+        builder.allowBlockingCallsInside(UUID.class.getName(), "randomUUID");
 
         // custom implementations for test class usage.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
@@ -51,7 +52,7 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
                                          "blockingRun");
 
-        // sometimes we make assertions in tests which should never reach production code and is thus safe.
+        // sometimes we make assertions in tests which never reach production code and is thus safe.
         builder.allowBlockingCallsInside("org.assertj.core.api.Assertions", "assertThat");
         builder.allowBlockingCallsInside("net.javacrumbs.jsonunit.fluent.JsonFluentAssert",
                                          "assertThatJson");
