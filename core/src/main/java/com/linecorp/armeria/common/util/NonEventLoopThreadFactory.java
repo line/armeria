@@ -35,10 +35,14 @@ final class NonEventLoopThreadFactory extends AbstractThreadFactory {
 
     @Override
     Thread newThread(@Nullable ThreadGroup threadGroup, Runnable r, String name) {
-        return new BlockingFastThreadLocalThread();
+        return new BlockingFastThreadLocalThread(threadGroup, r, name);
     }
 
     private static class BlockingFastThreadLocalThread extends FastThreadLocalThread {
+        public BlockingFastThreadLocalThread(ThreadGroup threadGroup, Runnable r, String name) {
+            super(threadGroup, r, name);
+        }
+
         @Override
         public boolean permitBlockingCalls() {
             return true;
