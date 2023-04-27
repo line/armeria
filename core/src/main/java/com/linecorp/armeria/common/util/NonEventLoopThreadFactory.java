@@ -39,7 +39,7 @@ final class NonEventLoopThreadFactory extends AbstractThreadFactory {
     }
 
     private static class BlockingFastThreadLocalThread extends FastThreadLocalThread {
-        public BlockingFastThreadLocalThread(ThreadGroup threadGroup, Runnable r, String name) {
+        BlockingFastThreadLocalThread(@Nullable ThreadGroup threadGroup, Runnable r, String name) {
             super(threadGroup, r, name);
         }
 

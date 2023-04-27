@@ -80,6 +80,7 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -319,12 +320,14 @@ public class ThriftOverHttpClientTest {
             client.hello("kukuman" + num, new AsyncMethodCallback<String>() {
                 @Override
                 public void onComplete(String response) {
-                    assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, response))).isTrue();
+                    BlockingUtils.blockingRun(() -> assertThat(resultQueue.add(
+                            new AbstractMap.SimpleEntry<>(num, response))).isTrue());
                 }
 
                 @Override
                 public void onError(Exception exception) {
-                    assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, exception))).isTrue();
+                    BlockingUtils.blockingRun(() -> assertThat(resultQueue.add(
+                            new AbstractMap.SimpleEntry<>(num, exception))).isTrue());
                 }
             });
         }
