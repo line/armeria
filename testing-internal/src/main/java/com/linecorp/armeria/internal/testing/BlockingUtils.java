@@ -38,5 +38,9 @@ public final class BlockingUtils {
         countDownLatch.await();
     }
 
+    public static void blockingRun(Runnable runnable) {
+        runnable.run();
+    }
+
     private BlockingUtils() {}
 }

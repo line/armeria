@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import java.util.function.Function;
+import java.util.function.Predicate;
+
+import io.netty.util.concurrent.GlobalEventExecutor;
 import reactor.blockhound.BlockHound.Builder;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
@@ -44,6 +48,8 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "acquireUninterruptibly");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
                                          "await");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
+                                         "blockingRun");
 
         // sometimes we make assertions in tests which should never reach production code and is thus safe.
         builder.allowBlockingCallsInside("org.assertj.core.api.Assertions", "assertThat");

@@ -690,11 +690,21 @@ public final class Server implements ListenableAsyncCloseable {
                 builder.addAll(serviceConfig.shutdownSupports());
             }
 
-            CompletableFutures.successfulAsList(builder.build()
-                                                       .stream()
-                                                       .map(ShutdownSupport::shutdown)
-                                                       .collect(toImmutableList()), cause -> null)
-                              .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            CompletableFuture.runAsync(() -> {
+                // ShutdownSupport may be blocking so run the entire block inside the startStopExecutor
+                CompletableFutures.successfulAsList(builder.build()
+                                                           .stream()
+                                                           .map(ShutdownSupport::shutdown)
+                                                           .collect(toImmutableList()), cause -> null)
+                                  .handle((ignored, cause) -> {
+                                      if (cause != null) {
+                                          future.completeExceptionally(cause);
+                                          return null;
+                                      }
+                                      future.complete(null);
+                                      return null;
+                                  });
+            }, config.startStopExecutor());
         }
 
         @Override
