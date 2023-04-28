@@ -65,7 +65,6 @@ import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.HelloService.AsyncIface;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.AbstractHttpService;

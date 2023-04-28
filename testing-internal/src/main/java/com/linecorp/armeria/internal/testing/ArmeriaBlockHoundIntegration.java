@@ -38,6 +38,13 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
         builder.allowBlockingCallsInside("com.linecorp.armeria.client.retrofit2.PipeBuffer$PipeSource", "read");
         builder.allowBlockingCallsInside(
                 "com.linecorp.armeria.server.metric.PrometheusExpositionService", "doGet");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
+                                         "StreamMessageInputStreamSubscriber", "onNext");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
+                                         "StreamMessageInputStreamSubscriber", "onError");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
+                                         "StreamMessageInputStreamSubscriber", "onComplete");
+        builder.allowBlockingCallsInside("sangria.parser.QueryParser$", "parse");
 
         // a single blocking call is incurred for the first invocation, but the result is cached.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
