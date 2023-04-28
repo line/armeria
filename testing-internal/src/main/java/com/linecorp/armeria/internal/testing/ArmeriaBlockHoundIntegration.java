@@ -35,6 +35,7 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
         builder.allowBlockingCallsInside("org.HdrHistogram.ConcurrentHistogram", "getCountAtIndex");
         builder.allowBlockingCallsInside("org.HdrHistogram.WriterReaderPhaser", "flipPhase");
         builder.allowBlockingCallsInside("zipkin2.reporter.AsyncReporter$BoundedAsyncReporter", "report");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.client.retrofit2.PipeBuffer$PipeSource", "read");
         builder.allowBlockingCallsInside(
                 "com.linecorp.armeria.server.metric.PrometheusExpositionService", "doGet");
 
