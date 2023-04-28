@@ -67,6 +67,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -569,17 +570,13 @@ class BraveIntegrationTest {
 
         @Override
         public boolean end(TraceContext context, MutableSpan span, Cause cause) {
-            return spans.add(span);
+            return BlockingUtils.blockingRun(() -> spans.add(span));
         }
 
         MutableSpan[] take(int numSpans) {
             final List<MutableSpan> taken = new ArrayList<>();
             while (taken.size() < numSpans) {
-                try {
-                    taken.add(spans.poll(30, TimeUnit.SECONDS));
-                } catch (InterruptedException e) {
-                    return Exceptions.throwUnsafely(e);
-                }
+                BlockingUtils.blockingRun(() -> taken.add(spans.poll(30, TimeUnit.SECONDS)));
             }
 
             // Reverse the collected spans to sort the spans by request time.

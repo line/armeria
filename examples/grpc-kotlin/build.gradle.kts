@@ -26,4 +26,5 @@ dependencies {
     testImplementation(libs.awaitility)
     testImplementation(libs.junit5.jupiter.api)
     testImplementation(libs.protobuf.java.util)
+    testRuntimeOnly(libs.kotlin.coroutines.debug)
 }

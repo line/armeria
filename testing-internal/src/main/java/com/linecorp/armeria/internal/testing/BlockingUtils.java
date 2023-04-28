@@ -20,6 +20,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.api.function.ThrowingSupplier;
+
 public final class BlockingUtils {
 
     public static void sleep(long millis) throws InterruptedException {
@@ -38,8 +41,20 @@ public final class BlockingUtils {
         countDownLatch.await();
     }
 
-    public static void blockingRun(Runnable runnable) {
-        runnable.run();
+    public static void blockingRun(Executable runnable) {
+        try {
+            runnable.execute();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static <T> T blockingRun(ThrowingSupplier<T> supplier) {
+        try {
+            return supplier.get();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private BlockingUtils() {}
