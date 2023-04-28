@@ -29,6 +29,9 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
 
         builder.allowBlockingCallsInside("com.linecorp.armeria.client.HttpClientFactory",
                                          "pool");
+        // Thread.yield can be eventually called when PooledObjects.copyAndClose is called
+        builder.allowBlockingCallsInside("io.netty.util.internal.ReferenceCountUpdater",
+                                         "release");
 
         // a single blocking call is incurred for the first invocation, but the result is cached.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
