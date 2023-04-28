@@ -835,7 +835,8 @@ public class ThriftOverHttpClientTest {
 
         @Override
         public void onComplete(Object response) {
-            BlockingUtils.blockingRun(() -> assertThat(resQueue.add(response == null ? "null" : response)).isTrue());
+            BlockingUtils.blockingRun(
+                    () -> assertThat(resQueue.add(response == null ? "null" : response)).isTrue());
         }
 
         @Override
