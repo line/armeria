@@ -835,12 +835,12 @@ public class ThriftOverHttpClientTest {
 
         @Override
         public void onComplete(Object response) {
-            assertThat(resQueue.add(response == null ? "null" : response)).isTrue();
+            BlockingUtils.blockingRun(() -> assertThat(resQueue.add(response == null ? "null" : response)).isTrue());
         }
 
         @Override
         public void onError(Exception exception) {
-            assertThat(resQueue.add(exception)).isTrue();
+            BlockingUtils.blockingRun(() -> assertThat(resQueue.add(exception)).isTrue());
         }
     }
 }

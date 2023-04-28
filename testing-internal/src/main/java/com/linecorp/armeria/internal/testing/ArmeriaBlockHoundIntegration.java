@@ -32,6 +32,11 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
         // Thread.yield can be eventually called when PooledObjects.copyAndClose is called
         builder.allowBlockingCallsInside("io.netty.util.internal.ReferenceCountUpdater",
                                          "release");
+        builder.allowBlockingCallsInside("org.HdrHistogram.ConcurrentHistogram", "getCountAtIndex");
+        builder.allowBlockingCallsInside("org.HdrHistogram.WriterReaderPhaser", "flipPhase");
+        builder.allowBlockingCallsInside("zipkin2.reporter.AsyncReporter$BoundedAsyncReporter", "report");
+        builder.allowBlockingCallsInside(
+                "com.linecorp.armeria.server.metric.PrometheusExpositionService", "doGet");
 
         // a single blocking call is incurred for the first invocation, but the result is cached.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
@@ -42,6 +47,7 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "lock");
         builder.allowBlockingCallsInside(ResourceBundle.class.getName(), "getBundle");
         builder.allowBlockingCallsInside(UUID.class.getName(), "randomUUID");
+        builder.allowBlockingCallsInside("java.util.concurrent.ThreadPoolExecutor", "addWorker");
 
         // custom implementations for test class usage.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
