@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -75,7 +74,6 @@ public final class GraphqlServiceBuilder {
     private final ImmutableList.Builder<GraphqlConfigurator> graphqlBuilderConsumers =
             ImmutableList.builder();
 
-    @Deprecated
     @Nullable
     private ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers;
     private boolean useBlockingTaskExecutor;
@@ -157,8 +155,8 @@ public final class GraphqlServiceBuilder {
      */
     public GraphqlServiceBuilder dataLoaderRegistry(
             Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory) {
-        checkArgument(dataLoaderRegistryConsumers == null,
-                      "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+        checkState(dataLoaderRegistryConsumers == null,
+                   "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
         this.dataLoaderRegistryFactory =
                 requireNonNull(dataLoaderRegistryFactory, "dataLoaderRegistryFactory");
         return this;
@@ -183,8 +181,8 @@ public final class GraphqlServiceBuilder {
     @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(
             Iterable<? extends Consumer<? super DataLoaderRegistry>> configurers) {
-        checkArgument(dataLoaderRegistryFactory == null,
-                      "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+        checkState(dataLoaderRegistryFactory == null,
+                   "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
         if (dataLoaderRegistryConsumers == null) {
             dataLoaderRegistryConsumers = ImmutableList.builder();
         }
