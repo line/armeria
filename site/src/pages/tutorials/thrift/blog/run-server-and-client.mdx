@@ -1,0 +1,157 @@
+---
+menuTitle: "Run the server and client"
+order: 2
+category: thrift
+type: step
+targetLang: java
+---
+
+# Running the server and client
+
+// TODO
+
+<TutorialSteps current={2} />
+
+## What you need
+
+// TODO
+
+## 1. Create a server
+
+Let's create and start a server instance to serve the service.
+
+1. Create a `Main` class for the server.
+  You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
+  ```java filename=Main.java
+  package example.armeria.server.blog.thrift;
+
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
+  public final class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+  }
+  ```
+2. Add a method `newServer()` in the `Main` class.
+3. In the `newServer()` method, create a service instance using Armeria's <type://THttpService#builder()>.
+  ```java filename=Main.java
+  import com.linecorp.armeria.server.thrift.THttpService;
+
+  public final class Main {
+    private static void newServer(int port) throws Exception {
+        final THttpService tHttpService =
+                THttpService.builder()
+                            .addService(new BlogServiceImpl())
+                            .build();
+    }
+  }
+  ```
+4. Create and return a server instance using Armeria's <type://ServerBuilder>.
+  ```java filename=Main.java
+  import com.linecorp.armeria.server.Server;
+
+  public final class Main {
+    private static Server newServer(int port) throws Exception {
+        ...
+        return Server.builder()
+                     .http(port)
+                     .service("/thrift", tHttpService) // Add the service to server
+                     .build();
+    }
+  }
+  ```
+5. Add the `main()` method in the `Main` class as follows.
+  ```java filename=Main.java
+  public static void main(String[] args) throws Exception {
+      final Server server = newServer(8080);
+
+      server.closeOnJvmShutdown().thenRun(() -> {
+          logger.info("Server has been stopped.");
+      });
+
+      server.start().join();
+  }
+  ```
+
+## 2. Run the server
+
+Run the `Main.main()` method on your IDE or using Gradle.
+```bash
+./gradlew run
+```
+
+Your server is running if you see the following message.
+```bash
+[armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
+```
+
+## 4. Prepare the thrift file for client
+
+Now that our server is running, it's time to start working on the client.
+Let's write and compile the thrift file for the client.
+
+1. Create a thrift file, `blog.thrift`, as we did in [Define a service](/tutorials/thrift/blog/create-service#define-a-service) for the server.
+2. Compile the `blog.thrift` file, as we did in [Compile the thrift file](/tutorials/thrift/blog/create-service#compile-the-thrift-file) for the server.
+
+<Tip>
+
+See [Sample client](/tutorials/thrift/blog#sample-client) for the overall folder structure of the sample client.
+
+</Tip>
+
+## 5. Create a client
+
+1. Create a main class for the client. We'll name the class `BlogClient`.
+  ```java filename=BlogClient.java
+  package example.armeria.client.blog.thrift;
+
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
+  public class BlogClient {
+      private static final Logger logger = LoggerFactory.getLogger(BlogClient.class);
+
+      public static void main(String[] args) throws Exception {}
+  }
+  ```
+2. Create a client instance using Armeria's <type://ThriftClients>.
+  We're running the server locally and set the port to 8080 in our server code.
+  Let's access the server at http://127.0.0.1:8080.
+  ```java filename=BlogClient.java
+  import com.linecorp.armeria.client.thrift.ThriftClients;
+  import example.armeria.blog.thrift.BlogService;
+
+  public class BlogClient {
+      ...
+      public static void main(String[] args) throws Exception {
+          BlogService.Iface blogService =
+              ThriftClients.builder("http://127.0.0.1:8080")
+              .path("/thrift")
+              .build(BlogService.Iface.class);
+      }
+  }
+  ```
+3. Call the `hello()` method.
+  ```java filename=BlogClient.java
+  public static void main(String[] args) throws Exception {
+    ...
+    String greeting = blogService.hello();
+    logger.info(greeting);
+  }
+  ```
+
+## 6. Run the client
+
+While the server is running, run the client's `main()` method on your IDE or using Gradle.
+
+Your client made request to the server successfully if you see the following message.
+
+```bash
+[main] INFO example.armeria.client.blog.thrift.BlogClient - Hello, Armeria!
+```
+
+## What's next
+
+// TODO
+
+<TutorialSteps current={2} />

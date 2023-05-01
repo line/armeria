@@ -9,7 +9,7 @@ import versions from '/gen-src/versions.json';
 
 In this tutorial, you'll learn how to build an Apache Thrift service with Armeria.
 
-This tutorial is based on a [sample service](https://github.com/line/armeria/tree/main/examples/tutorials/thrift), a minimal blog service, with which you can create, read, update, and delete blog posts.
+This tutorial is based on a [sample service](#sample-service-and-client), a minimal blog service, with which you can create, read, update, and delete blog posts.
 To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using database.
 
 Follow this tutorial to write a service yourself or try [running the sample service](#build-and-run-the-sample-service) right away.
@@ -30,8 +30,7 @@ This tutorial assumes that you have:
 
 ## Prerequisites
 
-// TW: JDK 버전 확인 부탁드려요.
-// TW: 혹시 thrift compiler 설치(https://thrift.apache.org/docs/install/)를 prerequisite으로 추가해야하는지 궁금합니다.
+// TW: 혹시 thrift compiler 설치(https://thrift.apache.org/docs/install/)를 prerequisite으로 추가해야할지 궁금합니다. 저는 컴파일러를 설치해야만 컴파일이 되던데, 설치하는 게 맞는지 아니면 제가 Gradle 설정을 잘못한 건지 모르겠어서 질문 드려요.
 
 To run and develop the sample service, you need JDK 11 or higher.
 
@@ -43,6 +42,8 @@ The sample service is the main part of the tutorial, while the client is to veri
 
 The sample service provides you implementations of CRUD operations with corresponding service methods.
 [The source code](https://github.com/line/armeria/tree/main/examples/tutorials/thrift) consists the following folders and files.
+
+// TW: 이 경로(https://github.com/line/armeria/tree/main/examples/tutorials/thrift)의 build.gradle 파일은 상위 프로젝트에 종속성이 있어서, 지난 회의에서 종속성 없는 튜토리얼 버전으로 다시 작성하기로 얘기했습니다. 업데이트 부탁드립니다!
 
 ```
 thrift-server/
@@ -76,6 +77,9 @@ In this tutorial, we use [gradle](https://gradle.org/) as the build tool and use
 `}</CodeBlock>
 
 ### Sample client
+
+// TW: 서버/클라이언트 코드를 합치지 않으려고 합니다. (희승 님 제안대로 나머지 튜토리얼도 다 바꿀 것을 생각하니, 바꾸는 이득에 비해 비용이 너무 커져서요)
+// 대신 클라이언트쪽 샘플 코드도 여기서 제공하고 싶습니다. 클라이언트 코드도 armeria(또는 armeria-examples) 저장소에 올릴 수 있을까요?
 
 The sample client sends requests to the sample service to test the implementations.
 [The source code]() consists the following folders and files.

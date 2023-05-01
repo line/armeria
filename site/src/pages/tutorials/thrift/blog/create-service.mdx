@@ -1,0 +1,80 @@
+---
+menuTitle: "Create a service"
+order: 1
+category: thrift
+type: step
+targetLang: java
+---
+
+# Creating a service
+
+As the first step of the tutorial, we'll define a service with Thrift, and implement the service in Java.
+
+<TutorialSteps current={1} />
+
+## What you need
+
+// TODO
+
+## 1. Define a service
+
+Create a thrift file, `blog.thrift` in the `{project_root}/src/main/thrift` folder as follows.
+In the thrift file, let's define the `BlogService` service with a method `hello()`.
+
+```thrift filename=blog.thrift
+namespace java example.armeria.blog.thrift
+
+service BlogService {
+  string hello()
+}
+```
+
+<Tip>
+
+See [Sample service](/tutorials/thrift/blog#sample-service) for the overall folder structure of the sample service.
+
+</Tip>
+
+## 2. Compile the thrift file
+
+Compile the `blog.thrift` file to generate Java code.
+You can refer to the full [build.gradle](https://github.com/line/armeria-examples/blob/master/tutorials/thrift/build.gradle) file for generating code with [Gradle Thrift Plugin](https://github.com/jruyi/thrift-gradle-plugin).
+
+```bash
+  ./gradlew build
+  ```
+
+You'll see the generated Java code in the `{project_root}/build/generated-sources/thrift/gen-java/example/armeria/blog/thrift/` folder.
+
+## 3. Implement the service
+
+Now, let's implement the service in Java.
+
+1. Create a file, `BlogServiceImpl.java`.
+2. Declare the `BlogServiceImpl` class and override the `hello()` method. The `BlogServiceImpl` class implements the `BlogService` service we defined in the earlier step.
+  ```java filename=BlogServiceImpl.java
+  package example.armeria.server.blog.thrift;
+
+  import example.armeria.blog.thrift.BlogService;
+
+  import org.apache.thrift.async.AsyncMethodCallback;
+
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+      @Override
+      public void hello(AsyncMethodCallback<String> resultHandler) {}
+  }
+  ```
+3. Add a dummy result for the service method.
+  This is for temporary use to test the connection between server and client.
+  ```java filename=BlogServiceImpl.java
+  @Override
+  public void hello(AsyncMethodCallback<String> resultHandler) {
+      resultHandler.onComplete("Hello, Armeria!"); // Add this
+  }
+  ```
+
+## What's next
+
+// TODO
+
+<TutorialSteps current={1} />
