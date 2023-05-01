@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 
 /**
  * Decorates an {@link RpcClient} to collect metrics into {@link MeterRegistry}.
@@ -65,7 +66,8 @@ public final class MetricCollectingRpcClient extends AbstractMetricCollectingCli
 
     MetricCollectingRpcClient(
             RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
-            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
-        super(delegate, meterIdPrefixFunction, successFunction);
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+            @Nullable DistributionStatisticConfig distributionStatisticConfig) {
+        super(delegate, meterIdPrefixFunction, successFunction, distributionStatisticConfig);
     }
 }

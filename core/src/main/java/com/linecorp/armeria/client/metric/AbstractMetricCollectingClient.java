@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.util.AttributeKey;
 
 /**
@@ -46,13 +47,17 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
     private final MeterIdPrefixFunction meterIdPrefixFunction;
     @Nullable
     private final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
+    @Nullable
+    private final DistributionStatisticConfig distributionStatisticConfig;
 
     AbstractMetricCollectingClient(
             Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction,
-            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+            @Nullable DistributionStatisticConfig distributionStatisticConfig) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;
+        this.distributionStatisticConfig = distributionStatisticConfig;
     }
 
     @Override

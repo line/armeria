@@ -47,7 +47,8 @@ public final class MetricCollectingRpcClientBuilder extends AbstractMetricCollec
      */
     public MetricCollectingRpcClient build(RpcClient delegate) {
         requireNonNull(delegate, "delegate");
-        return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction(), successFunction());
+        return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction(), successFunction(),
+                                             distributionStatisticConfig());
     }
 
     /**

@@ -47,7 +47,8 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
      */
     public MetricCollectingService build(HttpService delegate) {
         requireNonNull(delegate, "delegate");
-        return new MetricCollectingService(delegate, meterIdPrefixFunction(), successFunction());
+        return new MetricCollectingService(delegate, meterIdPrefixFunction(), successFunction(),
+                                           distributionStatisticConfig());
     }
 
     /**

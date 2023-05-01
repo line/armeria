@@ -33,6 +33,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.util.AttributeKey;
 
 /**
@@ -77,13 +78,17 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
     private final MeterIdPrefixFunction meterIdPrefixFunction;
     @Nullable
     private final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
+    @Nullable
+    private final DistributionStatisticConfig distributionStatisticConfig;
 
     MetricCollectingService(HttpService delegate,
                             MeterIdPrefixFunction meterIdPrefixFunction,
-                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+                            @Nullable DistributionStatisticConfig distributionStatisticConfig) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;
+        this.distributionStatisticConfig = distributionStatisticConfig;
     }
 
     @Override
