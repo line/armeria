@@ -32,14 +32,14 @@ class VirtualHostTest {
 
     @Test
     void testApiConsistencyBetweenVirtualHostAndServiceConfig() {
-        //Check method consistency between VirtualHost and ServiceConfig excluding certain methods.
+        // Check method consistency between VirtualHost and ServiceConfig excluding certain methods.
         final Set<String> virtualHostMethods =
                 ReflectionUtils.getMethods(VirtualHost.class, m -> Modifier.isPublic(m.getModifiers()))
                                .stream()
                                .map(Method::getName)
                                .collect(Collectors.toSet());
 
-        final Set<String> knownIgnoreVirtualHostMethods = ImmutableSet.of(
+        final Set<String> ignorableVirtualHostMethods = ImmutableSet.of(
                 "defaultHostname",
                 "sslContext",
                 "accessLogger",
@@ -48,7 +48,7 @@ class VirtualHostTest {
                 "findServiceConfig",
                 "serviceConfigs"
         );
-        virtualHostMethods.removeAll(knownIgnoreVirtualHostMethods);
+        virtualHostMethods.removeAll(ignorableVirtualHostMethods);
 
         final Set<String> serviceConfigMethods =
                 ReflectionUtils.getMethods(ServiceConfig.class, m -> Modifier.isPublic(m.getModifiers()))
@@ -56,7 +56,7 @@ class VirtualHostTest {
                                .map(Method::getName)
                                .collect(Collectors.toSet());
 
-        final Set<String> knownIgnoreServiceConfigMethods = ImmutableSet.of(
+        final Set<String> ignorableServiceConfigMethods = ImmutableSet.of(
                 "defaultServiceName",
                 "mappedRoute",
                 "virtualHost",
@@ -65,7 +65,7 @@ class VirtualHostTest {
                 "defaultHeaders",
                 "transientServiceOptions"
         );
-        serviceConfigMethods.removeAll(knownIgnoreServiceConfigMethods);
+        serviceConfigMethods.removeAll(ignorableServiceConfigMethods);
 
         assertThat(virtualHostMethods).hasSameElementsAs(serviceConfigMethods);
     }

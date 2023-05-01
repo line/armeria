@@ -971,6 +971,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     @VisibleForTesting
+    @Nullable
     String defaultLogName() {
         return defaultLogName;
     }
@@ -1083,6 +1084,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     @VisibleForTesting
+    @Nullable
     SuccessFunction successFunction() {
         return successFunction;
     }
@@ -1280,8 +1282,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter,
                                 blockingTaskExecutor, successFunction, multipartUploadsLocation,
-                                builder.build(),
-                                requestIdGenerator);
+                                builder.build(), requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);
