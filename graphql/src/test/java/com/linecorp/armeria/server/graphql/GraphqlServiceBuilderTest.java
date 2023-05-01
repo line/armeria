@@ -153,7 +153,7 @@ class GraphqlServiceBuilderTest {
                     .dataLoaderRegistry(ctx -> new DataLoaderRegistry())
                     .configureDataLoaderRegistry(dlr -> dlr.register("dummy1", dataLoader));
         })
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(IllegalStateException.class)
         .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
 
         assertThatThrownBy(() -> {
@@ -161,7 +161,7 @@ class GraphqlServiceBuilderTest {
                     .configureDataLoaderRegistry(dlr -> dlr.register("dummy1", dataLoader))
                     .dataLoaderRegistry(ctx -> new DataLoaderRegistry());
         })
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(IllegalStateException.class)
         .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
     }
 }
