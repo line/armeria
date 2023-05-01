@@ -33,6 +33,7 @@ configure(scala212 + scala213 + scala3) {
         // Run `scalafmt` to automatically format scala code from source sets
         // https://github.com/alenkacz/gradle-scalafmt#tasks
         project.ext.getLintTask().dependsOn tasks.checkScalafmt
+        tasks.checkScalafmt.dependsOn tasks.processResources
     }
 
     if (project.hasFlags('publish')) {
