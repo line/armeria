@@ -1008,7 +1008,19 @@ public interface FlagsProvider {
     /**
      * Returns the {@link DistributionStatisticConfig} where armeria utilizes.
      *
-     * <p>The default value of this flag is {@link DistributionStatisticConfig#DEFAULT}</p>
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .sla()
+     *     .percentiles(PERCENTILES)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1L)
+     *     .maximumExpectedValue(Long.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
      */
     @Nullable
     @UnstableApi

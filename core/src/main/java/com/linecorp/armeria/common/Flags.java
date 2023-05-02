@@ -71,8 +71,10 @@ import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.logging.LoggingService;
 
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
@@ -1348,9 +1350,22 @@ public final class Flags {
     }
 
     /**
-     * Returns the {@link DistributionStatisticConfig} where armeria utilizes.
+     * Returns the default {@link DistributionStatisticConfig} of the {@link Timer}s and
+     * {@link DistributionSummary}s created by Armeria.
      *
-     * <p>The default value of this flag is {@link DistributionStatisticConfig#DEFAULT}</p>
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .sla()
+     *     .percentiles(PERCENTILES)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1L)
+     *     .maximumExpectedValue(Long.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
      */
     @UnstableApi
     public static DistributionStatisticConfig distributionStatisticConfig() {
