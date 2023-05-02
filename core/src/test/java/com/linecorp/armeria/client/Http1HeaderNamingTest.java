@@ -139,9 +139,9 @@ class Http1HeaderNamingTest {
     void serverTraditionalHeaderNaming(boolean useHeaderNaming) throws IOException {
         try (Socket socket = new Socket()) {
             if (useHeaderNaming) {
-                socket.connect(traditionalHeaderNameServer.server().activePort().localAddress());
+                socket.connect(traditionalHeaderNameServer.httpSocketAddress());
             } else {
-                socket.connect(server.server().activePort().localAddress());
+                socket.connect(server.httpSocketAddress());
             }
 
             final PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);

@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.ResourceBundle;
 import java.util.UUID;
 
@@ -23,6 +27,28 @@ import reactor.blockhound.BlockHound.Builder;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
 public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration {
+
+    private static final OutputStream NULL = new OutputStream() {
+        @Override
+        public void write(int b) throws IOException {
+        }
+    };
+
+    static final PrintStream ps;
+    static {
+        final String path = System.getProperties().getProperty("com.linecorp.armeria.blockhound.reportFile");
+        if (path == null) {
+            ps = new PrintStream(NULL);
+        } else {
+            final File file = new File(path);
+            try {
+                ps = new PrintStream(file);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread(ps::close));
+    }
 
     @Override
     public void applyTo(Builder builder) {
@@ -75,5 +101,10 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "assertThatJson");
         builder.allowBlockingCallsInside("com.linecorp.armeria.testing.server.ServiceRequestContextCaptor$2",
                                          "serve");
+
+        // prints the exception which makes it easier to debug issues
+        builder.blockingMethodCallback(m -> {
+            new Exception(m.toString()).printStackTrace(ps);
+        });
     }
 }
