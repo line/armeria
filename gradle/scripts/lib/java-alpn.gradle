@@ -24,6 +24,11 @@ configure(projectsWithFlags('java')) {
                 fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[^.]+)?\\.jar", ".jar")
             }
         }
+        tasks.compileJava.dependsOn(tasks.copyAlpnAgent)
+        tasks.processResources.dependsOn(tasks.copyAlpnAgent)
+        tasks.sourcesJar.dependsOn(tasks.copyAlpnAgent)
+        tasks.javadoc.dependsOn(tasks.copyAlpnAgent)
+        project.ext.getLintTask().dependsOn(tasks.copyAlpnAgent)
 
         tasks.withType(JavaForkOptions) {
             dependsOn tasks.copyAlpnAgent

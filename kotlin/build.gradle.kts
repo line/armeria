@@ -16,11 +16,16 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     }
 }
 
-val testNg by tasks.registering(Test::class) {
-    group = "Verification"
-    description = "Runs the TestNG unit tests"
-    useTestNG()
+testing {
+    suites {
+        val testNg by registering(JvmTestSuite::class) {
+            useTestNG()
+
+            group = "Verification"
+            description = "Runs the TestNG unit tests"
+        }
+    }
 }
 
-tasks.shadedTest { finalizedBy(testNg) }
-tasks.check { dependsOn(testNg) }
+tasks.shadedTest { finalizedBy(testing.suites.named("testNg")) }
+tasks.check { dependsOn(testing.suites.named("testNg")) }

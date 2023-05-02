@@ -16,6 +16,11 @@ configure(projectsWithFlags('kotlin')) {
         }.each { task ->
             task.kotlinOptions.jvmTarget = target
             task.kotlinOptions.freeCompilerArgs = compilerArgs
+
+            def copyAlpnAgentTask = tasks.findByName("copyAlpnAgent")
+            if (copyAlpnAgentTask != null) {
+                task.dependsOn(copyAlpnAgentTask)
+            }
         }
     }
 
