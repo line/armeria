@@ -135,7 +135,7 @@ jobs:
 
       - name: Fail the run if any threads were blocked
         if: always()
-        run: "[[ ! -z `find . -name 'blockhound.log' -size +0` ]] && echo 1"
+        run: "[[ ! -z `find . -name 'blockhound.log' -size +0` ]] && exit 1"
 
       - name: Collect the test reports
         if: failure()
