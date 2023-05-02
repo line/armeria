@@ -73,7 +73,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
             logBuilder().responseHeaders(merged);
         }
 
-        responseEncoder.writeHeaders(reqCtx, req.id(), req.streamId(), merged,
+        responseEncoder.writeHeaders(req.id(), req.streamId(), merged,
                                      endOfStream, reqCtx.additionalResponseTrailers().isEmpty())
                        .addListener(writeHeadersFutureListener(endOfStream));
     }

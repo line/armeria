@@ -73,8 +73,8 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     }
 
     @Override
-    public ChannelFuture doWriteHeaders(@Nullable ServiceRequestContext ctx, int id, int streamId,
-                                        ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
+    public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
+                                        boolean isTrailersEmpty) {
         if (!isWritable(id)) {
             return newClosedSessionFuture();
         }

@@ -37,29 +37,28 @@ interface ServerHttpObjectEncoder extends HttpObjectEncoder {
     /**
      * Writes a {@link ResponseHeaders}.
      */
-    default ChannelFuture writeHeaders(@Nullable ServiceRequestContext ctx, int id, int streamId,
-                                       ResponseHeaders headers, boolean endStream) {
-        return writeHeaders(ctx, id, streamId, headers, endStream, true);
+    default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream) {
+        return writeHeaders(id, streamId, headers, endStream, true);
     }
 
     /**
      * Writes a {@link ResponseHeaders}.
      */
-    default ChannelFuture writeHeaders(@Nullable ServiceRequestContext ctx, int id, int streamId,
-                                       ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
+    default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
+                                       boolean isTrailersEmpty) {
         assert eventLoop().inEventLoop();
         if (isClosed()) {
             return newClosedSessionFuture();
         }
 
-        return doWriteHeaders(ctx, id, streamId, headers, endStream, isTrailersEmpty);
+        return doWriteHeaders(id, streamId, headers, endStream, isTrailersEmpty);
     }
 
     /**
      * Writes a {@link ResponseHeaders}.
      */
-    ChannelFuture doWriteHeaders(@Nullable ServiceRequestContext ctx, int id, int streamId,
-                                 ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty);
+    ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
+                                 boolean isTrailersEmpty);
 
     /**
      * Tells whether the {@link ResponseHeaders} is sent.
@@ -89,15 +88,15 @@ interface ServerHttpObjectEncoder extends HttpObjectEncoder {
             final HttpHeaders resTrailers = res.trailers();
             if (resTrailers.isEmpty()) {
                 if (content.isEmpty()) {
-                    return writeHeaders(null, id, streamId, resHeaders, true);
+                    return writeHeaders(id, streamId, resHeaders, true);
                 }
 
-                writeHeaders(null, id, streamId, resHeaders, false);
+                writeHeaders(id, streamId, resHeaders, false);
                 transferredContent = true;
                 return writeData(id, streamId, content, true);
             }
 
-            writeHeaders(null, id, streamId, resHeaders, false);
+            writeHeaders(id, streamId, resHeaders, false);
             if (!content.isEmpty()) {
                 transferredContent = true;
                 writeData(id, streamId, content, false);

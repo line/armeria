@@ -712,12 +712,6 @@ final class HttpChannelPool implements AsyncCloseable {
                 // Channel not healthy. Do not add it back to the pool.
             }
         }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this).add("channel", get())
-                    .add("key", key).toString();
-        }
     }
 
     /**

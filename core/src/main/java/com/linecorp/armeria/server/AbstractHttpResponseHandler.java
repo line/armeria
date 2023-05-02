@@ -175,12 +175,12 @@ abstract class AbstractHttpResponseHandler {
 
         if (!res.informationals().isEmpty()) {
             for (ResponseHeaders informational : res.informationals()) {
-                responseEncoder.writeHeaders(reqCtx, id, streamId, informational,
+                responseEncoder.writeHeaders(id, streamId, informational,
                                              false, trailersEmpty);
             }
         }
         logBuilder().responseHeaders(headers);
-        ChannelFuture future = responseEncoder.writeHeaders(reqCtx, id, streamId, headers,
+        ChannelFuture future = responseEncoder.writeHeaders(id, streamId, headers,
                                                             contentEmpty && trailersEmpty, trailersEmpty);
         if (!contentEmpty) {
             logBuilder().increaseResponseLength(content);
