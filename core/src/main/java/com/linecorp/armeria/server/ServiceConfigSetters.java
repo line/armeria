@@ -25,6 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -177,6 +178,26 @@ interface ServiceConfigSetters {
      */
     @UnstableApi
     ServiceConfigSetters successFunction(SuccessFunction successFunction);
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * It's useful when you want to receive additional data even after closing the response.
+     * Specify {@link Duration#ZERO} to disable aborting the {@link HttpRequest}. Any negative value will abort
+     * the request immediately. There is no delay by default.
+     */
+    @UnstableApi
+    ServiceConfigSetters abortingRequestDelay(Duration delay);
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * It's useful when you want to receive additional data even after closing the response.
+     * Specify {@code 0} to disable aborting the {@link HttpRequest}. Any negative value will abort
+     * the request immediately. There is no delay by default.
+     */
+    @UnstableApi
+    ServiceConfigSetters abortingRequestDelayMillis(long delayMillis);
 
     /**
      * Sets the {@link Path} for storing the files uploaded from

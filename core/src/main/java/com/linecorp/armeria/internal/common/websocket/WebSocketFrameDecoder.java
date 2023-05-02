@@ -15,18 +15,22 @@
  */
 package com.linecorp.armeria.internal.common.websocket;
 
-import static java.util.Objects.requireNonNull;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
+import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 
 import io.netty.buffer.ByteBuf;
@@ -47,10 +51,12 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
         CORRUPT
     }
 
+    private final ServiceRequestContext ctx;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
-    private final WebSocketCloseHandler webSocketCloseHandler;
     private final boolean expectMaskedFrames;
+    @Nullable
+    private WebSocket outboundFrames;
 
     private int fragmentedFramesCount;
     private boolean finalFragment;
@@ -63,12 +69,16 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     private boolean receivedClosingHandshake;
     private State state = State.READING_FIRST;
 
-    public WebSocketFrameDecoder(int maxFramePayloadLength, boolean allowMaskMismatch,
-                                 WebSocketCloseHandler webSocketCloseHandler, boolean expectMaskedFrames) {
+    public WebSocketFrameDecoder(ServiceRequestContext ctx, int maxFramePayloadLength,
+                                 boolean allowMaskMismatch, boolean expectMaskedFrames) {
+        this.ctx = ctx;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
-        this.webSocketCloseHandler = requireNonNull(webSocketCloseHandler, "webSocketCloseHandler");
         this.expectMaskedFrames = expectMaskedFrames;
+    }
+
+    public void setOutboundWebSocket(WebSocket outboundFrames) {
+        this.outboundFrames = outboundFrames;
     }
 
     @Override
@@ -135,7 +145,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
 
                         // close frame : if there is a body, the first two bytes of the
                         // body MUST be a 2-byte unsigned integer representing a getStatus code
-                        if (frameOpcode == 8 && framePayloadLen1 == 1) {
+                        if (frameOpcode == WebSocketFrameType.CLOSE.opcode() && framePayloadLen1 == 1) {
                             throw protocolViolation("received close control frame with payload len 1");
                         }
                     } else { // data frame
@@ -247,7 +257,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         final CloseWebSocketFrame decodedFrame = WebSocketFrame.ofPooledClose(payloadBuffer);
                         out.add(decodedFrame);
                         logger.trace("{} is decoded.", decodedFrame);
-                        webSocketCloseHandler.receivedCloseFrame();
+                        closeRequest();
                         continue; // to while loop
                     }
 
@@ -272,9 +282,6 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         fragmentedFramesCount++;
                     }
                     continue; // to while loop
-                case CORRUPT:
-                    in.close();
-                    return;
                 default:
                     throw new Error("Shouldn't reach here.");
             }
@@ -312,7 +319,8 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     }
 
     private static int toFrameLength(long l) {
-        // We know that the length is less or equal to Integer.MAX_VALUE.
+        // We know that the length is less or equal to Integer.MAX_VALUE because maxFramePayloadLength
+        // is an integer.
         return (int) l;
     }
 
@@ -342,8 +350,19 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
         }
     }
 
+    private void closeRequest() {
+        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+        assert ctxExtension != null;
+        final Request request = ctxExtension.originalRequest();
+        assert request instanceof HttpRequestWriter;
+        //noinspection OverlyStrongTypeCast
+        ((HttpRequestWriter) request).close();
+    }
+
     @Override
     public void processOnError(Throwable cause) {
-        webSocketCloseHandler.closeStreams(cause, cause instanceof WebSocketProtocolViolationException);
+        if (outboundFrames != null) {
+            outboundFrames.abort(cause);
+        }
     }
 }

@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
-import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 
 import java.net.URISyntaxException;
 
@@ -29,6 +28,7 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -38,15 +38,13 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
-import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
-import com.linecorp.armeria.server.ServerHttp1ObjectEncoder.WebSocketUpgradeContext;
-import com.linecorp.armeria.server.ServerHttp1ObjectEncoder.WebSocketUpgradeListener;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.netty.buffer.ByteBuf;
@@ -73,7 +71,7 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
-final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocketUpgradeListener {
+final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http1RequestDecoder.class);
 
@@ -84,7 +82,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
     private ServerHttpObjectEncoder encoder;
-    private WebSocketUpgradeContext webSocketUpgradeContext;
     private final HttpServer httpServer;
 
     /** The request being decoded currently. */
@@ -99,19 +96,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.encoder = encoder;
-        webSocketUpgradeContext = encoder.webSocketUpgradeContext();
-        webSocketUpgradeContext.setWebSocketUpgradeListener(this);
         this.httpServer = httpServer;
-    }
-
-    @Override
-    public void upgraded(boolean success) {
-        if (!success) {
-            if (req != null) {
-                req.close();
-            }
-            req = null;
-        }
     }
 
     @Override
@@ -140,14 +125,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
         if (!(msg instanceof HttpObject)) {
             ctx.fireChannelRead(msg);
             return;
-        }
-
-        if (msg == EMPTY_LAST_CONTENT) {
-            if (req == null || webSocketUpgradeContext.lastWebSocketUpgradeRequestId() > 0) {
-                // EMPTY_LAST_CONTENT can be read after web socket upgrade failed or
-                // before an upgrade response is sent so just ignore it.
-                return;
-            }
         }
 
         final KeepAliveHandler keepAliveHandler = encoder.keepAliveHandler();
@@ -245,35 +222,36 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
                                                                         headers, reqTarget);
                     if (routingCtx.status().routeMustExist()) {
-                        try {
-                            // Find the service that matches the path.
-                            final Routed<ServiceConfig> routed =
-                                    routingCtx.virtualHost().findServiceConfig(routingCtx, true);
-                            assert routed.isPresent();
-                            final ServiceConfig serviceConfig = routingCtx.result().value();
-                            if (serviceConfig.service().as(WebSocketService.class) != null &&
-                                isHttp1WebSocketUpgradeRequest(headers)) {
+                        // Find the service that matches the path.
+                        final Routed<ServiceConfig> routed =
+                                routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                        assert routed.isPresent();
+                        final ServiceConfig serviceConfig = routingCtx.result().value();
+                        if (serviceConfig.service().as(WebSocketService.class) != null) {
+                            if (isHttp1WebSocketUpgradeRequest(headers)) {
                                 logger.trace("Received WebSocket upgrade headers: {}", headers);
-                                if (httpServer.unfinishedRequests() > 0) {
+                                if (httpServer.unfinishedRequests() > 1) {
                                     fail(id, headers, HttpStatus.BAD_REQUEST,
                                          "WebSocket session cannot share the connection.", null);
                                     return;
                                 }
-
-                                this.req = req = DecodedHttpRequest.of(false, eventLoop, id, 1, headers,
-                                                                       keepAlive, inboundTrafficController,
-                                                                       routingCtx);
-                                // Because endOfStream is false and the exchangeType is BIDI_STREAMING.
-                                assert req instanceof StreamingDecodedHttpRequest;
-                                webSocketUpgradeContext.setLastWebSocketUpgradeRequestId(id);
-                                WebSocketUtil.setWebSocketInboundStream(ctx.channel(), (HttpRequestWriter) req);
-                                ctx.fireChannelRead(req);
+                                final StreamingDecodedHttpRequest webSocketRequest =
+                                        new StreamingDecodedHttpRequest(
+                                                eventLoop, id, 1, headers, keepAlive, inboundTrafficController,
+                                                serviceConfig.maxRequestLength(), routingCtx,
+                                                ExchangeType.BIDI_STREAMING,
+                                                System.nanoTime(), SystemInfo.currentTimeMicros(), true);
+                                assert encoder instanceof ServerHttp1ObjectEncoder;
+                                ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
+                                final ChannelPipeline pipeline = ctx.pipeline();
+                                pipeline.replace(this, null, new WebSocketSessionHandler(
+                                        webSocketRequest, encoder, serviceConfig));
+                                if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
+                                    pipeline.remove(HttpServerUpgradeHandler.class);
+                                }
+                                ctx.fireChannelRead(webSocketRequest);
                                 return;
                             }
-                        } catch (Throwable cause) {
-                            logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
-                            fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
-                            return;
                         }
                     }
 
@@ -338,9 +316,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                     }
                 }
 
-                // If a WebSocket session established, ignore the LastHttpContent.
-                if (!webSocketUpgradeContext.webSocketSessionEstablished() &&
-                    msg instanceof LastHttpContent) {
+                if (msg instanceof LastHttpContent) {
                     final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                     if (!trailingHeaders.isEmpty()) {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
@@ -392,7 +368,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
         }
 
         // Send a '100 Continue' response.
-        encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false);
+        encoder.writeHeaders(null, id, 1, CONTINUE_RESPONSE, false);
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         nettyHeaders.remove(HttpHeaderNames.EXPECT);
@@ -431,7 +407,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
             // The HTTP/2 encoder will be used when a protocol violation error occurs after upgrading to HTTP/2
             // that is directly written by 'fail()'.
             encoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
-            webSocketUpgradeContext = WebSocketUpgradeContext.noop();
 
             // Generate the initial Http2Settings frame,
             // so that the next handler knows the protocol upgrade occurred as well.

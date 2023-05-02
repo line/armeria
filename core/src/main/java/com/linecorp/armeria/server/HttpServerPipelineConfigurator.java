@@ -72,6 +72,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
@@ -208,8 +209,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             keepAliveHandler = new NoopKeepAliveHandler();
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
-                p.channel(), H1C, keepAliveHandler,
-                config.hasWebSocketService(), config.http1HeaderNaming());
+                p.channel(), H1C, keepAliveHandler, config.http1HeaderNaming()
+        );
         p.addLast(TrafficLoggingHandler.SERVER);
         final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
                                                                           gracefulShutdownSupport,
@@ -517,12 +518,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             }
 
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
-                    ch, H1, keepAliveHandler, config.hasWebSocketService(), config.http1HeaderNaming());
-            p.addLast(new HttpServerCodec(config.http1MaxInitialLineLength(),
-                                          config.http1MaxHeaderSize(),
-                                          config.http1MaxChunkSize(),
-                                          encoder.webSocketUpgradeContext()));
-
+                    ch, H1, keepAliveHandler, config.http1HeaderNaming());
+            p.addLast(new HttpServerCodec(
+                    config.http1MaxInitialLineLength(),
+                    config.http1MaxHeaderSize(),
+                    config.http1MaxChunkSize()));
             final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
                                                                               gracefulShutdownSupport,
                                                                               encoder, H1, proxiedAddresses);
@@ -674,10 +674,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            final HttpServerCodec http1codec = new HttpServerCodec(config.http1MaxInitialLineLength(),
-                                                                   config.http1MaxHeaderSize(),
-                                                                   config.http1MaxChunkSize(),
-                                                                   responseEncoder.webSocketUpgradeContext());
+            final HttpServerCodec http1codec = new HttpServerCodec(
+                    config.http1MaxInitialLineLength(),
+                    config.http1MaxHeaderSize(),
+                    config.http1MaxChunkSize());
 
             String baseName = name;
             assert baseName != null;

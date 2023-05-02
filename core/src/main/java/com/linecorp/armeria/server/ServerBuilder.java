@@ -69,6 +69,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -231,6 +232,7 @@ public final class ServerBuilder implements TlsSetters {
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
+        virtualHostTemplate.abortingRequestDelayMillis(-1); // TODO(minwoox): add to Flags.
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
@@ -798,6 +800,31 @@ public final class ServerBuilder implements TlsSetters {
         gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
         validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
                                    gracefulShutdownQuietPeriod, "timeout");
+        return this;
+    }
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * It's useful when you want to receive additional data even after closing the response.
+     * Specify {@link Duration#ZERO} to disable aborting the {@link HttpRequest}. Any negative value will abort
+     * the request immediately. There is no delay by default.
+     */
+    @UnstableApi
+    public ServerBuilder abortingRequestDelay(Duration delay) {
+        return abortingRequestDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * It's useful when you want to receive additional data even after closing the response.
+     * Specify {@code 0} to disable aborting the {@link HttpRequest}. Any negative value will abort
+     * the request immediately. There is no delay by default.
+     */
+    @UnstableApi
+    public ServerBuilder abortingRequestDelayMillis(long delayMillis) {
+        virtualHostTemplate.abortingRequestDelayMillis(delayMillis);
         return this;
     }
 
@@ -2118,19 +2145,5 @@ public final class ServerBuilder implements TlsSetters {
                             path, service);
             }
         }
-    }
-
-    @Override
-    public String toString() {
-        return DefaultServerConfig.toString(
-                getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
-                maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
-                http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
-                meterRegistry, channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportIntervalMillis);
     }
 }

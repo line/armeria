@@ -21,7 +21,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * A close {@link WebSocketFrame}.
  *
- * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-1">Close</a>
+ * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1">Close</a>
  */
 @UnstableApi
 public interface CloseWebSocketFrame extends WebSocketFrame {
@@ -29,14 +29,14 @@ public interface CloseWebSocketFrame extends WebSocketFrame {
     /**
      * Returns the {@link WebSocketCloseStatus}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7-4">Status Codes</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
      */
     WebSocketCloseStatus status();
 
     /**
      * Returns the text that indicates the reason for closure.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7-4">Status Codes</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
      */
     String reasonPhrase();
 }

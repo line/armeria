@@ -18,12 +18,10 @@ package com.linecorp.armeria.server.websocket;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 
@@ -41,8 +39,6 @@ public final class WebSocketServiceBuilder {
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
-    private long closeTimeoutMillis = Flags.defaultRequestTimeoutMillis();
-    private long requestTimeoutMillis = Long.MAX_VALUE;
 
     WebSocketServiceBuilder(WebSocketHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -70,7 +66,7 @@ public final class WebSocketServiceBuilder {
     /**
      * Sets the subprotocols to use with the WebSocket Protocol.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1-9">
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1.9">
      *     Subprotocols Using the WebSocket Protocol</a>
      */
     public WebSocketServiceBuilder subprotocols(String... subprotocols) {
@@ -80,7 +76,7 @@ public final class WebSocketServiceBuilder {
     /**
      * Sets the subprotocols to use with the WebSocket Protocol.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1-9">
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1.9">
      *     Subprotocols Using the WebSocket Protocol</a>
      */
     public WebSocketServiceBuilder subprotocols(Iterable<String> subprotocols) {
@@ -91,7 +87,7 @@ public final class WebSocketServiceBuilder {
     /**
      * Sets the allowed origins.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10-2">Origin Considerations</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
     public WebSocketServiceBuilder allowedOrigins(String... allowedOrigins) {
         return allowedOrigins(ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins")));
@@ -100,49 +96,10 @@ public final class WebSocketServiceBuilder {
     /**
      * Sets the allowed origins.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10-2">Origin Considerations</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
     public WebSocketServiceBuilder allowedOrigins(Iterable<String> allowedOrigins) {
         this.allowedOrigins = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"));
-        return this;
-    }
-
-    /**
-     * Sets the timeout of a request. {@link Long#MAX_VALUE} is used by default.
-     */
-    public WebSocketServiceBuilder requestTimeout(Duration timeout) {
-        return requestTimeoutMillis(requireNonNull(timeout, "timeout").toMillis());
-    }
-
-    /**
-     * Sets the timeout of a request in milliseconds. {@link Long#MAX_VALUE} is used by default.
-     */
-    public WebSocketServiceBuilder requestTimeoutMillis(long requestTimeoutMillis) {
-        checkArgument(requestTimeoutMillis >= 0,
-                      "requestTimeoutMillis: %s (expected >= 0)", requestTimeoutMillis);
-        this.requestTimeoutMillis = requestTimeoutMillis;
-        return this;
-    }
-
-    /**
-     * Sets the timeout that waits a close frame from the peer after sending a close frame to the peer.
-     *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1-4">Closing Handshake</a>
-     */
-    public WebSocketServiceBuilder closeTimeout(Duration timeout) {
-        return closeTimeoutMillis(requireNonNull(timeout, "timeout").toMillis());
-    }
-
-    /**
-     * Sets the timeout that waits a close frame from the peer after sending a close frame to the peer
-     * in milliseconds. Specify {@code 0} to close the connection as soon as sending a close frame.
-     * {@link Flags#defaultRequestTimeoutMillis()} is used by default.
-     *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1-4">Closing Handshake</a>
-     */
-    public WebSocketServiceBuilder closeTimeoutMillis(long closeTimeoutMillis) {
-        checkArgument(closeTimeoutMillis >= 0, "closeTimeoutMillis: %s (expected >= 0)", closeTimeoutMillis);
-        this.closeTimeoutMillis = closeTimeoutMillis;
         return this;
     }
 
@@ -151,6 +108,6 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketService build() {
         return new WebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
-                                    subprotocols, allowedOrigins, requestTimeoutMillis, closeTimeoutMillis);
+                                    subprotocols, allowedOrigins);
     }
 }

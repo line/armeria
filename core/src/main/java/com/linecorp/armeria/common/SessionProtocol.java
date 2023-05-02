@@ -153,7 +153,7 @@ public enum SessionProtocol {
      * Returns {@code true} if this {@link SessionProtocol} is {@link #H1} or {@link #H1C}.
      * Note that this method returns {@code false} for {@link #HTTP} and {@link #HTTPS}.
      */
-    public boolean isHttp1() {
+    public boolean isExplicitHttp1() {
         return this == H1 || this == H1C;
     }
 
@@ -161,7 +161,7 @@ public enum SessionProtocol {
      * Returns {@code true} if this {@link SessionProtocol} is {@link #H2} or {@link #H2C}.
      * Note that this method returns {@code false} for {@link #HTTP} and {@link #HTTPS}.
      */
-    public boolean isHttp2() {
+    public boolean isExplicitHttp2() {
         return this == H2 || this == H2C;
     }
 

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.websocket;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newCloseWebSocketFrame;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -34,18 +35,16 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
-import com.linecorp.armeria.internal.common.websocket.WebSocketCloseHandler;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -112,19 +111,14 @@ public final class WebSocketService extends AbstractHttpService {
     private final boolean allowMaskMismatch;
     private final Set<String> subprotocols;
     private final Set<String> allowedOrigins;
-    private long requestTimeoutMillis;
-    private final long closeTimeoutMillis;
 
     WebSocketService(WebSocketHandler handler, int maxFramePayloadLength, boolean allowMaskMismatch,
-                     Set<String> subprotocols, Set<String> allowedOrigins,
-                     long requestTimeoutMillis, long closeTimeoutMillis) {
+                     Set<String> subprotocols, Set<String> allowedOrigins) {
         this.handler = handler;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
         this.subprotocols = subprotocols;
         this.allowedOrigins = allowedOrigins;
-        this.requestTimeoutMillis = Math.max(requestTimeoutMillis, closeTimeoutMillis);
-        this.closeTimeoutMillis = closeTimeoutMillis;
     }
 
     /**
@@ -155,7 +149,7 @@ public final class WebSocketService extends AbstractHttpService {
      */
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (!ctx.sessionProtocol().isHttp1()) {
+        if (!ctx.sessionProtocol().isExplicitHttp1()) {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
         final RequestHeaders headers = req.headers();
@@ -167,7 +161,7 @@ public final class WebSocketService extends AbstractHttpService {
         if (!allowedOrigins.isEmpty()) {
             final String origin = headers.get(HttpHeaderNames.ORIGIN);
             if (isNullOrEmpty(origin) || !allowedOrigins.contains(origin)) {
-                logger.trace("not allowed origin: {}, allowed: {}", origin, allowedOrigins);
+                logger.trace("Not allowed origin: {}, allowed: {}", origin, allowedOrigins);
                 return HttpResponse.of(HttpStatus.FORBIDDEN);
             }
         }
@@ -209,7 +203,7 @@ public final class WebSocketService extends AbstractHttpService {
     }
 
     // Generate Sec-WebSocket-Accept using Sec-WebSocket-Key.
-    // See https://datatracker.ietf.org/doc/html/rfc6455#section-11-3-3
+    // See https://datatracker.ietf.org/doc/html/rfc6455#section-11.3.3
     private static String generateSecWebSocketAccept(String webSocketKey) {
         final String acceptSeed = webSocketKey + WEBSOCKET_13_ACCEPT_GUID;
         final byte[] sha1 = Hashing.sha1().hashBytes(acceptSeed.getBytes(StandardCharsets.US_ASCII)).asBytes();
@@ -218,28 +212,21 @@ public final class WebSocketService extends AbstractHttpService {
 
     private HttpResponse handleUpgradeRequest(ServiceRequestContext ctx, HttpRequest req,
                                               ResponseHeaders responseHeaders) {
-        ctx.setRequestTimeoutMillis(requestTimeoutMillis);
-
-        final HttpResponseWriter responseWriter = HttpResponse.streaming();
-        responseWriter.write(responseHeaders);
-        responseWriter.whenConsumed().thenRun(() -> {
-            final WebSocketCloseHandler webSocketCloseHandler =
-                    new WebSocketCloseHandler(ctx, responseWriter, encoder, closeTimeoutMillis);
-            final WebSocketFrameDecoder decoder =
-                    new WebSocketFrameDecoder(maxFramePayloadLength, allowMaskMismatch, webSocketCloseHandler,
-                                              true); // client sends masked frames.
-            final StreamMessage<WebSocketFrame> inboundFrames = req.decode(decoder, ctx.alloc());
-            try {
-                final WebSocket outboundFrames = handler.handle(ctx, new WebSocketWrapper(inboundFrames));
-                outboundFrames.subscribe(new WebSocketResponseSubscriber(ctx, responseWriter,
-                                                                         encoder, webSocketCloseHandler),
-                                         ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
-            } catch (Throwable cause) {
-                req.abort(cause);
-                responseWriter.close(cause);
-            }
-        });
-        return responseWriter;
+        final WebSocketFrameDecoder decoder =
+                new WebSocketFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch,
+                                          true); // client sends masked frames.
+        final StreamMessage<WebSocketFrame> inboundFrames = req.decode(decoder, ctx.alloc());
+        final WebSocket outboundFrames = handler.handle(ctx, new WebSocketWrapper(inboundFrames));
+        decoder.setOutboundWebSocket(outboundFrames);
+        return HttpResponse.of(
+                responseHeaders, outboundFrames.recoverAndResume(cause -> {
+                                                   if (cause instanceof ClosedStreamException) {
+                                                       return StreamMessage.of();
+                                                   }
+                                                   ctx.logBuilder().responseCause(cause);
+                                                   return StreamMessage.of(newCloseWebSocketFrame(cause));
+                                               })
+                                               .map(frame -> HttpData.wrap(encoder.encode(ctx, frame))));
     }
 
     /**
@@ -270,7 +257,7 @@ public final class WebSocketService extends AbstractHttpService {
      */
     @Override
     protected HttpResponse doConnect(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.sessionProtocol().isHttp1()) {
+        if (!ctx.sessionProtocol().isExplicitHttp2()) {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
         final RequestHeaders headers = req.headers();

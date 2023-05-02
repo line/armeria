@@ -52,7 +52,7 @@ interface DecodedHttpRequest extends HttpRequest {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,
-                            requestStartTimeNanos, requestStartTimeMicros);
+                            requestStartTimeNanos, requestStartTimeMicros, false);
                 } else {
                     return new AggregatingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,
@@ -121,4 +121,11 @@ interface DecodedHttpRequest extends HttpRequest {
      * when the request started.
      */
     long requestStartTimeMicros();
+
+    /**
+     * Returns whether the request is an HTTP/1.1 webSocket request.
+     */
+    default boolean isHttp1WebSocket() {
+        return false;
+    }
 }

@@ -275,6 +275,16 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder abortingRequestDelay(Duration duration) {
+        return (ServiceBindingBuilder) super.abortingRequestDelay(duration);
+    }
+
+    @Override
+    public ServiceBindingBuilder abortingRequestDelayMillis(long delayMillis) {
+        return (ServiceBindingBuilder) super.abortingRequestDelayMillis(delayMillis);
+    }
+
+    @Override
     public ServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (ServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
     }

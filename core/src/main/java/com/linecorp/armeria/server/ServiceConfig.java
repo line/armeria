@@ -30,6 +30,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -73,6 +74,7 @@ public final class ServiceConfig {
 
     private final BlockingTaskExecutor blockingTaskExecutor;
 
+    private final long abortingRequestDelayMillis;
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
     private final HttpHeaders defaultHeaders;
@@ -87,7 +89,7 @@ public final class ServiceConfig {
                   long requestTimeoutMillis, long maxRequestLength,
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
                   BlockingTaskExecutor blockingTaskExecutor,
-                  SuccessFunction successFunction,
+                  SuccessFunction successFunction, long abortingRequestDelayMillis,
                   Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
                   HttpHeaders defaultHeaders,
                   Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
@@ -95,7 +97,7 @@ public final class ServiceConfig {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
-             blockingTaskExecutor, successFunction,
+             blockingTaskExecutor, successFunction, abortingRequestDelayMillis,
              multipartUploadsLocation, shutdownSupports, defaultHeaders,
                      requestIdGenerator, serviceErrorHandler);
     }
@@ -111,6 +113,7 @@ public final class ServiceConfig {
                           Set<TransientServiceOption> transientServiceOptions,
                           BlockingTaskExecutor blockingTaskExecutor,
                           SuccessFunction successFunction,
+                          long abortingRequestDelayMillis,
                           Path multipartUploadsLocation,
                           List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
                           Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
@@ -129,6 +132,7 @@ public final class ServiceConfig {
         this.transientServiceOptions = requireNonNull(transientServiceOptions, "transientServiceOptions");
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.successFunction = requireNonNull(successFunction, "successFunction");
+        this.abortingRequestDelayMillis = abortingRequestDelayMillis;
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
         this.defaultHeaders = defaultHeaders;
@@ -173,7 +177,7 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, mappedRoute, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
-                                 blockingTaskExecutor, successFunction,
+                                 blockingTaskExecutor, successFunction, abortingRequestDelayMillis,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler);
     }
@@ -184,7 +188,7 @@ public final class ServiceConfig {
                                  defaultServiceName, defaultServiceNaming, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
-                                 blockingTaskExecutor, successFunction,
+                                 blockingTaskExecutor, successFunction, abortingRequestDelayMillis,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler);
     }
@@ -194,7 +198,7 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, mappedRoute, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
-                                 blockingTaskExecutor, successFunction,
+                                 blockingTaskExecutor, successFunction, abortingRequestDelayMillis,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler);
     }
@@ -403,6 +407,14 @@ public final class ServiceConfig {
     }
 
     /**
+     * Returns the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    public long abortingRequestDelayMillis() {
+        return abortingRequestDelayMillis;
+    }
+
+    /**
      * Returns the {@link Path} that is used to store uploaded file through multipart/form-data.
      */
     public Path multipartUploadsLocation() {
@@ -452,6 +464,7 @@ public final class ServiceConfig {
                              .add("accessLogWriter", accessLogWriter)
                              .add("blockingTaskExecutor", blockingTaskExecutor)
                              .add("successFunction", successFunction)
+                             .add("abortingRequestDelayMillis", abortingRequestDelayMillis)
                              .add("multipartUploadsLocation", multipartUploadsLocation)
                              .add("serviceErrorHandler", serviceErrorHandler)
                              .add("shutdownSupports", shutdownSupports)

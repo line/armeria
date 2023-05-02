@@ -16,11 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -33,39 +28,42 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
-import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.Http2Error;
+import io.netty.util.ReferenceCountUtil;
 
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
-
-    private static final Logger logger = LoggerFactory.getLogger(ServerHttp1ObjectEncoder.class);
-
     private final KeepAliveHandler keepAliveHandler;
     private final Http1HeaderNaming http1HeaderNaming;
-    private final WebSocketUpgradeContext webSocketUpgradeContext;
 
-    private boolean sentConnectionCloseHeader;
+    /**
+     * The ID of the last request whose response headers is written.
+     */
+    private int lastResponseHeadersId;
+    private boolean webSocketUpgrading;
+    private boolean webSocketUpgraded;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
-                             boolean hasWebSocketService, Http1HeaderNaming http1HeaderNaming) {
+                             Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
         assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
                keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
-        webSocketUpgradeContext = hasWebSocketService ? new DefaultWebSocketUpgradeContext()
-                                                      : WebSocketUpgradeContext.noop();
         this.http1HeaderNaming = http1HeaderNaming;
     }
 
@@ -74,25 +72,20 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return keepAliveHandler;
     }
 
-    WebSocketUpgradeContext webSocketUpgradeContext() {
-        return webSocketUpgradeContext;
-    }
-
     @Override
-    public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
-                                        boolean isTrailersEmpty) {
+    public ChannelFuture doWriteHeaders(@Nullable ServiceRequestContext ctx, int id, int streamId,
+                                        ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
         if (!isWritable(id)) {
             return newClosedSessionFuture();
         }
 
-        if (webSocketUpgradeContext.lastWebSocketUpgradeRequestId() == id) {
-            if (isHttp1WebSocketUpgradeResponse(headers)) {
-                webSocketUpgradeContext.setWebSocketSessionEstablished(true);
-                logger.trace("WebSocket session is established. id: {}, response headers: {}", id, headers);
-                return handleWebSocketUpgradeResponse(id, headers);
-            }
-            logger.trace("Failed to establish a WebSocket session. id: {}, response headers: {}", id, headers);
-            webSocketUpgradeContext.setWebSocketSessionEstablished(false);
+        if (webSocketUpgrading && headers.status() == HttpStatus.SWITCHING_PROTOCOLS) {
+            webSocketUpgraded = true;
+            final HttpResponse res = new DefaultHttpResponse(
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS, false);
+            // Call toNettyHttp1Server directly not to remove "Connection: Upgrade" header.
+            ArmeriaHttpUtil.toNettyHttp1Server(headers, res.headers(), http1HeaderNaming, false);
+            return write(id, res, false);
         }
 
         final HttpResponse converted = convertHeaders(headers, endStream, isTrailersEmpty);
@@ -103,56 +96,42 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return writeNonInformationalHeaders(id, converted, endStream, channel().newPromise());
     }
 
-    private ChannelFuture handleWebSocketUpgradeResponse(int id, ResponseHeaders headers) {
-        final HttpResponse res = new DefaultHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS, false);
-        convertHeaders(headers, res.headers(), false /* To remove Content-Length header */);
-        return write(id, res, false);
-    }
-
     private HttpResponse convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
         final int statusCode = headers.status().code();
         final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(statusCode);
 
+        final HttpResponse res;
         if (headers.status().isInformational()) {
-            final HttpResponse res = new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
+            res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
             ArmeriaHttpUtil.toNettyHttp1ServerHeaders(headers, res.headers(), http1HeaderNaming, true);
-            return res;
-        }
+        } else if (endStream) {
+            res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
+            final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
+            convertHeaders(headers, outHeaders, isTrailersEmpty);
 
-        if (!endStream) {
-            final HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
+            if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
+                maybeRemoveContentLength(statusCode, outHeaders);
+            } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                // NB: Set the 'content-length' only when not set rather than always setting to 0.
+                //     It's because a response to a HEAD request can have empty content while having
+                //     non-zero 'content-length' header.
+                //     However, this also opens the possibility of sending a non-zero 'content-length'
+                //     header even when it really has to be zero. e.g. a response to a non-HEAD request
+                outHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+            }
+        } else {
+            res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
             convertHeaders(headers, res.headers(), isTrailersEmpty);
             maybeSetTransferEncoding(res, statusCode);
-            return res;
         }
 
-        final HttpResponse res =
-                new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
-        final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
-        convertHeaders(headers, outHeaders, isTrailersEmpty);
-
-        if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
-            maybeRemoveContentLength(statusCode, outHeaders);
-        } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-            // NB: Set the 'content-length' only when not set rather than always setting to 0.
-            //     It's because a response to a HEAD request can have empty content while having
-            //     non-zero 'content-length' header.
-            //     However, this also opens the possibility of sending a non-zero 'content-length'
-            //     header even when it really has to be zero. e.g. a response to a non-HEAD request
-            outHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
-        }
         return res;
     }
 
     private void convertHeaders(ResponseHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
                                 boolean isTrailersEmpty) {
-        if (keepAliveHandler.needsDisconnection()) {
-            sentConnectionCloseHeader = true;
-        }
         ArmeriaHttpUtil.toNettyHttp1ServerHeaders(inHeaders, outHeaders, http1HeaderNaming,
-                                                  !sentConnectionCloseHeader);
+                                                  !keepAliveHandler.needsDisconnection());
 
         if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
@@ -187,6 +166,29 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     }
 
     @Override
+    protected ChannelFuture write(HttpObject obj, ChannelPromise promise) {
+        // Use FQCN for Netty HttpResponse to avoid confusion with Armeria HttpResponse
+        // We check if obj is an HttpResponse here because server-side writes both headers
+        // and errors as an HttpResponse.
+        //noinspection UnnecessaryFullyQualifiedName
+        if (obj instanceof io.netty.handler.codec.http.HttpResponse) {
+            final int currentId = currentId();
+            if (lastResponseHeadersId >= currentId) {
+                // Response headers were written already. This may occur Http1RequestDecoder sends an error
+                // response while HttpResponseSubscriber writes a response headers and then waits for bodies.
+                ReferenceCountUtil.release(obj);
+                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR);
+            }
+            if (webSocketUpgraded ||
+                ((HttpResponse) obj).status().codeClass() != HttpStatusClass.INFORMATIONAL) {
+                lastResponseHeadersId = currentId;
+            }
+        }
+
+        return channel().write(obj, promise);
+    }
+
+    @Override
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
         ArmeriaHttpUtil.toNettyHttp1ServerTrailers(inputHeaders, outputHeaders, http1HeaderNaming);
@@ -199,7 +201,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
-        return id <= lastResponseHeadersId();
+        return id <= lastResponseHeadersId;
     }
 
     @Override
@@ -223,114 +225,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return future.addListener(ChannelFutureListener.CLOSE);
     }
 
-    /**
-     * The context that has WebSocket upgrade and session information.
-     */
-    interface WebSocketUpgradeContext {
-
-        /**
-         * A noop context. This is used when the server doesn't have any {@link WebSocketService}.
-         */
-        static WebSocketUpgradeContext noop() {
-            return NoopWebSocketUpgradeContext.INSTANCE;
-        }
-
-        /**
-         * Sets the ID of the request that lastly tries to establish a WebSocket session.
-         * The ID will be used to find the corresponding response. If the response contains the proper
-         * WebSocket upgrade response headers, the WebSocket session will be established.
-         */
-        void setLastWebSocketUpgradeRequestId(int id);
-
-        /**
-         * Returns the ID of the request that lastly tries to establish a WebSocket session.
-         */
-        int lastWebSocketUpgradeRequestId();
-
-        /**
-         * Sets whether a WebSocket session is established. This will also reset the last request ID to -1 if
-         * {@code success} is {@code false}.
-         */
-        void setWebSocketSessionEstablished(boolean success);
-
-        /**
-         * Tells whether WebSocket session is established.
-         */
-        boolean webSocketSessionEstablished();
-
-        /**
-         * Sets the listener that this context notifies when a WebSocket session is established or failed.
-         * The listener is {@link Http1RequestDecoder}.
-         * When the upgrade fails, the {@link Http1RequestDecoder} closes the request and removes
-         * the reference of the request.
-         */
-        void setWebSocketUpgradeListener(WebSocketUpgradeListener listener);
-    }
-
-    @FunctionalInterface
-    interface WebSocketUpgradeListener {
-        void upgraded(boolean success);
-    }
-
-    static final class DefaultWebSocketUpgradeContext implements WebSocketUpgradeContext {
-
-        private int lastWebSocketUpgradeRequestId = -1;
-
-        private boolean webSocketEstablished;
-        @SuppressWarnings("NotNullFieldNotInitialized")
-        private WebSocketUpgradeListener listener;
-
-        @Override
-        public void setLastWebSocketUpgradeRequestId(int id) {
-            lastWebSocketUpgradeRequestId = id;
-        }
-
-        @Override
-        public int lastWebSocketUpgradeRequestId() {
-            return lastWebSocketUpgradeRequestId;
-        }
-
-        @Override
-        public void setWebSocketSessionEstablished(boolean success) {
-            webSocketEstablished = success;
-            if (!success) {
-                lastWebSocketUpgradeRequestId = -1; // reset
-            }
-            listener.upgraded(success);
-        }
-
-        @Override
-        public boolean webSocketSessionEstablished() {
-            return webSocketEstablished;
-        }
-
-        @Override
-        public void setWebSocketUpgradeListener(WebSocketUpgradeListener listener) {
-            this.listener = listener;
-        }
-    }
-
-    private enum NoopWebSocketUpgradeContext implements WebSocketUpgradeContext {
-
-        INSTANCE;
-
-        @Override
-        public void setLastWebSocketUpgradeRequestId(int id) {}
-
-        @Override
-        public int lastWebSocketUpgradeRequestId() {
-            return -1;
-        }
-
-        @Override
-        public void setWebSocketSessionEstablished(boolean success) {}
-
-        @Override
-        public boolean webSocketSessionEstablished() {
-            return false;
-        }
-
-        @Override
-        public void setWebSocketUpgradeListener(WebSocketUpgradeListener listener) {}
+    void webSocketUpgrading() {
+        webSocketUpgrading = true;
     }
 }

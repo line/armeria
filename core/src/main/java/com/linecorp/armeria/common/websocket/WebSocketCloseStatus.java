@@ -38,8 +38,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <pre>
  *
  * RFC-6455 The WebSocket Protocol, December 2011:
- * <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7-4-1"
- *         >https://datatracker.ietf.org/doc/html/rfc6455#section-7-4-1</a>
+ * <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1"
+ *         >https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1</a>
  *
  * WebSocket Protocol Registries, April 2019:
  * <a href="https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number"
@@ -305,7 +305,7 @@ public final class WebSocketCloseStatus {
     /**
      * Returns the status code.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7-4">Status Codes</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
      */
     public int code() {
         return statusCode;
@@ -314,7 +314,7 @@ public final class WebSocketCloseStatus {
     /**
      * Returns the text that indicates the reason for closure.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7-4">Status Codes</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
      */
     public String reasonPhrase() {
         return reasonPhrase;

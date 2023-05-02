@@ -278,6 +278,18 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
     }
 
     @Override
+    public VirtualHostAnnotatedServiceBindingBuilder abortingRequestDelay(Duration delay) {
+        defaultServiceConfigSetters.abortingRequestDelay(delay);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder abortingRequestDelayMillis(long delayMillis) {
+        defaultServiceConfigSetters.abortingRequestDelayMillis(delayMillis);
+        return this;
+    }
+
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
         return this;

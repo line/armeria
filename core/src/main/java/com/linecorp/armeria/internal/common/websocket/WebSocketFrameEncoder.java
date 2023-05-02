@@ -136,7 +136,7 @@ public final class WebSocketFrameEncoder {
 
         logger.trace("Encoding a WebSocket Frame. type: {}, length: {}", type.opcode(), length);
 
-        // https://datatracker.ietf.org/doc/html/rfc6455#section-5-2
+        // https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
         int b0 = 0;
         if (msg.isFinalFragment()) {
             b0 |= 1 << 7;

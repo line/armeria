@@ -96,9 +96,9 @@ class WebSocketFrameEncoderAndDecoderTest {
         final int maxPayloadLength = 255;
         final HttpResponseWriter httpResponseWriter = HttpResponse.streaming();
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
-        final WebSocketFrameDecoder decoder =
-                frameDecoder(encoder, httpResponseWriter, maxPayloadLength, false, true);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
+        final WebSocketFrameDecoder decoder =
+                new WebSocketFrameDecoder(ctx, maxPayloadLength, false, true);
         final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(whenComplete));
 
@@ -117,25 +117,15 @@ class WebSocketFrameEncoderAndDecoderTest {
         httpResponseWriter.abort();
     }
 
-    private static WebSocketFrameDecoder frameDecoder(WebSocketFrameEncoder encoder,
-                                                      HttpResponseWriter httpResponseWriter,
-                                                      int maxPayloadLength,
-                                                      boolean allowMaskMismatch, boolean maskPayload) {
-        final WebSocketCloseHandler closeHandler =
-                new WebSocketCloseHandler(ctx, httpResponseWriter, encoder, 1000);
-        return new WebSocketFrameDecoder(maxPayloadLength, allowMaskMismatch,
-                                         closeHandler, maskPayload);
-    }
-
     @CsvSource({ "false, false", "false, true", "true, false", "true, true" })
     @ParameterizedTest
     public void testWebSocketEncodingAndDecoding(boolean maskPayload, boolean allowMaskMismatch)
             throws InterruptedException {
         final HttpResponseWriter httpResponseWriter = HttpResponse.streaming();
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(maskPayload);
-        final WebSocketFrameDecoder decoder = frameDecoder(encoder, httpResponseWriter, 1024 * 1024,
-                                                           allowMaskMismatch, maskPayload);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
+        final WebSocketFrameDecoder decoder = new WebSocketFrameDecoder(ctx, 1024 * 1024, allowMaskMismatch,
+                                                                        maskPayload);
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(new CompletableFuture<>()));
         executeTests(encoder, requestWriter);
         httpResponseWriter.abort();

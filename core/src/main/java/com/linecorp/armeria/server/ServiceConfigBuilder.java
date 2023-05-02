@@ -66,6 +66,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
+    private Long abortingRequestDelayMillis;
+    @Nullable
     private Path multipartUploadsLocation;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
@@ -188,6 +190,17 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder abortingRequestDelay(Duration delay) {
+        return abortingRequestDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    @Override
+    public ServiceConfigBuilder abortingRequestDelayMillis(long delayMillis) {
+        abortingRequestDelayMillis = delayMillis;
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         this.multipartUploadsLocation = multipartUploadsLocation;
         return this;
@@ -275,7 +288,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         BlockingTaskExecutor defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
-                        Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders,
+                        long defaultAbortingRequestDelayMillis,
+                        Path defaultMultipartUploadsLocation,
+                        HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
                         @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
@@ -297,6 +312,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 successFunction != null ? successFunction : defaultSuccessFunction,
+                abortingRequestDelayMillis != null ? abortingRequestDelayMillis
+                                                   : defaultAbortingRequestDelayMillis,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),

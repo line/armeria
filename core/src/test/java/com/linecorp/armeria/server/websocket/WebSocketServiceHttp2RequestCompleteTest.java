@@ -16,8 +16,6 @@
 package com.linecorp.armeria.server.websocket;
 
 import static com.linecorp.armeria.server.websocket.WebSocketServiceTest.checkCloseFrame;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.BlockingQueue;
@@ -32,6 +30,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -39,19 +39,20 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketServiceTest.AbstractWebSocketHandler;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
 
-class WebSocketServiceHttp2CloseTimeoutTest {
+class WebSocketServiceHttp2RequestCompleteTest {
 
     private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
 
@@ -65,12 +66,10 @@ class WebSocketServiceHttp2CloseTimeoutTest {
                     writer.close();
                 }
             };
-            sb.service("/noCloseTimeout", WebSocketService.builder(immediateClosingHandler)
-                                                          .closeTimeoutMillis(Long.MAX_VALUE)
-                                                          .build());
-            sb.service("/2000MillisTimeout", WebSocketService.builder(immediateClosingHandler)
-                                                             .closeTimeoutMillis(2000)
-                                                             .build());
+            sb.route()
+              .path("/2000MillisTimeout")
+              .abortingRequestDelayMillis(2000)
+              .build(WebSocketService.of(immediateClosingHandler));
         }
     };
 
@@ -84,18 +83,21 @@ class WebSocketServiceHttp2CloseTimeoutTest {
     @Test
     void normalCloseWhenCloseFrameSentAndReceived() throws InterruptedException {
         final HttpRequestWriter requestWriter =
-                HttpRequest.streaming(webSocketUpgradeHeaders("/noCloseTimeout"));
+                HttpRequest.streaming(webSocketUpgradeHeaders("/2000MillisTimeout"));
         final ClientRequestContext ctx = ClientRequestContext.of(requestWriter);
 
         requestWriter.write(HttpData.wrap(encoder.encode(
                 ctx, WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE))));
+        requestWriter.close();
 
         final BodySubscriber bodySubscriber = new BodySubscriber();
         client.execute(requestWriter).split().body().subscribe(bodySubscriber);
 
+        final ServiceRequestContext sctx = server.requestContextCaptor().take();
+        await().atMost(1000, TimeUnit.MILLISECONDS) // buffer 1000 milliseconds
+               .until(() -> sctx.request().isComplete());
         bodySubscriber.whenComplete.join();
         checkCloseFrame(bodySubscriber.messageQueue.take(), WebSocketCloseStatus.NORMAL_CLOSURE);
-        await().until(() -> requestWriter.whenComplete().isDone());
     }
 
     @Test
@@ -103,29 +105,20 @@ class WebSocketServiceHttp2CloseTimeoutTest {
         final HttpRequestWriter requestWriter =
                 HttpRequest.streaming(webSocketUpgradeHeaders("/2000MillisTimeout"));
         final BodySubscriber bodySubscriber = new BodySubscriber();
-        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final SplitHttpResponse split = client.execute(requestWriter).split();
+            split.headers().thenAccept(unused -> {
+                // Update the request to prevent the request from being completed.
+                captor.get().updateRequest(HttpRequest.of(HttpMethod.GET, "/"));
+            });
+            split.body().subscribe(bodySubscriber);
+        }
 
+        final ServiceRequestContext sctx = server.requestContextCaptor().take();
         await().atLeast(1000, TimeUnit.MILLISECONDS) // buffer 1000 milliseconds
-               .until(() -> requestWriter.whenComplete().isCompletedExceptionally());
-        // Because the client didn't send the close frame, the request is complete exceptionally.
-        assertThatThrownBy(() -> requestWriter.whenComplete().join())
-                .hasCauseInstanceOf(ResponseCompleteException.class);
-        checkCloseFrame(bodySubscriber.messageQueue.take(), WebSocketCloseStatus.NORMAL_CLOSURE);
-        // Response is completed normally because the client received close frame.
+               .until(() -> sctx.request().isComplete());
         bodySubscriber.whenComplete.join();
-    }
-
-    @Test
-    void notClosedIfCloseFrameIsNotSentWhenNoCloseTimeout() throws InterruptedException {
-        final HttpRequestWriter requestWriter =
-                HttpRequest.streaming(webSocketUpgradeHeaders("/noCloseTimeout"));
-        final BodySubscriber bodySubscriber = new BodySubscriber();
-        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
-
-        Thread.sleep(3000);
-        // The request and response are not complete.
-        assertThat(requestWriter.whenComplete().isDone()).isFalse();
-        assertThat(bodySubscriber.whenComplete.isDone()).isFalse();
+        checkCloseFrame(bodySubscriber.messageQueue.take(), WebSocketCloseStatus.NORMAL_CLOSURE);
     }
 
     private static RequestHeaders webSocketUpgradeHeaders(String path) {

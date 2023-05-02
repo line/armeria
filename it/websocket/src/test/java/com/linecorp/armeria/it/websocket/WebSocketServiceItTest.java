@@ -61,9 +61,10 @@ class WebSocketServiceItTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/chat", WebSocketService.builder(new WebSocketEchoHandler())
-                                                .closeTimeoutMillis(3000)
-                                                .build());
+            sb.route()
+              .path("/chat")
+              .abortingRequestDelayMillis(3000)
+              .build(WebSocketService.of(new WebSocketEchoHandler()));
         }
     };
 

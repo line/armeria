@@ -91,7 +91,8 @@ class WebSocketServiceHandshakeTest {
             "H1,  false",
     })
     @ParameterizedTest
-    void http1Handshake(SessionProtocol sessionProtocol, boolean useThreadReschedulingDecorator) {
+    void http1Handshake(SessionProtocol sessionProtocol, boolean useThreadReschedulingDecorator)
+            throws InterruptedException {
         // If H1 protocol is used, HttpServerUpgradeHandler is involved in the pipeline.
         threadRescheduling.set(useThreadReschedulingDecorator);
         final WebClient client = WebClient.builder(server.uri(sessionProtocol))
@@ -126,67 +127,50 @@ class WebSocketServiceHandshakeTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final AggregatedHttpResponse res = client.execute(headersBuilder.build()).aggregate().join();
 
-            // The same connection is used.
-            assertThat(channel).isSameAs(channel(captor.get()));
+            // The previous connection is closed.
+            assertThat(channel).isNotSameAs(channel(captor.get()));
             assertThat(res.status()).isSameAs(HttpStatus.BAD_REQUEST);
             assertThat(res.headers().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION)).isEqualTo("13");
         }
 
         headersBuilder.addInt(HttpHeaderNames.SEC_WEBSOCKET_VERSION, 13);
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse res = client.execute(headersBuilder.build()).aggregate().join();
+        final AggregatedHttpResponse res = client.execute(headersBuilder.build()).aggregate().join();
 
-            // The same connection is used.
-            assertThat(channel).isSameAs(channel(captor.get()));
-            assertThat(res.status()).isSameAs(HttpStatus.BAD_REQUEST);
-            assertThat(res.contentUtf8()).contains("The upgrade header must contain Sec-WebSocket-Key");
-        }
+        assertThat(res.status()).isSameAs(HttpStatus.BAD_REQUEST);
+        assertThat(res.contentUtf8()).contains("The upgrade header must contain Sec-WebSocket-Key");
 
-        // Can send another request using the same connection before WebSocket is established.
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse res = client.get("/").aggregate().join();
-
-            // The same connection is used.
-            assertThat(channel).isSameAs(channel(captor.get()));
-            assertThat(res.status()).isSameAs(HttpStatus.OK);
-        }
-
-        // Borrowed from the RFC. https://datatracker.ietf.org/doc/html/rfc6455#section-1-2
+        // Borrowed from the RFC. https://datatracker.ietf.org/doc/html/rfc6455#section-1.2
         headersBuilder.add(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
                       .add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "superchat");
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final CompletableFuture<ResponseHeaders> informationalHeadersFuture = new CompletableFuture<>();
-            client.execute(headersBuilder.build()).subscribe(new Subscriber<HttpObject>() {
-                @Override
-                public void onSubscribe(Subscription s) {
-                    s.request(Long.MAX_VALUE);
-                }
+        final CompletableFuture<ResponseHeaders> informationalHeadersFuture = new CompletableFuture<>();
+        client.execute(headersBuilder.build()).subscribe(new Subscriber<HttpObject>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
 
-                @Override
-                public void onNext(HttpObject httpObject) {
-                    informationalHeadersFuture.complete((ResponseHeaders) httpObject);
-                }
+            @Override
+            public void onNext(HttpObject httpObject) {
+                informationalHeadersFuture.complete((ResponseHeaders) httpObject);
+            }
 
-                @Override
-                public void onError(Throwable t) {}
+            @Override
+            public void onError(Throwable t) {}
 
-                @Override
-                public void onComplete() {}
-            });
+            @Override
+            public void onComplete() {}
+        });
 
-            // The same connection is used.
-            assertThat(channel).isSameAs(channel(captor.get()));
-            final ResponseHeaders responseHeaders = informationalHeadersFuture.join();
-            assertThat(responseHeaders.status()).isSameAs(HttpStatus.SWITCHING_PROTOCOLS);
-            assertThat(responseHeaders.get(HttpHeaderNames.CONNECTION))
-                    .isEqualTo(HttpHeaderValues.UPGRADE.toString());
-            assertThat(responseHeaders.get(HttpHeaderNames.UPGRADE))
-                    .isEqualTo(HttpHeaderValues.WEBSOCKET.toString());
-            assertThat(responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT))
-                    .isEqualTo("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=");
-            assertThat(responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL))
-                    .isEqualTo("superchat");
-        }
+        final ResponseHeaders responseHeaders = informationalHeadersFuture.join();
+        assertThat(responseHeaders.status()).isSameAs(HttpStatus.SWITCHING_PROTOCOLS);
+        assertThat(responseHeaders.get(HttpHeaderNames.CONNECTION))
+                .isEqualTo(HttpHeaderValues.UPGRADE.toString());
+        assertThat(responseHeaders.get(HttpHeaderNames.UPGRADE))
+                .isEqualTo(HttpHeaderValues.WEBSOCKET.toString());
+        assertThat(responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT))
+                .isEqualTo("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=");
+        assertThat(responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL))
+                .isEqualTo("superchat");
     }
 
     private static Channel channel(ClientRequestContext ctx) {

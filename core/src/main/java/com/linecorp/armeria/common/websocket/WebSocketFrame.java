@@ -39,7 +39,7 @@ public interface WebSocketFrame extends Bytes {
      * Returns a new text {@link WebSocketFrame} with the text whose {@link #isFinalFragment()}
      * is set to {@code true}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
     static WebSocketFrame ofText(String text) {
         return ofText(text, true);
@@ -49,7 +49,7 @@ public interface WebSocketFrame extends Bytes {
      * Returns a new text {@link WebSocketFrame} with the text and {@code finalFragment}. When the
      * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames must be followed.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
     static WebSocketFrame ofText(String text, boolean finalFragment) {
         requireNonNull(text, "text");
@@ -61,7 +61,7 @@ public interface WebSocketFrame extends Bytes {
      * Returns a new text {@link WebSocketFrame} with the UTF-8 encoded text whose {@link #isFinalFragment()}
      * is set to {@code true}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
     static WebSocketFrame ofText(byte[] text) {
         requireNonNull(text, "text");
@@ -73,7 +73,7 @@ public interface WebSocketFrame extends Bytes {
      * When the {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames
      * must be followed.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
     static WebSocketFrame ofText(byte[] text, boolean finalFragment) {
         requireNonNull(text, "text");
@@ -83,7 +83,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a new binary {@link WebSocketFrame} whose {@link #isFinalFragment()} is set to {@code true}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
     static WebSocketFrame ofBinary(byte[] data) {
         requireNonNull(data, "data");
@@ -94,7 +94,7 @@ public interface WebSocketFrame extends Bytes {
      * Returns a new binary {@link WebSocketFrame} with the {@code finalFragment}. When the
      * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames must be followed.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
     static WebSocketFrame ofBinary(byte[] data, boolean finalFragment) {
         requireNonNull(data, "data");
@@ -104,7 +104,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a new {@link CloseWebSocketFrame} with the {@link WebSocketCloseStatus}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-1">Close</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1">Close</a>
      */
     static CloseWebSocketFrame ofClose(WebSocketCloseStatus status) {
         requireNonNull(status, "status");
@@ -114,7 +114,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a new {@link CloseWebSocketFrame} with the {@link WebSocketCloseStatus} and the reason.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-1">Close</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1">Close</a>
      */
     static CloseWebSocketFrame ofClose(WebSocketCloseStatus status, String reason) {
         requireNonNull(status, "status");
@@ -126,7 +126,7 @@ public interface WebSocketFrame extends Bytes {
      * Returns a new {@link CloseWebSocketFrame} with the {@code data} that contains
      * {@link WebSocketCloseStatus}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-1">Close</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1">Close</a>
      */
     static CloseWebSocketFrame ofClose(byte[] data) {
         requireNonNull(data, "data");
@@ -136,7 +136,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a ping {@link WebSocketFrame}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-2">Ping</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.2">Ping</a>
      */
     static WebSocketFrame ofPing() {
         return EMPTY_PING;
@@ -145,7 +145,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a new ping {@link WebSocketFrame} with the {@code data}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-2">Ping</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.2">Ping</a>
      */
     static WebSocketFrame ofPing(byte[] data) {
         requireNonNull(data, "data");
@@ -158,7 +158,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a pong {@link WebSocketFrame}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-3">Pong</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.3">Pong</a>
      */
     static WebSocketFrame ofPong() {
         return EMPTY_PONG;
@@ -167,7 +167,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a new pong {@link WebSocketFrame} with the {@code data}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-3">Pong</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.3">Pong</a>
      */
     static WebSocketFrame ofPong(byte[] data) {
         requireNonNull(data, "data");
@@ -183,7 +183,7 @@ public interface WebSocketFrame extends Bytes {
      * {@code isText} must be {@code true} if this continuation frame follows a text frame.
      * {@code false} if this follows a binary frame.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-4">Fragmentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
      */
     static WebSocketFrame ofContinuation(byte[] data) {
         return ofContinuation(data, true);
@@ -194,7 +194,7 @@ public interface WebSocketFrame extends Bytes {
      * {@code isText} must be {@code true} if this continuation frame follows a text frame.
      * {@code false} if this follows a binary frame.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-4">Fragmentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
      */
     static WebSocketFrame ofContinuation(byte[] data, boolean finalFragment) {
         requireNonNull(data, "data");
@@ -205,7 +205,7 @@ public interface WebSocketFrame extends Bytes {
      * Returns a new text continuation {@link WebSocketFrame} whose {@link #isFinalFragment()}
      * is set to {@code true}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-4">Fragmentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
      */
     static WebSocketFrame ofContinuation(String text) {
         return ofContinuation(text, true);
@@ -214,7 +214,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a new text continuation {@link WebSocketFrame} with the text and {@code finalFragment}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-4">Fragmentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
      */
     static WebSocketFrame ofContinuation(String text, boolean finalFragment) {
         requireNonNull(text, "text");
