@@ -83,6 +83,8 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
         builder.allowBlockingCallsInside(ResourceBundle.class.getName(), "getBundle");
         builder.allowBlockingCallsInside(UUID.class.getName(), "randomUUID");
         builder.allowBlockingCallsInside("java.util.concurrent.ThreadPoolExecutor", "addWorker");
+        builder.allowBlockingCallsInside("io.netty.handler.codec.compression.Brotli", "<clinit>");
+        builder.allowBlockingCallsInside("com.thoughtworks.paranamer.CachingParanamer", "lookupParameterNames");
 
         // custom implementations for test class usage.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
