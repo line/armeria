@@ -150,7 +150,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
      */
     @Test
     public void required_subscribeOnAbortedStreamMustFail() throws Throwable {
-        final StreamMessage<T> pub = createAbortedPublisher(0);
+        final StreamMessage<T> pub = createAbortedPublisher(1);
         if (pub == null) {
             notVerified();
         }
