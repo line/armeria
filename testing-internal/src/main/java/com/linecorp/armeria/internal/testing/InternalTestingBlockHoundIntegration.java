@@ -20,13 +20,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.ResourceBundle;
-import java.util.UUID;
 
 import reactor.blockhound.BlockHound.Builder;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
-public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration {
+public final class InternalTestingBlockHoundIntegration implements BlockHoundIntegration {
 
     private static final OutputStream NULL = new OutputStream() {
         @Override
@@ -54,39 +52,7 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
     @Override
     public void applyTo(Builder builder) {
 
-        builder.allowBlockingCallsInside("com.linecorp.armeria.client.HttpClientFactory",
-                                         "pool");
-        // Thread.yield can be eventually called when PooledObjects.copyAndClose is called
-        builder.allowBlockingCallsInside("io.netty.util.internal.ReferenceCountUpdater",
-                                         "release");
-        builder.allowBlockingCallsInside("org.HdrHistogram.ConcurrentHistogram", "getCountAtIndex");
-        builder.allowBlockingCallsInside("org.HdrHistogram.WriterReaderPhaser", "flipPhase");
-        builder.allowBlockingCallsInside("zipkin2.reporter.AsyncReporter$BoundedAsyncReporter", "report");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.client.retrofit2.PipeBuffer$PipeSource", "read");
-        builder.allowBlockingCallsInside(
-                "com.linecorp.armeria.server.metric.PrometheusExpositionService", "doGet");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
-                                         "StreamMessageInputStreamSubscriber", "onNext");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
-                                         "StreamMessageInputStreamSubscriber", "onError");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
-                                         "StreamMessageInputStreamSubscriber", "onComplete");
-        builder.allowBlockingCallsInside("sangria.parser.QueryParser$", "parse");
-
-        // a single blocking call is incurred for the first invocation, but the result is cached.
-        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
-                                         "get");
-        builder.allowBlockingCallsInside("java.util.ServiceLoader$LazyClassPathLookupIterator",
-                                         "parse");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.util.ReentrantShortLock",
-                                         "lock");
-        builder.allowBlockingCallsInside(ResourceBundle.class.getName(), "getBundle");
-        builder.allowBlockingCallsInside(UUID.class.getName(), "randomUUID");
-        builder.allowBlockingCallsInside("java.util.concurrent.ThreadPoolExecutor", "addWorker");
-        builder.allowBlockingCallsInside("io.netty.handler.codec.compression.Brotli", "<clinit>");
-        builder.allowBlockingCallsInside("com.thoughtworks.paranamer.CachingParanamer", "lookupParameterNames");
-
-        // custom implementations for test class usage.
+        // tests are allowed to block event loops
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
                                          "sleep");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
@@ -97,8 +63,6 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "await");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
                                          "blockingRun");
-
-        // sometimes we make assertions in tests which never reach production code and is thus safe.
         builder.allowBlockingCallsInside("org.assertj.core.api.Assertions", "assertThat");
         builder.allowBlockingCallsInside("net.javacrumbs.jsonunit.fluent.JsonFluentAssert",
                                          "assertThatJson");

@@ -14,4 +14,4 @@
 # under the License.
 #
 
-com.linecorp.armeria.internal.testing.InternalTestingBlockHoundIntegration
+com.linecorp.armeria.client.retrofit2.RetrofitBlockHoundIntegration
