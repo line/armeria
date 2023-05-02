@@ -18,6 +18,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 
 testing {
     suites {
+        @Suppress("UNUSED_VARIABLE")
         val testNg by registering(JvmTestSuite::class) {
             useTestNG()
 
