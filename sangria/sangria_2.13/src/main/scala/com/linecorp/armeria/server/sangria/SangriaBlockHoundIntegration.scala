@@ -20,6 +20,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi
 import reactor.blockhound.BlockHound
 import reactor.blockhound.integration.BlockHoundIntegration
 
+/**
+ * A [[BlockHoundIntegration]] for the sangria module.
+ */
 @UnstableApi
 final class SangriaBlockHoundIntegration extends BlockHoundIntegration {
 

@@ -21,6 +21,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import reactor.blockhound.BlockHound.Builder;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
+/**
+ * A {@link BlockHoundIntegration} for the brave module.
+ */
 @UnstableApi
 public final class BraveBlockHoundIntegration implements BlockHoundIntegration {
 

@@ -24,6 +24,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import reactor.blockhound.BlockHound.Builder;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
+/**
+ * A {@link BlockHoundIntegration} for the core module.
+ */
 @UnstableApi
 public class CoreBlockhoundIntegration implements BlockHoundIntegration {
     @Override
