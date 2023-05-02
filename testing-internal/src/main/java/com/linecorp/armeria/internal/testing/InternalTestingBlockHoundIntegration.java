@@ -71,6 +71,7 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
 
         // prints the exception which makes it easier to debug issues
         builder.blockingMethodCallback(m -> {
+            ps.println(Thread.currentThread());
             new Exception(m.toString()).printStackTrace(ps);
         });
     }
