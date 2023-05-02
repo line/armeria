@@ -35,6 +35,7 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
     };
 
     static final PrintStream ps;
+
     static {
         final String path = System.getProperties().getProperty("com.linecorp.armeria.blockhound.reportFile");
         if (path == null) {
