@@ -73,7 +73,7 @@ public class HttpClientPipeliningTest {
                             lock.unlock();
                         }
 
-                        BlockingUtils.acquireUninterruptibly(semaphore);
+                        BlockingUtils.blockingRun(() -> semaphore.acquireUninterruptibly());
                         try {
                             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                                                    String.valueOf(ctx.remoteAddress()));

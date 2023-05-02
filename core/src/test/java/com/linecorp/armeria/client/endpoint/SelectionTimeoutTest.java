@@ -309,7 +309,7 @@ class SelectionTimeoutTest {
             try (MockEndpointGroup endpointGroup = new MockEndpointGroup(5000)) {
                 final CompletableFuture<Endpoint> result =
                         endpointGroup.select(ctx, CommonPools.blockingTaskExecutor());
-                assertThat(BlockingUtils.join(result)).isNull();
+                assertThat(BlockingUtils.blockingRun(result::join)).isNull();
                 assertThat(stopwatch.elapsed())
                         .isGreaterThanOrEqualTo(Duration.ofSeconds(2));
             }

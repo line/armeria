@@ -113,12 +113,8 @@ class ServerTest {
             final HttpService delayedResponseOnIoThread = new EchoService() {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
-                    try {
-                        BlockingUtils.sleep(processDelayMillis);
-                        return super.echo(aReq);
-                    } catch (InterruptedException e) {
-                        return HttpResponse.ofFailure(e);
-                    }
+                    BlockingUtils.blockingRun(() -> Thread.sleep(processDelayMillis));
+                    return super.echo(aReq);
                 }
             }.decorate(LoggingService.newDecorator());
 

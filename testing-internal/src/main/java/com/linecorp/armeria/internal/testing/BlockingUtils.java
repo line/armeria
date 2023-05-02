@@ -16,30 +16,10 @@
 
 package com.linecorp.armeria.internal.testing;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
-
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.api.function.ThrowingSupplier;
 
 public final class BlockingUtils {
-
-    public static void sleep(long millis) throws InterruptedException {
-        Thread.sleep(millis);
-    }
-
-    public static <T> T join(CompletableFuture<T> cf) {
-        return cf.join();
-    }
-
-    public static void acquireUninterruptibly(Semaphore semaphore) {
-        semaphore.acquireUninterruptibly();
-    }
-
-    public static void await(CountDownLatch countDownLatch) throws InterruptedException {
-        countDownLatch.await();
-    }
 
     public static void blockingRun(Executable runnable) {
         try {

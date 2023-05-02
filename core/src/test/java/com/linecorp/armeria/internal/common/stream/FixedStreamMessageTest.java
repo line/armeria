@@ -95,12 +95,7 @@ class FixedStreamMessageTest {
 
             @Override
             public void onSubscribe(Subscription s) {
-                try {
-                    // Wait for `abort()` to be called.
-                    BlockingUtils.await(latch);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+                BlockingUtils.blockingRun(() -> latch.await());
             }
 
             @Override

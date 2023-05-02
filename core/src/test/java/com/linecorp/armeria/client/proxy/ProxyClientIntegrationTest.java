@@ -749,7 +749,7 @@ class ProxyClientIntegrationTest {
                 // first writing to the channel occurs after ProxySuccessEvent is triggered.
                 // If the first writing happens before ProxySuccessEvent is triggered,
                 // the client would get WriteTimeoutException that makes the test fail.
-                BlockingUtils.sleep(Flags.defaultWriteTimeoutMillis());
+                BlockingUtils.blockingRun(() -> Thread.sleep(Flags.defaultWriteTimeoutMillis()));
             }
             super.userEventTriggered(ctx, evt);
         }

@@ -317,13 +317,8 @@ public class HttpClientMaxConcurrentStreamTest {
                                           .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final int sleepMillis = 300;
-        connectionPoolListener = newConnectionPoolListener(() -> {
-            try {
-                BlockingUtils.sleep(sleepMillis);
-            } catch (InterruptedException e) {
-                throw new IllegalStateException(e);
-            }
-        }, () -> {});
+        connectionPoolListener = newConnectionPoolListener(
+                () -> BlockingUtils.blockingRun(() -> Thread.sleep(sleepMillis)), () -> {});
 
         final int numConnections = MAX_NUM_CONNECTIONS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numConnections;
