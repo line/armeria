@@ -133,6 +133,10 @@ jobs:
         if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v1
 
+      - name: Try to fail
+        if: find . -name 'blockhound.log' -size +0 | wc -l >= 0
+        run: exit 1
+
       - name: Collect the test reports
         if: failure()
         run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' -or -path '*/javadoc.options' -or -name 'blockhound.log' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
