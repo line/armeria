@@ -152,6 +152,7 @@ configure(relocatedProjects) {
             printconfiguration file("${project.buildDir}/proguard.cfg")
         }
 
+        tasks.shadedClasses.dependsOn tasks.trimShadedJar
         tasks.assemble.dependsOn tasks.trimShadedJar
 
         // Add the trimmed JAR to archives.
