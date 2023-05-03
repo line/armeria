@@ -44,13 +44,9 @@ public class CoreBlockhoundIntegration implements BlockHoundIntegration {
         builder.allowBlockingCallsInside("org.HdrHistogram.ConcurrentHistogram", "getCountAtIndex");
         builder.allowBlockingCallsInside("org.HdrHistogram.WriterReaderPhaser", "flipPhase");
 
-        // StreamMessageInputStream internally uses a blocking deque
-        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
-                                         "StreamMessageInputStreamSubscriber", "onNext");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
-                                         "StreamMessageInputStreamSubscriber", "onError");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.common.stream.StreamMessageInputStream$" +
-                                         "StreamMessageInputStreamSubscriber", "onComplete");
+        // StreamMessageInputStream internally uses a blocking queue
+        // ThreadPoolExecutor.execute internally uses a blocking queue
+        builder.allowBlockingCallsInside("java.util.concurrent.LinkedBlockingQueue", "offer");
 
         // a single blocking call is incurred for the first invocation, but the result is cached.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",

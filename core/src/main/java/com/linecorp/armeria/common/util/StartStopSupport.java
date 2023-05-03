@@ -189,14 +189,14 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
                         final CompletionStage<V> f = doStart(arg);
                         checkState(f != null, "doStart() returned null.");
 
-                        f.handleAsync((result, cause) -> {
+                        f.handle((result, cause) -> {
                             if (cause != null) {
                                 startFuture.completeExceptionally(cause);
                             } else {
                                 startFuture.complete(result);
                             }
                             return null;
-                        }, executor);
+                        });
                     } catch (Exception e) {
                         startFuture.completeExceptionally(e);
                     }
