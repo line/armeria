@@ -133,6 +133,10 @@ jobs:
         if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v1
 
+      - name: Debug blocked threads
+        if: always()
+        run: find . -name 'blockhound.log' -size +0
+
       - name: Fail the run if any threads were blocked
         if: always()
         run: "[[ ! -z `find . -name 'blockhound.log' -size +0` ]] && exit 1"
