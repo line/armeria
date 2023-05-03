@@ -147,8 +147,8 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v2
         with:
-          name: reports-JVM-${{ matrix.java }}
-          path: reports-JVM-${{ matrix.java }}.tar
+          name: reports-JVM-${{ matrix.on }}-${{ matrix.java }}
+          path: reports-JVM-${{ matrix.on }}-${{ matrix.java }}.tar
           retention-days: 3
 
   lint:
@@ -237,4 +237,9 @@ jobs:
       - name: Dump stuck threads
         if: always()
         run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        shell: bash
+
+      - name: Fail the run if any threads were blocked
+        if: always()
+        run: "if [[ -z `find . -name 'blockhound.log' -size +0` ]]; then exit 0; else exit 1; fi"
         shell: bash

@@ -66,5 +66,9 @@ public class CoreBlockhoundIntegration implements BlockHoundIntegration {
         // prometheus exporting holds a lock temporarily
         builder.allowBlockingCallsInside(
                 "com.linecorp.armeria.server.metric.PrometheusExpositionService", "doGet");
+
+        // Thread.yield can be called
+        builder.allowBlockingCallsInside(
+                "java.util.concurrent.FutureTask", "handlePossibleCancellationInterrupt");
     }
 }
