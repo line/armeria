@@ -31,8 +31,11 @@ import reactor.blockhound.integration.BlockHoundIntegration;
 public class CoreBlockhoundIntegration implements BlockHoundIntegration {
     @Override
     public void applyTo(Builder builder) {
+        // short locks
         builder.allowBlockingCallsInside("com.linecorp.armeria.client.HttpClientFactory",
                                          "pool");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.util.ReentrantShortLock",
+                                         "lock");
 
         // Thread.yield can be eventually called when PooledObjects.copyAndClose is called
         builder.allowBlockingCallsInside("io.netty.util.internal.ReferenceCountUpdater", "release");
@@ -54,8 +57,6 @@ public class CoreBlockhoundIntegration implements BlockHoundIntegration {
                                          "get");
         builder.allowBlockingCallsInside("java.util.ServiceLoader$LazyClassPathLookupIterator",
                                          "parse");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.util.ReentrantShortLock",
-                                         "lock");
         builder.allowBlockingCallsInside(ResourceBundle.class.getName(), "getBundle");
         builder.allowBlockingCallsInside(UUID.class.getName(), "randomUUID");
         builder.allowBlockingCallsInside("io.netty.handler.codec.compression.Brotli", "<clinit>");

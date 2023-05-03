@@ -18,7 +18,15 @@ package com.linecorp.armeria.internal.common.util;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-public class ReentrantShortLock extends ReentrantLock {
+import com.linecorp.armeria.common.CoreBlockhoundIntegration;
+
+/**
+ * A short lock which is whitelisted by {@link CoreBlockhoundIntegration}.
+ * This lock may be preferred over {@link ReentrantLock} when it is known that the
+ * lock won't block the event loop over long periods of time.
+ */
+public final class ReentrantShortLock extends ReentrantLock {
+    private static final long serialVersionUID = 8999619612996643502L;
 
     @Override
     public void lock() {
