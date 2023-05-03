@@ -28,7 +28,7 @@ import org.reflections.ReflectionUtils;
 
 import com.google.common.collect.ImmutableSet;
 
-class VirtualHostTest {
+class VirtualHostAndServiceConfigConsistencyTest {
 
     @Test
     void testApiConsistencyBetweenVirtualHostAndServiceConfig() {

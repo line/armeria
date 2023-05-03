@@ -317,13 +317,6 @@ public final class VirtualHost {
     /**
      * Returns the default value of the {@link RequestLog#name()} property which is used when no name was set
      * via {@link RequestLogBuilder#name(String, String)}.
-     * If {@code null}, one of the following values will be used instead:
-     * <ul>
-     *   <li>gRPC - A capitalized method name defined in {@code io.grpc.MethodDescriptor}
-     *       (e.g, {@code GetItems})</li>
-     *   <li>Thrift and annotated service - a method name (e.g, {@code getItems})</li>
-     *   <li>{@link HttpService} - an HTTP method name</li>
-     * </ul>
      */
     public String defaultLogName() {
         return defaultLogName;
