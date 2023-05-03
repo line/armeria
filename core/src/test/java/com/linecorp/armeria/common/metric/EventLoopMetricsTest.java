@@ -37,9 +37,7 @@ class EventLoopMetricsTest {
 
     @RegisterExtension
     static EventLoopGroupExtension eventLoopGroup =
-            new EventLoopGroupExtension(2, ThreadFactories.builder("block-me")
-                                                          .eventLoop(false)
-                                                          .build());
+            new EventLoopGroupExtension(2, ThreadFactories.newThreadFactory("block-me", false));
 
     private class BlockMe extends CountDownLatch implements Runnable {
 

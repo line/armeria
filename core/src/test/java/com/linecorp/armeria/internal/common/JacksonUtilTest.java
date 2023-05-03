@@ -22,17 +22,11 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
-
 class JacksonUtilTest {
-
-    @RegisterExtension
-    static EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
     void shouldSerializeJdk8TypesWithDefaultMapper() throws JsonProcessingException {
