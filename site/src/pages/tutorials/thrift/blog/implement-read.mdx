@@ -28,9 +28,9 @@ You need to have:
 
 ## 1. Add an exception handler
 
-First, add an exception and an exception handler class for the exception to be thrown when blog post with the specified ID doesn't exist.
+First, add an exception and an exception handler class for the exception to be thrown when there is no blog post for the given ID.
 
-1. Add an exception in `blog.thrift` file.
+1. Add an exception in the `blog.thrift` file.
   ```thrift filename=blog.thrift
   /**
    * An exception which is thrown when a blog is not found.
@@ -102,8 +102,21 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
 2. [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
 3. Add a service method in the `BlogServiceImpl` class to retrieve a single post.
   ```java filename=BlogServiceImpl.java
-  import example.armeria.blog.thrift.BlogNotFoundException;
   import example.armeria.blog.thrift.GetBlogPostRequest;
+
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+    ...
+    @Override
+    public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+            throws TException {
+      final BlogPost blogPost = blogPosts.get(request.getId());
+      resultHandler.onComplete(blogPost);
+    }
+  }
+  ```
+  4. Throw an exception in case there is no blog post for the given ID.
+  ```java filename=BlogServiceImpl.java
+  import example.armeria.blog.thrift.BlogNotFoundException;
 
   public class BlogServiceImpl implements BlogService.AsyncIface {
     ...
@@ -172,7 +185,7 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
     }
   }
   ```
-4. Add a sorting based on the value of the `descending` parameter.
+4. Sort the blog posts based on the value of the `descending` parameter.
   ```java filename=BlogServiceImpl.java
   import java.util.Collections;
   import java.util.Comparator;
@@ -371,7 +384,7 @@ To decorate your service, use the [server decorator](https://armeria.dev/docs/se
         </root>
       </configuration>
       ```
-3. Restart the server and run the client.
+3. Re-run the server and run the client.
   If succeed, you'll see an output like the following.
   ```bash
   [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - [creqId=b0bfb91d, chanId=4b890fb0, laddr=127.0.0.1:51644, raddr=127.0.0.1:8080][http://127.0.0.1:8080/thrift#POST] Response: {startTime=2023-02-22T03:03:30.740Z(1677035010740687), length=196B, duration=1143µs(1143917ns), totalDuration=6576µs(6576292ns), headers=[:status=200, content-type=application/x-thrift; protocol=TBINARY, server=Armeria/1.22.0, date=Wed, 22 Feb 2023 03:03:30 GMT, content-length=196], content=CompletableRpcResponse{ListBlogPostsResponse(blogs:
@@ -394,7 +407,7 @@ Now that we have the ID information, we can now retrieve a single post.
 
 Let's retrieve the second blog post.
 
-1. Call the `getBlogPost()` method with `1`, an ID for the second blog post.
+1. Call the `getBlogPost()` method with ID `1` for the second blog post.
   ```java filename=BlogClient.java
   void testRun() {
     createBlogPost("My first blog", "Yay");
@@ -415,8 +428,8 @@ Let's retrieve the second blog post.
       createdAt:1677041522789, 
       modifiedAt:1677041522789)}}
   ```
-3. Check what happens if you retrieve a blog post that does not exist.
-  Change the argument to `100` and run the client again.
+3. Change the argument to `100` and run the client again.
+  Let's see what happens if you retrieve a blog post that does not exist.
   ```java filename=BlogClient.java
   void testRun() {
     createBlogPost("My first blog", "Yay");
@@ -424,7 +437,7 @@ Let's retrieve the second blog post.
     getBlogPost(100); // Set the argument to 100
   }
   ```
-  We can see that our `getBlogPost()` method returns the `BlogNotFoundException` error as a runtime exception.
+  You can see the `BlogNotFoundException` is thrown as a runtime exception.
   ```bash
   Exception in thread "main" BlogNotFoundException(reason:The blog post does not exist. ID: 100)
           at example.armeria.blog.thrift.BlogService$getBlogPost_result$getBlogPost_resultStandardScheme.read(BlogService.java:2157)
