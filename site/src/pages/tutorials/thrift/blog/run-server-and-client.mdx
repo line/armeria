@@ -85,13 +85,13 @@ Your server is running if you see the following message.
 [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
 ```
 
-## 4. Prepare the thrift file for client
+## 4. Create and compile a thrift file for client
 
 Now that our server is running, it's time to start working on the client.
 Let's write and compile the thrift file for the client.
 
-1. Create a thrift file, `blog.thrift`, as we did in [Define a service](/tutorials/thrift/blog/create-service#define-a-service) for the server.
-2. Compile the `blog.thrift` file, as we did in [Compile the thrift file](/tutorials/thrift/blog/create-service#compile-the-thrift-file) for the server.
+1. Create a thrift file, `blog.thrift`, like we did in [Step 1. Create a service](/tutorials/thrift/blog/create-service#create-a-thrift-file) for the server.
+2. Compile the `blog.thrift` file, like we did in [Step 1. Create a service](/tutorials/thrift/blog/create-service#compile-the-thrift-file) for the server.
 
 <Tip>
 
@@ -123,11 +123,12 @@ See [Sample client](/tutorials/thrift/blog#sample-client) for the overall folder
 
   public class BlogClient {
       ...
+      static BlogService.Iface blogService;
+
       public static void main(String[] args) throws Exception {
-          BlogService.Iface blogService =
-              ThriftClients.builder("http://127.0.0.1:8080")
-              .path("/thrift")
-              .build(BlogService.Iface.class);
+          blogService = ThriftClients.builder("http://127.0.0.1:8080")
+                  .path("/thrift")
+                  .build(BlogService.Iface.class);
       }
   }
   ```
