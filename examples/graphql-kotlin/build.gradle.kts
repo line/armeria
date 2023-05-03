@@ -17,6 +17,7 @@ dependencies {
     testImplementation(project(":junit5"))
     testImplementation(libs.assertj)
     testImplementation(libs.junit5.jupiter.api)
+    testRuntimeOnly(libs.kotlin.coroutines.debug)
 }
 
 application {

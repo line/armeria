@@ -9,6 +9,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(libs.kotlin.coroutines.core)
     implementation(libs.kotlin.coroutines.jdk8)
+    testRuntimeOnly(libs.kotlin.coroutines.debug)
 }
 
 application {
