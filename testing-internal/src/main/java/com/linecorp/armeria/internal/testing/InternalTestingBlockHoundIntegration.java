@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 
 import reactor.blockhound.BlockHound.Builder;
+import reactor.blockhound.BlockingMethod;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
 public final class InternalTestingBlockHoundIntegration implements BlockHoundIntegration {
@@ -69,10 +70,16 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
         builder.allowBlockingCallsInside("com.linecorp.armeria.testing.server.ServiceRequestContextCaptor$2",
                                          "serve");
 
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.InternalTestingBlockHoundIntegration",
+                                         "writeBlockingMethod");
+
         // prints the exception which makes it easier to debug issues
-        builder.blockingMethodCallback(m -> {
-            ps.println(Thread.currentThread());
-            new Exception(m.toString()).printStackTrace(ps);
-        });
+        builder.blockingMethodCallback(this::writeBlockingMethod);
+    }
+
+    void writeBlockingMethod(BlockingMethod m) {
+        ps.println(Thread.currentThread());
+        new Exception(m.toString()).printStackTrace(ps);
+        ps.flush();
     }
 }
