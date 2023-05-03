@@ -70,8 +70,9 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
         builder.allowBlockingCallsInside("com.linecorp.armeria.testing.server.ServiceRequestContextCaptor$2",
                                          "serve");
 
-        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.InternalTestingBlockHoundIntegration",
-                                         "writeBlockingMethod");
+        builder.allowBlockingCallsInside(
+                "com.linecorp.armeria.internal.testing.InternalTestingBlockHoundIntegration",
+                "writeBlockingMethod");
 
         // prints the exception which makes it easier to debug issues
         builder.blockingMethodCallback(this::writeBlockingMethod);
