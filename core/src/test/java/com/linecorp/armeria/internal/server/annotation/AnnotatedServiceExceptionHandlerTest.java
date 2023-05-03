@@ -302,7 +302,7 @@ class AnnotatedServiceExceptionHandlerTest {
 
     @LoggingDecorator
     @ExceptionHandler(CapturingExceptionHandler.class)
-    public static class MyService6 extends MyService1 {
+    public static class MyService6 {
         @Post("/simple")
         @RequestConverter(ThrowingRequestConverterFunction.class)
         public HttpResponse post1(SimpleRequest simpleRequest) {
