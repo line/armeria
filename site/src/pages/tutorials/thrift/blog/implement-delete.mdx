@@ -10,7 +10,8 @@ type: step
 
 # Implementing DELETE operation
 
-So far, we've created, read, and updated a blog post. Now, let's implement and make a call to finally delete a blog post.
+So far, we created, read, and updated a blog post.
+Now, let's implement and make a call to finally delete a blog post.
 
 <TutorialSteps current={6} />
 
@@ -27,21 +28,17 @@ You need to have the files obtained from previous steps:
 
 ## 1. Implement server-side
 
-Let's implement a service method `deleteBlogPost()` in `BlogServiceImpl.java` we've been working on.
+Let's implement a service method to delete a blog post.
 
-1. Add a service method and a struct in `blog.thrift` file for deleting a blog post.
+1. In the `blog.thrift` file, add a service method and a struct.
   ```thrift filename=blog.thrift
-  ...
   /**
    * A request object for deleting a blog post.
    */
   struct DeleteBlogPostRequest {
       1: i32 id;
   }
-  ...
-  /**
-   * My first BlogService in Armeria!
-   */
+
   service BlogService {
   ...
     /**
@@ -50,7 +47,7 @@ Let's implement a service method `deleteBlogPost()` in `BlogServiceImpl.java` we
     void deleteBlogPost(1:DeleteBlogPostRequest request) throws (1:BlogNotFoundException e),
   }
   ```
-2. Add a service method, `deleteBlogPost()` in the class `BlogServiceImpl`.
+2. Add a service method in the `BlogServiceImpl` class to delete a blog post.
   ```java filename=BlogServiceImpl.java
   import example.armeria.blog.thrift.DeleteBlogPostRequest;
 
@@ -74,8 +71,8 @@ Let's implement a service method `deleteBlogPost()` in `BlogServiceImpl.java` we
 
 Add a method `deleteBlogPost()` to send a request to delete a blog post.
 
-1. Add a service method and a struct for deleting a blog post in `blog.thrift` file, as we did in [1. Implement server-side](#1-implement-server-side).
-2. Add a service method, `deleteBlogPost()` in the class `BlogClient`.
+1. In the `blog.thrift` file, add a service method and a struct as we did in [1. Implement server-side](#1-implement-server-side).
+2. In the `BlogClient` class, add a method sending a request to delete a blog post.
   ```java filename=BlogClient.java
   import example.armeria.blog.thrift.DeleteBlogPostRequest;
 
@@ -88,11 +85,11 @@ Add a method `deleteBlogPost()` to send a request to delete a blog post.
   }
   ```
 
-## 3. Test run
+## 3. Test deleting a blog post
 
-Let's test deleting a blog. We know that our client creates a blog post by default when it's executed and that the ID of the first one has been `0` always.
+Let's test deleting a blog post.
 
-1. Call the delete method we just implemented followed by `listBlogPosts()` to see that no post with the ID `0` exists after deleting the post.
+1. Call the `deleteBlogPost()` method to delete the first blog post with the ID `0`, followed by the `listBlogPosts()` method to see the first blog post no longer exists after deleting the post.
   ```java filename=BlogClient.java
   void testRun() throws Exception {
       createBlogPost("My first blog", "Yay");
@@ -101,28 +98,34 @@ Let's test deleting a blog. We know that our client creates a blog post by defau
       listBlogPosts();
   }
   ```
-2. [Re-run the server](/tutorials/thrift/blog/create-server#7-test-run) and run the client. The number of blog posts in the log depends on how you've tested so far. Anyhow, since we are attempting to delete the first post, you won't have a problem, unless you've deleted it already. You can check that the list of posts retrieved start from `1`, which is the second post.
+2. [Re-run the server](/tutorials/thrift/blog/create-server#7-test-run) and run the client.
+
+    If you search for `method=deleteBlogPost` from the logs, you can check if the `deleteBlogPost()` method is called like the following.
+    ```
+    [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=DefaultRpcRequest{
+        serviceType=BlogService$Iface,
+        serviceName=example.armeria.blog.thrift.BlogService$Iface,
+        method=deleteBlogPost,
+        params=[DeleteBlogPostRequest(id:0)]}}
+    ```
+    If you search for `ListBlogPostsResponse` from the subsequent logs, you can check that the list of posts retrieved starts from `1`, which is the second post.
    ```bash
-   [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=DefaultRpcRequest{
-    serviceType=BlogService$Iface, 
-    serviceName=example.armeria.blog.thrift.BlogService$Iface, 
-    method=deleteBlogPost, 
-    params=[DeleteBlogPostRequest(id:0)]}}
-    ...
    [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
     ListBlogPostsResponse(
       blogs:[BlogPost(
         id:1, title:Another blog post, content:Creating a post via createBlogPost()., createdAt:1677145864108, modifiedAt:1677145864108)])}}
    ```
-4. Now, while keeping the server running, run the client again, attempting to delete the post with the ID `0`, which does not exist any longer.
-   
+4. Now, run the client again, while keeping the server running.
+
    You should see the exception logged as the following.
+   This is because we attempted to delete the post with the ID `0`, which does not exist any longer.
    ```bash
    Exception in thread "main" BlogNotFoundException(reason:The blog post does not exist. ID: 0)
    ```
 
 ## What's next
 
-Here, we've implemented a service method and client method for deleting a blog post. Next, we'll finally [add](/tutorials/thrift/blog/add-docservice) Armeria's [Documentation service](/docs/server-docservice) to our service.
+Here, we've implemented a service method and client method for deleting a blog post.
+Next, we'll finally [add](/tutorials/thrift/blog/add-docservice) Armeria's [Documentation service](/docs/server-docservice) to our service.
 
 <TutorialSteps current={6} />

@@ -159,7 +159,8 @@ Add a method `createBlogPost()` in `BlogClient.java` to send a request to create
 
 ## 4. Test creating a blog post
 
-Now, let's make a request from the client. Note the code is minimal to keep things simple.
+Now, to test what we implemented so far in this step, let's make a request to the server for creating a blog post.
+Note the code is minimal to keep things simple.
 
 1. Add a method, `testRun()`, to test the creation method we just implemented.
   ```java filename=BlogClient.java
@@ -181,7 +182,7 @@ Now, let's make a request from the client. Note the code is minimal to keep thin
   [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
   ```
 3. Run the client's `main()` method on your IDE or using Gradle.
-Your client made request to the server successfully if you see the following message.
+  Your client made request to the server successfully if you see the following message.
   ```bash
   [main] INFO example.armeria.client.blog.thrift.BlogClient - [Create response] Title: My first blog Content: Yay
   ```
