@@ -19,13 +19,12 @@ And here, we'll throw a custom exception and add a `BlogServiceExceptionHandler`
 
 ## What you need
 
-You need to have:
-- [Java code generated](/tutorials/thrift/blog/define-service#compile-the-thrift-file)
-- blog.thrift(both server and client)
-- Main.java
-- BlogServiceImpl.java
-- BlogClient.java
+You need to have the following obtained from previous steps:
 
+- [Java code generated](/tutorials/thrift/blog/create-server#compile-the-thrift-file) for each server and client
+- `Main.java` for server
+- `BlogServiceImpl.java` for server
+- `BlogClient.java` for client
 
 ## 1. Implement server-side
 
@@ -254,7 +253,7 @@ To decorate your service, use the [server decorator](https://armeria.dev/docs/se
         implementation 'ch.qos.logback:logback-classic:1.2.10'
       }
       ```
-    2. Add the logback.xml file in the `{project_root}/src/main/resources` folder.
+    2. Add the `logback.xml` file in the `{project_root}/src/main/resources` folder.
       ```xml filename=logback.xml
       <?xml version="1.0" encoding="UTF-8"?>
       <configuration>
