@@ -1,6 +1,6 @@
 ---
 menuTitle: "Implement DELETE"
-order: 6
+order: 7
 category: thrift
 tags:
   - server
@@ -13,7 +13,7 @@ type: step
 So far, we created, read, and updated a blog post.
 Now, let's implement and make a call to finally delete a blog post.
 
-<TutorialSteps current={6} />
+<TutorialSteps current={7} />
 
 ## What you need
 
@@ -30,24 +30,7 @@ You need to have the files obtained from previous steps:
 
 Let's implement a service method to delete a blog post.
 
-1. In the `blog.thrift` file, add a service method and a struct.
-  ```thrift filename=blog.thrift
-  /**
-   * A request object for deleting a blog post.
-   */
-  struct DeleteBlogPostRequest {
-      1: i32 id;
-  }
-
-  service BlogService {
-  ...
-    /**
-     * Deletes a blog post.
-     */
-    void deleteBlogPost(1:DeleteBlogPostRequest request) throws (1:BlogNotFoundException e),
-  }
-  ```
-2. Add a service method in the `BlogServiceImpl` class to delete a blog post.
+Add a service method in the `BlogServiceImpl` class to delete a blog post.
   ```java filename=BlogServiceImpl.java
   import example.armeria.blog.thrift.DeleteBlogPostRequest;
 
@@ -71,19 +54,19 @@ Let's implement a service method to delete a blog post.
 
 Add a method `deleteBlogPost()` to send a request to delete a blog post.
 
-1. In the `blog.thrift` file, add a service method and a struct as we did in [1. Implement server-side](#1-implement-server-side).
-2. In the `BlogClient` class, add a method sending a request to delete a blog post.
-  ```java filename=BlogClient.java
-  import example.armeria.blog.thrift.DeleteBlogPostRequest;
+In the `BlogClient` class, add a method sending a request to delete a blog post.
 
-  public class BlogClient {
-    ...
-    void deleteBlogPost(int id) throws Exception {
-        final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
-        client.deleteBlogPost(request);
-    }
+```java filename=BlogClient.java
+import example.armeria.blog.thrift.DeleteBlogPostRequest;
+
+public class BlogClient {
+  ...
+  void deleteBlogPost(int id) throws Exception {
+      final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
+      client.deleteBlogPost(request);
   }
-  ```
+}
+```
 
 ## 3. Test deleting a blog post
 
@@ -123,9 +106,17 @@ Let's test deleting a blog post.
    Exception in thread "main" BlogNotFoundException(reason:The blog post does not exist. ID: 0)
    ```
 
+## 4. Add the Documentation service
+
+// TODO
+
+## 5. Check the DocService page
+
+// TODO
+
 ## What's next
 
 Here, we've implemented a service method and client method for deleting a blog post.
 Next, we'll finally [add](/tutorials/thrift/blog/add-docservice) Armeria's [Documentation service](/docs/server-docservice) to our service.
 
-<TutorialSteps current={6} />
+<TutorialSteps current={7} />

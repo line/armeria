@@ -1,6 +1,6 @@
 ---
 menuTitle: "Implement CREATE"
-order: 3
+order: 4
 category: thrift
 tags:
   - server
@@ -13,7 +13,7 @@ type: step
 Previously, we ran a blog service on a server and also confirmed that our client could make a call to the service.
 In this step, we'll create and implement a create operation and again, try making a call to a service method.
 
-<TutorialSteps current={3} />
+<TutorialSteps current={4} />
 
 ## What you need
 
@@ -25,45 +25,7 @@ You need to have the following obtained from previous steps:
 - BlogServiceImpl.java
 - BlogClient.java
 
-## 1. Update the thrift file for server
-
-Let's add a couple of structs and a service method to the `blog.thrift` file.
-Here, we will add only the creation method and a struct that for creating blog posts.
-We will add the retrieving, modification, and deletion method at each step.
-
-1. Add structs, `BlogPost` and `CreateBlogPostReaust`.
-  ```thrift filename=blog.thrift
-  /**
-   * An object which represents a blog post.
-   */
-  struct BlogPost {
-      1: i32 id;
-      2: string title;
-      3: string content;
-      4: i64 createdAt;
-      5: i64 modifiedAt;
-  }
-
-  /**
-   * A request object for creating a blog post.
-   */
-  struct CreateBlogPostRequest {
-      1: string title;
-      2: string content;
-  }
-  ```
-2. In `BlogService`, remove the `hello()` method and add a method, `createBlogPost()`.
-  ```thrift filename=blog.thrift
-  service BlogService {
-      /**
-       * Creates a blog post.
-       */
-      BlogPost createBlogPost(1:CreateBlogPostRequest request),
-  }
-  ```
-3. [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
-
-## 2. Implement server-side
+## 1. Implement server-side
 
 Let's implement a service method `createBlogPost()` in `BlogServiceImpl.java`.
 
@@ -121,11 +83,7 @@ Let's implement a service method `createBlogPost()` in `BlogServiceImpl.java`.
   }
   ```
 
-## 3. Update the thrift file for client
-
-Update the `blog.thrift` file for client, like we did in [1. Update the thrift file for server](#1-update-the-thrift-file-for-server).
-
-## 4. Implement client-side
+## 2. Implement client-side
 
 Add a method `createBlogPost()` in `BlogClient.java` to send a request to create a blog post.
 
@@ -157,7 +115,7 @@ Add a method `createBlogPost()` in `BlogClient.java` to send a request to create
   }
   ```
 
-## 4. Test creating a blog post
+## 3. Test creating a blog post
 
 Now, to test what we implemented so far in this step, let's make a request to the server for creating a blog post.
 Note the code is minimal to keep things simple.
@@ -192,4 +150,4 @@ Note the code is minimal to keep things simple.
 Here, we've implemented a method for creating a blog post.
 Next, we'll [implement a READ operation](/tutorials/thrift/blog/implement-read).
 
-<TutorialSteps current={3} />
+<TutorialSteps current={4} />

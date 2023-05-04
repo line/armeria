@@ -1,6 +1,6 @@
 ---
 menuTitle: "Implement UPDATE"
-order: 5
+order: 6
 category: thrift
 tags:
   - server
@@ -12,7 +12,7 @@ type: step
 
 Previously, we created and read blog posts. Now, let's implement and make a call to update a blog post.
 
-<TutorialSteps current={5} />
+<TutorialSteps current={6} />
 
 ## What you need
 
@@ -27,68 +27,48 @@ You need to have the files obtained from previous steps:
 
 ## 1. Implement server-side
 
-1. Add a service method and a struct in the `blog.thrift` file.
-  ```thrift filename=blog.thrift
-  /**
-   * A request object for updating a blog post.
-   */
-  struct UpdateBlogPostRequest {
-      1: i32 id;
-      2: string title;
-      3: string content;
-  }
+In the `BlogServiceImpl` class, add a service method for updating a blog post.
+Let's throw an exception in case there is no blog post for the given ID.
 
-  service BlogService {
+```java filename=BlogServiceImpl.java
+import example.armeria.blog.thrift.UpdateBlogPostRequest;
+
+public class BlogServiceImpl implements BlogService.AsyncIface {
   ...
-    /**
-     * Updates a blog post.
-     */
-    BlogPost updateBlogPost(1:UpdateBlogPostRequest request) throws (1:BlogNotFoundException e),
+  @Override
+  public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {
+      final BlogPost oldBlogPost = blogPosts.get(request.getId());
+      if (oldBlogPost == null) {
+          resultHandler.onError(
+                  new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+      } else {
+          final BlogPost newBlogPost = oldBlogPost.deepCopy()
+                                                  .setTitle(request.getTitle())
+                                                  .setContent(request.getContent())
+                                                  .setModifiedAt(Instant.now().toEpochMilli());
+          blogPosts.put(request.getId(), newBlogPost);
+          resultHandler.onComplete(newBlogPost);
+      }
   }
-  ```
-2. [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
-3. In the `BlogServiceImpl` class, add a service method for updating a blog post.
-  Let's throw an exception in case there is no blog post for the given ID.
-  ```java filename=BlogServiceImpl.java
-  import example.armeria.blog.thrift.UpdateBlogPostRequest;
-
-  public class BlogServiceImpl implements BlogService.AsyncIface {
-    ...
-    @Override
-    public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
-            throws TException {
-        final BlogPost oldBlogPost = blogPosts.get(request.getId());
-        if (oldBlogPost == null) {
-            resultHandler.onError(
-                    new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
-        } else {
-            final BlogPost newBlogPost = oldBlogPost.deepCopy()
-                                                    .setTitle(request.getTitle())
-                                                    .setContent(request.getContent())
-                                                    .setModifiedAt(Instant.now().toEpochMilli());
-            blogPosts.put(request.getId(), newBlogPost);
-            resultHandler.onComplete(newBlogPost);
-        }
-    }
-  }
-  ```
+}
+```
 
 ## 2. Implement client-side
 
-1. Add a service method and a struct for updating a blog post in `blog.thrift` file, as we did in [1. Implement server-side](#1-implement-server-side).
-2. [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
-2. Add a method `updateBlogPost()` to send a request to update a blog post.
-  ```java filename=BlogClient.java
-  import example.armeria.blog.thrift.UpdateBlogPostRequest;
+Add a method `updateBlogPost()` to send a request to update a blog post.
 
-  public class BlogClient {
-    ...
-    void updateBlogPost(int id, String newTitle, String newContent) throws Exception {
-        final UpdateBlogPostRequest request = new UpdateBlogPostRequest().setId(id).setTitle(newTitle).setContent(newContent);
-        blogService.updateBlogPost(request);
-    }
+```java filename=BlogClient.java
+import example.armeria.blog.thrift.UpdateBlogPostRequest;
+
+public class BlogClient {
+  ...
+  void updateBlogPost(int id, String newTitle, String newContent) throws Exception {
+      final UpdateBlogPostRequest request = new UpdateBlogPostRequest().setId(id).setTitle(newTitle).setContent(newContent);
+      blogService.updateBlogPost(request);
   }
-  ```
+}
+```
 
 ## 3. Test updating a blog post
 
@@ -188,4 +168,4 @@ Here, we've implemented a service method and client method for updating a blog p
 We've also added exception handling.
 Next, we'll implement a method for [deleting a blog post](/tutorials/thrift/blog/implement-delete).
 
-<TutorialSteps current={5} />
+<TutorialSteps current={6} />

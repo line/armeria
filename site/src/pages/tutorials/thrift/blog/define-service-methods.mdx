@@ -1,0 +1,190 @@
+---
+menuTitle: Define service methods
+order: 3
+type: step
+level: basic
+---
+
+# Defining service methods
+
+// TODO
+Define empty service methods to implement in later steps of this tutorial.
+
+<TutorialSteps current={3} />
+
+## What you need
+
+// TODO
+
+## 1. Write the thrift file
+
+Let's update the server's `blog.thrift` file.
+We'll add structs, an exception, and service methods.
+
+1. Add the `BlogPost` struct.
+  ```thrift filename=blog.thrift
+  /**
+   * An object which represents a blog post.
+   */
+  struct BlogPost {
+      1: i32 id;
+      2: string title;
+      3: string content;
+      4: i64 createdAt;
+      5: i64 modifiedAt;
+  }
+  ```
+2. Add request and response types as follows.
+  ```thrift filename=blog.thrift
+  /**
+   * A request object for creating a blog post.
+   */
+  struct CreateBlogPostRequest {
+      1: string title;
+      2: string content;
+  }
+
+  /**
+   * A request object for getting a blog post.
+   */
+  struct GetBlogPostRequest {
+      1: i32 id;
+  }
+
+  /**
+   * A request object for fetching a list of blog posts.
+   */
+  struct ListBlogPostsRequest {
+      1: bool descending;
+  }
+
+  /**
+   * A response object containing a list of blog posts.
+   */
+  struct ListBlogPostsResponse {
+      1: list<BlogPost> blogs;
+  }
+
+  /**
+   * A request object for updating a blog post.
+   */
+  struct UpdateBlogPostRequest {
+      1: i32 id;
+      2: string title;
+      3: string content;
+  }
+
+  /**
+   * A request object for deleting a blog post.
+   */
+  struct DeleteBlogPostRequest {
+      1: i32 id;
+  }
+  ```
+3. Add the `BlogNotFoundException` exception.
+  ```thrift filename=blog.thrift
+  /**
+   * An exception which is thrown when a blog is not found.
+   */
+  exception BlogNotFoundException {
+      1: string reason
+  }
+  ```
+4. Remove the `hello()` method in the `BlogService`.
+  ```thrift filename=blog.thrift
+  service BlogService {
+      string hello() // Remove this
+  }
+  ```
+5. Add service methods for create, read, update, and delete operations.
+  ```thrift filename=blog.thrift
+  service BlogService {
+
+      /**
+       * Creates a blog post.
+       */
+      BlogPost createBlogPost(1:CreateBlogPostRequest request),
+
+      /**
+       * Gets a blog post.
+       */
+      BlogPost getBlogPost(1:GetBlogPostRequest request) throws (1:BlogNotFoundException e),
+
+      /**
+       * Retrieves a list of blog posts.
+       */
+      ListBlogPostsResponse listBlogPosts(1:ListBlogPostsRequest request),
+
+      /**
+       * Updates a blog post.
+       */
+      BlogPost updateBlogPost(1:UpdateBlogPostRequest request) throws (1:BlogNotFoundException e),
+
+      /**
+       * Deletes a blog post.
+       */
+      void deleteBlogPost(1:DeleteBlogPostRequest request) throws (1:BlogNotFoundException e),
+  }
+  ```
+
+## 2. Compile the thrift file
+
+[Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
+You'll see the generated Java code in the `{project_root}/build/generated-sources/thrift/gen-java/example/armeria/blog/thrift/` folder.
+
+After compiling, you may encounter a warning in your IDE, because we updated only the service interface in Thrift, but not yet the implementation in Java.
+The warning will be resolved soon in the step below.
+
+## 3. Override service methods
+
+Let's override the service methods.
+
+1. Remove the `hello()` method in the `BlogServiceImpl` class.
+2. Add the service methods.
+  We'll implement the service methods one by one in this tutorial.
+  Let's leave them empty for now.
+```java filename=BlogServiceImpl.java
+import example.armeria.blog.thrift.BlogPost;
+import example.armeria.blog.thrift.CreateBlogPostRequest;
+import example.armeria.blog.thrift.GetBlogPostRequest;
+import example.armeria.blog.thrift.ListBlogPostsRequest;
+import example.armeria.blog.thrift.ListBlogPostsResponse;
+import example.armeria.blog.thrift.UpdateBlogPostRequest;
+import example.armeria.blog.thrift.DeleteBlogPostRequest;
+import org.apache.thrift.TException;
+
+public class BlogServiceImpl implements BlogService.AsyncIface {
+
+    @Override
+    public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+            throws TException {}
+
+    @Override
+    public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+            throws TException {}
+
+    @Override
+    public void listBlogPosts(ListBlogPostsRequest request, AsyncMethodCallback<ListBlogPostsResponse> resultHandler)
+            throws TException {}
+
+    @Override
+    public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+            throws TException {}
+
+    @Override
+    public void deleteBlogPost(DeleteBlogPostRequest request, AsyncMethodCallback<Void> resultHandler)
+            throws TException {}
+}
+```
+
+## 4. Write and compile the thrift file for client
+
+Let's write and compile the thrift file for client as well.
+
+1. Write the client's `blog.thrift` file like we did for server in [1. Write the thrift file](#1-write-the-thrift-file).
+2. [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
+  You'll see the generated Java code in the `{project_root}/build/generated-sources/thrift/gen-java/example/armeria/blog/thrift/` folder.
+
+## What's next
+
+// TODO
