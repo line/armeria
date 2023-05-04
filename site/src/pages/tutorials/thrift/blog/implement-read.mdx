@@ -26,7 +26,10 @@ You need to have:
 - BlogServiceImpl.java
 - BlogClient.java
 
-## 1. Add an exception handler
+
+## 1. Implement server-side
+
+### Add an exception handler
 
 First, add an exception handler for the exception to be thrown when there is no blog post for the given ID.
 
@@ -65,25 +68,20 @@ First, add an exception handler for the exception to be thrown when there is no 
   }
   ```
 
-## 2. Implement service code
+### Implement service methods
 
 Now, let's write two methods for retrieving blog posts; one for a single post and another for multiple posts.
 
 <Tabs>
 <TabPane tab="Single post" key="1">
 
-1. Add a service method in the `BlogServiceImpl` class to retrieve a single post.
+1. Implement the `getBlogPost` method in the `BlogServiceImpl` class to retrieve a single post.
   ```java filename=BlogServiceImpl.java
-  import example.armeria.blog.thrift.GetBlogPostRequest;
-
-  public class BlogServiceImpl implements BlogService.AsyncIface {
-    ...
-    @Override
-    public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
-            throws TException {
-      final BlogPost blogPost = blogPosts.get(request.getId());
-      resultHandler.onComplete(blogPost);
-    }
+  @Override
+  public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {
+    final BlogPost blogPost = blogPosts.get(request.getId());
+    resultHandler.onComplete(blogPost);
   }
   ```
 2. Throw an exception in case there is no blog post for the given ID.
@@ -111,13 +109,10 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
 </TabPane>
 <TabPane tab="Multiple posts" key="2">
 
-1. Add a service method in the `BlogServiceImpl` class to retrieve multiple posts.
+1. Implement the `listBlogPosts` method in the `BlogServiceImpl` class to retrieve multiple posts.
   ```java filename=BlogServiceImpl.java
   import java.util.List;
   import java.util.stream.Collectors;
-
-  import example.armeria.blog.thrift.ListBlogPostsRequest;
-  import example.armeria.blog.thrift.ListBlogPostsResponse;
 
   public class BlogServiceImpl implements BlogService.AsyncIface {
     ...

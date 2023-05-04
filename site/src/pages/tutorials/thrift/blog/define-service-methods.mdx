@@ -180,10 +180,21 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
 ## 4. Write and compile the thrift file for client
 
 Let's write and compile the thrift file for client as well.
+And update the client code accordingly.
 
 1. Write the client's `blog.thrift` file like we did for server in [1. Write the thrift file](#1-write-the-thrift-file).
 2. [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
   You'll see the generated Java code in the `{project_root}/build/generated-sources/thrift/gen-java/example/armeria/blog/thrift/` folder.
+3. In the `BlogClient` class, remove two lines of code calling the `hello()` method.
+  ```java filename=BlogClient.java
+  public static void main(String[] args) throws Exception {
+      blogService = ThriftClients.builder("http://127.0.0.1:8080")
+              .path("/thrift")
+              .build(BlogService.Iface.class);
+      String result = blogService.hello(); // Remove this
+      logger.info(result); // Remove this
+  }
+  ```
 
 ## What's next
 

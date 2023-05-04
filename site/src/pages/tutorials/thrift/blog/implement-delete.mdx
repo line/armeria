@@ -28,33 +28,26 @@ You need to have the files obtained from previous steps:
 
 ## 1. Implement server-side
 
-Let's implement a service method to delete a blog post.
+Implement the `deleteBlogPost` method in the `BlogServiceImpl` class to delete a blog post.
+Let's throw an exception in case there is no blog post for the given ID.
 
-Add a service method in the `BlogServiceImpl` class to delete a blog post.
-  ```java filename=BlogServiceImpl.java
-  import example.armeria.blog.thrift.DeleteBlogPostRequest;
-
-  public class BlogServiceImpl implements BlogService.AsyncIface {
-    ...
-    @Override
-    public void deleteBlogPost(DeleteBlogPostRequest request, AsyncMethodCallback<Void> resultHandler)
-            throws TException {
-        final BlogPost removed = blogPosts.remove(request.getId());
-        if (removed == null) {
-            resultHandler.onError(
-                    new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
-        } else {
-            resultHandler.onComplete(null);
-        }
+```java filename=BlogServiceImpl.java
+@Override
+public void deleteBlogPost(DeleteBlogPostRequest request, AsyncMethodCallback<Void> resultHandler)
+        throws TException {
+    final BlogPost removed = blogPosts.remove(request.getId());
+    if (removed == null) {
+        resultHandler.onError(
+                new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
+    } else {
+        resultHandler.onComplete(null);
     }
-  }
-  ```
+}
+```
 
 ## 2. Implement client-side
 
-Add a method `deleteBlogPost()` to send a request to delete a blog post.
-
-In the `BlogClient` class, add a method sending a request to delete a blog post.
+In the `BlogClient` class, add the `deleteBlogPost()` method to send a request deleting a blog post.
 
 ```java filename=BlogClient.java
 import example.armeria.blog.thrift.DeleteBlogPostRequest;

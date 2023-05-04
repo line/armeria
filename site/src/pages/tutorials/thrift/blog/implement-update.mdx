@@ -27,30 +27,25 @@ You need to have the files obtained from previous steps:
 
 ## 1. Implement server-side
 
-In the `BlogServiceImpl` class, add a service method for updating a blog post.
+In the `BlogServiceImpl` class, implement the `updateBlogPost` method for updating a blog post.
 Let's throw an exception in case there is no blog post for the given ID.
 
 ```java filename=BlogServiceImpl.java
-import example.armeria.blog.thrift.UpdateBlogPostRequest;
-
-public class BlogServiceImpl implements BlogService.AsyncIface {
-  ...
-  @Override
-  public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
-          throws TException {
-      final BlogPost oldBlogPost = blogPosts.get(request.getId());
-      if (oldBlogPost == null) {
-          resultHandler.onError(
-                  new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
-      } else {
-          final BlogPost newBlogPost = oldBlogPost.deepCopy()
-                                                  .setTitle(request.getTitle())
-                                                  .setContent(request.getContent())
-                                                  .setModifiedAt(Instant.now().toEpochMilli());
-          blogPosts.put(request.getId(), newBlogPost);
-          resultHandler.onComplete(newBlogPost);
-      }
-  }
+@Override
+public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+        throws TException {
+    final BlogPost oldBlogPost = blogPosts.get(request.getId());
+    if (oldBlogPost == null) {
+        resultHandler.onError(
+                new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+    } else {
+        final BlogPost newBlogPost = oldBlogPost.deepCopy()
+                                                .setTitle(request.getTitle())
+                                                .setContent(request.getContent())
+                                                .setModifiedAt(Instant.now().toEpochMilli());
+        blogPosts.put(request.getId(), newBlogPost);
+        resultHandler.onComplete(newBlogPost);
+    }
 }
 ```
 

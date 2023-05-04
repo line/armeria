@@ -27,24 +27,9 @@ You need to have the following obtained from previous steps:
 
 ## 1. Implement server-side
 
-Let's implement a service method `createBlogPost()` in `BlogServiceImpl.java`.
+Let's implement the `createBlogPost()` method in the `BlogServiceImpl` class.
 
-1. Remove the `hello()` method.
-2. Override a service method, `createBlogPost()`.
-  ```java filename=BlogServiceImpl.java
-  import org.apache.thrift.TException;
-
-  import example.armeria.blog.thrift.CreateBlogPostRequest;
-  import example.armeria.blog.thrift.BlogPost;
-
-  public class BlogServiceImpl implements BlogService.AsyncIface {
-
-      @Override
-      public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
-              throws TException {}
-  }
-  ```
-2. Create an ID generator to issue temporary blog post IDs and a map to contain blog posts.
+1. Create an ID generator to issue temporary blog post IDs and a map to contain blog posts.
   ```java filename=BlogServiceImpl.java
   import java.util.Map;
   import java.util.concurrent.ConcurrentHashMap;
@@ -56,10 +41,7 @@ Let's implement a service method `createBlogPost()` in `BlogServiceImpl.java`.
       ...
   }
   ```
-3. Implement the `createBlogPost()` method:
-    1. Create a `BlogPost` object with request parameters.
-    2. Save the post information in the `blogPosts` map.
-    3. Return the information of the blog post created to the `resultHandler`.
+2. In the `createBlogPost()` method, create a `BlogPost` object with request parameters.
   ```java filename=BlogServiceImpl.java
   import java.time.Instant;
 
@@ -76,44 +58,41 @@ Let's implement a service method `createBlogPost()` in `BlogServiceImpl.java`.
                   .setContent(request.getContent())
                   .setModifiedAt(now.toEpochMilli())
                   .setCreatedAt(now.toEpochMilli());
-          blogPosts.put(id, blogPost);
-          final BlogPost stored = blogPost;
-          resultHandler.onComplete(stored);
       }
+  }
+  ```
+2. In the `createBlogPost()` method, save the post information in the `blogPosts` map and return the information of the blog post created to the `resultHandler`.
+  ```java filename=BlogServiceImpl.java
+  @Override
+  public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {
+      ...
+      blogPosts.put(id, blogPost);
+      final BlogPost stored = blogPost;
+      resultHandler.onComplete(stored);
   }
   ```
 
 ## 2. Implement client-side
 
-Add a method `createBlogPost()` in `BlogClient.java` to send a request to create a blog post.
+Add a method `createBlogPost()` in the `BlogClient` class to send a request to create a blog post.
 
-1. In the `main()` method, remove two lines of code calling the `hello()` method.
-  ```java filename=BlogClient.java
-  public static void main(String[] args) throws Exception {
-      blogService = ThriftClients.builder("http://127.0.0.1:8080")
-              .path("/thrift")
-              .build(BlogService.Iface.class);
-      String result = blogService.hello(); // Remove this
-      logger.info(result); // Remove this
-  }
-  ```
-2. Add a method `createBlogPost()` to send a request to create a blog post.
-  ```java filename=BlogClient.java
-  import example.armeria.blog.thrift.BlogPost;
-  import example.armeria.blog.thrift.CreateBlogPostRequest;
+```java filename=BlogClient.java
+import example.armeria.blog.thrift.BlogPost;
+import example.armeria.blog.thrift.CreateBlogPostRequest;
 
-  public class BlogClient {
-    ...
-    void createBlogPost(String title, String content) throws Exception {
-      final CreateBlogPostRequest request = 
-          new CreateBlogPostRequest().setTitle(title)
-                                  .setContent(content);
-      final BlogPost response = blogService.createBlogPost(request);
-      logger.info("[Create response] Title: {} Content: {}",
-                      response.getTitle(), response.getContent());
-    }
+public class BlogClient {
+  ...
+  void createBlogPost(String title, String content) throws Exception {
+    final CreateBlogPostRequest request =
+        new CreateBlogPostRequest().setTitle(title)
+                                .setContent(content);
+    final BlogPost response = blogService.createBlogPost(request);
+    logger.info("[Create response] Title: {} Content: {}",
+                    response.getTitle(), response.getContent());
   }
-  ```
+}
+```
 
 ## 3. Test creating a blog post
 
