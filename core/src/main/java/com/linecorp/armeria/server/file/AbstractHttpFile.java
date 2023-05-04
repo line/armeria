@@ -23,6 +23,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Splitter;
 import com.google.common.math.LongMath;
 
@@ -45,7 +48,7 @@ import io.netty.buffer.ByteBufAllocator;
  * A skeletal {@link HttpFile} implementation.
  */
 public abstract class AbstractHttpFile implements HttpFile {
-
+    private static final Logger logger = LoggerFactory.getLogger(AbstractHttpFile.class);
     private static final Splitter etagSplitter = Splitter.on(',').trimResults().omitEmptyStrings();
 
     @Nullable
@@ -203,7 +206,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                         return res;
                     }
 
-                    // read() returned null above.
+                    logger.debug("{} is not found. attrs: {}", pathOrUri(), attrs);
                     return HttpResponse.of(HttpStatus.NOT_FOUND);
                 })
                 .exceptionally(cause -> HttpResponse.ofFailure(Exceptions.peel(cause)));
@@ -260,6 +263,7 @@ public abstract class AbstractHttpFile implements HttpFile {
 
             return HttpResponse.from(readAttributes(ctx.blockingTaskExecutor()).thenApply(attrs -> {
                 if (attrs == null) {
+                    logger.debug("{} is not found. attrs: {}", pathOrUri(), attrs);
                     return HttpResponse.of(HttpStatus.NOT_FOUND);
                 }
 

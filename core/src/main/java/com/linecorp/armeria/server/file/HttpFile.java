@@ -129,6 +129,7 @@ public interface HttpFile {
      * Contains additional {@code location} information.
      */
     static HttpFile nonExistent(String location) {
+        requireNonNull(location, "location");
         return new NonExistentHttpFile(location, false);
     }
 
