@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -67,6 +68,7 @@ import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.thrift.THttpService;
+import com.linecorp.armeria.server.thrift.ThriftServiceEntry;
 
 /**
  * {@link DocServicePlugin} implementation that supports {@link THttpService}s.
@@ -124,7 +126,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                     final Class<?> serviceClass = iface.getEnclosingClass();
                     final EntryBuilder builder =
                             map.computeIfAbsent(serviceClass, cls -> new EntryBuilder(serviceClass));
-
+                    builder.thriftServiceEntry(entry);
                     // Add all available endpoints. Accept only the services with exact and prefix path
                     // mappings, whose endpoint path can be determined.
                     final Route route = c.route();
@@ -152,7 +154,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                                          DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         final List<ServiceInfo> services =
                 entries.stream()
-                       .map(e -> newServiceInfo(e.serviceType, e.endpointInfos, filter))
+                       .map(e -> newServiceInfo(e, filter))
                        .filter(Objects::nonNull)
                        .collect(toImmutableList());
 
@@ -162,8 +164,9 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     @Nullable
-    ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
+    ServiceInfo newServiceInfo(Entry entry,
                                DocServiceFilter filter) {
+        final Class<?> serviceClass = entry.serviceType;
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -178,7 +181,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         final Method[] methods = interfaceClass.getDeclaredMethods();
 
         final List<MethodInfo> methodInfos = Arrays.stream(methods)
-                                                   .map(m -> newMethodInfo(m, endpoints, filter))
+                                                   .map(m -> newMethodInfo(m, entry, filter))
                                                    .filter(Objects::nonNull)
                                                    .collect(toImmutableList());
         if (methodInfos.isEmpty()) {
@@ -188,7 +191,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     @Nullable
-    private MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints,
+    private MethodInfo newMethodInfo(Method method, Entry entry,
                                      DocServiceFilter filter) {
         final String methodName = method.getName();
 
@@ -199,7 +202,12 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         }
         final ClassLoader classLoader = serviceClass.getClassLoader();
 
-        final String argsClassName = serviceName + '$' + methodName + "_args";
+        // Need get the function name in thrift proto,
+        // otherwise the argsClassName maybe wrong when use fullcamel compile option
+        final String thriftFunctionName = Optional.ofNullable(entry.thriftServiceEntry)
+                                                  .map(x -> x.functionName(methodName))
+                                                  .orElse(methodName);
+        final String argsClassName = serviceName + '$' + thriftFunctionName + "_args";
         final Class<? extends TBase<?, ?>> argsClass;
         try {
             @SuppressWarnings("unchecked")
@@ -223,7 +231,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                 newMethodInfo(serviceName, methodName, argsClass,
                               (Class<? extends TBase<?, ?>>) resultClass,
                               (Class<? extends TException>[]) method.getExceptionTypes(),
-                              endpoints);
+                              entry.endpointInfos);
         return methodInfo;
     }
 
@@ -298,10 +306,13 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     public static final class Entry {
         final Class<?> serviceType;
         final List<EndpointInfo> endpointInfos;
+        final ThriftServiceEntry thriftServiceEntry;
 
-        Entry(Class<?> serviceType, List<EndpointInfo> endpointInfos) {
+        Entry(Class<?> serviceType, List<EndpointInfo> endpointInfos,
+              ThriftServiceEntry thriftServiceEntry) {
             this.serviceType = serviceType;
             this.endpointInfos = ImmutableList.copyOf(endpointInfos);
+            this.thriftServiceEntry = thriftServiceEntry;
         }
     }
 
@@ -309,6 +320,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     public static final class EntryBuilder {
         private final Class<?> serviceType;
         private final List<EndpointInfo> endpointInfos = new ArrayList<>();
+        private ThriftServiceEntry thriftServiceEntry;
 
         public EntryBuilder(Class<?> serviceType) {
             this.serviceType = requireNonNull(serviceType, "serviceType");
@@ -319,8 +331,13 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
             return this;
         }
 
+        public EntryBuilder thriftServiceEntry(ThriftServiceEntry thriftServiceEntry) {
+            this.thriftServiceEntry = thriftServiceEntry;
+            return this;
+        }
+
         public Entry build() {
-            return new Entry(serviceType, endpointInfos);
+            return new Entry(serviceType, endpointInfos, thriftServiceEntry);
         }
     }
 

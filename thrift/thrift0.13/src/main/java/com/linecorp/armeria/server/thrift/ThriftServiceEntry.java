@@ -19,10 +19,13 @@ package com.linecorp.armeria.server.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 
 /**
@@ -71,6 +74,18 @@ public final class ThriftServiceEntry {
      */
     public Set<Class<?>> interfaces() {
         return metadata.interfaces();
+    }
+
+    /**
+     * Returns the associated thrift method name in proto from Thrift function.
+     *
+     * @return the associated thrift method name in proto, or {@code null} if there's no such function.
+     */
+    @Nullable
+    public String functionName(String method) {
+        return Optional.ofNullable(metadata.function(method))
+                       .map(ThriftFunction::name)
+                       .orElse(null);
     }
 
     @Override
