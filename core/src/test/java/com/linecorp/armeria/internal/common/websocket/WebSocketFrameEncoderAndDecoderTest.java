@@ -13,6 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+/*
+ * Copyright 2019 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.linecorp.armeria.internal.common.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,7 +64,7 @@ import io.netty.buffer.Unpooled;
 
 class WebSocketFrameEncoderAndDecoderTest {
 
-    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
+    // Forked from Netty 4.1.92 https://github.com/netty/netty/blob/ac3f823cce911b5239f3d01c9f6b44be683b2e48/codec-http/src/test/java/io/netty/handler/codec/http/websocketx/WebSocket08EncoderDecoderTest.java
     // - Change to use HttpRequestWriter and HttpResponseWriter instead of EmbeddedChannel.
 
     private static final int MAX_TEST_DATA_LENGTH = 100 * 1024;

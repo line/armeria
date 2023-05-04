@@ -91,7 +91,7 @@ import io.netty.util.internal.ThreadLocalRandom;
  */
 public final class WebSocketFrameEncoder {
 
-    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
+    // Forked from Netty 4.1.92 https://github.com/netty/netty/blob/e8df52e442629214e0355528c00e873e213f0139/codec-http/src/main/java/io/netty/handler/codec/http/websocketx/WebSocket08FrameEncoder.java
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketFrameEncoder.class);
 

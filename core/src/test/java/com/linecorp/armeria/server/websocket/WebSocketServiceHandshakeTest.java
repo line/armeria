@@ -196,6 +196,12 @@ class WebSocketServiceHandshakeTest {
         SplitHttpResponse split = client.execute(headersBuilder.build()).split();
         ResponseHeaders responseHeaders = split.headers().join();
         split.body().abort();
+        assertThat(responseHeaders.status()).isSameAs(HttpStatus.FORBIDDEN);
+
+        headersBuilder.add(HttpHeaderNames.ORIGIN, "foo.com");
+        split = client.execute(headersBuilder.build()).split();
+        responseHeaders = split.headers().join();
+        split.body().abort();
         assertThat(responseHeaders.status()).isSameAs(HttpStatus.BAD_REQUEST);
         assertThat(responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_VERSION)).isEqualTo("13");
 

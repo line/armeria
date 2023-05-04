@@ -66,7 +66,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
-    private Long abortingRequestDelayMillis;
+    private Long requestAutoAbortDelayMillis;
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
@@ -190,13 +190,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigBuilder abortingRequestDelay(Duration delay) {
-        return abortingRequestDelayMillis(requireNonNull(delay, "delay").toMillis());
+    public ServiceConfigBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
     }
 
     @Override
-    public ServiceConfigBuilder abortingRequestDelayMillis(long delayMillis) {
-        abortingRequestDelayMillis = delayMillis;
+    public ServiceConfigBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
         return this;
     }
 
@@ -288,7 +288,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         BlockingTaskExecutor defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
-                        long defaultAbortingRequestDelayMillis,
+                        long requestAutoAbortDelayMillis,
                         Path defaultMultipartUploadsLocation,
                         HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
@@ -312,8 +312,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 successFunction != null ? successFunction : defaultSuccessFunction,
-                abortingRequestDelayMillis != null ? abortingRequestDelayMillis
-                                                   : defaultAbortingRequestDelayMillis,
+                this.requestAutoAbortDelayMillis != null ? this.requestAutoAbortDelayMillis
+                                                         : requestAutoAbortDelayMillis,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),

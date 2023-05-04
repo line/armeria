@@ -278,14 +278,14 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
     }
 
     @Override
-    public VirtualHostAnnotatedServiceBindingBuilder abortingRequestDelay(Duration delay) {
-        defaultServiceConfigSetters.abortingRequestDelay(delay);
+    public VirtualHostAnnotatedServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        defaultServiceConfigSetters.requestAutoAbortDelay(delay);
         return this;
     }
 
     @Override
-    public VirtualHostAnnotatedServiceBindingBuilder abortingRequestDelayMillis(long delayMillis) {
-        defaultServiceConfigSetters.abortingRequestDelayMillis(delayMillis);
+    public VirtualHostAnnotatedServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

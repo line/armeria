@@ -29,7 +29,6 @@ import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
@@ -599,9 +598,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private final class RequestAndResponseCompleteHandler {
 
-        final BiFunction<Void, Throwable, Void> requestCompleteHandler;
-        final BiFunction<Void, Throwable, Void> responseCompleteHandler;
-        private final AtomicBoolean requestOrResponseComplete = new AtomicBoolean();
+        final BiFunction<Void, @Nullable Throwable, Void> requestCompleteHandler;
+        final BiFunction<Void, @Nullable Throwable, Void> responseCompleteHandler;
+        private boolean requestOrResponseComplete;
 
         private final ChannelHandlerContext ctx;
         private final DecodedHttpRequest req;
@@ -627,16 +626,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             responseCompleteHandler = (unused, cause) -> {
                 assert eventLoop.inEventLoop();
-                if (cause != null || !req.isOpen() || serviceCfg.abortingRequestDelayMillis() < 0) {
+                if (cause != null || !req.isOpen() || serviceCfg.requestAutoAbortDelayMillis() == 0) {
                     handleResponseComplete(cause);
                     return null;
                 }
-                if (serviceCfg.abortingRequestDelayMillis() > 0) {
+                if (serviceCfg.requestAutoAbortDelayMillis() > 0) {
                     eventLoop.schedule(() -> handleResponseComplete(cause),
-                                       serviceCfg.abortingRequestDelayMillis(), TimeUnit.MILLISECONDS);
+                                       serviceCfg.requestAutoAbortDelayMillis(), TimeUnit.MILLISECONDS);
                     return null;
                 }
-                // aborting request is disabled.
+                // Auto aborting request is disabled.
                 handleRequestOrResponseComplete();
                 return null;
             };
@@ -667,10 +666,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         private void handleRequestOrResponseComplete() {
             try {
-                if (!requestOrResponseComplete.get()) {
+                if (!requestOrResponseComplete) {
                     // This will make this method is called only once after
                     // both request and response are complete.
-                    requestOrResponseComplete.set(true);
+                    requestOrResponseComplete = true;
                     return;
                 }
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber.

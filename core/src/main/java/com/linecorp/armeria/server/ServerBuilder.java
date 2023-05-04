@@ -232,7 +232,7 @@ public final class ServerBuilder implements TlsSetters {
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
-        virtualHostTemplate.abortingRequestDelayMillis(-1); // TODO(minwoox): add to Flags.
+        virtualHostTemplate.requestAutoAbortDelayMillis(-1); // TODO(minwoox): add to Flags.
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
@@ -807,24 +807,24 @@ public final class ServerBuilder implements TlsSetters {
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
      * It's useful when you want to receive additional data even after closing the response.
-     * Specify {@link Duration#ZERO} to disable aborting the {@link HttpRequest}. Any negative value will abort
-     * the request immediately. There is no delay by default.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
      */
     @UnstableApi
-    public ServerBuilder abortingRequestDelay(Duration delay) {
-        return abortingRequestDelayMillis(requireNonNull(delay, "delay").toMillis());
+    public ServerBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
     }
 
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
      * It's useful when you want to receive additional data even after closing the response.
-     * Specify {@code 0} to disable aborting the {@link HttpRequest}. Any negative value will abort
-     * the request immediately. There is no delay by default.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
      */
     @UnstableApi
-    public ServerBuilder abortingRequestDelayMillis(long delayMillis) {
-        virtualHostTemplate.abortingRequestDelayMillis(delayMillis);
+    public ServerBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        virtualHostTemplate.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

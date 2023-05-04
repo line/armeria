@@ -150,7 +150,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
-    private Long abortingRequestDelayMillis;
+    private Long requestAutoAbortDelayMillis;
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
@@ -1068,24 +1068,24 @@ public final class VirtualHostBuilder implements TlsSetters {
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
      * It's useful when you want to receive additional data even after closing the response.
-     * Specify {@link Duration#ZERO} to disable aborting the {@link HttpRequest}. Any negative value will abort
-     * the request immediately. There is no delay by default.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
      */
     @UnstableApi
-    public VirtualHostBuilder abortingRequestDelay(Duration delay) {
-        return abortingRequestDelayMillis(requireNonNull(delay, "delay").toMillis());
+    public VirtualHostBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
     }
 
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
      * It's useful when you want to receive additional data even after closing the response.
-     * Specify {@code 0} to disable aborting the {@link HttpRequest}. Any negative value will abort
-     * the request immediately. There is no delay by default.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
      */
     @UnstableApi
-    public VirtualHostBuilder abortingRequestDelayMillis(long delayMillis) {
-        abortingRequestDelayMillis = delayMillis;
+    public VirtualHostBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
         return this;
     }
 
@@ -1182,9 +1182,9 @@ public final class VirtualHostBuilder implements TlsSetters {
         final boolean verboseResponses =
                 this.verboseResponses != null ?
                 this.verboseResponses : template.verboseResponses;
-        final long abortingRequestDelayMillis =
-                this.abortingRequestDelayMillis != null ?
-                this.abortingRequestDelayMillis : template.abortingRequestDelayMillis;
+        final long requestAutoAbortDelayMillis =
+                this.requestAutoAbortDelayMillis != null ?
+                this.requestAutoAbortDelayMillis : template.requestAutoAbortDelayMillis;
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
                 this.rejectedRouteHandler : template.rejectedRouteHandler;
@@ -1260,7 +1260,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, abortingRequestDelayMillis,
+                                            successFunction, requestAutoAbortDelayMillis,
                                             multipartUploadsLocation, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
                                             unhandledExceptionsReporter);
@@ -1270,7 +1270,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               abortingRequestDelayMillis, multipartUploadsLocation,
+                               requestAutoAbortDelayMillis, multipartUploadsLocation,
                                defaultHeaders, requestIdGenerator,
                                defaultErrorHandler, unhandledExceptionsReporter);
 
@@ -1283,7 +1283,8 @@ public final class VirtualHostBuilder implements TlsSetters {
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter,
-                                blockingTaskExecutor, multipartUploadsLocation, builder.build(),
+                                blockingTaskExecutor, requestAutoAbortDelayMillis,
+                                multipartUploadsLocation, builder.build(),
                                 requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =

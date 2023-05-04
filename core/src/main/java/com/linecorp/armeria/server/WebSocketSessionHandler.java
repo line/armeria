@@ -16,6 +16,11 @@
 
 package com.linecorp.armeria.server;
 
+import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
@@ -34,6 +39,8 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
 
 final class WebSocketSessionHandler extends ChannelDuplexHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketSessionHandler.class);
 
     private final StreamingDecodedHttpRequest req;
     private final ServerHttpObjectEncoder encoder;
@@ -67,7 +74,12 @@ final class WebSocketSessionHandler extends ChannelDuplexHandler {
             ctx.fireChannelRead(msg);
             return;
         }
+        if (msg == EMPTY_LAST_CONTENT) {
+            // HttpServerCodec produces this after creating the headers. We can just ignore it.
+            return;
+        }
         if (!(msg instanceof ByteBuf)) {
+            logger.warn("{} Unexpected msg: {}", ctx.channel(), msg);
             return;
         }
         try {

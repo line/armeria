@@ -275,13 +275,13 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder abortingRequestDelay(Duration duration) {
-        return (ServiceBindingBuilder) super.abortingRequestDelay(duration);
+    public ServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        return (ServiceBindingBuilder) super.requestAutoAbortDelay(delay);
     }
 
     @Override
-    public ServiceBindingBuilder abortingRequestDelayMillis(long delayMillis) {
-        return (ServiceBindingBuilder) super.abortingRequestDelayMillis(delayMillis);
+    public ServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (ServiceBindingBuilder) super.requestAutoAbortDelayMillis(delayMillis);
     }
 
     @Override

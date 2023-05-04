@@ -20,7 +20,6 @@ import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponse
 
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
@@ -34,6 +33,7 @@ final class WebSocketHttp1ResponseSubscriber extends AbstractHttpResponseSubscri
                                      DecodedHttpRequest req,
                                      CompletableFuture<Void> completionFuture) {
         super(ctx, responseEncoder, reqCtx, req, completionFuture);
+        responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 
     @Override
@@ -46,10 +46,6 @@ final class WebSocketHttp1ResponseSubscriber extends AbstractHttpResponseSubscri
                                      config.isServerHeaderEnabled(),
                                      config.isDateHeaderEnabled());
         logBuilder().responseHeaders(merged);
-        if (merged.status() != HttpStatus.SWITCHING_PROTOCOLS) {
-            // fail to upgrade. Close connection after sending the response.
-            responseEncoder.keepAliveHandler().disconnectWhenFinished();
-        }
         setState(State.NEEDS_DATA);
         responseEncoder.writeHeaders(req.id(), req.streamId(), merged, endOfStream)
                        .addListener(writeHeadersFutureListener(endOfStream));

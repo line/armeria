@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 
 /**
- * A {@link RuntimeException} that is raised when it fails to decode a {@link WebSocketFrame}.
+ * A {@link RuntimeException} that is raised when failing to decode a {@link WebSocketFrame}.
  *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5">Data framing</a>
  */

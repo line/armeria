@@ -47,6 +47,7 @@ public final class WebSocketServiceBuilder {
     /**
      * Sets the maximum length of a frame's payload. If the size of a payload data exceeds the value,
      * {@link WebSocketCloseStatus#MESSAGE_TOO_BIG} is sent to the peer.
+     * {@value DEFAULT_MAX_FRAME_PAYLOAD_LENGTH} is used by default.
      */
     public WebSocketServiceBuilder maxFramePayloadLength(int maxFramePayloadLength) {
         checkArgument(maxFramePayloadLength > 0,
@@ -56,7 +57,8 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Sets whether the decoder allow to loose the masking requirement on received frames.
+     * Sets whether the decoder allow to loosen the masking requirement on received frames.
+     * It's not allowed by default.
      */
     public WebSocketServiceBuilder allowMaskMismatch(boolean allowMaskMismatch) {
         this.allowMaskMismatch = allowMaskMismatch;
@@ -85,7 +87,7 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Sets the allowed origins.
+     * Sets the allowed origins. All origins are allowed by default.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
@@ -94,7 +96,7 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Sets the allowed origins.
+     * Sets the allowed origins. All origins are allowed by default.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */

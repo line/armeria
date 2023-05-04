@@ -13,6 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+/*
+ * Copyright 2019 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.linecorp.armeria.internal.common.websocket;
 
 import org.slf4j.Logger;
@@ -38,7 +54,7 @@ import io.netty.buffer.Unpooled;
 
 public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> {
 
-    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
+    // Forked from Netty 4.1.92 https://github.com/netty/netty/blob/e8df52e442629214e0355528c00e873e213f0139/codec-http/src/main/java/io/netty/handler/codec/http/websocketx/WebSocket08FrameDecoder.java
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketFrameDecoder.class);
 
@@ -354,7 +370,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
         assert ctxExtension != null;
         final Request request = ctxExtension.originalRequest();
-        assert request instanceof HttpRequestWriter;
+        assert request instanceof HttpRequestWriter : request;
         //noinspection OverlyStrongTypeCast
         ((HttpRequestWriter) request).close();
     }

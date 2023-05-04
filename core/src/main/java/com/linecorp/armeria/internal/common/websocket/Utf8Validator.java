@@ -55,7 +55,7 @@ import io.netty.util.ByteProcessor;
 
 final class Utf8Validator implements ByteProcessor {
 
-    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
+    // Forked from Netty 4.1.92 https://github.com/netty/netty/blob/3cf83d5a2a601f033ddde7d43acab71ad1acf988/codec-http/src/main/java/io/netty/handler/codec/http/websocketx/Utf8Validator.java#L44
 
     private static final int UTF8_ACCEPT = 0;
     private static final int UTF8_REJECT = 12;

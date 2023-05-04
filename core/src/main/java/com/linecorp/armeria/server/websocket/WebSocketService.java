@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -158,19 +159,9 @@ public final class WebSocketService extends AbstractHttpService {
             return missingHttp1WebSocketUpgradeHeader.toHttpResponse();
         }
 
-        if (!allowedOrigins.isEmpty()) {
-            final String origin = headers.get(HttpHeaderNames.ORIGIN);
-            if (isNullOrEmpty(origin) || !allowedOrigins.contains(origin)) {
-                logger.trace("Not allowed origin: {}, allowed: {}", origin, allowedOrigins);
-                return HttpResponse.of(HttpStatus.FORBIDDEN);
-            }
-        }
-
-        // Currently we only support v13.
-        final String version = headers.get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
-        if (!WebSocketVersion.V13.toHttpHeaderValue().equalsIgnoreCase(version)) {
-            logger.trace("not supported WebSocket version: {} (expected: 13)", version);
-            return HttpResponse.of(unsupportedWebSocketVersion);
+        final HttpResponse invalidResponse = checkOriginAndVersion(headers);
+        if (invalidResponse != null) {
+            return invalidResponse;
         }
 
         final String webSocketKey = headers.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
@@ -221,7 +212,7 @@ public final class WebSocketService extends AbstractHttpService {
         return HttpResponse.of(
                 responseHeaders, outboundFrames.recoverAndResume(cause -> {
                                                    if (cause instanceof ClosedStreamException) {
-                                                       return StreamMessage.of();
+                                                       return StreamMessage.aborted(cause);
                                                    }
                                                    ctx.logBuilder().responseCause(cause);
                                                    return StreamMessage.of(newCloseWebSocketFrame(cause));
@@ -265,15 +256,36 @@ public final class WebSocketService extends AbstractHttpService {
             logger.trace("RequestHeaders does not contain headers for WebSocket upgrade. headers: {}", headers);
             return missingHttp2WebSocketUpgradeHeader.toHttpResponse();
         }
+
+        final HttpResponse invalidResponse = checkOriginAndVersion(headers);
+        if (invalidResponse != null) {
+            return invalidResponse;
+        }
+
+        // As described in https://datatracker.ietf.org/doc/html/rfc8441#section-5,
+        // HTTP/2 does not use Sec-WebSocket-Key and Sec-WebSocket-Accept headers.
+
+        final ResponseHeadersBuilder responseHeadersBuilder = ResponseHeaders.builder(HttpStatus.OK);
+        maybeAddSubprotocol(headers, responseHeadersBuilder);
+        return handleUpgradeRequest(ctx, req, responseHeadersBuilder.build());
+    }
+
+    @Nullable
+    private HttpResponse checkOriginAndVersion(RequestHeaders headers) {
+        if (!allowedOrigins.isEmpty()) {
+            final String origin = headers.get(HttpHeaderNames.ORIGIN);
+            if (isNullOrEmpty(origin) || !allowedOrigins.contains(origin)) {
+                logger.debug("Not allowed origin: {}, allowed: {}", origin, allowedOrigins);
+                return HttpResponse.of(HttpStatus.FORBIDDEN);
+            }
+        }
+
         // Currently we only support v13.
         final String version = headers.get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
         if (!WebSocketVersion.V13.toHttpHeaderValue().equalsIgnoreCase(version)) {
             logger.trace("not supported WebSocket version: {} (expected: 13)", version);
             return HttpResponse.of(unsupportedWebSocketVersion);
         }
-
-        final ResponseHeadersBuilder responseHeadersBuilder = ResponseHeaders.builder(HttpStatus.OK);
-        maybeAddSubprotocol(headers, responseHeadersBuilder);
-        return handleUpgradeRequest(ctx, req, responseHeadersBuilder.build());
+        return null;
     }
 }

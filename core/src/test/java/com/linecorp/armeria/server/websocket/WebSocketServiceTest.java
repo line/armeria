@@ -86,8 +86,8 @@ class WebSocketServiceTest {
     @Test
     void testDecodedContinuationFrame() throws Exception {
         final CompletableFuture<List<WebSocketFrame>> collectFuture = new CompletableFuture<>();
-        final WebSocketService webSocketService = WebSocketService.of((ctx, messages) -> {
-            messages.collect().thenAccept(collectFuture::complete);
+        final WebSocketService webSocketService = WebSocketService.of((ctx, in) -> {
+            in.collect().thenAccept(collectFuture::complete);
             return WebSocket.streaming();
         });
 
@@ -129,9 +129,9 @@ class WebSocketServiceTest {
     static class AbstractWebSocketHandler implements WebSocketHandler {
 
         @Override
-        public WebSocket handle(ServiceRequestContext ctx, WebSocket messages) {
+        public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
             final WebSocketWriter writer = WebSocket.streaming();
-            messages.subscribe(new Subscriber<WebSocketFrame>() {
+            in.subscribe(new Subscriber<WebSocketFrame>() {
                 @Override
                 public void onSubscribe(Subscription s) {
                     onOpen(writer);

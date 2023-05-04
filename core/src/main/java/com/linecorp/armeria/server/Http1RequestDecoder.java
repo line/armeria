@@ -216,7 +216,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     final EventLoop eventLoop = ctx.channel().eventLoop();
-                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
 
                     // Close the request early when it is certain there will be neither content nor trailers.
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
@@ -227,34 +226,39 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                 routingCtx.virtualHost().findServiceConfig(routingCtx, true);
                         assert routed.isPresent();
                         final ServiceConfig serviceConfig = routingCtx.result().value();
-                        if (serviceConfig.service().as(WebSocketService.class) != null) {
-                            if (isHttp1WebSocketUpgradeRequest(headers)) {
-                                logger.trace("Received WebSocket upgrade headers: {}", headers);
-                                if (httpServer.unfinishedRequests() > 1) {
-                                    fail(id, headers, HttpStatus.BAD_REQUEST,
-                                         "WebSocket session cannot share the connection.", null);
-                                    return;
-                                }
-                                final StreamingDecodedHttpRequest webSocketRequest =
-                                        new StreamingDecodedHttpRequest(
-                                                eventLoop, id, 1, headers, keepAlive, inboundTrafficController,
-                                                serviceConfig.maxRequestLength(), routingCtx,
-                                                ExchangeType.BIDI_STREAMING,
-                                                System.nanoTime(), SystemInfo.currentTimeMicros(), true);
-                                assert encoder instanceof ServerHttp1ObjectEncoder;
-                                ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
-                                final ChannelPipeline pipeline = ctx.pipeline();
-                                pipeline.replace(this, null, new WebSocketSessionHandler(
-                                        webSocketRequest, encoder, serviceConfig));
-                                if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
-                                    pipeline.remove(HttpServerUpgradeHandler.class);
-                                }
-                                ctx.fireChannelRead(webSocketRequest);
+                        if (isHttp1WebSocketUpgradeRequest(headers)) {
+                            if (serviceConfig.service().as(WebSocketService.class) == null) {
+                                fail(id, headers, HttpStatus.BAD_REQUEST,
+                                     "WebSocket upgrade requested but the service does not support it.", null);
                                 return;
                             }
+
+                            logger.trace("Received WebSocket upgrade headers: {}", headers);
+                            if (httpServer.unfinishedRequests() > 0) {
+                                fail(id, headers, HttpStatus.BAD_REQUEST,
+                                     "WebSocket session cannot share the connection.", null);
+                                return;
+                            }
+                            final StreamingDecodedHttpRequest webSocketRequest =
+                                    new StreamingDecodedHttpRequest(
+                                            eventLoop, id, 1, headers, false, inboundTrafficController,
+                                            serviceConfig.maxRequestLength(), routingCtx,
+                                            ExchangeType.BIDI_STREAMING,
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true);
+                            assert encoder instanceof ServerHttp1ObjectEncoder;
+                            ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
+                            final ChannelPipeline pipeline = ctx.pipeline();
+                            pipeline.replace(this, null, new WebSocketSessionHandler(
+                                    webSocketRequest, encoder, serviceConfig));
+                            if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
+                                pipeline.remove(HttpServerUpgradeHandler.class);
+                            }
+                            ctx.fireChannelRead(webSocketRequest);
+                            return;
                         }
                     }
 
+                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);

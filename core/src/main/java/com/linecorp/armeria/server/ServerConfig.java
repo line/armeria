@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -263,11 +262,6 @@ public interface ServerConfig {
      * Returns a {@link Function} to use when determining the client address from {@link ProxiedAddresses}.
      */
     Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper();
-
-    /**
-     * Returns whether {@link WebSocketService} is added to the {@link Server}.
-     */
-    boolean hasWebSocketService();
 
     /**
      * Returns whether the response header will include default {@code "Date"} header.

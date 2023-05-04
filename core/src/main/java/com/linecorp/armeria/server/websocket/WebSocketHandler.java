@@ -34,5 +34,5 @@ public interface WebSocketHandler {
      * Handles the incoming {@link WebSocket} and returns {@link WebSocket} created via
      * {@link WebSocket#streaming()} to send {@link WebSocketFrame}s.
      */
-    WebSocket handle(ServiceRequestContext ctx, WebSocket messages);
+    WebSocket handle(ServiceRequestContext ctx, WebSocket in);
 }

@@ -128,16 +128,18 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private final ServerPort port;
     private final UpdatableServerConfig config;
     private final GracefulShutdownSupport gracefulShutdownSupport;
+    private final boolean hasWebSocketService;
 
     /**
      * Creates a new instance.
      */
-    HttpServerPipelineConfigurator(
-            UpdatableServerConfig config, ServerPort port,
-            GracefulShutdownSupport gracefulShutdownSupport) {
+    HttpServerPipelineConfigurator(UpdatableServerConfig config, ServerPort port,
+                                   GracefulShutdownSupport gracefulShutdownSupport,
+                                   boolean hasWebSocketService) {
         this.config = config;
         this.port = requireNonNull(port, "port");
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
+        this.hasWebSocketService = hasWebSocketService;
     }
 
     @Override
@@ -277,7 +279,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         settings.maxConcurrentStreams(Math.min(config.http2MaxStreamsPerConnection(), Integer.MAX_VALUE));
         settings.maxHeaderListSize(config.http2MaxHeaderListSize());
 
-        if (config.hasWebSocketService()) {
+        if (hasWebSocketService) {
             // Set SETTINGS_ENABLE_CONNECT_PROTOCOL to support protocol upgrades.
             // See: https://datatracker.ietf.org/doc/html/rfc8441#section-3
             settings.put((char) 0x8, (Long) 1L);

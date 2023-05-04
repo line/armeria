@@ -153,14 +153,14 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
-    public AbstractServiceBindingBuilder abortingRequestDelay(Duration duration) {
-        defaultServiceConfigSetters.abortingRequestDelay(duration);
+    public AbstractServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        defaultServiceConfigSetters.requestAutoAbortDelay(delay);
         return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder abortingRequestDelayMillis(long delayMillis) {
-        defaultServiceConfigSetters.abortingRequestDelayMillis(delayMillis);
+    public AbstractServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

@@ -63,7 +63,7 @@ class WebSocketServiceItTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.route()
               .path("/chat")
-              .abortingRequestDelayMillis(3000)
+              .requestAutoAbortDelayMillis(3000)
               .build(WebSocketService.of(new WebSocketEchoHandler()));
         }
     };
@@ -223,9 +223,9 @@ class WebSocketServiceItTest {
     static final class WebSocketEchoHandler implements WebSocketHandler {
 
         @Override
-        public WebSocket handle(ServiceRequestContext ctx, WebSocket messages) {
+        public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
             final WebSocketWriter writer = WebSocket.streaming();
-            messages.subscribe(new Subscriber<WebSocketFrame>() {
+            in.subscribe(new Subscriber<WebSocketFrame>() {
                 @Override
                 public void onSubscribe(Subscription s) {
                     s.request(Long.MAX_VALUE);

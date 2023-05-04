@@ -276,14 +276,14 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder abortingRequestDelay(Duration delay) {
-        defaultServiceConfigSetters.abortingRequestDelay(delay);
+    public AnnotatedServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        defaultServiceConfigSetters.requestAutoAbortDelay(delay);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder abortingRequestDelayMillis(long delayMillis) {
-        defaultServiceConfigSetters.abortingRequestDelayMillis(delayMillis);
+    public AnnotatedServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

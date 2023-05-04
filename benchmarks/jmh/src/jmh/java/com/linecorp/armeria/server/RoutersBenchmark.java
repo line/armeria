@@ -80,7 +80,8 @@ public class RoutersBenchmark {
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
-                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), multipartUploadsLocation,
+                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), 0,
+                multipartUploadsLocation,
                 ImmutableList.of(),
                 ctx -> RequestId.random());
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);

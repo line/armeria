@@ -68,7 +68,7 @@ class WebSocketServiceHttp2RequestCompleteTest {
             };
             sb.route()
               .path("/2000MillisTimeout")
-              .abortingRequestDelayMillis(2000)
+              .requestAutoAbortDelayMillis(2000)
               .build(WebSocketService.of(immediateClosingHandler));
         }
     };

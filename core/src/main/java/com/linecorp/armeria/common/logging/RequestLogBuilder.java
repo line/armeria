@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -296,10 +295,9 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void responseTrailers(HttpHeaders responseTrailers);
 
     /**
-     * Sets the {@link RequestLog#responseCause()}.
-     * This method should be used when an exception is raised, and you want to convert the exception into a
-     * normal response such as {@link CloseWebSocketFrame}.
-     * If you want to end the response right away when an exception is raised,
+     * Sets the {@link RequestLog#responseCause()} without completing a response log.
+     * This method will be useful when you want to send additional data even after an exception is raised.
+     * If you want to end the response log right away when an exception is raised,
      * please use {@link #endResponse(Throwable)}.
      */
     void responseCause(Throwable cause);

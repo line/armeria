@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -103,7 +102,6 @@ final class DefaultServerConfig implements ServerConfig {
     private final Predicate<? super InetAddress> clientAddressTrustedProxyFilter;
     private final Predicate<? super InetAddress> clientAddressFilter;
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
-    private final boolean hasWebSocketService;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private final ServerErrorHandler errorHandler;
@@ -245,9 +243,6 @@ final class DefaultServerConfig implements ServerConfig {
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
-        hasWebSocketService =
-                services.stream().anyMatch(serviceConfig -> serviceConfig.service()
-                                                                         .as(WebSocketService.class) != null);
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
 
@@ -596,11 +591,6 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper() {
         return clientAddressMapper;
-    }
-
-    @Override
-    public boolean hasWebSocketService() {
-        return hasWebSocketService;
     }
 
     @Override

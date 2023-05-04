@@ -254,11 +254,6 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public boolean hasWebSocketService() {
-        return delegate.hasWebSocketService();
-    }
-
-    @Override
     public boolean isDateHeaderEnabled() {
         return delegate.isDateHeaderEnabled();
     }

@@ -34,6 +34,8 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -86,6 +88,7 @@ public final class VirtualHost {
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
     private final BlockingTaskExecutor blockingTaskExecutor;
+    private final long requestAutoAbortDelayMillis;
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
@@ -101,6 +104,7 @@ public final class VirtualHost {
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
                 BlockingTaskExecutor blockingTaskExecutor,
+                long requestAutoAbortDelayMillis,
                 Path multipartUploadsLocation,
                 List<ShutdownSupport> shutdownSupports,
                 Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
@@ -121,6 +125,7 @@ public final class VirtualHost {
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = accessLogWriter;
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.multipartUploadsLocation = multipartUploadsLocation;
         this.shutdownSupports = shutdownSupports;
         @SuppressWarnings("unchecked")
@@ -147,7 +152,8 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, multipartUploadsLocation,
+                               accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
+                               multipartUploadsLocation,
                                shutdownSupports,
                                requestIdGenerator);
     }
@@ -468,6 +474,14 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    public long requestAutoAbortDelayMillis() {
+        return requestAutoAbortDelayMillis;
+    }
+
+    /**
      * Returns the {@link Path} that is used to store the files uploaded
      * through a {@code multipart/form-data} request.
      */
@@ -492,7 +506,8 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, multipartUploadsLocation,
+                               accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
+                               multipartUploadsLocation,
                                shutdownSupports,
                                requestIdGenerator);
     }
@@ -530,6 +545,8 @@ public final class VirtualHost {
         buf.append(accessLogWriter());
         buf.append(", blockingTaskExecutor: ");
         buf.append(blockingTaskExecutor());
+        buf.append(", requestAutoAbortDelayMillis: ");
+        buf.append(requestAutoAbortDelayMillis());
         buf.append(", multipartUploadsLocation: ");
         buf.append(multipartUploadsLocation());
         buf.append(')');

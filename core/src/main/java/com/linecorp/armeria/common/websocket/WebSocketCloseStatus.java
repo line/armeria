@@ -28,6 +28,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.common.websocket;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -188,7 +189,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class WebSocketCloseStatus {
 
-    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
+    // Forked from Netty 4.1.92 https://github.com/netty/netty/blob/05093de0d6fe5787447439836e2ca159e79c88bf/codec-http/src/main/java/io/netty/handler/codec/http/websocketx/WebSocketCloseStatus.java
 
     public static final WebSocketCloseStatus NORMAL_CLOSURE =
         new WebSocketCloseStatus(1000, "Bye");
