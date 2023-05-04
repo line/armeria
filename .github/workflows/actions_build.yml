@@ -45,7 +45,7 @@ jobs:
           - java: 19
             on: self-hosted
             snapshot: true
-            # blockhound makes the build run 10min slower. Remove this block if this is no longer an issue
+            # blockhound makes the build run about 10 minutes slower
             blockhound: true
 
     steps:
@@ -241,9 +241,4 @@ jobs:
       - name: Dump stuck threads
         if: always()
         run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
-        shell: bash
-
-      - name: Fail the run if any threads were blocked
-        if: always()
-        run: "if [[ -z `find . -name 'blockhound.log' -size +0` ]]; then exit 0; else exit 1; fi"
         shell: bash

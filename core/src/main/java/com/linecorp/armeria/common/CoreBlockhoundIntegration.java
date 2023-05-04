@@ -28,7 +28,7 @@ import reactor.blockhound.integration.BlockHoundIntegration;
  * A {@link BlockHoundIntegration} for the core module.
  */
 @UnstableApi
-public class CoreBlockhoundIntegration implements BlockHoundIntegration {
+public final class CoreBlockhoundIntegration implements BlockHoundIntegration {
     @Override
     public void applyTo(Builder builder) {
         // short locks
