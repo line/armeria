@@ -232,7 +232,7 @@ public final class ServerBuilder implements TlsSetters {
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
-        virtualHostTemplate.requestAutoAbortDelayMillis(-1); // TODO(minwoox): add to Flags.
+        virtualHostTemplate.requestAutoAbortDelayMillis(0); // TODO(minwoox): add to Flags.
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
