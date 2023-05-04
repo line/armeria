@@ -193,7 +193,10 @@ configure(projectsWithFlags('java')) {
         testImplementation libs.apache.httpclient5
         testImplementation libs.hamcrest
         testImplementation libs.hamcrest.library
-        testRuntimeOnly libs.blockhound.junit.platform
+
+        if (rootProject.hasProperty('blockhound')) {
+            testRuntimeOnly libs.blockhound.junit.platform
+        }
     }
 
     // Configure the default DuplicatesStrategy for such as:

@@ -45,6 +45,7 @@ jobs:
           - java: 19
             on: self-hosted
             snapshot: true
+            blockhound: true
 
     steps:
       - uses: actions/checkout@v2
@@ -86,6 +87,7 @@ jobs:
           ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           ${{ matrix.leak && '-Pleak' || '' }} \
+          ${{ matrix.blockhound && '-Pblockhound' || '' }} \
           -PnoLint \
           -PflakyTests=false \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
