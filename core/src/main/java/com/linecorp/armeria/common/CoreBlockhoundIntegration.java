@@ -47,6 +47,8 @@ public class CoreBlockhoundIntegration implements BlockHoundIntegration {
         // StreamMessageInputStream internally uses a blocking queue
         // ThreadPoolExecutor.execute internally uses a blocking queue
         builder.allowBlockingCallsInside("java.util.concurrent.LinkedBlockingQueue", "offer");
+        // ClientCalls.QueuingListener internally uses a blocking queue
+        builder.allowBlockingCallsInside("java.util.concurrent.ArrayBlockingQueue", "add");
 
         // a single blocking call is incurred for the first invocation, but the result is cached.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
