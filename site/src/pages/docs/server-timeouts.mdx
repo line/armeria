@@ -1,0 +1,210 @@
+# Overriding server timeouts
+
+You can override the default timeouts of a request.
+
+## Global Configuration
+
+Globally configuring the default timeout with system properties or a custom <type://FlagsProvider>.
+
+### Using JVM system properties
+
+You can override the default server timeouts by specifying the following JVM system properties if you do not prefer setting it programmatically.
+
+`-Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>`
+
+The default value of this flag is 10000L and 0 disables the timeout.
+
+<Warning>
+
+  The JVM system properties have effect only when you did not specify them programmatically.
+  See <type://Flags> for the complete list of JVM system properties in Armeria.
+
+</Warning>
+
+### Using <type://FlagsProvider>
+
+You can override the global <type://Flags> by implementing your own <type://FlagsProvider> and loading it via Java SPI.
+
+```java
+package com.example.providers;
+
+// Add the following text file to your classpath or JAR file:
+//
+// $ cat META-INF/services/com.linecorp.armeria.common.FlagsProvider
+// com.example.providers.MyFlagsProvider
+//
+public class MyFlagsProvider implements FlagsProvider {
+  @Override
+  public int priority() {
+    // The provider with higher value will be evaluated first.
+    return 100;
+  }
+
+  @Override
+  public Long defaultRequestTimeoutMillis() {
+      return 1000L;
+  }
+}
+```
+
+## Using <type://ServerBuilder>
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+
+import java.time.Duration;
+
+int requestTimeout = 5;
+
+ServerBuilder sb = Server.builder();
+Server server = sb.http(port)
+                  .annotatedService(new HelloService())
+                  .requestTimeout(Duration.ofSeconds(requestTimeout))
+                  .build();
+```
+
+## Using <type://VirtualHostBuilder>
+
+You can set the timeouts for each virtual host individually
+
+```java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+
+import java.time.Duration;
+
+import static com.linecorp.armeria.common.HttpStatus.OK;
+
+int requestTimeout1 = 5;
+int requestTimeout2 = 10;
+int requestTimeout3 = 20;
+
+ServerBuilder sb = Server.builder();
+Server server = sb.http(port)
+                  .defaultVirtualHost()
+                  .service("/hello1", (ctx, req) -> HttpResponse.of(OK))
+                  .requestTimeout(Duration.ofSeconds(requestTimeout1))
+                  .and()
+                  .virtualHost("*.foo.com")
+                  .service("/hello2", (ctx, req) -> HttpResponse.of(OK))
+                  .requestTimeout(Duration.ofSeconds(requestTimeout2))
+                  .and()
+                  .withVirtualHost(builder -> {
+                      builder.hostnamePattern("*.bar.com")
+                              .service("/hello3", (ctx, req) -> HttpResponse.of(OK))
+                              .requestTimeout(Duration.ofSeconds(requestTimeout3));
+                  })
+                  .build();
+```
+
+## Using <type://ServiceBindingBuilder>
+
+You can set the timeouts for each route individually
+
+```java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+
+import java.time.Duration;
+
+import static com.linecorp.armeria.common.HttpStatus.OK;
+
+int requestTimeout1 = 5;
+int requestTimeout2 = 10;
+
+ServerBuilder sb = Server.builder();
+Server server = sb.http(port)
+                  .route()
+                  .get("/hello1")
+                  .requestTimeout(Duration.ofSeconds(requestTimeout1))
+                  .build((ctx, req) -> HttpResponse.of(OK))
+                  .withRoute(builder -> {
+                      builder.get("/hello2")
+                             .requestTimeout(Duration.ofSeconds(requestTimeout2))
+                             .build((ctx, req) -> HttpResponse.of(OK));
+                  })
+                  .build();
+```
+
+## Using <type://ServiceRequestContext>
+
+You can use the context to set the timeouts for a request.
+
+```java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+
+import java.time.Duration;
+
+import static com.linecorp.armeria.common.HttpStatus.OK;
+
+int requestTimeout = 5;
+
+ServerBuilder sb = Server.builder();
+Server server = sb.http(port)
+                  .service("/hello", (ctx, req) -> {
+                      ctx.setRequestTimeout(Duration.ofSeconds(requestTimeout));
+                      return HttpResponse.of(OK);
+                  })
+                  .build();
+```
+
+Also, It is possible to use automatically injected context.
+
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+
+ServerBuilder sb = Server.builder();
+Server server = sb.http(port)
+                  .annotatedService(new HelloService())
+                  .build();
+```
+```java filename=HelloService.java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Get;
+
+import java.time.Duration;
+
+import static com.linecorp.armeria.common.HttpStatus.OK;
+
+public class HelloService {
+    @Get("/hello")
+    public HttpResponse getHello(ServiceRequestContext ctx) {
+        int requestTimeout = 5;
+        ctx.setRequestTimeout(Duration.ofSeconds(requestTimeout));
+        return HttpResponse.of(OK);
+    }
+}
+```
+
+## Using <type://@RequestTimeout> Annotation
+
+You can use the <type://@RequestTimeout> annotation for annotated services and gRPC services.
+
+```java filename=HelloService.java
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.decorator.RequestTimeout;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+import static com.linecorp.armeria.common.HttpStatus.OK;
+
+@RequestTimeout(value = 10, unit = TimeUnit.SECONDS)
+public class HelloService {
+
+    @Get("/hello")
+    @RequestTimeout(5000)
+    public HttpResponse getHello() {
+        return HttpResponse.of(OK);
+    }
+
+}
+```
