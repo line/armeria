@@ -67,7 +67,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                                   @Nullable MapperFunction<T, U> function,
                                   @Nullable Function<? super Throwable, ? extends Throwable> errorFunction) {
         requireNonNull(source, "source");
-        assert function != null && errorFunction == null || function == null && errorFunction != null
+        assert (function != null && errorFunction == null) || (function == null && errorFunction != null)
                 : "function and errorFunction should be mutually exclusive";
 
         source = peel(source);
