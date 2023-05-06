@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy{
 
     static final RingHashEndpointSelectionStrategy INSTANCE = new RingHashEndpointSelectionStrategy();
+
     private RingHashEndpointSelectionStrategy() {}
 
     @Override
