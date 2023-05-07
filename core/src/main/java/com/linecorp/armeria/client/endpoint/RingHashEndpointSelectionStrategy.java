@@ -38,6 +38,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy{
 
     static final RingHashEndpointSelectionStrategy INSTANCE = new RingHashEndpointSelectionStrategy();
+
     private RingHashEndpointSelectionStrategy() {}
 
     @Override
