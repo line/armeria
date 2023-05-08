@@ -68,6 +68,8 @@ class WebSocketServiceTest {
         return RequestHeaders.builder(HttpMethod.GET, "/chat")
                              .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString())
                              .add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString())
+                             .add(HttpHeaderNames.HOST, "foo.com")
+                             .add(HttpHeaderNames.ORIGIN, "http://foo.com")
                              .addInt(HttpHeaderNames.SEC_WEBSOCKET_VERSION, 13)
                              .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
                              .add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "superchat")

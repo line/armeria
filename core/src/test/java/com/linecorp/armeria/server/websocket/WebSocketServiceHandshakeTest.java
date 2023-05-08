@@ -137,7 +137,7 @@ class WebSocketServiceHandshakeTest {
         final AggregatedHttpResponse res = client.execute(headersBuilder.build()).aggregate().join();
 
         assertThat(res.status()).isSameAs(HttpStatus.BAD_REQUEST);
-        assertThat(res.contentUtf8()).contains("The upgrade header must contain Sec-WebSocket-Key");
+        assertThat(res.contentUtf8()).contains("missing Sec-WebSocket-Key header");
 
         // Borrowed from the RFC. https://datatracker.ietf.org/doc/html/rfc6455#section-1.2
         headersBuilder.add(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")

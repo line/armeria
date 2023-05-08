@@ -43,6 +43,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -74,6 +75,7 @@ class WebSocketServiceItTest {
     void setUp() throws InterruptedException, URISyntaxException {
         final URI serverUri = new URI("ws://127.0.0.1:" + server.httpPort() + "/chat");
         client = new JavaWebSocketClient(serverUri);
+        client.addHeader(HttpHeaderNames.ORIGIN.toString(), "http://" + server.httpEndpoint().authority());
         client.connectBlocking();
     }
 

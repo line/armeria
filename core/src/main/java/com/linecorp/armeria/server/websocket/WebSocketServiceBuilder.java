@@ -22,6 +22,7 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 
@@ -38,7 +39,8 @@ public final class WebSocketServiceBuilder {
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
-    private Set<String> allowedOrigins = ImmutableSet.of();
+    @Nullable
+    private Set<String> allowedOrigins;
 
     WebSocketServiceBuilder(WebSocketHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -87,7 +89,7 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Sets the allowed origins. All origins are allowed by default.
+     * Sets the allowed origins. The same-origin is allowed by default.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
@@ -96,7 +98,7 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Sets the allowed origins. All origins are allowed by default.
+     * Sets the allowed origins. The same-origin is allowed by default.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */

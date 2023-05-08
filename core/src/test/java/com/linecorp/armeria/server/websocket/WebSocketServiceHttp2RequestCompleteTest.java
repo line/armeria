@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.websocket;
 
 import static com.linecorp.armeria.server.websocket.WebSocketServiceTest.checkCloseFrame;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.BlockingQueue;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
@@ -91,7 +93,9 @@ class WebSocketServiceHttp2RequestCompleteTest {
         requestWriter.close();
 
         final BodySubscriber bodySubscriber = new BodySubscriber();
-        client.execute(requestWriter).split().body().subscribe(bodySubscriber);
+        final SplitHttpResponse split = client.execute(requestWriter).split();
+        assertThat(split.headers().join().status()).isSameAs(HttpStatus.OK);
+        split.body().subscribe(bodySubscriber);
 
         final ServiceRequestContext sctx = server.requestContextCaptor().take();
         await().atMost(1000, TimeUnit.MILLISECONDS) // buffer 1000 milliseconds
@@ -107,7 +111,8 @@ class WebSocketServiceHttp2RequestCompleteTest {
         final BodySubscriber bodySubscriber = new BodySubscriber();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final SplitHttpResponse split = client.execute(requestWriter).split();
-            split.headers().thenAccept(unused -> {
+            split.headers().thenAccept(headers -> {
+                assertThat(headers.status()).isSameAs(HttpStatus.OK);
                 // Update the request to prevent the request from being completed.
                 captor.get().updateRequest(HttpRequest.of(HttpMethod.GET, "/"));
             });
@@ -124,6 +129,7 @@ class WebSocketServiceHttp2RequestCompleteTest {
     private static RequestHeaders webSocketUpgradeHeaders(String path) {
         return RequestHeaders.builder(HttpMethod.CONNECT, path)
                              .add(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString())
+                             .add(HttpHeaderNames.ORIGIN, "http://" + server.httpEndpoint().authority())
                              .addInt(HttpHeaderNames.SEC_WEBSOCKET_VERSION, 13)
                              .build();
     }
