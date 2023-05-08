@@ -46,8 +46,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private final KeepAliveHandler keepAliveHandler;
     private final Http1HeaderNaming http1HeaderNaming;
 
-    private boolean sentConnectionCloseHeader;
-
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
                              Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);

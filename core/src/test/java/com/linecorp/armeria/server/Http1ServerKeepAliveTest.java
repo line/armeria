@@ -128,7 +128,6 @@ class Http1ServerKeepAliveTest {
             String line;
             boolean hasConnectionClose = false;
             while ((line = in.readLine()) != null) {
-                System.out.println("### " + line);
                 if ("connection: close".equalsIgnoreCase(line)) {
                     // If "Connection: close" was sent by the client,
                     // the server should return "Connection: close" as well.
