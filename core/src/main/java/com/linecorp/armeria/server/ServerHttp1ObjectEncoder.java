@@ -111,11 +111,8 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     private void convertHeaders(HttpHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
                                 boolean isTrailersEmpty) {
-        if (keepAliveHandler.needsDisconnection()) {
-            sentConnectionCloseHeader = true;
-        }
         ArmeriaHttpUtil.toNettyHttp1ServerHeaders(inHeaders, outHeaders, http1HeaderNaming,
-                                                  !sentConnectionCloseHeader);
+                                                  !keepAliveHandler.needsDisconnection());
 
         if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
