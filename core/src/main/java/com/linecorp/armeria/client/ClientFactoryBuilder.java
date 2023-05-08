@@ -611,9 +611,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
-     * progress for this amount of time. By default, PING frames do not prevent connection from closing.
-     * Set {@link ClientFactoryBuilder#keepAliveOnPing(boolean)} to true to prevent connection from closing
-     * when PING frame is received.
+     * progress for the given amount of time. By default, HTTP/2 PING frames do not prevent connection from
+     * closing. Use the method {@link ClientFactoryBuilder#idleTimeout(Duration, boolean)} to set whether to
+     * prevent connection from closing when an HTTP/2 PING frame is received.
      */
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
@@ -622,8 +622,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the idle timeout of a socket connection and whether to reset idle timeout when PING frame is
-     * received.
+     * Sets the idle timeout of a socket connection and whether to reset idle timeout when an HTTP/2 PING
+     * frame is received.
      */
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
         requireNonNull(idleTimeout, "idleTimeout");
@@ -635,7 +635,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the idle timeout of a socket connection in milliseconds. The connection is closed if there is no
-     * request in progress for this amount of time.
+     * request in progress for the given amount of time.
      */
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis) {
         checkArgument(idleTimeoutMillis >= 0, "idleTimeoutMillis: %s (expected: >= 0)", idleTimeoutMillis);
@@ -644,8 +644,20 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
-     * Sets whether to reset idle timeout when PING frame is received. By default, PING frames do not prevent
-     * connections from closing after `idleTimeout` has elapsed since last data was received.
+     * Sets the idle timeout of a socket connection in milliseconds. The connection is closed if there is no
+     * request in progress for the given amount of time. If keepAliveOnPing is true, idle timeout is reset when
+     * an HTTP/2 PING frame is received.
+     */
+    public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {
+        checkArgument(idleTimeoutMillis >= 0, "idleTimeoutMillis: %s (expected: >= 0)", idleTimeoutMillis);
+        option(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS, idleTimeoutMillis);
+        option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);
+        return this;
+    }
+
+    /**
+     * Sets whether to reset idle timeout when an HTTP/2 PING frame is received. By default, HTTP/2 PING frames
+     * do not prevent connections from closing after `idleTimeout` has elapsed since last data was received.
      */
     public ClientFactoryBuilder keepAliveOnPing(boolean keepAliveOnPing) {
         option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);

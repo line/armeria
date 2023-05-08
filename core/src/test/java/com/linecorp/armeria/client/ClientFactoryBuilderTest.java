@@ -295,7 +295,7 @@ class ClientFactoryBuilderTest {
             assertThat(factory.options().keepAliveOnPing()).isFalse();
         }
 
-        try (ClientFactory factory = ClientFactory.builder().keepAliveOnPing(true).build()) {
+        try (ClientFactory factory = ClientFactory.builder().idleTimeoutMillis(1000, true).build()) {
             assertThat(factory.options().keepAliveOnPing()).isTrue();
         }
     }

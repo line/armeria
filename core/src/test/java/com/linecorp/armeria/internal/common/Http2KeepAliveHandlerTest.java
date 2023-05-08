@@ -56,7 +56,7 @@ class Http2KeepAliveHandlerTest {
 
     private Http2KeepAliveHandler keepAliveHandler;
 
-    public void setup(boolean keepAliveOnPing) throws Exception {
+    void setup(boolean keepAliveOnPing) throws Exception {
         ctx = mock(ChannelHandlerContext.class);
         channel = spy(new EmbeddedChannel());
         when(channel.eventLoop()).thenReturn(eventLoop.get());
@@ -78,7 +78,7 @@ class Http2KeepAliveHandlerTest {
     }
 
     @AfterEach
-    public void after() {
+    void after() {
         assertThat(channel.finish()).isFalse();
     }
 

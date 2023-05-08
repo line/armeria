@@ -533,7 +533,7 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets whether to prevent connection going idle when a PING frame is received.
+     * Sets whether to prevent connection going idle when an HTTP/2 PING frame is received.
      *
      * @param keepAliveOnPing whether to reset idle timeout on PING frame or not.
      */
