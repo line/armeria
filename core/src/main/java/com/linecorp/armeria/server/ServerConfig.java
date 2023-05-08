@@ -129,7 +129,7 @@ public interface ServerConfig {
     Map<ChannelOption<?>, ?> childChannelOptions();
 
     /**
-     * Returns the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * Returns the {@link Consumer} that customizes the Netty child {@link ChannelPipeline}.
      */
     @UnstableApi
     Consumer<? super ChannelPipeline> childChannelPipelineCustomizer();

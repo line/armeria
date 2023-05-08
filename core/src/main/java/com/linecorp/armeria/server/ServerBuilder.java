@@ -478,14 +478,13 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * (Advanced users only) Sets the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * (Advanced users only) Adds the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
      * This customizer is run right after the initial set of {@link ChannelHandler}s are configured.
      * This customizer is no-op by default.
      *
-     * <p>Note that usage of this customizer is an advanced
-     * feature and may produce unintended side effects, including complete
-     * breakdown. It is not recommended if you are not familiar with
-     * Armeria and Netty internals.
+     * <p>Note that usage of this customizer is an advanced feature and may produce unintended side effects,
+     * including complete breakdown. It is not recommended if you are not familiar with Armeria and Netty
+     * internals.
      */
     @UnstableApi
     public ServerBuilder childChannelPipelineCustomizer(
