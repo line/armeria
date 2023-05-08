@@ -19,16 +19,16 @@ In this step, we'll fill in one of the service methods to create a blog post and
 
 You need to have the following obtained from previous steps:
 
-- [Java code generated](/tutorials/thrift/blog/create-server#compile-the-thrift-file) for each server and client
+- [Java code generated](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) for each server and client
 - `Main.java` for server
 - `BlogServiceImpl.java` for server
 - `BlogClient.java` for client
 
 ## 1. Implement server-side
 
-Let's implement the `createBlogPost()` method in the `BlogServiceImpl` class.
+Let's implement a service method to create a blog post.
 
-1. Create an ID generator to issue temporary blog post IDs and a map to contain blog posts.
+1. In the `BlogServiceImpl` class, create an ID generator to issue temporary blog post IDs and a map to contain blog posts.
   ```java filename=BlogServiceImpl.java
   import java.util.Map;
   import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +40,7 @@ Let's implement the `createBlogPost()` method in the `BlogServiceImpl` class.
       ...
   }
   ```
-2. In the `createBlogPost()` method, create a `BlogPost` object with request parameters.
+2. In the `createBlogPost()` method, create a `BlogPost` object with a generated ID and request parameters.
   ```java filename=BlogServiceImpl.java
   import java.time.Instant;
 
@@ -74,28 +74,28 @@ Let's implement the `createBlogPost()` method in the `BlogServiceImpl` class.
 
 ## 2. Implement client-side
 
-Add a method `createBlogPost()` in the `BlogClient` class to send a request to create a blog post.
+In the `BlogClient` class, add a method to send a request to create a blog post.
 
 ```java filename=BlogClient.java
 import example.armeria.blog.thrift.BlogPost;
 import example.armeria.blog.thrift.CreateBlogPostRequest;
 
 public class BlogClient {
-  ...
-  void createBlogPost(String title, String content) throws Exception {
-    final CreateBlogPostRequest request =
-        new CreateBlogPostRequest().setTitle(title)
-                                .setContent(content);
-    final BlogPost response = blogService.createBlogPost(request);
-    logger.info("[Create response] Title: {} Content: {}",
-                    response.getTitle(), response.getContent());
-  }
+    ...
+    void createBlogPost(String title, String content) throws Exception {
+      final CreateBlogPostRequest request =
+          new CreateBlogPostRequest().setTitle(title)
+                                  .setContent(content);
+      final BlogPost response = blogService.createBlogPost(request);
+      logger.info("[Create response] Title: {} Content: {}",
+                      response.getTitle(), response.getContent());
+    }
 }
 ```
 
 ## 3. Test creating a blog post
 
-Now, to test what we implemented so far in this step, let's make a request to the server for creating a blog post.
+Now, let's run the client to test what we implemented so far in this step.
 Note the code is minimal to keep things simple.
 
 1. Add a method, `testRun()`, to test the creation method we just implemented.
@@ -112,12 +112,9 @@ Note the code is minimal to keep things simple.
       blogClient.testRun();
   }
   ```
-2. [Re-run the server](/tutorials/thrift/blog/create-server#7-test-run).
-  Your server is running if you see the following message.
-  ```bash
-  [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
-  ```
+2. [Re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server).
 3. Run the client's `main()` method on your IDE or using Gradle.
+
   Your client made request to the server successfully if you see the following message.
   ```bash
   [main] INFO example.armeria.client.blog.thrift.BlogClient - [Create response] Title: My first blog Content: Yay

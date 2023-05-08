@@ -8,7 +8,7 @@ level: basic
 # Defining service methods
 
 Previously, we ran a service on a server and also confirmed that our client could make a call to the service.
-In this step, we'll define service methods, objects, and an exception for server and client each.
+In this step, we'll define service methods and other components including objects and an exception for server and client each.
 We'll leave the service methods empty for now to implement one by one in later steps of this tutorial.
 
 <TutorialSteps current={3} />
@@ -24,8 +24,9 @@ You need to have the files obtained from previous steps:
 
 ## 1. Write the thrift file
 
-Let's update the server's `blog.thrift` file.
+Let's update the server's `blog.thrift` file we created earlier in [Step 1. Create a service](/tutorials/thrift/blog/create-service).
 We'll add structs, an exception, and service methods.
+You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/main/thrift/blog.thrift).
 
 1. Add the `BlogPost` struct.
   ```thrift filename=blog.thrift
@@ -40,7 +41,7 @@ We'll add structs, an exception, and service methods.
       5: i64 modifiedAt;
   }
   ```
-2. Add request and response types as follows.
+2. Add structs for request and response objects as follows.
   ```thrift filename=blog.thrift
   /**
    * A request object for creating a blog post.
@@ -136,7 +137,6 @@ We'll add structs, an exception, and service methods.
 ## 2. Compile the thrift file
 
 [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
-You'll see the generated Java code in the `{project_root}/build/generated-sources/thrift/gen-java/example/armeria/blog/thrift/` folder.
 
 After compiling, you may encounter a warning in your IDE, because we updated only the service interface in Thrift, but not yet the implementation in Java.
 The warning will be resolved soon in the step below.
@@ -146,7 +146,7 @@ The warning will be resolved soon in the step below.
 Let's override the service methods.
 
 1. Remove the `hello()` method in the `BlogServiceImpl` class.
-2. Add the service methods.
+2. Add empty service methods.
   We'll implement the service methods one by one in this tutorial.
   Let's leave them empty for now.
 ```java filename=BlogServiceImpl.java
@@ -185,12 +185,10 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
 
 ## 4. Write and compile the thrift file for client
 
-Let's write and compile the thrift file for client as well.
-And update the client code accordingly.
+Let's write and compile the thrift file for client as well, then update the client code accordingly.
 
 1. Write the client's `blog.thrift` file like we did for server in [1. Write the thrift file](#1-write-the-thrift-file).
 2. [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
-  You'll see the generated Java code in the `{project_root}/build/generated-sources/thrift/gen-java/example/armeria/blog/thrift/` folder.
 3. In the `BlogClient` class, remove two lines of code calling the `hello()` method.
   ```java filename=BlogClient.java
   public static void main(String[] args) throws Exception {
@@ -204,7 +202,7 @@ And update the client code accordingly.
 
 ## What's next
 
-In this step, we've defined service methods to implement one by one in later steps in this tutorial.
+In this step, we've defined empty service methods to implement from now on.
 
 Next, at [Step 4. Implement CREATE](/tutorials/thrift/blog/implement-create), we'll implement a CREATE operation to create a blog post.
 

@@ -9,10 +9,10 @@ import versions from '/gen-src/versions.json';
 
 In this tutorial, you'll learn how to build an Apache Thrift service with Armeria.
 
-This tutorial is based on a [sample service](#sample-service-and-client), a minimal blog service, with which you can create, read, update, and delete blog posts.
+This tutorial is based on a [sample service](#sample-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
 To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using database.
 
-Follow this tutorial to write a service yourself or try [running the sample service](#build-and-run-the-sample-service) right away.
+Follow this tutorial to write a service yourself or try [running the sample service](#build-and-run-sample-service) right away.
 
 ## Background
 
@@ -30,13 +30,13 @@ This tutorial assumes that you have:
 
 ## Prerequisites
 
-// TW: 혹시 thrift compiler 설치(https://thrift.apache.org/docs/install/)를 prerequisite으로 추가해야할지 궁금합니다. 저는 컴파일러를 설치해야만 컴파일이 되던데, 설치하는 게 맞는지 아니면 제가 Gradle 설정을 잘못한 건지 모르겠어서 질문 드려요.
-
 To run and develop the sample service, you need JDK 11 or higher.
+
+// TW: 혹시 thrift compiler 설치(https://thrift.apache.org/docs/install/)를 prerequisite으로 추가해야할지 궁금합니다. 저는 컴파일러를 설치해야만 컴파일이 되던데, 설치하는 게 맞는지 아니면 제가 Gradle 설정을 잘못한 건지 모르겠어서 질문 드려요.
 
 ## Sample service and client
 
-The sample service is the main part of the tutorial, while the client is to verify the service is working properly.
+The main part of the tutorial is to implement the sample service, while building the sample client as well to verify the service is working properly.
 
 ### Sample service
 

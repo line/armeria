@@ -19,7 +19,7 @@ No preparation is required for this step.
 
 ## 1. Create a server
 
-Let's create and start a server instance to serve the service.
+Let's create a server to serve our service.
 
 1. Create a `Main` class for the server.
   You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
@@ -30,7 +30,7 @@ Let's create and start a server instance to serve the service.
   import org.slf4j.LoggerFactory;
 
   public final class Main {
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+      private static final Logger logger = LoggerFactory.getLogger(Main.class);
   }
   ```
 2. Add a method `newServer()` in the `Main` class.
@@ -39,26 +39,27 @@ Let's create and start a server instance to serve the service.
   import com.linecorp.armeria.server.thrift.THttpService;
 
   public final class Main {
-    private static void newServer(int port) throws Exception {
-        final THttpService tHttpService =
-                THttpService.builder()
-                            .addService(new BlogServiceImpl())
-                            .build();
-    }
+      private static void newServer(int port) throws Exception {
+          final THttpService tHttpService =
+                  THttpService.builder()
+                              .addService(new BlogServiceImpl())
+                              .build();
+      }
   }
   ```
 4. Create and return a server instance using Armeria's <type://ServerBuilder>.
+  Note that the service instance, `tHttpService`, is added to the server instance.
   ```java filename=Main.java
   import com.linecorp.armeria.server.Server;
 
   public final class Main {
-    private static Server newServer(int port) throws Exception {
-        ...
-        return Server.builder()
-                     .http(port)
-                     .service("/thrift", tHttpService) // Add the service to server
-                     .build();
-    }
+      private static Server newServer(int port) throws Exception {
+          ...
+          return Server.builder()
+                       .http(port)
+                       .service("/thrift", tHttpService) // Add the service to server
+                       .build();
+      }
   }
   ```
 5. Add the `main()` method in the `Main` class as follows.
@@ -89,10 +90,10 @@ Your server is running if you see the following message.
 ## 4. Create and compile a thrift file for client
 
 Now that our server is running, it's time to start working on the client.
-Let's write and compile the thrift file for the client.
+Let's create and compile the thrift file for the client like we did in [Step 1. Create a service](/tutorials/thrift/blog/create-service) for the server.
 
-1. Create a thrift file, `blog.thrift`, like we did in [Step 1. Create a service](/tutorials/thrift/blog/create-service#create-a-thrift-file) for the server.
-2. Compile the `blog.thrift` file, like we did in [Step 1. Create a service](/tutorials/thrift/blog/create-service#compile-the-thrift-file) for the server.
+1. Create a thrift file, `blog.thrift`, like we did [for the server](/tutorials/thrift/blog/create-service#1-create-a-thrift-file).
+2. Compile the `blog.thrift` file, like we did [for the server](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file).
 
 <Tip>
 
@@ -102,7 +103,7 @@ See [Sample client](/tutorials/thrift/blog#sample-client) for the overall folder
 
 ## 5. Create a client
 
-1. Create a main class for the client. We'll name the class `BlogClient`.
+1. Create a main class and method for the client. We'll name the class `BlogClient`.
   ```java filename=BlogClient.java
   package example.armeria.client.blog.thrift;
 
@@ -136,9 +137,9 @@ See [Sample client](/tutorials/thrift/blog#sample-client) for the overall folder
 3. Call the `hello()` method.
   ```java filename=BlogClient.java
   public static void main(String[] args) throws Exception {
-    ...
-    String greeting = blogService.hello();
-    logger.info(greeting);
+      ...
+      String greeting = blogService.hello();
+      logger.info(greeting);
   }
   ```
 

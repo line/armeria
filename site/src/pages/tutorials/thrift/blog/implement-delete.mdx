@@ -20,7 +20,7 @@ Also, we'll add Armeria's [Documentation Service](/docs/server-docservice) for t
 
 You need to have the following obtained from previous steps:
 
-- [Java code generated](/tutorials/thrift/blog/create-server#compile-the-thrift-file) for each server and client
+- [Java code generated](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) for each server and client
 - `Main.java` for server
 - `BlogServiceImpl.java` for server
 - `BlogServiceExceptionHandler.java` for server
@@ -28,7 +28,7 @@ You need to have the following obtained from previous steps:
 
 ## 1. Implement server-side
 
-Implement the `deleteBlogPost` method in the `BlogServiceImpl` class to delete a blog post.
+In the `BlogServiceImpl` class, implement the `deleteBlogPost()` method to delete a blog post.
 Let's throw an exception in case there is no blog post for the given ID.
 
 ```java filename=BlogServiceImpl.java
@@ -53,11 +53,11 @@ In the `BlogClient` class, add the `deleteBlogPost()` method to send a request d
 import example.armeria.blog.thrift.DeleteBlogPostRequest;
 
 public class BlogClient {
-  ...
-  void deleteBlogPost(int id) throws Exception {
-      final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
-      client.deleteBlogPost(request);
-  }
+    ...
+    void deleteBlogPost(int id) throws Exception {
+        final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
+        client.deleteBlogPost(request);
+    }
 }
 ```
 
@@ -65,7 +65,7 @@ public class BlogClient {
 
 Let's test deleting a blog post.
 
-1. Call the `deleteBlogPost()` method to delete the first blog post with the ID `0`, followed by the `listBlogPosts()` method to see the first blog post no longer exists after deleting the post.
+1. Call the `deleteBlogPost()` method to delete the first blog post with the ID `0`, followed by the `listBlogPosts()` method to see the list of the blog posts after deleting a blog post.
   ```java filename=BlogClient.java
   void testRun() throws Exception {
       createBlogPost("My first blog", "Yay");
@@ -74,23 +74,24 @@ Let's test deleting a blog post.
       listBlogPosts();
   }
   ```
-2. [Re-run the server](/tutorials/thrift/blog/create-server#7-test-run) and run the client.
+2. [Re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server) and run the client.
 
-    If you search for `method=deleteBlogPost` from the logs, you can check if the `deleteBlogPost()` method is called like the following.
-    ```
-    [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=DefaultRpcRequest{
-        serviceType=BlogService$Iface,
-        serviceName=example.armeria.blog.thrift.BlogService$Iface,
-        method=deleteBlogPost,
-        params=[DeleteBlogPostRequest(id:0)]}}
-    ```
-    If you search for `ListBlogPostsResponse` from the subsequent logs, you can check that the list of posts retrieved starts from `1`, which is the second post.
-   ```bash
-   [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
-    ListBlogPostsResponse(
-      blogs:[BlogPost(
-        id:1, title:Another blog post, content:Creating a post via createBlogPost()., createdAt:1677145864108, modifiedAt:1677145864108)])}}
-   ```
+  If you search for "method=deleteBlogPost" in the logs, you can check if the `deleteBlogPost()` method is called like the following.
+  ```
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=DefaultRpcRequest{
+      serviceType=BlogService$Iface,
+      serviceName=example.armeria.blog.thrift.BlogService$Iface,
+      method=deleteBlogPost,
+      params=[DeleteBlogPostRequest(id:0)]}}
+  ```
+
+  If you search for "ListBlogPostsResponse" in the subsequent logs, you can check that the list of posts retrieved starts from `1` and the first blog post no longer exists.
+  ```bash
+  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
+   ListBlogPostsResponse(
+     blogs:[BlogPost(
+       id:1, title:Another blog post, content:Creating a post via createBlogPost()., createdAt:1677145864108, modifiedAt:1677145864108)])}}
+  ```
 4. Now, run the client again, while keeping the server running.
 
    You should see the exception logged as the following.
@@ -102,7 +103,7 @@ Let's test deleting a blog post.
 ## 4. Add the Documentation service
 
 This time, we'll add Armeria's [Documentation service](/docs/server-docservice).
-Take advantage of the Documentation service which automatically creates documentation of your service methods, as well as providing means to test out the methods.
+The Documentation service automatically creates documentation of your service methods, as well as providing means to test out the methods.
 
 1. In the `newServer()` method, add a <type://DocService> and a request example for [creating blog posts](/tutorials/thrift/blog/implement-create),
   using <type://DocServiceBuilder#exampleRequests(Class,String,Iterable)>. Feel free to add more examples for other service methods.
@@ -147,6 +148,7 @@ Take advantage of the Documentation service which automatically creates document
   }
   ```
 4. Now, [re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server).
+
   The server and services are launched successfully if you see this message.
   ```bash
    Server has been started. Serving DocService at http://127.0.0.1:8080/docs
@@ -156,7 +158,9 @@ Take advantage of the Documentation service which automatically creates document
 
 Let's test and call our service operations using Armeria's Documentation service.
 
-1. Click the URL `http://127.0.0.1:8080/docs` from the log message or open up the URL on a web browser. If you see the Document service page, you've successfully launched the <type://DocService> and server.
+1. Click the URL `http://127.0.0.1:8080/docs` from the log message or open up the URL on a web browser.
+
+  If you see the Document service page, you've successfully launched the <type://DocService> and server.
 
   ![](../../../../images/tutorial_blogservice_thrift_docservice_start.png)
 
