@@ -58,6 +58,8 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class WebSocketServiceItTest {
 
+    private static final int MAX_FRAME_LENGTH = 4 * 1024;
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -65,7 +67,9 @@ class WebSocketServiceItTest {
             sb.route()
               .path("/chat")
               .requestAutoAbortDelayMillis(3000)
-              .build(WebSocketService.of(new WebSocketEchoHandler()));
+              .build(WebSocketService.builder(new WebSocketEchoHandler())
+                                     .maxFramePayloadLength(MAX_FRAME_LENGTH)
+                                     .build());
         }
     };
 
@@ -81,7 +85,7 @@ class WebSocketServiceItTest {
 
     @Test
     void echoText() throws Exception {
-        final List<String> sendingMessages = ImmutableList.of("foobar", Strings.repeat("abc", 3 * 1024), "baz");
+        final List<String> sendingMessages = ImmutableList.of("foobar", Strings.repeat("a", 3 * 1024), "baz");
         sendingMessages.forEach(client::send);
 
         for (String sendingMessage : sendingMessages) {
@@ -94,7 +98,7 @@ class WebSocketServiceItTest {
 
     @Test
     void echoBinary() throws Exception {
-        final List<String> sendingMessages = ImmutableList.of("foobar", Strings.repeat("abc", 3 * 1024), "baz");
+        final List<String> sendingMessages = ImmutableList.of("foobar", Strings.repeat("a", 3 * 1024), "baz");
         sendingMessages.forEach(message -> client.send(message.getBytes(StandardCharsets.UTF_8)));
 
         for (String sendingMessage : sendingMessages) {
@@ -108,9 +112,10 @@ class WebSocketServiceItTest {
     @Test
     void exceedMaxFrameLength() throws Exception {
         client.send("foo");
-        client.send(Strings.repeat("a", 64 * 1024));
+        client.send(Strings.repeat("a", 4 * 1024 + 1));
         await().until(() -> client.closeStatus().get() == WebSocketCloseStatus.MESSAGE_TOO_BIG.code());
-        assertThat(client.closeReason().get()).isEqualTo("Max frame length of 65535 has been exceeded.");
+        assertThat(client.closeReason().get()).isEqualTo("Max frame length of " + MAX_FRAME_LENGTH +
+                                                         " has been exceeded.");
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
         assertThat(ctx.log().whenComplete().join().responseCause()).isInstanceOf(
                 WebSocketProtocolViolationException.class);
@@ -118,7 +123,7 @@ class WebSocketServiceItTest {
 
     @Test
     void sendFragments() throws Exception {
-        final List<String> sendingMessages = ImmutableList.of("foobar", Strings.repeat("abc", 3 * 1024), "baz");
+        final List<String> sendingMessages = ImmutableList.of("foobar", Strings.repeat("a", 3 * 1024), "baz");
 
         int i = 0;
         final TextFrame textFrame = new TextFrame();
