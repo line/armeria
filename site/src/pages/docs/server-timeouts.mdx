@@ -1,10 +1,10 @@
 # Overriding server timeouts
 
-You can override the default timeouts of a request.
+There are several ways to override the default timeouts at server-side.
 
 ## Global Configuration
 
-Globally configuring the default timeout with system properties or a custom <type://FlagsProvider>.
+You may globally configure the default timeout with system properties or a custom <type://FlagsProvider>.
 
 ### Using JVM system properties
 
@@ -12,7 +12,7 @@ You can override the default server timeouts by specifying the following JVM sys
 
 `-Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>`
 
-The default value of this flag is 10000L and 0 disables the timeout.
+Represents the amount of time from receiving a request to sending the corresponding response completely. Default: `10000`.
 
 <Warning>
 
@@ -23,7 +23,7 @@ The default value of this flag is 10000L and 0 disables the timeout.
 
 ### Using <type://FlagsProvider>
 
-You can override the global <type://Flags> by implementing your own <type://FlagsProvider> and loading it via Java SPI.
+You can override the request timeout specified by JVM system properties by implementing your own <type://FlagsProvider> and loading it via Java SPI.
 
 ```java
 package com.example.providers;
@@ -54,18 +54,16 @@ import com.linecorp.armeria.server.ServerBuilder;
 
 import java.time.Duration;
 
-int requestTimeout = 5;
-
 ServerBuilder sb = Server.builder();
 Server server = sb.http(port)
                   .annotatedService(new HelloService())
-                  .requestTimeout(Duration.ofSeconds(requestTimeout))
+                  .requestTimeout(Duration.ofSeconds(5))
                   .build();
 ```
 
 ## Using <type://VirtualHostBuilder>
 
-You can set the timeouts for each virtual host individually
+You can set the timeouts for each virtual host.
 
 ```java
 import com.linecorp.armeria.common.HttpResponse;
@@ -76,31 +74,27 @@ import java.time.Duration;
 
 import static com.linecorp.armeria.common.HttpStatus.OK;
 
-int requestTimeout1 = 5;
-int requestTimeout2 = 10;
-int requestTimeout3 = 20;
-
 ServerBuilder sb = Server.builder();
 Server server = sb.http(port)
                   .defaultVirtualHost()
                   .service("/hello1", (ctx, req) -> HttpResponse.of(OK))
-                  .requestTimeout(Duration.ofSeconds(requestTimeout1))
+                  .requestTimeout(Duration.ofSeconds(5))
                   .and()
                   .virtualHost("*.foo.com")
                   .service("/hello2", (ctx, req) -> HttpResponse.of(OK))
-                  .requestTimeout(Duration.ofSeconds(requestTimeout2))
+                  .requestTimeout(Duration.ofSeconds(10))
                   .and()
                   .withVirtualHost(builder -> {
                       builder.hostnamePattern("*.bar.com")
                               .service("/hello3", (ctx, req) -> HttpResponse.of(OK))
-                              .requestTimeout(Duration.ofSeconds(requestTimeout3));
+                              .requestTimeout(Duration.ofSeconds(15));
                   })
                   .build();
 ```
 
 ## Using <type://ServiceBindingBuilder>
 
-You can set the timeouts for each route individually
+You can set the timeouts for each route.
 
 ```java
 import com.linecorp.armeria.common.HttpResponse;
@@ -111,18 +105,15 @@ import java.time.Duration;
 
 import static com.linecorp.armeria.common.HttpStatus.OK;
 
-int requestTimeout1 = 5;
-int requestTimeout2 = 10;
-
 ServerBuilder sb = Server.builder();
 Server server = sb.http(port)
                   .route()
                   .get("/hello1")
-                  .requestTimeout(Duration.ofSeconds(requestTimeout1))
+                  .requestTimeout(Duration.ofSeconds(5))
                   .build((ctx, req) -> HttpResponse.of(OK))
                   .withRoute(builder -> {
                       builder.get("/hello2")
-                             .requestTimeout(Duration.ofSeconds(requestTimeout2))
+                             .requestTimeout(Duration.ofSeconds(10))
                              .build((ctx, req) -> HttpResponse.of(OK));
                   })
                   .build();
@@ -141,45 +132,13 @@ import java.time.Duration;
 
 import static com.linecorp.armeria.common.HttpStatus.OK;
 
-int requestTimeout = 5;
-
 ServerBuilder sb = Server.builder();
 Server server = sb.http(port)
                   .service("/hello", (ctx, req) -> {
-                      ctx.setRequestTimeout(Duration.ofSeconds(requestTimeout));
+                      ctx.setRequestTimeout(Duration.ofSeconds(5));
                       return HttpResponse.of(OK);
                   })
                   .build();
-```
-
-Also, It is possible to use automatically injected context.
-
-```java
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-
-ServerBuilder sb = Server.builder();
-Server server = sb.http(port)
-                  .annotatedService(new HelloService())
-                  .build();
-```
-```java filename=HelloService.java
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.Get;
-
-import java.time.Duration;
-
-import static com.linecorp.armeria.common.HttpStatus.OK;
-
-public class HelloService {
-    @Get("/hello")
-    public HttpResponse getHello(ServiceRequestContext ctx) {
-        int requestTimeout = 5;
-        ctx.setRequestTimeout(Duration.ofSeconds(requestTimeout));
-        return HttpResponse.of(OK);
-    }
-}
 ```
 
 ## Using <type://@RequestTimeout> Annotation
