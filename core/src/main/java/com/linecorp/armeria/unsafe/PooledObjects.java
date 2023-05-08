@@ -151,7 +151,9 @@ public final class PooledObjects {
         }
         if (obj instanceof WebSocketFrame) {
             final WebSocketFrame frame = (WebSocketFrame) obj;
-            return copyAndCloseWebSocketFrame(frame);
+            if (frame.isPooled()) {
+                return copyAndCloseWebSocketFrame(frame);
+            }
         }
 
         return obj;
@@ -159,30 +161,26 @@ public final class PooledObjects {
 
     @SuppressWarnings("unchecked")
     private static <T> T copyAndCloseWebSocketFrame(WebSocketFrame frame) {
-        if (frame.isPooled()) {
-            try {
-                switch (frame.type()) {
-                    case CONTINUATION:
-                        return (T) WebSocketFrame.ofContinuation(frame.array(), frame.isFinalFragment());
-                    case TEXT:
-                        return (T) WebSocketFrame.ofText(frame.array(), frame.isFinalFragment());
-                    case BINARY:
-                        return (T) WebSocketFrame.ofBinary(frame.array(), frame.isFinalFragment());
-                    case CLOSE:
-                        return (T) WebSocketFrame.ofClose(frame.array());
-                    case PING:
-                        return (T) WebSocketFrame.ofPing(frame.array());
-                    case PONG:
-                        return (T) WebSocketFrame.ofPong(frame.array());
-                    default:
-                        // Should never reach here.
-                        throw new Error();
-                }
-            } finally {
-                frame.close();
+        try {
+            switch (frame.type()) {
+                case CONTINUATION:
+                    return (T) WebSocketFrame.ofContinuation(frame.array(), frame.isFinalFragment());
+                case TEXT:
+                    return (T) WebSocketFrame.ofText(frame.array(), frame.isFinalFragment());
+                case BINARY:
+                    return (T) WebSocketFrame.ofBinary(frame.array(), frame.isFinalFragment());
+                case CLOSE:
+                    return (T) WebSocketFrame.ofClose(frame.array());
+                case PING:
+                    return (T) WebSocketFrame.ofPing(frame.array());
+                case PONG:
+                    return (T) WebSocketFrame.ofPong(frame.array());
             }
+        } finally {
+            frame.close();
         }
-        return (T) frame;
+        // Should never reach here.
+        throw new Error();
     }
 
     private PooledObjects() {}
