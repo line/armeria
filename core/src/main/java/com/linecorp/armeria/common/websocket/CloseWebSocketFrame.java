@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.websocket;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -38,5 +39,6 @@ public interface CloseWebSocketFrame extends WebSocketFrame {
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
      */
+    @Nullable
     String reasonPhrase();
 }

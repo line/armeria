@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
 import com.google.common.hash.Hashing;
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -97,22 +98,23 @@ public final class WebSocketService extends AbstractHttpService {
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     private final Set<String> subprotocols;
-    @Nullable
     private final Set<String> allowedOrigins;
+    private final boolean allowAnyOrigin;
 
     WebSocketService(WebSocketHandler handler, int maxFramePayloadLength, boolean allowMaskMismatch,
-                     Set<String> subprotocols, @Nullable Set<String> allowedOrigins) {
+                     Set<String> subprotocols, Set<String> allowedOrigins, boolean allowAnyOrigin) {
         this.handler = handler;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
         this.subprotocols = subprotocols;
         this.allowedOrigins = allowedOrigins;
+        this.allowAnyOrigin = allowAnyOrigin;
     }
 
     /**
      * Handles the HTTP/1.1 web socket handshake described in
      * <a href="https://datatracker.ietf.org/doc/html/rfc6455">The WebSocket Protocol</a>.
-     * These are examples of a request and the corresponding response:
+     * These are examples of a request and its corresponding response:
      *
      * <p>Request:
      * <pre>
@@ -273,17 +275,16 @@ public final class WebSocketService extends AbstractHttpService {
 
     @Nullable
     private HttpResponse checkOrigin(ServiceRequestContext ctx, RequestHeaders headers) {
-        final String origin = headers.get(HttpHeaderNames.ORIGIN);
-        if (allowedOrigins != null && allowedOrigins.isEmpty()) {
-            // All origins are allowed
+        if (allowAnyOrigin) {
             return null;
         }
+        final String origin = headers.get(HttpHeaderNames.ORIGIN);
         if (isNullOrEmpty(origin)) {
             return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
                                    "missing the origin header");
         }
 
-        if (allowedOrigins == null) {
+        if (allowedOrigins.isEmpty()) {
             // Only the same-origin is allowed.
             if (!isSameOrigin(ctx, headers, origin)) {
                 return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
@@ -299,22 +300,6 @@ public final class WebSocketService extends AbstractHttpService {
     }
 
     private static boolean isSameOrigin(ServiceRequestContext ctx, RequestHeaders headers, String origin) {
-        final String authority = headers.authority();
-        final int portDelimiter = authority.indexOf(':');
-        final String host;
-        final int port;
-        if (portDelimiter < 0) {
-            host = authority;
-            port = ctx.sessionProtocol().defaultPort();
-        } else {
-            host = authority.substring(0, portDelimiter);
-            try {
-                port = Integer.parseInt(authority.substring(portDelimiter + 1));
-            } catch (NumberFormatException e) {
-                return false;
-            }
-        }
-
         final int schemeDelimiter = origin.indexOf("://");
         if (schemeDelimiter < 0) {
             return false;
@@ -325,33 +310,25 @@ public final class WebSocketService extends AbstractHttpService {
         if (originSessionProtocol == null) {
             return false;
         }
-        if (ctx.sessionProtocol().isHttp()) {
-            if (!originSessionProtocol.isHttp()) {
-                return false;
-            }
-        } else {
-            if (!ctx.sessionProtocol().isHttps() || !originSessionProtocol.isHttps()) {
-                return false;
-            }
-        }
-        // The same scheme.
 
-        final String originHost;
-        final int originPort;
-        final int originPortDelimiter = origin.indexOf(':', schemeDelimiter + 3);
-        if (originPortDelimiter < 0) {
-            originHost = origin.substring(schemeDelimiter + 3);
-            originPort = originSessionProtocol.defaultPort();
+        if ((ctx.sessionProtocol().isHttp() && originSessionProtocol.isHttp()) ||
+            (ctx.sessionProtocol().isHttps() && originSessionProtocol.isHttps())) {
+            // The same scheme.
         } else {
-            originHost = origin.substring(schemeDelimiter + 3, originPortDelimiter);
-            try {
-                originPort = Integer.parseInt(origin.substring(originPortDelimiter + 1));
-            } catch (NumberFormatException e) {
-                return false;
-            }
+            return false;
         }
 
-        return port == originPort && host.equals(originHost);
+        final String authority = headers.authority();
+        assert authority != null;
+        final HostAndPort authorityHostAndPort = HostAndPort.fromString(authority);
+        final String authorityHost = authorityHostAndPort.getHost();
+        final int authorityPort = authorityHostAndPort.getPortOrDefault(ctx.sessionProtocol().defaultPort());
+
+        final HostAndPort originHostAndPort = HostAndPort.fromString(origin.substring(schemeDelimiter + 3));
+        final String originHost = originHostAndPort.getHost();
+        final int originPort = originHostAndPort.getPortOrDefault(originSessionProtocol.defaultPort());
+
+        return authorityPort == originPort && authorityHost.equals(originHost);
     }
 
     @Nullable

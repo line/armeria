@@ -295,8 +295,8 @@ public interface RequestLogBuilder extends RequestLogAccess {
     void responseTrailers(HttpHeaders responseTrailers);
 
     /**
-     * Sets the {@link RequestLog#responseCause()} without completing a response log.
-     * This method will be useful when you want to send additional data even after an exception is raised.
+     * Sets the {@link RequestLog#responseCause()} without completing the response log.
+     * This method may be useful if you want to send additional data even after an exception is raised.
      * If you want to end the response log right away when an exception is raised,
      * please use {@link #endResponse(Throwable)}.
      */

@@ -35,9 +35,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * WebSocket status codes specified in RFC-6455.
- * See <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1">Defined Status Codes</a>
- * for more information.
+ * WebSocket <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1">Defined Status Codes</a>.
  */
 @UnstableApi
 public final class WebSocketCloseStatus {
@@ -115,7 +113,7 @@ public final class WebSocketCloseStatus {
         new WebSocketCloseStatus(1011, "Internal server error");
 
     /**
-     * {@code 1012} (IANA Registry, Non RFC-6455) indicates that the service is restarted.
+     * {@code 1012} (IANA Registry, Non RFC 6455) indicates that the service is restarted.
      * A client may reconnect, and if it chooses to do, should reconnect using a randomized delay
      * of 5 - 30 seconds.
      */
@@ -123,7 +121,7 @@ public final class WebSocketCloseStatus {
         new WebSocketCloseStatus(1012, "Service Restart");
 
     /**
-     * {@code 1013} (IANA Registry, Non RFC-6455) indicates that the service is experiencing overload.
+     * {@code 1013} (IANA Registry, Non RFC 6455) indicates that the service is experiencing overload.
      * A client should only connect to a different IP (when there are multiple for the target)
      * or reconnect to the same IP upon user action.
      */
@@ -131,7 +129,7 @@ public final class WebSocketCloseStatus {
         new WebSocketCloseStatus(1013, "Try Again Later");
 
     /**
-     * {@code 1014} (IANA Registry, Non RFC-6455) indicates that the server was acting as a gateway or
+     * {@code 1014} (IANA Registry, Non RFC 6455) indicates that the server was acting as a gateway or
      * proxy and received an invalid response from the upstream server.
      * This is similar to 502 HTTP Status Code.
      */
@@ -140,12 +138,28 @@ public final class WebSocketCloseStatus {
 
     // 1004, 1005, 1006, 1015 are reserved and should never be used by user
 
+    /**
+     * {@code 1005} is a reserved value and MUST NOT be set as a status code in a Close control frame
+     * by an endpoint. It is designated for use in applications expecting a status code to indicate
+     * that no status code was actually present.
+     */
     public static final WebSocketCloseStatus EMPTY =
         new WebSocketCloseStatus(1005, "Empty");
 
+    /**
+     * {@code 1006} is a reserved value and MUST NOT be set as a status code in a Close control frame
+     * by an endpoint. It is designated for use in applications expecting a status code to indicate that the
+     * connection was closed abnormally, e.g., without sending or receiving a Close control frame.
+     */
     public static final WebSocketCloseStatus ABNORMAL_CLOSURE =
         new WebSocketCloseStatus(1006, "Abnormal closure");
 
+    /**
+     * {@code 1015} is a reserved value and MUST NOT be set as a status code in a Close control frame
+     * by an endpoint. It is designated for use in applications expecting a status code to indicate that the
+     * connection was closed due to a failure to perform a TLS handshake
+     * (e.g., the server certificate can't be verified).
+     */
     public static final WebSocketCloseStatus TLS_HANDSHAKE_FAILED =
         new WebSocketCloseStatus(1015, "TLS handshake failed");
 
@@ -197,7 +211,7 @@ public final class WebSocketCloseStatus {
             default:
                 if (!isValidStatusCode(code)) {
                     throw new IllegalArgumentException(
-                            "WebSocket close status code does NOT comply with RFC-6455: " + code);
+                            "WebSocket close status code does NOT comply with RFC 6455: " + code);
                 }
                 return new WebSocketCloseStatus(code, "Close status #" + code);
         }

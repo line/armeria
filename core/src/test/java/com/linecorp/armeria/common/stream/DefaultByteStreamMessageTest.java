@@ -95,7 +95,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate).range(1, 1);
         StepVerifier.create(byteStreamMessage, 1)
-                    .expectNextMatches(httpData -> "2".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("2"))
                     .verifyComplete();
     }
 

@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.common.websocket;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects.ToStringHelper;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -27,6 +31,7 @@ import io.netty.buffer.Unpooled;
 final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements CloseWebSocketFrame {
 
     private final WebSocketCloseStatus status;
+    @Nullable
     private final String reasonPhrase;
 
     CloseByteBufWebSocketFrame(byte[] data) {
@@ -38,11 +43,12 @@ final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements 
     }
 
     CloseByteBufWebSocketFrame(WebSocketCloseStatus status, String reasonPhrase) {
-        this(createByteBuf(validateStatusCode(status.code()), reasonPhrase), false, status, reasonPhrase);
+        this(createByteBuf(validateStatusCode(status.code()), requireNonNull(reasonPhrase, "reasonPhrase")),
+             false, status, reasonPhrase);
     }
 
     private CloseByteBufWebSocketFrame(ByteBuf data, boolean pooled,
-                                       WebSocketCloseStatus status, String reasonPhrase) {
+                                       WebSocketCloseStatus status, @Nullable String reasonPhrase) {
         super(data, pooled, WebSocketFrameType.CLOSE, true);
         this.status = status;
         this.reasonPhrase = reasonPhrase;
@@ -76,7 +82,7 @@ final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements 
             return statusCode;
         } else {
             throw new IllegalArgumentException(
-                    "WebSocket close status code does NOT comply with RFC-6455. code: " + statusCode);
+                    "WebSocket close status code does NOT comply with RFC 6455. code: " + statusCode);
         }
     }
 
@@ -85,13 +91,17 @@ final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements 
         return reasonPhrase;
     }
 
+    @Nullable
     private static String reasonPhrase(ByteBuf data) {
         if (data.capacity() <= 2) {
-            return "";
+            return null;
         }
 
         final int index = data.readerIndex();
         data.readerIndex(index + 2);
+        if (!data.isReadable()) {
+            return null;
+        }
         final String reasonPhrase = data.toString(StandardCharsets.UTF_8);
         data.readerIndex(index);
         return reasonPhrase;

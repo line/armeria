@@ -243,6 +243,7 @@ final class DefaultServerConfig implements ServerConfig {
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
+
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
 

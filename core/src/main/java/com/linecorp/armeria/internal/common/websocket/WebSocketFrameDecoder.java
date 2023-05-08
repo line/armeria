@@ -289,7 +289,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         out.add(decodedFrame);
                     } else {
                         throw protocolViolation(WebSocketCloseStatus.INVALID_MESSAGE_TYPE,
-                                                "Cannot decode web socket frame with opcode: " + frameOpcode);
+                                                "Cannot decode a web socket frame with opcode: " + frameOpcode);
                     }
                     logger.trace("{} is decoded.", decodedFrame);
                     if (finalFragment) {

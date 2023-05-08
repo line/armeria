@@ -17,16 +17,28 @@ package com.linecorp.armeria.common.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class WebSocketFrameTypeTest {
 
-    @Test
-    void controlFrame() {
-        assertThat(WebSocketFrameType.TEXT.isControlFrame()).isFalse();
-        assertThat(WebSocketFrameType.BINARY.isControlFrame()).isFalse();
-        assertThat(WebSocketFrameType.CLOSE.isControlFrame()).isTrue();
-        assertThat(WebSocketFrameType.PING.isControlFrame()).isTrue();
-        assertThat(WebSocketFrameType.PONG.isControlFrame()).isTrue();
+    @EnumSource(WebSocketFrameType.class)
+    @ParameterizedTest
+    void controlFrame(WebSocketFrameType type) {
+        switch (type) {
+            case CONTINUATION:
+            case TEXT:
+            case BINARY:
+                assertThat(type.isControlFrame()).isFalse();
+                break;
+            case CLOSE:
+            case PING:
+            case PONG:
+                assertThat(type.isControlFrame()).isTrue();
+                break;
+            default:
+                // Should never reach here.
+                throw new Error();
+        }
     }
 }

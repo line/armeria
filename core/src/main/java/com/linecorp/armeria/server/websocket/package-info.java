@@ -15,7 +15,7 @@
  */
 
 /**
- * <a href="https://datatracker.ietf.org/doc/html/rfc6455">The WebSocket Protocol</a>.
+ * Server-side classes for <a href="https://datatracker.ietf.org/doc/html/rfc6455">the WebSocket Protocol</a>.
  */
 @NonNullByDefault
 package com.linecorp.armeria.server.websocket;

@@ -806,7 +806,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
-     * It's useful when you want to receive additional data even after closing the response.
+     * This may be useful when you want to receive additional data even after closing the response.
      * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
      * abort the request automatically. There is no delay by default.
      */
@@ -1887,7 +1887,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
-     * case sensitive HTTP/1 headers.
+     * case-sensitive HTTP/1 headers.
      */
     public ServerBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(http1HeaderNaming, "http1HeaderNaming");

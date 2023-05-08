@@ -631,7 +631,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     return null;
                 }
                 if (serviceCfg.requestAutoAbortDelayMillis() > 0) {
-                    eventLoop.schedule(() -> handleResponseComplete(cause),
+                    eventLoop.schedule(() -> handleResponseComplete(null),
                                        serviceCfg.requestAutoAbortDelayMillis(), TimeUnit.MILLISECONDS);
                     return null;
                 }

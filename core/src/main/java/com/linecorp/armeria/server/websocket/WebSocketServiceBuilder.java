@@ -19,10 +19,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 
@@ -32,6 +35,10 @@ import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 @UnstableApi
 public final class WebSocketServiceBuilder {
 
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketServiceBuilder.class);
+
+    private static final String ANY_ORIGIN = "*";
+
     static final int DEFAULT_MAX_FRAME_PAYLOAD_LENGTH = 65535; // 64 * 1024 -1
 
     private final WebSocketHandler handler;
@@ -39,8 +46,7 @@ public final class WebSocketServiceBuilder {
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
-    @Nullable
-    private Set<String> allowedOrigins;
+    private Set<String> allowedOrigins = ImmutableSet.of();
 
     WebSocketServiceBuilder(WebSocketHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -59,7 +65,7 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Sets whether the decoder allow to loosen the masking requirement on received frames.
+     * Sets whether the decoder allows to loosen the masking requirement on received frames.
      * It's not allowed by default.
      */
     public WebSocketServiceBuilder allowMaskMismatch(boolean allowMaskMismatch) {
@@ -90,6 +96,7 @@ public final class WebSocketServiceBuilder {
 
     /**
      * Sets the allowed origins. The same-origin is allowed by default.
+     * Specify {@value ANY_ORIGIN} to allow any origins.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
@@ -99,12 +106,28 @@ public final class WebSocketServiceBuilder {
 
     /**
      * Sets the allowed origins. The same-origin is allowed by default.
+     * Specify {@value ANY_ORIGIN} to allow any origins.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
     public WebSocketServiceBuilder allowedOrigins(Iterable<String> allowedOrigins) {
-        this.allowedOrigins = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"));
+        this.allowedOrigins = validateOrigins(allowedOrigins);
         return this;
+    }
+
+    private static Set<String> validateOrigins(Iterable<String> allowedOrigins) {
+        //TODO(minwoox): Dedup the same logic in cors service.
+        final Set<String> copied = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"));
+        checkArgument(!copied.isEmpty(), "allowedOrigins is empty. (expected: non-empty)");
+        if (copied.contains(ANY_ORIGIN)) {
+            if (copied.size() > 1) {
+                logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
+                            copied.stream()
+                                  .filter(c -> !ANY_ORIGIN.equals(c))
+                                  .collect(Collectors.joining(",")));
+            }
+        }
+        return copied;
     }
 
     /**
@@ -112,6 +135,6 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketService build() {
         return new WebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
-                                    subprotocols, allowedOrigins);
+                                    subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN));
     }
 }
