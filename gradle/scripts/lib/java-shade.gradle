@@ -284,7 +284,7 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
 
 /**
  * Finds the dependencies of {@code project} recursively and adds the found dependencies to
- * the configuration named as {@code 'shadedTestRuntime'}.
+ * the configuration named as {@code 'shadedTestImplementation'}.
  */
 private Configuration configureShadedTestImplementConfiguration(
         Project project, Project recursedProject = project,
