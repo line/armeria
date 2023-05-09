@@ -47,12 +47,13 @@
     "advanced-metrics",
     "advanced-unit-testing",
     "advanced-production-checklist",
-    "advanced-zipkin",
     "advanced-saml",
     "advanced-spring-webflux-integration",
     "advanced-dropwizard-integration",
+    "advanced-kotlin",
     "advanced-scala",
     "advanced-scalapb",
+    "advanced-zipkin",
     "advanced-client-interoperability"
   ]
 }
