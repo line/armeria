@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.common.RequestTarget;
 
 import io.netty.channel.Channel;
 
@@ -39,7 +39,7 @@ class ServiceRouteUtilTest {
                                                      .authority("foo.com")
                                                      .build();
         final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(
-                config, channel, headers, PathAndQuery.parse(headers.path()));
+                config, channel, headers, RequestTarget.forServer(headers.path()));
         assertThat(routingContext.status()).isEqualTo(RoutingStatus.OPTIONS);
     }
 
@@ -49,18 +49,8 @@ class ServiceRouteUtilTest {
                                                      .authority("foo.com")
                                                      .build();
         final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(
-                config, channel, headers, PathAndQuery.parse(headers.path()));
+                config, channel, headers, RequestTarget.forServer(headers.path()));
         assertThat(routingContext.status()).isEqualTo(RoutingStatus.OK);
-    }
-
-    @Test
-    void invalidPath() {
-        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.GET, "abc/def")
-                                                     .authority("foo.com")
-                                                     .build();
-        final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(
-                config, channel, headers, PathAndQuery.parse(headers.path()));
-        assertThat(routingContext.status()).isEqualTo(RoutingStatus.INVALID_PATH);
     }
 
     @Test
@@ -74,7 +64,7 @@ class ServiceRouteUtilTest {
                                          "X-PINGOTHER, Content-Type")
                               .build();
         final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(
-                config, channel, headers, PathAndQuery.parse(headers.path()));
+                config, channel, headers, RequestTarget.forServer(headers.path()));
         assertThat(routingContext.status()).isEqualTo(RoutingStatus.CORS_PREFLIGHT);
     }
 }

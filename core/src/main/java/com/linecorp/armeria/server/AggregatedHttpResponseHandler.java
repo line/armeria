@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
+import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -101,7 +102,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         } else if (cause instanceof HttpStatusException) {
             final Throwable cause0 = firstNonNull(cause.getCause(), cause);
             write(toAggregatedHttpResponse((HttpStatusException) cause), cause0);
-        } else if (Exceptions.isStreamCancelling(cause)) {
+        } else if (Exceptions.isStreamCancelling(cause) || cause instanceof EmptyHttpResponseException) {
             resetAndFail(cause);
         } else {
             if (!(cause instanceof CancellationException)) {

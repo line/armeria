@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.logback;
 
+import java.time.Instant;
 import java.util.Map;
 
 import org.slf4j.Marker;
@@ -90,6 +91,12 @@ final class LoggingEventWrapper extends LoggingEvent {
     @Override
     public long getTimeStamp() {
         return event.getTimeStamp();
+    }
+
+    // To keep compatibility with logback 1.4.x
+    // @Override
+    public Instant getInstant() {
+        return Instant.ofEpochMilli(event.getTimeStamp());
     }
 
     @Override

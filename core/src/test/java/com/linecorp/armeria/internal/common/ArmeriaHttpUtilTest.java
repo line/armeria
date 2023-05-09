@@ -23,6 +23,7 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1C
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerHeaders;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ClientHeaders;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,6 +50,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.Server;
@@ -70,12 +72,6 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void testConcatPaths() throws Exception {
-        assertThat(concatPaths(null, "a")).isEqualTo("/a");
-        assertThat(concatPaths(null, "/a")).isEqualTo("/a");
-
-        assertThat(concatPaths("", "a")).isEqualTo("/a");
-        assertThat(concatPaths("", "/a")).isEqualTo("/a");
-
         assertThat(concatPaths("/", "a")).isEqualTo("/a");
         assertThat(concatPaths("/", "/a")).isEqualTo("/a");
         assertThat(concatPaths("/", "/")).isEqualTo("/");
@@ -88,6 +84,11 @@ class ArmeriaHttpUtilTest {
         assertThat(concatPaths("/a/", "")).isEqualTo("/a/");
         assertThat(concatPaths("/a", "?foo=bar")).isEqualTo("/a?foo=bar");
         assertThat(concatPaths("/a/", "?foo=bar")).isEqualTo("/a/?foo=bar");
+
+        // Bad prefixes
+        assertThatThrownBy(() -> concatPaths(null, "a")).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> concatPaths("", "b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> concatPaths("relative", "c")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest
@@ -260,9 +261,9 @@ class ArmeriaHttpUtilTest {
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(in.path().toString());
+        final RequestTarget reqTarget = RequestTarget.forServer(in.path().toString());
         final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(
-                null, in, false, "http", null, pathAndQuery);
+                null, in, false, "http", null, reqTarget);
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f;g=h; i=j; k=l;");
@@ -279,7 +280,7 @@ class ArmeriaHttpUtilTest {
         final ChannelHandlerContext ctx = mockChannelHandlerContext();
 
         RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http",
-                                                  PathAndQuery.parse(originReq.uri()));
+                                                  RequestTarget.forServer(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
         assertThat(armeriaHeaders.authority()).isEqualTo("bar");
         assertThat(armeriaHeaders.scheme()).isEqualTo("http");
@@ -288,7 +289,7 @@ class ArmeriaHttpUtilTest {
         // Remove Host header.
         headers.remove(HttpHeaderNames.HOST);
         armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https",
-                                   PathAndQuery.parse(originReq.uri()));
+                                   RequestTarget.forServer(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
         assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");
         assertThat(armeriaHeaders.scheme()).isEqualTo("https");
@@ -523,10 +524,10 @@ class ArmeriaHttpUtilTest {
         in.set(HttpHeaderNames.METHOD, "GET")
           .set(HttpHeaderNames.PATH, "/");
         // Request headers without pseudo headers.
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(in.path().toString());
+        final RequestTarget reqTarget = RequestTarget.forServer(in.path().toString());
         final RequestHeaders headers =
                 ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https",
-                                                        serverConfig(), pathAndQuery);
+                                                        serverConfig(), reqTarget);
         assertThat(headers.scheme()).isEqualTo("https");
         assertThat(headers.authority()).isEqualTo("foo:36462");
     }
