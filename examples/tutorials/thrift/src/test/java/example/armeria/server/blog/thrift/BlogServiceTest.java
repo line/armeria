@@ -6,28 +6,18 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import java.util.List;
 
 import org.apache.thrift.TException;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.logging.LoggingRpcClient;
-import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import example.armeria.blog.thrift.BlogNotFoundException;
 import example.armeria.blog.thrift.BlogPost;
-import example.armeria.blog.thrift.BlogService;
-import example.armeria.blog.thrift.CreateBlogPostRequest;
-import example.armeria.blog.thrift.DeleteBlogPostRequest;
-import example.armeria.blog.thrift.GetBlogPostRequest;
-import example.armeria.blog.thrift.ListBlogPostsRequest;
-import example.armeria.blog.thrift.ListBlogPostsResponse;
-import example.armeria.blog.thrift.UpdateBlogPostRequest;
 
 @TestMethodOrder(OrderAnnotation.class)
 class BlogServiceTest {
@@ -43,32 +33,21 @@ class BlogServiceTest {
         }
     };
 
-    static BlogService.Iface client;
-
-    @BeforeAll
-    static void beforeAll() {
-        client = ThriftClients.builder(server.httpUri())
-                              .path("/thrift")
-                              .rpcDecorator(LoggingRpcClient.newDecorator())
-                              .build(BlogService.Iface.class);
-    }
-
     @Test
     @Order(1)
     void createBlogPost() throws TException {
-        final CreateBlogPostRequest request = new CreateBlogPostRequest()
-                .setTitle("My first blog")
-                .setContent("Hello Armeria!");
-        final BlogPost response = client.createBlogPost(request);
+        final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+        final BlogPost response = client.createBlogPost("My first blog", "Hello Armeria!");
         assertThat(response.getId()).isGreaterThanOrEqualTo(0);
-        assertThat(response.getTitle()).isEqualTo(request.getTitle());
-        assertThat(response.getContent()).isEqualTo(request.getContent());
+        assertThat(response.getTitle()).isEqualTo("My first blog");
+        assertThat(response.getContent()).isEqualTo("Hello Armeria!");
     }
 
     @Test
     @Order(2)
     void getBlogPost() throws TException {
-        final BlogPost blogPost = client.getBlogPost(new GetBlogPostRequest().setId(0));
+        final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+        final BlogPost blogPost = client.getBlogPost(0);
 
         assertThat(blogPost.getTitle()).isEqualTo("My first blog");
         assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
@@ -77,8 +56,9 @@ class BlogServiceTest {
     @Test
     @Order(3)
     void getInvalidBlogPost() {
+        final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
         final Throwable exception = catchThrowable(() -> {
-            client.getBlogPost(new GetBlogPostRequest().setId(Integer.MAX_VALUE));
+            client.getBlogPost(Integer.MAX_VALUE);
         });
         assertThat(exception).isInstanceOf(BlogNotFoundException.class)
                 .extracting("reason")
@@ -89,15 +69,10 @@ class BlogServiceTest {
     @Test
     @Order(4)
     void listBlogPosts() throws TException {
-        final CreateBlogPostRequest newBlogPost = new CreateBlogPostRequest()
-                .setTitle("My second blog")
-                .setContent("Armeria is awesome!");
-        client.createBlogPost(newBlogPost);
-        final ListBlogPostsResponse
-                response = client.listBlogPosts(new ListBlogPostsRequest()
-                                                        .setDescending(false));
+        final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+        client.createBlogPost("My second blog", "Armeria is awesome!");
 
-        final List<BlogPost> blogs = response.getBlogs();
+        final List<BlogPost> blogs = client.listBlogPosts(false);
         assertThat(blogs).hasSize(2);
         final BlogPost firstBlog = blogs.get(0);
         assertThat(firstBlog.getTitle()).isEqualTo("My first blog");
@@ -111,11 +86,8 @@ class BlogServiceTest {
     @Test
     @Order(5)
     void updateBlogPosts() throws TException {
-        final UpdateBlogPostRequest request = new UpdateBlogPostRequest()
-                .setId(0)
-                .setTitle("My first blog")
-                .setContent("Hello awesome Armeria!");
-        final BlogPost updated = client.updateBlogPost(request);
+        final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+        final BlogPost updated = client.updateBlogPost(0, "My first blog", "Hello awesome Armeria!");
         assertThat(updated.getId()).isZero();
         assertThat(updated.getTitle()).isEqualTo("My first blog");
         assertThat(updated.getContent()).isEqualTo("Hello awesome Armeria!");
@@ -124,8 +96,9 @@ class BlogServiceTest {
     @Test
     @Order(6)
     void badRequestExceptionHandlerWhenTryingDeleteMissingBlogPost() {
+        final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
         final Throwable exception = catchThrowable(() -> {
-            client.deleteBlogPost(new DeleteBlogPostRequest().setId(100));
+            client.deleteBlogPost(100);
         });
         assertThat(exception).isInstanceOf(BlogNotFoundException.class)
                              .extracting("reason")
