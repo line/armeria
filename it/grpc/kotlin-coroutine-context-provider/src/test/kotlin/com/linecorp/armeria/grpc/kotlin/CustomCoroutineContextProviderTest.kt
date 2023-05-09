@@ -17,6 +17,8 @@
 package com.linecorp.armeria.grpc.kotlin
 
 import com.linecorp.armeria.client.grpc.GrpcClients
+import com.linecorp.armeria.grpc.kotlin.context.Hello
+import com.linecorp.armeria.grpc.kotlin.context.HelloServiceGrpcKt
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension

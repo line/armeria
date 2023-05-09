@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.grpc.kotlin
 
+import com.linecorp.armeria.grpc.kotlin.context.Hello
+import com.linecorp.armeria.grpc.kotlin.context.HelloServiceGrpcKt
 import org.assertj.core.api.Assertions.assertThat
 
 class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
