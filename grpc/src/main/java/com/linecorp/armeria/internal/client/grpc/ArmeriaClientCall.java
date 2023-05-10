@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -60,7 +59,6 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
-import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
@@ -106,11 +104,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             pendingTaskUpdater = AtomicReferenceFieldUpdater.newUpdater(
             ArmeriaClientCall.class, Runnable.class, "pendingTask");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<ArmeriaClientCall, Boolean>
-            closedUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            ArmeriaClientCall.class, Boolean.class, "closed");
-
     private final DefaultClientRequestContext ctx;
     private final EndpointGroup endpointGroup;
     private final HttpClient httpClient;
@@ -141,7 +134,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Nullable
     private O firstResponse;
-    private volatile Boolean closed;
+    private boolean closed;
 
     private int pendingRequests;
     private volatile int pendingMessages;
@@ -162,7 +155,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
             boolean unsafeWrapResponseBuffers) {
-        this.closed = Boolean.FALSE;
         this.ctx = ctx;
         this.endpointGroup = endpointGroup;
         this.httpClient = httpClient;
@@ -218,7 +210,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (callOptions.getCompressor() != null) {
             compressor = compressorRegistry.lookupCompressor(callOptions.getCompressor());
             if (compressor == null) {
-                Status status = Status.INTERNAL
+                final Status status = Status.INTERNAL
                         .withDescription("Unable to find compressor by name " + callOptions.getCompressor());
                 close(status, new Metadata());
                 return;
@@ -278,10 +270,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void request(int numMessages) {
-        if (closed) {
-            return;
-        }
-
         if (needsDirectInvocation()) {
             doRequest(numMessages);
         } else {
@@ -303,10 +291,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void cancel(@Nullable String message, @Nullable Throwable cause) {
-        if (closed) {
-            return;
-        }
-
         if (needsDirectInvocation()) {
             doCancel(message, cause);
         } else {
@@ -319,6 +303,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             cause = new CancellationException("Cancelled without a message or cause");
             logger.warn("Cancelling without a message or cause is suboptimal", cause);
         }
+
+        if (closed) {
+            return;
+        }
+
         Status status = Status.CANCELLED;
         if (message != null) {
             status = status.withDescription(message);
@@ -336,10 +325,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void halfClose() {
-        if (closed) {
-            return;
-        }
-
         if (needsDirectInvocation()) {
             req.close();
         } else {
@@ -349,10 +334,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void sendMessage(I message) {
-        if (closed) {
-            return;
-        }
-
         pendingMessagesUpdater.incrementAndGet(this);
         if (needsDirectInvocation()) {
             doSendMessage(message);
@@ -530,12 +511,21 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
     }
 
+    // 'close' deserves a commentary about thread safety as it might be called from two separate threads:
+    //  - event-loop (very normal pathway)
+    //  - ClientCall driving thread (via ClientCall.start() - abnormal, early-return pathway)
+    //
+    // We're not worried to ensure any form of synchronization between these two parties as they should
+    // never do this concurrently: the abnormal call into close() from the caller thread happens in case
+    // of early return, before event-loop is being assigned to this call. After event-loop is being
+    // assigned, the driving call won't be able to trigger close() anymore.
     private void close(Status status, Metadata metadata) {
-        if (!closedUpdater.compareAndSet(this, Boolean.FALSE, Boolean.TRUE)) {
+        if (closed) {
             // 'close()' could be called twice if a call is closed with non-OK status.
             // See: https://github.com/line/armeria/issues/3799
             return;
         }
+        closed = true;
 
         final Deadline deadline = callOptions.getDeadline();
         if (status.getCode() == Code.CANCELLED && deadline != null && deadline.isExpired()) {
