@@ -14,22 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.util;
-
-import java.util.concurrent.locks.ReentrantLock;
-
-import com.linecorp.armeria.common.CoreBlockHoundIntegration;
-
 /**
- * A short lock which is whitelisted by {@link CoreBlockHoundIntegration}.
- * This lock may be preferred over {@link ReentrantLock} when it is known that the
- * lock won't block the event loop over long periods of time.
+ * GraphQL-related common classes.
  */
-public final class ReentrantShortLock extends ReentrantLock {
-    private static final long serialVersionUID = 8999619612996643502L;
+@UnstableApi
+@NonNullByDefault
+package com.linecorp.armeria.common.graphql;
 
-    @Override
-    public void lock() {
-        super.lock();
-    }
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

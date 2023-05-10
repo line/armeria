@@ -25,7 +25,7 @@ import reactor.blockhound.integration.BlockHoundIntegration;
  * A {@link BlockHoundIntegration} for the gRPC module.
  */
 @UnstableApi
-public final class GrpcBlockhoundIntegration implements BlockHoundIntegration {
+public final class GrpcBlockHoundIntegration implements BlockHoundIntegration {
 
     @Override
     public void applyTo(Builder builder) {

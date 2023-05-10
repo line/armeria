@@ -14,22 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.util;
+package com.linecorp.armeria.common.graphql;
 
-import java.util.concurrent.locks.ReentrantLock;
-
-import com.linecorp.armeria.common.CoreBlockHoundIntegration;
+import reactor.blockhound.BlockHound.Builder;
+import reactor.blockhound.integration.BlockHoundIntegration;
 
 /**
- * A short lock which is whitelisted by {@link CoreBlockHoundIntegration}.
- * This lock may be preferred over {@link ReentrantLock} when it is known that the
- * lock won't block the event loop over long periods of time.
+ * A {@link BlockHoundIntegration} for the GraphQL module.
  */
-public final class ReentrantShortLock extends ReentrantLock {
-    private static final long serialVersionUID = 8999619612996643502L;
-
+public class GraphqlBlockHoundIntegration implements BlockHoundIntegration {
     @Override
-    public void lock() {
-        super.lock();
+    public void applyTo(Builder builder) {
+        // UUID.randomUUID is called by default
+        builder.allowBlockingCallsInside("graphql.execution.ExecutionId", "generate");
     }
 }
