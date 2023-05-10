@@ -106,6 +106,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             pendingTaskUpdater = AtomicReferenceFieldUpdater.newUpdater(
             ArmeriaClientCall.class, Runnable.class, "pendingTask");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<ArmeriaClientCall, Boolean>
+            closedUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            ArmeriaClientCall.class, Boolean.class, "closed");
+
     private final DefaultClientRequestContext ctx;
     private final EndpointGroup endpointGroup;
     private final HttpClient httpClient;
@@ -136,7 +141,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Nullable
     private O firstResponse;
-    private boolean closed;
+    private volatile Boolean closed;
 
     private int pendingRequests;
     private volatile int pendingMessages;
@@ -157,6 +162,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
             boolean unsafeWrapResponseBuffers) {
+        this.closed = Boolean.FALSE;
         this.ctx = ctx;
         this.endpointGroup = endpointGroup;
         this.httpClient = httpClient;
@@ -171,13 +177,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        endpointInitialized = endpointGroup instanceof Endpoint || endpointGroup instanceof StaticEndpointGroup;
-        if (!endpointInitialized) {
-            ctx.whenInitialized().handle((unused1, unused2) -> {
-                runPendingTask();
-                return null;
-            });
-        }
+
+        ctx.whenInitialized().handle((unused1, unused2) -> {
+            runPendingTask();
+            return null;
+        });
 
         requestFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
@@ -206,15 +210,17 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         requireNonNull(responseListener, "responseListener");
         requireNonNull(metadata, "metadata");
 
+        // The listener is set by the callers thread. The safe-publishing (aka visibility)
+        // to event-loop is guaranteed via semantics of EventLoop.execute(...) call.
+        listener = responseListener;
+
         final Compressor compressor;
         if (callOptions.getCompressor() != null) {
             compressor = compressorRegistry.lookupCompressor(callOptions.getCompressor());
             if (compressor == null) {
-                contextAwareExecutor.execute(() -> responseListener.onClose(
-                        Status.INTERNAL.withDescription(
-                                "Unable to find compressor by name " + callOptions.getCompressor()),
-                        new Metadata())
-                );
+                Status status = Status.INTERNAL
+                        .withDescription("Unable to find compressor by name " + callOptions.getCompressor());
+                close(status, new Metadata());
                 return;
             }
         } else {
@@ -223,10 +229,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         requestFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
 
-        // The listener is set by the callers thread. The safe-publishing (aka visibility)
-        // to event-loop is guaranteed via semantics of EventLoop.execute(...) call.
-        listener = responseListener;
-
         final long remainingNanos;
         if (callOptions.getDeadline() != null) {
             remainingNanos = callOptions.getDeadline().timeRemaining(TimeUnit.NANOSECONDS);
@@ -234,9 +236,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 final Status status = Status.DEADLINE_EXCEEDED
                         .augmentDescription("ClientCall started after deadline exceeded: " +
                                             callOptions.getDeadline());
-                // We know that start() is called on the callers' thread (not on event-loop) so we
-                // unconditionally offload close() call onto an event-loop.
-                execute(() -> close(status, new Metadata()));
+                close(status, new Metadata());
+                return;
             } else {
                 ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(remainingNanos));
             }
@@ -277,6 +278,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void request(int numMessages) {
+        if (closed) {
+            return;
+        }
+
         if (needsDirectInvocation()) {
             doRequest(numMessages);
         } else {
@@ -298,6 +303,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void cancel(@Nullable String message, @Nullable Throwable cause) {
+        if (closed) {
+            return;
+        }
+
         if (needsDirectInvocation()) {
             doCancel(message, cause);
         } else {
@@ -309,9 +318,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (message == null && cause == null) {
             cause = new CancellationException("Cancelled without a message or cause");
             logger.warn("Cancelling without a message or cause is suboptimal", cause);
-        }
-        if (closed) {
-            return;
         }
         Status status = Status.CANCELLED;
         if (message != null) {
@@ -330,6 +336,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void halfClose() {
+        if (closed) {
+            return;
+        }
+
         if (needsDirectInvocation()) {
             req.close();
         } else {
@@ -339,6 +349,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void sendMessage(I message) {
+        if (closed) {
+            return;
+        }
+
         pendingMessagesUpdater.incrementAndGet(this);
         if (needsDirectInvocation()) {
             doSendMessage(message);
@@ -517,12 +531,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void close(Status status, Metadata metadata) {
-        if (closed) {
+        if (!closedUpdater.compareAndSet(this, Boolean.FALSE, Boolean.TRUE)) {
             // 'close()' could be called twice if a call is closed with non-OK status.
             // See: https://github.com/line/armeria/issues/3799
             return;
         }
-        closed = true;
 
         final Deadline deadline = callOptions.getDeadline();
         if (status.getCode() == Code.CANCELLED && deadline != null && deadline.isExpired()) {
