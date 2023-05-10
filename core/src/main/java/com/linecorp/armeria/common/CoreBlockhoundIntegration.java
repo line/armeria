@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import java.util.ResourceBundle;
-import java.util.UUID;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -47,8 +46,6 @@ public final class CoreBlockhoundIntegration implements BlockHoundIntegration {
         // StreamMessageInputStream internally uses a blocking queue
         // ThreadPoolExecutor.execute internally uses a blocking queue
         builder.allowBlockingCallsInside("java.util.concurrent.LinkedBlockingQueue", "offer");
-        // ClientCalls.QueuingListener internally uses a blocking queue
-        builder.allowBlockingCallsInside("java.util.concurrent.ArrayBlockingQueue", "add");
 
         // a single blocking call is incurred for the first invocation, but the result is cached.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
@@ -56,7 +53,6 @@ public final class CoreBlockhoundIntegration implements BlockHoundIntegration {
         builder.allowBlockingCallsInside("java.util.ServiceLoader$LazyClassPathLookupIterator",
                                          "parse");
         builder.allowBlockingCallsInside(ResourceBundle.class.getName(), "getBundle");
-        builder.allowBlockingCallsInside(UUID.class.getName(), "randomUUID");
         builder.allowBlockingCallsInside("io.netty.handler.codec.compression.Brotli", "<clinit>");
 
         // a lock is held temporarily when adding workers
