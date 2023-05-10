@@ -66,6 +66,17 @@ configure(projectsWithFlags('java')) {
                 "for '${project.path}' cannot be smaller than 8")
     }
 
+    def targetJavaVersionStr = null
+    if (targetJavaVersion != null) {
+        targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
+    }
+    def javaSourceCompatibility = targetJavaVersionStr ?: project.findProperty('javaSourceCompatibility') ?: '1.8'
+    def javaTargetCompatibility = targetJavaVersionStr ?: project.findProperty('javaTargetCompatibility') ?: '1.8'
+
+    // The default targetJavaVersion is 'javaTargetCompatibility'
+    targetJavaVersion = Integer.valueOf(JavaVersion.toVersion(javaTargetCompatibility).majorVersion)
+    project.ext.set('targetJavaVersion', targetJavaVersion)
+
     def testJavaVersion = targetJavaVersion
     if (project.hasProperty('testJavaVersion')) {
         def testVersion = Integer.parseInt(String.valueOf(project.findProperty('testJavaVersion')))
@@ -73,6 +84,10 @@ configure(projectsWithFlags('java')) {
             testJavaVersion = testVersion
             logger.quiet("Overriding JRE for testing ${project.path} with ${testJavaVersion}")
         }
+    }
+
+    if (targetJavaVersion != null) {
+        targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
     }
 
     logger.info("Using JRE ${testJavaVersion} to test ${project.path}")
@@ -119,16 +134,11 @@ configure(projectsWithFlags('java')) {
 
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
-        def targetJavaVersionStr = null
-        if (targetJavaVersion != null) {
-            targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
-        }
-        sourceCompatibility = targetJavaVersionStr ?: project.findProperty('javaSourceCompatibility') ?: '1.8'
-        // the default targetJavaVersion is 'javaTargetCompatibility'
-        targetCompatibility = targetJavaVersionStr ?: project.findProperty('javaTargetCompatibility') ?: '1.8'
+        sourceCompatibility = javaSourceCompatibility
+        targetCompatibility = javaTargetCompatibility
         if (rootProject.ext.buildJdkVersion >= 9) {
             // Supported since java 9 https://openjdk.org/jeps/247
-            options.release.set(Integer.valueOf(JavaVersion.toVersion(targetCompatibility).majorVersion))
+            options.release.set(targetJavaVersion)
         }
         options.encoding = 'UTF-8'
         options.warnings = false
@@ -167,10 +177,10 @@ configure(projectsWithFlags('java')) {
                             }
 
                             // disable tests for projects which target a higher java version
-                            if (project.ext.testJavaVersion < targetJavaVersion) {
+                            if (project.ext.testJavaVersion < project.ext.targetJavaVersion) {
                                 project.logger.lifecycle("Skipping tests for ${project.path} since the " +
-                                        "testJavaVersion(${testJavaVersion}) is smaller than the " +
-                                        "targetJavaVersion(${targetJavaVersion})")
+                                        "testJavaVersion(${project.ext.testJavaVersion}) is smaller than the " +
+                                        "targetJavaVersion(${project.ext.targetJavaVersion})")
                                 enabled = false
                             }
                         }
