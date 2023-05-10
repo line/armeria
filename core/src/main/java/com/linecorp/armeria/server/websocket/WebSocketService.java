@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.websocket;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newCloseWebSocketFrame;
@@ -160,8 +159,8 @@ public final class WebSocketService extends AbstractHttpService {
             return invalidResponse;
         }
 
-        final String webSocketKey = headers.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
-        if (isNullOrEmpty(webSocketKey)) {
+        final String webSocketKey = headers.get(HttpHeaderNames.SEC_WEBSOCKET_KEY, "");
+        if (webSocketKey.isEmpty()) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                    "missing Sec-WebSocket-Key header");
         }
@@ -178,8 +177,8 @@ public final class WebSocketService extends AbstractHttpService {
 
     private void maybeAddSubprotocol(RequestHeaders headers,
                                      ResponseHeadersBuilder responseHeadersBuilder) {
-        final String subprotocols = headers.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
-        if (isNullOrEmpty(subprotocols)) {
+        final String subprotocols = headers.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "");
+        if (subprotocols.isEmpty()) {
             return;
         }
         commaSplitter.splitToStream(subprotocols)
@@ -278,8 +277,8 @@ public final class WebSocketService extends AbstractHttpService {
         if (allowAnyOrigin) {
             return null;
         }
-        final String origin = headers.get(HttpHeaderNames.ORIGIN);
-        if (isNullOrEmpty(origin)) {
+        final String origin = headers.get(HttpHeaderNames.ORIGIN, "");
+        if (origin.isEmpty()) {
             return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
                                    "missing the origin header");
         }

@@ -116,9 +116,9 @@ class DefaultByteStreamMessageTest {
                 ByteStreamMessage.of(delegate)
                                  .range(0, 2);
         StepVerifier.create(byteStreamMessage, 1)
-                    .expectNextMatches(httpData -> "1".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("1"))
                     .thenRequest(1)
-                    .expectNextMatches(httpData -> "2".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("2"))
                     .verifyComplete();
     }
 
@@ -129,11 +129,11 @@ class DefaultByteStreamMessageTest {
                 ByteStreamMessage.of(delegate)
                                  .range(0, 4);
         StepVerifier.create(byteStreamMessage, 1)
-                    .expectNextMatches(httpData -> "1".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("1"))
                     .thenRequest(1)
-                    .expectNextMatches(httpData -> "22".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("22"))
                     .thenRequest(1)
-                    .expectNextMatches(httpData -> "3".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("3"))
                     .verifyComplete();
     }
 
@@ -143,9 +143,9 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate).range(2, 4);
         StepVerifier.create(byteStreamMessage, 1)
-                    .expectNextMatches(httpData -> "2".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("2"))
                     .thenRequest(1)
-                    .expectNextMatches(httpData -> "333".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("333"))
                     .verifyComplete();
     }
 
@@ -155,11 +155,11 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate).range(2, 8);
         StepVerifier.create(byteStreamMessage, 1)
-                    .expectNextMatches(httpData -> "2".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("2"))
                     .thenRequest(1)
-                    .expectNextMatches(httpData -> "333".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("333"))
                     .thenRequest(Long.MAX_VALUE)
-                    .expectNextMatches(httpData -> "4444".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("4444"))
                     .verifyComplete();
     }
 
@@ -169,10 +169,10 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate).range(3, 8);
         StepVerifier.create(byteStreamMessage, 1)
-                    .expectNextMatches(httpData -> "333".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("333"))
                     .thenRequest(2)
-                    .expectNextMatches(httpData -> "4444".equals(httpData.toStringUtf8()))
-                    .expectNextMatches(httpData -> "5".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("4444"))
+                    .expectNext(HttpData.ofUtf8("5"))
                     .verifyComplete();
     }
 
@@ -182,7 +182,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate).range(4, 1);
         StepVerifier.create(byteStreamMessage, 1)
-                    .expectNextMatches(httpData -> "3".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("3"))
                     .verifyComplete();
     }
 
@@ -203,7 +203,7 @@ class DefaultByteStreamMessageTest {
                 ByteStreamMessage.of(delegate).range(14, Integer.MAX_VALUE);
 
         StepVerifier.create(byteStreamMessage)
-                    .expectNextMatches(httpData -> "5".equals(httpData.toStringUtf8()))
+                    .expectNext(HttpData.ofUtf8("5"))
                     .verifyComplete();
     }
 
@@ -413,19 +413,19 @@ class DefaultByteStreamMessageTest {
 
         streamMessage.whenComplete().join();
         HttpData httpData = queue.take();
-        assertThat(httpData.toStringUtf8()).isEqualTo("A");
+        assertThat(httpData).isEqualTo(HttpData.ofUtf8("A"));
         httpData.close();
 
         httpData = queue.take();
-        assertThat(httpData.toStringUtf8()).isEqualTo("B");
+        assertThat(httpData).isEqualTo(HttpData.ofUtf8("B"));
         httpData.close();
 
         httpData = queue.take();
-        assertThat(httpData.toStringUtf8()).isEqualTo("C");
+        assertThat(httpData).isEqualTo(HttpData.ofUtf8("C"));
         httpData.close();
 
         httpData = queue.take();
-        assertThat(httpData.toStringUtf8()).isEqualTo("completed");
+        assertThat(httpData).isEqualTo(HttpData.ofUtf8("completed"));
         httpData.close();
 
         assertThat(byteBuf1.refCnt()).isZero();

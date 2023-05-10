@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.stream.StreamWriter;
 public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame> {
 
     /**
-     * Writesa text {@link WebSocketFrame} to this {@link WebSocket}.
+     * Writes a text {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @see WebSocketFrame#ofText(String)
      */
@@ -35,7 +35,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa text {@link WebSocketFrame} to this {@link WebSocket} whose
+     * Writes a text {@link WebSocketFrame} to this {@link WebSocket} whose
      * {@link WebSocketFrame#isFinalFragment()} is set to {@code finalFragment}.
      *
      * @see WebSocketFrame#ofText(String, boolean)
@@ -45,7 +45,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa binary {@link WebSocketFrame} to this {@link WebSocket}.
+     * Writes a binary {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @see WebSocketFrame#ofBinary(byte[])
      */
@@ -54,7 +54,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa binary {@link WebSocketFrame} to this {@link WebSocket} whose
+     * Writes a binary {@link WebSocketFrame} to this {@link WebSocket} whose
      * {@link WebSocketFrame#isFinalFragment()} is set to {@code finalFragment}.
      *
      * @see WebSocketFrame#ofBinary(byte[], boolean)
@@ -64,7 +64,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa text {@link WebSocketFrame} to this {@link WebSocket}.
+     * Writes a text {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @return {@code true} if the text has been scheduled for publication. {@code false} if the
      *         writer has been closed already.
@@ -75,7 +75,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa text {@link WebSocketFrame} to this {@link WebSocket}.
+     * Writes a text {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @return {@code true} if the text has been scheduled for publication. {@code false} if the
      *         writer has been closed already.
@@ -86,7 +86,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa binary {@link WebSocketFrame} to this {@link WebSocket}.
+     * Writes a binary {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @return {@code true} if the data has been scheduled for publication. {@code false} if the
      *         writer has been closed already.
@@ -97,7 +97,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa binary {@link WebSocketFrame} to this {@link WebSocket}.
+     * Writes a binary {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @return {@code true} if the data has been scheduled for publication. {@code false} if the
      *         writer has been closed already.
@@ -108,7 +108,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa ping {@link WebSocketFrame} to this {@link WebSocket}.
+     * Writes a ping {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @see WebSocketFrame#ofPing()
      */
@@ -117,7 +117,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa ping {@link WebSocketFrame} to this {@link WebSocket} with the data.
+     * Writes a ping {@link WebSocketFrame} to this {@link WebSocket} with the data.
      *
      * @see WebSocketFrame#ofPing(byte[])
      */
@@ -126,7 +126,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa pong {@link WebSocketFrame} to this {@link WebSocket}.
+     * Writes a pong {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @see WebSocketFrame#ofPong()
      */
@@ -135,7 +135,7 @@ public interface WebSocketWriter extends WebSocket, StreamWriter<WebSocketFrame>
     }
 
     /**
-     * Writesa pong {@link WebSocketFrame} to this {@link WebSocket} with the data.
+     * Writes a pong {@link WebSocketFrame} to this {@link WebSocket} with the data.
      *
      * @see WebSocketFrame#ofPong(byte[])
      */
