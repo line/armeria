@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -33,7 +34,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -47,7 +47,7 @@ public class HttpClientPipeliningTest {
 
     // Server-side configuration
     private static final Semaphore semaphore = new Semaphore(0);
-    private static final Lock lock = new ReentrantShortLock();
+    private static final Lock lock = new ReentrantLock();
     private static final Condition condition = lock.newCondition();
     private static volatile boolean connectionReturnedToPool;
 
