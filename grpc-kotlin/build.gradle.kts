@@ -6,5 +6,4 @@ dependencies {
     implementation(libs.kotlin.coroutines.jdk8)
 
     testImplementation(libs.kotlin.coroutines.test)
-    testRuntimeOnly(libs.kotlin.coroutines.debug)
 }

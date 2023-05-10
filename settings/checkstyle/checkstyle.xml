@@ -125,6 +125,12 @@
     <property name="format" value="Metrics.globalRegistry"/>
     <property name="message" value="Use Flags.meterRegistry() instead."/>
   </module>
+  <!--  Prefer ReentrantShortLock -->
+  <module name="RegexpSingleline">
+    <property name="id" value="PreferReentrantShortLock"/>
+    <property name="format" value="new ReentrantLock("/>
+    <property name="message" value="Use ReentrantShortLock instead."/>
+  </module>
 
   <module name="JavadocPackage"/>
 

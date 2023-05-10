@@ -696,14 +696,7 @@ public final class Server implements ListenableAsyncCloseable {
                                                            .stream()
                                                            .map(ShutdownSupport::shutdown)
                                                            .collect(toImmutableList()), cause -> null)
-                                  .handle((ignored, cause) -> {
-                                      if (cause != null) {
-                                          future.completeExceptionally(cause);
-                                          return null;
-                                      }
-                                      future.complete(null);
-                                      return null;
-                                  });
+                                  .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
             }, config.startStopExecutor());
         }
 

@@ -3,5 +3,4 @@ dependencies {
     testImplementation(libs.jackson.kotlin)
     testImplementation(libs.kotlin.coroutines.reactor)
     testImplementation(libs.spring.boot3.starter.test)
-    testRuntimeOnly(libs.kotlin.coroutines.debug)
 }

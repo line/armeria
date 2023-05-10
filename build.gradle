@@ -173,7 +173,7 @@ configure(projectsWithFlags('java')) {
         implementation libs.reflections
 
         // Blockhound
-        implementation libs.blockhound
+        optionalImplementation libs.blockhound
 
         // Test-time dependencies
         testImplementation libs.guava.testlib
@@ -193,6 +193,7 @@ configure(projectsWithFlags('java')) {
         testImplementation libs.apache.httpclient5
         testImplementation libs.hamcrest
         testImplementation libs.hamcrest.library
+        testRuntimeOnly libs.kotlin.coroutines.debug
 
         if (rootProject.hasProperty('blockhound')) {
             testRuntimeOnly libs.blockhound.junit.platform

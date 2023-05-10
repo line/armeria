@@ -2,5 +2,4 @@
 // and the `:armeria-kotlin` dependency is not added.
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    testRuntimeOnly(libs.kotlin.coroutines.debug)
 }

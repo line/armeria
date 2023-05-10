@@ -7,5 +7,4 @@ dependencies {
     testImplementation(libs.kotlin.coroutines.core)
     testImplementation(libs.grpc.kotlin)
     testImplementation(libs.javax.annotation)
-    testRuntimeOnly(libs.kotlin.coroutines.debug)
 }
