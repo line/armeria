@@ -355,14 +355,22 @@ public final class RequestMetricSupport {
 
         @Override
         public DistributionSummary successAttempts() {
-            return parent.summary(idPrefix.name("actual.requests.attempts"),
-                                  idPrefix.tags("result", "success"));
+            if (successAttempts != null) {
+                return successAttempts;
+            }
+            return successAttempts = newDistributionSummary(parent,
+                                                            idPrefix.name("actual.requests.attempts"),
+                                                            idPrefix.tags("result", "success"));
         }
 
         @Override
         public DistributionSummary failureAttempts() {
-            return parent.summary(idPrefix.name("actual.requests.attempts"),
-                                  idPrefix.tags("result", "failure"));
+            if (failureAttempts != null) {
+                return failureAttempts;
+            }
+            return failureAttempts = newDistributionSummary(parent,
+                                                            idPrefix.name("actual.requests.attempts"),
+                                                            idPrefix.tags("result", "failure"));
         }
     }
 
