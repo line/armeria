@@ -35,15 +35,10 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (ctx.shouldReportUnhandledExceptions() && !isIgnorableException(cause)) {
-            reporter.report(cause);
+        if (ctx.shouldReportUnhandledExceptions()) {
+            reporter.report(ctx, cause);
         }
         return delegate.onServiceException(ctx, cause);
-    }
-
-    private static boolean isIgnorableException(Throwable cause) {
-        return (cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
-               cause.getCause() == null;
     }
 
     @Nullable

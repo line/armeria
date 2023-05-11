@@ -33,7 +33,6 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.DependencyInjector;
@@ -640,13 +639,9 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Nullable
-    UnhandledExceptionsReporter unhandledExceptionsReporter() {
-        return unhandledExceptionsReporter;
-    }
-
     @Override
-    public long unhandledExceptionsReportIntervalMillis() {
-        return unhandledExceptionsReporter == null ? 0 : unhandledExceptionsReporter.intervalMillis();
+    public UnhandledExceptionsReporter unhandledExceptionsReporter() {
+        return unhandledExceptionsReporter;
     }
 
     List<ShutdownSupport> shutdownSupports() {
@@ -670,7 +665,7 @@ final class DefaultServerConfig implements ServerConfig {
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled(),
-                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis());
+                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReporter());
         }
 
         return strVal;
@@ -695,7 +690,7 @@ final class DefaultServerConfig implements ServerConfig {
             boolean serverHeaderEnabled, boolean dateHeaderEnabled,
             @Nullable DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
-            long unhandledExceptionsReportIntervalMillis) {
+            UnhandledExceptionsReporter unhandledExceptionsReporter) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -794,8 +789,8 @@ final class DefaultServerConfig implements ServerConfig {
         }
         buf.append(", absoluteUriTransformer: ");
         buf.append(absoluteUriTransformer);
-        buf.append(", unhandledExceptionsReportIntervalMillis: ");
-        buf.append(unhandledExceptionsReportIntervalMillis);
+        buf.append(", unhandledExceptionsReporter: ");
+        buf.append(unhandledExceptionsReporter);
         buf.append(')');
 
         return buf.toString();

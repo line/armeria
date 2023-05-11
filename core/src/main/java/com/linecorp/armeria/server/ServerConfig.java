@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
@@ -308,7 +309,8 @@ public interface ServerConfig {
     Function<String, String> absoluteUriTransformer();
 
     /**
-     * Returns the interval between reporting unhandled exceptions in milliseconds.
+     * Returns the {@link UnhandledExceptionsReporter} used to report unhandled exceptions.
      */
-    long unhandledExceptionsReportIntervalMillis();
+    @Nullable
+    UnhandledExceptionsReporter unhandledExceptionsReporter();
 }

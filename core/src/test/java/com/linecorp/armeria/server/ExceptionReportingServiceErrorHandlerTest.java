@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,9 +30,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Spy;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -47,11 +51,19 @@ class ExceptionReportingServiceErrorHandlerTest {
     private static final long reportIntervalMillis = 1000;
     private static final long awaitIntervalMillis = 2000;
 
+    private static final UnhandledExceptionsReporter reporter =
+            UnhandledExceptionsReporter.builder(reportIntervalMillis).build();
+    private static final Deque<Throwable> reportedCauses = new ArrayDeque<>();
+    private static final UnhandledExceptionsReporter delegatingReporter = (ctx, cause) -> {
+        reportedCauses.add(cause);
+        reporter.report(ctx, cause);
+    };
+
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.unhandledExceptionsReportIntervalMillis(reportIntervalMillis);
+            sb.unhandledExceptionsReporter(delegatingReporter);
             sb.service("/hello", (ctx, req) -> {
                 throw HttpStatusException.of(HttpStatus.BAD_REQUEST,
                                              new IllegalArgumentException("test"));
@@ -69,6 +81,9 @@ class ExceptionReportingServiceErrorHandlerTest {
               .path("/ok")
               .decorator(LoggingService.newDecorator())
               .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.route()
+              .path("/streaming")
+              .build((ctx, req) -> HttpResponse.streaming());
         }
     };
 
@@ -76,11 +91,8 @@ class ExceptionReportingServiceErrorHandlerTest {
     public void beforeEach() {
         logAppender.start();
         errorHandlerLogger.addAppender(logAppender);
-
-        final UpdatableServerConfig config = (UpdatableServerConfig) server.server().config();
-        final DefaultUnhandledExceptionsReporter reporter =
-                (DefaultUnhandledExceptionsReporter) config.unhandledExceptionsReporter();
-        reporter.reset();
+        ((DefaultUnhandledExceptionsReporter) reporter).reset();
+        reportedCauses.clear();
     }
 
     @AfterEach
@@ -97,6 +109,10 @@ class ExceptionReportingServiceErrorHandlerTest {
         await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
                .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
+        assertThat(reportedCauses).hasSize(1);
+        final Throwable throwable = reportedCauses.pop();
+        assertThat(throwable).isInstanceOf(HttpStatusException.class)
+                             .hasCauseInstanceOf(IllegalArgumentException.class);
         assertThat(logAppender.list
                            .stream()
                            .filter(event -> event.getFormattedMessage().contains(
@@ -110,7 +126,8 @@ class ExceptionReportingServiceErrorHandlerTest {
         assertThat(res.status().code()).isEqualTo(400);
 
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        await().until(() -> logAppender.list.isEmpty());
+        assertThat(reportedCauses).hasSize(1).singleElement().isInstanceOf(HttpStatusException.class);
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test
@@ -119,7 +136,8 @@ class ExceptionReportingServiceErrorHandlerTest {
         assertThat(res.status().code()).isEqualTo(500);
 
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        await().until(() -> logAppender.list.isEmpty());
+        assertThat(reportedCauses).isEmpty();
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test
@@ -128,6 +146,20 @@ class ExceptionReportingServiceErrorHandlerTest {
         assertThat(res.status().code()).isEqualTo(200);
 
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        await().until(() -> logAppender.list.isEmpty());
+        assertThat(reportedCauses).isEmpty();
+        assertThat(logAppender.list).isEmpty();
+    }
+
+    @Test
+    void streamExceptionsAreNotLogged() throws Exception {
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            final HttpResponse res = server.webClient(cb -> cb.factory(cf)).get("/streaming");
+            await().until(() -> !server.requestContextCaptor().isEmpty());
+        }
+
+        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+        assertThat(reportedCauses).hasSize(1).singleElement()
+                                  .isInstanceOf(ClosedStreamException.class);
+        assertThat(logAppender.list).isEmpty();
     }
 }

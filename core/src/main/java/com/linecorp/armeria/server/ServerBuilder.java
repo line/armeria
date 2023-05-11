@@ -161,6 +161,7 @@ public final class ServerBuilder implements TlsSetters {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
+    private static final long UNSET_REPORT_INTERVAL = -1;
 
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
@@ -212,8 +213,9 @@ public final class ServerBuilder implements TlsSetters {
     @Nullable
     private DependencyInjector dependencyInjector;
     private Function<? super String, String> absoluteUriTransformer = Function.identity();
-    private long unhandledExceptionsReportIntervalMillis =
-            Flags.defaultUnhandledExceptionsReportIntervalMillis();
+    private long unhandledExceptionsReportIntervalMillis = UNSET_REPORT_INTERVAL;
+    @Nullable
+    private UnhandledExceptionsReporter unhandledExceptionsReporter;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     ServerBuilder() {
@@ -1869,8 +1871,11 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the interval between reporting exceptions which is not handled or logged
-     * by any decorators or services such as {@link LoggingService}.
+     * Sets the interval between reporting unhandled exceptions for the default
+     * {@link UnhandledExceptionsReporter}. Exceptions which are not handled or logged
+     * by any decorators or services such as {@link LoggingService} will be reported.
+     * Note that this parameter is mutually exclusive with
+     * {@link #unhandledExceptionsReporter(UnhandledExceptionsReporter)}.
      * @param unhandledExceptionsReportInterval the interval between reports,
      *        or {@link Duration#ZERO} to disable this feature
      * @throws IllegalArgumentException if specified {@code interval} is negative.
@@ -1883,8 +1888,11 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the interval between reporting exceptions which is not handled or logged
-     * by any decorators or services such as {@link LoggingService}.
+     * Sets the interval between reporting unhandled exceptions for the default
+     * {@link UnhandledExceptionsReporter}. Exceptions which are not handled or logged
+     * by any decorators or services such as {@link LoggingService} will be reported.
+     * Note that this parameter is mutually exclusive with
+     * {@link #unhandledExceptionsReporter(UnhandledExceptionsReporter)}.
      * @param unhandledExceptionsReportIntervalMillis the interval between reports in milliseconds,
      *        or {@code 0} to disable this feature
      * @throws IllegalArgumentException if specified {@code interval} is negative.
@@ -1895,6 +1903,23 @@ public final class ServerBuilder implements TlsSetters {
                       "unhandledExceptionsReportIntervalMillis: %s (expected: >= 0)",
                       unhandledExceptionsReportIntervalMillis);
         this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
+        return this;
+    }
+
+    /**
+     * Sets the {@link UnhandledExceptionsReporter} which will report unhandled exceptions.
+     * Exceptions which are not handled or logged
+     * by any decorators or services such as {@link LoggingService} will be reported.
+     * Note that this parameter is mutually exclusive with
+     * {@link #unhandledExceptionsReportIntervalMillis(long)} and
+     * {@link #unhandledExceptionsReportInterval(Duration)}.
+     * @param unhandledExceptionsReporter the {@link UnhandledExceptionsReporter} which will be used
+     *        to report unhandled exceptions
+     */
+    @UnstableApi
+    public ServerBuilder unhandledExceptionsReporter(UnhandledExceptionsReporter unhandledExceptionsReporter) {
+        this.unhandledExceptionsReporter =
+                requireNonNull(unhandledExceptionsReporter, "unhandledExceptionsReporter");
         return this;
     }
 
@@ -1917,14 +1942,7 @@ public final class ServerBuilder implements TlsSetters {
         assert extensions != null;
         final DependencyInjector dependencyInjector = dependencyInjectorOrReflective();
 
-        final UnhandledExceptionsReporter unhandledExceptionsReporter;
-        if (unhandledExceptionsReportIntervalMillis > 0) {
-            unhandledExceptionsReporter = UnhandledExceptionsReporter.of(
-                    meterRegistry, unhandledExceptionsReportIntervalMillis);
-            serverListeners.add(unhandledExceptionsReporter);
-        } else {
-            unhandledExceptionsReporter = null;
-        }
+        final UnhandledExceptionsReporter unhandledExceptionsReporter = reporter();
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
@@ -2120,6 +2138,31 @@ public final class ServerBuilder implements TlsSetters {
         }
     }
 
+    @Nullable
+    private UnhandledExceptionsReporter reporter() {
+        if (unhandledExceptionsReportIntervalMillis != UNSET_REPORT_INTERVAL &&
+            unhandledExceptionsReporter != null) {
+            throw new IllegalArgumentException(
+                    "unhandledExceptionsReportInterval() and unhandledExceptionsReporter() " +
+                    "are mutually exclusive.");
+        }
+        if (unhandledExceptionsReporter != null) {
+            return unhandledExceptionsReporter;
+        }
+
+        if (unhandledExceptionsReportIntervalMillis == UNSET_REPORT_INTERVAL) {
+            unhandledExceptionsReportIntervalMillis = Flags.defaultUnhandledExceptionsReportIntervalMillis();
+        }
+        if (unhandledExceptionsReportIntervalMillis > 0) {
+            final DefaultUnhandledExceptionsReporter reporter =
+                    new DefaultUnhandledExceptionsReporter(meterRegistry,
+                                                           unhandledExceptionsReportIntervalMillis);
+            serverListeners.add(reporter);
+            return reporter;
+        }
+        return unhandledExceptionsReporter;
+    }
+
     @Override
     public String toString() {
         return DefaultServerConfig.toString(
@@ -2131,6 +2174,6 @@ public final class ServerBuilder implements TlsSetters {
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportIntervalMillis);
+                unhandledExceptionsReporter);
     }
 }

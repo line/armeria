@@ -20,22 +20,26 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.BiPredicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 
-final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsReporter {
+final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsReporter, ServerListener {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultUnhandledExceptionsReporter.class);
+
     private static final AtomicIntegerFieldUpdater<DefaultUnhandledExceptionsReporter> scheduledUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultUnhandledExceptionsReporter.class,
                                                  "scheduled");
@@ -53,15 +57,26 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     private ScheduledFuture<?> reportingTaskFuture;
     @Nullable
     private Throwable thrownException;
+    BiPredicate<ServiceRequestContext, Throwable> ignorePredicate;
 
     DefaultUnhandledExceptionsReporter(MeterRegistry meterRegistry, long intervalMillis) {
+        this(meterRegistry, intervalMillis, (ctx, cause) -> defaultIsIgnorableException(cause));
+    }
+
+    DefaultUnhandledExceptionsReporter(MeterRegistry meterRegistry, long intervalMillis,
+                                       BiPredicate<ServiceRequestContext, Throwable> ignorePredicate) {
         this.intervalMillis = intervalMillis;
         micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unhandled");
         counter = new LongAdder();
+        this.ignorePredicate = ignorePredicate;
     }
 
     @Override
-    public void report(Throwable cause) {
+    public void report(ServiceRequestContext ctx, Throwable cause) {
+        if (ignorePredicate.test(ctx, cause)) {
+            return;
+        }
+
         if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
             reportingTaskFuture = startReporterScheduling();
         }
@@ -122,11 +137,6 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
         lastExceptionsCount = totalExceptionsCount;
     }
 
-    @Override
-    public long intervalMillis() {
-        return intervalMillis;
-    }
-
     @VisibleForTesting
     synchronized void reset() {
         if (reportingTaskFuture != null) {
@@ -136,6 +146,29 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
             thrownException = null;
             reportingTaskFuture = startReporterScheduling();
         }
+    }
+
+    @Override
+    public long intervalMillis() {
+        return intervalMillis;
+    }
+
+    private static boolean defaultIsIgnorableException(Throwable cause) {
+        if ((cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
+            cause.getCause() == null) {
+            return true;
+        }
+        if (cause instanceof ClosedStreamException) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("intervalMillis", intervalMillis)
+                          .toString();
     }
 }
 

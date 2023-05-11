@@ -16,15 +16,48 @@
 
 package com.linecorp.armeria.server;
 
-import io.micrometer.core.instrument.MeterRegistry;
+import com.linecorp.armeria.server.logging.LoggingService;
 
-interface UnhandledExceptionsReporter extends ServerListener {
+/**
+ * A reporter which reports unhandled exceptions for each request.
+ * An unhandled exception is an exception which satisfies the following conditions:
+ * <ul>
+ *     <li>An exception for a request which is not logged by a {@link LoggingService}</li>
+ *     <li>An exception for a request which is not explicitly disabled using
+ *     {@link ServiceRequestContext#setShouldReportUnhandledExceptions(boolean)}</li>
+ * </ul>
+ * This reporter may be set via {@link ServerBuilder#unhandledExceptionsReporter(UnhandledExceptionsReporter)}.
+ * <pre>{@code
+ * Server.builder()
+ * ...
+ *       .unhandledExceptionsReporter(new UnhandledExceptionsReporter() {
+ *           @Override
+ *           public void report(Throwable cause) {
+ *               logger.info("Unhandled exception: ", cause);
+ *           }
+ *       }).build().start();
+ * }</pre>
+ */
+public interface UnhandledExceptionsReporter {
 
-    static UnhandledExceptionsReporter of(MeterRegistry meterRegistry, long intervalMillis) {
-        return new DefaultUnhandledExceptionsReporter(meterRegistry, intervalMillis);
+    /**
+     * A builder for creating the default built-in {@link UnhandledExceptionsReporter}.
+     */
+    static UnhandledExceptionsReporterBuilder builder(long unhandledExceptionsReportIntervalMillis) {
+        return new UnhandledExceptionsReporterBuilder(unhandledExceptionsReportIntervalMillis);
     }
 
-    void report(Throwable cause);
+    /**
+     * A callback method which is invoked whenever an unhandled exception is reported.
+     */
+    void report(ServiceRequestContext ctx, Throwable cause);
 
-    long intervalMillis();
+    /**
+     * The interval by which {@link UnhandledExceptionsReporter} may report
+     * unhandled exceptions. Note that this is an optional value which implementations
+     * may choose not to override.
+     */
+    default long intervalMillis() {
+        return 0;
+    }
 }
