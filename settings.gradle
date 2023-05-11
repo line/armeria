@@ -7,6 +7,15 @@ plugins {
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id("org.gradle.toolchains.foojay-resolver") version "0.5.0"
 }
+toolchainManagement {
+    jvm {
+        javaRepositories {
+            repository("foojay") {
+                resolverClass = org.gradle.toolchains.foojay.FoojayToolchainResolver
+            }
+        }
+    }
+}
 
 rootProject.name = 'armeria'
 
