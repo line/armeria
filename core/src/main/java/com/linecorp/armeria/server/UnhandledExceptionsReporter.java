@@ -25,4 +25,6 @@ interface UnhandledExceptionsReporter extends ServerListener {
     }
 
     void report(Throwable cause);
+
+    long intervalMillis();
 }

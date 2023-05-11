@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.LongAdder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
@@ -61,8 +63,7 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     @Override
     public void report(Throwable cause) {
         if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
-            reportingTaskFuture = CommonPools.workerGroup().next().scheduleAtFixedRate(
-                    this::reportException, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
+            reportingTaskFuture = startReporterScheduling();
         }
 
         if (thrownException == null) {
@@ -71,6 +72,11 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
 
         micrometerCounter.increment();
         counter.increment();
+    }
+
+    private io.netty.util.concurrent.ScheduledFuture<?> startReporterScheduling() {
+        return CommonPools.workerGroup().next().scheduleAtFixedRate(
+                this::reportException, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -114,6 +120,19 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
         }
 
         lastExceptionsCount = totalExceptionsCount;
+    }
+
+    @Override
+    public long intervalMillis() {
+        return intervalMillis;
+    }
+
+    @VisibleForTesting
+    synchronized void reset() {
+        if (reportingTaskFuture != null) {
+            reportingTaskFuture.cancel(true);
+            reportingTaskFuture = startReporterScheduling();
+        }
     }
 }
 

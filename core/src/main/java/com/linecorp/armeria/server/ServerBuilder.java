@@ -2035,7 +2035,7 @@ public final class ServerBuilder implements TlsSetters {
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
+                unhandledExceptionsReporter, ImmutableList.copyOf(shutdownSupports));
     }
 
     /**

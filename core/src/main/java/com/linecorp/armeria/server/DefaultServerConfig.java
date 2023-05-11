@@ -108,7 +108,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
     private final Function<String, String> absoluteUriTransformer;
-    private final long unhandledExceptionsReportIntervalMillis;
+    private final UnhandledExceptionsReporter unhandledExceptionsReporter;
     private final List<ShutdownSupport> shutdownSupports;
 
     @Nullable
@@ -141,7 +141,7 @@ final class DefaultServerConfig implements ServerConfig {
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
-            long unhandledExceptionsReportIntervalMillis,
+            UnhandledExceptionsReporter unhandledExceptionsReporter,
             List<ShutdownSupport> shutdownSupports) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -255,7 +255,7 @@ final class DefaultServerConfig implements ServerConfig {
         final Function<String, String> castAbsoluteUriTransformer =
                 (Function<String, String>) requireNonNull(absoluteUriTransformer, "absoluteUriTransformer");
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
-        this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
+        this.unhandledExceptionsReporter = unhandledExceptionsReporter;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
     }
 
@@ -638,8 +638,8 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public long unhandledExceptionsReportIntervalMillis() {
-        return unhandledExceptionsReportIntervalMillis;
+    public UnhandledExceptionsReporter unhandledExceptionsReporter() {
+        return unhandledExceptionsReporter;
     }
 
     List<ShutdownSupport> shutdownSupports() {
@@ -663,7 +663,7 @@ final class DefaultServerConfig implements ServerConfig {
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled(),
-                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis());
+                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReporter().intervalMillis());
         }
 
         return strVal;

@@ -649,13 +649,13 @@ class ServerBuilderTest {
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .unhandledExceptionsReportInterval(Duration.ofMillis(1000))
                                      .build();
-        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+        assertThat(server1.config().unhandledExceptionsReporter().intervalMillis()).isEqualTo(1000);
 
         final Server server2 = Server.builder()
                                      .unhandledExceptionsReportInterval(Duration.ofMillis(0))
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+        assertThat(server2.config().unhandledExceptionsReporter().intervalMillis()).isZero();
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
@@ -670,13 +670,13 @@ class ServerBuilderTest {
                                      .unhandledExceptionsReportIntervalMillis(1000)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+        assertThat(server1.config().unhandledExceptionsReporter().intervalMillis()).isEqualTo(1000);
 
         final Server server2 = Server.builder()
                                      .unhandledExceptionsReportIntervalMillis(0)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+        assertThat(server2.config().unhandledExceptionsReporter().intervalMillis()).isZero();
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
