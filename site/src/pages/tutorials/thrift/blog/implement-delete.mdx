@@ -56,7 +56,7 @@ public class BlogClient {
     ...
     void deleteBlogPost(int id) throws Exception {
         final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
-        client.deleteBlogPost(request);
+        blogService.deleteBlogPost(request);
     }
 }
 ```
