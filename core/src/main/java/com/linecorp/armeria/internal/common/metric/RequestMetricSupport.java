@@ -320,7 +320,10 @@ public final class RequestMetricSupport {
 
         @Override
         public Counter actualRequests() {
-            return parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
+            if (actualRequests != null) {
+                return actualRequests;
+            }
+            return actualRequests = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
         }
 
         @Override
