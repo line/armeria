@@ -205,7 +205,7 @@ tasks.shadedTest.finalizedBy testing.suites.testStreaming
 tasks.check.dependsOn testing.suites.testStreaming
 
 // Run the test cases based on reactive-streams-tck only with non-flaky mode
-if (rootProject.findProperty('FLAKY_TESTS') != 'true') {
+if (rootProject.findProperty('flakyTests') != 'true') {
     testing {
         suites {
             testNg(JvmTestSuite) {

@@ -158,11 +158,11 @@ configure(projectsWithFlags('java')) {
 
                             def flakyTests = rootProject.findProperty('flakyTests')
                             if (flakyTests == 'true') {
-                                options {
+                                useJUnitPlatform {
                                     includeTags 'FLAKY_TESTS'
                                 }
                             } else if (flakyTests == 'false') {
-                                options {
+                                useJUnitPlatform {
                                     excludeTags 'FLAKY_TESTS'
                                 }
                             } else if (flakyTests != null) {
