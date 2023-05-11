@@ -18,7 +18,12 @@ Follow this tutorial to write a service yourself or try [running the sample serv
 
 Before we start, let's swiftly go over Armeria's Thrift features:
 
-// TW: Thrift 관련 기능 작성 부탁드립니다.
+- Transport over HTTP/1.1 or HTTP/2.
+- Support for `TBINARY`, `TCOMPACT`, `TJSON` and `TTEXT` [serialization formats](/docs/server-thrift#serialization-formats).
+- RPC level decorator support for both [client](/docs/client-decorator#implementing-decoratinghttpclientfunction-and-decoratingrpcclientfunction)
+and [server](/docs/server-decorator#implementing-decoratinghttpservicefunction-and-decoratingrpcservicefunction).
+- Out of the box support for circuit breaker, retries, metric collection and more.
+- Full-fledged [Thrift documentation service](/docs/server-docservice).
 
 ## Assumptions
 
@@ -30,9 +35,10 @@ This tutorial assumes that you have:
 
 ## Prerequisites
 
-To run and develop the sample service, you need JDK 11 or higher.
+To run and develop the sample service, set your computer with the requirements:
 
-// TW: 혹시 thrift compiler 설치(https://thrift.apache.org/docs/install/)를 prerequisite으로 추가해야할지 궁금합니다. 저는 컴파일러를 설치해야만 컴파일이 되던데, 설치하는 게 맞는지 아니면 제가 Gradle 설정을 잘못한 건지 모르겠어서 질문 드려요.
+* JDK 11 or higher
+* Thrift compiler: Install a thrift compiler by either [building from source](https://thrift.apache.org/docs/install/) or using a package manager like `brew` or `apt` depending on your environment.
 
 ## Sample service and client
 
@@ -41,9 +47,7 @@ The main part of the tutorial is to implement the sample service, while building
 ### Sample service
 
 The sample service provides you implementations of CRUD operations with corresponding service methods.
-[The source code](https://github.com/line/armeria/tree/main/examples/tutorials/thrift) consists the following folders and files.
-
-// TW: 이 경로(https://github.com/line/armeria/tree/main/examples/tutorials/thrift)의 build.gradle 파일은 상위 프로젝트에 종속성이 있어서, 지난 회의에서 종속성 없는 튜토리얼 버전으로 다시 작성하기로 얘기했습니다. 업데이트 부탁드립니다!
+[The source code](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) consists the following folders and files.
 
 ```
 thrift-server/
@@ -73,7 +77,21 @@ In this tutorial, we use [gradle](https://gradle.org/) as the build tool and use
 </Tip>
 
 <CodeBlock language="groovy" filename="build.gradle">{`
-// TW: 작성 부탁드리겠습니다.
+plugins {
+    id "org.jruyi.thrift" version "0.4.2"
+    id "java"
+    id "idea"
+    id "eclipse"
+}\n
+repositories {
+  mavenCentral()
+}\n
+dependencies {
+  implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  implementation "com.linecorp.armeria:armeria-thrift0.17:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  // Logging
+  runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"
+}
 `}</CodeBlock>
 
 ### Sample client
@@ -103,7 +121,7 @@ thrift-client/
 Try running the sample service and see the outcome of this tutorial.
 Using Armeria's [Documentation Service](/docs/server-docservice), you can easily verify a server is running, receiving requests and sending responses.
 
-1. Download the code from [here](https://github.com/line/armeria/tree/main/examples/tutorials/thrift).
+1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift).
 2. Build the sample service using the Gradle Wrapper.
   ```bash
   $ ./gradlew build
