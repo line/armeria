@@ -2,51 +2,6 @@
 
 There are several ways to override the default timeouts at server-side.
 
-## Global Configuration
-
-You may globally configure the default timeout with system properties or a custom <type://FlagsProvider>.
-
-### Using JVM system properties
-
-You can override the default server timeouts by specifying the following JVM system properties if you do not prefer setting it programmatically.
-
-`-Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>`
-
-Represents the amount of time from receiving a request to sending the corresponding response completely. Default: `10000`.
-
-<Warning>
-
-  The JVM system properties have effect only when you did not specify them programmatically.
-  See <type://Flags> for the complete list of JVM system properties in Armeria.
-
-</Warning>
-
-### Using <type://FlagsProvider>
-
-You can override the request timeout specified by JVM system properties by implementing your own <type://FlagsProvider> and loading it via Java SPI.
-
-```java
-package com.example.providers;
-
-// Add the following text file to your classpath or JAR file:
-//
-// $ cat META-INF/services/com.linecorp.armeria.common.FlagsProvider
-// com.example.providers.MyFlagsProvider
-//
-public class MyFlagsProvider implements FlagsProvider {
-  @Override
-  public int priority() {
-    // The provider with higher value will be evaluated first.
-    return 100;
-  }
-
-  @Override
-  public Long defaultRequestTimeoutMillis() {
-      return 1000L;
-  }
-}
-```
-
 ## Using <type://ServerBuilder>
 ```java
 import com.linecorp.armeria.server.Server;
@@ -167,3 +122,49 @@ public class HelloService {
 
 }
 ```
+
+## Global Configuration
+
+You may globally configure the default timeout with system properties or a custom <type://FlagsProvider>.
+
+### Using <type://FlagsProvider>
+
+You can override the request timeout specified by JVM system properties by implementing your own <type://FlagsProvider> and loading it via Java SPI.
+
+```java
+package com.example.providers;
+
+// Add the following text file to your classpath or JAR file:
+//
+// $ cat META-INF/services/com.linecorp.armeria.common.FlagsProvider
+// com.example.providers.MyFlagsProvider
+//
+public class MyFlagsProvider implements FlagsProvider {
+  @Override
+  public int priority() {
+    // The provider with higher value will be evaluated first.
+    return 100;
+  }
+
+  @Override
+  public Long defaultRequestTimeoutMillis() {
+      return 1000L;
+  }
+}
+```
+
+### Using JVM system properties
+
+You can override the default server timeouts by specifying the following JVM system properties if you do not prefer setting it programmatically.
+
+`-Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>`
+
+Represents the amount of time from receiving a request to sending the corresponding response completely. Default: `10000`.
+
+<Warning>
+
+  The JVM system properties have effect only when you did not specify them programmatically.
+  See <type://Flags> for the complete list of JVM system properties in Armeria.
+
+</Warning>
+
