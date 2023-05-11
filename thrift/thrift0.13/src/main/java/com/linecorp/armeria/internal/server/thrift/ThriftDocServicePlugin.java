@@ -33,7 +33,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -125,8 +124,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                 for (Class<?> iface : entry.interfaces()) {
                     final Class<?> serviceClass = iface.getEnclosingClass();
                     final EntryBuilder builder =
-                            map.computeIfAbsent(serviceClass, cls -> new EntryBuilder(serviceClass));
-                    builder.thriftServiceEntry(entry);
+                            map.computeIfAbsent(serviceClass, cls -> new EntryBuilder(serviceClass, entry));
                     // Add all available endpoints. Accept only the services with exact and prefix path
                     // mappings, whose endpoint path can be determined.
                     final Route route = c.route();
@@ -164,8 +162,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     @Nullable
-    ServiceInfo newServiceInfo(Entry entry,
-                               DocServiceFilter filter) {
+    ServiceInfo newServiceInfo(Entry entry, DocServiceFilter filter) {
         final Class<?> serviceClass = entry.serviceType;
         requireNonNull(serviceClass, "serviceClass");
 
@@ -194,7 +191,6 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     private MethodInfo newMethodInfo(Method method, Entry entry,
                                      DocServiceFilter filter) {
         final String methodName = method.getName();
-
         final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
         final String serviceName = serviceClass.getName();
         if (!filter.test(name(), serviceName, methodName)) {
@@ -204,9 +200,10 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         // Need get the function name in thrift proto,
         // otherwise the argsClassName maybe wrong when use fullcamel compile option
-        final String thriftFunctionName = Optional.ofNullable(entry.thriftServiceEntry)
-                                                  .map(x -> x.functionName(methodName))
-                                                  .orElse(methodName);
+        String thriftFunctionName = methodName;
+        if (entry.thriftServiceEntry != null) {
+            thriftFunctionName = entry.thriftServiceEntry.functionName(methodName);
+        }
         final String argsClassName = serviceName + '$' + thriftFunctionName + "_args";
         final Class<? extends TBase<?, ?>> argsClass;
         try {
@@ -220,7 +217,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         Class<?> resultClass;
         try {
-            resultClass = Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
+            resultClass = Class.forName(serviceName + '$' + thriftFunctionName + "_result", false, classLoader);
         } catch (ClassNotFoundException ignored) {
             // Oneway function does not have a result type.
             resultClass = null;
@@ -228,7 +225,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         @SuppressWarnings("unchecked")
         final MethodInfo methodInfo =
-                newMethodInfo(serviceName, methodName, argsClass,
+                newMethodInfo(serviceName, thriftFunctionName, argsClass,
                               (Class<? extends TBase<?, ?>>) resultClass,
                               (Class<? extends TException>[]) method.getExceptionTypes(),
                               entry.endpointInfos);
@@ -306,10 +303,11 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     public static final class Entry {
         final Class<?> serviceType;
         final List<EndpointInfo> endpointInfos;
+        @Nullable
         final ThriftServiceEntry thriftServiceEntry;
 
         Entry(Class<?> serviceType, List<EndpointInfo> endpointInfos,
-              ThriftServiceEntry thriftServiceEntry) {
+              @Nullable ThriftServiceEntry thriftServiceEntry) {
             this.serviceType = serviceType;
             this.endpointInfos = ImmutableList.copyOf(endpointInfos);
             this.thriftServiceEntry = thriftServiceEntry;
@@ -320,19 +318,20 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     public static final class EntryBuilder {
         private final Class<?> serviceType;
         private final List<EndpointInfo> endpointInfos = new ArrayList<>();
+        @Nullable
         private ThriftServiceEntry thriftServiceEntry;
 
         public EntryBuilder(Class<?> serviceType) {
+            this(serviceType, null);
+        }
+
+        public EntryBuilder(Class<?> serviceType, @Nullable ThriftServiceEntry thriftServiceEntry) {
             this.serviceType = requireNonNull(serviceType, "serviceType");
+            this.thriftServiceEntry = thriftServiceEntry;
         }
 
         public EntryBuilder endpoint(EndpointInfo endpointInfo) {
             endpointInfos.add(requireNonNull(endpointInfo, "endpointInfo"));
-            return this;
-        }
-
-        public EntryBuilder thriftServiceEntry(ThriftServiceEntry thriftServiceEntry) {
-            this.thriftServiceEntry = thriftServiceEntry;
             return this;
         }
 
