@@ -27,6 +27,8 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
@@ -288,9 +290,15 @@ final class UpdatableServerConfig implements ServerConfig {
         return delegate.absoluteUriTransformer();
     }
 
-    @Override
-    public UnhandledExceptionsReporter unhandledExceptionsReporter() {
+    @VisibleForTesting
+    @Nullable
+    UnhandledExceptionsReporter unhandledExceptionsReporter() {
         return delegate.unhandledExceptionsReporter();
+    }
+
+    @Override
+    public long unhandledExceptionsReportIntervalMillis() {
+        return delegate.unhandledExceptionsReportIntervalMillis();
     }
 
     @Override

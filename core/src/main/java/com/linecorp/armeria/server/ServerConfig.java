@@ -308,7 +308,7 @@ public interface ServerConfig {
     Function<String, String> absoluteUriTransformer();
 
     /**
-     * Returns the {@link UnhandledExceptionsReporter} which periodically reports unhandled exceptions.
+     * Returns the interval between reporting unhandled exceptions in milliseconds.
      */
-    UnhandledExceptionsReporter unhandledExceptionsReporter();
+    long unhandledExceptionsReportIntervalMillis();
 }

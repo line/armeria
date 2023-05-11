@@ -77,11 +77,10 @@ class ExceptionReportingServiceErrorHandlerTest {
         logAppender.start();
         errorHandlerLogger.addAppender(logAppender);
 
+        final UpdatableServerConfig config = (UpdatableServerConfig) server.server().config();
         final DefaultUnhandledExceptionsReporter reporter =
-                (DefaultUnhandledExceptionsReporter) server.server().config().unhandledExceptionsReporter();
-        if (reporter != null) {
-            reporter.reset();
-        }
+                (DefaultUnhandledExceptionsReporter) config.unhandledExceptionsReporter();
+        reporter.reset();
     }
 
     @AfterEach

@@ -33,6 +33,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.DependencyInjector;
@@ -108,6 +109,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
     private final Function<String, String> absoluteUriTransformer;
+    @Nullable
     private final UnhandledExceptionsReporter unhandledExceptionsReporter;
     private final List<ShutdownSupport> shutdownSupports;
 
@@ -141,7 +143,7 @@ final class DefaultServerConfig implements ServerConfig {
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
-            UnhandledExceptionsReporter unhandledExceptionsReporter,
+            @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
             List<ShutdownSupport> shutdownSupports) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -637,9 +639,14 @@ final class DefaultServerConfig implements ServerConfig {
         return absoluteUriTransformer;
     }
 
-    @Override
-    public UnhandledExceptionsReporter unhandledExceptionsReporter() {
+    @Nullable
+    UnhandledExceptionsReporter unhandledExceptionsReporter() {
         return unhandledExceptionsReporter;
+    }
+
+    @Override
+    public long unhandledExceptionsReportIntervalMillis() {
+        return unhandledExceptionsReporter == null ? 0 : unhandledExceptionsReporter.intervalMillis();
     }
 
     List<ShutdownSupport> shutdownSupports() {
@@ -663,7 +670,7 @@ final class DefaultServerConfig implements ServerConfig {
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled(),
-                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReporter().intervalMillis());
+                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis());
         }
 
         return strVal;

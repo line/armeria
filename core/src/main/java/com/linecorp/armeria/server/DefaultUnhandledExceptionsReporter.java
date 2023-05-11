@@ -131,6 +131,9 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     synchronized void reset() {
         if (reportingTaskFuture != null) {
             reportingTaskFuture.cancel(true);
+            counter.reset();
+            lastExceptionsCount = 0;
+            thrownException = null;
             reportingTaskFuture = startReporterScheduling();
         }
     }
