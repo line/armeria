@@ -93,12 +93,13 @@ public final class RequestMetricSupport {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
+        final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
         if (server) {
             final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                           ServiceRequestMetrics.class,
                                                                           DefaultServiceRequestMetrics::new);
-            updateMetrics(ctx, log, metrics, successFunction);
+            updateMetrics(log, metrics, isSuccess);
             if (log.responseCause() instanceof RequestTimeoutException) {
                 metrics.requestTimeouts().increment();
             }
@@ -108,7 +109,7 @@ public final class RequestMetricSupport {
         final ClientRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
-        updateMetrics(ctx, log, metrics, successFunction);
+        updateMetrics(log, metrics, isSuccess);
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
             metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
@@ -139,20 +140,20 @@ public final class RequestMetricSupport {
 
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
-            updateRetryingClientMetrics(ctx, log, metrics, childrenSize, successFunction);
+            updateRetryingClientMetrics(metrics, childrenSize, isSuccess);
         }
     }
 
     private static void updateMetrics(
-            RequestContext ctx, RequestLog log, RequestMetrics metrics,
-            SuccessFunction successFunction) {
+            RequestLog log, RequestMetrics metrics,
+            boolean isSuccess) {
         metrics.requestDuration().record(log.requestDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.requestLength().record(log.requestLength());
         metrics.responseDuration().record(log.responseDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.responseLength().record(log.responseLength());
         metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
 
-        if (successFunction.isSuccess(ctx, log)) {
+        if (isSuccess) {
             metrics.success().increment();
         } else {
             metrics.failure().increment();
@@ -160,17 +161,14 @@ public final class RequestMetricSupport {
     }
 
     private static void updateRetryingClientMetrics(
-            RequestContext ctx, RequestLog log,
-            ClientRequestMetrics metrics, int childrenSize,
-            SuccessFunction successFunction) {
+            ClientRequestMetrics metrics, int childrenSize, boolean isSuccess) {
 
         metrics.actualRequests().increment(childrenSize);
 
-        final boolean success = successFunction.isSuccess(ctx, log);
-        if (success) {
-            metrics.successAttempts().record(log.children().size());
+        if (isSuccess) {
+            metrics.successAttempts().record(childrenSize);
         } else {
-            metrics.failureAttempts().record(log.children().size());
+            metrics.failureAttempts().record(childrenSize);
         }
     }
 
