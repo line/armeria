@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -39,8 +36,6 @@ public final class CircuitBreakerClientBuilder
 
     private final boolean needsContentInRule;
     private final int maxContentLength;
-    private Optional<BiFunction<ClientRequestContext, HttpRequest, HttpResponse>> fallback =
-            Optional.empty();
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
@@ -67,9 +62,10 @@ public final class CircuitBreakerClientBuilder
      */
     public CircuitBreakerClient build(HttpClient delegate) {
         if (needsContentInRule) {
-            return new CircuitBreakerClient(delegate, handler(), ruleWithContent(), maxContentLength, fallback);
+            return new CircuitBreakerClient(
+                    delegate, handler(), ruleWithContent(), maxContentLength, fallback());
         }
-        return new CircuitBreakerClient(delegate, handler(), rule(), fallback);
+        return new CircuitBreakerClient(delegate, handler(), rule(), fallback());
     }
 
     /**
@@ -78,17 +74,6 @@ public final class CircuitBreakerClientBuilder
      */
     public Function<? super HttpClient, CircuitBreakerClient> newDecorator() {
         return this::build;
-    }
-
-    /**
-     * Sets the {@link BiFunction}. This is invoked when adding the fallback strategy.
-     *
-     * @return {@code this} to support method chaining.
-     */
-    public CircuitBreakerClientBuilder recover(
-            BiFunction<ClientRequestContext, HttpRequest, HttpResponse> fallback) {
-        this.fallback = Optional.of(requireNonNull(fallback, "fallback"));
-        return this;
     }
 
     // Methods that were overridden to change the return type.
@@ -102,6 +87,13 @@ public final class CircuitBreakerClientBuilder
     @UnstableApi
     public CircuitBreakerClientBuilder handler(CircuitBreakerClientHandler handler) {
         return (CircuitBreakerClientBuilder) super.handler(handler);
+    }
+
+    @Override
+    public CircuitBreakerClientBuilder recover(
+            BiFunction<? super ClientRequestContext, ? super HttpRequest, ? extends HttpResponse> fallback) {
+        super.recover(fallback);
+        return this;
     }
 
     @Override

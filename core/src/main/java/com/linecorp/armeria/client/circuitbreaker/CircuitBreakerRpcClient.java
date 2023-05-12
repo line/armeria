@@ -144,7 +144,17 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerClientHandler handler,
                             CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"));
+        this(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"), null);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link RpcClient}.
+     */
+    CircuitBreakerRpcClient(
+            RpcClient delegate, CircuitBreakerClientHandler handler,
+            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent,
+            BiFunction<? super ClientRequestContext, ? super RpcRequest, ? extends RpcResponse> fallback) {
+        super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"), fallback);
     }
 
     @Override
