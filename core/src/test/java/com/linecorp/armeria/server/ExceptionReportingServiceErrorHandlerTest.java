@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,9 +29,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Spy;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -46,6 +49,7 @@ class ExceptionReportingServiceErrorHandlerTest {
             (Logger) LoggerFactory.getLogger(DefaultUnhandledExceptionsReporter.class);
     private static final long reportIntervalMillis = 1000;
     private static final long awaitIntervalMillis = 2000;
+    private static final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -69,6 +73,14 @@ class ExceptionReportingServiceErrorHandlerTest {
               .path("/ok")
               .decorator(LoggingService.newDecorator())
               .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.route()
+              .path("/streaming")
+              .build((ctx, req) -> HttpResponse.streaming());
+
+            sb.errorHandler((ctx, cause) -> {
+                throwableRef.set(cause);
+                return ServerErrorHandler.ofDefault().onServiceException(ctx, cause);
+            });
         }
     };
 
@@ -76,6 +88,7 @@ class ExceptionReportingServiceErrorHandlerTest {
     public void beforeEach() {
         logAppender.start();
         errorHandlerLogger.addAppender(logAppender);
+        throwableRef.set(null);
 
         final UpdatableServerConfig config = (UpdatableServerConfig) server.server().config();
         final DefaultUnhandledExceptionsReporter reporter =
@@ -110,7 +123,7 @@ class ExceptionReportingServiceErrorHandlerTest {
         assertThat(res.status().code()).isEqualTo(400);
 
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        await().until(() -> logAppender.list.isEmpty());
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test
@@ -119,7 +132,7 @@ class ExceptionReportingServiceErrorHandlerTest {
         assertThat(res.status().code()).isEqualTo(500);
 
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        await().until(() -> logAppender.list.isEmpty());
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test
@@ -129,5 +142,18 @@ class ExceptionReportingServiceErrorHandlerTest {
 
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
         await().until(() -> logAppender.list.isEmpty());
+    }
+
+    @Test
+    void streamExceptionsAreNotLogged() throws Exception {
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            final HttpResponse res = server.webClient(cb -> cb.factory(cf)).get("/streaming");
+            await().until(() -> !server.requestContextCaptor().isEmpty());
+        }
+
+        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+        final Throwable throwable = throwableRef.get();
+        assertThat(throwable).isInstanceOf(ClosedStreamException.class);
+        assertThat(logAppender.list).isEmpty();
     }
 }
