@@ -206,7 +206,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                         return res;
                     }
 
-                    logger.warn("{} is not found. attrs: {}", pathOrUri(), attrs);
+                    logger.debug("{} is not found. attrs: {}", pathOrUri(), attrs);
                     return HttpResponse.of(HttpStatus.NOT_FOUND);
                 })
                 .exceptionally(cause -> HttpResponse.ofFailure(Exceptions.peel(cause)));
@@ -263,7 +263,7 @@ public abstract class AbstractHttpFile implements HttpFile {
 
             return HttpResponse.from(readAttributes(ctx.blockingTaskExecutor()).thenApply(attrs -> {
                 if (attrs == null) {
-                    logger.warn("{} is not found. attrs: {}", pathOrUri(), attrs);
+                    logger.debug("{} is not found. attrs: {}", pathOrUri(), attrs);
                     return HttpResponse.of(HttpStatus.NOT_FOUND);
                 }
 
@@ -315,7 +315,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                         throw new Error(); // Never reaches here.
                 }
 
-                logger.warn("{} is not found. attrs: {}", pathOrUri(), attrs);
+                logger.debug("{} is not found. attrs: {}", pathOrUri(), attrs);
                 return HttpResponse.of(HttpStatus.NOT_FOUND);
             }));
         };
