@@ -47,7 +47,6 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
     private final MeterIdPrefixFunction meterIdPrefixFunction;
     @Nullable
     private final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
-    @Nullable
     private final DistributionStatisticConfig distributionStatisticConfig;
 
     AbstractMetricCollectingClient(
@@ -64,7 +63,8 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
                                    successFunction != null ? successFunction::test
-                                                           : ctx.options().successFunction());
+                                                           : ctx.options().successFunction(),
+                                   distributionStatisticConfig);
         return unwrap().execute(ctx, req);
     }
 }

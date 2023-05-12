@@ -96,7 +96,8 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
         if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
             RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
                                        successFunction != null ? successFunction::test
-                                                               : ctx.config().successFunction());
+                                                               : ctx.config().successFunction(),
+                                       distributionStatisticConfig);
         }
         return unwrap().serve(ctx, req);
     }

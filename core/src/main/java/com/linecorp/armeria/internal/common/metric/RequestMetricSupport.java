@@ -33,12 +33,14 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.util.AttributeKey;
 
 /**
@@ -52,7 +54,7 @@ public final class RequestMetricSupport {
     public static void setup(
             RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -66,6 +68,8 @@ public final class RequestMetricSupport {
                           RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction));
+
+        MoreMeters.setDistributionStatisticConfig(distributionStatisticConfig);
     }
 
     private static void onRequest(
