@@ -73,17 +73,16 @@ final class NonExistentHttpFile implements HttpFile {
                 return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
             }
 
-            if (location == null) {
-                return HttpResponse.of(HttpStatus.NOT_FOUND, MediaType.PLAIN_TEXT_UTF_8,
-                                       "Location is not set.");
-            }
-
             if (isRedirect) {
                 return HttpResponse.ofRedirect(location);
             }
 
-            return HttpResponse.of(HttpStatus.NOT_FOUND, MediaType.PLAIN_TEXT_UTF_8, "%s file is not found.",
-                                   location);
+            if (location == null) {
+                return HttpResponse.of(HttpStatus.NOT_FOUND);
+            }
+
+            return HttpResponse.of(HttpStatus.NOT_FOUND, MediaType.PLAIN_TEXT_UTF_8,
+                                   "%s file is not found.", location);
         };
     }
 
