@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.file;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -41,6 +43,9 @@ final class NonExistentHttpFile implements HttpFile {
     private final boolean isRedirect;
 
     NonExistentHttpFile(@Nullable String location, boolean isRedirect) {
+        checkState(!isRedirect || location != null,
+                   "Requires location information for redirection.");
+
         this.location = location;
         this.isRedirect = isRedirect;
     }
