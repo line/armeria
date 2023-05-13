@@ -60,7 +60,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.OsType;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -188,7 +188,7 @@ class FileServiceTest {
 
     @BeforeEach
     void setUp() {
-        PathAndQuery.clearCachedPaths();
+        RequestTargetCache.clearCachedPaths();
     }
 
     @ParameterizedTest
@@ -207,7 +207,7 @@ class FileServiceTest {
 
             // Confirm file service paths are cached when cache is enabled.
             if (baseUri.contains("/cached")) {
-                assertThat(PathAndQuery.cachedPaths()).contains("/cached/foo.txt");
+                assertThat(RequestTargetCache.cachedServerPaths()).contains("/cached/foo.txt");
             }
         }
     }
@@ -391,8 +391,7 @@ class FileServiceTest {
                 assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo");
 
                 // Confirm path not cached when cache disabled.
-                assertThat(PathAndQuery.cachedPaths())
-                        .doesNotContain("/compressed/foo.txt");
+                assertThat(RequestTargetCache.cachedServerPaths()).doesNotContain("/compressed/foo.txt");
             }
         }
     }
@@ -411,8 +410,7 @@ class FileServiceTest {
                 assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo_alone");
 
                 // Confirm path not cached when cache disabled.
-                assertThat(PathAndQuery.cachedPaths())
-                        .doesNotContain("/compressed/foo_alone.txt");
+                assertThat(RequestTargetCache.cachedServerPaths()).doesNotContain("/compressed/foo_alone.txt");
             }
         }
     }

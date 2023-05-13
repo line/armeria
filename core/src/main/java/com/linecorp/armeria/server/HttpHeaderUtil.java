@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.List;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
@@ -59,6 +61,7 @@ final class HttpHeaderUtil {
     @VisibleForTesting
     static final Function<String, @Nullable String> FORWARDED_CONVERTER =
             value -> TOKEN_SPLITTER.split(value).get("for");
+    private static boolean warnedIllegalAbsoluteUriTransformer;
 
     /**
      * Returns {@link ProxiedAddresses} which were delivered through a proxy server.
@@ -171,6 +174,60 @@ final class HttpHeaderUtil {
                         "duplicated media type in " + typeName + ": " + type);
             }
         }
+    }
+
+    static String maybeTransformAbsoluteUri(
+            String path, Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
+
+        if (isValidHttp2Path(path)) {
+            return path;
+        }
+
+        if (!ArmeriaHttpUtil.isAbsoluteUri(path)) {
+            throw newInvalidPathException(path);
+        }
+
+        final String newPath;
+        try {
+            newPath = absoluteUriTransformer.apply(path);
+        } catch (Exception e) {
+            warnExceptionThrowingAbsoluteUriTransformer(e);
+            throw newInvalidPathException(path);
+        }
+
+        if (newPath == null || newPath.isEmpty()) {
+            warnNullReturningAbsoluteUriTransformer();
+            throw newInvalidPathException(path);
+        }
+
+        if (!isValidHttp2Path(newPath)) {
+            throw newInvalidPathException(path);
+        }
+
+        return newPath;
+    }
+
+    private static void warnExceptionThrowingAbsoluteUriTransformer(Exception e) {
+        if (!warnedIllegalAbsoluteUriTransformer) {
+            warnedIllegalAbsoluteUriTransformer = true;
+            logger.warn("absoluteUriTransformer.apply() raised an exception; returning 400 Bad Request", e);
+        }
+    }
+
+    private static void warnNullReturningAbsoluteUriTransformer() {
+        if (!warnedIllegalAbsoluteUriTransformer) {
+            warnedIllegalAbsoluteUriTransformer = true;
+            logger.warn("absoluteUriTransformer.apply() returned null; returning 400 Bad Request");
+        }
+    }
+
+    private static URISyntaxException newInvalidPathException(String path) {
+        return new URISyntaxException(path, "neither origin form nor asterisk form");
+    }
+
+    private static boolean isValidHttp2Path(String path) {
+        // We support only origin form and asterisk form.
+        return path.charAt(0) == '/' || "*".equals(path);
     }
 
     private HttpHeaderUtil() {}

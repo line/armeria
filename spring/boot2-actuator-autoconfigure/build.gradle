@@ -16,27 +16,18 @@ dependencies {
     testImplementation project(':spring:boot2-starter')
 }
 
-// Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as
-// a source/test set.
-task generateTestSources(type: Copy) {
-    from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/test"
-    into "${project.ext.genSrcDir}/test"
-    include '**/RetryableArmeriaServerGracefulShutdownLifecycle.java'
-    include '**/RetryableArmeriaServerGracefulShutdownLifecycleConfiguration.java'
-    include '**/META-INF/spring.factories'
-}
+// Use the sources from ':spring:boot3-actuator-autoconfigure'.
+def boot3Actuator = "boot3-actuator-autoconfigure"
+def boot3ActuatorProjectDir = "${rootProject.projectDir}/spring/$boot3Actuator"
+tasks.compileJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileJava)
+tasks.compileTestJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileTestJava)
 
-task generateSources(type: Copy) {
-    dependsOn(generateTestSources)
-
-    from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/main/java"
-    into "${project.ext.genSrcDir}/main/java"
-    include '**/ArmeriaConfigurationNetUtil.java'
-    include '**/ArmeriaServerConfigurator.java'
-    include '**/ArmeriaSettings.java'
-    include '**/InternalServiceId.java'
-    include '**/SpringDependencyInjector.java'
-    include '**/Ssl.java'
-}
-
-tasks.compileJava.dependsOn(generateSources)
+tasks.compileJava.source "${boot3ActuatorProjectDir}/src/main/java",
+        "${boot3ActuatorProjectDir}/gen-src/main/java"
+tasks.processResources.from "${boot3ActuatorProjectDir}/src/main/resources"
+tasks.compileTestJava.source "${boot3ActuatorProjectDir}/src/test/java",
+        "${boot3ActuatorProjectDir}/gen-src/test/java"
+tasks.processTestResources.from "${boot3ActuatorProjectDir}/src/test/resources"
+tasks.sourcesJar.from "${boot3ActuatorProjectDir}/src/main/java", "${boot3ActuatorProjectDir}/gen-src/main/java"
+tasks.sourcesJar.from "${boot3ActuatorProjectDir}/src/main/resources"
+tasks.javadoc.source "${boot3ActuatorProjectDir}/src/main/java", "${boot3ActuatorProjectDir}/gen-src/main/java"

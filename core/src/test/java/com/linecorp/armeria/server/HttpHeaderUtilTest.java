@@ -17,10 +17,12 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.ClientAddressSource.ofHeader;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.function.Function;
@@ -34,6 +36,12 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpVersion;
 
 class HttpHeaderUtilTest {
 
@@ -276,5 +284,82 @@ class HttpHeaderUtilTest {
         assertThat(HttpHeaderUtil.determineProxiedAddresses(
                 HttpHeaders.of(), ClientAddressSource.DEFAULT_SOURCES, null, remoteAddr, ACCEPT_ANY))
                 .isEqualTo(ProxiedAddresses.of(remoteAddr));
+    }
+
+    @Test
+    void absoluteUriTransformation() throws URISyntaxException {
+        final String requestUri = "https://foo.com/bar";
+
+        // Should fail with an invalid path.
+        assertThatThrownBy(() -> HttpHeaderUtil.maybeTransformAbsoluteUri("../..",
+                                                                          Function.identity()))
+                .isInstanceOf(URISyntaxException.class)
+                .hasMessageContaining("neither origin form nor asterisk form")
+                .hasMessageContaining("../..");
+
+        // Should fail without any transformation.
+        final HttpRequest originReq = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, requestUri, new DefaultHttpHeaders());
+        assertThatThrownBy(() -> HttpHeaderUtil.maybeTransformAbsoluteUri(originReq.uri(),
+                                                                          Function.identity()))
+                .isInstanceOf(URISyntaxException.class)
+                .hasMessageContaining("neither origin form nor asterisk form")
+                .hasMessageContaining(requestUri);
+
+        // Should pass with correct transformation.
+        assertThat(HttpHeaderUtil.maybeTransformAbsoluteUri(originReq.uri(), absoluteUri -> {
+            assertThat(absoluteUri).isEqualTo(requestUri);
+            return "/alice";
+        })).isEqualTo("/alice");
+
+        // Should pass even with a non-HTTP absolute URI.
+        final String requestUri2 = "ftp://bar.com/qux";
+        final HttpRequest originReq2 = new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.GET, requestUri2, new DefaultHttpHeaders());
+        assertThat(HttpHeaderUtil.maybeTransformAbsoluteUri(originReq2.uri(), absoluteUri -> {
+            assertThat(absoluteUri).isEqualTo(requestUri2);
+            return "/bob";
+        })).isEqualTo("/bob");
+
+        // Should fail when transformed path is not a valid HTTP/2 path yet.
+        assertThatThrownBy(() -> HttpHeaderUtil.maybeTransformAbsoluteUri(originReq.uri(),
+                                                                          absoluteUri -> "../.."))
+                .isInstanceOf(URISyntaxException.class)
+                .hasMessageContaining("neither origin form nor asterisk form")
+                .hasMessageContaining(requestUri);
+    }
+
+    @Test
+    void pathValidation() throws Exception {
+
+        // Should not be overly strict, e.g. allow `"` in the path.
+        final HttpRequest doubleQuoteReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/\"?\"",
+                                       new DefaultHttpHeaders());
+        assertThat(HttpHeaderUtil.maybeTransformAbsoluteUri(doubleQuoteReq.uri(),
+                                                            Function.identity())).isEqualTo("/\"?\"");
+
+        // Should accept an asterisk request.
+        final HttpRequest asteriskReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "*", new DefaultHttpHeaders());
+        assertThat(HttpHeaderUtil.maybeTransformAbsoluteUri(asteriskReq.uri(), Function.identity()))
+                .isEqualTo("*");
+
+        // Should reject an absolute URI.
+        final HttpRequest absoluteUriReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
+                                       "http://example.com/hello", new DefaultHttpHeaders());
+        assertThatThrownBy(() -> HttpHeaderUtil.maybeTransformAbsoluteUri(absoluteUriReq.uri(),
+                                                                          Function.identity()))
+                .isInstanceOf(URISyntaxException.class)
+                .hasMessageContaining("neither origin form nor asterisk form");
+
+        // Should not accept a path that starts with an asterisk.
+        final HttpRequest badAsteriskReq =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "*/", new DefaultHttpHeaders());
+        assertThatThrownBy(() -> HttpHeaderUtil.maybeTransformAbsoluteUri(badAsteriskReq.uri(),
+                                                                          Function.identity()))
+                .isInstanceOf(URISyntaxException.class)
+                .hasMessageContaining("neither origin form nor asterisk form");
     }
 }

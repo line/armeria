@@ -1,0 +1,70 @@
+configurations {
+    // TODO(hyangtack) The followings are not transitive dependencies and they are not in testRuntime
+    //                 dependencies. Need to figure out why they are included in shadedTestRuntime dependencies.
+    // Exclude jetty from shadedTest.
+    shadedTestRuntime.exclude group: 'org.eclipse.jetty'
+    shadedTestRuntime.exclude group: 'org.eclipse.jetty.http2'
+}
+
+dependencies {
+    // To let a user choose between thrift and thrift0.9.
+    compileOnly project(':thrift0.17')
+    implementation project(':logback')
+
+    api libs.spring.boot3.starter.webflux
+    api libs.jakarta.inject
+    compileOnly libs.jakarta.validation
+    // WebFlux uses `StandardWebSocketUpgradeStrategy`, which depends on Jakarta WebSocket API 2.1+, if no
+    // custom `RequestUpgradeStrategy` is detected. We may remove jakarta.websocket dependencies if
+    // Armeria WebFlux module supports WebSocket.
+    // https://github.com/spring-projects/spring-framework/blob/main/spring-webflux/src/main/java/org/springframework/web/reactive/socket/server/support/HandshakeWebSocketService.java#L272-L291
+    implementation libs.jakarta.websocket
+    implementation libs.jakarta.websocket.client
+
+    optionalApi libs.micrometer.prometheus
+    optionalApi libs.dropwizard.metrics.json
+
+    annotationProcessor libs.spring.boot3.configuration.processor
+
+    testImplementation project(':spring:boot3-actuator-autoconfigure')
+    testImplementation project(':thrift0.17')
+    testImplementation libs.spring.boot3.starter.test
+    // Added for sharing test suites with boot2
+    testImplementation libs.javax.inject
+}
+
+// Copy common files from boot3-autoconfigure module to gen-src directory in order to use them as a source set.
+task generateSources(type: Copy) {
+    from("${rootProject.projectDir}/spring/boot3-autoconfigure/src/main/java") {
+        // NB: Update `copyBoot3Sources` task in boot2-webflux-autoconfigure if a new file is added.
+
+        // Copy from /internal/spring package.
+        include '**/ArmeriaConfigurationNetUtil.java'
+        include '**/ArmeriaConfigurationSettingsUtil.java'
+        include '**/ArmeriaConfigurationUtil.java'
+        include '**/CustomAlias*KeyManager*.java'
+        include '**/SpringDependencyInjector.java'
+        include '**/ThriftServiceUtils.java'
+
+        // Copy from /spring package.
+        include '**/*ArmeriaBeanPostProcessor*.java'
+        include '**/ArmeriaServerConfigurator.java'
+        include '**/ArmeriaSettings.java'
+        include '**/DocServiceConfigurator.java'
+        include '**/DropwizardExpositionService.java'
+        include '**/DropwizardSupport.java'
+        include '**/HealthCheckServiceConfigurator.java'
+        include '**/InternalServiceId.java'
+        include '**/InternalServices.java'
+        include '**/MetricCollectingServiceConfigurator.java'
+        include '**/LocalArmeriaPort.java'
+        include '**/LocalArmeriaPorts.java'
+        include '**/PrometheusSupport.java'
+        include '**/SpringDependencyInjector.java'
+        include '**/Ssl.java'
+    }
+
+    into "${project.ext.genSrcDir}/main/java"
+}
+
+tasks.compileJava.dependsOn(generateSources)

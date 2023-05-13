@@ -147,6 +147,7 @@ abstract class AbstractHttpResponseHandler {
         }
 
         final HttpData content = res.content();
+        content.touch(reqCtx);
         // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
         assert !res.status().isContentAlwaysEmpty() || content.isEmpty();
         final boolean contentEmpty;
@@ -200,9 +201,9 @@ abstract class AbstractHttpResponseHandler {
         final HttpStatus status = cause.httpStatus();
         final Throwable cause0 = firstNonNull(cause.getCause(), cause);
         final ServiceConfig serviceConfig = reqCtx.config();
-        final AggregatedHttpResponse response =
-                serviceConfig.server().config().errorHandler()
-                             .renderStatus(serviceConfig, req.headers(), status, null, cause0);
+        final AggregatedHttpResponse response = serviceConfig.errorHandler()
+                                                             .renderStatus(serviceConfig, req.headers(), status,
+                                                                           null, cause0);
         assert response != null;
         return response;
     }

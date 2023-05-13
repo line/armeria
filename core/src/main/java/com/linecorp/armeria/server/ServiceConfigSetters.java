@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -152,6 +153,16 @@ interface ServiceConfigSetters {
                                               boolean shutdownOnStop);
 
     /**
+     * Sets an {@link BlockingTaskExecutor executor} to be used when executing blocking tasks.
+     *
+     * @param blockingTaskExecutor the {@link BlockingTaskExecutor executor} to be used.
+     * @param shutdownOnStop whether to shut down the {@link BlockingTaskExecutor} when the {@link Server}
+     *                       stops.
+     */
+    ServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                              boolean shutdownOnStop);
+
+    /**
      * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
      * the execution of blocking tasks or invocations.
      * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
@@ -175,6 +186,14 @@ interface ServiceConfigSetters {
      */
     @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
+
+    /**
+     * Sets the {@link Function} which generates a {@link RequestId}.
+     *
+     * @param requestIdGenerator the {@link Function} that generates a request ID.
+     */
+    ServiceConfigSetters requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator);
 
     /**
      * Adds the default HTTP header for an {@link HttpResponse} served by this {@link Service}.
@@ -217,4 +236,10 @@ interface ServiceConfigSetters {
     @UnstableApi
     ServiceConfigSetters setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
+
+    /**
+     * Sets the default {@link ServiceErrorHandler} served by this {@link Service}.
+     * @param serviceErrorHandler the default {@link ServiceErrorHandler}
+     */
+    ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler);
 }

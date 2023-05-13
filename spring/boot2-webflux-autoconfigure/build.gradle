@@ -24,35 +24,47 @@ dependencies {
     testImplementation libs.spring.boot2.starter.test
 }
 
-// Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as a source set.
-task generateSources(type: Copy) {
-    from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/main/java"
+// Copy the sources from ':spring:boot3-autoconfigure'.
+task copyBoot3Sources(type: Copy) {
+    from("${rootProject.projectDir}/spring/boot3-autoconfigure/src/main/java") {
+        // Copy from /internal/spring package.
+        include '**/ArmeriaConfigurationNetUtil.java'
+        include '**/ArmeriaConfigurationSettingsUtil.java'
+        include '**/ArmeriaConfigurationUtil.java'
+        include '**/CustomAlias*KeyManager*.java'
+        include '**/SpringDependencyInjector.java'
+        include '**/ThriftServiceUtils.java'
+
+        // Copy from /spring package.
+        include '**/*ArmeriaBeanPostProcessor*.java'
+        include '**/ArmeriaServerConfigurator.java'
+        include '**/ArmeriaSettings.java'
+        include '**/DocServiceConfigurator.java'
+        include '**/DropwizardExpositionService.java'
+        include '**/DropwizardSupport.java'
+        include '**/HealthCheckServiceConfigurator.java'
+        include '**/InternalServiceId.java'
+        include '**/InternalServices.java'
+        include '**/MetricCollectingServiceConfigurator.java'
+        include '**/LocalArmeriaPort.java'
+        include '**/LocalArmeriaPorts.java'
+        include '**/PrometheusSupport.java'
+        include '**/SpringDependencyInjector.java'
+        include '**/Ssl.java'
+    }
+
     into "${project.ext.genSrcDir}/main/java"
-
-    // Copy from /internal/spring package.
-    include '**/ArmeriaConfigurationNetUtil.java'
-    include '**/ArmeriaConfigurationSettingsUtil.java'
-    include '**/ArmeriaConfigurationUtil.java'
-    include '**/CustomAlias*KeyManager*.java'
-    include '**/SpringDependencyInjector.java'
-    include '**/ThriftServiceUtils.java'
-
-    // Copy from /spring package.
-    include '**/*ArmeriaBeanPostProcessor*.java'
-    include '**/ArmeriaServerConfigurator.java'
-    include '**/ArmeriaSettings.java'
-    include '**/DocServiceConfigurator.java'
-    include '**/DropwizardExpositionService.java'
-    include '**/DropwizardSupport.java'
-    include '**/HealthCheckServiceConfigurator.java'
-    include '**/InternalServiceId.java'
-    include '**/InternalServices.java'
-    include '**/MetricCollectingServiceConfigurator.java'
-    include '**/LocalArmeriaPort.java'
-    include '**/LocalArmeriaPorts.java'
-    include '**/PrometheusSupport.java'
-    include '**/SpringDependencyInjector.java'
-    include '**/Ssl.java'
 }
 
-tasks.compileJava.dependsOn(generateSources)
+// Copy the main and test sources from ':spring:boot3-webflux-autoconfigure'.
+task generateSources(type: Copy) {
+    dependsOn(tasks.copyBoot3Sources)
+    from("${"${rootProject.projectDir}/spring/boot3-webflux-autoconfigure"}/src") {
+        exclude '**/AbstractServerHttpResponseVersionSpecific.java'
+        exclude '**/package-info.java'
+    }
+
+    into "${project.ext.genSrcDir}"
+}
+
+tasks.compileJava.dependsOn(tasks.generateSources)

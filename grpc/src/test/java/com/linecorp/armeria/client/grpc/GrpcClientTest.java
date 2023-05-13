@@ -94,6 +94,7 @@ import com.linecorp.armeria.grpc.testing.UnimplementedServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
@@ -236,6 +237,7 @@ class GrpcClientTest {
 
     @BeforeEach
     void setUp() {
+        RequestTargetCache.clearCachedPaths();
         requestLogQueue.clear();
         final DecoratingHttpClientFunction requestLogRecorder = (delegate, ctx, req) -> {
             ctx.log().whenComplete().thenAccept(requestLogQueue::add);
@@ -272,6 +274,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(EMPTY);
             assertThat(rpcRes.get()).isEqualTo(EMPTY);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/EmptyCall"));
     }
 
     @Test
@@ -322,6 +326,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(request);
             assertThat(rpcRes.get()).isEqualTo(goldenResponse);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/UnaryCall"));
     }
 
     @Test
@@ -473,6 +479,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(request);
             assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/StreamingOutputCall"));
     }
 
     @Test
@@ -552,6 +560,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(requests.get(0));
             assertThat(rpcRes.get()).isEqualTo(goldenResponse);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/StreamingInputCall"));
     }
 
     @Test
@@ -634,6 +644,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(requests.get(0));
             assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/FullDuplexCall"));
     }
 
     @Test
