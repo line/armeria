@@ -30,6 +30,8 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
@@ -46,10 +48,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -70,6 +68,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -102,8 +101,6 @@ import io.netty.util.internal.StringUtil;
 public final class ArmeriaHttpUtil {
 
     // Forked from Netty 4.1.34 at 4921f62c8ab8205fd222439dcd1811760b05daf1
-
-    private static final Logger logger = LoggerFactory.getLogger(ArmeriaHttpUtil.class);
 
     /**
      * The default case-insensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
@@ -237,12 +234,6 @@ public final class ArmeriaHttpUtil {
                                         HttpHeaderNames.HOST);
     }
 
-    /**
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a>
-     * states the path must not be empty, and instead should be {@code /}.
-     */
-    private static final String EMPTY_REQUEST_PATH = "/";
-
     private static final Splitter COOKIE_SPLITTER = Splitter.on(';').trimResults().omitEmptyStrings();
     private static final String COOKIE_SEPARATOR = "; ";
     private static final Joiner COOKIE_JOINER = Joiner.on(COOKIE_SEPARATOR);
@@ -253,58 +244,77 @@ public final class ArmeriaHttpUtil {
     private static final Set<AsciiString> CACHED_HEADERS = Flags.cachedHeaders().stream().map(AsciiString::of)
                                                                 .collect(toImmutableSet());
 
-    private static boolean warnedIllegalAbsoluteUriTransformer;
-
     private static LoadingCache<AsciiString, String> buildCache(String spec) {
         return Caffeine.from(spec).build(AsciiString::toString);
     }
 
     /**
-     * Concatenates two path strings.
+     * Concatenates the specified {@code prefix} and {@code path} into an absolute path.
+     *
+     * @throws IllegalArgumentException if {@code prefix} is not an absolute path prefix
      */
-    public static String concatPaths(@Nullable String path1, @Nullable String path2) {
-        path2 = path2 == null ? "" : path2;
+    public static String concatPaths(String prefix, @Nullable String path) {
+        requireNonNull(prefix, "prefix");
+        checkArgument(!prefix.isEmpty() && prefix.charAt(0) == '/',
+                      "prefix: %s (expected: an absolute path starting with '/')", prefix);
 
-        if (path1 == null || path1.isEmpty() || EMPTY_REQUEST_PATH.equals(path1)) {
-            if (path2.isEmpty()) {
-                return EMPTY_REQUEST_PATH;
-            }
-
-            if (path2.charAt(0) == '/') {
-                return path2; // Most requests will land here.
-            }
-
-            return '/' + path2;
+        path = firstNonNull(path, "");
+        if (path.isEmpty()) {
+            return prefix;
         }
 
-        // At this point, we are sure path1 is neither empty nor null.
-        if (path2.isEmpty()) {
-            // Only path1 is non-empty. No need to concatenate.
-            return path1;
+        if (prefix.length() == 1) { // means "/".equals(prefix)
+            if (path.charAt(0) == '/') {
+                return path; // Most requests will land here.
+            }
+            return simpleConcat("/", path);
         }
 
-        if (path1.charAt(path1.length() - 1) == '/') {
-            if (path2.charAt(0) == '/') {
-                // path1 ends with '/' and path2 starts with '/'.
-                // Avoid double-slash by stripping the first slash of path2.
-                return new StringBuilder(path1.length() + path2.length() - 1)
-                        .append(path1).append(path2, 1, path2.length()).toString();
+        return slowConcatPaths(prefix, path);
+    }
+
+    private static String slowConcatPaths(String prefix, String path) {
+        if (prefix.charAt(prefix.length() - 1) == '/') {
+            if (path.charAt(0) == '/') {
+                // `prefix` ends with '/' and `path` starts with '/'.
+                // Avoid double-slash by stripping the first slash of `path`.
+                try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+                    return tmp.stringBuilder()
+                              .append(prefix)
+                              .append(path, 1, path.length())
+                              .toString();
+                }
             }
 
-            // path1 ends with '/' and path2 does not start with '/'.
+            // `prefix` ends with '/' and `path` does not start with '/'.
             // Simple concatenation would suffice.
-            return path1 + path2;
+            return simpleConcat(prefix, path);
         }
 
-        if (path2.charAt(0) == '/' || path2.charAt(0) == '?') {
-            // path1 does not end with '/' and path2 starts with '/' or '?'
+        if (path.charAt(0) == '/' || path.charAt(0) == '?') {
+            // `prefix` does not end with '/' and `path` starts with '/' or '?'
             // Simple concatenation would suffice.
-            return path1 + path2;
+            return simpleConcat(prefix, path);
         }
 
-        // path1 does not end with '/' and path2 does not start with '/' or '?'.
-        // Need to insert '/' between path1 and path2.
-        return path1 + '/' + path2;
+        // `prefix` does not end with '/' and `path` does not start with '/' or '?'.
+        // Need to insert '/' in-between.
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            return tmp.stringBuilder()
+                      .append(prefix)
+                      .append('/')
+                      .append(path)
+                      .toString();
+        }
+    }
+
+    private static String simpleConcat(String prefix, String path) {
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            return tmp.stringBuilder()
+                      .append(prefix)
+                      .append(path)
+                      .toString();
+        }
     }
 
     /**
@@ -559,7 +569,8 @@ public final class ArmeriaHttpUtil {
      */
     public static RequestHeaders toArmeriaRequestHeaders(ChannelHandlerContext ctx, Http2Headers headers,
                                                          boolean endOfStream, String scheme,
-                                                         ServerConfig cfg) {
+                                                         ServerConfig cfg,
+                                                         RequestTarget reqTarget) {
         assert headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
         builder.endOfStream(endOfStream);
@@ -567,12 +578,12 @@ public final class ArmeriaHttpUtil {
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-
         if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
             builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
         }
+        builder.set(HttpHeaderNames.PATH, reqTarget.toString());
         final List<String> cookies = builder.getAll(HttpHeaderNames.COOKIE);
         if (cookies.size() > 1) {
             // Cookies must be concatenated into a single octet string.
@@ -615,16 +626,14 @@ public final class ArmeriaHttpUtil {
      */
     public static RequestHeaders toArmeria(
             ChannelHandlerContext ctx, HttpRequest in,
-            ServerConfig cfg, String scheme,
-            Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
+            ServerConfig cfg, String scheme, RequestTarget reqTarget) throws URISyntaxException {
 
-        final String path = maybeTransformAbsoluteUri(in.uri(), absoluteUriTransformer);
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final RequestHeadersBuilder out = RequestHeaders.builder();
         out.sizeHint(inHeaders.size());
-        out.method(HttpMethod.valueOf(in.method().name()))
-           .path(path)
-           .scheme(scheme);
+        out.method(firstNonNull(HttpMethod.tryParse(in.method().name()), HttpMethod.UNKNOWN))
+           .scheme(scheme)
+           .path(reqTarget.toString());
 
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
@@ -706,60 +715,6 @@ public final class ArmeriaHttpUtil {
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
-    }
-
-    private static String maybeTransformAbsoluteUri(
-            String path, Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
-
-        if (isValidHttp2Path(path)) {
-            return path;
-        }
-
-        if (!isAbsoluteUri(path)) {
-            throw newInvalidPathException(path);
-        }
-
-        final String newPath;
-        try {
-            newPath = absoluteUriTransformer.apply(path);
-        } catch (Exception e) {
-            warnExceptionThrowingAbsoluteUriTransformer(e);
-            throw newInvalidPathException(path);
-        }
-
-        if (newPath == null) {
-            warnNullReturningAbsoluteUriTransformer();
-            throw newInvalidPathException(path);
-        }
-
-        if (!isValidHttp2Path(newPath)) {
-            throw newInvalidPathException(path);
-        }
-
-        return newPath;
-    }
-
-    private static void warnExceptionThrowingAbsoluteUriTransformer(Exception e) {
-        if (!warnedIllegalAbsoluteUriTransformer) {
-            warnedIllegalAbsoluteUriTransformer = true;
-            logger.warn("absoluteUriTransformer.apply() raised an exception; returning 400 Bad Request", e);
-        }
-    }
-
-    private static void warnNullReturningAbsoluteUriTransformer() {
-        if (!warnedIllegalAbsoluteUriTransformer) {
-            warnedIllegalAbsoluteUriTransformer = true;
-            logger.warn("absoluteUriTransformer.apply() returned null; returning 400 Bad Request");
-        }
-    }
-
-    private static URISyntaxException newInvalidPathException(String path) {
-        return new URISyntaxException(path, "neither origin form nor asterisk form");
-    }
-
-    private static boolean isValidHttp2Path(String path) {
-        // We support only origin form and asterisk form.
-        return path.charAt(0) == '/' || "*".equals(path);
     }
 
     private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,

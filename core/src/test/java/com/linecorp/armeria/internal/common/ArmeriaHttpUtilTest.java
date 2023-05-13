@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.Server;
@@ -71,12 +72,6 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void testConcatPaths() throws Exception {
-        assertThat(concatPaths(null, "a")).isEqualTo("/a");
-        assertThat(concatPaths(null, "/a")).isEqualTo("/a");
-
-        assertThat(concatPaths("", "a")).isEqualTo("/a");
-        assertThat(concatPaths("", "/a")).isEqualTo("/a");
-
         assertThat(concatPaths("/", "a")).isEqualTo("/a");
         assertThat(concatPaths("/", "/a")).isEqualTo("/a");
         assertThat(concatPaths("/", "/")).isEqualTo("/");
@@ -89,6 +84,11 @@ class ArmeriaHttpUtilTest {
         assertThat(concatPaths("/a/", "")).isEqualTo("/a/");
         assertThat(concatPaths("/a", "?foo=bar")).isEqualTo("/a?foo=bar");
         assertThat(concatPaths("/a/", "?foo=bar")).isEqualTo("/a/?foo=bar");
+
+        // Bad prefixes
+        assertThatThrownBy(() -> concatPaths(null, "a")).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> concatPaths("", "b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> concatPaths("relative", "c")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest
@@ -261,7 +261,9 @@ class ArmeriaHttpUtilTest {
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
-        final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(null, in, false, "http", null);
+        final RequestTarget reqTarget = RequestTarget.forServer(in.path().toString());
+        final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(
+                null, in, false, "http", null, reqTarget);
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f;g=h; i=j; k=l;");
@@ -277,7 +279,8 @@ class ArmeriaHttpUtilTest {
 
         final ChannelHandlerContext ctx = mockChannelHandlerContext();
 
-        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http", Function.identity());
+        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http",
+                                                  RequestTarget.forServer(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
         assertThat(armeriaHeaders.authority()).isEqualTo("bar");
         assertThat(armeriaHeaders.scheme()).isEqualTo("http");
@@ -285,93 +288,12 @@ class ArmeriaHttpUtilTest {
 
         // Remove Host header.
         headers.remove(HttpHeaderNames.HOST);
-        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https", Function.identity());
+        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https",
+                                   RequestTarget.forServer(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
         assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");
         assertThat(armeriaHeaders.scheme()).isEqualTo("https");
         assertThat(armeriaHeaders.path()).isEqualTo("/hello");
-    }
-
-    @Test
-    void absoluteUriTransformation() throws URISyntaxException {
-        final String requestUri = "https://foo.com/bar";
-        final ChannelHandlerContext ctx = mockChannelHandlerContext();
-
-        // Should fail with an invalid path.
-        assertThatThrownBy(() -> toArmeria(
-                ctx, new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "../.."),
-                serverConfig(), "http", Function.identity()))
-                .isInstanceOf(URISyntaxException.class)
-                .hasMessageContaining("neither origin form nor asterisk form")
-                .hasMessageContaining("../..");
-
-        // Should fail without any transformation.
-        final HttpRequest originReq = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, requestUri, new DefaultHttpHeaders());
-        assertThatThrownBy(() -> toArmeria(ctx, originReq, serverConfig(), "http", Function.identity()))
-                .isInstanceOf(URISyntaxException.class)
-                .hasMessageContaining("neither origin form nor asterisk form")
-                .hasMessageContaining(requestUri);
-
-        // Should pass with correct transformation.
-        RequestHeaders armeriaHeaders = toArmeria(
-                ctx, originReq, serverConfig(), "http", absoluteUri -> {
-                    assertThat(absoluteUri).isEqualTo(requestUri);
-                    return "/alice";
-                });
-
-        assertThat(armeriaHeaders.path()).isEqualTo("/alice");
-
-        // Should pass even with a non-HTTP absolute URI.
-        final String requestUri2 = "ftp://bar.com/qux";
-        final HttpRequest originReq2 = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, requestUri2, new DefaultHttpHeaders());
-        armeriaHeaders = toArmeria(
-                ctx, originReq2, serverConfig(), "http", absoluteUri -> {
-                    assertThat(absoluteUri).isEqualTo(requestUri2);
-                    return "/bob";
-                });
-
-        assertThat(armeriaHeaders.path()).isEqualTo("/bob");
-
-        // Should fail when transformed path is not a valid HTTP/2 path yet.
-        assertThatThrownBy(() -> toArmeria(ctx, originReq, serverConfig(), "http", absoluteUri -> "../.."))
-                .isInstanceOf(URISyntaxException.class)
-                .hasMessageContaining("neither origin form nor asterisk form")
-                .hasMessageContaining(requestUri);
-    }
-
-    @Test
-    void pathValidation() throws Exception {
-        final ChannelHandlerContext ctx = mockChannelHandlerContext();
-
-        // Should not be overly strict, e.g. allow `"` in the path.
-        final HttpRequest doubleQuoteReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/\"?\"",
-                                       new DefaultHttpHeaders());
-        RequestHeaders armeriaHeaders = toArmeria(ctx, doubleQuoteReq, serverConfig(), "http", null);
-        assertThat(armeriaHeaders.path()).isEqualTo("/\"?\"");
-
-        // Should accept an asterisk request.
-        final HttpRequest asteriskReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "*", new DefaultHttpHeaders());
-        armeriaHeaders = toArmeria(ctx, asteriskReq, serverConfig(), "http", null);
-        assertThat(armeriaHeaders.path()).isEqualTo("*");
-
-        // Should reject an absolute URI.
-        final HttpRequest absoluteUriReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                                       "http://example.com/hello", new DefaultHttpHeaders());
-        assertThatThrownBy(() -> toArmeria(ctx, absoluteUriReq, serverConfig(), "http", null))
-                .isInstanceOf(URISyntaxException.class)
-                .hasMessageContaining("neither origin form nor asterisk form");
-
-        // Should not accept a path that starts with an asterisk.
-        final HttpRequest badAsteriskReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "*/", new DefaultHttpHeaders());
-        assertThatThrownBy(() -> toArmeria(ctx, badAsteriskReq, serverConfig(), "http", null))
-                .isInstanceOf(URISyntaxException.class)
-                .hasMessageContaining("neither origin form nor asterisk form");
     }
 
     @Test
@@ -602,8 +524,10 @@ class ArmeriaHttpUtilTest {
         in.set(HttpHeaderNames.METHOD, "GET")
           .set(HttpHeaderNames.PATH, "/");
         // Request headers without pseudo headers.
+        final RequestTarget reqTarget = RequestTarget.forServer(in.path().toString());
         final RequestHeaders headers =
-                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https", serverConfig());
+                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https",
+                                                        serverConfig(), reqTarget);
         assertThat(headers.scheme()).isEqualTo("https");
         assertThat(headers.authority()).isEqualTo("foo:36462");
     }

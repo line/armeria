@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -115,6 +116,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
         if (failIfStreamOrSessionClosed()) {
             PooledObjects.close(o);
+            setDone(true);
             return;
         }
 
@@ -157,7 +159,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         state = State.NEEDS_DATA_OR_TRAILERS;
                     }
                     if (endOfStream) {
-                        setDone(false);
+                        setDone(true);
                     }
                     final ServerConfig config = reqCtx.config().server().config();
                     merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),
@@ -209,6 +211,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                    .addListener(writeHeadersFutureListener(true));
                 } else {
                     final HttpData data = (HttpData) o;
+                    data.touch(reqCtx);
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
@@ -303,11 +306,10 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
         final State oldState = setDone(false);
         if (oldState == State.NEEDS_HEADERS) {
-            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
             responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR)
                            .addListener(future -> {
                                try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                                   tryComplete(null);
+                                   fail(EmptyHttpResponseException.get());
                                }
                            });
             ctx.flush();
@@ -395,10 +397,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         maybeLogFirstResponseBytesTransferred();
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
-                    if (tryComplete(cause)) {
-                        endLogRequestAndResponse(cause);
-                        maybeWriteAccessLog();
-                    }
+                    fail(cause);
                 }
             });
         }

@@ -23,9 +23,10 @@ import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
 import java.security.cert.CertificateFactorySpi;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -46,8 +47,10 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
 
     private static final String PROVIDER_NAME = "ArmeriaBC";
 
+    private static final ReentrantLock lock = new ReentrantLock();
+
     private static final Map<ASN1ObjectIdentifier, AsymmetricKeyInfoConverter> keyInfoConverters =
-            new HashMap<>();
+            new ConcurrentHashMap<>();
 
     /**
      * Invokes the specified {@link Runnable} with {@link MinifiedBouncyCastleProvider} enabled temporarily.
@@ -62,24 +65,29 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
     /**
      * Invokes the specified {@link Supplier} with {@link MinifiedBouncyCastleProvider} enabled temporarily.
      */
-    public static synchronized <T> T call(Supplier<T> task) {
-        boolean needToAdd = true;
-        for (Provider provider : Security.getProviders()) {
-            if (provider instanceof MinifiedBouncyCastleProvider) {
-                needToAdd = false;
-                break;
+    public static <T> T call(Supplier<T> task) {
+        lock.lock();
+        try {
+            boolean needToAdd = true;
+            for (Provider provider : Security.getProviders()) {
+                if (provider instanceof MinifiedBouncyCastleProvider) {
+                    needToAdd = false;
+                    break;
+                }
             }
-        }
 
-        if (needToAdd) {
-            Security.addProvider(new MinifiedBouncyCastleProvider());
-            try {
+            if (needToAdd) {
+                Security.addProvider(new MinifiedBouncyCastleProvider());
+                try {
+                    return task.get();
+                } finally {
+                    Security.removeProvider(PROVIDER_NAME);
+                }
+            } else {
                 return task.get();
-            } finally {
-                Security.removeProvider(PROVIDER_NAME);
             }
-        } else {
-            return task.get();
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -142,9 +150,7 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
 
     @Override
     public void addKeyInfoConverter(ASN1ObjectIdentifier oid, AsymmetricKeyInfoConverter keyInfoConverter) {
-        synchronized (keyInfoConverters) {
-            keyInfoConverters.put(oid, keyInfoConverter);
-        }
+        keyInfoConverters.put(oid, keyInfoConverter);
     }
 
     @Override

@@ -7,3 +7,23 @@ dependencies {
 
     testImplementation libs.tomcat9.jasper
 }
+
+def tomcat10ProjectDir = "${rootProject.projectDir}/tomcat10"
+
+// Copy the sources from ':tomcat10'.
+task generateSources(type: Copy) {
+    from("${tomcat10ProjectDir}/src/main/java")
+    into("${project.ext.genSrcDir}/main/java")
+
+    exclude '**/ArmeriaProcessor.java'
+}
+
+tasks.compileJava.dependsOn(generateSources)
+
+tasks.compileTestJava.source "${tomcat10ProjectDir}/src/test/java"
+tasks.processTestResources.from "${tomcat10ProjectDir}/src/test/resources"
+
+// Disable checkstyle because it's checked by ':tomcat10'.
+tasks.withType(Checkstyle) {
+    onlyIf { false }
+}

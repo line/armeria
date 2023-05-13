@@ -71,14 +71,15 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
      * Returns a newly created {@link DnsAddressEndpointGroup}.
      */
     public DnsAddressEndpointGroup build() {
+        final EventLoop eventLoop = getOrAcquireEventLoop();
         final DefaultDnsResolver resolver = buildResolver(builder -> {
             if (resolvedAddressTypes != null) {
                 builder.resolvedAddressTypes(resolvedAddressTypes);
             }
-        });
+        }, eventLoop);
         return new DnsAddressEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
                                            selectionTimeoutMillis(), resolver,
-                                           eventLoop(), backoff(), minTtl(), maxTtl(),
+                                           eventLoop, backoff(), minTtl(), maxTtl(),
                                            resolvedAddressTypes, hostname(), port, dnsQueryListeners());
     }
 

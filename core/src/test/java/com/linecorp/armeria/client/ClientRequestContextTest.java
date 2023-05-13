@@ -21,10 +21,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -258,6 +261,19 @@ class ClientRequestContextTest {
             assertThat(sctx.hasOwnAttr(key)).isTrue();
             assertThat(cctx.hasOwnAttr(key)).isFalse();
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"%", "http:///", "http://foo.com/bar"})
+    void updateRequestWithInvalidPath(String path) {
+        final ClientRequestContext clientRequestContext = clientRequestContext();
+        assertThat(clientRequestContext.path()).isEqualTo("/");
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
+
+        assertThatThrownBy(() -> clientRequestContext.updateRequest(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid path");
     }
 
     private static void assertUnwrapAllCurrentCtx(@Nullable RequestContext ctx) {

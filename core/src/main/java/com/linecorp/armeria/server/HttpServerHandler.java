@@ -63,8 +63,8 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
@@ -328,17 +328,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (!routingStatus.routeMustExist()) {
             final ServiceRequestContext reqCtx =
                     newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
-            switch (routingStatus) {
-                case OPTIONS:
-                    // Handle 'OPTIONS * HTTP/1.1'.
-                    handleOptions(ctx, reqCtx);
-                    return;
-                case INVALID_PATH:
-                    rejectInvalidPath(ctx, reqCtx);
-                    return;
-                default:
-                    throw new Error(); // Should never reach here.
+
+            // Handle 'OPTIONS * HTTP/1.1'.
+            if (routingStatus == RoutingStatus.OPTIONS) {
+                handleOptions(ctx, reqCtx);
+                return;
             }
+
+            throw new Error(); // Should never reach here.
         }
 
         // Find the service that matches the path.
@@ -352,13 +349,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                nextRequestId(routingCtx), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-            final ServerErrorHandler serverErrorHandler = config.errorHandler();
             HttpResponse serviceResponse;
             try {
                 req.init(reqCtx);
@@ -377,7 +373,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Store the cause to set as the log.responseCause().
                 CapturedServiceException.set(reqCtx, cause);
                 // Recover the failed response with the error handler.
-                return serverErrorHandler.onServiceException(reqCtx, cause);
+                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
             });
             final HttpResponse res = serviceResponse;
             final EventLoop eventLoop = channel.eventLoop();
@@ -394,10 +390,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
                 reqCtx.log().whenComplete().thenAccept(log -> {
                     final int statusCode = log.responseHeaders().status().code();
-                    if (statusCode >= 200 && statusCode < 400 && routingCtx instanceof DefaultRoutingContext) {
-                        final PathAndQuery pathAndQuery = ((DefaultRoutingContext) routingCtx).pathAndQuery();
-                        assert pathAndQuery != null;
-                        pathAndQuery.storeInCache(req.path());
+                    if (statusCode >= 200 && statusCode < 400) {
+                        RequestTargetCache.putForServer(req.path(), routingCtx.requestTarget());
                     }
                 });
             }
@@ -652,14 +646,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return new DefaultServiceRequestContext(
                 serviceConfig,
                 channel, NoopMeterRegistry.get(), protocol(),
-                nextRequestId(routingCtx), routingCtx, routingResult, req.exchangeType(),
+                nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 
-    private RequestId nextRequestId(RoutingContext routingCtx) {
+    private static RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {
         try {
-            final RequestId id = config.requestIdGenerator().apply(routingCtx);
+            final RequestId id = serviceConfig.requestIdGenerator().apply(routingCtx);
             if (id != null) {
                 return id;
             }

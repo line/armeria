@@ -288,7 +288,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
   const relpath = pagePath(props.location).substring(1);
   const githubHref = props.noEdit
     ? undefined
-    : `https://github.com/line/armeria/edit/master/site/src/pages/${relpath}${
+    : `https://github.com/line/armeria/edit/main/site/src/pages/${relpath}${
         relpath === props.prefix ? '/index' : ''
       }.mdx`;
   let prevLabel;

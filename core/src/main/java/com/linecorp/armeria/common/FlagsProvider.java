@@ -989,4 +989,18 @@ public interface FlagsProvider {
     default MeterRegistry meterRegistry() {
         return null;
     }
+
+    /**
+     * Returns the default interval in milliseconds between the reports on unhandled exceptions.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUnhandledExceptionsReportIntervalMillis=<long>} JVM option to
+     * override the default value.</p>
+     */
+    @Nullable
+    @UnstableApi
+    default Long defaultUnhandledExceptionsReportIntervalMillis() {
+        return null;
+    }
 }
