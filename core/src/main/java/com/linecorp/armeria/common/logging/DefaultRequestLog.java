@@ -99,10 +99,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      */
     private volatile int deferredFlags;
 
-    @GuardedBy("reentrantLock")
+    @GuardedBy("lock")
     private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
 
-    private final ReentrantLock reentrantLock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantLock();
     @Nullable
     private UnmodifiableFuture<RequestLog> partiallyCompletedFuture;
     @Nullable
@@ -369,12 +369,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             final RequestLogFuture[] satisfiedFutures;
             final RequestLogFuture newFuture = new RequestLogFuture(interestedFlags);
-            reentrantLock.lock();
+            lock.lock();
             try {
                 pendingFutures.add(newFuture);
                 satisfiedFutures = removeSatisfiedFutures(pendingFutures, this.flags);
             } finally {
-                reentrantLock.unlock();
+                lock.unlock();
             }
             if (satisfiedFutures != null) {
                 completeSatisfiedFutures(satisfiedFutures, partial(flags));
@@ -416,11 +416,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             if (flagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
                 final RequestLogFuture[] satisfiedFutures;
-                reentrantLock.lock();
+                lock.lock();
                 try {
                     satisfiedFutures = removeSatisfiedFutures(pendingFutures, flags);
                 } finally {
-                    reentrantLock.unlock();
+                    lock.unlock();
                 }
                 if (satisfiedFutures != null) {
                     final RequestLog log = partial(newFlags);

@@ -247,7 +247,7 @@ public final class RequestScopedMdc {
             return;
         }
 
-        for (;;) {
+        synchronized (ctx) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;
 
@@ -258,9 +258,7 @@ public final class RequestScopedMdc {
                 newMap.putAll(oldMap);
                 newMap.putAll(map);
             }
-            if (ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap)) == oldMap) {
-                break;
-            }
+            ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap));
         }
     }
 
@@ -318,10 +316,10 @@ public final class RequestScopedMdc {
     public static void remove(RequestContext ctx, String key) {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
-        for (;;) {
+        synchronized (ctx) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (!oldMap.containsKey(key)) {
-                break;
+                return;
             }
 
             final Object2ObjectMap<String, String> newMap;
@@ -332,9 +330,7 @@ public final class RequestScopedMdc {
                 tmp.remove(key);
                 newMap = Object2ObjectMaps.unmodifiable(tmp);
             }
-            if (ctx.setAttr(MAP, newMap) == oldMap) {
-                break;
-            }
+            ctx.setAttr(MAP, newMap);
         }
     }
 
@@ -345,14 +341,12 @@ public final class RequestScopedMdc {
      */
     public static void clear(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        for (;;) {
+        synchronized (ctx) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (oldMap.isEmpty()) {
-                break;
+                return;
             }
-            if (ctx.setAttr(MAP, Object2ObjectMaps.emptyMap()) == oldMap) {
-                break;
-            }
+            ctx.setAttr(MAP, Object2ObjectMaps.emptyMap());
         }
     }
 
