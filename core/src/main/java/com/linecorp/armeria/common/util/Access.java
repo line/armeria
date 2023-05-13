@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.util;
 
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import static java.nio.ByteOrder.BIG_ENDIAN;
@@ -84,63 +83,6 @@ public abstract class Access<T> {
     @SuppressWarnings("unchecked")
     public static <T> Access<T> unsafe() {
         return (Access<T>) UnsafeAccess.INSTANCE;
-    }
-
-    /**
-     * Returns the {@code Access} to any {@link ByteBuffer}. This {@code Access} isn't useful in
-     * the user code, because methods {@link LongHashFunction#hashBytes(ByteBuffer)} and
-     * {@link LongHashFunction#hashBytes(ByteBuffer, int, int)} exist. This {@code Access} could be
-     * used in new {@link LongHashFunction} implementations.
-     *
-     * @return the {@code Access} to {@link ByteBuffer}s
-     */
-    public static Access<ByteBuffer> toByteBuffer() {
-        return ByteBufferAccess.INSTANCE;
-    }
-
-    /**
-     * Returns the {@code Access} to {@link CharSequence}s backed by {@linkplain
-     * ByteOrder#nativeOrder() native} {@code char} reads, typically from {@code char[]} array.
-     *
-     * <p>Usage example:<pre>{@code
-     * static long hashStringBuffer(StringBuffer buffer, LongHashFunction hashFunction) {
-     *     return hashFunction.hash(buffer, Access.toNativeCharSequence(),
-     *         // * 2L because length is passed in bytes, not chars
-     *         0L, buffer.length() * 2L);
-     * }}</pre>
-     *
-     * <p>This method is a shortcut for {@code Access.toCharSequence(ByteOrder.nativeOrder())}.
-     *
-     * @param <T> the {@code CharSequence} subtype (backed by native {@code char reads}) to access
-     * @return the {@code Access} to {@link CharSequence}s backed by native {@code char} reads
-     * @see #toCharSequence(ByteOrder)
-     */
-    @SuppressWarnings("unchecked")
-    public static <T extends CharSequence> Access<T> toNativeCharSequence() {
-        return (Access<T>) CharSequenceAccess.nativeCharSequenceAccess();
-    }
-
-    /**
-     * Returns the {@code Access} to {@link CharSequence}s backed by {@code char} reads made in
-     * the specified byte order.
-     *
-     * <p>Usage example:<pre>{@code
-     * static long hashCharBuffer(CharBuffer buffer, LongHashFunction hashFunction) {
-     *     return hashFunction.hash(buffer, Access.toCharSequence(buffer.order()),
-     *         // * 2L because length is passed in bytes, not chars
-     *         0L, buffer.length() * 2L);
-     * }}</pre>
-     *
-     * @param backingOrder the byte order of {@code char} reads backing
-     * {@code CharSequences} to access
-     * @return the {@code Access} to {@link CharSequence}s backed by {@code char} reads made in
-     * the specified byte order
-     * @param <T> the {@code CharSequence} subtype to access
-     * @see #toNativeCharSequence()
-     */
-    @SuppressWarnings("unchecked")
-    public static <T extends CharSequence> Access<T> toCharSequence(ByteOrder backingOrder) {
-        return (Access<T>) CharSequenceAccess.charSequenceAccess(backingOrder);
     }
 
     /**

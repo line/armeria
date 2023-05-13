@@ -30,9 +30,10 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.LongHashFunction;
+import com.linecorp.armeria.common.util.XxHash;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 
 final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy{
@@ -114,7 +115,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                     int weight = endpoint.weight();
                     arr.add(weight);
                 }
-                int x = bsearch(arr, sizeOfRing);
+                int x = binarySearch(arr, sizeOfRing);
                 for (Endpoint endpoint : this.endpoints) {
                     final int weight = endpoint.weight();
                     final String host = endpoint.host();
@@ -138,18 +139,19 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 return count;
             }
 
-            private int bsearch(List<Integer> arr, int sz) {
+            private int binarySearch(List<Integer> arr, int sz) {
                 Collections.sort(arr);
                 int lt = arr.get(0);
                 int rt = arr.get(arr.size() - 1);
                 while (rt > lt + 1) {
                     int mid = (lt + rt) / 2;
-                    if (f(mid, arr, sz)) mid = rt;
+                    if (isPossible(mid, arr, sz)) mid = rt;
                     else mid = lt + 1;
                 }
+                return lt;
             }
 
-            private boolean f(int x, List<Integer> arr, int sz) {
+            private boolean isPossible(int x, List<Integer> arr, int sz) {
                 int total = 0;
                 for (int w : arr) {
                     total += w/x;
@@ -194,8 +196,8 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             // Returned int values range from -2,147,483,648 to 2,147,483,647, same as java int type
             int getXXHash(String input) {
                 final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
-                final LongHashFunction xxHash = LongHashFunction.xx();
-                final long hashBytes = xxHash.hashBytes(inputBytes);
+                final XxHash xxHash = new XxHash();
+                final long hashBytes = xxHash.hash(inputBytes, inputBytes.length);
                 return (int) (hashBytes >>> 32);
             }
         }

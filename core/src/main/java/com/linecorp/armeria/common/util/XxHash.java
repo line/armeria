@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.linecorp.armeria.common.util.UnsafeAccess.UNSAFE;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 /**
@@ -133,103 +134,14 @@ public class XxHash {
         return hash;
     }
 
-    static LongHashFunction asLongHashFunctionWithoutSeed() {
-        return AsLongHashFunction.SEEDLESS_INSTANCE;
+    long seed() {
+        return 0L;
     }
 
-    private static class AsLongHashFunction extends LongHashFunction {
-        private static final long serialVersionUID = 0L;
-        static final AsLongHashFunction SEEDLESS_INSTANCE = new AsLongHashFunction();
-        private static final long VOID_HASH = XxHash.finalize(P5);
-
-        private Object readResolve() {
-            return SEEDLESS_INSTANCE;
-        }
-
-        public long seed() {
-            return 0L;
-        }
-
-        @Override
-        public long hashLong(long input) {
-            input = Primitives.nativeToLittleEndian(input);
-            long hash = seed() + P5 + 8;
-            input *= P2;
-            input = Long.rotateLeft(input, 31);
-            input *= P1;
-            hash ^= input;
-            hash = Long.rotateLeft(hash, 27) * P1 + P4;
-            return XxHash.finalize(hash);
-        }
-
-        @Override
-        public long hashInt(int input) {
-            input = Primitives.nativeToLittleEndian(input);
-            long hash = seed() + P5 + 4;
-            hash ^= Primitives.unsignedInt(input) * P1;
-            hash = Long.rotateLeft(hash, 23) * P2 + P3;
-            return XxHash.finalize(hash);
-        }
-
-        @Override
-        public long hashShort(short input) {
-            input = Primitives.nativeToLittleEndian(input);
-            long hash = seed() + P5 + 2;
-            hash ^= Primitives.unsignedByte(input) * P5;
-            hash = Long.rotateLeft(hash, 11) * P1;
-            hash ^= Primitives.unsignedByte(input >> 8) * P5;
-            hash = Long.rotateLeft(hash, 11) * P1;
-            return XxHash.finalize(hash);
-        }
-
-        @Override
-        public long hashChar(char input) {
-            return hashShort((short) input);
-        }
-
-        @Override
-        public long hashByte(byte input) {
-            long hash = seed() + P5 + 1;
-            hash ^= Primitives.unsignedByte(input) * P5;
-            hash = Long.rotateLeft(hash, 11) * P1;
-            return XxHash.finalize(hash);
-        }
-
-        @Override
-        public long hashVoid() {
-            return VOID_HASH;
-        }
-
-        @Override
-        public <T> long hash(T input, Access<T> access, long off, long len) {
-            long seed = seed();
-            return XxHash.xxHash64(seed, input, access.byteOrder(input, LITTLE_ENDIAN), off, len);
-        }
+    public <T> long hash(T input, long len) {
+        final long BYTE_BASE = UNSAFE.arrayBaseOffset(byte[].class);;
+        long seed = seed();
+        return XxHash.xxHash64(seed, input, UnsafeAccess.INSTANCE.byteOrder(input, LITTLE_ENDIAN), BYTE_BASE, len);
     }
 
-    static LongHashFunction asLongHashFunctionWithSeed(long seed) {
-        return new AsLongHashFunctionSeeded(seed);
-    }
-
-    private static class AsLongHashFunctionSeeded extends AsLongHashFunction {
-        private static final long serialVersionUID = 0L;
-
-        private final long seed;
-        private final transient long voidHash;
-
-        private AsLongHashFunctionSeeded(long seed) {
-            this.seed = seed;
-            voidHash = XxHash.finalize(seed + P5);
-        }
-
-        @Override
-        public long seed() {
-            return seed;
-        }
-
-        @Override
-        public long hashVoid() {
-            return voidHash;
-        }
-    }
 }

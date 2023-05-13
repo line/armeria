@@ -30,10 +30,6 @@ public abstract class CharSequenceAccess extends Access<CharSequence> {
                BigEndianCharSequenceAccess.INSTANCE;
     }
 
-    static CharSequenceAccess nativeCharSequenceAccess() {
-        return charSequenceAccess(ByteOrder.nativeOrder());
-    }
-
     private static int ix(long offset) {
         return (int) (offset >> 1);
     }

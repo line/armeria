@@ -27,7 +27,7 @@ import sun.misc.Unsafe;
 
 // Forked from https://github.com/OpenHFT/Zero-Allocation-Hashing/blob/ea/src/main/java/net/openhft/hashing/UnsafeAccess.java
 public class UnsafeAccess extends Access<Object> {
-    static final UnsafeAccess INSTANCE;
+    public static final UnsafeAccess INSTANCE;
     private static final Access<Object> INSTANCE_NON_NATIVE;
 
     // for test only
