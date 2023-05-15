@@ -30,7 +30,7 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
     }
 
     static PublisherBasedHttpResponse from(ResponseHeaders headers,
-                                           Publisher<? extends HttpObject> publisher,
+                                           Publisher<? extends HttpData> publisher,
                                            HttpHeaders trailers) {
         return new PublisherBasedHttpResponse(new SurroundingPublisher<>(headers, publisher, trailers));
     }
