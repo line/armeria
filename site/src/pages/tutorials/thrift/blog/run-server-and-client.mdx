@@ -21,7 +21,7 @@ No preparation is required for this step.
 
 Let's create a server to serve our service.
 
-1. Create a `Main` class for the server.
+1. Create the `Main` class for the server.
   You can see the full version of the file [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
   ```java filename=Main.java
   package example.armeria.server.blog.thrift;
@@ -87,70 +87,60 @@ Your server is running if you see the following message.
 [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
 ```
 
-## 4. Create and compile a thrift file for client
+## 4. Create a client
 
-Now that our server is running, it's time to start working on the client.
-Let's create and compile the thrift file for the client like we did in [Step 1. Create a service](/tutorials/thrift/blog/create-service) for the server.
-
-1. Create a thrift file, `blog.thrift`, like we did [for the server](/tutorials/thrift/blog/create-service#1-create-a-thrift-file).
-2. Compile the `blog.thrift` file, like we did [for the server](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file).
-
-<Tip>
-
-See [Sample client](/tutorials/thrift/blog#sample-client) for the overall folder structure of the sample client.
-
-</Tip>
-
-## 5. Create a client
-
-1. Create a main class and method for the client. We'll name the class `BlogClient`.
+1. Create a main class for our client. We'll name the class `BlogClient`.
   ```java filename=BlogClient.java
-  package example.armeria.client.blog.thrift;
+  package example.armeria.server.blog.thrift;
 
   import org.slf4j.Logger;
   import org.slf4j.LoggerFactory;
 
   public class BlogClient {
       private static final Logger logger = LoggerFactory.getLogger(BlogClient.class);
-
-      public static void main(String[] args) throws Exception {}
   }
   ```
-2. Create a client instance using Armeria's <type://ThriftClients>.
-  We're running the server locally and set the port to 8080 in our server code.
-  Let's access the server at http://127.0.0.1:8080.
+2. In the `BlogClient` class, add a constructor and create a Thrift client instance using Armeria's <type://ThriftClients>.
   ```java filename=BlogClient.java
   import com.linecorp.armeria.client.thrift.ThriftClients;
   import example.armeria.blog.thrift.BlogService;
 
   public class BlogClient {
       ...
-      static BlogService.Iface blogService;
+      private final BlogService.Iface blogService;
 
-      public static void main(String[] args) throws Exception {
-          blogService = ThriftClients.builder("http://127.0.0.1:8080")
-                  .path("/thrift")
+      BlogClient(URI uri, String path) {
+          blogService = ThriftClients.builder(uri)
+                  .path(path)
                   .build(BlogService.Iface.class);
       }
   }
   ```
-3. Call the `hello()` method.
+3. Add the `hello()` method to make a request to the `hello()` method of our service.
+  ```java filename=BlogClient.java
+    String hello() throws TException {
+        return blogService.hello();
+    }
+  ```
+4. Add the `main()` method as follows.
+  We're running the server locally and set the port to 8080 in our server code.
+  Let's access the server at http://127.0.0.1:8080.
   ```java filename=BlogClient.java
   public static void main(String[] args) throws Exception {
-      ...
-      String greeting = blogService.hello();
-      logger.info(greeting);
+      final BlogClient client = new BlogClient(URI.create("http://127.0.0.1:8080"), "/thrift");
+      final String response = client.hello();
+      logger.info(response);
   }
   ```
 
-## 6. Run the client
+## 5. Run the client
 
 While the server is running, run the client's `main()` method on your IDE or using Gradle.
 
 Your client made request to the server successfully if you see the following message.
 
 ```bash
-[main] INFO example.armeria.client.blog.thrift.BlogClient - Hello, Armeria!
+[main] INFO example.armeria.server.blog.thrift.BlogClient - Hello, Armeria!
 ```
 
 ## What's next

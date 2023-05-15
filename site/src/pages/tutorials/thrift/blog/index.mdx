@@ -40,14 +40,13 @@ To run and develop the sample service, set your computer with the requirements:
 * JDK 11 or higher
 * Thrift compiler: Install a thrift compiler by either [building from source](https://thrift.apache.org/docs/install/) or using a package manager like `brew` or `apt` depending on your environment.
 
-## Sample service and client
-
-The main part of the tutorial is to implement the sample service, while building the sample client as well to verify the service is working properly.
-
-### Sample service
+## Sample service
 
 The sample service provides you implementations of CRUD operations with corresponding service methods.
-[The source code](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) consists the following folders and files.
+
+### Sample service structure
+
+The [sample service code](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) consists the following folders and files.
 
 ```
 thrift-server/
@@ -55,6 +54,7 @@ thrift-server/
 │  ├─ main/
 │  │  ├─ java/
 │  │  │  ├─ example.armeria.server.blog.thrift/
+│  │  │  │  ├─ BlogClient.java
 │  │  │  │  ├─ BlogServiceExceptionHandler.java
 │  │  │  │  ├─ BlogServiceImpl.java
 │  │  │  │  └─ Main.java
@@ -67,8 +67,10 @@ thrift-server/
 └─ build.gradle
 ```
 
-A part of the build.gradle file for the sample service is specified below.
-If you are trying the tutorial from scratch, base your file on the sample source code's.
+### build.gradle
+
+Here is a part of the build.gradle file for the sample service.
+If you are trying the tutorial from scratch, base your file on the sample service's.
 
 <Tip>
 
@@ -93,28 +95,6 @@ dependencies {
   runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"
 }
 `}</CodeBlock>
-
-### Sample client
-
-// TW: 서버/클라이언트 코드를 합치지 않으려고 합니다. (희승 님 제안대로 나머지 튜토리얼도 다 바꿀 것을 생각하니, 바꾸는 이득에 비해 비용이 너무 커져서요)
-// 대신 클라이언트쪽 샘플 코드도 여기서 제공하면 좋을것 같은데, armeria(또는 armeria-examples) 저장소에 올릴 수 있을까요?
-
-The sample client sends requests to the sample service to test the implementations.
-[The source code]() consists the following folders and files.
-
-```
-thrift-client/
-├─ src/
-│  └─ main/
-│     ├─ java/
-│     │  └─ example.armeria.client.blog.thrift/
-│     │     └─ BlogClient.java
-│     ├─ resources/
-│     │  └─ logback.xml
-│     └─ thrift/
-│        └─ blog.thrift
-└─ build.gradle
-```
 
 ## Build and run sample service
 

@@ -17,14 +17,14 @@ We'll leave the service methods empty for now to implement one by one in later s
 
 You need to have the files obtained from previous steps:
 
-- `blog.thrift` for each server and client
-- `BlogServiceImpl.java` for server
-- `BlogClient.java` for client
+- blog.thrift
+- BlogServiceImpl.java
+- BlogClient.java
 
 
 ## 1. Write the thrift file
 
-Let's update the server's `blog.thrift` file we created earlier in [Step 1. Create a service](/tutorials/thrift/blog/create-service).
+Let's update the `blog.thrift` file we created earlier in [Step 1. Create a service](/tutorials/thrift/blog/create-service).
 We'll add structs, an exception, and service methods.
 You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/main/thrift/blog.thrift).
 
@@ -97,15 +97,10 @@ You can see the full version of the file [here](https://github.com/line/armeria-
       1: string reason
   }
   ```
-4. Remove the `hello()` method in the `BlogService`.
+4. Add service methods for create, read, update, and delete operations.
   ```thrift filename=blog.thrift
   service BlogService {
-      string hello() // Remove this
-  }
-  ```
-5. Add service methods for create, read, update, and delete operations.
-  ```thrift filename=blog.thrift
-  service BlogService {
+      ...
 
       /**
        * Creates a blog post.
@@ -143,12 +138,10 @@ The warning will be resolved soon in the step below.
 
 ## 3. Override service methods
 
-Let's override the service methods.
+Let's override the service methods by adding empty service methods as follows.
+We'll implement the service methods one by one in this tutorial.
+Let's leave them empty for now.
 
-1. Remove the `hello()` method in the `BlogServiceImpl` class.
-2. Add empty service methods.
-  We'll implement the service methods one by one in this tutorial.
-  Let's leave them empty for now.
 ```java filename=BlogServiceImpl.java
 import example.armeria.blog.thrift.BlogPost;
 import example.armeria.blog.thrift.CreateBlogPostRequest;
@@ -182,23 +175,6 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
             throws TException {}
 }
 ```
-
-## 4. Write and compile the thrift file for client
-
-Let's write and compile the thrift file for client as well, then update the client code accordingly.
-
-1. Write the client's `blog.thrift` file like we did for server in [1. Write the thrift file](#1-write-the-thrift-file).
-2. [Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
-3. In the `BlogClient` class, remove two lines of code calling the `hello()` method.
-  ```java filename=BlogClient.java
-  public static void main(String[] args) throws Exception {
-      blogService = ThriftClients.builder("http://127.0.0.1:8080")
-              .path("/thrift")
-              .build(BlogService.Iface.class);
-      String result = blogService.hello(); // Remove this
-      logger.info(result); // Remove this
-  }
-  ```
 
 ## What's next
 

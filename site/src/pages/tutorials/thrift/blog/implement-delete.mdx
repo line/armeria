@@ -20,11 +20,12 @@ Also, we'll add Armeria's [Documentation Service](/docs/server-docservice) for t
 
 You need to have the following obtained from previous steps:
 
-- [Java code generated](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) for each server and client
-- `Main.java` for server
-- `BlogServiceImpl.java` for server
-- `BlogServiceExceptionHandler.java` for server
-- `BlogClient.java` for client
+- [Java code generated](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file)
+- Main.java
+- BlogServiceImpl.java
+- BlogServiceExceptionHandler.java
+- BlogClient.java
+- BlogServiceTest.java
 
 ## 1. Implement server-side
 
@@ -51,56 +52,62 @@ In the `BlogClient` class, add the `deleteBlogPost()` method to send a request d
 
 ```java filename=BlogClient.java
 import example.armeria.blog.thrift.DeleteBlogPostRequest;
-
-public class BlogClient {
-    ...
-    void deleteBlogPost(int id) throws Exception {
-        final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
-        blogService.deleteBlogPost(request);
-    }
+...
+void deleteBlogPost(int id) throws TException {
+    final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
+    blogService.deleteBlogPost(request);
 }
 ```
 
 ## 3. Test deleting a blog post
 
 Let's test deleting a blog post.
+We'll delete the blog post with ID `1`, and try retrieving with the same ID to verify it is indeed deleted.
+Add a test method like the following.
 
-1. Call the `deleteBlogPost()` method to delete the first blog post with the ID `0`, followed by the `listBlogPosts()` method to see the list of the blog posts after deleting a blog post.
-  ```java filename=BlogClient.java
-  void testRun() throws Exception {
-      createBlogPost("My first blog", "Yay");
-      createBlogPost("Another blog post", "Creating a post via createBlogPost().");
-      deleteBlogPost(0);
-      listBlogPosts();
-  }
-  ```
-2. [Re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server) and run the client.
+```java filename=BlogServiceTest.java
+@Test
+@Order(7)
+void deleteBlogPost() throws TException {
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    client.deleteBlogPost(1);
+    final Throwable exception = catchThrowable(() -> {
+        client.getBlogPost(1);
+    });
+    assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+            .extracting("reason")
+            .asString()
+            .isEqualTo("The blog post does not exist. ID: 1");
+}
+```
 
-  If you search for "method=deleteBlogPost" in the logs, you can check if the `deleteBlogPost()` method is called like the following.
-  ```
-  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=DefaultRpcRequest{
-      serviceType=BlogService$Iface,
-      serviceName=example.armeria.blog.thrift.BlogService$Iface,
-      method=deleteBlogPost,
-      params=[DeleteBlogPostRequest(id:0)]}}
-  ```
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
 
-  If you search for "ListBlogPostsResponse" in the subsequent logs, you can check that the list of posts retrieved starts from `1` and the first blog post no longer exists.
-  ```bash
-  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - ... { ... , content=CompletableRpcResponse{
-   ListBlogPostsResponse(
-     blogs:[BlogPost(
-       id:1, title:Another blog post, content:Creating a post via createBlogPost()., createdAt:1677145864108, modifiedAt:1677145864108)])}}
-  ```
-4. Now, run the client again, while keeping the server running.
+## 4. Test an error case
 
-   You should see the exception logged as the following.
-   This is because we attempted to delete the post with the ID `0`, which does not exist any longer.
-   ```bash
-   Exception in thread "main" BlogNotFoundException(reason:The blog post does not exist. ID: 0)
-   ```
+Let's test deleting a blog post that does not exist.
+Add a test method like the following.
 
-## 4. Add the Documentation service
+```java filename=BlogServiceTest.java
+@Test
+@Order(8)
+void deleteInvalidBlogPost() {
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    final Throwable exception = catchThrowable(() -> {
+        client.deleteBlogPost(100);
+    });
+    assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+                         .extracting("reason")
+                         .asString()
+                         .isEqualTo("The blog post does not exist. ID: 100");
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
+
+## 5. Add the Documentation service
 
 This time, we'll add Armeria's [Documentation service](/docs/server-docservice).
 The Documentation service automatically creates documentation of your service methods, as well as providing means to test out the methods.

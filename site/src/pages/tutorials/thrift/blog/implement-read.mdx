@@ -14,7 +14,6 @@ In the earlier step, we created blog posts.
 In this step, we'll implement a read operation and make a call to read blog posts.
 We'll write two service methods, one for reading a single post and another for multiple posts.
 And here, we'll handle a custom exception with a custom exception handler.
-Then, we'll add Armeria's <type://LoggingClient> to print more detailed logs.
 
 <TutorialSteps current={5} />
 
@@ -22,10 +21,11 @@ Then, we'll add Armeria's <type://LoggingClient> to print more detailed logs.
 
 You need to have the following obtained from previous steps:
 
-- [Java code generated](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) for each server and client
-- `Main.java` for server
-- `BlogServiceImpl.java` for server
-- `BlogClient.java` for client
+- [Java code generated](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file)
+- Main.java
+- BlogServiceImpl.java
+- BlogClient.java
+- BlogServiceTest.java
 
 ## 1. Implement server-side
 
@@ -165,10 +165,9 @@ Let's implement client methods for each corresponding server method.
 In the `BlogClient` class, add a method to retrieve a single post.
 
 ```java filename=BlogClient.java
-import example.armeria.blog.thrift.BlogNotFoundException;
 import example.armeria.blog.thrift.GetBlogPostRequest;
 ...
-void getBlogPost(int id) throws Exception {
+BlogPost getBlogPost(int id) throws TException {
     final GetBlogPostRequest request =
                 new GetBlogPostRequest().setId(id);
     blogService.getBlogPost(request);
@@ -185,148 +184,112 @@ import example.armeria.blog.thrift.ListBlogPostsRequest;
 import example.armeria.blog.thrift.ListBlogPostsResponse;
 
 ...
-void listBlogPosts() throws Exception {
-    final ListBlogPostsRequest request =
-                new ListBlogPostsRequest().setDescending(false);
-    blogService.listBlogPosts(request);
+List<BlogPost> listBlogPosts(boolean descending) throws TException {
+    return blogService.listBlogPosts(new ListBlogPostsRequest().setDescending(descending))
+                      .getBlogs();
 }
 ```
 
 </TabPane>
 </Tabs>
 
-## 3. Test retrieving multiple posts
+## 3. Test retrieving a single post
 
-Let's start off with retrieving all the blog posts there are:
+Let's test if we can retrieve a blog post we created.
 
-1. Call the `listBlogPosts()` method in the `testRun()` method.
-  ```java filename=BlogClient.java
-  void testRun() {
-      createBlogPost("My first blog", "Yay");
-      createBlogPost("Another blog post", "Creating a post via createBlogPost().");
-      listBlogPosts();
+1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
+  ```java filename=BlogServiceTest.jvaa
+  @Test
+  void getBlogPost() throws TException {
+      final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+      final BlogPost blogPost = client.getBlogPost(0);
+
+      assertThat(blogPost.getTitle()).isEqualTo("My first blog");
+      assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
   }
   ```
-2. [Re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server).
-3. Run the client's `main()` method on your IDE or using Gradle.
+2. Add annotations to configure orders to execute our test methods.
+  The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve in the `getBlogPost()` method.
+  ```java filename=BlogServiceTest.java
+  import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+  import org.junit.jupiter.api.Order;
+  import org.junit.jupiter.api.TestMethodOrder;
 
-Since we haven't added any log messages, we can't tell if we've successfully retrieved blog posts or not.
-To add log messages, we'll add a decorator in the following step.
-Not only can we see the blog posts retrieved, we can obtain IDs to retrieve a post later on.
+  @TestMethodOrder(OrderAnnotation.class) // Add this
+  class BlogServiceTest {
+      ...
 
-## 4. Add the LoggingClient
-
-Retrieving a single blog post requires a post ID.
-In this step, we'll decorate the client with Armeria's <type://LoggingClient> to obtain blog post IDs from the detailed logs.
-
-<Tip>
-
-Similarly, you can decorate a service as well.
-Use the [server decorator](https://armeria.dev/docs/server-decorator) or annotate with <type://@LoggingDecorator> to decorate a service.
-
-</Tip>
-
-1. In our client's `main()` method, add a decorator to the client instance using the <type://LoggingClient>.
-  ```java filename=BlogClient.java
-  import com.linecorp.armeria.client.logging.LoggingClient;
-
-  public class BlogClient {
-      public static void main(String[] args) throws Exception {
+      @Test
+      @Order(1) // Add this
+      void createBlogPost() throws TException {
           ...
-          blogService = ThriftClients.builder("http://127.0.0.1:8080")
-                              .path("/thrift")
-                              .decorator(LoggingClient.newDecorator()) // Add this
-                              .build(BlogService.Iface.class);
+      }
+
+      @Test
+      @Order(2) // Add this
+      void getBlogPost() throws TException {
           ...
       }
   }
   ```
-2. Set up log messages:
-    1. Add a dependency in the `build.gradle` file.
-      ```groovy filename=build.gradle
-      dependencies {
-        implementation 'ch.qos.logback:logback-classic:1.2.10'
-      }
-      ```
-    2. Add the `logback.xml` file in the `{project_root}/src/main/resources` folder.
-      ```xml filename=logback.xml
-      <?xml version="1.0" encoding="UTF-8"?>
-      <configuration>
+3. Run all the test cases on your IDE or using Gradle.
 
-        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-          <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-          </encoder>
-        </appender>
+  Your client retrieved a blog post from the server successfully if the test is passed.
 
-        <root level="debug">
-          <appender-ref ref="STDOUT" />
-        </root>
-      </configuration>
-      ```
-3. [Re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server) and run the client.
+## 4. Test an error case
 
-  If succeed, you'll see an output like the following from the client.
-  ```bash
-  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - [creqId=b0bfb91d, chanId=4b890fb0, laddr=127.0.0.1:51644, raddr=127.0.0.1:8080][http://127.0.0.1:8080/thrift#POST] Response: {startTime=2023-02-22T03:03:30.740Z(1677035010740687), length=196B, duration=1143µs(1143917ns), totalDuration=6576µs(6576292ns), headers=[:status=200, content-type=application/x-thrift; protocol=TBINARY, server=Armeria/1.22.0, date=Wed, 22 Feb 2023 03:03:30 GMT, content-length=196], content=CompletableRpcResponse{ListBlogPostsResponse(blogs:
-  [BlogPost(
-      id:0, 
-      title:My first blog, 
-      content:Yay, 
-      createdAt:1677035010712, 
-      modifiedAt:1677035010712), 
-  BlogPost(
-      id:1, 
-      title:Another blog post, 
-      content:Creating a post via createBlogPost()., 
-      createdAt:1677035010733, 
-      modifiedAt:1677035010733)])}}
-  ```
-Now that we can find the ID information from the logs, we can now retrieve a single post.
+To check that our exception handler is working, let's try retrieving a blog post that does not exist.
+Add a test method to retrieve a blog post with an invalid ID, asserting an exception is thrown.
 
-## 5. Test retrieving a single post
+```java filename=BlogServiceTest.java
+import static org.assertj.core.api.Assertions.catchThrowable;
+import example.armeria.blog.thrift.BlogNotFoundException;
+...
+@Test
+@Order(3)
+void getInvalidBlogPost() {
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    final Throwable exception = catchThrowable(() -> {
+        client.getBlogPost(Integer.MAX_VALUE);
+    });
+    assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+        .extracting("reason")
+        .asString()
+        .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+}
+```
 
-Let's retrieve the second blog post.
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
 
-1. Call the `getBlogPost()` method with ID `1` for the second blog post.
-  ```java filename=BlogClient.java
-  void testRun() {
-      createBlogPost("My first blog", "Yay");
-      createBlogPost("Another blog post", "Creating a post via createBlogPost().");
-      listBlogPosts();  // Feel free to comment this out or leave it
-      getBlogPost(1);   // Add this
-  }
-  ```
+## 5. Test retrieving multiple posts
 
-2. [Re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server) and run the client.
+Finally, let's test if we can retrieve multiple posts.
+Add a test method like the following to create the second blog post and test retrieving the list of blog posts.
 
-  If succeed, you'll see an output like the following.
-  ```bash
-  [armeria-common-worker-nio-2-2] DEBUG c.l.a.c.logging.LoggingRpcClient - [creqId=e0dcd594, chanId=5601d592, laddr=127.0.0.1:52486, raddr=127.0.0.1:8080][http://127.0.0.1:8080/thrift#POST] Response: {startTime=2023-02-22T04:52:02.801Z(1677041522801509), length=125B, duration=1842µs(1842458ns), totalDuration=5748µs(5748416ns), headers=[:status=200, content-type=application/x-thrift; protocol=TBINARY, server=Armeria/1.22.0, date=Wed, 22 Feb 2023 04:52:02 GMT, content-length=125], content=CompletableRpcResponse{
-    BlogPost(
-      id:1, 
-      title:Another blog post, 
-      content:Creating a post via createBlogPost()., 
-      createdAt:1677041522789, 
-      modifiedAt:1677041522789)}}
-  ```
-3. Change the argument to `100` and run the client again.
-  Let's see what happens if you retrieve a blog post that does not exist.
-  ```java filename=BlogClient.java
-  void testRun() {
-      createBlogPost("My first blog", "Yay");
-      createBlogPost("Another blog post", "Creating a post via createBlogPost().");
-      getBlogPost(100); // Set the argument to 100
-  }
-  ```
-  You can see the `BlogNotFoundException` is thrown as a runtime exception.
-  ```bash
-  Exception in thread "main" BlogNotFoundException(reason:The blog post does not exist. ID: 100)
-          at example.armeria.blog.thrift.BlogService$getBlogPost_result$getBlogPost_resultStandardScheme.read(BlogService.java:2157)
-          at example.armeria.blog.thrift.BlogService$getBlogPost_result$getBlogPost_resultStandardScheme.read(BlogService.java:2133)
-          at example.armeria.blog.thrift.BlogService$getBlogPost_result.read(BlogService.java:2071)
-          ...
-  ```
+```java filename=BlogServiceTest.java
+import java.util.List;
+...
+@Test
+@Order(4)
+void listBlogPosts() throws TException {
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    client.createBlogPost("My second blog", "Armeria is awesome!");
+
+    final List<BlogPost> blogs = client.listBlogPosts(false);
+    assertThat(blogs).hasSize(2);
+    final BlogPost firstBlog = blogs.get(0);
+    assertThat(firstBlog.getTitle()).isEqualTo("My first blog");
+    assertThat(firstBlog.getContent()).isEqualTo("Hello Armeria!");
+
+    final BlogPost secondBlog = blogs.get(1);
+    assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
+    assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
 
 ## What's next
 

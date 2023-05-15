@@ -19,10 +19,10 @@ In this step, we'll fill in one of the service methods to create a blog post and
 
 You need to have the following obtained from previous steps:
 
-- [Java code generated](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) for each server and client
-- `Main.java` for server
-- `BlogServiceImpl.java` for server
-- `BlogClient.java` for client
+- [Java code generated](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file)
+- Main.java
+- BlogServiceImpl.java
+- BlogClient.java
 
 ## 1. Implement server-side
 
@@ -82,43 +82,76 @@ import example.armeria.blog.thrift.CreateBlogPostRequest;
 
 public class BlogClient {
     ...
-    void createBlogPost(String title, String content) throws Exception {
-      final CreateBlogPostRequest request =
-          new CreateBlogPostRequest().setTitle(title)
-                                  .setContent(content);
-      final BlogPost response = blogService.createBlogPost(request);
-      logger.info("[Create response] Title: {} Content: {}",
-                      response.getTitle(), response.getContent());
+    BlogPost createBlogPost(String title, String content) throws TException {
+        final CreateBlogPostRequest request =
+                new CreateBlogPostRequest().setTitle(title)
+                                           .setContent(content);
+        return blogService.createBlogPost(request);
     }
 }
 ```
 
 ## 3. Test creating a blog post
 
-Now, let's run the client to test what we implemented so far in this step.
+Now, let's write the test code to test what we implemented so far in this step.
 Note the code is minimal to keep things simple.
 
-1. Add a method, `testRun()`, to test the creation method we just implemented.
-  ```java filename=BlogClient.java
-  void testRun() throws Exception {
-      createBlogPost("My first blog", "Yay");
-  }
-  ```
-2. In the `main()` method, call the `testRun()` method.
-  ```java filename=BlogClient.java
-  public static void main(String[] args) throws Exception {
-      ...
-      BlogClient blogClient = new BlogClient();
-      blogClient.testRun();
-  }
-  ```
-2. [Re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server).
-3. Run the client's `main()` method on your IDE or using Gradle.
+1. Create a file, `BlogServiceTest.java`, and declare the test class.
+  You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/test/java/example/armeria/server/blog/thrift/BlogServiceTest.java).
+  ```java filename=BlogServiceTest.java
+  package example.armeria.server.blog.thrift;
 
-  Your client made request to the server successfully if you see the following message.
-  ```bash
-  [main] INFO example.armeria.client.blog.thrift.BlogClient - [Create response] Title: My first blog Content: Yay
+  class BlogServiceTest {}
   ```
+2. Register a <type://ServerExtension> and add the service to the server.
+  ```java filename=BlogServiceTest.java
+  import org.junit.jupiter.api.extension.RegisterExtension;
+
+  import com.linecorp.armeria.server.ServerBuilder;
+  import com.linecorp.armeria.server.thrift.THttpService;
+  import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+  class BlogServiceTest {
+
+      @RegisterExtension
+      static final ServerExtension server = new ServerExtension() {
+          @Override
+          protected void configure(ServerBuilder sb) throws Exception {
+              sb.service("/thrift", THttpService.builder()
+                                                .addService(new BlogServiceImpl())
+                                                .build());
+          }
+      };
+  }
+  ```
+3. Add a method, `createBlogPost()`, to test the service method for creation.
+  ```java filename=BlogServiceTest.java
+  import static org.assertj.core.api.Assertions.assertThat;
+
+  import org.apache.thrift.TException;
+  import org.junit.jupiter.api.Order;
+  import org.junit.jupiter.api.Test;
+
+  import example.armeria.blog.thrift.BlogPost;
+
+  class BlogServiceTest {
+
+      @Test
+      void createBlogPost() throws TException {
+          final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+          final BlogPost response = client.createBlogPost("My first blog", "Hello Armeria!");
+          assertThat(response.getId()).isGreaterThanOrEqualTo(0);
+          assertThat(response.getTitle()).isEqualTo("My first blog");
+          assertThat(response.getContent()).isEqualTo("Hello Armeria!");
+      }
+  }
+  ```
+4. Run the test case on your IDE or using Gradle.
+  ```bash
+  ./gradlew test
+  ```
+
+  Your client made request to the server successfully if you see the test case is passed.
 
 ## What's next
 
