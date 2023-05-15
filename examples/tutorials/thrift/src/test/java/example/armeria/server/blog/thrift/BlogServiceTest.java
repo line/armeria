@@ -95,7 +95,34 @@ class BlogServiceTest {
 
     @Test
     @Order(6)
-    void badRequestExceptionHandlerWhenTryingDeleteMissingBlogPost() {
+    void updateInvalidBlogPost() {
+        final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+        final Throwable exception = catchThrowable(() -> {
+            final BlogPost updated = client.updateBlogPost(Integer.MAX_VALUE, "My first blog", "Hello awesome Armeria!");
+        });
+        assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+                .extracting("reason")
+                .asString()
+                .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+    }
+
+    @Test
+    @Order(7)
+    void deleteBlogPost() throws TException {
+        final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+        client.deleteBlogPost(1);
+        final Throwable exception = catchThrowable(() -> {
+            client.getBlogPost(1);
+        });
+        assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+                .extracting("reason")
+                .asString()
+                .isEqualTo("The blog post does not exist. ID: 1");
+    }
+
+    @Test
+    @Order(8)
+    void deleteInvalidBlogPost() {
         final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
         final Throwable exception = catchThrowable(() -> {
             client.deleteBlogPost(100);
