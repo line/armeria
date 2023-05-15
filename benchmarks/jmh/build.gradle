@@ -21,6 +21,8 @@ dependencies {
     implementation project(':testing-internal')
 }
 
+tasks.sourcesJar.dependsOn(tasks.compileJmhThrift)
+
 jmh {
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
     jmhVersion = libs.versions.jmh.core.get()
