@@ -113,7 +113,7 @@ class ExceptionReportingServiceErrorHandlerTest {
         assertThat(logAppender.list
                            .stream()
                            .filter(event -> event.getFormattedMessage().contains(
-                                   "Observed 1 unhandled exceptions"))
+                                   "Observed 1 exceptions"))
                            .findAny()).isNotEmpty();
     }
 
