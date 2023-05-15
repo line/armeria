@@ -45,7 +45,7 @@ public class SurroundingPublisherTckTest extends PublisherVerification<Object> {
             return new SurroundingPublisher<>("head", Mono.empty(), null);
         }
         if (elements == 2) {
-            return new SurroundingPublisher<>("head", Mono.empty(), "tail");
+            return new SurroundingPublisher<>(null, Mono.just(1), "tail");
         }
         return new SurroundingPublisher<>("head",
                                           Flux.fromStream(LongStream.range(0, elements - 2).boxed()),

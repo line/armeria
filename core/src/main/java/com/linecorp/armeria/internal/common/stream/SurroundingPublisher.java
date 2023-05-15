@@ -65,14 +65,14 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
                 AtomicLongFieldUpdater.newUpdater(SurroundingSubscriber.class, "needToPublish");
 
         enum State {
-            SENDING_HEAD,
-            SENDING_BODY,
-            SENDING_TAIL,
-            SENDING_COMPLETE,
+            REQUIRE_HEAD,
+            REQUIRE_BODY,
+            REQUIRE_TAIL,
+            REQUIRE_COMPLETE,
             DONE,
         }
 
-        private volatile State state = State.SENDING_HEAD;
+        private volatile State state;
 
         @Nullable
         private final T head;
@@ -85,12 +85,14 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
 
         private volatile long requested;
         private volatile long needToPublish;
+        private volatile boolean subscribed;
         private volatile boolean cancelled;
 
         SurroundingSubscriber(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail,
                               Subscriber<? super T> downstream) {
             requireNonNull(publisher, "publisher");
             requireNonNull(downstream, "downstream");
+            state = head != null ? State.REQUIRE_HEAD : State.REQUIRE_BODY;
             this.head = head;
             this.publisher = publisher;
             this.tail = tail;
@@ -117,42 +119,56 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
                 }
             }
 
-            switch (state) {
-                case SENDING_HEAD: {
-                    setState(State.SENDING_HEAD, State.SENDING_BODY);
-                    if (head != null) {
-                        downstream.onNext(head);
-                        requestedUpdater.decrementAndGet(this);
+            publish();
+        }
+
+        private void publish() {
+            for (;;) {
+                if (requested <= 0) {
+                    return;
+                }
+                switch (state) {
+                    case REQUIRE_HEAD: {
+                        sendHead();
+                        continue;
                     }
-                    publisher.subscribe(this);
-                    return;
-                }
-                case SENDING_BODY: {
-                    requestUpstream(upstream);
-                    return;
-                }
-                case SENDING_TAIL: {
-                    sendTail();
-                    if (n > 1) {
+                    case REQUIRE_BODY: {
+                        if (!subscribed) {
+                            subscribed = true;
+                            publisher.subscribe(this);
+                            return;
+                        }
+                        if (upstream != null) {
+                           requestUpstream(upstream);
+                        }
+                        return;
+                    }
+                    case REQUIRE_TAIL: {
+                        sendTail();
+                        continue;
+                    }
+                    case REQUIRE_COMPLETE: {
                         sendComplete();
+                        return;
                     }
-                    return;
-                }
-                case SENDING_COMPLETE: {
-                    sendComplete();
-                    return;
-                }
-                case DONE: {
-                    upstream.cancel();
-                    return;
+                    case DONE: {
+                        upstream.cancel();
+                        return;
+                    }
                 }
             }
         }
 
+        private void sendHead() {
+            setState(State.REQUIRE_HEAD, State.REQUIRE_BODY);
+            requestedUpdater.decrementAndGet(this);
+            downstream.onNext(head);
+        }
+
         private void sendTail() {
-            setState(State.SENDING_TAIL, State.SENDING_COMPLETE);
+            setState(State.REQUIRE_TAIL, State.REQUIRE_COMPLETE);
+            requestedUpdater.decrementAndGet(this);
             if (tail != null) {
-                requestedUpdater.decrementAndGet(this);
                 downstream.onNext(tail);
             } else {
                 sendComplete();
@@ -160,10 +176,8 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
         }
 
         private void sendComplete() {
-            if (state == State.DONE) {
-                return;
-            }
-            setState(State.SENDING_COMPLETE, State.DONE);
+            setState(State.REQUIRE_COMPLETE, State.DONE);
+            requestedUpdater.decrementAndGet(this);
             downstream.onComplete();
         }
 
@@ -173,18 +187,13 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
                 if (requested == 0) {
                     return;
                 }
-                if (state == State.SENDING_TAIL) {
-                    sendTail();
-                    if (requested > 1) {
-                        sendComplete();
-                    }
-                    return;
-                }
                 if (requestedUpdater.compareAndSet(this, requested, 0)) {
-                    if (needToPublishUpdater.get(this) > Long.MAX_VALUE - requested) {
-                        needToPublishUpdater.set(this, Long.MAX_VALUE);
-                    } else {
-                        needToPublishUpdater.addAndGet(this, requested);
+                    for (;;) {
+                        final long oldNeedToPublish = needToPublish;
+                        final long newNeedToPublish = LongMath.saturatedAdd(oldNeedToPublish, requested);
+                        if (needToPublishUpdater.compareAndSet(this, oldNeedToPublish, newNeedToPublish)) {
+                            break;
+                        }
                     }
                     subscription.request(requested);
                     return;
@@ -222,15 +231,10 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
 
         @Override
         public void onComplete() {
-            final long needToPublish = needToPublishUpdater.get(this);
-            setState(State.SENDING_BODY, State.SENDING_TAIL);
-            if (needToPublish == 0) {
-                return;
-            }
-
-            sendTail();
-            if (needToPublish > 1) {
-                sendComplete();
+            setState(State.REQUIRE_BODY, State.REQUIRE_TAIL);
+            if (needToPublish > 0) {
+                requestedUpdater.addAndGet(this, needToPublish);
+                publish();
             }
         }
 
@@ -248,7 +252,7 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
         }
 
         private boolean setState(State oldState, State newState) {
-            assert newState != State.SENDING_HEAD : "oldState: " + oldState + ", newState: " + newState;
+            assert newState != State.REQUIRE_HEAD : "oldState: " + oldState + ", newState: " + newState;
             return stateUpdater.compareAndSet(this, oldState, newState);
         }
     }
