@@ -107,15 +107,17 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
 
         final Throwable exception = thrownException;
         if (exception != null) {
-            logger.warn("Observed {} unhandled exceptions in last {}. " +
-                        "Please consider adding the LoggingService decorator to get detailed error logs. " +
+            logger.warn("Observed {} exceptions that didn't reach a LoggingService in the last {}. " +
+                        "Please consider either adding a LoggingService or moving the " +
+                        "LoggingService to an earlier timing. " +
                         "One of the thrown exceptions:",
                         newExceptionsCount,
                         TextFormatter.elapsed(intervalMillis, TimeUnit.MILLISECONDS), exception);
             thrownException = null;
         } else {
-            logger.warn("Observed {} unhandled exceptions in last {}. " +
-                        "Please consider adding the LoggingService decorator to get detailed error logs.",
+            logger.warn("Observed {} exceptions that didn't reach a LoggingService in the last {}. " +
+                        "Please consider either adding a LoggingService or moving the " +
+                        "LoggingService to an earlier timing.",
                         newExceptionsCount, TextFormatter.elapsed(intervalMillis, TimeUnit.MILLISECONDS));
         }
 
