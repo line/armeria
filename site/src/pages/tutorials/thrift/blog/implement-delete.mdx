@@ -117,19 +117,17 @@ The Documentation service automatically creates documentation of your service me
   ```java filename=Main.java
   import com.linecorp.armeria.server.docs.DocService;
   import example.armeria.blog.thrift.CreateBlogPostRequest;
-
-  public final class Main {
-      private static Server newServer(int port) throws Exception {
-          ...
-          final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
-                  .setTitle("Example title")
-                  .setContent("Example content");
-          final DocService docService = DocService
-                  .builder()
-                  .exampleRequests(List.of(new BlogService.createBlogPost_args(exampleRequest)))
-                  .build();
-          ...
-      }
+  ...
+  private static Server newServer(int port) throws Exception {
+      ...
+      final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
+              .setTitle("Example title")
+              .setContent("Example content");
+      final DocService docService = DocService
+              .builder()
+              .exampleRequests(List.of(new BlogService.createBlogPost_args(exampleRequest)))
+              .build();
+      ...
   }
   ```
 2. In the `newServer()` method, add the <type://DocService> to our server builder.

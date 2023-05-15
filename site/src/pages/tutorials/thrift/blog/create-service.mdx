@@ -65,12 +65,10 @@ Now, let's implement the service in Java.
 3. In the `BlogServiceImpl` class, add the `hello()` method, a dummy method for temporary use to test the connection between server and client.
   ```java filename=BlogServiceImpl.java
   import org.apache.thrift.async.AsyncMethodCallback;
-
-  public class BlogServiceImpl implements BlogService.AsyncIface {
-      @Override
-      public void hello(AsyncMethodCallback<String> resultHandler) {
-          resultHandler.onComplete("Hello, Armeria!");
-      }
+  ...
+  @Override
+  public void hello(AsyncMethodCallback<String> resultHandler) {
+      resultHandler.onComplete("Hello, Armeria!");
   }
   ```
 

@@ -89,21 +89,18 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
 2. Add an if-else statement to throw an exception in case there is no blog post for the given ID.
   ```java filename=BlogServiceImpl.java
   import example.armeria.blog.thrift.BlogNotFoundException;
-
-  public class BlogServiceImpl implements BlogService.AsyncIface {
-      ...
-      @Override
-      public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
-              throws TException {
-          final BlogPost blogPost = blogPosts.get(request.getId());
-          if (blogPost == null) {
-              // throwing an exception will also have the same effect
-              // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
-              resultHandler.onError(
-                      new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
-          } else {
-              resultHandler.onComplete(blogPost);
-          }
+  ...
+  @Override
+  public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {
+      final BlogPost blogPost = blogPosts.get(request.getId());
+      if (blogPost == null) {
+          // throwing an exception will also have the same effect
+          // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+          resultHandler.onError(
+                  new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+      } else {
+          resultHandler.onComplete(blogPost);
       }
   }
   ```
@@ -115,15 +112,12 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
   ```java filename=BlogServiceImpl.java
   import java.util.List;
   import java.util.stream.Collectors;
-
-  public class BlogServiceImpl implements BlogService.AsyncIface {
-      ...
-      @Override
-      public void listBlogPosts(ListBlogPostsRequest request,
-                                AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
-          final List<BlogPost> blogPosts = blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
-          resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
-      }
+  ...
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request,
+                            AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
+      final List<BlogPost> blogPosts = blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
+      resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
   }
   ```
 2. Add an if-else statement to sort the blog posts based on the value of the `descending` parameter.
@@ -131,23 +125,20 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
   import java.util.Collections;
   import java.util.Comparator;
   import java.util.Map.Entry;
-
-  public class BlogServiceImpl implements BlogService.AsyncIface {
-      ...
-      @Override
-      public void listBlogPosts(ListBlogPostsRequest request,
-                                AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
-          final List<BlogPost> blogPosts;
-          if (request.isDescending()) {
-              blogPosts = this.blogPosts.entrySet()
-                                        .stream()
-                                        .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
-                                        .map(Entry::getValue).collect(Collectors.toList());
-          } else {
-              blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
-          }
-          resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
+  ...
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request,
+                            AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
+      final List<BlogPost> blogPosts;
+      if (request.isDescending()) {
+          blogPosts = this.blogPosts.entrySet()
+                                    .stream()
+                                    .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                                    .map(Entry::getValue).collect(Collectors.toList());
+      } else {
+          blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
       }
+      resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
   }
   ```
 
@@ -182,7 +173,6 @@ In the `BlogClient` class, add a method to retrieve a list of posts.
 ```java filename=BlogClient.java
 import example.armeria.blog.thrift.ListBlogPostsRequest;
 import example.armeria.blog.thrift.ListBlogPostsResponse;
-
 ...
 List<BlogPost> listBlogPosts(boolean descending) throws TException {
     return blogService.listBlogPosts(new ListBlogPostsRequest().setDescending(descending))

@@ -37,29 +37,25 @@ Let's create a server to serve our service.
 3. In the `newServer()` method, create a service instance using Armeria's <type://THttpService#builder()>.
   ```java filename=Main.java
   import com.linecorp.armeria.server.thrift.THttpService;
-
-  public final class Main {
-      private static void newServer(int port) throws Exception {
-          final THttpService tHttpService =
-                  THttpService.builder()
-                              .addService(new BlogServiceImpl())
-                              .build();
-      }
+  ...
+  private static void newServer(int port) throws Exception {
+      final THttpService tHttpService =
+              THttpService.builder()
+                          .addService(new BlogServiceImpl())
+                          .build();
   }
   ```
 4. Create and return a server instance using Armeria's <type://ServerBuilder>.
   Note that the service instance, `tHttpService`, is added to the server instance.
   ```java filename=Main.java
   import com.linecorp.armeria.server.Server;
-
-  public final class Main {
-      private static Server newServer(int port) throws Exception {
-          ...
-          return Server.builder()
-                       .http(port)
-                       .service("/thrift", tHttpService) // Add the service to server
-                       .build();
-      }
+  ...
+  private static Server newServer(int port) throws Exception {
+      ...
+      return Server.builder()
+                   .http(port)
+                   .service("/thrift", tHttpService) // Add the service to server
+                   .build();
   }
   ```
 5. Add the `main()` method in the `Main` class as follows.
