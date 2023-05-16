@@ -98,7 +98,8 @@ class BlogServiceTest {
     void updateInvalidBlogPost() {
         final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
         final Throwable exception = catchThrowable(() -> {
-            final BlogPost updated = client.updateBlogPost(Integer.MAX_VALUE, "My first blog", "Hello awesome Armeria!");
+            final BlogPost updated = client.updateBlogPost(Integer.MAX_VALUE, "My first blog",
+                                                           "Hello awesome Armeria!");
         });
         assertThat(exception).isInstanceOf(BlogNotFoundException.class)
                 .extracting("reason")
