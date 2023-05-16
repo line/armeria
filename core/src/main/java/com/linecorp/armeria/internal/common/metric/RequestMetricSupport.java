@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.micrometer.core.instrument.Counter;
@@ -67,14 +66,13 @@ public final class RequestMetricSupport {
                           RequestLogProperty.REQUEST_HEADERS,
                           RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
-           .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction));
-
-        MoreMeters.setDistributionStatisticConfig(distributionStatisticConfig);
+           .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction,
+                                        distributionStatisticConfig));
     }
 
     private static void onRequest(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
@@ -87,14 +85,14 @@ public final class RequestMetricSupport {
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
         activeRequestMetrics.increment();
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server, successFunction);
+            onResponse(requestLog, meterIdPrefixFunction, server, successFunction, distributionStatisticConfig);
             activeRequestMetrics.decrement();
         });
     }
 
     private static void onResponse(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);

@@ -124,12 +124,23 @@ public final class MoreMeters {
      * Returns a newly-registered {@link Timer} configured by {@link #distributionStatisticConfig()}.
      */
     public static Timer newTimer(MeterRegistry registry, String name, Iterable<Tag> tags) {
+        return newTimer(registry, name, tags, distStatCfg);
+    }
+
+    /**
+     * Returns a newly-registered {@link Timer} configured by given {@link DistributionStatisticConfig}.
+     *
+     * @param distributionStatisticConfig the {@link DistributionStatisticConfig} to use
+     */
+    public static Timer newTimer(MeterRegistry registry, String name, Iterable<Tag> tags,
+                                 DistributionStatisticConfig distributionStatisticConfig) {
         requireNonNull(registry, "registry");
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
+        requireNonNull(distributionStatisticConfig, "distributionStatisticConfig");
 
-        final Double maxExpectedValueNanos = distStatCfg.getMaximumExpectedValueAsDouble();
-        final Double minExpectedValueNanos = distStatCfg.getMinimumExpectedValueAsDouble();
+        final Double maxExpectedValueNanos = distributionStatisticConfig.getMaximumExpectedValueAsDouble();
+        final Double minExpectedValueNanos = distributionStatisticConfig.getMinimumExpectedValueAsDouble();
         final Duration maxExpectedValue =
                 maxExpectedValueNanos != null ? Duration.ofNanos(maxExpectedValueNanos.longValue()) : null;
         final Duration minExpectedValue =
@@ -139,11 +150,11 @@ public final class MoreMeters {
                     .tags(tags)
                     .maximumExpectedValue(maxExpectedValue)
                     .minimumExpectedValue(minExpectedValue)
-                    .publishPercentiles(distStatCfg.getPercentiles())
-                    .publishPercentileHistogram(distStatCfg.isPercentileHistogram())
-                    .percentilePrecision(distStatCfg.getPercentilePrecision())
-                    .distributionStatisticBufferLength(distStatCfg.getBufferLength())
-                    .distributionStatisticExpiry(distStatCfg.getExpiry())
+                    .publishPercentiles(distributionStatisticConfig.getPercentiles())
+                    .publishPercentileHistogram(distributionStatisticConfig.isPercentileHistogram())
+                    .percentilePrecision(distributionStatisticConfig.getPercentilePrecision())
+                    .distributionStatisticBufferLength(distributionStatisticConfig.getBufferLength())
+                    .distributionStatisticExpiry(distributionStatisticConfig.getExpiry())
                     .register(registry);
     }
 
