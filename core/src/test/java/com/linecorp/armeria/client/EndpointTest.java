@@ -115,6 +115,20 @@ class EndpointTest {
         assertThatThrownBy(() -> foo.withWeight(-1)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    void hostWithTrailingDot() {
+        final Endpoint endpoint = Endpoint.of("foo.com.");
+        assertThat(endpoint.host()).isEqualTo("foo.com");
+        assertThat(endpoint.hasTrailingDot()).isTrue();
+        final Endpoint barEndpoint = endpoint.withHost("bar.com");
+        assertThat(barEndpoint.host()).isEqualTo("bar.com");
+        assertThat(barEndpoint.hasTrailingDot()).isFalse();
+
+        final Endpoint bazEndpoint = barEndpoint.withHost("baz.com.");
+        assertThat(bazEndpoint.host()).isEqualTo("baz.com");
+        assertThat(bazEndpoint.hasTrailingDot()).isTrue();
+    }
+
     @ParameterizedTest
     @CsvSource({
             "::1, ::1, INET6",
