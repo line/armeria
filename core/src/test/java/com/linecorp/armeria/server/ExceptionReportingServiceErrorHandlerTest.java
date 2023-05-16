@@ -141,7 +141,7 @@ class ExceptionReportingServiceErrorHandlerTest {
         assertThat(res.status().code()).isEqualTo(200);
 
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        await().until(() -> logAppender.list.isEmpty());
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test
