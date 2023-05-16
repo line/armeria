@@ -21,7 +21,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.util.Exceptions;
 
 final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler {
 
@@ -43,7 +43,7 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
     }
 
     private static boolean isIgnorableException(Throwable cause) {
-        if (cause instanceof ClosedStreamException) {
+        if (Exceptions.isExpected(cause)) {
             return true;
         }
         return (cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
