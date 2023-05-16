@@ -529,7 +529,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         // Replace the host name as well if the host name is an IP address.
         if (isIpAddrOnly()) {
             return new Endpoint(ipAddr, ipAddr, port, weight,
-                                ipFamily == StandardProtocolFamily.INET ? HostType.IPv4_ONLY : HostType.IPv6_ONLY,
+                                ipFamily == StandardProtocolFamily.INET ? HostType.IPv4_ONLY
+                                                                        : HostType.IPv6_ONLY,
                                 attributes, hasTrailingDot);
         }
 
