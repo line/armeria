@@ -104,6 +104,59 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             pendingTaskUpdater = AtomicReferenceFieldUpdater.newUpdater(
             ArmeriaClientCall.class, Runnable.class, "pendingTask");
 
+    /**
+     * Offloads execution of Listener callbacks to contextAwareExecutor, while
+     * also handling callbacks' exceptions to gracefully close the stream.
+     */
+    private final class OffloadingListener extends Listener<O> {
+
+        private final Listener<O> delegate;
+
+        OffloadingListener(Listener<O> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void onHeaders(Metadata metadata) {
+            contextAwareExecutor.execute(() -> {
+                try {
+                    delegate.onHeaders(metadata);
+                } catch (Throwable t) {
+                    closeWhenListenerThrows(t);
+                }
+            });
+        }
+
+        @Override
+        public void onMessage(O message) {
+            contextAwareExecutor.execute(() -> {
+                try {
+                    delegate.onMessage(message);
+                } catch (Throwable t) {
+                    closeWhenListenerThrows(t);
+                }
+            });
+        }
+
+        @Override
+        public void onClose(Status status, Metadata trailers) {
+            contextAwareExecutor.execute(() -> {
+                delegate.onClose(status, trailers);
+            });
+        }
+
+        @Override
+        public void onReady() {
+            contextAwareExecutor.execute(() -> {
+                try {
+                    delegate.onReady();
+                } catch (Throwable t) {
+                    closeWhenListenerThrows(t);
+                }
+            });
+        }
+    }
+
     private final DefaultClientRequestContext ctx;
     private final EndpointGroup endpointGroup;
     private final HttpClient httpClient;
@@ -204,7 +257,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         // The listener is set by the callers thread. The safe-publishing (aka visibility)
         // to event-loop is guaranteed via semantics of EventLoop.execute(...) call.
-        listener = responseListener;
+        listener = new OffloadingListener(responseListener);
 
         final Compressor compressor;
         if (callOptions.getCompressor() != null) {
@@ -259,13 +312,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
             });
         }
-        contextAwareExecutor.execute(() -> {
-            try {
-                responseListener.onReady();
-            } catch (Throwable t) {
-                closeWhenListenerThrows(t);
-            }
-        });
+
+        assert listener != null;
+        listener.onReady();
     }
 
     @Override
@@ -363,14 +412,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             req.write(requestFramer.writePayload(serialized));
             req.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    contextAwareExecutor.execute(() -> {
-                        try {
-                            assert listener != null;
-                            listener.onReady();
-                        } catch (Throwable t) {
-                            closeWhenListenerThrows(t);
-                        }
-                    });
+                    assert listener != null;
+                    listener.onReady();
                 }
             });
         } catch (Throwable t) {
@@ -434,14 +477,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 GrpcUnsafeBufferUtil.storeBuffer(buf, msg, ctx);
             }
 
-            contextAwareExecutor.execute(() -> {
-                try {
-                    assert listener != null;
-                    listener.onMessage(msg);
-                } catch (Throwable t) {
-                    closeWhenListenerThrows(t);
-                }
-            });
+            assert listener != null;
+            listener.onMessage(msg);
         } catch (Throwable t) {
             close(GrpcStatus.fromThrowable(t), new Metadata());
         }
@@ -464,14 +501,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportHeaders(Metadata metadata) {
-        contextAwareExecutor.execute(() -> {
-            try {
-                assert listener != null;
-                listener.onHeaders(metadata);
-            } catch (Throwable t) {
-                closeWhenListenerThrows(t);
-            }
-        });
+        assert listener != null;
+        listener.onHeaders(metadata);
     }
 
     private void prepareHeaders(Compressor compressor, Metadata metadata, long remainingNanos) {
@@ -542,10 +573,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         // We want to close the user-facing ClientCall.Listener right away, before we move on to recycling
         // underlying resources.
-        contextAwareExecutor.execute(() -> {
-            assert listener != null;
-            listener.onClose(statusAndMetadata.status(), statusAndMetadata.metadata());
-        });
+        assert listener != null;
+        listener.onClose(statusAndMetadata.status(), statusAndMetadata.metadata());
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
