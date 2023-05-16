@@ -229,28 +229,40 @@ Let's test if we can retrieve a blog post we created.
 ## 4. Test an error case
 
 To check that our exception handler is working, let's try retrieving a blog post that does not exist.
-Add a test method to retrieve a blog post with an invalid ID, asserting an exception is thrown.
 
-```java filename=BlogServiceTest.java
-import static org.assertj.core.api.Assertions.catchThrowable;
-import example.armeria.blog.thrift.BlogNotFoundException;
-...
-@Test
-@Order(3)
-void getInvalidBlogPost() {
-    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
-    final Throwable exception = catchThrowable(() -> {
-        client.getBlogPost(Integer.MAX_VALUE);
-    });
-    assertThat(exception).isInstanceOf(BlogNotFoundException.class)
-        .extracting("reason")
-        .asString()
-        .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
-}
-```
-
-Run all the test cases on your IDE or using Gradle.
-Check that you see the test is passed.
+1. Bind the exception handler to the service for the test server.
+  ```java filename=BlogServiceTest.java
+  @RegisterExtension
+  static final ServerExtension server = new ServerExtension() {
+  @Override
+      protected void configure(ServerBuilder sb) throws Exception {
+          sb.service("/thrift", THttpService.builder()
+              .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
+              .addService(new BlogServiceImpl())
+              .build());
+      }
+  };
+  ```
+2. Add a test method to retrieve a blog post with an invalid ID, asserting an exception is thrown.
+  ```java filename=BlogServiceTest.java
+  import static org.assertj.core.api.Assertions.catchThrowable;
+  import example.armeria.blog.thrift.BlogNotFoundException;
+  ...
+  @Test
+  @Order(3)
+  void getInvalidBlogPost() {
+      final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+      final Throwable exception = catchThrowable(() -> {
+          client.getBlogPost(Integer.MAX_VALUE);
+      });
+      assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+          .extracting("reason")
+          .asString()
+          .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+  }
+  ```
+3. Run all the test cases on your IDE or using Gradle.
+  Check that you see the test is passed.
 
 ## 5. Test retrieving multiple posts
 

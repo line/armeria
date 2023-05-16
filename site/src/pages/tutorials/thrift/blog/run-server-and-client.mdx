@@ -33,8 +33,8 @@ Let's create a server to serve our service.
       private static final Logger logger = LoggerFactory.getLogger(Main.class);
   }
   ```
-2. Add a method `newServer()` in the `Main` class.
-3. In the `newServer()` method, create a service instance using Armeria's <type://THttpService#builder()>.
+2. Add the `newServer()` method in the `Main` class as follows.
+  A service instance is created using Armeria's <type://THttpService#builder()> in the method.
   ```java filename=Main.java
   import com.linecorp.armeria.server.thrift.THttpService;
   ...
@@ -45,7 +45,7 @@ Let's create a server to serve our service.
                           .build();
   }
   ```
-4. Create and return a server instance using Armeria's <type://ServerBuilder>.
+3. Create and return a server instance using Armeria's <type://ServerBuilder>.
   Note that the service instance, `tHttpService`, is added to the server instance.
   ```java filename=Main.java
   import com.linecorp.armeria.server.Server;
@@ -58,7 +58,7 @@ Let's create a server to serve our service.
                    .build();
   }
   ```
-5. Add the `main()` method in the `Main` class as follows.
+4. Add the `main()` method in the `Main` class as follows.
   ```java filename=Main.java
   public static void main(String[] args) throws Exception {
       final Server server = newServer(8080);

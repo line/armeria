@@ -97,7 +97,8 @@ Note the code is minimal to keep things simple.
 
   class BlogServiceTest {}
   ```
-2. Register a <type://ServerExtension> and add the service to the server.
+2. Register a <type://ServerExtension> to set up a server instance for testing.
+  Note that the service instance is added to the configuration.
   ```java filename=BlogServiceTest.java
   import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -112,7 +113,7 @@ Note the code is minimal to keep things simple.
           @Override
           protected void configure(ServerBuilder sb) throws Exception {
               sb.service("/thrift", THttpService.builder()
-                                                .addService(new BlogServiceImpl())
+                                                .addService(new BlogServiceImpl()) // Add the service to the configuration
                                                 .build());
           }
       };
@@ -143,7 +144,7 @@ Note the code is minimal to keep things simple.
   ./gradlew test
   ```
 
-  Your client made request to the server successfully if you see the test case is passed.
+  The service worked as expected if you see the test case is passed.
 
 ## What's next
 

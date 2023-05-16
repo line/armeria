@@ -19,7 +19,7 @@ No preparation is required for this step. Do check that you've prepared the [pre
 ## 1. Create a thrift file
 
 Create a thrift file, `blog.thrift` in the `{project_root}/src/main/thrift` folder as follows.
-In the thrift file, let's define the `BlogService` service with a method, `hello()`.
+In the thrift file, let's define the `BlogService` service with the `hello()` method.
 
 ```thrift filename=blog.thrift
 namespace java example.armeria.blog.thrift
@@ -62,7 +62,7 @@ Now, let's implement the service in Java.
 
   public class BlogServiceImpl implements BlogService.AsyncIface {}
   ```
-3. In the `BlogServiceImpl` class, add the `hello()` method, a dummy method for temporary use to test the connection between server and client.
+3. In the `BlogServiceImpl` class, override the `hello()` method, a dummy method for temporary use to test the connection between server and client.
   ```java filename=BlogServiceImpl.java
   import org.apache.thrift.async.AsyncMethodCallback;
   ...
