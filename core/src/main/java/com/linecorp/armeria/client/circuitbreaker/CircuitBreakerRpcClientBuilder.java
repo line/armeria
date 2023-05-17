@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -23,6 +25,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Builds a new {@link CircuitBreakerRpcClient} or its decorator function.
@@ -63,7 +66,9 @@ public final class CircuitBreakerRpcClientBuilder
 
     @Override
     public CircuitBreakerRpcClientBuilder recover(
-            BiFunction<? super ClientRequestContext, ? super RpcRequest, ? extends RpcResponse> fallback) {
+            @Nullable BiFunction<? super ClientRequestContext, ? super RpcRequest, ? extends RpcResponse>
+                    fallback) {
+        requireNonNull(fallback, "fallback");
         super.recover(fallback);
         return this;
     }

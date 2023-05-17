@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
@@ -153,7 +154,8 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     CircuitBreakerRpcClient(
             RpcClient delegate, CircuitBreakerClientHandler handler,
             CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent,
-            BiFunction<? super ClientRequestContext, ? super RpcRequest, ? extends RpcResponse> fallback) {
+            @Nullable BiFunction<? super ClientRequestContext, ? super RpcRequest, ? extends RpcResponse>
+                    fallback) {
         super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"), fallback);
     }
 

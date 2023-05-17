@@ -58,9 +58,10 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler handler,
-                                 CircuitBreakerRule rule,
-                                 BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
+    AbstractCircuitBreakerClient(
+            Client<I, O> delegate, CircuitBreakerClientHandler handler,
+            CircuitBreakerRule rule,
+            @Nullable BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
         this(delegate, handler, requireNonNull(rule, "rule"), null, fallback);
     }
 
@@ -70,7 +71,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     AbstractCircuitBreakerClient(
             Client<I, O> delegate, CircuitBreakerClientHandler handler,
             CircuitBreakerRuleWithContent<O> ruleWithContent,
-            BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
+            @Nullable BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
         this(delegate, handler, null, requireNonNull(ruleWithContent, "ruleWithContent"), fallback);
     }
 
@@ -138,7 +139,8 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
             return doExecute(ctx, req, callback);
         } catch (Exception ex) {
             if (handler().isCircuitBreakerException(ex) && fallback != null) {
-                return fallback.apply(ctx, req);
+                final O res = fallback.apply(ctx, req);
+                return requireNonNull(res, "fallback.apply() returned null.");
             }
             throw ex;
         }

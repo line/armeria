@@ -110,18 +110,28 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
         return handler;
     }
 
+    @Nullable
     final BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback() {
         return fallback;
     }
 
     /**
      * Sets the {@link BiFunction}. This is invoked when adding the fallback strategy.
+     * <p>For example:</p>
+     * <pre>{@code
+     * CircuitBreakerClient
+     *   .builder(...)
+     *   .recover((ctx, req) -> {
+     *       // fallback logic
+     *       return HttpResponse.of(...);
+     *   });
+     * }</pre>
      *
      * @return {@code this} to support method chaining.
      */
     public AbstractCircuitBreakerClientBuilder<I, O> recover(
             BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
-        this.fallback = requireNonNull(fallback, "fallback");
+        this.fallback = fallback;
         return this;
     }
 

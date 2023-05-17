@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -25,6 +27,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -90,8 +93,9 @@ public final class CircuitBreakerClientBuilder
     }
 
     @Override
-    public CircuitBreakerClientBuilder recover(
-            BiFunction<? super ClientRequestContext, ? super HttpRequest, ? extends HttpResponse> fallback) {
+    public CircuitBreakerClientBuilder recover(@Nullable BiFunction<? super ClientRequestContext,
+            ? super HttpRequest, ? extends HttpResponse> fallback) {
+        requireNonNull(fallback, "fallback");
         super.recover(fallback);
         return this;
     }
