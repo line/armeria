@@ -35,9 +35,9 @@ Let's implement a service method to create a blog post.
   import java.util.concurrent.atomic.AtomicInteger;
 
   public class BlogServiceImpl implements BlogService.AsyncIface {
-      private final AtomicInteger idGenerator = new AtomicInteger();
-      private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
-      ...
+    private final AtomicInteger idGenerator = new AtomicInteger();
+    private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+    ...
   }
   ```
 2. In the `createBlogPost()` method, create a `BlogPost` object with a generated ID and request parameters.
@@ -47,14 +47,14 @@ Let's implement a service method to create a blog post.
   @Override
   public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
           throws TException {
-      final int id = idGenerator.getAndIncrement();
-      final Instant now = Instant.now();
-      final BlogPost blogPost = new BlogPost()
-              .setId(id)
-              .setTitle(request.getTitle())
-              .setContent(request.getContent())
-              .setModifiedAt(now.toEpochMilli())
-              .setCreatedAt(now.toEpochMilli());
+    final int id = idGenerator.getAndIncrement();
+    final Instant now = Instant.now();
+    final BlogPost blogPost = new BlogPost()
+            .setId(id)
+            .setTitle(request.getTitle())
+            .setContent(request.getContent())
+            .setModifiedAt(now.toEpochMilli())
+            .setCreatedAt(now.toEpochMilli());
   }
   ```
 2. In the `createBlogPost()` method, save the post information in the `blogPosts` map and return the information of the blog post created to the `resultHandler`.
@@ -62,10 +62,10 @@ Let's implement a service method to create a blog post.
   @Override
   public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
           throws TException {
-      ...
-      blogPosts.put(id, blogPost);
-      final BlogPost stored = blogPost;
-      resultHandler.onComplete(stored);
+    ...
+    blogPosts.put(id, blogPost);
+    final BlogPost stored = blogPost;
+    resultHandler.onComplete(stored);
   }
   ```
 
@@ -78,10 +78,10 @@ import example.armeria.blog.thrift.BlogPost;
 import example.armeria.blog.thrift.CreateBlogPostRequest;
 ...
 BlogPost createBlogPost(String title, String content) throws TException {
-    final CreateBlogPostRequest request =
-            new CreateBlogPostRequest().setTitle(title)
-                                       .setContent(content);
-    return blogService.createBlogPost(request);
+  final CreateBlogPostRequest request =
+          new CreateBlogPostRequest().setTitle(title)
+                                     .setContent(content);
+  return blogService.createBlogPost(request);
 }
 ```
 
@@ -108,15 +108,15 @@ Note the code is minimal to keep things simple.
 
   class BlogServiceTest {
 
-      @RegisterExtension
-      static final ServerExtension server = new ServerExtension() {
-          @Override
-          protected void configure(ServerBuilder sb) throws Exception {
-              sb.service("/thrift", THttpService.builder()
-                                                .addService(new BlogServiceImpl()) // Add the service to the configuration
-                                                .build());
-          }
-      };
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+      @Override
+      protected void configure(ServerBuilder sb) throws Exception {
+        sb.service("/thrift", THttpService.builder()
+                                          .addService(new BlogServiceImpl()) // Add the service to the configuration
+                                          .build());
+      }
+    };
   }
   ```
 3. Add a method, `createBlogPost()`, to test the service method for creation.
@@ -132,11 +132,11 @@ Note the code is minimal to keep things simple.
   ...
   @Test
   void createBlogPost() throws TException {
-      final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
-      final BlogPost response = client.createBlogPost("My first blog", "Hello Armeria!");
-      assertThat(response.getId()).isGreaterThanOrEqualTo(0);
-      assertThat(response.getTitle()).isEqualTo("My first blog");
-      assertThat(response.getContent()).isEqualTo("Hello Armeria!");
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    final BlogPost response = client.createBlogPost("My first blog", "Hello Armeria!");
+    assertThat(response.getId()).isGreaterThanOrEqualTo(0);
+    assertThat(response.getTitle()).isEqualTo("My first blog");
+    assertThat(response.getContent()).isEqualTo("Hello Armeria!");
   }
   ```
 4. Run the test case on your IDE or using Gradle.

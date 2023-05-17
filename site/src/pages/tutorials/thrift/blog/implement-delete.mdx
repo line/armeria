@@ -35,14 +35,14 @@ Let's throw an exception in case there is no blog post for the given ID.
 ```java filename=BlogServiceImpl.java
 @Override
 public void deleteBlogPost(DeleteBlogPostRequest request, AsyncMethodCallback<Void> resultHandler)
-        throws TException {
-    final BlogPost removed = blogPosts.remove(request.getId());
-    if (removed == null) {
-        resultHandler.onError(
-                new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
-    } else {
-        resultHandler.onComplete(null);
-    }
+      throws TException {
+  final BlogPost removed = blogPosts.remove(request.getId());
+  if (removed == null) {
+    resultHandler.onError(
+            new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
+  } else {
+    resultHandler.onComplete(null);
+  }
 }
 ```
 
@@ -54,8 +54,8 @@ In the `BlogClient` class, add the `deleteBlogPost()` method to send a request d
 import example.armeria.blog.thrift.DeleteBlogPostRequest;
 ...
 void deleteBlogPost(int id) throws TException {
-    final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
-    blogService.deleteBlogPost(request);
+  final DeleteBlogPostRequest request = new DeleteBlogPostRequest().setId(id);
+  blogService.deleteBlogPost(request);
 }
 ```
 
@@ -69,15 +69,15 @@ Add a test method like the following.
 @Test
 @Order(7)
 void deleteBlogPost() throws TException {
-    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
-    client.deleteBlogPost(1);
-    final Throwable exception = catchThrowable(() -> {
-        client.getBlogPost(1);
-    });
-    assertThat(exception).isInstanceOf(BlogNotFoundException.class)
-            .extracting("reason")
-            .asString()
-            .isEqualTo("The blog post does not exist. ID: 1");
+  final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+  client.deleteBlogPost(1);
+  final Throwable exception = catchThrowable(() -> {
+    client.getBlogPost(1);
+  });
+  assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+          .extracting("reason")
+          .asString()
+          .isEqualTo("The blog post does not exist. ID: 1");
 }
 ```
 
@@ -93,14 +93,14 @@ Add a test method like the following.
 @Test
 @Order(8)
 void deleteInvalidBlogPost() {
-    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
-    final Throwable exception = catchThrowable(() -> {
-        client.deleteBlogPost(100);
-    });
-    assertThat(exception).isInstanceOf(BlogNotFoundException.class)
-                         .extracting("reason")
-                         .asString()
-                         .isEqualTo("The blog post does not exist. ID: 100");
+  final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+  final Throwable exception = catchThrowable(() -> {
+    client.deleteBlogPost(100);
+  });
+  assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+                       .extracting("reason")
+                       .asString()
+                       .isEqualTo("The blog post does not exist. ID: 100");
 }
 ```
 
@@ -119,37 +119,37 @@ The Documentation service automatically creates documentation of your service me
   import example.armeria.blog.thrift.CreateBlogPostRequest;
   ...
   private static Server newServer(int port) throws Exception {
-      ...
-      final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
-              .setTitle("Example title")
-              .setContent("Example content");
-      final DocService docService = DocService
-              .builder()
-              .exampleRequests(List.of(new BlogService.createBlogPost_args(exampleRequest)))
-              .build();
-      ...
+    ...
+    final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
+            .setTitle("Example title")
+            .setContent("Example content");
+    final DocService docService = DocService
+            .builder()
+            .exampleRequests(List.of(new BlogService.createBlogPost_args(exampleRequest)))
+            .build();
+    ...
   }
   ```
 2. In the `newServer()` method, add the <type://DocService> to our server builder.
   ```java filename=Main.java highlight=5
   private static Server newServer(int port) throws Exception {
-      ...
-      return Server.builder()
-               .http(port)
-               .service("/thrift", tHttpService)
-               // You can access the documentation service at http://127.0.0.1:8080/docs.
-               // See https://armeria.dev/docs/server-docservice for more information.
-               .serviceUnder("/docs", docService)
-               .build();
+    ...
+    return Server.builder()
+             .http(port)
+             .service("/thrift", tHttpService)
+             // You can access the documentation service at http://127.0.0.1:8080/docs.
+             // See https://armeria.dev/docs/server-docservice for more information.
+             .serviceUnder("/docs", docService)
+             .build();
   }
   ```
 
 3. (Optional) To access the Documentation service result easily, edit the log message in the `main()` method.
   ```java filename=Main.java highlight=2
   public static void main(String[] args) throws Exception {
-      ...
-      logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
-                  server.activeLocalPort());
+    ...
+    logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
+                server.activeLocalPort());
   }
   ```
 4. Now, [re-run the server](/tutorials/thrift/blog/run-server-and-client#2-run-the-server).

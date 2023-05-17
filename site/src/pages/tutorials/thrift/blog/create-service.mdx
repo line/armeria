@@ -24,11 +24,8 @@ In the thrift file, let's define the `BlogService` service with the `hello()` me
 ```thrift filename=blog.thrift
 namespace java example.armeria.blog.thrift
 
-/**
- * My first BlogService in Armeria!
- */
 service BlogService {
-    string hello()
+  string hello()
 }
 ```
 
@@ -68,7 +65,7 @@ Now, let's implement the service in Java.
   ...
   @Override
   public void hello(AsyncMethodCallback<String> resultHandler) {
-      resultHandler.onComplete("Hello, Armeria!");
+    resultHandler.onComplete("Hello, Armeria!");
   }
   ```
 

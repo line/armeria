@@ -48,25 +48,25 @@ First, add an exception handler for the exception to be thrown when there is no 
 
   public class BlogServiceExceptionHandler implements BiFunction<ServiceRequestContext, Throwable, RpcResponse> {
 
-      @Override
-      public RpcResponse apply(ServiceRequestContext serviceRequestContext, Throwable cause) {
-          if (cause instanceof IllegalArgumentException) {
-              return RpcResponse.ofFailure(new BlogNotFoundException(cause.getMessage()));
-          }
-          return RpcResponse.ofFailure(cause);
+    @Override
+    public RpcResponse apply(ServiceRequestContext serviceRequestContext, Throwable cause) {
+      if (cause instanceof IllegalArgumentException) {
+        return RpcResponse.ofFailure(new BlogNotFoundException(cause.getMessage()));
       }
+      return RpcResponse.ofFailure(cause);
+    }
   }
   ```
 2. In the `Main` class, bind the `BlogServiceExceptionHandler` to our service.
   ```java filename=Main.java
   ...
   private static Server newServer(int port) throws Exception {
-      final THttpService tHttpService =
-              THttpService.builder()
-                          .addService(new BlogServiceImpl())
-                          .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
-                          .build();
-      ...
+    final THttpService tHttpService =
+            THttpService.builder()
+                        .addService(new BlogServiceImpl())
+                        .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
+                        .build();
+    ...
   }
   ```
 
@@ -93,15 +93,15 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
   @Override
   public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
           throws TException {
-      final BlogPost blogPost = blogPosts.get(request.getId());
-      if (blogPost == null) {
-          // throwing an exception will also have the same effect
-          // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
-          resultHandler.onError(
-                  new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
-      } else {
-          resultHandler.onComplete(blogPost);
-      }
+    final BlogPost blogPost = blogPosts.get(request.getId());
+    if (blogPost == null) {
+      // throwing an exception will also have the same effect
+      // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+      resultHandler.onError(
+              new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+    } else {
+      resultHandler.onComplete(blogPost);
+    }
   }
   ```
 
@@ -116,8 +116,8 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
   @Override
   public void listBlogPosts(ListBlogPostsRequest request,
                             AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
-      final List<BlogPost> blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
-      resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
+    final List<BlogPost> blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
+    resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
   }
   ```
 2. Add an if-else statement to sort the blog posts based on the value of the `descending` parameter.
@@ -129,16 +129,16 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
   @Override
   public void listBlogPosts(ListBlogPostsRequest request,
                             AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
-      final List<BlogPost> blogPosts;
-      if (request.isDescending()) {
-          blogPosts = this.blogPosts.entrySet()
-                                    .stream()
-                                    .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
-                                    .map(Entry::getValue).collect(Collectors.toList());
-      } else {
-          blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
-      }
-      resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
+    final List<BlogPost> blogPosts;
+    if (request.isDescending()) {
+      blogPosts = this.blogPosts.entrySet()
+                                .stream()
+                                .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                                .map(Entry::getValue).collect(Collectors.toList());
+    } else {
+      blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
+    }
+    resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
   }
   ```
 
@@ -159,9 +159,9 @@ In the `BlogClient` class, add a method to retrieve a single post.
 import example.armeria.blog.thrift.GetBlogPostRequest;
 ...
 BlogPost getBlogPost(int id) throws TException {
-    final GetBlogPostRequest request =
-                new GetBlogPostRequest().setId(id);
-    return blogService.getBlogPost(request);
+  final GetBlogPostRequest request =
+              new GetBlogPostRequest().setId(id);
+  return blogService.getBlogPost(request);
 }
 ```
 
@@ -175,8 +175,8 @@ import example.armeria.blog.thrift.ListBlogPostsRequest;
 import example.armeria.blog.thrift.ListBlogPostsResponse;
 ...
 List<BlogPost> listBlogPosts(boolean descending) throws TException {
-    return blogService.listBlogPosts(new ListBlogPostsRequest().setDescending(descending))
-                      .getBlogs();
+  return blogService.listBlogPosts(new ListBlogPostsRequest().setDescending(descending))
+                    .getBlogs();
 }
 ```
 
@@ -191,11 +191,11 @@ Let's test if we can retrieve a blog post we created.
   ```java filename=BlogServiceTest.jvaa
   @Test
   void getBlogPost() throws TException {
-      final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
-      final BlogPost blogPost = client.getBlogPost(0);
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    final BlogPost blogPost = client.getBlogPost(0);
 
-      assertThat(blogPost.getTitle()).isEqualTo("My first blog");
-      assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
+    assertThat(blogPost.getTitle()).isEqualTo("My first blog");
+    assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
   }
   ```
 2. Add annotations to configure orders to execute our test methods.
@@ -207,19 +207,19 @@ Let's test if we can retrieve a blog post we created.
 
   @TestMethodOrder(OrderAnnotation.class) // Add this
   class BlogServiceTest {
+    ...
+
+    @Test
+    @Order(1) // Add this
+    void createBlogPost() throws TException {
       ...
+    }
 
-      @Test
-      @Order(1) // Add this
-      void createBlogPost() throws TException {
-          ...
-      }
-
-      @Test
-      @Order(2) // Add this
-      void getBlogPost() throws TException {
-          ...
-      }
+    @Test
+    @Order(2) // Add this
+    void getBlogPost() throws TException {
+      ...
+    }
   }
   ```
 3. Run all the test cases on your IDE or using Gradle.
@@ -235,12 +235,12 @@ To check that our exception handler is working, let's try retrieving a blog post
   @RegisterExtension
   static final ServerExtension server = new ServerExtension() {
   @Override
-      protected void configure(ServerBuilder sb) throws Exception {
-          sb.service("/thrift", THttpService.builder()
-              .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
-              .addService(new BlogServiceImpl())
-              .build());
-      }
+    protected void configure(ServerBuilder sb) throws Exception {
+      sb.service("/thrift", THttpService.builder()
+          .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
+          .addService(new BlogServiceImpl())
+          .build());
+    }
   };
   ```
 2. Add a test method to retrieve a blog post with an invalid ID, asserting an exception is thrown.
@@ -251,14 +251,14 @@ To check that our exception handler is working, let's try retrieving a blog post
   @Test
   @Order(3)
   void getInvalidBlogPost() {
-      final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
-      final Throwable exception = catchThrowable(() -> {
-          client.getBlogPost(Integer.MAX_VALUE);
-      });
-      assertThat(exception).isInstanceOf(BlogNotFoundException.class)
-          .extracting("reason")
-          .asString()
-          .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    final Throwable exception = catchThrowable(() -> {
+      client.getBlogPost(Integer.MAX_VALUE);
+    });
+    assertThat(exception).isInstanceOf(BlogNotFoundException.class)
+        .extracting("reason")
+        .asString()
+        .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
   }
   ```
 3. Run all the test cases on your IDE or using Gradle.
@@ -275,18 +275,18 @@ import java.util.List;
 @Test
 @Order(4)
 void listBlogPosts() throws TException {
-    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
-    client.createBlogPost("My second blog", "Armeria is awesome!");
+  final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+  client.createBlogPost("My second blog", "Armeria is awesome!");
 
-    final List<BlogPost> blogs = client.listBlogPosts(false);
-    assertThat(blogs).hasSize(2);
-    final BlogPost firstBlog = blogs.get(0);
-    assertThat(firstBlog.getTitle()).isEqualTo("My first blog");
-    assertThat(firstBlog.getContent()).isEqualTo("Hello Armeria!");
+  final List<BlogPost> blogs = client.listBlogPosts(false);
+  assertThat(blogs).hasSize(2);
+  final BlogPost firstBlog = blogs.get(0);
+  assertThat(firstBlog.getTitle()).isEqualTo("My first blog");
+  assertThat(firstBlog.getContent()).isEqualTo("Hello Armeria!");
 
-    final BlogPost secondBlog = blogs.get(1);
-    assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
-    assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
+  final BlogPost secondBlog = blogs.get(1);
+  assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
+  assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
 }
 ```
 
