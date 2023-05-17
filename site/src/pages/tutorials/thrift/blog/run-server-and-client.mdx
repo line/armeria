@@ -38,7 +38,7 @@ Let's create a server to serve our service.
   ```java filename=Main.java
   import com.linecorp.armeria.server.thrift.THttpService;
   ...
-  private static void newServer(int port) throws Exception {
+  private static Server newServer(int port) throws Exception {
       final THttpService tHttpService =
               THttpService.builder()
                           .addService(new BlogServiceImpl())
