@@ -15,7 +15,10 @@ Also, we'll create a client and make a call to the service with the client.
 
 ## What you need
 
-No preparation is required for this step.
+You need to have the files obtained from previous steps:
+
+- blog.thrift
+- BlogServiceImpl.java
 
 ## 1. Create a server
 
@@ -34,7 +37,7 @@ Let's create a server to serve our service.
   }
   ```
 2. Add the `newServer()` method in the `Main` class as follows.
-  A service instance is created using Armeria's <type://THttpService#builder()> in the method.
+  We are using Armeria's <type://THttpService> to handle Thrift calls.
   ```java filename=Main.java
   import com.linecorp.armeria.server.thrift.THttpService;
   ...
