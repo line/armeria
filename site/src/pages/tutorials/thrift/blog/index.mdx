@@ -80,10 +80,10 @@ In this tutorial, we use [gradle](https://gradle.org/) as the build tool and use
 
 <CodeBlock language="groovy" filename="build.gradle">{`
 plugins {
-    id "org.jruyi.thrift" version "0.4.2"
-    id "java"
-    id "idea"
-    id "eclipse"
+  id "org.jruyi.thrift" version "0.4.2"
+  id "application"
+  id "idea"
+  id "eclipse"
 }\n
 repositories {
   mavenCentral()
@@ -92,7 +92,16 @@ dependencies {
   implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
   implementation "com.linecorp.armeria:armeria-thrift0.17:${versions['com.linecorp.armeria:armeria-bom']}"\n
   // Logging
-  runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"
+  runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"\n
+  testImplementation "org.junit.jupiter:junit-jupiter:${versions['org.junit:junit-bom']}"\n
+  testImplementation "com.linecorp.armeria:armeria-junit5:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  testImplementation "org.assertj:assertj-core:${versions['org.assertj:assertj-core']}"
+}\n
+application {
+  mainClass.set('example.armeria.server.blog.thrift.Main')
+}\n
+tasks.withType(Test) {
+  useJUnitPlatform()
 }
 `}</CodeBlock>
 
