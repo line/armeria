@@ -116,7 +116,7 @@ Now, let's write two methods for retrieving blog posts; one for a single post an
   @Override
   public void listBlogPosts(ListBlogPostsRequest request,
                             AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
-      final List<BlogPost> blogPosts = blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
+      final List<BlogPost> blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
       resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
   }
   ```
