@@ -161,7 +161,7 @@ import example.armeria.blog.thrift.GetBlogPostRequest;
 BlogPost getBlogPost(int id) throws TException {
     final GetBlogPostRequest request =
                 new GetBlogPostRequest().setId(id);
-    blogService.getBlogPost(request);
+    return blogService.getBlogPost(request);
 }
 ```
 
