@@ -85,9 +85,9 @@ BlogPost createBlogPost(String title, String content) throws TException {
 }
 ```
 
-## 3. Test creating a blog post
+## 3. Set up for testing
 
-Now, let's write the test code to test what we implemented so far in this step.
+Now, let's get started with the test code so that we can verify what we implement along the way.
 Note the code is minimal to keep things simple.
 
 1. Create a file, `BlogServiceTest.java`, and declare the test class.
@@ -119,7 +119,12 @@ Note the code is minimal to keep things simple.
     };
   }
   ```
-3. Add a method, `createBlogPost()`, to test the service method for creation.
+
+## 4. Test creating a blog post
+
+Let's test if we can create a blog post.
+
+1. In the `BlogServiceTest` class, add a test method as follows.
   ```java filename=BlogServiceTest.java
   import static org.assertj.core.api.Assertions.assertThat;
 
@@ -139,7 +144,7 @@ Note the code is minimal to keep things simple.
     assertThat(response.getContent()).isEqualTo("Hello Armeria!");
   }
   ```
-4. Run the test case on your IDE or using Gradle.
+2. Run the test case on your IDE or using Gradle.
   ```bash
   ./gradlew test
   ```
