@@ -19,6 +19,7 @@ import static com.linecorp.armeria.spring.actuate.WebOperationService.handleResu
 
 import org.reactivestreams.Publisher;
 import org.springframework.boot.actuate.endpoint.InvalidEndpointRequestException;
+import org.springframework.boot.actuate.health.HttpCodeStatusMapper;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -33,7 +34,7 @@ import reactor.core.publisher.Mono;
 
 final class ReactiveHealthEndpointWebExtensionUtil {
 
-    static HttpResponse handleMaybeReactorResult(SimpleHttpCodeStatusMapper statusMapper,
+    static HttpResponse handleMaybeReactorResult(HttpCodeStatusMapper statusMapper,
                                                  ServiceRequestContext ctx, Object result,
                                                  HttpMethod method) throws Throwable {
         if (result instanceof Flux) {
@@ -47,7 +48,7 @@ final class ReactiveHealthEndpointWebExtensionUtil {
         return handleResult(statusMapper, ctx, result, method);
     }
 
-    private static HttpResponse handlePublisher(SimpleHttpCodeStatusMapper statusMapper,
+    private static HttpResponse handlePublisher(HttpCodeStatusMapper statusMapper,
                                                 ServiceRequestContext ctx, Publisher<?> result,
                                                 HttpMethod method) {
         final Mono<HttpResponse> monoResponse =

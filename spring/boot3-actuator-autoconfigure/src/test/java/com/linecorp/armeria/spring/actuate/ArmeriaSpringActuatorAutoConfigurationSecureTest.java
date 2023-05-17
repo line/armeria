@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.actuate.autoconfigure.endpoint.jmx.JmxEndpointAutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -45,7 +46,7 @@ import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguratio
 @DirtiesContext
 @AutoConfigureMetrics
 @EnableAutoConfiguration
-@ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+@ImportAutoConfiguration({ ArmeriaSpringActuatorAutoConfiguration.class, JmxEndpointAutoConfiguration.class })
 @Timeout(10)
 class ArmeriaSpringActuatorAutoConfigurationSecureTest {
 
@@ -73,6 +74,10 @@ class ArmeriaSpringActuatorAutoConfigurationSecureTest {
                   assertStatus(port, "/actuator/health", statusCode);
                   assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, statusCode);
                   assertStatus(port, "/actuator/prometheus", statusCode);
+                  assertStatus(port, "/actuator/info", 404);
+                  assertStatus(port, "/actuator/env", 404);
+                  assertStatus(port, "/actuator/configprops", 404);
+                  assertStatus(port, "/actuator/threaddump", 404);
                   assertStatus(port, settings.getDocsPath(), statusCode);
                   assertStatus(port, settings.getHealthCheckPath(), statusCode);
                   assertStatus(port, settings.getMetricsPath(), statusCode);

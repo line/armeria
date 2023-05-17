@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.spring.actuate;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.maybeNewPort;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.HAS_WEB_SERVER_NAMESPACE;
-import static com.linecorp.armeria.spring.actuate.WebOperationService.toMediaType;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.addAdditionalPath;
 
 import java.lang.reflect.InvocationTargetException;
@@ -41,10 +41,12 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
+import org.springframework.boot.actuate.autoconfigure.endpoint.expose.EndpointExposure;
+import org.springframework.boot.actuate.autoconfigure.endpoint.expose.IncludeExcludeEndpointFilter;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.endpoint.web.WebEndpointProperties;
+import org.springframework.boot.actuate.autoconfigure.health.HealthEndpointProperties;
 import org.springframework.boot.actuate.autoconfigure.web.server.ManagementServerProperties;
-import org.springframework.boot.actuate.endpoint.ApiVersion;
 import org.springframework.boot.actuate.endpoint.EndpointFilter;
 import org.springframework.boot.actuate.endpoint.invoke.OperationInvokerAdvisor;
 import org.springframework.boot.actuate.endpoint.invoke.ParameterValueMapper;
@@ -60,6 +62,8 @@ import org.springframework.boot.actuate.endpoint.web.WebOperationRequestPredicat
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpointDiscoverer;
 import org.springframework.boot.actuate.health.HealthEndpoint;
 import org.springframework.boot.actuate.health.HealthEndpointGroups;
+import org.springframework.boot.actuate.health.HttpCodeStatusMapper;
+import org.springframework.boot.actuate.health.SimpleHttpCodeStatusMapper;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -70,7 +74,6 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.PropertySource;
 import org.springframework.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -80,7 +83,6 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -98,19 +100,14 @@ import com.linecorp.armeria.spring.InternalServiceId;
  * {@link WebEndpointAutoConfiguration}.
  */
 @Configuration
-@AutoConfigureAfter(EndpointAutoConfiguration.class)
+@AutoConfigureAfter({ EndpointAutoConfiguration.class, WebEndpointAutoConfiguration.class })
 @EnableConfigurationProperties({
         WebEndpointProperties.class, CorsEndpointProperties.class, ManagementServerProperties.class,
-        ArmeriaSettings.class
+        HealthEndpointProperties.class, ArmeriaSettings.class
 })
 public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaSpringActuatorAutoConfiguration.class);
-
-    @VisibleForTesting
-    static final MediaType ACTUATOR_MEDIA_TYPE;
-
-    private static final List<String> MEDIA_TYPES;
 
     @Nullable
     private static final Class<?> INTERNAL_SERVICES_CLASS;
@@ -118,10 +115,6 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     private static final Method MANAGEMENT_SERVER_PORT_METHOD;
 
     static {
-        ACTUATOR_MEDIA_TYPE = toMediaType(ApiVersion.LATEST.getProducedMimeType());
-        assert ACTUATOR_MEDIA_TYPE != null;
-        MEDIA_TYPES = ImmutableList.of(ACTUATOR_MEDIA_TYPE.toString(), MediaTypeNames.JSON);
-
         Class<?> internalServicesClass = null;
         try {
             internalServicesClass =
@@ -143,12 +136,32 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         MANAGEMENT_SERVER_PORT_METHOD = managementServerPortMethod;
     }
 
+    // In case WebEndpointAutoConfiguration is excluded
+    @Bean
+    @ConditionalOnMissingBean
+    PathMapper webEndpointPathMapper(WebEndpointProperties properties) {
+        return new MappingWebEndpointPathMapper(properties.getPathMapping());
+    }
+
+    // In case WebEndpointAutoConfiguration is excluded
     @Bean
     @ConditionalOnMissingBean
     EndpointMediaTypes endpointMediaTypes() {
-        return new EndpointMediaTypes(MEDIA_TYPES, MEDIA_TYPES);
+        return EndpointMediaTypes.DEFAULT;
     }
 
+    // In case WebEndpointAutoConfiguration is excluded
+    @Bean
+    @ConditionalOnMissingBean
+    IncludeExcludeEndpointFilter<ExposableWebEndpoint> webExposeExcludePropertyEndpointFilter(
+            WebEndpointProperties properties) {
+        final WebEndpointProperties.Exposure exposure = properties.getExposure();
+        return new IncludeExcludeEndpointFilter<>(ExposableWebEndpoint.class, exposure.getInclude(),
+                                                  exposure.getExclude(),
+                                                  EndpointExposure.WEB.getDefaultIncludes());
+    }
+
+    // In case WebEndpointAutoConfiguration is excluded
     @Bean
     @ConditionalOnMissingBean(WebEndpointsSupplier.class)
     WebEndpointDiscoverer webEndpointDiscoverer(
@@ -166,9 +179,11 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                          filters.orderedStream().collect(toImmutableList()));
     }
 
+    // In case HealthEndpointAutoConfiguration is excluded
     @Bean
-    SimpleHttpCodeStatusMapper simpleHttpCodeStatusMapper() {
-        return new SimpleHttpCodeStatusMapper();
+    @ConditionalOnMissingBean
+    HttpCodeStatusMapper healthHttpCodeStatusMapper(HealthEndpointProperties properties) {
+        return new SimpleHttpCodeStatusMapper(properties.getStatus().getHttpMapping());
     }
 
     @Bean
@@ -177,7 +192,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             Optional<HealthEndpointGroups> healthEndpointGroups,
             EndpointMediaTypes mediaTypes,
             WebEndpointProperties properties,
-            SimpleHttpCodeStatusMapper statusMapper,
+            HttpCodeStatusMapper statusMapper,
             CorsEndpointProperties corsProperties,
             ConfigurableEnvironment environment,
             ManagementServerProperties serverProperties,
@@ -239,7 +254,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                   .forEach(entry -> configureExposableWebEndpoint(sb, entry.getValue(),
                                                                                   endpoints, statusMapper,
                                                                                   mediaTypes, entry.getKey(),
-                                                                                  cors));
+                                                                                  cors, properties));
 
             if (cors != null) {
                 sb.routeDecorator().pathPrefix("/").build(cors.newDecorator());
@@ -249,10 +264,11 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static void configureExposableWebEndpoint(ServerBuilder sb, @Nullable Integer targetPort,
                                                       Collection<ExposableWebEndpoint> endpoints,
-                                                      SimpleHttpCodeStatusMapper statusMapper,
+                                                      HttpCodeStatusMapper statusMapper,
                                                       EndpointMediaTypes mediaTypes,
                                                       EndpointMapping endpointMapping,
-                                                      @Nullable CorsServiceBuilder cors) {
+                                                      @Nullable CorsServiceBuilder cors,
+                                                      WebEndpointProperties properties) {
         final List<Integer> ports = targetPort == null ? ImmutableList.of() : ImmutableList.of(targetPort);
         endpoints.stream()
                  .flatMap(endpoint -> endpoint.getOperations().stream())
@@ -263,7 +279,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                          predicate, path, ImmutableMap.of(), cors);
                  });
 
-        if (StringUtils.hasText(endpointMapping.getPath())) {
+        if (StringUtils.hasText(endpointMapping.getPath()) && properties.getDiscovery().isEnabled()) {
             final Route route = route(
                     HttpMethod.GET.name(),
                     endpointMapping.getPath(),
@@ -273,7 +289,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             final HttpService linksService = (ctx, req) -> {
                 final Map<String, Link> links =
                         new EndpointLinksResolver(endpoints).resolveLinks(req.path());
-                return HttpResponse.ofJson(ACTUATOR_MEDIA_TYPE, ImmutableMap.of("_links", links));
+                final MediaType contentType = firstNonNull(ctx.negotiatedResponseMediaType(), MediaType.JSON);
+                return HttpResponse.ofJson(contentType, ImmutableMap.of("_links", links));
             };
             if (targetPort == null) {
                 sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
@@ -397,7 +414,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     static void addOperationService(ServerBuilder sb, List<Integer> exposedPorts,
-                                    WebOperation operation, SimpleHttpCodeStatusMapper statusMapper,
+                                    WebOperation operation, HttpCodeStatusMapper statusMapper,
                                     WebOperationRequestPredicate predicate, String path,
                                     Map<String, Object> arguments, @Nullable CorsServiceBuilder cors) {
         if (cors != null) {
