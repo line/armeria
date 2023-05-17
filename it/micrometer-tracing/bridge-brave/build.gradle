@@ -1,0 +1,13 @@
+dependencies {
+    implementation project(":brave")
+    implementation project(":micrometer-tracing")
+    implementation libs.micrometer.tracing.bridge.brave
+    implementation 'io.zipkin.reporter2:zipkin-sender-urlconnection:2.16.4'
+
+//    api libs.brave
+//    api libs.brave.instrumentation.http
+
+//    testImplementation project(':thrift0.17')
+//    testImplementation libs.brave.context.slf4j
+    testImplementation libs.brave.instrumentation.http.tests
+}

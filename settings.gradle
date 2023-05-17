@@ -42,6 +42,7 @@ includeWithFlags ':junit5',                              'java', 'publish', 'rel
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate'
+includeWithFlags ':micrometer-tracing',                  'java', 'relocate' // don't publish yet
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate'
@@ -124,6 +125,8 @@ includeWithFlags ':it:grpc:reactor',                'java', 'relocate', 'reactor
 includeWithFlags ':it:flags-provider',              'java', 'relocate'
 includeWithFlags ':it:jackson-provider',            'java', 'relocate'
 includeWithFlags ':it:kotlin',                      'java', 'relocate', 'kotlin'
+includeWithFlags 'it:micrometer-tracing:bridge-brave', 'java', 'relocate'
+includeWithFlags 'it:micrometer-tracing:bridge-otel', 'java', 'relocate'
 includeWithFlags ':it:micrometer1.3',               'java', 'relocate'
 includeWithFlags ':it:multipart',                   'java17', 'relocate'
 includeWithFlags ':it:nio',                         'java', 'relocate'

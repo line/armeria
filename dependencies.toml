@@ -700,6 +700,24 @@ javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.10.6/"
 module = "io.micrometer:micrometer-registry-prometheus"
 version.ref = "micrometer"
 javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.10.6/"
+[libraries.micrometer-tracing]
+module = "io.micrometer:micrometer-tracing"
+version = "1.0.2"
+[libraries.micrometer-tracing-reporter-wavefront]
+module = "io.micrometer:micrometer-tracing-reporter-wavefront"
+version = "1.0.2"
+[libraries.micrometer-tracing-test]
+module = "io.micrometer:micrometer-tracing-test"
+version = "1.0.2"
+[libraries.micrometer-tracing-integration-test]
+module = "io.micrometer:micrometer-tracing-integration-test"
+version = "1.0.2"
+[libraries.micrometer-tracing-bridge-brave]
+module = "io.micrometer:micrometer-tracing-bridge-brave"
+version = "1.0.2"
+[libraries.micrometer-tracing-bridge-otel]
+module = "io.micrometer:micrometer-tracing-bridge-otel"
+version = "1.0.2"
 [libraries.micrometer-spring-legacy]
 module = "io.micrometer:micrometer-spring-legacy"
 version.ref = "micrometer"

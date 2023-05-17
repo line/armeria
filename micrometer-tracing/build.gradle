@@ -1,0 +1,6 @@
+dependencies {
+    implementation libs.micrometer.tracing
+
+    testImplementation libs.micrometer.tracing.test
+    testImplementation libs.micrometer.tracing.integration.test
+}
