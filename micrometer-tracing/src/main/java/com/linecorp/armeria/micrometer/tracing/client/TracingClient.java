@@ -33,13 +33,12 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
-import com.linecorp.armeria.micrometer.tracing.common.ArmeriaCurrentTraceContext;
 import com.linecorp.armeria.micrometer.tracing.internal.SpanTags;
 
 import io.micrometer.tracing.CurrentTraceContext;
+import io.micrometer.tracing.CurrentTraceContext.Scope;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
-import io.micrometer.tracing.Tracer.SpanInScope;
 import io.micrometer.tracing.http.HttpClientHandler;
 import io.micrometer.tracing.http.HttpClientRequest;
 import io.micrometer.tracing.http.HttpClientResponse;
@@ -53,7 +52,7 @@ public final class TracingClient extends SimpleDecoratingHttpClient {
     private static final Logger logger = LoggerFactory.getLogger(TracingClient.class);
 
     /**
-     * Creates a new tracing {@link HttpClient} decorator using the specified {@link HttpTracing} instance.
+     * Creates a new tracing {@link HttpClient} decorator using the specified {@link Tracer} instance.
      */
     public static Function<? super HttpClient, TracingClient> newDecorator(
             Tracer tracer, HttpClientHandler handler) {
@@ -67,24 +66,17 @@ public final class TracingClient extends SimpleDecoratingHttpClient {
         return delegate -> new TracingClient(delegate, tracer, handler);
     }
 
-    private final Tracer tracer;
     private final HttpClientHandler handler;
     @Nullable
-    private final ArmeriaCurrentTraceContext currentTraceContext;
+    private final CurrentTraceContext currentTraceContext;
 
     /**
      * Creates a new instance.
      */
     private TracingClient(HttpClient delegate, Tracer tracer, HttpClientHandler handler) {
         super(delegate);
-        this.tracer = tracer;
         this.handler = handler;
-        final CurrentTraceContext currentTraceContext = tracer.currentTraceContext();
-        if (currentTraceContext instanceof ArmeriaCurrentTraceContext) {
-            this.currentTraceContext = (ArmeriaCurrentTraceContext) currentTraceContext;
-        } else {
-            this.currentTraceContext = null;
-        }
+        this.currentTraceContext = tracer.currentTraceContext();
     }
 
     @Override
@@ -102,7 +94,8 @@ public final class TracingClient extends SimpleDecoratingHttpClient {
         }
 
         maybeAddTagsToSpan(ctx, tracingReq, span);
-        try (SpanInScope ignored = tracer.withSpan(span)) {
+        // don't use Tracer apis since it might use a different CurrentTraceContext internally
+        try (Scope ignored = currentTraceContext.newScope(span.context())) {
             return unwrap().execute(ctx, req);
         }
     }
@@ -113,7 +106,6 @@ public final class TracingClient extends SimpleDecoratingHttpClient {
             return;
         }
 
-        span.start();
         ctx.log().whenComplete().thenAccept(log -> {
 
             final Long wireSendTimeNanos = log.requestFirstBytesTransferredTimeNanos();

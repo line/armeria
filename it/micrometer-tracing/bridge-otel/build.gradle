@@ -1,2 +1,7 @@
 dependencies {
+    testImplementation project(":micrometer-tracing")
+    testImplementation project(':thrift0.17')
+
+    testImplementation libs.micrometer.tracing.bridge.otel
+    testImplementation libs.opentelemetry.sdk.testing
 }

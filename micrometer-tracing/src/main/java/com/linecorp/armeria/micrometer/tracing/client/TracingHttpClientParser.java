@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,54 +14,35 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.brave;
+package com.linecorp.armeria.micrometer.tracing.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.net.SocketAddress;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.internal.common.brave.SpanTags;
+import com.linecorp.armeria.micrometer.tracing.internal.SpanTags;
 
-import brave.SpanCustomizer;
-import brave.http.HttpRequestParser;
-import brave.http.HttpResponse;
-import brave.http.HttpResponseParser;
-import brave.propagation.TraceContext;
+import io.micrometer.tracing.SpanCustomizer;
+import io.micrometer.tracing.TraceContext;
+import io.micrometer.tracing.http.HttpRequest;
+import io.micrometer.tracing.http.HttpRequestParser;
+import io.micrometer.tracing.http.HttpResponse;
+import io.micrometer.tracing.http.HttpResponseParser;
 
-/**
- * Default implementation of {@link HttpRequestParser} and {@link HttpResponseParser} for clients.
- * This parser adds some custom tags and overwrites the name of span if {@link RequestLog#requestContent()}
- * is {@link RpcRequest}.
- * The following tags become available:
- * <ul>
- *   <li>http.url</li>
- *   <li>http.host</li>
- *   <li>http.protocol</li>
- *   <li>http.serfmt</li>
- *   <li>address.remote</li>
- *   <li>address.local</li>
- * </ul>
- */
-public final class ArmeriaHttpClientParser implements HttpRequestParser, HttpResponseParser {
+public final class TracingHttpClientParser implements HttpRequestParser, HttpResponseParser {
 
-    private static final ArmeriaHttpClientParser INSTANCE = new ArmeriaHttpClientParser();
+    private static final TracingHttpClientParser INSTANCE = new TracingHttpClientParser();
 
-    /**
-     * The singleton {@link ArmeriaHttpClientParser} instance.
-     */
-    public static ArmeriaHttpClientParser get() {
+    public static TracingHttpClientParser of() {
         return INSTANCE;
     }
 
-    private ArmeriaHttpClientParser() {}
+    private TracingHttpClientParser() {}
 
     @Override
-    public void parse(brave.http.HttpRequest request, TraceContext context, SpanCustomizer span) {
-        HttpRequestParser.DEFAULT.parse(request, context, span);
+    public void parse(HttpRequest request, TraceContext context, SpanCustomizer span) {
 
         final Object unwrapped = request.unwrap();
         if (!(unwrapped instanceof ClientRequestContext)) {
@@ -69,7 +50,7 @@ public final class ArmeriaHttpClientParser implements HttpRequestParser, HttpRes
         }
 
         final ClientRequestContext ctx = (ClientRequestContext) unwrapped;
-        final HttpRequest httpReq = ctx.request();
+        final com.linecorp.armeria.common.HttpRequest httpReq = ctx.request();
         if (httpReq == null) {
             // Should never reach here because BraveClient is an HTTP-level decorator.
             return;
@@ -81,8 +62,6 @@ public final class ArmeriaHttpClientParser implements HttpRequestParser, HttpRes
 
     @Override
     public void parse(HttpResponse response, TraceContext context, SpanCustomizer span) {
-        HttpResponseParser.DEFAULT.parse(response, context, span);
-
         final Object res = response.unwrap();
         if (!(res instanceof ClientRequestContext)) {
             return;

@@ -723,6 +723,9 @@ module = "io.micrometer:micrometer-spring-legacy"
 version.ref = "micrometer"
 javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.20/"
 exclusions = ["org.springframework:spring-web", "org.springframework:spring-webmvc"]
+[libraries.opentelemetry-sdk-testing]
+module = "io.opentelemetry:opentelemetry-sdk-testing"
+version = "1.26.0"
 
 [libraries.micrometer13-core]
 module = "io.micrometer:micrometer-core"
