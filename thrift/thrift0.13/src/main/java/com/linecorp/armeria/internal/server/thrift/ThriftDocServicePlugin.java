@@ -190,22 +190,21 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     @Nullable
     private MethodInfo newMethodInfo(Method method, Entry entry,
                                      DocServiceFilter filter) {
-        final String methodName = method.getName();
+        // Get the function name in thrift IDL
+        final String thriftFunctionName;
+        if (entry.thriftServiceEntry != null) {
+            thriftFunctionName = entry.thriftServiceEntry.functionName(method.getName());
+        } else {
+            thriftFunctionName = method.getName();
+        }
+
         final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
         final String serviceName = serviceClass.getName();
-        if (!filter.test(name(), serviceName, methodName)) {
+        if (!filter.test(name(), serviceName, thriftFunctionName)) {
             return null;
         }
         final ClassLoader classLoader = serviceClass.getClassLoader();
 
-        // Need get the function name in thrift proto,
-        // otherwise the argsClassName maybe wrong when use fullcamel compile option
-        final String thriftFunctionName;
-        if (entry.thriftServiceEntry != null) {
-            thriftFunctionName = entry.thriftServiceEntry.functionName(methodName);
-        } else {
-            thriftFunctionName = methodName;
-        }
         final String argsClassName = serviceName + '$' + thriftFunctionName + "_args";
         final Class<? extends TBase<?, ?>> argsClass;
         try {
@@ -317,17 +316,17 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    public static final class EntryBuilder {
+    static final class EntryBuilder {
         private final Class<?> serviceType;
         private final List<EndpointInfo> endpointInfos = new ArrayList<>();
         @Nullable
         private ThriftServiceEntry thriftServiceEntry;
 
-        public EntryBuilder(Class<?> serviceType) {
+        EntryBuilder(Class<?> serviceType) {
             this(serviceType, null);
         }
 
-        public EntryBuilder(Class<?> serviceType, @Nullable ThriftServiceEntry thriftServiceEntry) {
+        EntryBuilder(Class<?> serviceType, @Nullable ThriftServiceEntry thriftServiceEntry) {
             this.serviceType = requireNonNull(serviceType, "serviceType");
             this.thriftServiceEntry = thriftServiceEntry;
         }
