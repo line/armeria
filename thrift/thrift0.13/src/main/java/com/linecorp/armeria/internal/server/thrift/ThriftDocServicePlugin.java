@@ -302,7 +302,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    public static final class Entry {
+    static final class Entry {
         final Class<?> serviceType;
         final List<EndpointInfo> endpointInfos;
         @Nullable
