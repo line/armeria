@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 import org.assertj.core.api.ObjectAssert;
@@ -25,6 +26,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -63,11 +67,24 @@ class CircuitBreakerRuleBuilderTest {
 
     @Test
     void shouldReportAsFailure() {
-        final CircuitBreakerRule rule = CircuitBreakerRule.builder()
-                                                          .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-                                                          .thenFailure();
+        final CircuitBreakerRule rule = CircuitBreakerRule
+                .builder()
+                .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .thenFailure()
+                .orElse(CircuitBreakerRule.onResponseTimeout());
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
         assertFuture(rule.shouldReportAsSuccess(ctx1, null)).isSameAs(CircuitBreakerDecision.failure());
+        assertFuture(rule.shouldReportAsSuccess(
+                ctx1, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
+                .isSameAs(CircuitBreakerDecision.failure());
+        assertFuture(rule.shouldReportAsSuccess(ctx1, ResponseTimeoutException.get()))
+                .isSameAs(CircuitBreakerDecision.failure());
+        final ClientRequestContext timedOutCtx = ClientRequestContext
+                .builder(HttpRequest.of(HttpMethod.GET, "/"))
+                .timedOut(true)
+                .build();
+        assertFuture(rule.shouldReportAsSuccess(timedOutCtx, ClosedSessionException.get()))
+                .isSameAs(CircuitBreakerDecision.failure());
 
         ctx2.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
         assertFuture(rule.shouldReportAsSuccess(ctx2, null)).isSameAs(CircuitBreakerDecision.next());
@@ -93,12 +110,29 @@ class CircuitBreakerRuleBuilderTest {
                 CircuitBreakerRule.of(CircuitBreakerRule.builder()
                                                         .onException(ClosedSessionException.class)
                                                         .thenFailure(),
+                                      CircuitBreakerRule.onResponseTimeout(),
                                       CircuitBreakerRule.builder()
                                                         .onStatus(HttpStatus.OK)
                                                         .thenSuccess());
 
         assertFuture(rule.shouldReportAsSuccess(ctx2, ClosedSessionException.get()))
                 .isSameAs(CircuitBreakerDecision.failure());
+        assertFuture(rule.shouldReportAsSuccess(
+                ctx2, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
+                .isSameAs(CircuitBreakerDecision.failure());
+        assertFuture(rule.shouldReportAsSuccess(ctx2, ResponseTimeoutException.get()))
+                .isSameAs(CircuitBreakerDecision.failure());
+        final ClientRequestContext timedOutCtx = ClientRequestContext
+                .builder(HttpRequest.of(HttpMethod.GET, "/"))
+                .timedOut(true)
+                .build();
+        assertFuture(rule.shouldReportAsSuccess(timedOutCtx, ClosedSessionException.get()))
+                .isSameAs(CircuitBreakerDecision.failure());
+        assertFuture(rule.shouldReportAsSuccess(ctx2, null))
+                .isSameAs(CircuitBreakerDecision.next());
+        ctx2.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
+        assertFuture(rule.shouldReportAsSuccess(ctx2, null))
+                .isSameAs(CircuitBreakerDecision.success());
     }
 
     static <T> ObjectAssert<T> assertFuture(CompletionStage<T> decisionFuture) {

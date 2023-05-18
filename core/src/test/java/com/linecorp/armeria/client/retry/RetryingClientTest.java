@@ -454,7 +454,7 @@ class RetryingClientTest {
                     queue.add(3);
                     return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRule.builder()
-                                   .onException(ResponseTimeoutException.class)
+                                   .onResponseTimeout()
                                    .thenBackoff(backoff)));
         final WebClient client = client(strategy, 0, 500, 100);
         final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();

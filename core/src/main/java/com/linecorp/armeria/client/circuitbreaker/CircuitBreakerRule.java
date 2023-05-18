@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -140,6 +141,14 @@ public interface CircuitBreakerRule {
      */
     static CircuitBreakerRule onException() {
         return builder().onException().thenFailure();
+    }
+
+    /**
+     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
+     * if an {@link TimeoutException} is raised.
+     */
+    static CircuitBreakerRule onResponseTimeout() {
+        return builder().onResponseTimeout().thenFailure();
     }
 
     /**

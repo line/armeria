@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
@@ -242,6 +243,16 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     @Override
     public CircuitBreakerRuleBuilder onException() {
         return (CircuitBreakerRuleBuilder) super.onException();
+    }
+
+    /**
+     * Reports a {@link Response} as a success or failure to a {@link CircuitBreaker},
+     * or ignores it according to the build methods({@link #thenSuccess()}, {@link #thenFailure()}
+     * and {@link #thenIgnore()}), if an {@link TimeoutException} is raised.
+     */
+    @Override
+    public CircuitBreakerRuleBuilder onResponseTimeout() {
+        return (CircuitBreakerRuleBuilder) super.onResponseTimeout();
     }
 
     /**
