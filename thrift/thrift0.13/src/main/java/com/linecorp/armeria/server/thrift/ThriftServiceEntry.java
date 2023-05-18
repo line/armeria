@@ -79,7 +79,8 @@ public final class ThriftServiceEntry {
      */
     public String functionName(String method) {
         final ThriftFunction function = metadata.function(method);
-        requireNonNull(function);
+        requireNonNull(function, "metadata.function(method) returned null. metadata: " + metadata +
+                                 ", method: " + method);
         return function.name();
     }
 
