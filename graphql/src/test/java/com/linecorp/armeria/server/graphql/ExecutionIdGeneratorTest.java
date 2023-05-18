@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.graphql;
 
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
@@ -24,7 +25,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -32,6 +35,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.ExecutionResult;
+import graphql.GraphQLContext;
 import graphql.execution.AsyncExecutionStrategy;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionId;
@@ -41,6 +45,9 @@ import graphql.schema.DataFetcher;
 class ExecutionIdGeneratorTest {
 
     static CaptureIdStrategy idStrategy = new CaptureIdStrategy();
+
+    @Nullable
+    static GraphQLContext capturedGraphQLContext;
 
     static class CaptureIdStrategy extends AsyncExecutionStrategy {
         @Nullable
@@ -56,8 +63,9 @@ class ExecutionIdGeneratorTest {
 
     static class ConcatExecutionIdGenerator implements ExecutionIdGenerator {
         @Override
-        public ExecutionId generate(ServiceRequestContext ctx, String query, String operationName) {
-            return ExecutionId.from(ctx + query + operationName);
+        public ExecutionId generate(ServiceRequestContext requestContext, String query, String operationName,
+                                    GraphQLContext graphqlContext) {
+                return ExecutionId.from(requestContext + query + operationName + graphqlContext);
         }
     }
 
@@ -95,6 +103,7 @@ class ExecutionIdGeneratorTest {
 
     static DataFetcher<String> dataFetcher(String value) {
         return environment -> {
+            capturedGraphQLContext = environment.getGraphQlContext();
             final ServiceRequestContext ctx = GraphqlServiceContexts.get(environment);
             assertThat(ctx.eventLoop().inEventLoop()).isTrue();
             // Make sure that a ServiceRequestContext is available
@@ -105,9 +114,11 @@ class ExecutionIdGeneratorTest {
 
     @Test
     void defaultExecutionIdGenerator() throws InterruptedException {
-        BlockingWebClient.of(server.httpUri()).get("/graphql?query={foo}");
-
+        final AggregatedHttpResponse response = server.blockingWebClient().get("/graphql?query={foo}");
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
         assertThat(idStrategy.executionId).isEqualTo(ExecutionId.from(ctx.id().text()));
     }
 
@@ -120,11 +131,13 @@ class ExecutionIdGeneratorTest {
                                "  \"query\": \"" + query + "\"\n" +
                                "}\n";
         final HttpRequest request = HttpRequest.builder().post("/graphql-customized-execution-id")
-                                               .content(MediaType.GRAPHQL_RESPONSE_JSON, content)
+                                               .content(MediaType.JSON, content)
                                                .build();
-        BlockingWebClient.of(server.httpUri()).execute(request);
-
+        final AggregatedHttpResponse response = server.blockingWebClient().execute(request);
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
-        assertThat(idStrategy.executionId).isEqualTo(ExecutionId.from(ctx + query + operationName));
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
+        assertThat(idStrategy.executionId).isEqualTo(ExecutionId.from(ctx + query + operationName + capturedGraphQLContext));
     }
 }

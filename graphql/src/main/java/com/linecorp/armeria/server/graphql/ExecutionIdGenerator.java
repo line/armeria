@@ -34,13 +34,13 @@ public interface ExecutionIdGenerator {
      * as the execution ID.
      */
     static ExecutionIdGenerator of() {
-        return (ctx, query, operationName) -> ExecutionId.from(ctx.id().text());
+        return (requestContext, query, operationName, graphqlContext) -> ExecutionId.from(requestContext.id().text());
     }
 
     /**
      * Generates an execution ID based on the provided context, query, and operation name.
      */
-    ExecutionId generate(ServiceRequestContext ctx, String query, String operationName);
+    ExecutionId generate(ServiceRequestContext requestContext, String query, String operationName, GraphQLContext graphqlContext);
 
     /**
      * Returns an {@link ExecutionIdProvider} that uses this {@link ExecutionIdGenerator} to generate
@@ -48,8 +48,9 @@ public interface ExecutionIdGenerator {
      */
     default ExecutionIdProvider asExecutionProvider() {
         return (query, operationName, context) -> {
-            final ServiceRequestContext ctx = GraphqlServiceContexts.get((GraphQLContext) context);
-            return generate(ctx, query, operationName);
+            final GraphQLContext graphqlContext = (GraphQLContext) context;
+            final ServiceRequestContext requestContext = GraphqlServiceContexts.get(graphqlContext);
+            return generate(requestContext, query, operationName, graphqlContext);
         };
     }
 }
