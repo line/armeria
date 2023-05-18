@@ -65,7 +65,7 @@ class ExecutionIdGeneratorTest {
         @Override
         public ExecutionId generate(ServiceRequestContext requestContext, String query, String operationName,
                                     GraphQLContext graphqlContext) {
-                return ExecutionId.from(requestContext + query + operationName + graphqlContext);
+            return ExecutionId.from(requestContext + query + operationName + graphqlContext);
         }
     }
 
@@ -138,6 +138,7 @@ class ExecutionIdGeneratorTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
-        assertThat(idStrategy.executionId).isEqualTo(ExecutionId.from(ctx + query + operationName + capturedGraphQLContext));
+        assertThat(idStrategy.executionId).isEqualTo(
+                ExecutionId.from(ctx + query + operationName + capturedGraphQLContext));
     }
 }
