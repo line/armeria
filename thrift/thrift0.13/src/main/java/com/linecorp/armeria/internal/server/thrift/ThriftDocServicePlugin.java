@@ -200,9 +200,11 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         // Need get the function name in thrift proto,
         // otherwise the argsClassName maybe wrong when use fullcamel compile option
-        String thriftFunctionName = methodName;
+        final String thriftFunctionName;
         if (entry.thriftServiceEntry != null) {
             thriftFunctionName = entry.thriftServiceEntry.functionName(methodName);
+        } else {
+            thriftFunctionName = methodName;
         }
         final String argsClassName = serviceName + '$' + thriftFunctionName + "_args";
         final Class<? extends TBase<?, ?>> argsClass;
