@@ -75,8 +75,7 @@ public final class ThriftServiceEntry {
     }
 
     /**
-     * Returns the associated thrift method name in `.thrift` from Thrift function.
-     * @return the associated thrift method name in `.thrift` function.
+     * Returns the associated thrift method name in the Thrift IDL.
      */
     public String functionName(String method) {
         final ThriftFunction function = metadata.function(method);
