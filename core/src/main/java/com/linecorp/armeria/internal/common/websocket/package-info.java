@@ -15,7 +15,7 @@
  */
 
 /**
- * Server-side classes for <a href="https://datatracker.ietf.org/doc/html/rfc6455">the WebSocket Protocol</a>.
+ * Internal common classes for <a href="https://datatracker.ietf.org/doc/html/rfc6455">the WebSocket Protocol</a>.
  */
 @NonNullByDefault
 package com.linecorp.armeria.internal.common.websocket;
