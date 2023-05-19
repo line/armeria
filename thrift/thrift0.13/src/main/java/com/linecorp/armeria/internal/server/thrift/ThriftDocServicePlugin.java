@@ -331,7 +331,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
             this.thriftServiceEntry = thriftServiceEntry;
         }
 
-        public EntryBuilder endpoint(EndpointInfo endpointInfo) {
+        EntryBuilder endpoint(EndpointInfo endpointInfo) {
             endpointInfos.add(requireNonNull(endpointInfo, "endpointInfo"));
             return this;
         }
