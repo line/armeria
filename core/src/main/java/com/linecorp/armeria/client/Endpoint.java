@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -49,6 +51,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -105,6 +108,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         });
     }
 
+    private static String removeUserInfo(String authority) {
+        final int indexOfDelimiter = authority.lastIndexOf('@');
+        if (indexOfDelimiter == -1) {
+            return authority;
+        }
+        return authority.substring(indexOfDelimiter + 1);
+    }
+
     /**
      * Creates a new host {@link Endpoint}.
      *
@@ -123,6 +134,37 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public static Endpoint of(String host) {
         return create(host, 0, true);
+    }
+
+    /**
+     * Creates a new {@link Endpoint} from the specified {@link SocketAddress}.
+     * This method converts the following address types into an endpoint:
+     * <ul>
+     *   <li>{@link InetSocketAddress}</li>
+     *   <li>{@link DomainSocketAddress}</li>
+     *   <li>{@link io.netty.channel.unix.DomainSocketAddress}</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified {@link SocketAddress} is not supported
+     */
+    public static Endpoint of(SocketAddress addr) {
+        requireNonNull(addr, "addr");
+        if (addr instanceof io.netty.channel.unix.DomainSocketAddress) {
+            addr = DomainSocketAddress.of((io.netty.channel.unix.DomainSocketAddress) addr);
+        }
+
+        if (addr instanceof DomainSocketAddress) {
+            return of(((DomainSocketAddress) addr).authority());
+        }
+
+        checkArgument(addr instanceof InetSocketAddress,
+                      "unsupported address: %s", addr);
+
+        final InetSocketAddress inetAddr = (InetSocketAddress) addr;
+        @SuppressWarnings("resource")
+        final Endpoint endpoint = of(inetAddr.getHostString(), inetAddr.getPort());
+        return inetAddr.isUnresolved() ? endpoint
+                                       : endpoint.withIpAddr(inetAddr.getAddress().getHostAddress());
     }
 
     /**
@@ -152,18 +194,17 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY, null);
         }
 
-        if (validateHost) {
+        if (validateHost && !isDomainSocketAuthority(host)) {
             host = InternetDomainName.from(host).toString();
         }
         return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY, null);
     }
 
-    private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf('@');
-        if (indexOfDelimiter == -1) {
-            return authority;
-        }
-        return authority.substring(indexOfDelimiter + 1);
+    static boolean isDomainSocketAuthority(String host) {
+        // Return true if `host` starts with `unix%3A` or `unix%3a`.
+        return host.length() > 7 &&
+               host.startsWith("unix%3") &&
+               Character.toUpperCase(host.charAt(6)) == 'A';
     }
 
     private enum HostType {
@@ -361,6 +402,13 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             default:
                 return null;
         }
+    }
+
+    /**
+     * Returns whether this endpoint connects to a domain socket.
+     */
+    public boolean isDomainSocket() {
+        return isDomainSocketAuthority(host);
     }
 
     /**

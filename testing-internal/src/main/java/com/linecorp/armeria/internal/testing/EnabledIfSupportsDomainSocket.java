@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,25 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.testing;
 
-import com.linecorp.armeria.common.Flags;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public final class TestUtil {
+import org.junit.jupiter.api.condition.EnabledIf;
 
-    private static final boolean isDocServiceDemoMode = "true".equals(System.getenv("DOC_SERVICE_DEMO"));
-
-    /**
-     * Indicates doc service tests should be run on fixed ports to be able to demo or develop DocService.
-     */
-    public static boolean isDocServiceDemoMode() {
-        return isDocServiceDemoMode;
-    }
-
-    public static boolean hasDomainSocketSupport() {
-        return Flags.transportType().supportsDomainSockets();
-    }
-
-    private TestUtil() {}
+@EnabledIf(
+        value = "com.linecorp.armeria.internal.testing.TestUtil#hasDomainSocketSupport",
+        disabledReason = "The current platform doesn't support Unix domain sockets."
+)
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface EnabledIfSupportsDomainSocket {
 }

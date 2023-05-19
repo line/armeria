@@ -103,7 +103,9 @@ final class HttpClientDelegate implements HttpClient {
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
-        if (endpointWithPort.hasIpAddr() || proxyConfig.proxyType().isForwardProxy()) {
+        if (endpointWithPort.hasIpAddr() ||
+            endpointWithPort.isDomainSocket() ||
+            proxyConfig.proxyType().isForwardProxy()) {
             // There is no need to resolve the IP address either because it is already known,
             // or it isn't needed for forward proxies.
             acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder, proxyConfig);

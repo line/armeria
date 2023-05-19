@@ -64,6 +64,7 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
@@ -89,7 +90,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
-    private static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
+    private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -167,6 +168,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
+    @Nullable
+    private InetSocketAddress remoteAddress;
+    @Nullable
+    private InetSocketAddress localAddress;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
@@ -315,14 +320,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
-        final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
+        final InetSocketAddress remoteAddress = remoteAddress(channel);
+        final InetSocketAddress localAddress = localAddress(channel);
+        final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(remoteAddress, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
-            final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
+            final ServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
+                    channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx);
 
             // Handle 'OPTIONS * HTTP/1.1'.
             if (routingStatus == RoutingStatus.OPTIONS) {
@@ -345,7 +352,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
-                req, sslSession, proxiedAddresses, clientAddress,
+                req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
         try (SafeCloseable ignored = reqCtx.push()) {
@@ -422,8 +429,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ProxiedAddresses determineProxiedAddresses(Channel channel, RequestHeaders headers) {
-        final InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
+    private ProxiedAddresses determineProxiedAddresses(InetSocketAddress remoteAddress,
+                                                       RequestHeaders headers) {
         if (config.clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
             return HttpHeaderUtil.determineProxiedAddresses(
                     headers, config.clientAddressSources(), proxiedAddresses,
@@ -431,6 +438,28 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } else {
             return proxiedAddresses != null ? proxiedAddresses : ProxiedAddresses.of(remoteAddress);
         }
+    }
+
+    private InetSocketAddress remoteAddress(Channel ch) {
+        final InetSocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress != null) {
+            return remoteAddress;
+        }
+
+        final InetSocketAddress newRemoteAddress = ChannelUtil.remoteAddress(ch);
+        this.remoteAddress = newRemoteAddress;
+        return firstNonNull(newRemoteAddress, UNKNOWN_ADDR);
+    }
+
+    private InetSocketAddress localAddress(Channel ch) {
+        final InetSocketAddress localAddress = this.localAddress;
+        if (localAddress != null) {
+            return localAddress;
+        }
+
+        final InetSocketAddress newLocalAddress = ChannelUtil.localAddress(ch);
+        this.localAddress = newLocalAddress;
+        return firstNonNull(newLocalAddress, UNKNOWN_ADDR);
     }
 
     private void handleOptions(ChannelHandlerContext ctx, ServiceRequestContext reqCtx) {
@@ -561,6 +590,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
+                                                                   InetSocketAddress remoteAddress,
+                                                                   InetSocketAddress localAddress,
                                                                    RoutingContext routingCtx) {
         final ServiceConfig serviceConfig = routingCtx.virtualHost().fallbackServiceConfig();
         final RoutingResult routingResult = RoutingResult.builder()
@@ -570,7 +601,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceConfig,
                 channel, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
-                req, sslSession, proxiedAddresses, clientAddress,
+                req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }
 

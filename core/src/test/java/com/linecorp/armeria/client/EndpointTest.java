@@ -19,18 +19,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.OsType;
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.netty.util.AttributeKey;
 
@@ -171,6 +179,7 @@ class EndpointTest {
     void ipV4() {
         final Endpoint a = Endpoint.of("192.168.0.1");
         assertThat(a.host()).isEqualTo("192.168.0.1");
+        assertThat(a.isDomainSocket()).isFalse();
         assertThat(a.ipAddr()).isEqualTo("192.168.0.1");
         assertThat(a.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
         assertThat(a.hasIpAddr()).isTrue();
@@ -199,6 +208,7 @@ class EndpointTest {
     void ipV6() {
         final Endpoint a = Endpoint.of("::1");
         assertThat(a.host()).isEqualTo("::1");
+        assertThat(a.isDomainSocket()).isFalse();
         assertThat(a.ipAddr()).isEqualTo("::1");
         assertThat(a.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(a.hasIpAddr()).isTrue();
@@ -253,6 +263,19 @@ class EndpointTest {
         assertThat(a.port()).isEqualTo(80);
         assertThat(a.authority()).isEqualTo("[::1]:80");
         assertThat(a.toUri("none+http").toString()).isEqualTo("none+http://[::1]:80");
+    }
+
+    @Test
+    void domainSocket() {
+        final String sockAddr = "unix%3Afoo.sock";
+        final List<Function<String, Endpoint>> factoryFunctions =
+                ImmutableList.of(Endpoint::of, Endpoint::parse);
+
+        factoryFunctions.forEach(factoryFunc -> {
+            final Endpoint e = factoryFunc.apply(sockAddr);
+            assertThat(e.host()).isEqualTo(sockAddr);
+            assertThat(e.isDomainSocket()).isTrue();
+        });
     }
 
     @Test
@@ -450,6 +473,55 @@ class EndpointTest {
         assertThat(endpointWithIpv6.hasIpAddr()).isTrue();
         assertThat(endpointWithIpv6.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(endpointWithIpv6.ipAddr()).isEqualTo("0:0:0:0:0:0:0:1");
+    }
+
+    @Test
+    void socketAddressConversion() throws Exception {
+        // Unresolved InetSocketAddress
+        assertThat(Endpoint.of(InetSocketAddress.createUnresolved("foo", 80))).satisfies(e -> {
+            assertThat(e.host()).isEqualTo("foo");
+            assertThat(e.isDomainSocket()).isFalse();
+            assertThat(e.hasPort()).isTrue();
+            assertThat(e.port()).isEqualTo(80);
+            assertThat(e.hasIpAddr()).isFalse();
+        });
+
+        // Resolved InetSocketAddress
+        assertThat(Endpoint.of(new InetSocketAddress(
+                InetAddress.getByAddress("bar", new byte[] { 127, 0, 0, 42 }), 443))
+        ).satisfies(e -> {
+            assertThat(e.host()).isEqualTo("bar");
+            assertThat(e.isDomainSocket()).isFalse();
+            assertThat(e.hasPort()).isTrue();
+            assertThat(e.port()).isEqualTo(443);
+            assertThat(e.hasIpAddr()).isTrue();
+            assertThat(e.ipAddr()).isEqualTo("127.0.0.42");
+            assertThat(e.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
+        });
+
+        // DomainSocketAddress (Armeria)
+        assertThat(Endpoint.of(DomainSocketAddress.of(Paths.get("/foo.sock")))).satisfies(e -> {
+            if (SystemInfo.osType() == OsType.WINDOWS) {
+                assertThat(e.host()).isEqualTo("unix%3A%5Cfoo.sock");
+            } else {
+                assertThat(e.host()).isEqualTo("unix%3A%2Ffoo.sock");
+            }
+            assertThat(e.isDomainSocket()).isTrue();
+            assertThat(e.hasPort()).isFalse();
+            assertThat(e.hasIpAddr()).isFalse();
+        });
+
+        // DomainSocketAddress (Netty)
+        assertThat(Endpoint.of(new io.netty.channel.unix.DomainSocketAddress("/bar.sock"))).satisfies(e -> {
+            if (SystemInfo.osType() == OsType.WINDOWS) {
+                assertThat(e.host()).isEqualTo("unix%3A%5Cbar.sock");
+            } else {
+                assertThat(e.host()).isEqualTo("unix%3A%2Fbar.sock");
+            }
+            assertThat(e.isDomainSocket()).isTrue();
+            assertThat(e.hasPort()).isFalse();
+            assertThat(e.hasIpAddr()).isFalse();
+        });
     }
 
     @Test

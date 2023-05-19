@@ -17,7 +17,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -200,12 +200,12 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     @Override
-    public ClientRequestContextBuilder remoteAddress(SocketAddress remoteAddress) {
+    public ClientRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
         return (ClientRequestContextBuilder) super.remoteAddress(remoteAddress);
     }
 
     @Override
-    public ClientRequestContextBuilder localAddress(SocketAddress localAddress) {
+    public ClientRequestContextBuilder localAddress(InetSocketAddress localAddress) {
         return (ClientRequestContextBuilder) super.localAddress(localAddress);
     }
 

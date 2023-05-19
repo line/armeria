@@ -1,0 +1,57 @@
+/*
+ * Copyright 2023 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package com.linecorp.armeria.common.util;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.nio.file.Paths;
+
+import org.junit.jupiter.api.Test;
+
+class DomainSocketAddressTest {
+    @Test
+    void authority() {
+        assertThat(DomainSocketAddress.of(Paths.get("/var/run/test.sock"))).satisfies(addr -> {
+            assertThat(addr.authority()).isEqualTo(
+                    SystemInfo.osType() == OsType.WINDOWS ? "unix%3A%5Cvar%5Crun%5Ctest.sock"
+                                                          : "unix%3A%2Fvar%2Frun%2Ftest.sock");
+        });
+
+        if (SystemInfo.osType() != OsType.WINDOWS) {
+            // A path with a colon (:)
+            assertThat(DomainSocketAddress.of(Paths.get("/foo:bar"))).satisfies(addr -> {
+                assertThat(addr.authority()).isEqualTo("unix%3A%2Ffoo%3Abar");
+            });
+        }
+
+        // A path with an at-sign (@)
+        assertThat(DomainSocketAddress.of(Paths.get("/foo@bar"))).satisfies(addr -> {
+            assertThat(addr.authority()).isEqualTo(
+                    SystemInfo.osType() == OsType.WINDOWS ? "unix%3A%5Cfoo%40bar"
+                                                          : "unix%3A%2Ffoo%40bar");
+        });
+    }
+
+    @Test
+    void escape() {
+        assertThat(DomainSocketAddress.escape("@")).isEqualTo("%40");
+        assertThat(DomainSocketAddress.escape("@@")).isEqualTo("%40%40");
+        assertThat(DomainSocketAddress.escape("@foo@")).isEqualTo("%40foo%40");
+        assertThat(DomainSocketAddress.escape(":")).isEqualTo("%3A");
+        assertThat(DomainSocketAddress.escape("::")).isEqualTo("%3A%3A");
+        assertThat(DomainSocketAddress.escape(":bar:")).isEqualTo("%3Abar%3A");
+    }
+}
