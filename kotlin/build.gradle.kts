@@ -22,8 +22,15 @@ testing {
         val testNg by registering(JvmTestSuite::class) {
             useTestNG()
 
-            group = "Verification"
-            description = "Runs the TestNG unit tests"
+
+            targets {
+                all {
+                    testTask.configure {
+                        group = "Verification"
+                        description = "Runs the TestNG unit tests"
+                    }
+                }
+            }
         }
     }
 }
