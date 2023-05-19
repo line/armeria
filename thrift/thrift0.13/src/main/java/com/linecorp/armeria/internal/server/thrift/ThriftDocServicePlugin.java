@@ -336,7 +336,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
             return this;
         }
 
-        public Entry build() {
+        Entry build() {
             return new Entry(serviceType, endpointInfos, thriftServiceEntry);
         }
     }
