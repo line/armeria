@@ -201,6 +201,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                                            raddr.getHostString(),
                                            raddr.getPort());
         } else {
+            assert remoteAddr instanceof DomainSocketAddress : remoteAddr;
             sslHandler = sslCtx.newHandler(ch.alloc());
         }
 

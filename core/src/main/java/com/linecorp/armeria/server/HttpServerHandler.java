@@ -320,8 +320,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
-        final InetSocketAddress remoteAddress = remoteAddress(channel);
-        final InetSocketAddress localAddress = localAddress(channel);
+        final InetSocketAddress remoteAddress = firstNonNull(remoteAddress(channel), UNKNOWN_ADDR);
+        final InetSocketAddress localAddress = firstNonNull(localAddress(channel), UNKNOWN_ADDR);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(remoteAddress, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
@@ -440,6 +440,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
+    @Nullable
     private InetSocketAddress remoteAddress(Channel ch) {
         final InetSocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress != null) {
@@ -448,9 +449,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final InetSocketAddress newRemoteAddress = ChannelUtil.remoteAddress(ch);
         this.remoteAddress = newRemoteAddress;
-        return firstNonNull(newRemoteAddress, UNKNOWN_ADDR);
+        return newRemoteAddress;
     }
 
+    @Nullable
     private InetSocketAddress localAddress(Channel ch) {
         final InetSocketAddress localAddress = this.localAddress;
         if (localAddress != null) {
@@ -459,7 +461,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final InetSocketAddress newLocalAddress = ChannelUtil.localAddress(ch);
         this.localAddress = newLocalAddress;
-        return firstNonNull(newLocalAddress, UNKNOWN_ADDR);
+        return newLocalAddress;
     }
 
     private void handleOptions(ChannelHandlerContext ctx, ServiceRequestContext reqCtx) {

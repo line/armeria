@@ -31,6 +31,7 @@ import java.util.concurrent.locks.StampedLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -66,26 +67,8 @@ public final class SessionProtocolNegotiationCache {
      */
     public static boolean isUnsupported(Endpoint endpoint, SessionProtocol protocol) {
         requireNonNull(endpoint, "endpoint");
-        final String key;
-        if (endpoint.isDomainSocket()) {
-            try {
-                key = "unix:" + URLDecoder.decode(endpoint.host(), "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new Error(e);
-            }
-        } else {
-            checkArgument(endpoint.hasPort(), "endpoint must have a port.");
-            // It's okay to create the key using endpoint.host():
-            // - If the endpoint has an IP address without host name, the IP address is used in the key to store
-            //   and retrieve the value.
-            // - If the endpoint has an IP address with host name, the host name is used in the key to store
-            //   and retrieve the value.
-            // - If the endpoint has host name only, the host name is used in the key to store and retrieve
-            //   the value.
-            key = key(endpoint.host(), endpoint.port());
-        }
-
-        return isUnsupported(key, protocol);
+        requireNonNull(protocol, "protocol");
+        return isUnsupported(key(endpoint), protocol);
     }
 
     /**
@@ -93,12 +76,12 @@ public final class SessionProtocolNegotiationCache {
      * the specified {@link SessionProtocol}.
      */
     public static boolean isUnsupported(SocketAddress remoteAddress, SessionProtocol protocol) {
-        final String key = key(remoteAddress);
-        return isUnsupported(key, protocol);
+        requireNonNull(remoteAddress, "remoteAddress");
+        requireNonNull(protocol, "protocol");
+        return isUnsupported(key(remoteAddress), protocol);
     }
 
     private static boolean isUnsupported(String key, SessionProtocol protocol) {
-        requireNonNull(protocol, "protocol");
         final CacheEntry e;
         final long stamp = lock.readLock();
         try {
@@ -173,7 +156,31 @@ public final class SessionProtocolNegotiationCache {
         }
     }
 
-    private static String key(SocketAddress remoteAddress) {
+    @VisibleForTesting
+    static String key(Endpoint endpoint) {
+        final String key;
+        if (endpoint.isDomainSocket()) {
+            try {
+                key = URLDecoder.decode(endpoint.host(), "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new Error(e);
+            }
+        } else {
+            checkArgument(endpoint.hasPort(), "endpoint must have a port.");
+            // It's okay to create the key using endpoint.host():
+            // - If the endpoint has an IP address without host name, the IP address is used in the key to store
+            //   and retrieve the value.
+            // - If the endpoint has an IP address with host name, the host name is used in the key to store
+            //   and retrieve the value.
+            // - If the endpoint has host name only, the host name is used in the key to store and retrieve
+            //   the value.
+            key = key(endpoint.host(), endpoint.port());
+        }
+        return key;
+    }
+
+    @VisibleForTesting
+    static String key(SocketAddress remoteAddress) {
         requireNonNull(remoteAddress, "remoteAddress");
         if (remoteAddress instanceof InetSocketAddress) {
             if (remoteAddress instanceof DomainSocketAddress) {
@@ -191,7 +198,8 @@ public final class SessionProtocolNegotiationCache {
         throw new IllegalArgumentException("unsupported remote address: " + remoteAddress);
     }
 
-    private static String key(String host, int port) {
+    @VisibleForTesting
+    static String key(String host, int port) {
         return new StringBuilder(host.length() + 6)
                 .append(host)
                 .append(':')

@@ -346,6 +346,7 @@ public final class ChannelUtil {
 
     public static int getPort(SocketAddress addr, int defaultValue) {
         if (addr instanceof InetSocketAddress) {
+            assert !(addr instanceof DomainSocketAddress) : addr;
             return ((InetSocketAddress) addr).getPort();
         }
         return defaultValue;

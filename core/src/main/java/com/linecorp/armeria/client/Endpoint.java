@@ -147,6 +147,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *
      * @throws IllegalArgumentException if the specified {@link SocketAddress} is not supported
      */
+    @UnstableApi
     public static Endpoint of(SocketAddress addr) {
         requireNonNull(addr, "addr");
         if (addr instanceof io.netty.channel.unix.DomainSocketAddress) {
@@ -200,7 +201,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY, null);
     }
 
-    static boolean isDomainSocketAuthority(String host) {
+    private static boolean isDomainSocketAuthority(String host) {
         // Return true if `host` starts with `unix%3A` or `unix%3a`.
         return host.length() > 7 &&
                host.startsWith("unix%3") &&
@@ -407,6 +408,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Returns whether this endpoint connects to a domain socket.
      */
+    @UnstableApi
     public boolean isDomainSocket() {
         return isDomainSocketAuthority(host);
     }
@@ -818,17 +820,26 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         final Endpoint that = (Endpoint) obj;
-        return host().equals(that.host()) &&
+        return hashCode() == that.hashCode() &&
+               host.equals(that.host) &&
                Objects.equals(ipAddr, that.ipAddr) &&
                port == that.port;
     }
 
     @Override
     public int hashCode() {
-        if (hashCode == 0) {
-            hashCode = (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        final int hashCode = this.hashCode;
+        if (hashCode != 0) {
+            return hashCode;
         }
-        return hashCode;
+
+        int newHashCode = (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        if (newHashCode == 0) {
+            newHashCode = 1;
+        }
+
+        this.hashCode = newHashCode;
+        return newHashCode;
     }
 
     @Override

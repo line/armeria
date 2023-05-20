@@ -78,6 +78,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -598,10 +599,12 @@ public final class ArmeriaHttpUtil {
         // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
         final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
         final SocketAddress localAddr = ctx.channel().localAddress();
-        if (!(localAddr instanceof InetSocketAddress)) {
+        if (localAddr instanceof InetSocketAddress) {
+            return defaultHostname + ':' + ((InetSocketAddress) localAddr).getPort();
+        } else {
+            assert localAddr instanceof DomainSocketAddress : localAddr;
             return defaultHostname;
         }
-        return defaultHostname + ':' + ((InetSocketAddress) localAddr).getPort();
     }
 
     /**
@@ -1111,7 +1114,7 @@ public final class ArmeriaHttpUtil {
 
     /**
      * A 408 Request Timeout response can be received even without a request.
-     * More details can be found at https://github.com/line/armeria/issues/3055.
+     * More details can be found at <a href="https://github.com/line/armeria/issues/3055">#3055</a>.
      */
     public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
         return httpResponse.status().code() == HttpResponseStatus.REQUEST_TIMEOUT.code() &&

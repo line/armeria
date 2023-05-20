@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -41,8 +40,6 @@ import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
@@ -60,6 +57,7 @@ import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -229,6 +227,8 @@ final class HttpChannelPool implements AsyncCloseable {
             return inetBootstraps[desiredProtocol.ordinal()];
         }
 
+        assert remoteAddress instanceof DomainSocketAddress : remoteAddress;
+
         if (unixBootstraps == null) {
             throw new UnsupportedAddressTypeException();
         }
@@ -380,15 +380,8 @@ final class HttpChannelPool implements AsyncCloseable {
         setPendingAcquisition(desiredProtocol, key, promise);
         timingsBuilder.socketConnectStart();
 
-        final SocketAddress remoteAddress;
-        try {
-            remoteAddress = key.toRemoteAddress();
-        } catch (UnknownHostException e) {
-            notifyConnect(desiredProtocol, key, eventLoop.newFailedFuture(e), promise, timingsBuilder);
-            return;
-        }
-
         // Fail immediately if it is certain that the remote address doesn't support the desired protocol.
+        final SocketAddress remoteAddress = key.remoteAddress;
         if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, desiredProtocol)) {
             notifyConnect(desiredProtocol, key,
                           eventLoop.newFailedFuture(
@@ -472,7 +465,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
                 final ProxyConfigSelector proxyConfigSelector = clientFactory.proxyConfigSelector();
-                proxyConfigSelector.connectFailed(protocol, Endpoint.unsafeCreate(poolKey.host, poolKey.port),
+                proxyConfigSelector.connectFailed(protocol, poolKey.endpoint,
                                                   proxyAddress, UnprocessedRequestException.of(cause));
             }
         } catch (Throwable t) {
@@ -647,30 +640,62 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     static final class PoolKey {
-        final String host;
-        @Nullable
-        final String ipAddr;
-        final int port;
-        final int hashCode;
+        final Endpoint endpoint;
         final ProxyConfig proxyConfig;
+        final SocketAddress remoteAddress;
 
-        PoolKey(String host, @Nullable String ipAddr, int port, ProxyConfig proxyConfig) {
-            this.host = host;
-            this.ipAddr = ipAddr;
-            this.port = port;
+        private final int hashCode;
+        private final String strVal;
+
+        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig) {
+            this.endpoint = endpoint;
             this.proxyConfig = proxyConfig;
-            hashCode = Objects.hash(host, ipAddr, port, proxyConfig);
+            remoteAddress = toRemoteAddress(endpoint, proxyConfig);
+            hashCode = endpoint.hashCode() * 31 + proxyConfig.hashCode();
+            strVal = generateString(endpoint, proxyConfig);
         }
 
-        private SocketAddress toRemoteAddress() throws UnknownHostException {
+        private static String generateString(Endpoint endpoint, ProxyConfig proxyConfig) {
+            final String host = endpoint.host();
+            final String ipAddr = endpoint.ipAddr();
+            final int port = endpoint.port();
+            final boolean isDomainSocket = endpoint.isDomainSocket();
+            final String proxyConfigStr = proxyConfig.proxyType() != ProxyType.DIRECT ? proxyConfig.toString()
+                                                                                      : null;
+            try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+                final StringBuilder buf = tempThreadLocals.stringBuilder();
+                buf.append('{').append(host);
+                if (ipAddr != null) {
+                    buf.append('/').append(ipAddr);
+                }
+                if (!isDomainSocket) {
+                    buf.append(':').append(port);
+                }
+                if (proxyConfigStr != null) {
+                    buf.append(" via ");
+                    buf.append(proxyConfigStr);
+                }
+                buf.append('}');
+                return buf.toString();
+            }
+        }
+
+        private static SocketAddress toRemoteAddress(Endpoint endpoint, ProxyConfig proxyConfig) {
+            final String host = endpoint.host();
+            final String ipAddr = endpoint.ipAddr();
             if (ipAddr != null) {
-                final InetAddress inetAddr = InetAddress.getByAddress(
-                        host, NetUtil.createByteArrayFromIpAddressString(ipAddr));
-                return new InetSocketAddress(inetAddr, port);
+                try {
+                    return new InetSocketAddress(
+                            InetAddress.getByAddress(host, NetUtil.createByteArrayFromIpAddressString(ipAddr)),
+                            endpoint.port());
+                } catch (UnknownHostException e) {
+                    // Should never reach here because `Endpoint` validates the IP address.
+                    throw new Error(e);
+                }
             }
 
-            // key.ipAddr can be null for domain sockets.
-            if (Endpoint.isDomainSocketAuthority(host)) {
+            // ipAddr can be null for domain sockets.
+            if (endpoint.isDomainSocket()) {
                 final String path;
                 try {
                     path = URLDecoder.decode(host.substring(7), "UTF-8");
@@ -681,9 +706,9 @@ final class HttpChannelPool implements AsyncCloseable {
                 return new DomainSocketAddress(path);
             }
 
-            // key.ipAddr can be null for forward proxies.
+            // ipAddr can be null for forward proxies.
             assert proxyConfig.proxyType().isForwardProxy() : proxyConfig;
-            return InetSocketAddress.createUnresolved(host, port);
+            return InetSocketAddress.createUnresolved(host, endpoint.port());
         }
 
         @Override
@@ -697,10 +722,8 @@ final class HttpChannelPool implements AsyncCloseable {
             }
 
             final PoolKey that = (PoolKey) o;
-            // Compare IP address first, which is most likely to differ.
-            return Objects.equals(ipAddr, that.ipAddr) &&
-                   port == that.port &&
-                   host.equals(that.host) &&
+            return hashCode == that.hashCode &&
+                   endpoint.equals(that.endpoint) &&
                    proxyConfig.equals(that.proxyConfig);
         }
 
@@ -711,12 +734,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("host", host)
-                              .add("ipAddr", ipAddr)
-                              .add("port", port)
-                              .add("proxyConfig", proxyConfig)
-                              .toString();
+            return strVal;
         }
     }
 

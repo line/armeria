@@ -890,7 +890,8 @@ public final class DefaultClientRequestContext
                 buf.append(", laddr=");
                 TextFormatter.appendSocketAddress(buf, laddr);
                 if (!Objects.equals(laddr, raddr)) {
-                    buf.append(", raddr=").append(raddr);
+                    buf.append(", raddr=");
+                    TextFormatter.appendSocketAddress(buf, raddr);
                 }
             }
             buf.append("][")
