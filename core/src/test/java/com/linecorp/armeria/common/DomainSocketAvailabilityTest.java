@@ -13,20 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.testing;
+package com.linecorp.armeria.common;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.Test;
 
-@EnabledIf(
-        value = "com.linecorp.armeria.internal.testing.TestUtil#hasDomainSocketSupport",
-        disabledReason = "The current platform doesn't support Unix domain sockets."
-)
-@Target({ElementType.TYPE, ElementType.METHOD})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface EnabledIfSupportsDomainSocket {
+import com.linecorp.armeria.internal.testing.EnabledOnOsWithDomainSockets;
+
+@EnabledOnOsWithDomainSockets
+class DomainSocketAvailabilityTest {
+    @Test
+    void mustBeAvailableOnLinuxAndMacOs() {
+        assertThat(Flags.transportType().supportsDomainSockets()).isTrue();
+    }
 }

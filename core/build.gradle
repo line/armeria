@@ -118,18 +118,22 @@ dependencies {
     api libs.netty.codec.haproxy
     api libs.netty.codec.http2
     api libs.netty.resolver.dns
-    implementation(variantOf(libs.netty.transport.native.unix.common) { classifier("linux-x86_64") })
-    implementation(variantOf(libs.netty.transport.native.epoll) { classifier("linux-x86_64") })
-    implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier("osx-x86_64") })
-    implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier("osx-aarch_64") })
+    implementation libs.netty.handler.proxy
 
-    // Note that tcnative now needs explicit classifiers
-    // Related: https://github.com/netty/netty-tcnative/pull/709
+    // Netty native libraries
+    ['linux-x86_64', 'linux-aarch_64'].each { arch ->
+        implementation(variantOf(libs.netty.transport.native.unix.common) { classifier(arch) })
+        implementation(variantOf(libs.netty.transport.native.epoll) { classifier(arch) })
+        optionalImplementation(variantOf(libs.netty.io.uring) { classifier(arch) })
+    }
+    ['osx-x86_64', 'osx-aarch_64'].each { arch ->
+        implementation(variantOf(libs.netty.transport.native.unix.common) { classifier(arch) })
+        implementation(variantOf(libs.netty.transport.native.kqueue) { classifier(arch) })
+        implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier(arch) })
+    }
     ['linux-x86_64', 'linux-aarch_64', 'osx-x86_64', 'osx-aarch_64', 'windows-x86_64'].each { arch ->
         implementation(variantOf(libs.netty.tcnative.boringssl) { classifier(arch) })
     }
-    implementation libs.netty.handler.proxy
-    optionalImplementation(variantOf(libs.netty.io.uring) { classifier("linux-x86_64") })
 
     // TestNG
     testImplementation libs.testng

@@ -765,6 +765,8 @@ module = "io.netty:netty-resolver-dns-native-macos"
 module = "io.netty:netty-transport-native-unix-common"
 [libraries.netty-transport-native-epoll]
 module = "io.netty:netty-transport-native-epoll"
+[libraries.netty-transport-native-kqueue]
+module = "io.netty:netty-transport-native-kqueue"
 [libraries.netty-tcnative-boringssl]
 module = 'io.netty:netty-tcnative-boringssl-static'
 [libraries.netty-io_uring]

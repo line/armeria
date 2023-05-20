@@ -111,6 +111,18 @@ public final class TransportTypeProvider {
             ".epoll.EpollEventLoopGroup",
             ".epoll.EpollEventLoop");
 
+    public static final TransportTypeProvider KQUEUE = of(
+            "KQUEUE",
+            ChannelUtil.channelPackageName(),
+            ".kqueue.KQueue",
+            ".kqueue.KQueueServerSocketChannel",
+            ".kqueue.KQueueSocketChannel",
+            ".kqueue.KQueueServerDomainSocketChannel",
+            ".kqueue.KQueueDomainSocketChannel",
+            ".kqueue.KQueueDatagramChannel",
+            ".kqueue.KQueueEventLoopGroup",
+            ".kqueue.KQueueEventLoop");
+
     public static final TransportTypeProvider IO_URING = of(
             "IO_URING",
             ChannelUtil.incubatorChannelPackageName(),

@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.testing.EnabledIfSupportsDomainSocket;
+import com.linecorp.armeria.internal.testing.EnabledOnOsWithDomainSockets;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.bootstrap.Bootstrap;
@@ -42,7 +42,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-@EnabledIfSupportsDomainSocket
+@EnabledOnOsWithDomainSockets
 class DomainSocketServerTest {
 
     @TempDir

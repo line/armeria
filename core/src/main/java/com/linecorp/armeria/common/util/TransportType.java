@@ -40,6 +40,7 @@ public enum TransportType {
 
     NIO(TransportTypeProvider.NIO),
     EPOLL(TransportTypeProvider.EPOLL),
+    KQUEUE(TransportTypeProvider.KQUEUE),
     IO_URING(TransportTypeProvider.IO_URING);
 
     private final TransportTypeProvider provider;
