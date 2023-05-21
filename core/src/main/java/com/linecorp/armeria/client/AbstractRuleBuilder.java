@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * A skeletal builder implementation for {@link RetryRule}, {@link RetryRuleWithContent},
@@ -58,7 +59,7 @@ public abstract class AbstractRuleBuilder {
     @Nullable
     private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
     @Nullable
-    private BiPredicate<ClientRequestContext, RequestLog> requestLogFilter;
+    private BiPredicate<ClientRequestContext, Long> responseDurationFilter;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -202,11 +203,12 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code requestLogFilter}.
+     * Adds the specified {@code responseDurationFilter}.
      */
-    public AbstractRuleBuilder onRequestLog(
-            BiPredicate<? super ClientRequestContext, ? super RequestLog> requestLogFilter) {
-        this.requestLogFilter = combinePredicates(this.requestLogFilter, requestLogFilter, "requestLogFilter");
+    public AbstractRuleBuilder onResponseDuration(
+            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+        this.responseDurationFilter = combinePredicates(this.responseDurationFilter, responseDurationFilter,
+                                                        "responseDurationFilter");
         return this;
     }
 
@@ -250,11 +252,11 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Returns then {@link Predicate} of a {@link RequestLog}.
+     * Returns then {@link Predicate} of a response duration.
      */
     @Nullable
-    protected final BiPredicate<ClientRequestContext, RequestLog> requestLogFilter() {
-        return requestLogFilter;
+    protected final BiPredicate<ClientRequestContext, Long> responseDurationFilter() {
+        return responseDurationFilter;
     }
 
     /**
@@ -263,6 +265,6 @@ public abstract class AbstractRuleBuilder {
     protected final boolean requiresResponseTrailers() {
         return responseTrailersFilter != null ||
                grpcTrailersFilter != null ||
-               requestLogFilter != null;
+               responseDurationFilter != null;
     }
 }

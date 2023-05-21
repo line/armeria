@@ -76,7 +76,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), requestLogFilter(), false);
+                                                    exceptionFilter(), responseDurationFilter(), false);
         return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
@@ -257,14 +257,14 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code requestLogFilter} for a {@link CircuitBreakerRule}.
-     * If the specified {@code requestLogFilter} returns {@code true},
+     * Adds the specified {@code responseDurationFilter} for a {@link CircuitBreakerRule}.
+     * If the specified {@code responseDurationFilter} returns {@code true},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
-    public CircuitBreakerRuleBuilder onRequestLog(
-            BiPredicate<? super ClientRequestContext, ? super RequestLog> requestLogFilter) {
-        return (CircuitBreakerRuleBuilder) super.onRequestLog(requestLogFilter);
+    public CircuitBreakerRuleBuilder onResponseDuration(
+            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+        return (CircuitBreakerRuleBuilder) super.onResponseDuration(responseDurationFilter);
     }
 }

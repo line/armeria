@@ -226,11 +226,11 @@ class CircuitBreakerClientRuleTest {
     }
 
     @Test
-    void openCircuitWithRequestLog() {
+    void openCircuitWithResponseDuration() {
         final CircuitBreakerRuleWithContent<HttpResponse> rule =
                 CircuitBreakerRuleWithContent
                         .<HttpResponse>builder()
-                        .onRequestLog((ctx, requestLog) -> requestLog.responseDurationNanos() > 100)
+                        .onResponseDuration((ctx, nanos) -> nanos > 100)
                         .thenFailure();
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())

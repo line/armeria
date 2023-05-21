@@ -72,13 +72,14 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     private RetryRule build(RetryDecision decision) {
         if (decision != RetryDecision.noRetry() &&
             exceptionFilter() == null && responseHeadersFilter() == null &&
-            responseTrailersFilter() == null && grpcTrailersFilter() == null && requestLogFilter() == null) {
+            responseTrailersFilter() == null && grpcTrailersFilter() == null &&
+            responseDurationFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), requestLogFilter(), false);
+                                                    exceptionFilter(), responseDurationFilter(), false);
         return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
@@ -232,12 +233,12 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code requestLogFilter} for a {@link RetryRule} which will retry
-     * if the {@code requestLogFilter} returns {@code true}.
+     * Adds the specified {@code responseDurationFilter} for a {@link RetryRule} which will retry
+     * if the {@code responseDurationFilter} returns {@code true}.
      */
     @Override
-    public RetryRuleBuilder onRequestLog(
-            BiPredicate<? super ClientRequestContext, ? super RequestLog> requestLogFilter) {
-        return (RetryRuleBuilder) super.onRequestLog(requestLogFilter);
+    public RetryRuleBuilder onResponseDuration(
+            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+        return (RetryRuleBuilder) super.onResponseDuration(responseDurationFilter);
     }
 }

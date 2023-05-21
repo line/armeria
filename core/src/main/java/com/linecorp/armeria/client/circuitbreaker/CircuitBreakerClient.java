@@ -322,7 +322,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
             throw cause;
         }
         final RequestLogProperty property =
-                rule.requiresResponseTrailers() ? null : RequestLogProperty.RESPONSE_HEADERS;
+                rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
+                                                : RequestLogProperty.RESPONSE_HEADERS;
 
         if (!needsContentInRule) {
             reportResult(ctx, callback, property);
@@ -333,14 +334,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     }
 
     private void reportResult(ClientRequestContext ctx, CircuitBreakerCallback callback,
-                              @Nullable RequestLogProperty logProperty) {
-        final CompletableFuture<RequestLog> logFuture;
-        if (logProperty == null) {
-            logFuture = ctx.log().whenComplete();
-        } else {
-            logFuture = ctx.log().whenAvailable(logProperty);
-        }
-        logFuture.thenAccept(log -> {
+                              RequestLogProperty logProperty) {
+        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable resCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             reportSuccessOrFailure(callback, rule().shouldReportAsSuccess(ctx, resCause), ctx, resCause);
@@ -349,7 +344,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
 
     private HttpResponse reportResultWithContent(ClientRequestContext ctx, HttpResponse response,
                                                  CircuitBreakerCallback callback,
-                                                 @Nullable RequestLogProperty logProperty) {
+                                                 RequestLogProperty logProperty) {
 
         final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
                                                                         ctx.maxResponseLength());
@@ -358,13 +353,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         final HttpResponse duplicate = duplicator.duplicate();
         duplicator.close();
 
-        final CompletableFuture<RequestLog> logFuture;
-        if (logProperty == null) {
-            logFuture = ctx.log().whenComplete();
-        } else {
-            logFuture = ctx.log().whenAvailable(logProperty);
-        }
-        logFuture.thenAccept(log -> {
+        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
             try {
                 final CompletionStage<CircuitBreakerDecision> f =
                         ruleWithContent().shouldReportAsSuccess(ctx, truncatingHttpResponse, null);

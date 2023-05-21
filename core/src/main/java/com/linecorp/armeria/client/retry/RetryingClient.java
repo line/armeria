@@ -335,13 +335,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                  future, derivedCtx, HttpResponse.ofFailure(cause), cause);
                     return null;
                 }
-                derivedCtx.logBuilder().responseContent(null, null);
                 handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
                                null, aggregated);
                 return null;
             });
         } else {
-            derivedCtx.logBuilder().responseContent(null, null);
             handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                            future, derivedCtx, response, null);
         }
@@ -375,15 +373,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                 @Nullable AggregatedHttpResponse aggregatedRes) {
         assert response != null || aggregatedRes != null;
         final RequestLogProperty logProperty =
-                retryConfig.requiresResponseTrailers() ? null : RequestLogProperty.RESPONSE_HEADERS;
+                retryConfig.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
+                                                       : RequestLogProperty.RESPONSE_HEADERS;
 
-        final CompletableFuture<RequestLog> logFuture;
-        if (logProperty == null) {
-            logFuture = derivedCtx.log().whenComplete();
-        } else {
-            logFuture = derivedCtx.log().whenAvailable(logProperty);
-        }
-        logFuture.thenAccept(log -> {
+        derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable responseCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             if (retryConfig.needsContentInRule() && responseCause == null) {
