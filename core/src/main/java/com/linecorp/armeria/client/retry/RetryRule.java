@@ -19,6 +19,8 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiPredicate;
 
@@ -37,6 +39,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * Determines whether a failed request should be retried.
@@ -382,10 +385,10 @@ public interface RetryRule {
     CompletionStage<RetryDecision> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause);
 
     /**
-     * Returns whether this rule requires the response trailers to determine if a {@link Response} is
-     * successful or not.
+     * Returns a set of {@link RequestLogProperty} to be required to evaluate this rule and to determine
+     * if a {@link Response} is successful or not.
      */
-    default boolean requiresResponseTrailers() {
-        return false;
+    default Set<RequestLogProperty> getRequiredLogProperties() {
+        return Collections.emptySet();
     }
 }

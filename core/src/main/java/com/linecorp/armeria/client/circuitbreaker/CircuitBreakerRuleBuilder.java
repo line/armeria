@@ -21,6 +21,7 @@ import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.SUCCESS_DECISION;
 
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
@@ -36,7 +37,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -77,12 +78,12 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
                                                     exceptionFilter(), responseDurationFilter(), false);
-        return build(ruleFilter, decision, requiresResponseTrailers());
+        return build(ruleFilter, decision, getRequiredLogProperties());
     }
 
     static CircuitBreakerRule build(
             BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
-            CircuitBreakerDecision decision, boolean requiresResponseTrailers) {
+            CircuitBreakerDecision decision, Set<RequestLogProperty> requiredLogProperties) {
         final CompletableFuture<CircuitBreakerDecision> decisionFuture;
         if (decision == CircuitBreakerDecision.success()) {
             decisionFuture = SUCCESS_DECISION;
@@ -102,8 +103,8 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
             }
 
             @Override
-            public boolean requiresResponseTrailers() {
-                return requiresResponseTrailers;
+            public Set<RequestLogProperty> getRequiredLogProperties() {
+                return requiredLogProperties;
             }
         };
     }

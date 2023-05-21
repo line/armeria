@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -80,7 +79,7 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
                                                     exceptionFilter(), responseDurationFilter(),
                                                     hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
-                ruleFilter, decision, requiresResponseTrailers());
+                ruleFilter, decision, getRequiredLogProperties());
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }

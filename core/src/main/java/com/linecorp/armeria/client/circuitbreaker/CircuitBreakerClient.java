@@ -19,7 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -31,10 +31,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
@@ -321,21 +319,19 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
             reportSuccessOrFailure(callback, rule.shouldReportAsSuccess(ctx, cause), ctx, cause);
             throw cause;
         }
-        final RequestLogProperty property =
-                rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
-                                                : RequestLogProperty.RESPONSE_HEADERS;
+        final Set<RequestLogProperty> logProperties = rule.getRequiredLogProperties();
 
         if (!needsContentInRule) {
-            reportResult(ctx, callback, property);
+            reportResult(ctx, callback, logProperties);
             return response;
         } else {
-            return reportResultWithContent(ctx, response, callback, property);
+            return reportResultWithContent(ctx, response, callback, logProperties);
         }
     }
 
     private void reportResult(ClientRequestContext ctx, CircuitBreakerCallback callback,
-                              RequestLogProperty logProperty) {
-        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
+                              Set<RequestLogProperty> logProperties) {
+        ctx.log().whenAvailable(logProperties).thenAccept(log -> {
             final Throwable resCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             reportSuccessOrFailure(callback, rule().shouldReportAsSuccess(ctx, resCause), ctx, resCause);
@@ -344,7 +340,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
 
     private HttpResponse reportResultWithContent(ClientRequestContext ctx, HttpResponse response,
                                                  CircuitBreakerCallback callback,
-                                                 RequestLogProperty logProperty) {
+                                                 Set<RequestLogProperty> logProperties) {
 
         final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
                                                                         ctx.maxResponseLength());
@@ -353,7 +349,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         final HttpResponse duplicate = duplicator.duplicate();
         duplicator.close();
 
-        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
+        ctx.log().whenAvailable(logProperties).thenAccept(log -> {
             try {
                 final CompletionStage<CircuitBreakerDecision> f =
                         ruleWithContent().shouldReportAsSuccess(ctx, truncatingHttpResponse, null);

@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
@@ -260,11 +259,16 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Returns whether this rule being built requires HTTP response trailers.
+     * Returns a set of {@link RequestLogProperty} to be required to evaluate this rule.
      */
-    protected final boolean requiresResponseTrailers() {
-        return responseTrailersFilter != null ||
-               grpcTrailersFilter != null ||
-               responseDurationFilter != null;
+    protected final Set<RequestLogProperty> getRequiredLogProperties() {
+        ImmutableSet.Builder<RequestLogProperty> builder = ImmutableSet.builder();
+        if (responseTrailersFilter != null || grpcTrailersFilter != null) {
+            builder.add(RequestLogProperty.RESPONSE_TRAILERS);
+        }
+        if (responseDurationFilter != null) {
+            builder.add(RequestLogProperty.RESPONSE_END_TIME);
+        }
+        return builder.build();
     }
 }
