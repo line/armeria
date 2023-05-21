@@ -16,40 +16,54 @@
 
 package com.linecorp.armeria.internal.common.stream;
 
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.LongStream;
 
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
-import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.support.PublisherVerificationRules;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
+import com.google.common.math.LongMath;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessageVerification;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @SuppressWarnings("checkstyle:LineLength")
-public class SurroundingPublisherTckTest extends PublisherVerification<Object> {
+public class SurroundingPublisherTckTest extends StreamMessageVerification<Object> {
 
     public SurroundingPublisherTckTest() {
         super(new TestEnvironment(200));
     }
 
     @Override
-    public Publisher<Object> createPublisher(long elements) {
+    public StreamMessage<Object> createPublisher(long elements) {
         if (elements == 0) {
-            return Mono.empty();
+            final StreamMessage<Object> publisher = new SurroundingPublisher<>(null, Mono.empty(), null);
+            // `SurroundingPublisher` doesn't check head, tail, publisher's availability before subscribed so manually set complete.
+            publisher.whenComplete().complete(null);
+            return publisher;
         }
         if (elements == 1) {
-            return new SurroundingPublisher<>("head", Mono.empty(), null);
+            // return new SurroundingPublisher<>("head", Mono.empty(), null);
+            // return new SurroundingPublisher<>(null, Mono.just(1), null);
+            return new SurroundingPublisher<>(null, Mono.empty(), "tail");
         }
         if (elements == 2) {
-            return new SurroundingPublisher<>(null, Mono.just(1), "tail");
+            // return new SurroundingPublisher<>("head", Mono.just(1), null);
+            // return new SurroundingPublisher<>("head", Mono.empty(), "tail");
+            // return new SurroundingPublisher<>(null, Mono.just(1), "tail");
+            return new SurroundingPublisher<>(null, Flux.just(1, 2), null);
         }
-        return new SurroundingPublisher<>("head",
-                                          Flux.fromStream(LongStream.range(0, elements - 2).boxed()),
-                                          "tail");
+        // return new SurroundingPublisher<>("head", Flux.fromStream(LongStream.range(0, elements - 1).boxed()), null);
+        // return new SurroundingPublisher<>("head", Flux.fromStream(LongStream.range(0, elements - 2).boxed()), "tail");
+        // return new SurroundingPublisher<>(null, Flux.fromStream(LongStream.range(0, elements - 1).boxed()), "tail");
+        return new SurroundingPublisher<>(null, Flux.fromStream(LongStream.range(0, elements).boxed()), null);
     }
 
     /**
@@ -64,8 +78,26 @@ public class SurroundingPublisherTckTest extends PublisherVerification<Object> {
      * are overridden below to call {@link Subscription#request(long)} after subscribing.
      */
     @Override
-    public Publisher<Object> createFailedPublisher() {
+    public StreamMessage<Object> createFailedPublisher() {
         return new SurroundingPublisher<>(null, Mono.error(new RuntimeException()), "tail");
+    }
+
+    @Override
+    public @Nullable StreamMessage<Object> createAbortedPublisher(long elements) {
+        if (elements == 0) {
+            final StreamMessage<Object> publisher = new SurroundingPublisher<>(null, Mono.empty(), null);
+            publisher.abort();
+            return publisher;
+        }
+
+        final StreamMessage<Object> publisher = createPublisher(LongMath.saturatedAdd(elements, 1));
+        final AtomicLong produced = new AtomicLong();
+        return publisher
+                .peek(item -> {
+                    if (produced.getAndIncrement() >= elements) {
+                        publisher.abort();
+                    }
+                });
     }
 
     @Test

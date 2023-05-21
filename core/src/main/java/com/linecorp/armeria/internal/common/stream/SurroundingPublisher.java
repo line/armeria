@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.internal.common.stream;
 
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Publisher;
@@ -28,15 +30,33 @@ import org.reactivestreams.Subscription;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
-public final class SurroundingPublisher<T> implements Publisher<T> {
+import io.netty.util.concurrent.EventExecutor;
+
+public final class SurroundingPublisher<T> implements StreamMessage<T> {
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<SurroundingPublisher> subscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(SurroundingPublisher.class, "subscribed");
 
     @Nullable
     private final T head;
     private final Publisher<? extends T> publisher;
     @Nullable
     private final T tail;
+
+    private volatile int subscribed;
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
+
+    @Nullable
+    private volatile SurroundingSubscriber<T> surroundingSubscriber;
 
     public SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail) {
         requireNonNull(publisher, "publisher");
@@ -46,8 +66,90 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        subscriber.onSubscribe(new SurroundingSubscriber<>(head, publisher, tail, subscriber));
+    public boolean isOpen() {
+        return !completionFuture.isDone();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        if (isOpen()) {
+            return false;
+        }
+        final SurroundingSubscriber<T> surroundingSubscriber = this.surroundingSubscriber;
+        return surroundingSubscriber == null || !surroundingSubscriber.publishedAny;
+    }
+
+    @Override
+    public long demand() {
+        final SurroundingSubscriber<T> surroundingSubscriber = this.surroundingSubscriber;
+        if (surroundingSubscriber != null) {
+            return surroundingSubscriber.requested;
+        } else {
+            return 0;
+        }
+    }
+
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        return completionFuture;
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+
+        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("Only single subscriber is allowed!"));
+            return;
+        }
+
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber, executor, options);
+        } else {
+            executor.execute(() -> subscribe0(subscriber, executor, options));
+        }
+    }
+
+    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
+                            SubscriptionOption... options) {
+
+        final SurroundingSubscriber<T> surroundingSubscriber = new SurroundingSubscriber<>(
+                head, publisher, tail, subscriber, executor,
+                completionFuture, containsNotifyCancellation(options));
+        this.surroundingSubscriber = surroundingSubscriber;
+        subscriber.onSubscribe(surroundingSubscriber);
+
+        // To make sure to close the SurroundingSubscriber when this is aborted.
+        if (completionFuture.isCompletedExceptionally()) {
+            completionFuture.exceptionally(cause -> {
+                surroundingSubscriber.close0(cause);
+                return null;
+            });
+        }
+    }
+
+    @Override
+    public void abort() {
+        abort(AbortedStreamException.get());
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+
+        // `completionFuture` should be set before `SurroundingSubscriber` publishes data
+        // to guarantee the visibility of the abortion `cause` after
+        // SurroundingSubscriber is set in `subscriber0()`.
+        completionFuture.completeExceptionally(cause);
+
+        final SurroundingSubscriber<T> surroundingSubscriber = this.surroundingSubscriber;
+        if (surroundingSubscriber != null) {
+            surroundingSubscriber.close(cause);
+        }
     }
 
     static final class SurroundingSubscriber<T> implements Subscriber<T>, Subscription {
@@ -55,14 +157,6 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<SurroundingSubscriber, State> stateUpdater =
                 AtomicReferenceFieldUpdater.newUpdater(SurroundingSubscriber.class, State.class, "state");
-
-        @SuppressWarnings("rawtypes")
-        private static final AtomicLongFieldUpdater<SurroundingSubscriber> requestedUpdater =
-                AtomicLongFieldUpdater.newUpdater(SurroundingSubscriber.class, "requested");
-
-        @SuppressWarnings("rawtypes")
-        private static final AtomicLongFieldUpdater<SurroundingSubscriber> needToPublishUpdater =
-                AtomicLongFieldUpdater.newUpdater(SurroundingSubscriber.class, "needToPublish");
 
         enum State {
             REQUIRE_HEAD,
@@ -79,97 +173,118 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
         private final Publisher<? extends T> publisher;
         @Nullable
         private final T tail;
+
         private Subscriber<? super T> downstream;
+        private final EventExecutor executor;
         @Nullable
         private volatile Subscription upstream;
 
         private volatile long requested;
-        private volatile long needToPublish;
         private volatile boolean subscribed;
-        private volatile boolean cancelled;
+        private volatile boolean publishedAny;
+        private volatile boolean closed;
+
+        private final CompletableFuture<Void> completionFuture;
+        private final boolean notifyCancellation;
 
         SurroundingSubscriber(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail,
-                              Subscriber<? super T> downstream) {
+                              Subscriber<? super T> downstream, EventExecutor executor,
+                              CompletableFuture<Void> completionFuture, boolean notifyCancellation) {
             requireNonNull(publisher, "publisher");
             requireNonNull(downstream, "downstream");
+            requireNonNull(executor, "executor");
             state = head != null ? State.REQUIRE_HEAD : State.REQUIRE_BODY;
             this.head = head;
             this.publisher = publisher;
             this.tail = tail;
             this.downstream = downstream;
+            this.executor = executor;
+            this.completionFuture = completionFuture;
+            this.notifyCancellation = notifyCancellation;
         }
 
         @Override
         public void request(long n) {
             if (n <= 0) {
-                downstream.onError(new IllegalArgumentException("non-positive request signals are illegal"));
+                close(new IllegalArgumentException("non-positive request signals are illegal"));
                 return;
             }
-            if (cancelled || state == State.DONE) {
+            if (executor.inEventLoop()) {
+                request0(n);
+            } else {
+                executor.execute(() -> request0(n));
+            }
+        }
+
+        private void request0(long n) {
+            if (closed || state == State.DONE) {
                 return;
             }
-            for (;;) {
-                final long oldRequested = requested;
-                final long newRequested = LongMath.saturatedAdd(oldRequested, n);
-                if (requestedUpdater.compareAndSet(this, oldRequested, newRequested)) {
-                    if (oldRequested > 0) {
-                        return;
-                    }
-                    break;
-                }
+
+            final long oldRequested = requested;
+            if (oldRequested == Long.MAX_VALUE) {
+                return;
+            }
+            if (n == Long.MAX_VALUE) {
+                requested = Long.MAX_VALUE;
+            } else {
+                requested = LongMath.saturatedAdd(oldRequested, n);
+            }
+
+            if (oldRequested > 0) {
+                // SurroundingSubscriber is publishing data.
+                // New requests will be handled by 'publishDownstream(item)'.
+                return;
             }
 
             publish();
         }
 
         private void publish() {
-            for (;;) {
-                if (requested <= 0) {
-                    return;
+            if (closed || requested <= 0) {
+                return;
+            }
+
+            switch (state) {
+                case REQUIRE_HEAD: {
+                    sendHead();
+                    break;
                 }
-                switch (state) {
-                    case REQUIRE_HEAD: {
-                        sendHead();
-                        continue;
-                    }
-                    case REQUIRE_BODY: {
-                        if (!subscribed) {
-                            subscribed = true;
-                            publisher.subscribe(this);
-                            return;
-                        }
-                        if (upstream != null) {
-                           requestUpstream(upstream);
-                        }
+                case REQUIRE_BODY: {
+                    if (!subscribed) {
+                        subscribed = true;
+                        publisher.subscribe(this);
                         return;
                     }
-                    case REQUIRE_TAIL: {
-                        sendTail();
-                        continue;
+                    if (upstream != null) {
+                       requestUpstream(upstream);
                     }
-                    case REQUIRE_COMPLETE: {
-                        sendComplete();
-                        return;
-                    }
-                    case DONE: {
-                        upstream.cancel();
-                        return;
-                    }
+                    break;
+                }
+                case REQUIRE_TAIL: {
+                    sendTail();
+                    break;
+                }
+                case REQUIRE_COMPLETE: {
+                    sendComplete();
+                    break;
+                }
+                case DONE: {
+                    closed = true;
+                    break;
                 }
             }
         }
 
         private void sendHead() {
             setState(State.REQUIRE_HEAD, State.REQUIRE_BODY);
-            requestedUpdater.decrementAndGet(this);
-            downstream.onNext(head);
+            publishDownstream(head);
         }
 
         private void sendTail() {
             setState(State.REQUIRE_TAIL, State.REQUIRE_COMPLETE);
-            requestedUpdater.decrementAndGet(this);
             if (tail != null) {
-                downstream.onNext(tail);
+                publishDownstream(tail);
             } else {
                 sendComplete();
             }
@@ -177,34 +292,35 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
 
         private void sendComplete() {
             setState(State.REQUIRE_COMPLETE, State.DONE);
-            requestedUpdater.decrementAndGet(this);
-            downstream.onComplete();
+            close0(null);
+            requested--;
         }
 
         private void requestUpstream(Subscription subscription) {
-            for (;;) {
-                final long requested = this.requested;
-                if (requested == 0) {
-                    return;
-                }
-                if (requestedUpdater.compareAndSet(this, requested, 0)) {
-                    for (;;) {
-                        final long oldNeedToPublish = needToPublish;
-                        final long newNeedToPublish = LongMath.saturatedAdd(oldNeedToPublish, requested);
-                        if (needToPublishUpdater.compareAndSet(this, oldNeedToPublish, newNeedToPublish)) {
-                            break;
-                        }
-                    }
-                    subscription.request(requested);
-                    return;
-                }
+            if (requested <= 0) {
+                return;
             }
+            subscription.request(1);
+        }
+
+        private void publishDownstream(T item) {
+            requireNonNull(item, "item");
+            if (closed) {
+                return;
+            }
+            downstream.onNext(item);
+            requested--;
+            if (!publishedAny) {
+                publishedAny = true;
+            }
+
+            publish();
         }
 
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            if (cancelled) {
+            if (closed) {
                 subscription.cancel();
                 return;
             }
@@ -215,39 +331,79 @@ public final class SurroundingPublisher<T> implements Publisher<T> {
         @Override
         public void onNext(T item) {
             requireNonNull(item, "item");
-            needToPublishUpdater.decrementAndGet(this);
-            downstream.onNext(item);
+            publishDownstream(item);
         }
 
         @Override
         public void onError(Throwable cause) {
             requireNonNull(cause, "cause");
-            if (cancelled) {
-                return;
-            }
-            cancelled = true;
-            downstream.onError(cause);
+            close(cause);
         }
 
         @Override
         public void onComplete() {
             setState(State.REQUIRE_BODY, State.REQUIRE_TAIL);
-            if (needToPublish > 0) {
-                requestedUpdater.addAndGet(this, needToPublish);
-                publish();
-            }
+            publish();
         }
 
         @Override
         public void cancel() {
-            if (cancelled) {
+            if (executor.inEventLoop()) {
+                cancel0();
+            } else {
+                executor.execute(this::cancel0);
+            }
+        }
+
+        private void cancel0() {
+            if (closed) {
                 return;
             }
-            cancelled = true;
+            closed = true;
+
+            final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
+            if (notifyCancellation) {
+                downstream.onError(cause);
+            }
             downstream = NoopSubscriber.get();
+            completionFuture.completeExceptionally(cause);
+            release();
+        }
+
+        private void close(@Nullable Throwable cause) {
+            if (executor.inEventLoop()) {
+                close0(cause);
+            } else {
+                executor.execute(() -> close0(cause));
+            }
+        }
+
+        private void close0(@Nullable Throwable cause) {
+            if (closed) {
+                return;
+            }
+            closed = true;
+
+            if (cause == null) {
+                downstream.onComplete();
+                completionFuture.complete(null);
+            } else {
+                downstream.onError(cause);
+                completionFuture.completeExceptionally(cause);
+            }
+            release();
+        }
+
+        private void release() {
             final Subscription upstream = this.upstream;
             if (upstream != null) {
                 upstream.cancel();
+            }
+            if (head != null) {
+                PooledObjects.close(head);
+            }
+            if (tail != null) {
+                PooledObjects.close(tail);
             }
         }
 
