@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.retry.RetryRuleUtil.DEFAULT_DECISION;
 import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -239,7 +240,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public RetryRuleBuilder onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
         return (RetryRuleBuilder) super.onResponseDuration(responseDurationFilter);
     }
 }

@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
 
+import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -283,7 +284,7 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     @SuppressWarnings("unchecked")
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseDuration(responseDurationFilter);
     }
 }

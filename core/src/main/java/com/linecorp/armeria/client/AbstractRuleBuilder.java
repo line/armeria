@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -58,7 +59,7 @@ public abstract class AbstractRuleBuilder {
     @Nullable
     private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
     @Nullable
-    private BiPredicate<ClientRequestContext, Long> responseDurationFilter;
+    private BiPredicate<ClientRequestContext, Duration> responseDurationFilter;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -205,7 +206,7 @@ public abstract class AbstractRuleBuilder {
      * Adds the specified {@code responseDurationFilter}.
      */
     public AbstractRuleBuilder onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
         this.responseDurationFilter = combinePredicates(this.responseDurationFilter, responseDurationFilter,
                                                         "responseDurationFilter");
         return this;
@@ -254,7 +255,7 @@ public abstract class AbstractRuleBuilder {
      * Returns then {@link Predicate} of a response duration.
      */
     @Nullable
-    protected final BiPredicate<ClientRequestContext, Long> responseDurationFilter() {
+    protected final BiPredicate<ClientRequestContext, Duration> responseDurationFilter() {
         return responseDurationFilter;
     }
 

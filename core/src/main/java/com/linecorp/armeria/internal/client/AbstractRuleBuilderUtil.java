@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.client;
 
+import java.time.Duration;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -44,15 +45,16 @@ public final class AbstractRuleBuilderUtil {
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
                 @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
-                @Nullable BiPredicate<ClientRequestContext, Long> responseDurationFilter,
+                @Nullable BiPredicate<ClientRequestContext, Duration> responseDurationFilter,
                 boolean hasResponseFilter) {
 
         return new Filter(requestHeadersFilter, exceptionFilter, responseHeadersFilter,
-                          responseTrailersFilter, grpcTrailersFilter, responseDurationFilter,
-                          hasResponseFilter);
+                responseTrailersFilter, grpcTrailersFilter, responseDurationFilter,
+                hasResponseFilter);
     }
 
-    private AbstractRuleBuilderUtil() {}
+    private AbstractRuleBuilderUtil() {
+    }
 
     private static class Filter implements BiFunction<ClientRequestContext, Throwable, Boolean> {
         private final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter;
@@ -60,7 +62,7 @@ public final class AbstractRuleBuilderUtil {
         private final @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter;
         private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter;
         private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
-        private final @Nullable BiPredicate<ClientRequestContext, Long> responseDurationFilter;
+        private final @Nullable BiPredicate<ClientRequestContext, Duration> responseDurationFilter;
         private final boolean hasResponseFilter;
 
         Filter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
@@ -68,7 +70,7 @@ public final class AbstractRuleBuilderUtil {
                @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
-               @Nullable BiPredicate<ClientRequestContext, Long> responseDurationFilter,
+               @Nullable BiPredicate<ClientRequestContext, Duration> responseDurationFilter,
                boolean hasResponseFilter) {
             this.requestHeadersFilter = requestHeadersFilter;
             this.exceptionFilter = exceptionFilter;
@@ -91,9 +93,9 @@ public final class AbstractRuleBuilderUtil {
 
             // Safe to return true since no filters are set
             if (exceptionFilter == null && responseHeadersFilter == null &&
-                responseTrailersFilter == null && grpcTrailersFilter == null &&
-                responseDurationFilter == null &&
-                !hasResponseFilter) {
+                    responseTrailersFilter == null && grpcTrailersFilter == null &&
+                    responseDurationFilter == null &&
+                    !hasResponseFilter) {
                 return true;
             }
 
@@ -102,7 +104,7 @@ public final class AbstractRuleBuilderUtil {
 
         private boolean applySlow(ClientRequestContext ctx, @Nullable Throwable cause, RequestLog log) {
             if (cause != null && exceptionFilter != null &&
-                exceptionFilter.test(ctx, Exceptions.peel(cause))) {
+                    exceptionFilter.test(ctx, Exceptions.peel(cause))) {
                 return true;
             }
 
@@ -141,8 +143,8 @@ public final class AbstractRuleBuilderUtil {
                 }
             }
 
-            return responseDurationFilter != null && responseDurationFilter.test(ctx,
-                                                                                 log.responseDurationNanos());
+            return responseDurationFilter != null &&
+                    responseDurationFilter.test(ctx, Duration.ofNanos(log.responseDurationNanos()));
         }
     }
 }

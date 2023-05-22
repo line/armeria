@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -261,7 +262,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     @SuppressWarnings("unchecked")
     @Override
     public RetryRuleWithContentBuilder<T> onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onResponseDuration(responseDurationFilter);
     }
 }

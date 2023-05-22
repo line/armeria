@@ -21,6 +21,7 @@ import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.SUCCESS_DECISION;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -265,7 +266,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public CircuitBreakerRuleBuilder onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
         return (CircuitBreakerRuleBuilder) super.onResponseDuration(responseDurationFilter);
     }
 }
