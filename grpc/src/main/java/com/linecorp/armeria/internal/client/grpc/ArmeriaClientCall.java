@@ -501,11 +501,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void closeWhenListenerThrows(Throwable t) {
-        if (needsDirectInvocation()) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
-        } else {
-            execute(() -> close(GrpcStatus.fromThrowable(t), new Metadata()));
-        }
+        closeWhenEos(GrpcStatus.fromThrowable(t), new Metadata());
     }
 
     private void closeWhenEos(Status status, Metadata metadata) {
@@ -552,7 +548,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 assert listener != null;
                 listener.onClose(statusAndMetadata.status(), statusAndMetadata.metadata());
             } catch (Throwable t) {
-                closeWhenListenerThrows(t);
+                logger.warn("Unexpected exception while closing {}", listener, t);
             }
         });
 
