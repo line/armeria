@@ -178,7 +178,7 @@ public abstract class AbstractRuleBuilder {
     /**
      * Adds {@link TimeoutException}.
      */
-    public AbstractRuleBuilder onResponseTimeout() {
+    public AbstractRuleBuilder onTimeoutException() {
         return onException((ctx, ex) -> {
             if (ex instanceof UnprocessedRequestException) {
                 return ex.getCause() instanceof TimeoutException;

@@ -147,8 +147,8 @@ public interface CircuitBreakerRule {
      * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if an {@link TimeoutException} is raised.
      */
-    static CircuitBreakerRule onResponseTimeout() {
-        return builder().onResponseTimeout().thenFailure();
+    static CircuitBreakerRule onTimeoutException() {
+        return builder().onTimeoutException().thenFailure();
     }
 
     /**

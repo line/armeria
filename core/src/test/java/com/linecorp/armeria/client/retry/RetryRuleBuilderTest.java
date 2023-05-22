@@ -164,7 +164,7 @@ class RetryRuleBuilderTest {
     }
 
     @Test
-    void onResponseTimeout() {
+    void onTimeoutException() {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final ClientRequestContext timedOutCtx = ClientRequestContext
                 .builder(HttpRequest.of(HttpMethod.GET, "/"))
@@ -172,7 +172,7 @@ class RetryRuleBuilderTest {
                 .build();
         final Backoff backoff = Backoff.fixed(1000);
         final RetryRule rule = RetryRule.of(RetryRule.builder()
-                                                     .onResponseTimeout()
+                                                     .onTimeoutException()
                                                      .thenBackoff(backoff));
 
         assertBackoff(rule.shouldRetry(ctx, UnprocessedRequestException.of(WriteTimeoutException.get())))
@@ -206,7 +206,7 @@ class RetryRuleBuilderTest {
     @Test
     void multipleRule() {
         final RetryRule retryRule =
-                RetryRule.onResponseTimeout(responseTimeoutBackOff)
+                RetryRule.onTimeoutException(responseTimeoutBackOff)
                          .orElse(RetryRule.onUnprocessed(unprocessBackOff))
                          .orElse(RetryRule.onException())
                          .orElse((ctx, cause) -> {
@@ -322,7 +322,7 @@ class RetryRuleBuilderTest {
                 RetryRule.of(RetryRule.builder(HttpMethod.idempotentMethods())
                                       .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                                       .onException(ClosedChannelException.class)
-                                      .onResponseTimeout()
+                                      .onTimeoutException()
                                       .onStatusClass(HttpStatusClass.CLIENT_ERROR)
                                       .thenBackoff(idempotentBackoff),
                              RetryRule.builder()

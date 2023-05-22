@@ -251,8 +251,8 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
      * and {@link #thenIgnore()}), if an {@link TimeoutException} is raised.
      */
     @Override
-    public CircuitBreakerRuleBuilder onResponseTimeout() {
-        return (CircuitBreakerRuleBuilder) super.onResponseTimeout();
+    public CircuitBreakerRuleBuilder onTimeoutException() {
+        return (CircuitBreakerRuleBuilder) super.onTimeoutException();
     }
 
     /**

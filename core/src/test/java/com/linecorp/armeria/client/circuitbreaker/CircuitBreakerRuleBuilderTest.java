@@ -71,7 +71,7 @@ class CircuitBreakerRuleBuilderTest {
                 .builder()
                 .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                 .thenFailure()
-                .orElse(CircuitBreakerRule.onResponseTimeout());
+                .orElse(CircuitBreakerRule.onTimeoutException());
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
         assertFuture(rule.shouldReportAsSuccess(ctx1, null)).isSameAs(CircuitBreakerDecision.failure());
         assertFuture(rule.shouldReportAsSuccess(
@@ -110,7 +110,7 @@ class CircuitBreakerRuleBuilderTest {
                 CircuitBreakerRule.of(CircuitBreakerRule.builder()
                                                         .onException(ClosedSessionException.class)
                                                         .thenFailure(),
-                                      CircuitBreakerRule.onResponseTimeout(),
+                                      CircuitBreakerRule.onTimeoutException(),
                                       CircuitBreakerRule.builder()
                                                         .onStatus(HttpStatus.OK)
                                                         .thenSuccess());

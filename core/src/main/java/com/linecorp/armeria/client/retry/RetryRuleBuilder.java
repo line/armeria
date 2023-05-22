@@ -225,8 +225,8 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
      * Makes a {@link RetryRule} retry on {@link TimeoutException}.
      */
     @Override
-    public RetryRuleBuilder onResponseTimeout() {
-        return (RetryRuleBuilder) super.onResponseTimeout();
+    public RetryRuleBuilder onTimeoutException() {
+        return (RetryRuleBuilder) super.onTimeoutException();
     }
 
     /**

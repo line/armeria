@@ -262,8 +262,8 @@ public interface RetryRule {
      * Note that this rule should be used carefully because it reties regardless of
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
      */
-    static RetryRule onResponseTimeout() {
-        return onResponseTimeout(Backoff.ofDefault());
+    static RetryRule onTimeoutException() {
+        return onTimeoutException(Backoff.ofDefault());
     }
 
     /**
@@ -272,8 +272,8 @@ public interface RetryRule {
      * Note that this rule should be used carefully because it reties regardless of
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
      */
-    static RetryRule onResponseTimeout(Backoff backoff) {
-        return builder().onResponseTimeout().thenBackoff(backoff);
+    static RetryRule onTimeoutException(Backoff backoff) {
+        return builder().onTimeoutException().thenBackoff(backoff);
     }
 
     /**
