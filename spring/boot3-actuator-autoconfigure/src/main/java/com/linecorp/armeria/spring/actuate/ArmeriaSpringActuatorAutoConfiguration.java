@@ -136,6 +136,9 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         MANAGEMENT_SERVER_PORT_METHOD = managementServerPortMethod;
     }
 
+    /**
+     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/monitoring.adoc#customizing-the-management-endpoint-paths">customizing-the-management-endpoint-paths</a>
+     */
     // In case WebEndpointAutoConfiguration is excluded
     @Bean
     @ConditionalOnMissingBean
@@ -150,6 +153,9 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         return EndpointMediaTypes.DEFAULT;
     }
 
+    /**
+     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/endpoints.adoc#exposing-endpoints">exposing-endpoints</a>
+     */
     // In case WebEndpointAutoConfiguration is excluded
     @Bean
     @ConditionalOnMissingBean
@@ -179,6 +185,9 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                          filters.orderedStream().collect(toImmutableList()));
     }
 
+    /**
+     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/endpoints.adoc#writing-custom-healthindicators">writing-custom-healthindicators</a>
+     */
     // In case HealthEndpointAutoConfiguration is excluded
     @Bean
     @ConditionalOnMissingBean
