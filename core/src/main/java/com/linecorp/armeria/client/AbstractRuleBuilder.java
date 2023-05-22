@@ -180,10 +180,11 @@ public abstract class AbstractRuleBuilder {
      */
     public AbstractRuleBuilder onTimeoutException() {
         return onException((ctx, ex) -> {
-            if (ex instanceof UnprocessedRequestException) {
-                return ex.getCause() instanceof TimeoutException;
+            if (ctx.isTimedOut()) {
+                return true;
             }
-            return ctx.isTimedOut() || ex instanceof TimeoutException;
+            return ex instanceof UnprocessedRequestException &&
+                   ex.getCause() instanceof TimeoutException;
         });
     }
 

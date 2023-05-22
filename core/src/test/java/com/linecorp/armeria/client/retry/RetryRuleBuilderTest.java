@@ -180,8 +180,8 @@ class RetryRuleBuilderTest {
         assertBackoff(rule.shouldRetry(ctx, new CompletionException(
                 UnprocessedRequestException.of(WriteTimeoutException.get()))))
                 .isSameAs(backoff);
-        assertBackoff(rule.shouldRetry(ctx, ResponseTimeoutException.get())).isSameAs(backoff);
-        assertBackoff(rule.shouldRetry(ctx, new CompletionException(ResponseTimeoutException.get())))
+        assertBackoff(rule.shouldRetry(timedOutCtx, ResponseTimeoutException.get())).isSameAs(backoff);
+        assertBackoff(rule.shouldRetry(timedOutCtx, new CompletionException(ResponseTimeoutException.get())))
                 .isSameAs(backoff);
         assertBackoff(rule.shouldRetry(timedOutCtx, ClosedSessionException.get())).isSameAs(backoff);
         assertBackoff(rule.shouldRetry(ctx, ClosedSessionException.get())).isNull();
@@ -248,13 +248,13 @@ class RetryRuleBuilderTest {
         assertBackoff(retryRule.shouldRetry(
                 ctx6, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
                 .isSameAs(responseTimeoutBackOff);
-        assertBackoff(retryRule.shouldRetry(ctx6, ResponseTimeoutException.get()))
-                .isSameAs(responseTimeoutBackOff);
 
         final ClientRequestContext ctx7 = ClientRequestContext
                 .builder(HttpRequest.of(HttpMethod.GET, "/"))
                 .timedOut(true)
                 .build();
+        assertBackoff(retryRule.shouldRetry(ctx7, ResponseTimeoutException.get()))
+                .isSameAs(responseTimeoutBackOff);
         assertBackoff(retryRule.shouldRetry(ctx7, ClosedSessionException.get()))
                 .isSameAs(responseTimeoutBackOff);
     }
@@ -344,8 +344,6 @@ class RetryRuleBuilderTest {
         final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertBackoff(retryRule.shouldRetry(
                 ctx4, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
-                .isSameAs(idempotentBackoff);
-        assertBackoff(retryRule.shouldRetry(ctx4, ResponseTimeoutException.get()))
                 .isSameAs(idempotentBackoff);
 
         final ClientRequestContext ctx5 = ClientRequestContext

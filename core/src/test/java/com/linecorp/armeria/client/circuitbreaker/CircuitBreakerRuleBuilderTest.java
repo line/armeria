@@ -26,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -75,9 +74,7 @@ class CircuitBreakerRuleBuilderTest {
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
         assertFuture(rule.shouldReportAsSuccess(ctx1, null)).isSameAs(CircuitBreakerDecision.failure());
         assertFuture(rule.shouldReportAsSuccess(
-                ctx1, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
-                .isSameAs(CircuitBreakerDecision.failure());
-        assertFuture(rule.shouldReportAsSuccess(ctx1, ResponseTimeoutException.get()))
+                ctx2, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
                 .isSameAs(CircuitBreakerDecision.failure());
         final ClientRequestContext timedOutCtx = ClientRequestContext
                 .builder(HttpRequest.of(HttpMethod.GET, "/"))
@@ -119,8 +116,6 @@ class CircuitBreakerRuleBuilderTest {
                 .isSameAs(CircuitBreakerDecision.failure());
         assertFuture(rule.shouldReportAsSuccess(
                 ctx2, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
-                .isSameAs(CircuitBreakerDecision.failure());
-        assertFuture(rule.shouldReportAsSuccess(ctx2, ResponseTimeoutException.get()))
                 .isSameAs(CircuitBreakerDecision.failure());
         final ClientRequestContext timedOutCtx = ClientRequestContext
                 .builder(HttpRequest.of(HttpMethod.GET, "/"))
