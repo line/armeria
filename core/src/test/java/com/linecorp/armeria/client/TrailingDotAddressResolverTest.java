@@ -89,11 +89,10 @@ class TrailingDotAddressResolverTest {
                                                       })
                                                       .build()) {
 
-                final BlockingWebClient client =
-                        WebClient.builder()
-                                 .factory(factory)
-                                 .build()
-                                 .blocking();
+                final BlockingWebClient client = WebClient.builder()
+                                                          .factory(factory)
+                                                          .build()
+                                                          .blocking();
                 final AggregatedHttpResponse response = client.get(
                         "http://foo.com.:" + server.httpPort() + '/');
                 assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
