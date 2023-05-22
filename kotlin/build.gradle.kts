@@ -22,7 +22,6 @@ testing {
         val testNg by registering(JvmTestSuite::class) {
             useTestNG()
 
-
             targets {
                 all {
                     testTask.configure {
