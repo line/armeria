@@ -46,6 +46,18 @@ class DomainSocketAddressTest {
     }
 
     @Test
+    void asEndpoint() {
+        final DomainSocketAddress addr = DomainSocketAddress.of(Paths.get("/var/run/test.sock"));
+        assertThat(addr.asEndpoint()).satisfies(e -> {
+            assertThat(e.isDomainSocket()).isTrue();
+            assertThat(e.authority()).isEqualTo(
+                    SystemInfo.osType() == OsType.WINDOWS ? "unix%3A%5Cvar%5Crun%5Ctest.sock"
+                                                          : "unix%3A%2Fvar%2Frun%2Ftest.sock");
+            assertThat(e.toSocketAddress(0)).isEqualTo(addr);
+        });
+    }
+
+    @Test
     void escape() {
         assertThat(DomainSocketAddress.escape("@")).isEqualTo("%40");
         assertThat(DomainSocketAddress.escape("@@")).isEqualTo("%40%40");

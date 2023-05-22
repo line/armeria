@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.UrlEscapers;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -89,6 +90,8 @@ public final class DomainSocketAddress extends InetSocketAddress {
     private final Path path;
     @Nullable
     private String authority;
+    @Nullable
+    private Endpoint endpoint;
 
     private DomainSocketAddress(Path path) {
         super(toInetAddress(path), 1);
@@ -131,6 +134,20 @@ public final class DomainSocketAddress extends InetSocketAddress {
      */
     public io.netty.channel.unix.DomainSocketAddress toNettyAddress() {
         return new io.netty.channel.unix.DomainSocketAddress(path.toFile());
+    }
+
+    /**
+     * Converts this address to an {@link Endpoint}.
+     */
+    public Endpoint asEndpoint() {
+        final Endpoint endpoint = this.endpoint;
+        if (endpoint != null) {
+            return endpoint;
+        }
+
+        final Endpoint newEndpoint = Endpoint.of(authority());
+        this.endpoint = newEndpoint;
+        return newEndpoint;
     }
 
     /**

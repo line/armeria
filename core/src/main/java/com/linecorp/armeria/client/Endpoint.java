@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -27,6 +28,10 @@ import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -38,6 +43,7 @@ import java.util.regex.Pattern;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
@@ -205,7 +211,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         // Return true if `host` starts with `unix%3A` or `unix%3a`.
         return host.length() > 7 &&
                host.startsWith("unix%3") &&
-               Character.toUpperCase(host.charAt(6)) == 'A';
+               Ascii.toUpperCase(host.charAt(6)) == 'A';
     }
 
     private enum HostType {
@@ -782,6 +788,44 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return new URI(scheme.uriText(), authority, path, null, null);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Converts this endpoint into a {@link InetSocketAddress}. The specified {@code defaultPort} is used
+     * if this endpoint does not have a port number. A {@link DomainSocketAddress} is returned if this
+     * endpoint refers to a Unix domain socket.
+     *
+     * @see #hasPort()
+     * @see #isDomainSocket()
+     */
+    public InetSocketAddress toSocketAddress(int defaultPort) {
+        if (isDomainSocket()) {
+            final String decodedHost;
+            try {
+                decodedHost = URLDecoder.decode(host, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                // Should never reach here.
+                throw new Error(e);
+            }
+
+            assert decodedHost.startsWith("unix:") : decodedHost;
+            return DomainSocketAddress.of(Paths.get(decodedHost.substring(5))); // Strip "unix:"
+        }
+
+        final int port = hasPort() ? this.port : defaultPort;
+        if (!hasIpAddr()) {
+            return InetSocketAddress.createUnresolved(host, port);
+        }
+
+        assert ipAddr != null;
+        try {
+            return new InetSocketAddress(
+                    InetAddress.getByAddress(host, NetUtil.createByteArrayFromIpAddressString(ipAddr)),
+                    port);
+        } catch (UnknownHostException e) {
+            // Should never reach here.
+            throw new Error(e);
         }
     }
 

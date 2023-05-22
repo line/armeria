@@ -476,7 +476,7 @@ class EndpointTest {
     }
 
     @Test
-    void socketAddressConversion() throws Exception {
+    void conversionFromSocketAddress() throws Exception {
         // Unresolved InetSocketAddress
         assertThat(Endpoint.of(InetSocketAddress.createUnresolved("foo", 80))).satisfies(e -> {
             assertThat(e.host()).isEqualTo("foo");
@@ -522,6 +522,21 @@ class EndpointTest {
             assertThat(e.hasPort()).isFalse();
             assertThat(e.hasIpAddr()).isFalse();
         });
+    }
+
+    @Test
+    void conversionToSocketAddress() throws Exception {
+        // InetSocketAddress
+        assertThat(Endpoint.of("foo").toSocketAddress(42)).isEqualTo(
+                InetSocketAddress.createUnresolved("foo", 42));
+        assertThat(Endpoint.of("bar", 4242).toSocketAddress(42)).isEqualTo(
+                InetSocketAddress.createUnresolved("bar", 4242));
+        assertThat(Endpoint.of("baz").withIpAddr("127.0.0.1").toSocketAddress(443)).isEqualTo(
+                new InetSocketAddress(InetAddress.getByAddress("baz", new byte[] { 127, 0, 0, 1 }), 443));
+
+        // DomainSocketAddress
+        assertThat(Endpoint.of("unix%3A%2Ffoo.sock").toSocketAddress(0)).isEqualTo(
+                DomainSocketAddress.of(Paths.get("/foo.sock")));
     }
 
     @Test
