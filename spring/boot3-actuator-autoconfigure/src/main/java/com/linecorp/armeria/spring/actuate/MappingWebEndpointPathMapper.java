@@ -44,6 +44,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Fork of <a href="https://github.com/spring-projects/spring-boot/blob/e3aac5913ed3caf53b34eb7750138a4ed6839549/spring-boot-project/spring-boot-actuator-autoconfigure/src/main/java/org/springframework/boot/actuate/autoconfigure/endpoint/web/MappingWebEndpointPathMapper.java">MappingWebEndpointPathMapper</a>.
+ * This class doesn't follow the Armeria code convention because maintenance is easier if you use the same code
+ * as the spring side.
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class MappingWebEndpointPathMapper implements PathMapper {
