@@ -263,7 +263,7 @@ public abstract class AbstractRuleBuilder {
      * Returns a set of {@link RequestLogProperty} to be required to evaluate this rule.
      */
     protected final Set<RequestLogProperty> getRequiredLogProperties() {
-        ImmutableSet.Builder<RequestLogProperty> builder = ImmutableSet.builder();
+        final ImmutableSet.Builder<RequestLogProperty> builder = ImmutableSet.builder();
         if (responseTrailersFilter != null || grpcTrailersFilter != null) {
             builder.add(RequestLogProperty.RESPONSE_TRAILERS);
         }
