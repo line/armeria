@@ -57,10 +57,12 @@ class MarkdownDescriptionService {
     @Get("/markdown")
     fun markdown(
         @Description(value = "`Param` description", markup = Markup.MARKDOWN)
-        @Param param1: String,
+        @Param
+        param1: String,
         @Param param2: String,
         @Description("param3 description")
-        @Param param3: MarkdownEnumParam
+        @Param
+        param3: MarkdownEnumParam
     ): MarkdownDescriptionResult {
         return MarkdownDescriptionResult(
             result1 = param1,
