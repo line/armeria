@@ -131,10 +131,9 @@ final class HttpClientDelegate implements HttpClient {
         // IP address has not been resolved yet.
         assert !endpoint.hasIpAddr() && endpoint.hasPort();
 
-        // TODO(ikhoon): Add test codes to verify that the trailing dot is preserved when sending DNS queries.
         String host = endpoint.host();
         if (endpoint.hasTrailingDot()) {
-            host = endpoint.host() + '.';
+            host += '.';
         }
         final Future<InetSocketAddress> resolveFuture =
                 addressResolverGroup.getResolver(ctx.eventLoop().withoutContext())

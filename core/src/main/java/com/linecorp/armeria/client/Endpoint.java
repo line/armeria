@@ -245,7 +245,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
                 buf.append('.');
             }
             if (hostType == HostType.HOSTNAME_AND_IPv4 ||
-                    hostType == HostType.HOSTNAME_AND_IPv6) {
+                hostType == HostType.HOSTNAME_AND_IPv6) {
                 buf.append(", ipAddr=").append(ipAddr);
             }
             return buf.append(", weight=").append(weight).append('}').toString();
@@ -314,6 +314,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Returns whether the original host set when creating this {@link Endpoint} ends with a dot (.).
      */
+    // TODO(ikhoon): Remove this method and use `toInetSocketAddress()` instead
+    //               when https://github.com/line/armeria/pull/4846 is merged.
     @UnstableApi
     public boolean hasTrailingDot() {
         return hasTrailingDot;
