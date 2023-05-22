@@ -76,7 +76,7 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), responseDurationNanosFilter(),
+                                                    exceptionFilter(), responseDurationFilter(),
                                                     hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
                 ruleFilter, decision, getRequiredLogProperties());
@@ -275,16 +275,15 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     /**
-     * Adds the specified {@code responseDurationNanosFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code responseDurationNanosFilter} returns {@code true},
+     * Adds the specified {@code responseDurationFilter} for a {@link CircuitBreakerRuleWithContent}.
+     * If the specified {@code responseDurationFilter} returns {@code true},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
     @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onResponseDurationNanos(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationNanosFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseDurationNanos(
-                responseDurationNanosFilter);
+    public CircuitBreakerRuleWithContentBuilder<T> onResponseDuration(
+            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseDuration(responseDurationFilter);
     }
 }

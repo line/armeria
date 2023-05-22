@@ -58,7 +58,7 @@ public abstract class AbstractRuleBuilder {
     @Nullable
     private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
     @Nullable
-    private BiPredicate<ClientRequestContext, Long> responseDurationNanosFilter;
+    private BiPredicate<ClientRequestContext, Long> responseDurationFilter;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -202,13 +202,12 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code responseDurationNanosFilter}.
+     * Adds the specified {@code responseDurationFilter}.
      */
-    public AbstractRuleBuilder onResponseDurationNanos(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationNanosFilter) {
-        this.responseDurationNanosFilter = combinePredicates(this.responseDurationNanosFilter,
-                                                             responseDurationNanosFilter,
-                                                             "responseDurationNanosFilter");
+    public AbstractRuleBuilder onResponseDuration(
+            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+        this.responseDurationFilter = combinePredicates(this.responseDurationFilter, responseDurationFilter,
+                                                        "responseDurationFilter");
         return this;
     }
 
@@ -255,8 +254,8 @@ public abstract class AbstractRuleBuilder {
      * Returns then {@link Predicate} of a response duration.
      */
     @Nullable
-    protected final BiPredicate<ClientRequestContext, Long> responseDurationNanosFilter() {
-        return responseDurationNanosFilter;
+    protected final BiPredicate<ClientRequestContext, Long> responseDurationFilter() {
+        return responseDurationFilter;
     }
 
     /**
@@ -267,7 +266,7 @@ public abstract class AbstractRuleBuilder {
         if (responseTrailersFilter != null || grpcTrailersFilter != null) {
             builder.add(RequestLogProperty.RESPONSE_TRAILERS);
         }
-        if (responseDurationNanosFilter != null) {
+        if (responseDurationFilter != null) {
             builder.add(RequestLogProperty.RESPONSE_END_TIME);
         }
         return builder.build();

@@ -44,11 +44,11 @@ public final class AbstractRuleBuilderUtil {
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
                 @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
-                @Nullable BiPredicate<ClientRequestContext, Long> responseDurationNanosFilter,
+                @Nullable BiPredicate<ClientRequestContext, Long> responseDurationFilter,
                 boolean hasResponseFilter) {
 
         return new Filter(requestHeadersFilter, exceptionFilter, responseHeadersFilter,
-                          responseTrailersFilter, grpcTrailersFilter, responseDurationNanosFilter,
+                          responseTrailersFilter, grpcTrailersFilter, responseDurationFilter,
                           hasResponseFilter);
     }
 
@@ -60,7 +60,7 @@ public final class AbstractRuleBuilderUtil {
         private final @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter;
         private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter;
         private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
-        private final @Nullable BiPredicate<ClientRequestContext, Long> responseDurationNanosFilter;
+        private final @Nullable BiPredicate<ClientRequestContext, Long> responseDurationFilter;
         private final boolean hasResponseFilter;
 
         Filter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
@@ -68,14 +68,14 @@ public final class AbstractRuleBuilderUtil {
                @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
-               @Nullable BiPredicate<ClientRequestContext, Long> responseDurationNanosFilter,
+               @Nullable BiPredicate<ClientRequestContext, Long> responseDurationFilter,
                boolean hasResponseFilter) {
             this.requestHeadersFilter = requestHeadersFilter;
             this.exceptionFilter = exceptionFilter;
             this.responseHeadersFilter = responseHeadersFilter;
             this.responseTrailersFilter = responseTrailersFilter;
             this.grpcTrailersFilter = grpcTrailersFilter;
-            this.responseDurationNanosFilter = responseDurationNanosFilter;
+            this.responseDurationFilter = responseDurationFilter;
             this.hasResponseFilter = hasResponseFilter;
         }
 
@@ -92,7 +92,7 @@ public final class AbstractRuleBuilderUtil {
             // Safe to return true since no filters are set
             if (exceptionFilter == null && responseHeadersFilter == null &&
                 responseTrailersFilter == null && grpcTrailersFilter == null &&
-                responseDurationNanosFilter == null &&
+                responseDurationFilter == null &&
                 !hasResponseFilter) {
                 return true;
             }
@@ -141,8 +141,8 @@ public final class AbstractRuleBuilderUtil {
                 }
             }
 
-            return responseDurationNanosFilter != null &&
-                   responseDurationNanosFilter.test(ctx, log.responseDurationNanos());
+            return responseDurationFilter != null && responseDurationFilter.test(ctx,
+                                                                                 log.responseDurationNanos());
         }
     }
 }

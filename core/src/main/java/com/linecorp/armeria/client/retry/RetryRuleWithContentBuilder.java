@@ -91,7 +91,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), responseDurationNanosFilter(),
+                                                    exceptionFilter(), responseDurationFilter(),
                                                     hasResponseFilter);
         final RetryRule first = RetryRuleBuilder.build(
                 ruleFilter, decision, getRequiredLogProperties());
@@ -255,13 +255,13 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     }
 
     /**
-     * Adds the specified {@code responseDurationNanosFilter} for a {@link RetryRuleWithContent} which will
-     * retry if the {@code responseDurationNanosFilter} returns {@code true}.
+     * Adds the specified {@code responseDurationFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code responseDurationFilter} returns {@code true}.
      */
     @SuppressWarnings("unchecked")
     @Override
-    public RetryRuleWithContentBuilder<T> onResponseDurationNanos(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationNanosFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onResponseDurationNanos(responseDurationNanosFilter);
+    public RetryRuleWithContentBuilder<T> onResponseDuration(
+            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onResponseDuration(responseDurationFilter);
     }
 }

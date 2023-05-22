@@ -74,13 +74,13 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
         if (decision != RetryDecision.noRetry() &&
             exceptionFilter() == null && responseHeadersFilter() == null &&
             responseTrailersFilter() == null && grpcTrailersFilter() == null &&
-            responseDurationNanosFilter() == null) {
+            responseDurationFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), responseDurationNanosFilter(), false);
+                                                    exceptionFilter(), responseDurationFilter(), false);
         return build(ruleFilter, decision, getRequiredLogProperties());
     }
 
@@ -234,12 +234,12 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code responseDurationNanosFilter} for a {@link RetryRule} which will retry
-     * if the {@code responseDurationNanosFilter} returns {@code true}.
+     * Adds the specified {@code responseDurationFilter} for a {@link RetryRule} which will retry
+     * if the {@code responseDurationFilter} returns {@code true}.
      */
     @Override
-    public RetryRuleBuilder onResponseDurationNanos(
-            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationNanosFilter) {
-        return (RetryRuleBuilder) super.onResponseDurationNanos(responseDurationNanosFilter);
+    public RetryRuleBuilder onResponseDuration(
+            BiPredicate<? super ClientRequestContext, ? super Long> responseDurationFilter) {
+        return (RetryRuleBuilder) super.onResponseDuration(responseDurationFilter);
     }
 }
