@@ -294,6 +294,9 @@ public interface HttpRequest extends Request, HttpMessage {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         requireNonNull(trailers, "trailers");
+        if (trailers.isEmpty()) {
+            return of(headers, publisher);
+        }
         return of(headers, new SurroundingPublisher<>(null, publisher, trailers));
     }
 
