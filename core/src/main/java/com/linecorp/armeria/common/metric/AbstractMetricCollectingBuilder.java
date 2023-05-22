@@ -38,7 +38,6 @@ public abstract class AbstractMetricCollectingBuilder {
     @Nullable
     private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
 
-    @Nullable
     private DistributionStatisticConfig distributionStatisticConfig = MoreMeters.distributionStatisticConfig();
 
     /**
@@ -92,7 +91,6 @@ public abstract class AbstractMetricCollectingBuilder {
     /**
      * Returns the {@code distributionStatisticConfig}.
      */
-    @Nullable
     protected final DistributionStatisticConfig distributionStatisticConfig() {
         return distributionStatisticConfig;
     }
