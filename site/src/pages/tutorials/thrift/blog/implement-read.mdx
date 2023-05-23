@@ -154,7 +154,7 @@ Let's test if we can retrieve a blog post we created.
     assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
   }
   ```
-2. Add annotations to configure orders to execute our test methods.
+2. Add annotations to configure the order our test methods will be executed.
   The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve in the `getBlogPost()` method.
   ```java filename=BlogServiceTest.java
   import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
