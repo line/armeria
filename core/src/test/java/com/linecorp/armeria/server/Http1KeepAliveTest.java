@@ -44,11 +44,6 @@ class Http1KeepAliveTest {
 
             sb.service("/", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RoutingContext routingContext) {
-                    return ExchangeType.valueOf(routingContext.params().get("exchangeType"));
-                }
-
-                @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     // Wrap `delayedResponse` with an `HttpResponseException` so that
                     // the HttpResponseException completes first and `delayedResponse` is written later.
