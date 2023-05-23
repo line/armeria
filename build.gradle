@@ -51,7 +51,7 @@ allprojects {
     tasks.withType(JavaForkOptions) {
         maxHeapSize = '768m'
 
-        if (rootProject.ext.testJavaVersion >= 9) {
+        if (project.ext.testJavaVersion >= 9) {
             jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
         }
 
@@ -74,7 +74,7 @@ allprojects {
         // `-Pjava.security.manager` was added in Java 17 and the default value was changed to `disallow` in Java 18.
         // - https://openjdk.org/jeps/411
         // - https://bugs.openjdk.org/browse/JDK-8270380
-        if (rootProject.ext.testJavaVersion >= 17) {
+        if (project.ext.testJavaVersion >= 17) {
             systemProperty "java.security.manager", "allow"
         }
 

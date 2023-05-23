@@ -15,6 +15,7 @@ tasks.compileTestJava.source "${rootProject.projectDir}/core/src/test/java/com/l
 
 task copyThriftFiles(type: Copy) {
     dependsOn project(':thrift0.17').tasks.compileTestThrift
+    dependsOn project(':thrift0.17').tasks.generateTestSources
 
     from "${rootProject.projectDir}/thrift/thrift0.17/gen-src/test/java"
     into "${project.ext.genSrcDir}/test/java"

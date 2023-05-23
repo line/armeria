@@ -151,9 +151,6 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     @Test
     public void required_subscribeOnAbortedStreamMustFail() throws Throwable {
         final StreamMessage<T> pub = createAbortedPublisher(0);
-        if (pub == null) {
-            notVerified();
-        }
         assumeAbortedPublisherAvailable(pub);
         assertThatThrownBy(() -> pub.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
@@ -234,7 +231,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
                 .hasCauseInstanceOf(AbortedStreamException.class);
     }
 
-    private void assumeAbortedPublisherAvailable(@Nullable Publisher<T> pub) {
+    protected void assumeAbortedPublisherAvailable(@Nullable Publisher<T> pub) {
         if (pub == null) {
             throw new SkipException("Skipping because no aborted StreamMessage provided.");
         }

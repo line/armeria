@@ -291,7 +291,7 @@ public interface ServerConfig {
     /**
      * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only
-     * supports case sensitive HTTP/1 headers.
+     * supports case-sensitive HTTP/1 headers.
      */
     Http1HeaderNaming http1HeaderNaming();
 

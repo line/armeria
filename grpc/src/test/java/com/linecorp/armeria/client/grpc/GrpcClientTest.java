@@ -76,6 +76,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -140,6 +141,9 @@ class GrpcClientTest {
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
 
     private static final Empty EMPTY = Empty.getDefaultInstance();
+
+    private static final CallOptions.Key<String> MY_CALL_OPTION_KEY =
+            CallOptions.Key.create("my-call-option");
 
     private static final AtomicReference<HttpHeaders> CLIENT_HEADERS_CAPTURE = new AtomicReference<>();
     private static final AtomicReference<HttpHeaders> SERVER_TRAILERS_CAPTURE = new AtomicReference<>();
@@ -365,6 +369,16 @@ class GrpcClientTest {
 
         await().untilAtomic(onMessageThread, instanceOf(EventLoopThread.class));
         await().untilAtomic(onCompleteThread, instanceOf(EventLoopThread.class));
+    }
+
+    void grpcCallOptions() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub
+                    .withOption(MY_CALL_OPTION_KEY, "foo")
+                    .emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(GrpcCallOptions.get(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+        }
     }
 
     @Test
