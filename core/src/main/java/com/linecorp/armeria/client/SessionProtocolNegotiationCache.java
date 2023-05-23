@@ -19,10 +19,8 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URLDecoder;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -37,6 +35,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.LruMap;
+import com.linecorp.armeria.internal.common.util.DomainSocketPathEscaper;
 
 /**
  * Keeps the recent {@link SessionProtocol} negotiation failures. It is an LRU cache which keeps at most
@@ -158,25 +157,19 @@ public final class SessionProtocolNegotiationCache {
 
     @VisibleForTesting
     static String key(Endpoint endpoint) {
-        final String key;
-        if (endpoint.isDomainSocket()) {
-            try {
-                key = URLDecoder.decode(endpoint.host(), "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new Error(e);
-            }
-        } else {
-            checkArgument(endpoint.hasPort(), "endpoint must have a port.");
-            // It's okay to create the key using endpoint.host():
-            // - If the endpoint has an IP address without host name, the IP address is used in the key to store
-            //   and retrieve the value.
-            // - If the endpoint has an IP address with host name, the host name is used in the key to store
-            //   and retrieve the value.
-            // - If the endpoint has host name only, the host name is used in the key to store and retrieve
-            //   the value.
-            key = key(endpoint.host(), endpoint.port());
-        }
-        return key;
+        checkArgument(endpoint.hasPort() || endpoint.isDomainSocket(),
+                      "endpoint: %s (expected: has a port or is a domain socket address)", endpoint);
+
+        // It's okay to create the key using endpoint.authority():
+        // - If the endpoint has an IP address without host name, the IP address is used in the key to store
+        //   and retrieve the value.
+        // - If the endpoint has an IP address with host name, the host name is used in the key to store
+        //   and retrieve the value.
+        // - If the endpoint has host name only, the host name is used in the key to store and retrieve
+        //   the value.
+        // - If the endpoint is a domain socket address, the encoded path is used in the key to store and
+        //   retrieve the value.
+        return endpoint.authority();
     }
 
     @VisibleForTesting
@@ -184,27 +177,19 @@ public final class SessionProtocolNegotiationCache {
         requireNonNull(remoteAddress, "remoteAddress");
         if (remoteAddress instanceof InetSocketAddress) {
             if (remoteAddress instanceof DomainSocketAddress) {
-                return "unix:" + ((DomainSocketAddress) remoteAddress).path();
+                return ((DomainSocketAddress) remoteAddress).authority();
             } else {
                 final InetSocketAddress raddr = (InetSocketAddress) remoteAddress;
-                return key(raddr.getHostString(), raddr.getPort());
+                return raddr.getHostString() + ':' + raddr.getPort();
             }
         }
 
         if (remoteAddress instanceof io.netty.channel.unix.DomainSocketAddress) {
-            return "unix:" + ((io.netty.channel.unix.DomainSocketAddress) remoteAddress).path();
+            return DomainSocketPathEscaper.toAuthority(
+                    ((io.netty.channel.unix.DomainSocketAddress) remoteAddress).path());
         }
 
         throw new IllegalArgumentException("unsupported remote address: " + remoteAddress);
-    }
-
-    @VisibleForTesting
-    static String key(String host, int port) {
-        return new StringBuilder(host.length() + 6)
-                .append(host)
-                .append(':')
-                .append(port)
-                .toString();
     }
 
     private static long convertToWriteLock(long stamp) {

@@ -56,14 +56,4 @@ class DomainSocketAddressTest {
             assertThat(e.toSocketAddress(0)).isEqualTo(addr);
         });
     }
-
-    @Test
-    void escape() {
-        assertThat(DomainSocketAddress.escape("@")).isEqualTo("%40");
-        assertThat(DomainSocketAddress.escape("@@")).isEqualTo("%40%40");
-        assertThat(DomainSocketAddress.escape("@foo@")).isEqualTo("%40foo%40");
-        assertThat(DomainSocketAddress.escape(":")).isEqualTo("%3A");
-        assertThat(DomainSocketAddress.escape("::")).isEqualTo("%3A%3A");
-        assertThat(DomainSocketAddress.escape(":bar:")).isEqualTo("%3Abar%3A");
-    }
 }

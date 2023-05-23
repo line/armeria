@@ -24,16 +24,11 @@ import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.net.UrlEscapers;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.util.DomainSocketPathEscaper;
 
 /**
  * An {@link InetSocketAddress} that refers to the {@link Path} of a Unix domain socket.
@@ -125,7 +120,7 @@ public final class DomainSocketAddress extends InetSocketAddress {
             return authority;
         }
 
-        final String newAuthority = escape("unix:" + path);
+        final String newAuthority = DomainSocketPathEscaper.toAuthority(path.toString());
         this.authority = newAuthority;
         return newAuthority;
     }
@@ -167,28 +162,5 @@ public final class DomainSocketAddress extends InetSocketAddress {
     @Override
     public String toString() {
         return path.toString();
-    }
-
-    private static final Pattern AT_OR_COLON = Pattern.compile("[@:]");
-
-    @VisibleForTesting
-    static String escape(String authority) {
-        final String escaped = UrlEscapers.urlPathSegmentEscaper().escape(authority);
-        // We need to escape `@` and `:` as well, so that the authority contains neither userinfo nor port.
-        final Matcher matcher = AT_OR_COLON.matcher(escaped);
-        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tmp.stringBuilder();
-            for (int i = 0; i < escaped.length();) {
-                if (!matcher.find(i)) {
-                    buf.append(escaped, i, escaped.length());
-                    break;
-                }
-                final int pos = matcher.start();
-                buf.append(escaped, i, pos);
-                buf.append(escaped.charAt(pos) == '@' ? "%40" : "%3A");
-                i = pos + 1;
-            }
-            return buf.toString();
-        }
     }
 }

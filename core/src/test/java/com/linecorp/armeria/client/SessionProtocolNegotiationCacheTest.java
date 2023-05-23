@@ -75,9 +75,6 @@ class SessionProtocolNegotiationCacheTest {
     void inetKeyGeneration() throws Exception {
         final String expectedKey = "foo.com:8080";
         assertThat(SessionProtocolNegotiationCache.key(
-                "foo.com", 8080))
-                .isEqualTo(expectedKey);
-        assertThat(SessionProtocolNegotiationCache.key(
                 Endpoint.of("foo.com", 8080)))
                 .isEqualTo(expectedKey);
         assertThat(SessionProtocolNegotiationCache.key(
@@ -94,7 +91,7 @@ class SessionProtocolNegotiationCacheTest {
 
     @Test
     void domainKeyGeneration() {
-        final String expectedKey = "unix:/var/run/foo.sock";
+        final String expectedKey = "unix%3A%2Fvar%2Frun%2Ffoo.sock";
         assertThat(SessionProtocolNegotiationCache.key(
                 Endpoint.of("unix%3A%2Fvar%2Frun%2Ffoo.sock")))
                 .isEqualTo(expectedKey);
