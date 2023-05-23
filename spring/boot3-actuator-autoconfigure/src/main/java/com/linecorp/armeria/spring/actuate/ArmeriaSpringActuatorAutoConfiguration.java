@@ -137,7 +137,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     /**
-     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/monitoring.adoc#customizing-the-management-endpoint-paths">customizing-the-management-endpoint-paths</a>
+     * Returns a {@link PathMapper}.
+     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/monitoring.adoc#customizing-the-management-endpoint-paths">customizing-the-management-endpoint-paths</a>.
      */
     // In case WebEndpointAutoConfiguration is excluded
     @Bean
@@ -154,7 +155,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     /**
-     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/endpoints.adoc#exposing-endpoints">exposing-endpoints</a>
+     * Returns a {@link IncludeExcludeEndpointFilter}.
+     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/endpoints.adoc#exposing-endpoints">exposing-endpoints</a>.
      */
     // In case WebEndpointAutoConfiguration is excluded
     @Bean
@@ -186,7 +188,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     /**
-     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/endpoints.adoc#writing-custom-healthindicators">writing-custom-healthindicators</a>
+     * Returns a {@link HttpCodeStatusMapper}.
+     * See <a href="https://github.com/spring-projects/spring-boot/blob/9643dbeed26268f37d37c22385704de8911b8f21/spring-boot-project/spring-boot-docs/src/docs/asciidoc/actuator/endpoints.adoc#writing-custom-healthindicators">writing-custom-healthindicators</a>.
      */
     // In case HealthEndpointAutoConfiguration is excluded
     @Bean
