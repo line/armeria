@@ -57,7 +57,7 @@ Let's implement a service method to create a blog post.
             .setCreatedAt(now.toEpochMilli());
   }
   ```
-2. In the `createBlogPost()` method, save the post information in the `blogPosts` map and return the information of the blog post created to the `resultHandler`.
+2. In the `createBlogPost()` method, save the post information in the `blogPosts` map and return the information of the created blog post to the `resultHandler`.
   ```java filename=BlogServiceImpl.java
   @Override
   public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
