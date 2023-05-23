@@ -578,7 +578,7 @@ public final class Server implements ListenableAsyncCloseable {
             if (port.isDomainSocket()) {
                 if (transportType.supportsDomainSockets()) {
                     // Convert to Netty's DomainSocketAddress type.
-                    localAddress = ((DomainSocketAddress) port.localAddress()).toNettyAddress();
+                    localAddress = ((DomainSocketAddress) port.localAddress()).asNettyAddress();
                     channelType = transportType.domainServerChannelType();
                 } else {
                     throw new IllegalStateException(

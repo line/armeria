@@ -540,6 +540,45 @@ class EndpointTest {
     }
 
     @Test
+    void socketAddressCache() {
+        final Endpoint endpointWithPort = Endpoint.of("foo", 42);
+        assertThat(endpointWithPort.toSocketAddress(-1))
+                .isSameAs(endpointWithPort.toSocketAddress(1));
+
+        final Endpoint endpointWithoutPort = Endpoint.of("foo");
+        assertThat(endpointWithoutPort.toSocketAddress(80))
+                .isNotSameAs(endpointWithoutPort.toSocketAddress(80));
+
+        final Endpoint endpointWithDomainSocket = Endpoint.of("unix%3A%2Ffoo.sock");
+        assertThat(endpointWithDomainSocket.toSocketAddress(-1))
+                .isSameAs(endpointWithDomainSocket.toSocketAddress(1));
+    }
+
+    @Test
+    void socketAddressPrecache() throws Exception {
+        final DomainSocketAddress domainSocketAddress = DomainSocketAddress.of(Paths.get("/foo.sock"));
+        assertThat(Endpoint.of(domainSocketAddress).toSocketAddress(-1))
+                .isSameAs(domainSocketAddress);
+
+        final InetSocketAddress unresolvedSocketAddress = InetSocketAddress.createUnresolved("foo", 42);
+        assertThat(Endpoint.of(unresolvedSocketAddress).toSocketAddress(-1))
+                .isSameAs(unresolvedSocketAddress);
+
+        final InetSocketAddress resolvedSocketAddress = new InetSocketAddress(
+                InetAddress.getByAddress("foo", new byte[] { 127, 0, 0, 1 }), 42);
+        assertThat(Endpoint.of(resolvedSocketAddress).toSocketAddress(-1))
+                .isSameAs(resolvedSocketAddress);
+    }
+
+    @Test
+    void domainSocketWithIpAddr() {
+        final Endpoint endpoint = Endpoint.of("unix%3A%2Ffoo.sock");
+        assertThatThrownBy(() -> endpoint.withIpAddr("127.0.0.1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("domain socket");
+    }
+
+    @Test
     void setAndGetAttr() {
         final Endpoint endpointA = Endpoint.parse("a");
 

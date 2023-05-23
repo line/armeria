@@ -15,13 +15,9 @@
  */
 package com.linecorp.armeria.client;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URLDecoder;
-import java.net.UnknownHostException;
 import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -73,7 +69,6 @@ import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import reactor.core.scheduler.NonBlocking;
@@ -381,7 +376,7 @@ final class HttpChannelPool implements AsyncCloseable {
         timingsBuilder.socketConnectStart();
 
         // Fail immediately if it is certain that the remote address doesn't support the desired protocol.
-        final SocketAddress remoteAddress = key.remoteAddress;
+        final SocketAddress remoteAddress = key.toRemoteAddress();
         if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, desiredProtocol)) {
             notifyConnect(desiredProtocol, key,
                           eventLoop.newFailedFuture(
@@ -642,73 +637,24 @@ final class HttpChannelPool implements AsyncCloseable {
     static final class PoolKey {
         final Endpoint endpoint;
         final ProxyConfig proxyConfig;
-        final SocketAddress remoteAddress;
-
         private final int hashCode;
-        private final String strVal;
 
         PoolKey(Endpoint endpoint, ProxyConfig proxyConfig) {
             this.endpoint = endpoint;
             this.proxyConfig = proxyConfig;
-            remoteAddress = toRemoteAddress(endpoint, proxyConfig);
             hashCode = endpoint.hashCode() * 31 + proxyConfig.hashCode();
-            strVal = generateString(endpoint, proxyConfig);
         }
 
-        private static String generateString(Endpoint endpoint, ProxyConfig proxyConfig) {
-            final String host = endpoint.host();
-            final String ipAddr = endpoint.ipAddr();
-            final int port = endpoint.port();
-            final boolean isDomainSocket = endpoint.isDomainSocket();
-            final String proxyConfigStr = proxyConfig.proxyType() != ProxyType.DIRECT ? proxyConfig.toString()
-                                                                                      : null;
-            try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-                final StringBuilder buf = tempThreadLocals.stringBuilder();
-                buf.append('{').append(host);
-                if (ipAddr != null) {
-                    buf.append('/').append(ipAddr);
-                }
-                if (!isDomainSocket) {
-                    buf.append(':').append(port);
-                }
-                if (proxyConfigStr != null) {
-                    buf.append(" via ");
-                    buf.append(proxyConfigStr);
-                }
-                buf.append('}');
-                return buf.toString();
-            }
-        }
-
-        private static SocketAddress toRemoteAddress(Endpoint endpoint, ProxyConfig proxyConfig) {
-            final String host = endpoint.host();
-            final String ipAddr = endpoint.ipAddr();
-            if (ipAddr != null) {
-                try {
-                    return new InetSocketAddress(
-                            InetAddress.getByAddress(host, NetUtil.createByteArrayFromIpAddressString(ipAddr)),
-                            endpoint.port());
-                } catch (UnknownHostException e) {
-                    // Should never reach here because `Endpoint` validates the IP address.
-                    throw new Error(e);
-                }
+        SocketAddress toRemoteAddress() {
+            final InetSocketAddress remoteAddr = endpoint.toSocketAddress(-1);
+            if (remoteAddr instanceof com.linecorp.armeria.common.util.DomainSocketAddress) {
+                return ((com.linecorp.armeria.common.util.DomainSocketAddress) remoteAddr).asNettyAddress();
             }
 
-            // ipAddr can be null for domain sockets.
-            if (endpoint.isDomainSocket()) {
-                final String path;
-                try {
-                    path = URLDecoder.decode(host.substring(7), "UTF-8");
-                } catch (UnsupportedEncodingException e) {
-                    // Should never reach here.
-                    throw new Error(e);
-                }
-                return new DomainSocketAddress(path);
-            }
+            assert !remoteAddr.isUnresolved() || proxyConfig.proxyType().isForwardProxy()
+                    : remoteAddr + ", " + proxyConfig;
 
-            // ipAddr can be null for forward proxies.
-            assert proxyConfig.proxyType().isForwardProxy() : proxyConfig;
-            return InetSocketAddress.createUnresolved(host, endpoint.port());
+            return remoteAddr;
         }
 
         @Override
@@ -734,7 +680,28 @@ final class HttpChannelPool implements AsyncCloseable {
 
         @Override
         public String toString() {
-            return strVal;
+            final String host = endpoint.host();
+            final String ipAddr = endpoint.ipAddr();
+            final int port = endpoint.port();
+            final boolean isDomainSocket = endpoint.isDomainSocket();
+            final String proxyConfigStr = proxyConfig.proxyType() != ProxyType.DIRECT ? proxyConfig.toString()
+                                                                                      : null;
+            try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+                final StringBuilder buf = tempThreadLocals.stringBuilder();
+                buf.append('{').append(host);
+                if (ipAddr != null) {
+                    buf.append('/').append(ipAddr);
+                }
+                if (!isDomainSocket) {
+                    buf.append(':').append(port);
+                }
+                if (proxyConfigStr != null) {
+                    buf.append(" via ");
+                    buf.append(proxyConfigStr);
+                }
+                buf.append('}');
+                return buf.toString();
+            }
         }
     }
 

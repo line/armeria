@@ -74,7 +74,7 @@ class DomainSocketServerTest {
                 receivedBuffers.add((ByteBuf) msg);
             }
         });
-        final Channel ch = b.connect(domainSocketAddress().toNettyAddress())
+        final Channel ch = b.connect(domainSocketAddress().asNettyAddress())
                             .syncUninterruptibly()
                             .channel();
 

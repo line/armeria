@@ -92,6 +92,9 @@ public final class DomainSocketAddress extends InetSocketAddress {
     private String authority;
     @Nullable
     private Endpoint endpoint;
+    @Nullable
+    @SuppressWarnings("NullableOnContainingClass") // ErrorProne false positive
+    private io.netty.channel.unix.DomainSocketAddress nettyAddress;
 
     private DomainSocketAddress(Path path) {
         super(toInetAddress(path), 1);
@@ -132,8 +135,16 @@ public final class DomainSocketAddress extends InetSocketAddress {
      *
      * @return the converted Netty address
      */
-    public io.netty.channel.unix.DomainSocketAddress toNettyAddress() {
-        return new io.netty.channel.unix.DomainSocketAddress(path.toFile());
+    public io.netty.channel.unix.DomainSocketAddress asNettyAddress() {
+        final io.netty.channel.unix.DomainSocketAddress nettyAddress = this.nettyAddress;
+        if (nettyAddress != null) {
+            return nettyAddress;
+        }
+
+        final io.netty.channel.unix.DomainSocketAddress newNettyAddress =
+                new io.netty.channel.unix.DomainSocketAddress(path.toFile());
+        this.nettyAddress = newNettyAddress;
+        return newNettyAddress;
     }
 
     /**

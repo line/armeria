@@ -107,14 +107,10 @@ class SessionProtocolNegotiationCacheTest {
     }
 
     private static InetSocketAddress toRemoteAddress(Endpoint endpoint) throws UnknownHostException {
-        final String ipAddr;
-        if (endpoint.hasIpAddr()) {
-            ipAddr = endpoint.ipAddr();
-            assert ipAddr != null;
-        } else {
-            ipAddr = "127.0.0.1"; // Do not resolve the host name but just use local address for test.
+        if (!endpoint.hasIpAddr()) {
+            endpoint = endpoint.withIpAddr("127.0.0.1");
         }
-        return toRemoteAddress(endpoint.host(), ipAddr, endpoint.port());
+        return endpoint.toSocketAddress(-1);
     }
 
     private static InetSocketAddress toRemoteAddress(

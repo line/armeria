@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UnsupportedEncodingException;
@@ -30,7 +31,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
@@ -161,17 +161,20 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         if (addr instanceof DomainSocketAddress) {
-            return of(((DomainSocketAddress) addr).authority());
+            final DomainSocketAddress domainSocketAddr = (DomainSocketAddress) addr;
+            final Endpoint endpoint = unsafeCreate(domainSocketAddr.authority(), 0);
+            endpoint.socketAddress = domainSocketAddr;
+            return endpoint;
         }
 
         checkArgument(addr instanceof InetSocketAddress,
                       "unsupported address: %s", addr);
 
         final InetSocketAddress inetAddr = (InetSocketAddress) addr;
-        @SuppressWarnings("resource")
-        final Endpoint endpoint = of(inetAddr.getHostString(), inetAddr.getPort());
-        return inetAddr.isUnresolved() ? endpoint
-                                       : endpoint.withIpAddr(inetAddr.getAddress().getHostAddress());
+        final String ipAddr = inetAddr.isUnresolved() ? null : inetAddr.getAddress().getHostAddress();
+        final Endpoint endpoint = of(inetAddr.getHostString(), inetAddr.getPort()).withIpAddr(ipAddr);
+        endpoint.socketAddress = inetAddr;
+        return endpoint;
     }
 
     /**
@@ -239,6 +242,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private CompletableFuture<Endpoint> selectFuture;
     @Nullable
     private CompletableFuture<List<Endpoint>> whenReadyFuture;
+    @Nullable
+    private InetSocketAddress socketAddress;
     private int hashCode;
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType,
@@ -365,7 +370,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Returns the IP address of this endpoint.
      *
-     * @return the IP address, or {@code null} if the host name is not resolved yet
+     * @return the IP address, or {@code null} if the host name is a domain socket address or not resolved yet
      */
     @Nullable
     public String ipAddr() {
@@ -395,7 +400,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns the {@link StandardProtocolFamily} of this endpoint's IP address.
      *
      * @return the {@link StandardProtocolFamily} of this endpoint's IP address, or
-     *         {@code null} if the host name is not resolved yet
+     *         {@code null} if the host name is a domain socket address or not resolved yet.
      */
     @Nullable
     public StandardProtocolFamily ipFamily() {
@@ -416,6 +421,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     @UnstableApi
     public boolean isDomainSocket() {
+
         return isDomainSocketAuthority(host);
     }
 
@@ -534,6 +540,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (ipAddr.equals(this.ipAddr)) {
             return this;
         }
+
+        checkState(!isDomainSocket(), "A domain socket endpoint can't have an IP address.");
 
         if (NetUtil.isValidIpV4Address(ipAddr)) {
             return withIpAddr(ipAddr, StandardProtocolFamily.INET);
@@ -799,7 +807,21 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @see #hasPort()
      * @see #isDomainSocket()
      */
+    @UnstableApi
     public InetSocketAddress toSocketAddress(int defaultPort) {
+        final InetSocketAddress socketAddress = this.socketAddress;
+        if (socketAddress != null) {
+            return socketAddress;
+        }
+
+        final InetSocketAddress newSocketAddress = toSocketAddress0(defaultPort);
+        if (hasPort() || isDomainSocket()) {
+            this.socketAddress = newSocketAddress;
+        }
+        return newSocketAddress;
+    }
+
+    private InetSocketAddress toSocketAddress0(int defaultPort) {
         if (isDomainSocket()) {
             final String decodedHost;
             try {
