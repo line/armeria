@@ -28,7 +28,7 @@ task copyThriftFiles(type: Copy) {
     dependsOn project(":thrift$thriftVersion").tasks.compileTestThrift
     dependsOn project(":thrift$thriftVersion").tasks.generateTestSources
 
-    from "${rootProject.projectDir}/thrift/thrift0.18/gen-src/test/java"
+    from "${rootProject.projectDir}/thrift/thrift$thriftVersion/gen-src/test/java"
     into "${project.ext.genSrcDir}/test/java"
     include '**/HelloService.java'
 }
