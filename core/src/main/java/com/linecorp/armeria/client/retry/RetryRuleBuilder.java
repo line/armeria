@@ -222,7 +222,7 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     }
 
     /**
-     * Makes a {@link RetryRule} retry on {@link TimeoutException}.
+     * Makes a {@link RetryRule} retry on a {@link TimeoutException}.
      */
     @Override
     public RetryRuleBuilder onTimeoutException() {

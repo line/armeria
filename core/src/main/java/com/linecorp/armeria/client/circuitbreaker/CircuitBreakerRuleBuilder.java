@@ -248,7 +248,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     /**
      * Reports a {@link Response} as a success or failure to a {@link CircuitBreaker},
      * or ignores it according to the build methods({@link #thenSuccess()}, {@link #thenFailure()}
-     * and {@link #thenIgnore()}), if an {@link TimeoutException} is raised.
+     * and {@link #thenIgnore()}), if a {@link TimeoutException} is raised.
      */
     @Override
     public CircuitBreakerRuleBuilder onTimeoutException() {
