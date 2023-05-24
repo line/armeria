@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
@@ -27,21 +28,24 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -78,6 +82,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
     private ServerHttpObjectEncoder encoder;
+    private final HttpServer httpServer;
 
     /** The request being decoded currently. */
     @Nullable
@@ -86,11 +91,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private boolean discarding;
 
     Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
-                        ServerHttp1ObjectEncoder encoder) {
+                        ServerHttp1ObjectEncoder encoder, HttpServer httpServer) {
         this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.encoder = encoder;
+        this.httpServer = httpServer;
     }
 
     @Override
@@ -110,7 +116,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         super.channelUnregistered(ctx);
         if (req instanceof HttpRequestWriter) {
             // Ignored if the stream has already been closed.
-            ((HttpRequestWriter) req).close(ClosedSessionException.get());
+            req.close(ClosedSessionException.get());
         }
     }
 
@@ -138,23 +144,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (!nettyReq.decoderResult().isSuccess()) {
                         final Throwable cause = nettyReq.decoderResult().cause();
                         if (cause instanceof TooLongHttpLineException) {
-                            fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, Http2Error.FRAME_SIZE_ERROR,
-                                 "Too Long URI", cause);
+                            fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, "Too Long URI", cause);
                         } else if (cause instanceof TooLongHttpHeaderException) {
                             fail(id, null, HttpStatus.REQUEST_HEADER_FIELDS_TOO_LARGE,
-                                 Http2Error.FRAME_SIZE_ERROR, "Request header fields too large", cause);
+                                 "Request header fields too large", cause);
                         } else {
-                            fail(id, null, HttpStatus.BAD_REQUEST, Http2Error.PROTOCOL_ERROR,
-                                 "Decoder failure", cause);
+                            fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", cause);
                         }
-                        return;
-                    }
-
-                    // Do not accept unsupported methods.
-                    final io.netty.handler.codec.http.HttpMethod nettyMethod = nettyReq.method();
-                    if (!HttpMethod.isSupported(nettyMethod.name())) {
-                        fail(id, null, HttpStatus.METHOD_NOT_ALLOWED, Http2Error.PROTOCOL_ERROR,
-                             "Unsupported method", null);
                         return;
                     }
 
@@ -166,16 +162,29 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final String path = HttpHeaderUtil
                             .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
-                    final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
+
+                    // Parse and normalize the request path.
+                    final RequestTarget reqTarget = RequestTarget.forServer(path);
+                    if (reqTarget == null) {
+                        failWithInvalidRequestPath(id, null);
+                        return;
+                    }
 
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), pathAndQuery);
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), reqTarget);
+                    // Do not accept unsupported methods.
+                    final HttpMethod method = headers.method();
+                    switch (method) {
+                        case CONNECT:
+                        case UNKNOWN:
+                            fail(id, headers, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                            return;
+                    }
 
-                    // Do not accept a CONNECT request.
-                    if (headers.method() == HttpMethod.CONNECT) {
-                        fail(id, headers, HttpStatus.METHOD_NOT_ALLOWED, Http2Error.CONNECT_ERROR,
-                             "Unsupported method", null);
+                    // Do not accept the request path '*' for a non-OPTIONS request.
+                    if (method != HttpMethod.OPTIONS && "*".equals(path)) {
+                        failWithInvalidRequestPath(id, headers);
                         return;
                     }
 
@@ -190,8 +199,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             contentLength = -1;
                         }
                         if (contentLength < 0) {
-                            fail(id, headers, HttpStatus.BAD_REQUEST, Http2Error.FRAME_SIZE_ERROR,
-                                 "Invalid content length", null);
+                            fail(id, headers, HttpStatus.BAD_REQUEST, "Invalid content length", null);
                             return;
                         }
 
@@ -203,30 +211,55 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     // Reject the requests with an `expect` header whose value is not `100-continue`.
                     if (hasInvalidExpectHeader) {
                         ctx.pipeline().fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
-                        fail(id, headers, HttpStatus.EXPECTATION_FAILED, Http2Error.PROTOCOL_ERROR, null, null);
+                        fail(id, headers, HttpStatus.EXPECTATION_FAILED, null, null);
                         return;
                     }
 
+                    final EventLoop eventLoop = ctx.channel().eventLoop();
+
                     // Close the request early when it is certain there will be neither content nor trailers.
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
-                                                                        headers, pathAndQuery);
+                                                                        headers, reqTarget);
                     if (routingCtx.status().routeMustExist()) {
-                        try {
-                            // Find the service that matches the path.
-                            final Routed<ServiceConfig> routed =
-                                    routingCtx.virtualHost().findServiceConfig(routingCtx, true);
-                            assert routed.isPresent();
-                        } catch (Throwable cause) {
-                            logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
-                            fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR,
-                                 null, cause);
+                        // Find the service that matches the path.
+                        final Routed<ServiceConfig> routed =
+                                routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                        assert routed.isPresent();
+                        final ServiceConfig serviceConfig = routingCtx.result().value();
+                        if (isHttp1WebSocketUpgradeRequest(headers)) {
+                            if (serviceConfig.service().as(WebSocketService.class) == null) {
+                                fail(id, headers, HttpStatus.BAD_REQUEST,
+                                     "WebSocket upgrade requested but the service does not support it.", null);
+                                return;
+                            }
+
+                            logger.trace("Received WebSocket upgrade headers: {}", headers);
+                            if (httpServer.unfinishedRequests() > 0) {
+                                fail(id, headers, HttpStatus.BAD_REQUEST,
+                                     "WebSocket session cannot share the connection.", null);
+                                return;
+                            }
+                            final StreamingDecodedHttpRequest webSocketRequest =
+                                    new StreamingDecodedHttpRequest(
+                                            eventLoop, id, 1, headers, false, inboundTrafficController,
+                                            serviceConfig.maxRequestLength(), routingCtx,
+                                            ExchangeType.BIDI_STREAMING,
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true);
+                            assert encoder instanceof ServerHttp1ObjectEncoder;
+                            ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
+                            final ChannelPipeline pipeline = ctx.pipeline();
+                            pipeline.replace(this, null, new WebSocketSessionHandler(
+                                    webSocketRequest, encoder, serviceConfig));
+                            if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
+                                pipeline.remove(HttpServerUpgradeHandler.class);
+                            }
+                            ctx.fireChannelRead(webSocketRequest);
                             return;
                         }
                     }
 
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
-                    final EventLoop eventLoop = ctx.channel().eventLoop();
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);
 
@@ -235,8 +268,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         ctx.fireChannelRead(req);
                     }
                 } else {
-                    fail(id, null, HttpStatus.BAD_REQUEST, Http2Error.PROTOCOL_ERROR,
-                         "Invalid decoder state", null);
+                    fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
                     return;
                 }
             }
@@ -254,8 +286,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    fail(id, decodedReq.headers(), HttpStatus.BAD_REQUEST, Http2Error.PROTOCOL_ERROR,
-                         "Decoder failure", null);
+                    fail(id, decodedReq.headers(), HttpStatus.BAD_REQUEST, "Decoder failure", null);
                     final ProtocolViolationException cause =
                             new ProtocolViolationException(decoderResult.cause());
                     decodedReq.close(HttpStatusException.of(HttpStatus.BAD_REQUEST, cause));
@@ -275,8 +306,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                         .contentLength(req.headers())
                                                         .transferred(transferredLength)
                                                         .build();
-                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
-                             Http2Error.CANCEL, null, cause);
+                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
                         decodedReq.abortResponse(
@@ -295,7 +325,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (!trailingHeaders.isEmpty()) {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
-
                     decodedReq.close();
                     if (decodedReq.needsAggregation()) {
                         // An aggregated request is now ready to be fired.
@@ -306,17 +335,17 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             }
         } catch (URISyntaxException e) {
             if (req != null) {
-                fail(id, req.headers(), HttpStatus.BAD_REQUEST, Http2Error.CANCEL, "Invalid request path", e);
+                fail(id, req.headers(), HttpStatus.BAD_REQUEST, "Invalid request path", e);
                 req.close(HttpStatusException.of(HttpStatus.BAD_REQUEST, e));
             } else {
-                fail(id, null, HttpStatus.BAD_REQUEST, Http2Error.CANCEL, "Invalid request path", e);
+                fail(id, null, HttpStatus.BAD_REQUEST, "Invalid request path", e);
             }
         } catch (Throwable t) {
             if (req != null) {
-                fail(id, req.headers(), HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR, null, t);
+                fail(id, req.headers(), HttpStatus.INTERNAL_SERVER_ERROR, null, t);
                 req.close(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR, t));
             } else {
-                fail(id, null, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR, null, t);
+                fail(id, null, HttpStatus.INTERNAL_SERVER_ERROR, null, t);
                 logger.warn("Unexpected exception:", t);
             }
         } finally {
@@ -350,12 +379,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         return true;
     }
 
-    private void fail(int id, @Nullable RequestHeaders headers, HttpStatus status, Http2Error error,
+    private void failWithInvalidRequestPath(int id, @Nullable RequestHeaders headers) {
+        fail(id, headers, HttpStatus.BAD_REQUEST, "Invalid request path", null);
+    }
+
+    private void fail(int id, @Nullable RequestHeaders headers, HttpStatus status,
                       @Nullable String message, @Nullable Throwable cause) {
         if (encoder.isResponseHeadersSent(id, 1)) {
-            // The response is sent or being sent by HttpResponseSubscriber so we cannot send
+            // The response is sent or being sent by HttpResponseSubscriber, so we cannot send
             // the error response.
-            encoder.writeReset(id, 1, error);
+            encoder.writeReset(id, 1, Http2Error.PROTOCOL_ERROR);
         } else {
             discarding = true;
             req = null;

@@ -5,6 +5,6 @@ dependencies {
     implementation(libs.spring.boot3.starter.web) {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
-    implementation libs.spring.web
+    implementation libs.spring6.web
     testImplementation libs.spring.boot3.starter.test
 }

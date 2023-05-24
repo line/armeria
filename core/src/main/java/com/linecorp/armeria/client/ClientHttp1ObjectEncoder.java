@@ -103,6 +103,11 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
     }
 
     @Override
+    protected ChannelFuture write(HttpObject obj, ChannelPromise promise) {
+        return channel().write(obj, promise);
+    }
+
+    @Override
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
         ArmeriaHttpUtil.toNettyHttp1ClientTrailers(inputHeaders, outputHeaders, http1HeaderNaming);

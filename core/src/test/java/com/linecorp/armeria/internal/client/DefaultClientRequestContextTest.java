@@ -43,8 +43,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -263,26 +263,13 @@ class DefaultClientRequestContextTest {
         assertThat(ctx.uri().toString()).isEqualTo("http://example.com:8080/foo");
 
         final HttpRequest request = HttpRequest.of(RequestHeaders.of(
-                HttpMethod.POST, "https://path.com/a/b/c",
+                HttpMethod.POST, "/a/b/c?q1=p1&q2=p2#fragment1",
                 HttpHeaderNames.SCHEME, "http",
                 HttpHeaderNames.AUTHORITY, "request.com"));
         ctx.updateRequest(request);
-        assertThat(ctx.sessionProtocol()).isEqualTo(SessionProtocol.HTTPS);
         assertThat(ctx.authority()).isEqualTo("request.com");
-        assertThat(ctx.uri().toString()).isEqualTo("https://request.com/a/b/c");
-        assertThat(ctx.endpoint().authority()).isEqualTo("path.com");
-    }
-
-    @Test
-    void uriIncludesAllComponents() {
-        final HttpRequest request = HttpRequest.of(RequestHeaders.of(
-                HttpMethod.POST, "https://path.com/a/b/c?q1=p1&q2=p2",
-                HttpHeaderNames.SCHEME, "http",
-                HttpHeaderNames.AUTHORITY, "request.com"));
-        final DefaultClientRequestContext ctx = newContext(ClientOptions.of(), request, "fragment1");
-        ctx.updateRequest(request);
-        assertThat(ctx.uri().toString()).isEqualTo("https://request.com/a/b/c?q1=p1&q2=p2#fragment1");
-        assertThat(ctx.endpoint().authority()).isEqualTo("path.com");
+        assertThat(ctx.uri().toString()).isEqualTo("http://request.com/a/b/c?q1=p1&q2=p2#fragment1");
+        assertThat(ctx.endpoint().authority()).isEqualTo("example.com:8080");
     }
 
     @Test
@@ -307,16 +294,12 @@ class DefaultClientRequestContextTest {
 
     private static DefaultClientRequestContext newContext(ClientOptions clientOptions,
                                                           HttpRequest httpRequest) {
-        return newContext(clientOptions, httpRequest, null);
-    }
+        final RequestTarget reqTarget = RequestTarget.forClient(httpRequest.path());
+        assertThat(reqTarget).isNotNull();
 
-    private static DefaultClientRequestContext newContext(ClientOptions clientOptions,
-                                                          HttpRequest httpRequest,
-                                                          @Nullable String fragment) {
         return new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                RequestId.random(), HttpMethod.POST, "/foo", null, fragment,
-                clientOptions, httpRequest,
+                RequestId.random(), HttpMethod.POST, reqTarget, clientOptions, httpRequest,
                 null, RequestOptions.of(), new CancellationScheduler(0), System.nanoTime(),
                 SystemInfo.currentTimeMicros());
     }

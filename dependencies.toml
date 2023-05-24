@@ -45,6 +45,7 @@ jackson = "2.14.2"
 jakarta-inject = "2.0.1"
 jakarta-validation = "3.0.2"
 jakarta-websocket= "2.1.0"
+java-websocket = "1.5.3"
 javax-annotation = "1.3.2"
 javax-inject = "1"
 javax-jsr311 = "1.1.1"
@@ -67,14 +68,14 @@ jwt = "4.3.0"
 kafka = "3.4.0"
 kotlin = "1.8.10"
 kotlin-coroutine = "1.6.4"
-ktlint-gradle-plugin = "11.1.0"
+ktlint-gradle-plugin = "11.3.2"
 logback = "1.2.11"
 micrometer = "1.10.5"
 micrometer13 = "1.3.20"
 mockito = "4.11.0"
 monix = "3.4.1"
 munit = "0.7.29"
-netty = "4.1.90.Final"
+netty = "4.1.91.Final"
 netty-incubator-transport-native-io_uring = "0.0.19.Final"
 nexus-publish = "1.3.0"
 node-gradle-plugin = "3.5.1"
@@ -114,7 +115,7 @@ shadow-gradle-plugin = "7.1.2"
 shibboleth-utilities = "7.5.2"
 snappy = "1.1.9.1"
 slf4j = "1.7.36"
-spring = "5.3.26"
+spring6 = "6.0.6"
 spring-boot2 = "2.7.10"
 spring-boot3 = "3.0.5"
 testng = "7.5"
@@ -257,13 +258,13 @@ version.ref = "consul"
 module = "org.apache.curator:curator-recipes"
 version.ref = "curator"
 javadocs = [
-    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.3.0/",
-    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.3.0/"]
+    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.4.0/",
+    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.4.0/"]
 exclusions = "org.apache.zookeeper:zookeeper"
 [libraries.curator-discovery]
 module = "org.apache.curator:curator-x-discovery"
 version.ref = "curator"
-javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.3.0/"
+javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.4.0/"
 
 # This is only used for examples/context-propagation/dagger
 [libraries.dagger]
@@ -309,7 +310,7 @@ version.ref = "dropwizard1"
 [libraries.dropwizard2-core]
 module = "io.dropwizard:dropwizard-core"
 version.ref = "dropwizard2"
-javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.4/"
+javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.5/"
 [libraries.dropwizard2-jackson]
 module = "io.dropwizard:dropwizard-jackson"
 version.ref = "dropwizard2"
@@ -404,8 +405,8 @@ version.ref = "groovy"
 [libraries.grpc-core]
 module = "io.grpc:grpc-core"
 javadocs = [
-    "https://grpc.io/grpc-java/javadoc/",
-    "https://developers.google.com/protocol-buffers/docs/reference/java/"]
+    "https://grpc.github.io/grpc-java/javadoc/",
+    "https://protobuf.dev/reference/java/api-docs/"]
 exclusions = [
     "com.google.errorprone:error_prone_annotations",
     "org.codehaus.mojo:animal-sniffer-annotations"]
@@ -561,7 +562,7 @@ exclusions = ["org.ow2.asm:asm", "org.ow2.asm:asm-commons"]
 version.ref = "jetty93"
 [libraries.jetty93-server]
 module = "org.eclipse.jetty:jetty-server"
-javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.42.v20210604/"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.3.30.v20211001/"
 version.ref = "jetty93"
 # jetty-webapp for testing interoperability with other servers.
 [libraries.jetty93-webapp]
@@ -580,7 +581,7 @@ exclusions = ["org.ow2.asm:asm", "org.ow2.asm:asm-commons"]
 version.ref = "jetty94"
 [libraries.jetty94-server]
 module = "org.eclipse.jetty:jetty-server"
-javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.42.v20210604/"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.51.v20230217/"
 version.ref = "jetty94"
 # jetty-webapp for testing interoperability with other servers.
 [libraries.jetty94-webapp]
@@ -626,12 +627,12 @@ version.ref = "jsoup"
 [libraries.junit4]
 module = "junit:junit"
 version.ref = "junit4"
-javadocs = "https://junit.org/junit4/javadoc/4.13/"
+javadocs = "https://junit.org/junit4/javadoc/latest/"
 
 [libraries.junit5-jupiter-api]
 module = "org.junit.jupiter:junit-jupiter-api"
 # ":site:javadoc" fails when we use a newer version of Javadoc.
-javadocs = "https://junit.org/junit5/docs/5.5.2/api/"
+javadocs = "https://junit.org/junit5/docs/current/api/"
 [libraries.junit5-jupiter-params]
 module = "org.junit.jupiter:junit-jupiter-params"
 [libraries.junit5-jupiter-engine]
@@ -651,12 +652,12 @@ version.ref = "junit-pioneer"
 [libraries.jwt]
 module = "com.auth0:java-jwt"
 version.ref = "jwt"
-javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.0.0/"
+javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.4.0/"
 
 [libraries.kafka]
 module = "org.apache.kafka:kafka-clients"
 version.ref = "kafka"
-javadocs = "https://kafka.apache.org/30/javadoc/"
+javadocs = "https://kafka.apache.org/33/javadoc/"
 
 [libraries.kotlin-allopen]
 module = "org.jetbrains.kotlin:kotlin-allopen"
@@ -690,20 +691,20 @@ version.ref = "kotlin-coroutine"
 [libraries.logback]
 module = "ch.qos.logback:logback-classic"
 version.ref = "logback"
-javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.11/"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.12/"
 
 [libraries.micrometer-core]
 module = "io.micrometer:micrometer-core"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.10.5/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.10.6/"
 [libraries.micrometer-prometheus]
 module = "io.micrometer:micrometer-registry-prometheus"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.10.5/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.10.6/"
 [libraries.micrometer-spring-legacy]
 module = "io.micrometer:micrometer-spring-legacy"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.9/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.20/"
 exclusions = ["org.springframework:spring-web", "org.springframework:spring-webmvc"]
 
 [libraries.micrometer13-core]
@@ -824,7 +825,7 @@ version.ref = "resteasy"
 [libraries.resteasy-core-spi]
 module = "org.jboss.resteasy:resteasy-core-spi"
 version.ref = "resteasy"
-javadocs = "https://docs.jboss.org/resteasy/docs/5.0.2.Final/javadocs/"
+javadocs = "https://docs.jboss.org/resteasy/docs/5.0.6.Final/javadocs/"
 [libraries.resteasy-client]
 module = "org.jboss.resteasy:resteasy-client"
 version.ref = "resteasy"
@@ -1013,9 +1014,9 @@ version.ref = "slf4j"
 module = "org.slf4j:slf4j-simple"
 version.ref = "slf4j"
 
-[libraries.spring-web]
+[libraries.spring6-web]
 module = "org.springframework:spring-web"
-version.ref = "spring"
+version.ref = "spring6"
 
 [libraries.spring-boot2-actuator-autoconfigure]
 module = "org.springframework.boot:spring-boot-actuator-autoconfigure"
@@ -1137,7 +1138,7 @@ exclusions = [
 [libraries.tomcat8-core]
 module = "org.apache.tomcat.embed:tomcat-embed-core"
 version.ref = "tomcat8"
-javadocs = "https://tomcat.apache.org/tomcat-9.0-doc/api/"
+javadocs = "https://tomcat.apache.org/tomcat-8.0-doc/api/"
 [libraries.tomcat8-jasper]
 module = "org.apache.tomcat.embed:tomcat-embed-jasper"
 version.ref = "tomcat8"
@@ -1164,6 +1165,11 @@ version.ref = "tomcat10"
 [libraries.tomcat10-el]
 module = "org.apache.tomcat.embed:tomcat-embed-el"
 version.ref = "tomcat10"
+
+# java-websocket is only used for testing in it:websocket module.
+[libraries.java-websocket]
+module = "org.java-websocket:Java-WebSocket"
+version.ref = "java-websocket"
 
 # Needed to work around the problem with Gradle not supporting POM relocation correctly.
 [libraries.xml-apis]
