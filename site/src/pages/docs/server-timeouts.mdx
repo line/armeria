@@ -1,4 +1,4 @@
-# Overriding server timeouts
+# Configuring server timeouts
 
 There are several ways to override the default timeouts at server-side.
 
@@ -41,8 +41,8 @@ Server server = sb.http(port)
                   .and()
                   .withVirtualHost(builder -> {
                       builder.hostnamePattern("*.bar.com")
-                              .service("/hello3", (ctx, req) -> HttpResponse.of(OK))
-                              .requestTimeout(Duration.ofSeconds(15));
+                             .service("/hello3", (ctx, req) -> HttpResponse.of(OK))
+                             .requestTimeout(Duration.ofSeconds(15));
                   })
                   .build();
 ```
