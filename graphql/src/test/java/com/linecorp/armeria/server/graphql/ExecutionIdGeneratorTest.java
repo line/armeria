@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.File;
 import java.util.concurrent.CompletableFuture;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -50,7 +51,7 @@ class ExecutionIdGeneratorTest {
 
     static class CaptureIdStrategy extends AsyncExecutionStrategy {
         @Nullable
-        ExecutionId executionId;
+        volatile ExecutionId executionId;
 
         @Override
         public CompletableFuture<ExecutionResult> execute(ExecutionContext executionContext,
@@ -109,6 +110,11 @@ class ExecutionIdGeneratorTest {
             assertThat(ServiceRequestContext.current()).isSameAs(ctx);
             return value;
         };
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        idStrategy.executionId = null;
     }
 
     @Test

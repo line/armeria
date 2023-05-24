@@ -30,8 +30,7 @@ import graphql.execution.ExecutionIdProvider;
 @FunctionalInterface
 public interface ExecutionIdGenerator {
     /**
-     * Returns the default {@link ExecutionIdGenerator} which uses the ID of the {@link ServiceRequestContext}
-     * as the execution ID.
+     * Returns the default {@link ExecutionIdGenerator} which uses {@link ServiceRequestContext#id()}
      */
     static ExecutionIdGenerator of() {
         return (requestContext, query, operationName, graphqlContext) -> ExecutionId.from(
@@ -39,7 +38,7 @@ public interface ExecutionIdGenerator {
     }
 
     /**
-     * Generates an execution ID based on the provided context, query, and operation name.
+     * Generates an execution ID based on the provided context, query, operation name, and graphql context.
      */
     ExecutionId generate(ServiceRequestContext requestContext, String query, String operationName,
                          GraphQLContext graphqlContext);
