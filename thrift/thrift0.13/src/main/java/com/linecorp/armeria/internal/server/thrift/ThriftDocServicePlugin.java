@@ -320,7 +320,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         private final Class<?> serviceType;
         private final List<EndpointInfo> endpointInfos = new ArrayList<>();
         @Nullable
-        private ThriftServiceEntry thriftServiceEntry;
+        private final ThriftServiceEntry thriftServiceEntry;
 
         EntryBuilder(Class<?> serviceType) {
             this(serviceType, null);
