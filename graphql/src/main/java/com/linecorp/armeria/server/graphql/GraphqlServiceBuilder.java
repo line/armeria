@@ -296,8 +296,7 @@ public final class GraphqlServiceBuilder {
             }
             dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
         } else {
-            final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
-            dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
+            dataLoaderRegistryFactory = ctx -> new DataLoaderRegistry();
         }
 
         final GraphqlErrorHandler errorHandler;
