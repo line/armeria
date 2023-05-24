@@ -1,5 +1,9 @@
 dependencies {
-    testImplementation project(':thrift0.18')
+    if (project.ext.testJavaVersion >= 11) {
+        testImplementation project(':thrift0.18')
+    } else {
+        testImplementation project(':thrift0.17')
+    }
     testImplementation project(':grpc')
     testImplementation libs.dropwizard.metrics.core
     testImplementation libs.prometheus

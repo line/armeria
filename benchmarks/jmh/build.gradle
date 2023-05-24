@@ -6,7 +6,11 @@ dependencies {
     implementation project(':grpc')
     implementation project(':grpc-protocol')
     implementation project(':retrofit2')
-    implementation project(':thrift0.18')
+    if (project.ext.testJavaVersion >= 11) {
+        implementation project(':thrift0.18')
+    } else {
+        implementation project(':thrift0.17')
+    }
     implementation project(':kotlin')
 
     implementation libs.retrofit2.converter.jackson

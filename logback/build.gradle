@@ -1,6 +1,6 @@
 dependencies {
 
-    if (rootProject.ext.testJavaVersion >= 11) {
+    if (project.ext.testJavaVersion >= 11) {
         testImplementation project(':thrift0.18')
     } else {
         testImplementation project(':thrift0.17')
