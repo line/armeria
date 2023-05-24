@@ -41,7 +41,6 @@ class MainService(private val backendClient: WebClient) : HttpService {
     override fun serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse {
         val ctxExecutor = ctx.eventLoop()
         val response = GlobalScope.future(ctxExecutor.asCoroutineDispatcher()) {
-
             val numsFromRequest = async { fetchFromRequest(ctx, req) }
             val numsFromDb = async { fetchFromFakeDb(ctx) }
             val nums = awaitAll(numsFromRequest, numsFromDb).flatten()
@@ -88,10 +87,10 @@ class MainService(private val backendClient: WebClient) : HttpService {
 
         val nums = mutableListOf<Long>()
         for (
-            token in Iterables.concat(
-                NUM_SPLITTER.split(aggregatedHttpRequest.path().substring(1)),
-                NUM_SPLITTER.split(aggregatedHttpRequest.contentUtf8())
-            )
+        token in Iterables.concat(
+            NUM_SPLITTER.split(aggregatedHttpRequest.path().substring(1)),
+            NUM_SPLITTER.split(aggregatedHttpRequest.contentUtf8())
+        )
         ) {
             nums.add(token.toLong())
         }

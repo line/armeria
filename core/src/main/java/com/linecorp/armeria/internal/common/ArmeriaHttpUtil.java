@@ -690,7 +690,10 @@ public final class ArmeriaHttpUtil {
             final AsciiString aName = HttpHeaderNames.of(entry.getKey()).toLowerCase();
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(aName) ||
                 connectionDisallowedList.contains(aName)) {
-                continue;
+                final CharSequence value = entry.getValue();
+                if (!maybeWebSocketUpgrade(aName, value)) {
+                    continue;
+                }
             }
 
             // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2 makes a special exception for TE
@@ -715,6 +718,15 @@ public final class ArmeriaHttpUtil {
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
+    }
+
+    private static boolean maybeWebSocketUpgrade(AsciiString header, CharSequence value) {
+        if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(header) &&
+            HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
+            return true;
+        }
+        return HttpHeaderNames.UPGRADE.contentEqualsIgnoreCase(header) &&
+               HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(value);
     }
 
     private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
@@ -869,7 +881,7 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ServerHeaders(
-            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            ResponseHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming, boolean keepAlive) {
         toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, false);
         HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, keepAlive);
@@ -887,7 +899,7 @@ public final class ArmeriaHttpUtil {
         toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, true);
     }
 
-    private static void toNettyHttp1Server(
+    public static void toNettyHttp1Server(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming, boolean isTrailer) {
         for (Entry<AsciiString, String> entry : inputHeaders) {

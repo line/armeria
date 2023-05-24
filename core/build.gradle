@@ -177,12 +177,12 @@ testing {
     suites {
         testStreaming(JvmTestSuite) {
 
-            group = 'Verification'
-            description = 'Runs the streaming tests.'
-
             targets {
                 all {
                     testTask.configure {
+                        group = 'Verification'
+                        description = 'Runs the streaming tests.'
+
                         dependsOn(tasks.shadedTestClasses)
                         // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
                         maxHeapSize = '64m'

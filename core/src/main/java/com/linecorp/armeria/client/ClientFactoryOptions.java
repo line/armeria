@@ -523,7 +523,7 @@ public final class ClientFactoryOptions
     /**
      * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another header name. This is useful when communicating with a legacy system that only supports
-     * case sensitive HTTP/1 headers.
+     * case-sensitive HTTP/1 headers.
      */
     public Http1HeaderNaming http1HeaderNaming() {
         return get(HTTP1_HEADER_NAMING);
