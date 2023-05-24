@@ -79,7 +79,7 @@ allprojects {
         }
 
         // required by blockhound for jvm 13+. See https://github.com/reactor/BlockHound/issues/33.
-        if (rootProject.hasProperty('blockhound') && rootProject.ext.testJavaVersion >= 13) {
+        if (rootProject.hasProperty('blockhound') && project.ext.testJavaVersion >= 13) {
             jvmArgs "-XX:+AllowRedefinitionToAddDeleteMethods"
         }
 
