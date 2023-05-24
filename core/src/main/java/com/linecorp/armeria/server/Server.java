@@ -78,6 +78,7 @@ import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -119,6 +120,7 @@ public final class Server implements ListenableAsyncCloseable {
     @GuardedBy("lock")
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
+    private boolean hasWebSocketService;
 
     @Nullable
     @VisibleForTesting
@@ -143,6 +145,7 @@ public final class Server implements ListenableAsyncCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        hasWebSocketService = hasWebSocketService(config);
     }
 
     /**
@@ -476,6 +479,13 @@ public final class Server implements ListenableAsyncCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        hasWebSocketService = hasWebSocketService(config);
+    }
+
+    private static boolean hasWebSocketService(UpdatableServerConfig config) {
+        return config.serviceConfigs()
+                     .stream()
+                     .anyMatch(serviceConfig -> serviceConfig.service().as(WebSocketService.class) != null);
     }
 
     /**
@@ -552,7 +562,8 @@ public final class Server implements ListenableAsyncCloseable {
             b.group(bossGroup, config.workerGroup());
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport));
+            b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,
+                                                              hasWebSocketService));
             return b.bind(port.localAddress());
         }
 

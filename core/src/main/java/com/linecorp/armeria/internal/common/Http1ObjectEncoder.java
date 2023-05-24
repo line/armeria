@@ -39,8 +39,6 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
@@ -91,11 +89,6 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
      * The maximum known ID with pending writes.
      */
     private int maxIdWithPendingWrites = Integer.MIN_VALUE;
-
-    /**
-     * The ID of the last request whose response headers is written.
-     */
-    private int lastResponseHeadersId;
 
     /**
      * The map which maps a request ID to its related pending response.
@@ -311,23 +304,10 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         }
     }
 
-    private ChannelFuture write(HttpObject obj, ChannelPromise promise) {
-        // Use FQCN for Netty HttpResponse to avoid confusion with Armeria HttpResponse
-        // We check if obj is an HttpResponse here because server-side writes both headers
-        // and errors as an HttpResponse.
-        //noinspection UnnecessaryFullyQualifiedName
-        if (obj instanceof io.netty.handler.codec.http.HttpResponse) {
-            if (lastResponseHeadersId >= currentId) {
-                // Response headers were written already. This may occur Http1RequestDecoder sends an error
-                // response while HttpResponseSubscriber writes a response headers and then waits for bodies.
-                ReferenceCountUtil.release(obj);
-                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR);
-            } else if (((HttpResponse) obj).status().codeClass() != HttpStatusClass.INFORMATIONAL) {
-                lastResponseHeadersId = currentId;
-            }
-        }
+    protected abstract ChannelFuture write(HttpObject obj, ChannelPromise promise);
 
-        return ch.write(obj, promise);
+    protected int currentId() {
+        return currentId;
     }
 
     private void flushPendingWrites(PendingWrites pendingWrites) {
@@ -440,10 +420,6 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     @Override
     public final boolean isClosed() {
         return closed || !channel().isActive();
-    }
-
-    protected final int lastResponseHeadersId() {
-        return lastResponseHeadersId;
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {

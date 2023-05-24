@@ -43,7 +43,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -59,7 +59,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -76,7 +76,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -92,7 +92,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -108,7 +108,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -124,7 +124,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -140,7 +140,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -157,7 +157,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -173,7 +173,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -189,7 +189,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -205,7 +205,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -221,7 +221,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -238,7 +238,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -255,7 +255,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);
@@ -272,7 +272,7 @@ class ServiceNamingTest {
                                   null, null, ServiceNaming.fullTypeName(), 0, 0, false,
                                   AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         when(ctx.config()).thenReturn(config);

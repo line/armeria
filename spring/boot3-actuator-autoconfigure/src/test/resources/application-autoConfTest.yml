@@ -13,5 +13,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, heapdump, loggers, prometheus
+        include: health, heapdump, loggers, prometheus, info
       base-path: /internal/actuator
+      path-mapping:
+        info: custom-info

@@ -21,6 +21,7 @@ def boot3Actuator = "boot3-actuator-autoconfigure"
 def boot3ActuatorProjectDir = "${rootProject.projectDir}/spring/$boot3Actuator"
 tasks.compileJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileJava)
 tasks.compileTestJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileTestJava)
+tasks.sourcesJar.dependsOn(project(":spring:$boot3Actuator").tasks.sourcesJar)
 
 tasks.compileJava.source "${boot3ActuatorProjectDir}/src/main/java",
         "${boot3ActuatorProjectDir}/gen-src/main/java"

@@ -224,7 +224,10 @@ jobs:
 
       - name: Run flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoLint -PflakyTests=true
+          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoLint -PflakyTests=true \
+          -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
+          -PtestJavaVersion=${{ env.BUILD_JDK_VERSION }} \
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }}
 
       - name: Summarize the failed tests
         if: failure()
