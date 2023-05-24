@@ -195,6 +195,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         if (entry.thriftServiceEntry != null) {
             thriftFunctionName = entry.thriftServiceEntry.functionName(method.getName());
         } else {
+            // entry.thriftServiceEntry can be null for tests
             thriftFunctionName = method.getName();
         }
 
