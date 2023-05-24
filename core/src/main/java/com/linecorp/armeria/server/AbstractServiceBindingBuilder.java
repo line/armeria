@@ -153,6 +153,18 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
+    public AbstractServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        defaultServiceConfigSetters.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
         return this;

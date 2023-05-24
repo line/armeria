@@ -68,3 +68,5 @@ task generateSources(type: Copy) {
 }
 
 tasks.compileJava.dependsOn(tasks.generateSources)
+tasks.processResources.dependsOn(tasks.generateSources)
+tasks.processTestResources.dependsOn(tasks.generateSources)

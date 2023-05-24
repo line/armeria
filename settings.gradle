@@ -1,3 +1,22 @@
+plugins {
+    // This plugin should be applied in settings.gradle, not build.gradle.
+    // https://github.com/gradle/foojay-toolchains/issues/15
+    //
+    // If Gradle can’t find a locally available toolchain that matches the requirements of the build, it can
+    // automatically download one based on the foojay Disco API.
+    // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
+    id("org.gradle.toolchains.foojay-resolver") version "0.5.0"
+}
+toolchainManagement {
+    jvm {
+        javaRepositories {
+            repository("foojay") {
+                resolverClass = org.gradle.toolchains.foojay.FoojayToolchainResolver
+            }
+        }
+    }
+}
+
 rootProject.name = 'armeria'
 
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
@@ -121,6 +140,7 @@ includeWithFlags ':it:spring:webflux-security',                'java17', 'reloca
 includeWithFlags ':it:thrift-fullcamel',                       'java', 'relocate'
 includeWithFlags ':it:thrift0.9.1',                            'java', 'relocate'
 includeWithFlags ':it:trace-context-leak',                     'java', 'relocate'
+includeWithFlags ':it:websocket',                              'java', 'relocate'
 includeWithFlags ':jetty9.3',                                  'java', 'relocate'
 includeWithFlags ':testing-internal',                          'java', 'relocate'
 includeWithFlags ':thrift0.12',                                'java', 'relocate'
