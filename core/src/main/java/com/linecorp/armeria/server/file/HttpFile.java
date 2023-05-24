@@ -125,8 +125,8 @@ public interface HttpFile {
     }
 
     /**
-     * Returns an {@link HttpFile} which represents a non-existent file.
-     * Contains additional {@code location} information.
+     * Returns a non-existent {@link HttpFile} which contains the requested file
+     * information as a hint.
      */
     static HttpFile nonExistent(String location) {
         requireNonNull(location, "location");
