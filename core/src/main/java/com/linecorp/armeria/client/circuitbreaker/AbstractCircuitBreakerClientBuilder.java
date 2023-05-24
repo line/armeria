@@ -129,6 +129,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
      *
      * @return {@code this} to support method chaining.
      */
+    @UnstableApi
     public AbstractCircuitBreakerClientBuilder<I, O> recover(
             BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
         this.fallback = fallback;

@@ -138,7 +138,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
             }
             return doExecute(ctx, req, callback);
         } catch (Exception ex) {
-            if (handler().isCircuitBreakerException(ex) && fallback != null) {
+            if (fallback != null && handler().isCircuitBreakerException(ex)) {
                 final O res = fallback.apply(ctx, req);
                 return requireNonNull(res, "fallback.apply() returned null.");
             }
