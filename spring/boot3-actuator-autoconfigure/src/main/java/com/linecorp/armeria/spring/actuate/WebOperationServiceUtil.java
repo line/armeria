@@ -29,6 +29,7 @@ import org.springframework.boot.actuate.endpoint.web.WebServerNamespace;
 import org.springframework.boot.actuate.health.AdditionalHealthEndpointPath;
 import org.springframework.boot.actuate.health.HealthEndpointGroup;
 import org.springframework.boot.actuate.health.HealthEndpointGroups;
+import org.springframework.boot.actuate.health.HttpCodeStatusMapper;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -52,7 +53,7 @@ final class WebOperationServiceUtil {
 
     static void addAdditionalPath(ServerBuilder sb, List<Integer> exposedPorts,
                                   ExposableWebEndpoint endpoint,
-                                  SimpleHttpCodeStatusMapper statusMapper,
+                                  HttpCodeStatusMapper statusMapper,
                                   @Nullable CorsServiceBuilder cors, HealthEndpointGroups groups) {
         for (WebOperation operation : endpoint.getOperations()) {
             final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
@@ -87,7 +88,7 @@ final class WebOperationServiceUtil {
     }
 
     static void addAdditionalPath(ServerBuilder sb, List<Integer> exposedPorts,
-                                  SimpleHttpCodeStatusMapper statusMapper, WebOperation operation,
+                                  HttpCodeStatusMapper statusMapper, WebOperation operation,
                                   WebOperationRequestPredicate predicate,
                                   Set<HealthEndpointGroup> additionalGroups,
                                   @Nullable CorsServiceBuilder cors) {
