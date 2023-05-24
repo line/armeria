@@ -1,8 +1,15 @@
+def thriftVersion = ""
+if (project.ext.testJavaVersion >= 11) {
+    thriftVersion = '0.18'
+} else {
+    thriftVersion = '0.17'
+}
+
 dependencies {
     if (project.ext.testJavaVersion >= 11) {
-        testImplementation project(':thrift0.18')
+        testImplementation project(":thrift$thriftVersion")
     } else {
-        testImplementation project(':thrift0.17')
+        testImplementation project(":thrift$thriftVersion")
     }
     testImplementation project(':grpc')
     testImplementation libs.dropwizard.metrics.core
@@ -18,8 +25,8 @@ tasks.compileTestJava.source "${rootProject.projectDir}/core/src/test/java/com/l
         "${rootProject.projectDir}/grpc/src/test/java/com/linecorp/armeria/it/grpc/GrpcMetricsIntegrationTest.java"
 
 task copyThriftFiles(type: Copy) {
-    dependsOn project(':thrift0.18').tasks.compileTestThrift
-    dependsOn project(':thrift0.18').tasks.generateTestSources
+    dependsOn project(":thrift$thriftVersion").tasks.compileTestThrift
+    dependsOn project(":thrift$thriftVersion").tasks.generateTestSources
 
     from "${rootProject.projectDir}/thrift/thrift0.18/gen-src/test/java"
     into "${project.ext.genSrcDir}/test/java"
