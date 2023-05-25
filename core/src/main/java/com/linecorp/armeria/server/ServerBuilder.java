@@ -533,13 +533,15 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets whether to prevent connection going idle when an HTTP/2 PING frame is received.
+     * Sets the idle timeout of a connection in milliseconds for keep-alive and whether to prevent
+     * connection going idle when an HTTP/2 PING frame is received.
      *
-     * @param keepAliveOnPing whether to reset idle timeout on PING frame or not.
+     * @param idleTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     *  @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame or not.
      */
-    public ServerBuilder keepAliveOnPing(boolean keepAliveOnPing) {
-        this.keepAliveOnPing = keepAliveOnPing;
-        return this;
+    @UnstableApi
+    public ServerBuilder idleTimeoutMillis(long idleTimeoutMillis, Boolean keepAliveOnPing) {
+        return idleTimeout(Duration.ofMillis(idleTimeoutMillis), keepAliveOnPing);
     }
 
     /**
@@ -550,6 +552,21 @@ public final class ServerBuilder implements TlsSetters {
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
         idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
+        return this;
+    }
+
+    /**
+     * Sets the idle timeout of a connection for keep-alive and whether to prevent connection
+     * going idle when an HTTP/2 PING frame is received.
+     *
+     * @param idleTimeout the timeout. {@code 0} disables the timeout.
+     * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame or not.
+     */
+    @UnstableApi
+    public ServerBuilder idleTimeout(Duration idleTimeout, Boolean keepAliveOnPing) {
+        requireNonNull(idleTimeout, "idleTimeout");
+        idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
+        this.keepAliveOnPing = keepAliveOnPing;
         return this;
     }
 

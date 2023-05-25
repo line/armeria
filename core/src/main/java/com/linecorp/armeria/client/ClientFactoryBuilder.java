@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -625,12 +626,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Sets the idle timeout of a socket connection and whether to reset idle timeout when an HTTP/2 PING
      * frame is received.
      */
+    @UnstableApi
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
-        requireNonNull(idleTimeout, "idleTimeout");
-        checkArgument(!idleTimeout.isNegative(), "idleTimeout: %s (expected: >= 0)", idleTimeout);
-        option(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS, idleTimeout.toMillis());
-        option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);
-        return this;
+        return idleTimeoutMillis(requireNonNull(idleTimeout, "idleTimeout").toMillis(), keepAliveOnPing);
     }
 
     /**
@@ -648,18 +646,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * request in progress for the given amount of time. If keepAliveOnPing is true, idle timeout is reset when
      * an HTTP/2 PING frame is received.
      */
+    @UnstableApi
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {
         checkArgument(idleTimeoutMillis >= 0, "idleTimeoutMillis: %s (expected: >= 0)", idleTimeoutMillis);
         option(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS, idleTimeoutMillis);
-        option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);
-        return this;
-    }
-
-    /**
-     * Sets whether to reset idle timeout when an HTTP/2 PING frame is received. By default, HTTP/2 PING frames
-     * do not prevent connections from closing after `idleTimeout` has elapsed since last data was received.
-     */
-    public ClientFactoryBuilder keepAliveOnPing(boolean keepAliveOnPing) {
         option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);
         return this;
     }
