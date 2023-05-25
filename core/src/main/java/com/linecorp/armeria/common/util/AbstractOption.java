@@ -31,6 +31,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * A configuration option.
@@ -236,7 +237,7 @@ public abstract class AbstractOption<
 
         private final Class<?> type;
         private final BiMap<String, AbstractOption<?, ?, ?>> options;
-        private final ReentrantLock reentrantLock = new ReentrantLock();
+        private final ReentrantLock reentrantLock = new ReentrantShortLock();
 
         Pool(Class<?> type) {
             this.type = type;
