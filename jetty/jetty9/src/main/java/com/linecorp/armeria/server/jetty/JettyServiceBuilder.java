@@ -32,174 +32,20 @@ import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.util.component.Container;
 import org.eclipse.jetty.util.component.LifeCycle;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 /**
  * Builds a {@link JettyService}. Use {@link JettyService#of(Server)} if you have a configured Jetty
  * {@link Server} instance.
  */
-public final class JettyServiceBuilder {
+public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
 
-    private final ImmutableMap.Builder<String, Object> attrs = ImmutableMap.builder();
-    private final ImmutableList.Builder<Bean> beans = ImmutableList.builder();
-    private final ImmutableList.Builder<HandlerWrapper> handlerWrappers = ImmutableList.builder();
     private final ImmutableList.Builder<Container.Listener> eventListeners = ImmutableList.builder();
     private final ImmutableList.Builder<LifeCycle.Listener> lifeCycleListeners = ImmutableList.builder();
-    private final ImmutableList.Builder<Consumer<? super Server>> customizers = ImmutableList.builder();
-
-    @Nullable
-    private String hostname;
-    @Nullable
-    private Boolean dumpAfterStart;
-    @Nullable
-    private Boolean dumpBeforeStop;
-    @Nullable
-    private Handler handler;
-    @Nullable
-    private RequestLog requestLog;
-    @Nullable
-    private Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
-    @Nullable
-    private Long stopTimeoutMillis;
-    private boolean tlsReverseDnsLookup;
 
     JettyServiceBuilder() {}
-
-    /**
-     * Sets the default hostname of the Jetty {@link Server}.
-     */
-    public JettyServiceBuilder hostname(String hostname) {
-        this.hostname = requireNonNull(hostname, "hostname");
-        return this;
-    }
-
-    /**
-     * Puts the specified attribute into the Jetty {@link Server}.
-     *
-     * @see Server#setAttribute(String, Object)
-     */
-    public JettyServiceBuilder attr(String name, Object attribute) {
-        attrs.put(requireNonNull(name, "name"), requireNonNull(attribute, "attribute"));
-        return this;
-    }
-
-    /**
-     * Adds the specified bean to the Jetty {@link Server}.
-     *
-     * @see Server#addBean(Object)
-     */
-    public JettyServiceBuilder bean(Object bean) {
-        beans.add(new Bean(bean, null));
-        return this;
-    }
-
-    /**
-     * Adds the specified bean to the Jetty {@link Server}.
-     *
-     * @see Server#addBean(Object, boolean)
-     */
-    public JettyServiceBuilder bean(Object bean, boolean managed) {
-        beans.add(new Bean(bean, managed));
-        return this;
-    }
-
-    /**
-     * Sets whether the Jetty {@link Server} needs to dump its configuration after it started up.
-     *
-     * @see Server#setDumpAfterStart(boolean)
-     */
-    public JettyServiceBuilder dumpAfterStart(boolean dumpAfterStart) {
-        this.dumpAfterStart = dumpAfterStart;
-        return this;
-    }
-
-    /**
-     * Sets whether the Jetty {@link Server} needs to dump its configuration before it shuts down.
-     *
-     * @see Server#setDumpBeforeStop(boolean)
-     */
-    public JettyServiceBuilder dumpBeforeStop(boolean dumpBeforeStop) {
-        this.dumpBeforeStop = dumpBeforeStop;
-        return this;
-    }
-
-    /**
-     * Sets the {@link Handler} of the Jetty {@link Server}.
-     *
-     * @see Server#setHandler(Handler)
-     */
-    public JettyServiceBuilder handler(Handler handler) {
-        this.handler = requireNonNull(handler, "handler");
-        return this;
-    }
-
-    /**
-     * Adds the specified {@link HandlerWrapper} to the Jetty {@link Server}.
-     *
-     * @see Server#insertHandler(HandlerWrapper)
-     */
-    public JettyServiceBuilder handlerWrapper(HandlerWrapper handlerWrapper) {
-        handlerWrappers.add(requireNonNull(handlerWrapper, "handlerWrapper"));
-        return this;
-    }
-
-    /**
-     * Adds the specified {@link HttpConfiguration} to the Jetty {@link Server}.
-     * This method is a type-safe alias of {@link #bean(Object)}.
-     */
-    public JettyServiceBuilder httpConfiguration(HttpConfiguration httpConfiguration) {
-        return bean(httpConfiguration);
-    }
-
-    /**
-     * Sets the {@link RequestLog} of the Jetty {@link Server}.
-     *
-     * @see Server#setRequestLog(RequestLog)
-     */
-    public JettyServiceBuilder requestLog(RequestLog requestLog) {
-        this.requestLog = requireNonNull(requestLog, "requestLog");
-        return this;
-    }
-
-    /**
-     * Sets the {@link SessionIdManager} of the Jetty {@link Server}. This method is a shortcut for:
-     * <pre>{@code
-     * sessionIdManagerFactory(server -> sessionIdManager);
-     * }</pre>
-     *
-     * @see Server#setSessionIdManager(SessionIdManager)
-     */
-    public JettyServiceBuilder sessionIdManager(SessionIdManager sessionIdManager) {
-        requireNonNull(sessionIdManager, "sessionIdManager");
-        return sessionIdManagerFactory(server -> sessionIdManager);
-    }
-
-    /**
-     * Sets the factory that creates a new instance of {@link SessionIdManager} for the Jetty {@link Server}.
-     *
-     * @see Server#setSessionIdManager(SessionIdManager)
-     */
-    public JettyServiceBuilder sessionIdManagerFactory(
-            Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory) {
-        requireNonNull(sessionIdManagerFactory, "sessionIdManagerFactory");
-        this.sessionIdManagerFactory = sessionIdManagerFactory;
-        return this;
-    }
-
-    /**
-     * Sets the graceful stop time of the {@link Server#stop()} in milliseconds.
-     *
-     * @see Server#setStopTimeout(long)
-     */
-    public JettyServiceBuilder stopTimeoutMillis(long stopTimeoutMillis) {
-        this.stopTimeoutMillis = stopTimeoutMillis;
-        return this;
-    }
 
     /**
      * Adds the specified event listener to the Jetty {@link Server}.
@@ -217,38 +63,85 @@ public final class JettyServiceBuilder {
         return this;
     }
 
-    /**
-     * Sets whether Jetty has to perform reverse DNS lookup for the remote IP address on a TLS connection.
-     * By default, this flag is disabled because it is known to cause performance issues when the DNS server
-     * is not responsive enough. However, you might want to take the risk and enable it if you want the same
-     * behavior with Jetty 9.3 when mTLS is enabled.
-     *
-     * @see <a href="https://github.com/eclipse/jetty.project/issues/1235">Jetty issue #1235</a>
-     * @see <a href="https://github.com/eclipse/jetty.project/commit/de7c146bd741307cd924a9dcef386d516e75b1e9">Jetty commit de7c146</a>
-     */
+    @Override
+    public JettyServiceBuilder hostname(String hostname) {
+        return (JettyServiceBuilder) super.hostname(hostname);
+    }
+
+    @Override
+    public JettyServiceBuilder attr(String name, Object attribute) {
+        return (JettyServiceBuilder) super.attr(name, attribute);
+    }
+
+    @Override
+    public JettyServiceBuilder bean(Object bean) {
+        return (JettyServiceBuilder) super.bean(bean);
+    }
+
+    @Override
+    public JettyServiceBuilder bean(Object bean, boolean managed) {
+        return (JettyServiceBuilder) super.bean(bean, managed);
+    }
+
+    @Override
+    public JettyServiceBuilder dumpAfterStart(boolean dumpAfterStart) {
+        return (JettyServiceBuilder) super.dumpAfterStart(dumpAfterStart);
+    }
+
+    @Override
+    public JettyServiceBuilder dumpBeforeStop(boolean dumpBeforeStop) {
+        return (JettyServiceBuilder) super.dumpBeforeStop(dumpBeforeStop);
+    }
+
+    @Override
+    public JettyServiceBuilder handler(Handler handler) {
+        return (JettyServiceBuilder) super.handler(handler);
+    }
+
+    @Override
+    public JettyServiceBuilder handlerWrapper(HandlerWrapper handlerWrapper) {
+        return (JettyServiceBuilder) super.handlerWrapper(handlerWrapper);
+    }
+
+    @Override
+    public JettyServiceBuilder httpConfiguration(HttpConfiguration httpConfiguration) {
+        return (JettyServiceBuilder) super.httpConfiguration(httpConfiguration);
+    }
+
+    @Override
+    public JettyServiceBuilder requestLog(RequestLog requestLog) {
+        return (JettyServiceBuilder) super.requestLog(requestLog);
+    }
+
+    @Override
+    public JettyServiceBuilder sessionIdManager(SessionIdManager sessionIdManager) {
+        return (JettyServiceBuilder) super.sessionIdManager(sessionIdManager);
+    }
+
+    @Override
+    public JettyServiceBuilder sessionIdManagerFactory(
+            Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory) {
+        return (JettyServiceBuilder) super.sessionIdManagerFactory(sessionIdManagerFactory);
+    }
+
+    @Override
+    public JettyServiceBuilder stopTimeoutMillis(long stopTimeoutMillis) {
+        return (JettyServiceBuilder) super.stopTimeoutMillis(stopTimeoutMillis);
+    }
+
+    @Override
     public JettyServiceBuilder tlsReverseDnsLookup(boolean tlsReverseDnsLookup) {
-        this.tlsReverseDnsLookup = tlsReverseDnsLookup;
-        return this;
+        return (JettyServiceBuilder) super.tlsReverseDnsLookup(tlsReverseDnsLookup);
     }
 
-    /**
-     * Adds a {@link Consumer} that performs additional configuration operations against
-     * the Jetty {@link Server} created by a {@link JettyService}.
-     */
+    @Override
     public JettyServiceBuilder customizer(Consumer<? super Server> customizer) {
-        customizers.add(requireNonNull(customizer, "customizer"));
-        return this;
+        return (JettyServiceBuilder) super.customizer(customizer);
     }
 
-    /**
-     * Adds a {@link Consumer} that performs additional configuration operations against
-     * the Jetty {@link Server} created by a {@link JettyService}.
-     *
-     * @deprecated Use {@link #customizer(Consumer)}.
-     */
-    @Deprecated
+    @Override
     public JettyServiceBuilder configurator(Consumer<? super Server> configurator) {
-        return customizer(requireNonNull(configurator, "configurator"));
+        return (JettyServiceBuilder) super.configurator(configurator);
     }
 
     /**
@@ -323,54 +216,5 @@ public final class JettyServiceBuilder {
         };
 
         return new JettyService(hostname, tlsReverseDnsLookup, serverFactory, postStopTask);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("hostname", hostname)
-                          .add("dumpAfterStart", dumpAfterStart)
-                          .add("dumpBeforeStop", dumpBeforeStop)
-                          .add("stopTimeoutMillis", stopTimeoutMillis)
-                          .add("handler", handler)
-                          .add("requestLog", requestLog)
-                          .add("sessionIdManagerFactory", sessionIdManagerFactory)
-                          .add("attrs", attrs)
-                          .add("beans", beans)
-                          .add("handlerWrappers", handlerWrappers)
-                          .add("eventListeners", eventListeners)
-                          .add("lifeCycleListeners", lifeCycleListeners)
-                          .add("tlsReverseDnsLookup", tlsReverseDnsLookup)
-                          .add("customizers", customizers)
-                          .toString();
-    }
-
-    static final class Bean {
-
-        private final Object bean;
-        @Nullable
-        private final Boolean managed;
-
-        Bean(Object bean, @Nullable Boolean managed) {
-            this.bean = requireNonNull(bean, "bean");
-            this.managed = managed;
-        }
-
-        Object bean() {
-            return bean;
-        }
-
-        @Nullable
-        Boolean isManaged() {
-            return managed;
-        }
-
-        @Override
-        public String toString() {
-            final String mode = managed != null ? managed ? "managed" : "unmanaged"
-                                                : "auto";
-            return "(" + bean + ", " + mode + ')';
-        }
     }
 }
