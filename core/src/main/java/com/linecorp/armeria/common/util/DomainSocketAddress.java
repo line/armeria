@@ -157,7 +157,7 @@ public final class DomainSocketAddress extends InetSocketAddress {
     }
 
     /**
-     * Returns a string representation of this address, such as {@code "unix:/path/to/sock"}.
+     * Returns a string representation of this address, such as {@code "/path/to/sock"}.
      */
     @Override
     public String toString() {

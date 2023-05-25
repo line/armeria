@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -36,6 +35,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.LruMap;
 import com.linecorp.armeria.internal.common.util.DomainSocketPathEscaper;
+import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 
 /**
  * Keeps the recent {@link SessionProtocol} negotiation failures. It is an LRU cache which keeps at most
@@ -67,7 +67,8 @@ public final class SessionProtocolNegotiationCache {
     public static boolean isUnsupported(Endpoint endpoint, SessionProtocol protocol) {
         requireNonNull(endpoint, "endpoint");
         requireNonNull(protocol, "protocol");
-        return isUnsupported(key(endpoint), protocol);
+
+        return isUnsupported(key(endpoint, protocol), protocol);
     }
 
     /**
@@ -156,31 +157,28 @@ public final class SessionProtocolNegotiationCache {
     }
 
     @VisibleForTesting
-    static String key(Endpoint endpoint) {
-        checkArgument(endpoint.hasPort() || endpoint.isDomainSocket(),
-                      "endpoint: %s (expected: has a port or is a domain socket address)", endpoint);
-
-        // It's okay to create the key using endpoint.authority():
-        // - If the endpoint has an IP address without host name, the IP address is used in the key to store
-        //   and retrieve the value.
-        // - If the endpoint has an IP address with host name, the host name is used in the key to store
-        //   and retrieve the value.
-        // - If the endpoint has host name only, the host name is used in the key to store and retrieve
-        //   the value.
-        // - If the endpoint is a domain socket address, the encoded path is used in the key to store and
-        //   retrieve the value.
-        return endpoint.authority();
+    static String key(Endpoint endpoint, SessionProtocol protocol) {
+        if (endpoint.isDomainSocket()) {
+            return endpoint.host();
+        } else {
+            return endpoint.host() + '|' + endpoint.port(protocol.defaultPort());
+        }
     }
 
     @VisibleForTesting
     static String key(SocketAddress remoteAddress) {
-        requireNonNull(remoteAddress, "remoteAddress");
+        if (remoteAddress instanceof DomainSocketAddress) {
+            return ((DomainSocketAddress) remoteAddress).authority();
+        }
+
         if (remoteAddress instanceof InetSocketAddress) {
-            if (remoteAddress instanceof DomainSocketAddress) {
-                return ((DomainSocketAddress) remoteAddress).authority();
+            final InetSocketAddress raddr = (InetSocketAddress) remoteAddress;
+            final String hostOrIpAddr = raddr.getHostString();
+            final String normalizedIpAddr = IpAddrUtil.normalize(hostOrIpAddr);
+            if (normalizedIpAddr != null) {
+                return normalizedIpAddr + '|' + raddr.getPort();
             } else {
-                final InetSocketAddress raddr = (InetSocketAddress) remoteAddress;
-                return raddr.getHostString() + ':' + raddr.getPort();
+                return hostOrIpAddr + '|' + raddr.getPort();
             }
         }
 
@@ -189,7 +187,9 @@ public final class SessionProtocolNegotiationCache {
                     ((io.netty.channel.unix.DomainSocketAddress) remoteAddress).path());
         }
 
-        throw new IllegalArgumentException("unsupported remote address: " + remoteAddress);
+        throw new IllegalArgumentException(
+                "unsupported address type: " + remoteAddress.getClass().getName() +
+                " (expected: InetSocketAddress or DomainSocketAddress)");
     }
 
     private static long convertToWriteLock(long stamp) {

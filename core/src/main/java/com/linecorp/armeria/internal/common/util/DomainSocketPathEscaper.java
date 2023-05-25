@@ -27,12 +27,13 @@ public final class DomainSocketPathEscaper {
     private static final Pattern AT_OR_COLON = Pattern.compile("[@:]");
 
     public static String toAuthority(String path) {
-        path = "unix:" + requireNonNull(path, "path");
+        requireNonNull(path, "path");
         final String escaped = UrlEscapers.urlPathSegmentEscaper().escape(path);
         // We need to escape `@` and `:` as well, so that the authority contains neither userinfo nor port.
         final Matcher matcher = AT_OR_COLON.matcher(escaped);
         try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tmp.stringBuilder();
+            buf.append("unix%3A");
             for (int i = 0; i < escaped.length();) {
                 if (!matcher.find(i)) {
                     buf.append(escaped, i, escaped.length());
