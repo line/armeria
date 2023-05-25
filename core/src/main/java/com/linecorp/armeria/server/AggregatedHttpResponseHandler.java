@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
@@ -43,11 +44,10 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     private static final Logger logger = LoggerFactory.getLogger(AggregatedHttpResponseHandler.class);
 
-    private boolean isComplete;
-
     AggregatedHttpResponseHandler(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
-                                  DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
-        super(ctx, responseEncoder, reqCtx, req);
+                                  DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                                  CompletableFuture<Void> completionFuture) {
+        super(ctx, responseEncoder, reqCtx, req, completionFuture);
         scheduleTimeout();
     }
 
@@ -105,7 +105,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     @Override
     void fail(Throwable cause) {
-        if (tryComplete()) {
+        if (tryComplete(cause)) {
             endLogRequestAndResponse(cause);
             maybeWriteAccessLog();
         }
@@ -118,19 +118,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
             }
         });
         ctx.flush();
-    }
-
-    private boolean tryComplete() {
-        if (isComplete) {
-            return false;
-        }
-        isComplete = true;
-        return true;
-    }
-
-    @Override
-    boolean isDone() {
-        return isComplete;
     }
 
     private final class WriteFutureListener implements ChannelFutureListener {
@@ -171,7 +158,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         // - any write operation is failed with a cause.
         if (isSuccess) {
             logBuilder().responseFirstBytesTransferred();
-            if (tryComplete()) {
+            if (tryComplete(cause)) {
                 if (cause == null) {
                     cause = CapturedServiceException.get(reqCtx);
                 }

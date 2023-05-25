@@ -133,14 +133,14 @@ class ContentPreviewingServiceTest {
 
             sb.service("/deferred", httpService);
             sb.decorator("/deferred", ContentPreviewingService.newDecorator(100));
-            sb.decorator("/deferred", ((delegate, ctx, req) -> HttpResponse.from(
+            sb.decorator("/deferred", (delegate, ctx, req) -> HttpResponse.from(
                     completedFuture(null).handleAsync((ignored, cause) -> {
                         try {
                             return delegate.serve(ctx, req);
                         } catch (Exception e) {
                             return Exceptions.throwUnsafely(e);
                         }
-                    }, ctx.eventLoop()))));
+                    }, ctx.eventLoop())));
 
             sb.decoratorUnder("/", (delegate, ctx, req) -> {
                 contextCaptor.set(ctx);
