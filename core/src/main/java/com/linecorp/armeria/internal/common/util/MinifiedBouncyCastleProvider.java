@@ -47,7 +47,7 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
 
     private static final String PROVIDER_NAME = "ArmeriaBC";
 
-    private static final ReentrantLock lock = new ReentrantLock();
+    private static final ReentrantLock lock = new ReentrantShortLock();
 
     private static final Map<ASN1ObjectIdentifier, AsymmetricKeyInfoConverter> keyInfoConverters =
             new ConcurrentHashMap<>();
