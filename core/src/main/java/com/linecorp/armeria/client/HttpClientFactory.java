@@ -200,7 +200,7 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     /**
-     * Returns a new {@link Bootstrap} for connecting to an {@link io.netty.channel.unix.DomainSocketAddress}.
+     * Returns a new {@link Bootstrap} for connecting to a {@link io.netty.channel.unix.DomainSocketAddress}.
      * The returned {@link Bootstrap} has its {@link ChannelFactory}, {@link AddressResolverGroup} and
      * socket options pre-configured.
      */
