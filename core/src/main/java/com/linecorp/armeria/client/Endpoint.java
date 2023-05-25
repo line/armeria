@@ -421,7 +421,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     @UnstableApi
     public boolean isDomainSocket() {
-
         return isDomainSocketAuthority(host);
     }
 
