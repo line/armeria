@@ -101,12 +101,17 @@ private static String executeCommand(...command) {
     def stdout = new StringWriter()
     def stderr = new StringWriter()
     proc.waitForProcessOutput(stdout, stderr)
+    def outMsg = stdout.toString().trim()
 
     if (proc.exitValue() != 0) {
+        var errMsg = stderr.toString().trim()
+        if (errMsg.isEmpty()) {
+            errMsg = outMsg
+        }
         throw new IOException(
                 "'${command}' exited with a non-zero exit code: ${proc.exitValue()}:" +
-                        "${System.lineSeparator()}${stderr.toString().trim()}")
+                        "${System.lineSeparator()}$errMsg")
     }
 
-    return stdout.toString().trim()
+    return outMsg
 }

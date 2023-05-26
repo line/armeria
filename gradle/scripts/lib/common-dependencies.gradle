@@ -15,8 +15,6 @@ buildscript {
     }
 }
 
-def managedDependencyOverrides = [] as Set
-
 allprojects { p ->
     ext {
         // Add managedVersions() for backward compatibility with dependencies.yml
@@ -178,19 +176,8 @@ configure(projectsWithFlags('java')) {
         dependencies {
             configurations.configureEach { configuration ->
                 // Add to resolvable configurations
-                if (configuration.canBeResolved && !configuration.canBeConsumed) {
-                    add(configuration.name, platform(dependencyManagementProject))
-                }
-
-                // Find version overrides in dependency declaration configurations
                 if (!configuration.canBeResolved && !configuration.canBeConsumed) {
-                    configuration.dependencies.configureEach { dep ->
-                        if (dep instanceof org.gradle.api.artifacts.ExternalDependency) {
-                            if (dep.version != null) {
-                                managedDependencyOverrides.add(String.valueOf("${dep.module}:${dep.version}"))
-                            }
-                        }
-                    }
+                    add(configuration.name, platform(dependencyManagementProject))
                 }
             }
         }
