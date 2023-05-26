@@ -132,7 +132,8 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         return deferred;
     }
 
-    private static void completeExceptionally(ClientRequestContext ctx, CompletableFuture<?> resFuture, Throwable t) {
+    private static void completeExceptionally(ClientRequestContext ctx,
+                                              CompletableFuture<?> resFuture, Throwable t) {
         resFuture.completeExceptionally(t);
         ctx.logBuilder().endRequest(t);
         ctx.logBuilder().endResponse(t);
