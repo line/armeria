@@ -99,6 +99,9 @@ public final class ArmeriaCurrentTraceContext implements CurrentTraceContext {
 
     private final List<Pattern> nonRequestThreadPatterns;
 
+    /**
+     *
+     */
     public static ArmeriaCurrentTraceContext of() {
         return new ArmeriaCurrentTraceContext(Collections.emptyList());
     }

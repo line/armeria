@@ -155,6 +155,7 @@ public final class TracingClient extends SimpleDecoratingHttpClient {
     private static void logTiming(Span span, String startName, String endName, long startTimeMicros,
                                   long durationNanos) {
         span.event(startName, startTimeMicros, TimeUnit.MICROSECONDS);
-        span.event(endName, startTimeMicros + TimeUnit.NANOSECONDS.toMicros(durationNanos), TimeUnit.MICROSECONDS);
+        span.event(endName, startTimeMicros + TimeUnit.NANOSECONDS.toMicros(durationNanos),
+                   TimeUnit.MICROSECONDS);
     }
 }

@@ -21,6 +21,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import java.net.SocketAddress;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.micrometer.tracing.internal.SpanTags;
 
@@ -31,10 +32,27 @@ import io.micrometer.tracing.http.HttpRequestParser;
 import io.micrometer.tracing.http.HttpResponse;
 import io.micrometer.tracing.http.HttpResponseParser;
 
+/**
+ * Default implementation of {@link HttpRequestParser} and {@link HttpResponseParser} for clients.
+ * This parser adds some custom tags and overwrites the name of span if {@link RequestLog#requestContent()}
+ * is {@link RpcRequest}.
+ * The following tags become available:
+ * <ul>
+ *   <li>http.url</li>
+ *   <li>http.host</li>
+ *   <li>http.protocol</li>
+ *   <li>http.serfmt</li>
+ *   <li>address.remote</li>
+ *   <li>address.local</li>
+ * </ul>
+ */
 public final class TracingHttpClientParser implements HttpRequestParser, HttpResponseParser {
 
     private static final TracingHttpClientParser INSTANCE = new TracingHttpClientParser();
 
+    /**
+     * The singleton {@link TracingHttpClientParser} instance.
+     */
     public static TracingHttpClientParser of() {
         return INSTANCE;
     }
