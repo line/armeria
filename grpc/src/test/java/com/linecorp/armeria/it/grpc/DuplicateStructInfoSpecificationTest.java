@@ -42,7 +42,6 @@ class DuplicateStructInfoSpecificationTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.http(18080);
             sb.annotatedService(new SimpleAnnotatedService());
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl(CommonPools.blockingTaskExecutor()))
