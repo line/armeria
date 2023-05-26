@@ -59,12 +59,26 @@ configure(projectsWithFlags('java')) {
         delete project.ext.genSrcDir
     }
 
+    def minimumJavaVersion = null
+    if (project.hasProperty('minimumJavaVersion')) {
+        minimumJavaVersion = Integer.valueOf(String.valueOf(project.findProperty('minimumJavaVersion')))
+        if (minimumJavaVersion < 8) {
+            throw new IllegalArgumentException("'minimumJavaVersion' cannot be smaller than 8. " +
+                    "minimumJavaVersion: ${minimumJavaVersion}")
+        }
+    }
     // parse flags for the targetJavaVersion
     def targetJavaVersion = extractTargetJavaVersion(project)
     if (targetJavaVersion != null && targetJavaVersion < 8) {
         throw new IllegalArgumentException("The minimum target Java version ${version} specified " +
                 "for '${project.path}' cannot be smaller than 8")
     }
+
+    if (minimumJavaVersion != null && (targetJavaVersion == null || targetJavaVersion < minimumJavaVersion)) {
+        targetJavaVersion = minimumJavaVersion
+        logger.quiet("Overriding target Java version for ${project.path} with ${targetJavaVersion}")
+    }
+
     def targetJavaVersionStr = null
     if (targetJavaVersion != null) {
         targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
@@ -74,16 +88,6 @@ configure(projectsWithFlags('java')) {
 
     // The default targetJavaVersion is 'javaTargetCompatibility'
     targetJavaVersion = Integer.valueOf(JavaVersion.toVersion(javaTargetCompatibility).majorVersion)
-
-    if (project.hasProperty('minimumJavaVersion')) {
-        def minimumJavaVersion = Integer.parseInt(String.valueOf(project.findProperty('minimumJavaVersion')))
-        // Bump up the target Java version if it's smaller than the minimum Java version.
-        if (targetJavaVersion < minimumJavaVersion) {
-            targetJavaVersion = minimumJavaVersion
-            logger.quiet("Overriding target Java version for ${project.path} with ${targetJavaVersion}")
-        }
-    }
-
     project.ext.set('targetJavaVersion', targetJavaVersion)
 
     def testJavaVersion = targetJavaVersion
@@ -159,7 +163,7 @@ configure(projectsWithFlags('java')) {
                 targets {
                     all {
                         testTask.configure {
-                             testLogging.exceptionFormat = 'full'
+                            testLogging.exceptionFormat = 'full'
 
                             def flakyTests = rootProject.findProperty('flakyTests')
                             if (flakyTests == 'true') {

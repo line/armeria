@@ -30,11 +30,13 @@ mrJarVersions.each { version->
     "compileJava${version}Java" {
         sourceCompatibility = version
         targetCompatibility = version
+        options.release.set(version)
     }
 
     "compileJava${version}TestJava" {
         sourceCompatibility = version
         targetCompatibility = version
+        options.release.set(version)
     }
 
     task "testJava${version}"(type: Test, group: 'Verification', description: "Runs unit tests for Java ${version} source set") {
@@ -50,13 +52,6 @@ mrJarVersions.each { version->
     configurations."java${version}TestRuntimeClasspath".extendsFrom configurations.testRuntimeClasspath
 
     check.dependsOn "testJava${version}"
-}
-
-tasks.withType(JavaCompile) {
-    if (project.rootProject.ext.buildJdkVersion >= 9) {
-        def version = releaseFlagFromVersion(sourceCompatibility)
-        options.release.set(Integer.parseInt(version))
-    }
 }
 
 tasks.withType(Jar) {
