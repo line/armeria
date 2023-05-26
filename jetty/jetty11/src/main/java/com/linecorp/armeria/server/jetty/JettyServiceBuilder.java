@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.EventListener;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -36,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * Builds a {@link JettyService}. Use {@link JettyService#of(Server)} if you have a configured Jetty
@@ -157,7 +157,7 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
 
         final Function<BlockingTaskExecutor, Server> serverFactory = new Function<>() {
 
-            private final ReentrantLock lock = new ReentrantLock();
+            private final ReentrantShortLock lock = new ReentrantShortLock();
             @Nullable
             private Server server;
 
