@@ -38,7 +38,8 @@ public final class JacksonUtil {
 
     static {
         final List<JacksonObjectMapperProvider> providers =
-                ImmutableList.copyOf(ServiceLoader.load(JacksonObjectMapperProvider.class));
+                ImmutableList.copyOf(ServiceLoader.load(JacksonObjectMapperProvider.class,
+                                                        JacksonObjectMapperProvider.class.getClassLoader()));
         if (!providers.isEmpty()) {
             // Use a custom ObjectMapper provided via SPI.
             provider = providers.get(0);
