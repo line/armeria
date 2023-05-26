@@ -42,7 +42,7 @@ mrJarVersions.each { version->
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
         enabled = Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version &&
-                rootProject.ext.testJavaVersion >= version
+                project.ext.testJavaVersion >= version
     }
 
     configurations."java${version}Implementation".extendsFrom configurations.implementation
@@ -173,45 +173,63 @@ if (!rootProject.hasProperty('noWeb')) {
 // Run HttpServerStreamingTest separately with memory constraint.
 tasks.test.exclude '**/HttpServerStreamingTest**'
 tasks.shadedTest.exclude '**/HttpServerStreamingTest**'
-task testStreaming(type: Test,
-                   group: 'Verification',
-                   description: 'Runs the streaming tests.',
-                   dependsOn: tasks.shadedTestClasses) {
-    // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
-    maxHeapSize = '64m'
+testing {
+    suites {
+        testStreaming(JvmTestSuite) {
 
-    include '**/HttpServerStreamingTest**'
-    testClassesDirs = tasks.shadedTest.testClassesDirs
-    classpath = testClassesDirs
+            targets {
+                all {
+                    testTask.configure {
+                        group = 'Verification'
+                        description = 'Runs the streaming tests.'
 
-    // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
-    doFirst {
-        classpath += project.files(configurations.shadedTestRuntime.resolve())
-    }
-}
-tasks.shadedTest.finalizedBy tasks.testStreaming
-tasks.check.dependsOn tasks.testStreaming
+                        dependsOn(tasks.shadedTestClasses)
+                        // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
+                        maxHeapSize = '64m'
 
-if (rootProject.findProperty('FLAKY_TESTS') != 'true') {
-    // Run the test cases based on reactive-streams-tck only with non-flaky mode
-    task testNg(type: Test,
-            group: 'Verification',
-            description: 'Runs the TestNG unit tests.',
-            dependsOn: tasks.shadedTestClasses) {
-        useTestNG()
-        include '/com/linecorp/armeria/common/**'
+                        include '**/HttpServerStreamingTest**'
+                        testClassesDirs = tasks.shadedTest.testClassesDirs
+                        classpath = testClassesDirs
 
-        scanForTestClasses = false
-        testClassesDirs = tasks.shadedTest.testClassesDirs
-        classpath = testClassesDirs
-
-        // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
-        doFirst {
-            classpath += project.files(configurations.shadedTestRuntime.resolve())
+                        // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
+                        doFirst {
+                            classpath += project.files(configurations.shadedTestRuntime.resolve())
+                        }
+                    }
+                }
+            }
         }
     }
-    tasks.shadedTest.finalizedBy tasks.testNg
-    tasks.check.dependsOn tasks.testNg
+}
+tasks.shadedTest.finalizedBy testing.suites.testStreaming
+tasks.check.dependsOn testing.suites.testStreaming
+
+// Run the test cases based on reactive-streams-tck only with non-flaky mode
+if (rootProject.findProperty('flakyTests') != 'true') {
+    testing {
+        suites {
+            testNg(JvmTestSuite) {
+                useTestNG()
+
+                targets {
+                    all {
+                        testTask.configure {
+                            include '/com/linecorp/armeria/**/common/**'
+                            dependsOn tasks.shadedTestClasses
+                            scanForTestClasses = false
+                            testClassesDirs = tasks.shadedTest.testClassesDirs
+                            classpath = testClassesDirs
+                            doFirst {
+                                classpath += project.files(configurations.shadedTestRuntime.resolve())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    tasks.shadedTest.finalizedBy testing.suites.testNg
+    tasks.check.dependsOn testing.suites.testNg
 }
 
 if (tasks.findByName('trimShadedJar')) {

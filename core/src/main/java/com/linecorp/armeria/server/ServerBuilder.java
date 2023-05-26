@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -69,6 +71,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -83,6 +86,7 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -101,7 +105,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -165,6 +168,8 @@ public final class ServerBuilder implements TlsSetters {
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
+    private static final ExecutorService START_STOP_EXECUTOR = Executors.newSingleThreadExecutor(
+            ThreadFactories.newThreadFactory("startstop-support", true));
 
     static {
         RequestContextUtil.init();
@@ -179,7 +184,7 @@ public final class ServerBuilder implements TlsSetters {
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
-    private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
+    private Executor startStopExecutor = START_STOP_EXECUTOR;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();
@@ -231,6 +236,7 @@ public final class ServerBuilder implements TlsSetters {
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
+        virtualHostTemplate.requestAutoAbortDelayMillis(0); // TODO(minwoox): add to Flags.
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
@@ -501,8 +507,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the {@link Executor} which will invoke the callbacks of {@link Server#start()},
-     * {@link Server#stop()} and {@link ServerListener}. If not set, {@link GlobalEventExecutor} will be used
-     * by default.
+     * {@link Server#stop()} and {@link ServerListener}.
      */
     public ServerBuilder startStopExecutor(Executor startStopExecutor) {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
@@ -798,6 +803,31 @@ public final class ServerBuilder implements TlsSetters {
         gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
         validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
                                    gracefulShutdownQuietPeriod, "timeout");
+        return this;
+    }
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to receive additional data even after closing the response.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public ServerBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * It's useful when you want to receive additional data even after closing the response.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public ServerBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        virtualHostTemplate.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 
@@ -1860,7 +1890,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
-     * case sensitive HTTP/1 headers.
+     * case-sensitive HTTP/1 headers.
      */
     public ServerBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(http1HeaderNaming, "http1HeaderNaming");
@@ -2118,19 +2148,5 @@ public final class ServerBuilder implements TlsSetters {
                             path, service);
             }
         }
-    }
-
-    @Override
-    public String toString() {
-        return DefaultServerConfig.toString(
-                getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
-                maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
-                http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
-                meterRegistry, channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportIntervalMillis);
     }
 }

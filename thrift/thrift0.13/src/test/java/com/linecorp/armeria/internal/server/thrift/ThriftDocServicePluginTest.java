@@ -28,11 +28,12 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
+import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -214,14 +215,18 @@ class ThriftDocServicePluginTest {
 
     @Test
     void testNewServiceInfo() {
+        final EntryBuilder builder = new EntryBuilder(FooService.class);
+        builder.endpoint(EndpointInfo.builder("*", "/foo")
+                                     .fragment("a")
+                                     .defaultFormat(ThriftSerializationFormats.BINARY)
+                                     .build());
+        builder.endpoint(EndpointInfo.builder("*", "/debug/foo")
+                                     .fragment("b")
+                                     .defaultFormat(ThriftSerializationFormats.TEXT)
+                                     .build());
+        final Entry entry = builder.build();
         final ServiceInfo service = generator.newServiceInfo(
-                FooService.class,
-                ImmutableList.of(EndpointInfo.builder("*", "/foo")
-                                             .fragment("a").defaultFormat(ThriftSerializationFormats.BINARY)
-                                             .build(),
-                                 EndpointInfo.builder("*", "/debug/foo")
-                                             .fragment("b").defaultFormat(ThriftSerializationFormats.TEXT)
-                                             .build()),
+                entry,
                 (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> methods =
@@ -296,11 +301,13 @@ class ThriftDocServicePluginTest {
 
     @Test
     void typeDefService() {
+        final EntryBuilder builder = new EntryBuilder(TypeDefService.class);
+        builder.endpoint(EndpointInfo.builder("*", "/typeDef")
+                                     .defaultFormat(ThriftSerializationFormats.BINARY)
+                                     .build());
+        final Entry entry = builder.build();
         final ServiceInfo service = generator.newServiceInfo(
-                TypeDefService.class,
-                ImmutableList.of(EndpointInfo.builder("*", "/typeDef")
-                                             .defaultFormat(ThriftSerializationFormats.BINARY)
-                                             .build()),
+                entry,
                 (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> methods =
