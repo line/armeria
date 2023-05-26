@@ -36,6 +36,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -449,6 +450,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     public void transportReportHeaders(Metadata metadata) {
         assert listener != null;
         listener.onHeaders(metadata);
+    }
+
+    ClientRequestContext ctx() {
+        return ctx;
     }
 
     private void prepareHeaders(Compressor compressor, Metadata metadata, long remainingNanos) {
