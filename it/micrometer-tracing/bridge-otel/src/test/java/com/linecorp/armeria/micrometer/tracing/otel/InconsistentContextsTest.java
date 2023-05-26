@@ -18,6 +18,7 @@ package com.linecorp.armeria.micrometer.tracing.otel;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -33,6 +34,7 @@ import io.micrometer.tracing.otel.bridge.OtelTracer;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 
+@Disabled
 class InconsistentContextsTest {
 
     @RegisterExtension

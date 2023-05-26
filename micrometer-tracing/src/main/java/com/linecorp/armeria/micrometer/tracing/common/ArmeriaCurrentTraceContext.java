@@ -100,7 +100,7 @@ public final class ArmeriaCurrentTraceContext implements CurrentTraceContext {
     private final List<Pattern> nonRequestThreadPatterns;
 
     /**
-     *
+     * Returns the {@link ArmeriaCurrentTraceContext} singleton instance.
      */
     public static ArmeriaCurrentTraceContext of() {
         return new ArmeriaCurrentTraceContext(Collections.emptyList());
@@ -145,7 +145,7 @@ public final class ArmeriaCurrentTraceContext implements CurrentTraceContext {
 
     @Override
     public Scope maybeScope(TraceContext context) {
-        TraceContext current = context();
+        final TraceContext current = context();
         if (Objects.equals(current, context)) {
             return () -> {};
         }
@@ -216,6 +216,7 @@ public final class ArmeriaCurrentTraceContext implements CurrentTraceContext {
                 return "ThreadLocalScope";
             }
         }
+
         return new ThreadLocalScope();
     }
 

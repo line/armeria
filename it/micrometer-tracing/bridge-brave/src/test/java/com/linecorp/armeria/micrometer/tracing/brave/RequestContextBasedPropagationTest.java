@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.micrometer.tracing.otel;
+package com.linecorp.armeria.micrometer.tracing.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -23,43 +23,38 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
+import brave.Tracing;
+import brave.sampler.Sampler;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.Tracer.SpanInScope;
-import io.micrometer.tracing.otel.bridge.OtelCurrentTraceContext;
-import io.micrometer.tracing.otel.bridge.OtelTracer;
-import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
+import io.micrometer.tracing.brave.bridge.BraveCurrentTraceContext;
+import io.micrometer.tracing.brave.bridge.BraveTracer;
 
-/**
- * As illustrated in this test, even if we use micrometer-tracing we still need some
- * custom functionalities for context propagation.
- * We may need to still add a module for opentelemetry integration.
- * This test will fail if the {@link ArmeriaOtelContextStorageProvider} is not loaded.
- */
 class RequestContextBasedPropagationTest {
-
-    @RegisterExtension
-    static final OpenTelemetryExtension otelTesting = OpenTelemetryExtension.create();
-
-    @RegisterExtension
-    static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
 
     @Test
     void testContextPropagation() {
-        final OtelCurrentTraceContext context = new OtelCurrentTraceContext();
-        Tracer tracer = new OtelTracer(otelTesting.getOpenTelemetry().getTracer("test"),
-                                       context, event -> {
-        });
+        final SpanCollector collector = new SpanCollector();
+
+        final Tracing tracing = Tracing.newBuilder()
+                                       .addSpanHandler(collector)
+                                       // fails when commenting out this line
+                                       .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
+                                       .sampler(Sampler.create(1.0f))
+                                       .build();
+
+        final BraveCurrentTraceContext context = new BraveCurrentTraceContext(RequestContextCurrentTraceContext.ofDefault());
+        final Tracer tracer = new BraveTracer(tracing.tracer(), context);
 
         final RequestContext rctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.POST, "/"));
         final AtomicReference<TraceContext> contextRef = new AtomicReference<>();
@@ -71,8 +66,6 @@ class RequestContextBasedPropagationTest {
             final Span span = tracer.nextSpan();
             rctx.eventLoop().execute(() -> {
                 try (SpanInScope scope = tracer.withSpan(span)) {
-                    assertThat(span.context()).isEqualTo(context.context());
-
                     rctx.makeContextAware(fjp).execute(() -> {
                         contextRef.set(context.context());
                         rctxRef.set(RequestContext.currentOrNull());

@@ -45,11 +45,13 @@ public final class SpanTags {
     public static final String TAG_ADDRESS_LOCAL = "address.local";
 
     public static void logWireSend(Span span, long wireSendTimeNanos, RequestLog requestLog) {
-        span.event(WIRE_SEND_ANNOTATION, SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos), TimeUnit.MICROSECONDS);
+        span.event(WIRE_SEND_ANNOTATION, SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos),
+                   TimeUnit.MICROSECONDS);
     }
 
     public static void logWireReceive(Span span, long wireReceiveTimeNanos, RequestLog requestLog) {
-        span.event(WIRE_RECEIVE_ANNOTATION, SpanContextUtil.wallTimeMicros(requestLog, wireReceiveTimeNanos), TimeUnit.MICROSECONDS);
+        span.event(WIRE_RECEIVE_ANNOTATION, SpanContextUtil.wallTimeMicros(requestLog, wireReceiveTimeNanos),
+                   TimeUnit.MICROSECONDS);
     }
 
     public static void updateRemoteEndpoint(Span span, RequestContext ctx) {

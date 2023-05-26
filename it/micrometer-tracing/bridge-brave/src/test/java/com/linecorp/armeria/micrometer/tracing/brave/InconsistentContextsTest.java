@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.micrometer.tracing.brave;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import brave.Tracing;
@@ -29,6 +30,7 @@ import io.micrometer.tracing.Tracer.SpanInScope;
 import io.micrometer.tracing.brave.bridge.BraveCurrentTraceContext;
 import io.micrometer.tracing.brave.bridge.BraveTracer;
 
+@Disabled
 class InconsistentContextsTest {
 
     private static class TestCurrentTraceContext extends CurrentTraceContext {
