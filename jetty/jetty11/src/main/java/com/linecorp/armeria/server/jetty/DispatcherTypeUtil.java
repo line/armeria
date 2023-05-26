@@ -20,6 +20,9 @@ import org.eclipse.jetty.server.Request;
 
 import jakarta.servlet.DispatcherType;
 
+/**
+ * Jetty 10 uses javax meanwhile Jetty 11 uses jakarta.
+ */
 final class DispatcherTypeUtil {
 
     static void setRequestType(Request jReq) {

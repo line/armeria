@@ -34,8 +34,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * Builds a {@link JettyService}. Use {@link JettyService#of(Server)} if you have a configured Jetty
- * {@link Server} instance.
+ * A skeletal builder implementation for {@link JettyServiceBuilder} in Jetty 9 and Jetty 10+ modules.
  */
 public abstract class AbstractJettyServiceBuilder {
 

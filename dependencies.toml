@@ -51,9 +51,9 @@ javax-inject = "1"
 javax-jsr311 = "1.1.1"
 javax-validation = "2.0.1.Final"
 jctools = "4.0.1"
-# Find the latest version of the major 10 https://mvnrepository.com/artifact/org.eclipse.jetty/jetty-server
+# Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/jetty-server/
 jetty10 = "10.0.15"
-# Find the latest version of the major 10 https://mvnrepository.com/artifact/org.eclipse.jetty/apache-jstl
+# Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/apache-jstl/
 jetty10-jstl = "10.0.15"
 jetty11 = "11.0.15"
 jetty11-jstl = "11.0.0"

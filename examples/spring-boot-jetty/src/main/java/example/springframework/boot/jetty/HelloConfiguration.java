@@ -93,6 +93,7 @@ public class HelloConfiguration {
         @Override
         public void start() {
             // no-op. This will prevent Jetty from starting by the Spring Boot.
+            // We are starting the Jetty server in `JettyService` using the `ServerListener`.
         }
 
         void doStart() {

@@ -21,7 +21,7 @@ import javax.servlet.DispatcherType;
 import org.eclipse.jetty.server.Request;
 
 /**
- * Jetty10 uses javax meanwhile Jetty11 uses jakarta.
+ * Jetty 10 uses javax meanwhile Jetty 11 uses jakarta.
  */
 final class DispatcherTypeUtil {
 
