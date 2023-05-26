@@ -94,15 +94,15 @@ class BraveClientTest {
                 Arguments.of(BraveCurrentTraceContext.fromBrave(RequestContextCurrentTraceContext.ofDefault())),
                 Arguments.of(ArmeriaCurrentTraceContext.of())
         );
-    };
+    }
 
     @ParameterizedTest
     @MethodSource("newDecoratorArgs")
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextNotConfigured(
             io.micrometer.tracing.CurrentTraceContext currentTraceContext) {
         final HttpTracing tracing = HttpTracing.create(Tracing.newBuilder().build());
-        HttpClientHandler<HttpClientRequest, HttpClientResponse>
-                braveHttpHandler = HttpClientHandler.create(tracing);
+        final HttpClientHandler<HttpClientRequest, HttpClientResponse> braveHttpHandler =
+                HttpClientHandler.create(tracing);
         final BraveTracer braveTracer = new BraveTracer(tracing.tracing().tracer(), currentTraceContext);
         TracingClient.newDecorator(braveTracer, new BraveHttpClientHandler(braveHttpHandler));
     }
@@ -304,8 +304,8 @@ class BraveClientTest {
     private static Function<? super HttpClient, TracingClient> tracingClient(
             io.micrometer.tracing.CurrentTraceContext currentTraceContext,
             HttpTracing httpTracing) {
-        HttpClientHandler<HttpClientRequest, HttpClientResponse>
-                braveHttpHandler = HttpClientHandler.create(httpTracing);
+        final HttpClientHandler<HttpClientRequest, HttpClientResponse> braveHttpHandler =
+                HttpClientHandler.create(httpTracing);
         final BraveTracer braveTracer = new BraveTracer(httpTracing.tracing().tracer(), currentTraceContext);
         return TracingClient.newDecorator(braveTracer, new BraveHttpClientHandler(braveHttpHandler));
     }

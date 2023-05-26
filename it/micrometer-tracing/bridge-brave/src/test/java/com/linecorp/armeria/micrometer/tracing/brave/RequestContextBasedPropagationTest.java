@@ -53,7 +53,8 @@ class RequestContextBasedPropagationTest {
                                        .sampler(Sampler.create(1.0f))
                                        .build();
 
-        final BraveCurrentTraceContext context = new BraveCurrentTraceContext(RequestContextCurrentTraceContext.ofDefault());
+        final BraveCurrentTraceContext context =
+                new BraveCurrentTraceContext(RequestContextCurrentTraceContext.ofDefault());
         final Tracer tracer = new BraveTracer(tracing.tracer(), context);
 
         final RequestContext rctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.POST, "/"));

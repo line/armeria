@@ -57,9 +57,9 @@ class RequestContextBasedPropagationTest {
     @Test
     void testContextPropagation() {
         final OtelCurrentTraceContext context = new OtelCurrentTraceContext();
-        Tracer tracer = new OtelTracer(otelTesting.getOpenTelemetry().getTracer("test"),
-                                       context, event -> {
-        });
+        final Tracer tracer =
+                new OtelTracer(otelTesting.getOpenTelemetry().getTracer("test"),
+                               context, event -> {});
 
         final RequestContext rctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.POST, "/"));
         final AtomicReference<TraceContext> contextRef = new AtomicReference<>();

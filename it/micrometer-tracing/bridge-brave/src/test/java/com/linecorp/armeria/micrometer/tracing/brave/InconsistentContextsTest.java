@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.micrometer.tracing.brave;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +52,7 @@ class InconsistentContextsTest {
     void inconsistentContexts() {
         final SpanCollector collector = new SpanCollector();
 
-        TestCurrentTraceContext context = new TestCurrentTraceContext();
+        final TestCurrentTraceContext context = new TestCurrentTraceContext();
         final Tracing tracing = Tracing.newBuilder()
                                        .addSpanHandler(collector)
                                        .currentTraceContext(context)
@@ -59,13 +61,15 @@ class InconsistentContextsTest {
 
         final BraveCurrentTraceContext tracingContext =
                 new BraveCurrentTraceContext(ThreadLocalCurrentTraceContext.create());
-        BraveTracer tracer = new BraveTracer(tracing.tracer(), tracingContext);
+        final BraveTracer tracer = new BraveTracer(tracing.tracer(), tracingContext);
 
         try (Scope scope = tracer.currentTraceContext().newScope(null)) {
+            assertThat(scope).isNotNull();
         }
 
-        Span span = tracer.nextSpan();
-        try (SpanInScope ignored = tracer.withSpan(span)) {
+        final Span span = tracer.nextSpan();
+        try (SpanInScope scope = tracer.withSpan(span)) {
+            assertThat(scope).isNotNull();
         }
     }
 }

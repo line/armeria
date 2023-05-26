@@ -57,12 +57,12 @@ import okhttp3.Protocol;
 public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Parameters
-    public static Collection<Object[]> params(){
+    public static Collection<Object[]> params() {
         // Uses brave module's armeria CurrentTraceContext with bridge
-        Function<brave.propagation.CurrentTraceContext, CurrentTraceContext> fn1 =
+        final Function<brave.propagation.CurrentTraceContext, CurrentTraceContext> fn1 =
                 BraveCurrentTraceContext::new;
         // Uses tracing module's pure Armeria CurrentTraceContext
-        Function<brave.propagation.CurrentTraceContext, CurrentTraceContext> fn2 =
+        final Function<brave.propagation.CurrentTraceContext, CurrentTraceContext> fn2 =
                 ignored -> ArmeriaCurrentTraceContext.of();
         return Arrays.asList(new Object[][] {
                 {SessionProtocol.H1C, fn1},
