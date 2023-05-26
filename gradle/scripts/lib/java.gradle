@@ -65,7 +65,6 @@ configure(projectsWithFlags('java')) {
         throw new IllegalArgumentException("The minimum target Java version ${version} specified " +
                 "for '${project.path}' cannot be smaller than 8")
     }
-
     def targetJavaVersionStr = null
     if (targetJavaVersion != null) {
         targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
@@ -75,6 +74,16 @@ configure(projectsWithFlags('java')) {
 
     // The default targetJavaVersion is 'javaTargetCompatibility'
     targetJavaVersion = Integer.valueOf(JavaVersion.toVersion(javaTargetCompatibility).majorVersion)
+
+    if (project.hasProperty('minimumJavaVersion')) {
+        def minimumJavaVersion = Integer.parseInt(String.valueOf(project.findProperty('minimumJavaVersion')))
+        // Bump up the target Java version if it's smaller than the minimum Java version.
+        if (targetJavaVersion < minimumJavaVersion) {
+            targetJavaVersion = minimumJavaVersion
+            logger.quiet("Overriding target Java version for ${project.path} with ${targetJavaVersion}")
+        }
+    }
+
     project.ext.set('targetJavaVersion', targetJavaVersion)
 
     def testJavaVersion = targetJavaVersion
@@ -84,10 +93,6 @@ configure(projectsWithFlags('java')) {
             testJavaVersion = testVersion
             logger.quiet("Overriding JRE for testing ${project.path} with ${testJavaVersion}")
         }
-    }
-
-    if (targetJavaVersion != null) {
-        targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
     }
 
     logger.info("Using JRE ${testJavaVersion} to test ${project.path}")

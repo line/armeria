@@ -1,6 +1,6 @@
 dependencies {
     // Thrift
-    if (project.ext.testJavaVersion >= 11) {
+    if (project.ext.targetJavaVersion >= 11) {
         implementation project(':thrift0.18')
     } else {
         implementation project(':thrift0.17')

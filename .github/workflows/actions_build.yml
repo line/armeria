@@ -37,6 +37,12 @@ jobs:
           - java: 17
             on: self-hosted
             leak: true
+          - java: 17
+            on: self-hosted
+            min-java: 11
+          - java: 17
+            on: self-hosted
+            min-java: 17
           - java: 19
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
@@ -77,6 +83,7 @@ jobs:
           -PnoLint \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
@@ -90,6 +97,7 @@ jobs:
           -PflakyTests=false \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
@@ -115,6 +123,7 @@ jobs:
           -PflakyTests=false \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
 
           SUMMARY_FILE="build/failed-tests-result.txt"
