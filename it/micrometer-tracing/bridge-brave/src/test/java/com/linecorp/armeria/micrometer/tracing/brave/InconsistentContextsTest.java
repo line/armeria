@@ -27,7 +27,6 @@ import brave.propagation.ThreadLocalCurrentTraceContext;
 import brave.propagation.TraceContext;
 import brave.sampler.Sampler;
 import io.micrometer.tracing.CurrentTraceContext.Scope;
-import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer.SpanInScope;
 import io.micrometer.tracing.brave.bridge.BraveCurrentTraceContext;
 import io.micrometer.tracing.brave.bridge.BraveTracer;
@@ -63,12 +62,13 @@ class InconsistentContextsTest {
                 new BraveCurrentTraceContext(ThreadLocalCurrentTraceContext.create());
         final BraveTracer tracer = new BraveTracer(tracing.tracer(), tracingContext);
 
+        // doesn't throw
         try (Scope scope = tracer.currentTraceContext().newScope(null)) {
             assertThat(scope).isNotNull();
         }
 
-        final Span span = tracer.nextSpan();
-        try (SpanInScope scope = tracer.withSpan(span)) {
+        // throws
+        try (SpanInScope scope = tracer.withSpan(null)) {
             assertThat(scope).isNotNull();
         }
     }

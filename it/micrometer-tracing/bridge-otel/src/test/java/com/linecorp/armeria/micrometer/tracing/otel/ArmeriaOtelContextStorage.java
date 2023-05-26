@@ -54,7 +54,7 @@ public final class ArmeriaOtelContextStorage implements ContextStorage {
 
     @Override
     public Scope attach(Context toAttach) {
-        RequestContext ctx = RequestContext.current();
+        final RequestContext ctx = RequestContext.current();
         final Context previous = traceContext(ctx);
         setTraceContext(ctx, toAttach);
 
