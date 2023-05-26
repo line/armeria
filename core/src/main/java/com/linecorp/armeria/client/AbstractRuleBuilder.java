@@ -183,8 +183,8 @@ public abstract class AbstractRuleBuilder {
             if (ctx.isTimedOut()) {
                 return true;
             }
-            return ex instanceof UnprocessedRequestException &&
-                   ex.getCause() instanceof TimeoutException;
+            return ex instanceof TimeoutException ||
+                   ex instanceof UnprocessedRequestException && ex.getCause() instanceof TimeoutException;
         });
     }
 
