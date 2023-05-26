@@ -35,12 +35,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderResult;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -57,6 +60,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         DISCARD
     }
 
+    private boolean isWebSocket;
     /** The response being decoded currently. */
     @Nullable
     private HttpResponseWrapper res;
@@ -68,6 +72,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     Http1ResponseDecoder(Channel channel) {
         super(channel, InboundTrafficController.ofHttp1(channel));
+    }
+
+    void setWebSocket() {
+        isWebSocket = true;
     }
 
     @Override
@@ -168,7 +176,21 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         res.startResponse();
                         final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                         final boolean written;
-                        if (nettyRes.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                        final HttpResponseStatus status = nettyRes.status();
+                        if (isWebSocket && status.code() == HttpResponseStatus.SWITCHING_PROTOCOLS.code()) {
+                            final ChannelPipeline pipeline = ctx.pipeline();
+                            pipeline.remove(HttpClientCodec.class);
+                            final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+                            assert keepAliveHandler != null;
+                            pipeline.replace(this, null,
+                                             new WebSocketClientChannelHandler(res, keepAliveHandler));
+                            if (!res.tryWriteResponseHeaders(responseHeaders)) {
+                                fail(ctx, ClosedSessionException.get());
+                            }
+                            return;
+                        }
+
+                        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
                             written = res.tryWrite(responseHeaders);
                         } else {
@@ -183,14 +205,14 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                     } else {
                         failWithUnexpectedMessageType(ctx, msg, HttpResponse.class);
                     }
-                    break;
+                    return;
                 case NEED_INFORMATIONAL_DATA:
                     if (msg instanceof LastHttpContent) {
                         state = State.NEED_HEADERS;
                     } else {
                         failWithUnexpectedMessageType(ctx, msg, LastHttpContent.class);
                     }
-                    break;
+                    return;
                 case NEED_DATA_OR_TRAILERS:
                     if (msg instanceof HttpContent) {
                         final HttpContent content = (HttpContent) msg;

@@ -83,6 +83,16 @@ public final class ClientOptions
                                 Flags.defaultRequestAutoAbortDelayMillis());
 
     /**
+     * Whether to add an {@link HttpHeaderNames#ORIGIN} header automatically when sending
+     * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6454.html">The Web Origin Concept</a>
+     */
+    @UnstableApi
+    public static final ClientOption<Boolean> ADD_ORIGIN_HEADER =
+            ClientOption.define("ADD_ORIGIN_HEADER", false); // TODO(minwoox): Add to Flags
+
+    /**
      * The redirect configuration.
      */
     @UnstableApi
@@ -304,6 +314,14 @@ public final class ClientOptions
      */
     public long requestAutoAbortDelayMillis() {
         return get(REQUEST_AUTO_ABORT_DELAY_MILLIS);
+    }
+
+    /**
+     * Returns whether to add an {@link HttpHeaderNames#ORIGIN} header automatically when sending
+     * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
+     */
+    public boolean addOriginHeader() {
+        return get(ADD_ORIGIN_HEADER);
     }
 
     /**

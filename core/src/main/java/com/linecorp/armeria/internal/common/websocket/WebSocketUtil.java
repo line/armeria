@@ -17,6 +17,11 @@ package com.linecorp.armeria.internal.common.websocket;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
+import com.google.common.hash.Hashing;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -28,6 +33,8 @@ import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 public final class WebSocketUtil {
+
+    public static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     public static boolean isHttp1WebSocketUpgradeRequest(RequestHeaders headers) {
         requireNonNull(headers, "headers");
@@ -48,6 +55,17 @@ public final class WebSocketUtil {
         // ...
         return headers.method() == HttpMethod.CONNECT &&
                HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(headers.get(HttpHeaderNames.PROTOCOL));
+    }
+
+    /**
+     * Generates Sec-WebSocket-Accept using Sec-WebSocket-Key.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1.3">Opening Handshake</a>
+     */
+    public static String generateSecWebSocketAccept(String webSocketKey) {
+        final String acceptSeed = webSocketKey + MAGIC_GUID;
+        final byte[] sha1 = Hashing.sha1().hashBytes(acceptSeed.getBytes(StandardCharsets.US_ASCII)).asBytes();
+        return Base64.getEncoder().encodeToString(sha1);
     }
 
     static int byteAtIndex(int mask, int index) {

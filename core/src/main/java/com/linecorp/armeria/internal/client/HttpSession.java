@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -34,6 +35,12 @@ public interface HttpSession {
     int MAX_NUM_REQUESTS_SENT = 536870912;
 
     HttpSession INACTIVE = new HttpSession() {
+
+        @Override
+        public SerializationFormat serializationFormat() {
+            return SerializationFormat.UNKNOWN;
+        }
+
         @Nullable
         @Override
         public SessionProtocol protocol() {
@@ -93,6 +100,13 @@ public interface HttpSession {
         return INACTIVE;
     }
 
+    SerializationFormat serializationFormat();
+
+    /**
+     * Returns the explicit {@link SessionProtocol} of this {@link HttpSession} uses.
+     * This is one of {@link SessionProtocol#H1}, {@link SessionProtocol#H1C}, {@link SessionProtocol#H2} and
+     * {@link SessionProtocol#H2C}.
+     */
     @Nullable
     SessionProtocol protocol();
 

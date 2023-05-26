@@ -56,6 +56,11 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     public static final SerializationFormat NONE;
 
     /**
+     * Serialization format for WebSocket client.
+     */
+    public static final SerializationFormat WS;
+
+    /**
      * Unknown serialization format. Used when some serialization format is desired but the server
      * failed to understand or recognize it.
      */
@@ -69,6 +74,9 @@ public final class SerializationFormat implements Comparable<SerializationFormat
         // Register the core formats first.
         NONE = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
                         new SerializationFormatProvider.Entry("none", create("application", "x-none")));
+        WS = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
+                      new SerializationFormatProvider.Entry(
+                              "ws", create("application", "x-ws"))); // WebSocket does not use media type.
         UNKNOWN = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
                            new SerializationFormatProvider.Entry(
                                    "unknown", create("application", "x-unknown")));

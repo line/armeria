@@ -53,7 +53,7 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
      *                                  in {@link SessionProtocol}
      */
     WebClientBuilder(URI uri) {
-        super(uri);
+        super(uri, false);
     }
 
     /**

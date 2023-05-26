@@ -73,12 +73,14 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    protected AbstractWebClientBuilder(URI uri) {
+    protected AbstractWebClientBuilder(URI uri, boolean webSocket) {
+        requireNonNull(uri, "uri");
         if (Clients.isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
             final String givenScheme = requireNonNull(uri, "uri").getScheme();
-            final Scheme scheme = validateScheme(givenScheme);
+            final Scheme scheme = validateScheme(givenScheme, webSocket ? SerializationFormat.WS
+                                                                        : SerializationFormat.NONE);
             if (scheme.uriText().equals(givenScheme)) {
                 // No need to replace the user-specified scheme because it's already in its normalized form.
                 this.uri = uri;
@@ -97,34 +99,57 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
     /**
      * Creates a new instance.
      *
-     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
+     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
     protected AbstractWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                        @Nullable String path) {
-        validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
+        this(SerializationFormat.NONE, sessionProtocol, endpointGroup, path);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
+     *                                  in {@link SessionProtocol}
+     */
+    protected AbstractWebClientBuilder(SerializationFormat serializationFormat, SessionProtocol sessionProtocol,
+                                       EndpointGroup endpointGroup, @Nullable String path) {
+        validateSerializationFormat(serializationFormat);
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        requireNonNull(endpointGroup, "endpointGroup");
+        validateScheme(serializationFormat.uriText() + '+' + sessionProtocol.uriText(), serializationFormat);
         if (path != null) {
             checkArgument(path.startsWith("/"),
                           "path: %s (expected: an absolute path starting with '/')", path);
         }
 
         uri = null;
-        scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
+        scheme = Scheme.of(serializationFormat, sessionProtocol);
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
         this.path = path;
     }
 
-    private static Scheme validateScheme(String scheme) {
+    private static void validateSerializationFormat(SerializationFormat serializationFormat) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        checkArgument(serializationFormat == SerializationFormat.NONE ||
+                      serializationFormat == SerializationFormat.WS,
+                      "serializationFormat: %s (expected: one of %s and %s)",
+                      serializationFormat, SerializationFormat.NONE, SerializationFormat.WS);
+    }
+
+    private static Scheme validateScheme(String scheme, SerializationFormat serializationFormat) {
         final Scheme parsedScheme = Scheme.tryParse(scheme);
         if (parsedScheme != null) {
-            if (parsedScheme.serializationFormat() == SerializationFormat.NONE &&
+            if ((parsedScheme.serializationFormat() == serializationFormat) &&
                 SUPPORTED_PROTOCOLS.contains(parsedScheme.sessionProtocol())) {
                 return parsedScheme;
             }
         }
 
         throw new IllegalArgumentException("scheme : " + scheme +
-                                           " (expected: one of " + SUPPORTED_PROTOCOLS + ')');
+                                           " (expected: one of " + SUPPORTED_PROTOCOLS + " with " +
+                                           serializationFormat + ')');
     }
 
     /**

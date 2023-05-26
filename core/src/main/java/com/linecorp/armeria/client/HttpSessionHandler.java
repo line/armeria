@@ -37,6 +37,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
@@ -83,6 +84,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
     private final SessionProtocol desiredProtocol;
+    private final SerializationFormat serializationFormat;
     private final PoolKey poolKey;
     private final HttpClientFactory clientFactory;
 
@@ -125,16 +127,22 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       SessionProtocol desiredProtocol, PoolKey poolKey,
-                       HttpClientFactory clientFactory) {
+                       SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
+                       PoolKey poolKey, HttpClientFactory clientFactory) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
         this.desiredProtocol = desiredProtocol;
+        this.serializationFormat = serializationFormat;
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
+    }
+
+    @Override
+    public SerializationFormat serializationFormat() {
+        return serializationFormat;
     }
 
     @Override
@@ -196,7 +204,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         assert protocol != null;
         assert responseDecoder != null;
         assert requestEncoder != null;
-        if (!protocol.isMultiplex()) {
+        if (!protocol.isMultiplex() && serializationFormat != SerializationFormat.WS) {
             // When HTTP/1.1 is used:
             // If pipelining is enabled, return as soon as the request is fully sent.
             // If pipelining is disabled,
@@ -213,20 +221,24 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             });
         }
 
-        if (ctx.exchangeType().isRequestStreaming()) {
-            final HttpRequestSubscriber reqSubscriber = new HttpRequestSubscriber(
-                    channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
-            // A StreamMessage of a request body uses RequestContext to get the default SubscriberExecutor.
-            try (SafeCloseable ignored = ctx.push()) {
-                req.subscribe(reqSubscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
-            }
-        } else {
-            final AggregatedHttpRequestHandler reqHandler = new AggregatedHttpRequestHandler(
-                    channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
-            try (SafeCloseable ignored = ctx.push()) {
+        try (SafeCloseable ignored = ctx.push()) {
+            if (!ctx.exchangeType().isRequestStreaming()) {
+                final AggregatedHttpRequestHandler reqHandler = new AggregatedHttpRequestHandler(
+                        channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
                 req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), channel.eventLoop()))
                    .handle(reqHandler);
+                return;
             }
+
+            final AbstractHttpRequestSubscriber subscriber;
+            if (serializationFormat == SerializationFormat.WS && protocol.isExplicitHttp1()) {
+                subscriber = new WebSocketHttp1RequestSubscriber(
+                        channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+            } else {
+                subscriber = new HttpRequestSubscriber(
+                        channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+            }
+            req.subscribe(subscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         }
     }
 
@@ -347,6 +359,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
+                final boolean webSocket = serializationFormat == SerializationFormat.WS;
+                if (webSocket) {
+                    responseDecoder.setWebSocket();
+                }
 
                 final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
                 final long pingIntervalMillis = clientFactory.pingIntervalMillis();
@@ -371,7 +387,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
                 final ClientHttp1ObjectEncoder requestEncoder =
                         new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming(),
-                                                     keepAliveHandler);
+                                                     keepAliveHandler, webSocket);
                 if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
                     ((Http1ClientKeepAliveHandler) keepAliveHandler).setEncoder(requestEncoder);
                 }
@@ -447,9 +463,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, retryProtocol, poolKey, sessionPromise);
+                channelPool.connect(proxyDestinationAddress, retryProtocol, serializationFormat,
+                                    poolKey, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, retryProtocol, poolKey, sessionPromise);
+                channelPool.connect(remoteAddress, retryProtocol, serializationFormat, poolKey, sessionPromise);
             }
         } else {
             // Fail all pending responses.

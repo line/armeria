@@ -34,19 +34,22 @@ package com.linecorp.armeria.internal.common.websocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import com.linecorp.armeria.common.stream.StreamDecoderOutput;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 
 import io.netty.buffer.ByteBuf;
@@ -67,7 +70,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
         CORRUPT
     }
 
-    private final ServiceRequestContext ctx;
+    private final RequestContext ctx;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     private final boolean expectMaskedFrames;
@@ -85,7 +88,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     private boolean receivedClosingHandshake;
     private State state = State.READING_FIRST;
 
-    public WebSocketFrameDecoder(ServiceRequestContext ctx, int maxFramePayloadLength,
+    public WebSocketFrameDecoder(RequestContext ctx, int maxFramePayloadLength,
                                  boolean allowMaskMismatch, boolean expectMaskedFrames) {
         this.ctx = ctx;
         this.maxFramePayloadLength = maxFramePayloadLength;
@@ -273,7 +276,13 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         final CloseWebSocketFrame decodedFrame = WebSocketFrame.ofPooledClose(payloadBuffer);
                         out.add(decodedFrame);
                         logger.trace("{} is decoded.", decodedFrame);
-                        closeRequest();
+                        if (expectMaskedFrames) {
+                            // expectMaskedFrames is true on a service. The service should close the request.
+                            closeRequest();
+                        } else {
+                            // The client should close the response.
+                            closeResponse();
+                        }
                         continue; // to while loop
                     }
 
@@ -373,6 +382,14 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
         assert request instanceof HttpRequestWriter : request;
         //noinspection OverlyStrongTypeCast
         ((HttpRequestWriter) request).close();
+    }
+
+    private void closeResponse() {
+        final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
+        assert ctxExtension != null;
+        final StreamWriter<HttpObject> responseWriter = ctxExtension.originalResponseWriter();
+        assert responseWriter != null;
+        responseWriter.close();
     }
 
     @Override

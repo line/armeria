@@ -190,6 +190,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
     this
   }
 
+  override def content(content: Publisher[_ <: HttpData]): ScalaRestClientPreparation = {
+    delegate.content(content)
+    this
+  }
+
   override def content(
       contentType: MediaType,
       content: Publisher[_ <: HttpData]): ScalaRestClientPreparation = {

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Subscription;
 
@@ -38,7 +39,13 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
     private final SplitHttpResponseBodySubscriber bodySubscriber;
 
     public DefaultSplitHttpResponse(HttpResponse response, EventExecutor upstreamExecutor) {
-        this(response, upstreamExecutor, new SplitHttpResponseBodySubscriber(response, upstreamExecutor));
+        this(response, upstreamExecutor, headers -> !headers.status().isInformational());
+    }
+
+    public DefaultSplitHttpResponse(HttpResponse response, EventExecutor upstreamExecutor,
+                                    Predicate<ResponseHeaders> responseHeadersPredicate) {
+        this(response, upstreamExecutor,
+             new SplitHttpResponseBodySubscriber(response, upstreamExecutor, responseHeadersPredicate));
     }
 
     private DefaultSplitHttpResponse(HttpResponse response, EventExecutor upstreamExecutor,
@@ -55,9 +62,12 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
     private static final class SplitHttpResponseBodySubscriber extends SplitHttpMessageSubscriber {
 
         private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
+        private final Predicate<ResponseHeaders> responseHeadersPredicate;
 
-        SplitHttpResponseBodySubscriber(HttpResponse response, EventExecutor upstreamExecutor) {
+        SplitHttpResponseBodySubscriber(HttpResponse response, EventExecutor upstreamExecutor,
+                                        Predicate<ResponseHeaders> responseHeadersPredicate) {
             super(1, response, upstreamExecutor);
+            this.responseHeadersPredicate = responseHeadersPredicate;
         }
 
         CompletableFuture<ResponseHeaders> headersFuture() {
@@ -68,14 +78,12 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
         public void onNext(HttpObject httpObject) {
             if (httpObject instanceof ResponseHeaders) {
                 final ResponseHeaders headers = (ResponseHeaders) httpObject;
-                final HttpStatus status = headers.status();
-                if (status.isInformational()) {
-                    // Ignore informational headers
+                if (responseHeadersPredicate.test(headers)) {
+                    headersFuture.doComplete(headers);
+                } else {
                     final Subscription upstream = upstream();
                     assert upstream != null;
                     upstream.request(1);
-                } else {
-                    headersFuture.doComplete(headers);
                 }
                 return;
             }

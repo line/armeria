@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +32,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -95,6 +96,10 @@ abstract class HttpResponseDecoder {
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
+        final ClientRequestContextExtension extension = ctx.as(ClientRequestContextExtension.class);
+        if (extension != null) {
+            extension.setOriginalResponseWriter(newRes);
+        }
         onResponseAdded(id, eventLoop, newRes);
         return newRes;
     }
@@ -257,7 +262,6 @@ abstract class HttpResponseDecoder {
         }
 
         boolean tryWriteResponseHeaders(ResponseHeaders responseHeaders) {
-            assert responseHeaders.status().codeClass() != HttpStatusClass.INFORMATIONAL;
             contentLengthHeaderValue = responseHeaders.contentLength();
             ctx.logBuilder().defer(RequestLogProperty.RESPONSE_HEADERS);
             try {
@@ -423,7 +427,14 @@ abstract class HttpResponseDecoder {
 
         @Override
         public String toString() {
-            return delegate.toString();
+            return toStringHelper(this).omitNullValues()
+                                       .add("ctx", ctx)
+                                       .add("responseStarted", responseStarted)
+                                       .add("maxContentLength", maxContentLength)
+                                       .add("responseTimeoutMillis", responseTimeoutMillis)
+                                       .add("contentLengthHeaderValue", contentLengthHeaderValue)
+                                       .add("delegate", delegate)
+                                       .toString();
         }
     }
 

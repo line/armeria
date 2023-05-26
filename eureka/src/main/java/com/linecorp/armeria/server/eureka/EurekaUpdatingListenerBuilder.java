@@ -87,7 +87,7 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
      * Creates a new instance.
      */
     EurekaUpdatingListenerBuilder(URI eurekaUri) {
-        super(requireNonNull(eurekaUri, "eurekaUri"));
+        super(requireNonNull(eurekaUri, "eurekaUri"), false);
         instanceInfoBuilder = new InstanceInfoBuilder();
     }
 

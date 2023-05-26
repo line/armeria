@@ -59,6 +59,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
     enum State {
         NEEDS_TO_WRITE_FIRST_HEADER,
+        NEEDS_DATA,
         NEEDS_DATA_OR_TRAILERS,
         DONE
     }
@@ -199,6 +200,8 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         assert protocol != null;
         if (headersOnly) {
             state = State.DONE;
+        } else if (http1WebSocket()) {
+            state = State.NEEDS_DATA;
         } else {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
@@ -215,7 +218,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         logBuilder.requestHeaders(merged);
 
         final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
-        if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
+        if (CLOSE_STRING.equalsIgnoreCase(connectionOption) || http1WebSocket()) {
             // Make the session unhealthy so that subsequent requests do not use it.
             // In HTTP/2 request, the "Connection: close" is just interpreted as a signal to close the
             // connection by sending a GOAWAY frame that will be sent after receiving the corresponding
@@ -229,6 +232,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         // before any other callbacks like `onStreamClosed()` are invoked.
         promise.addListener(this);
         encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
+    }
+
+    private boolean http1WebSocket() {
+        return this instanceof WebSocketHttp1RequestSubscriber;
     }
 
     /**

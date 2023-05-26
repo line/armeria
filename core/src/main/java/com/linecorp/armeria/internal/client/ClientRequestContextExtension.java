@@ -22,7 +22,10 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 
@@ -73,4 +76,15 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
      * with default values on every request.
      */
     HttpHeaders internalRequestHeaders();
+
+    /**
+     * Sets the {@link StreamWriter} which is the original response.
+     */
+    void setOriginalResponseWriter(StreamWriter<HttpObject> responseWriter);
+
+    /**
+     * Returns the original response that is set via {@link #setOriginalResponseWriter(StreamWriter)}.
+     */
+    @Nullable
+    StreamWriter<HttpObject> originalResponseWriter();
 }

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
@@ -30,11 +29,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
 
-final class HttpRequestSubscriber extends AbstractHttpRequestHandler implements Subscriber<HttpObject> {
-
-    private static final HttpData EMPTY_EOS = HttpData.empty().withEndOfStream();
-
-    private final HttpRequest request;
+final class HttpRequestSubscriber extends AbstractHttpRequestSubscriber {
 
     // subscription, id and responseWrapper are assigned in onSubscribe()
     @Nullable
@@ -44,29 +39,7 @@ final class HttpRequestSubscriber extends AbstractHttpRequestHandler implements 
     HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                           HttpRequest request, DecodedHttpResponse originalRes,
                           ClientRequestContext ctx, long timeoutMillis) {
-        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty());
-        this.request = request;
-    }
-
-    @Override
-    public void onSubscribe(Subscription subscription) {
-        assert this.subscription == null;
-        this.subscription = subscription;
-        if (state() == State.DONE) {
-            cancel();
-            return;
-        }
-
-        if (!tryInitialize()) {
-            return;
-        }
-
-        // NB: This must be invoked at the end of this method because otherwise the callback methods in this
-        //     class can be called before the member fields (subscription, id, responseWrapper and
-        //     timeoutFuture) are initialized.
-        //     It is because the successful write of the first headers will trigger subscription.request(1).
-        writeHeaders(request.headers());
-        channel().flush();
+        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis);
     }
 
     @Override
@@ -99,39 +72,5 @@ final class HttpRequestSubscriber extends AbstractHttpRequestHandler implements 
                 PooledObjects.close(o);
                 break;
         }
-    }
-
-    @Override
-    public void onError(Throwable cause) {
-        isSubscriptionCompleted = true;
-        failRequest(cause);
-    }
-
-    @Override
-    public void onComplete() {
-        isSubscriptionCompleted = true;
-
-        if (state() != State.DONE) {
-            writeData(EMPTY_EOS);
-            channel().flush();
-        }
-    }
-
-    @Override
-    void onWriteSuccess() {
-        // Request more messages regardless whether the state is DONE. It makes the producer have
-        // a chance to produce the last call such as 'onComplete' and 'onError' when there are
-        // no more messages it can produce.
-        if (!isSubscriptionCompleted) {
-            assert subscription != null;
-            subscription.request(1);
-        }
-    }
-
-    @Override
-    void cancel() {
-        isSubscriptionCompleted = true;
-        assert subscription != null;
-        subscription.cancel();
     }
 }

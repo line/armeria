@@ -186,6 +186,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 meterRegistry, protocol, id, method, reqTarget, options(), httpReq, rpcReq,
                 requestOptions, System.nanoTime(), SystemInfo.currentTimeMicros());
+        ctx.logBuilder().serializationFormat(scheme().serializationFormat());
 
         return initContextAndExecuteWithFallback(unwrap(), ctx, endpointGroup,
                                                  futureConverter, errorResponseFactory);
