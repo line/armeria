@@ -19,7 +19,8 @@ package com.linecorp.armeria.micrometer.tracing.otel;
 import io.opentelemetry.context.ContextStorage;
 import io.opentelemetry.context.ContextStorageProvider;
 
-public class ArmeriaOtelContextStorageProvider implements ContextStorageProvider {
+public final class ArmeriaOtelContextStorageProvider implements ContextStorageProvider {
+
     @Override
     public ContextStorage get() {
         return ArmeriaOtelContextStorage.of();

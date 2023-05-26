@@ -62,7 +62,7 @@ class RequestContextBasedPropagationTest {
         final AtomicReference<RequestContext> rctxRef = new AtomicReference<>();
 
         try (SafeCloseable unused = rctx.push()) {
-            Span span = tracer.nextSpan();
+            final Span span = tracer.nextSpan();
             try (SpanInScope scope = tracer.withSpan(span)) {
                 assertThat(span.context()).isEqualTo(context.context());
 
