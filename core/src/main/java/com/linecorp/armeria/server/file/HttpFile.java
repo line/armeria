@@ -195,7 +195,7 @@ public interface HttpFile {
         requireNonNull(url, "url");
         if (url.getPath().endsWith("/")) {
             // Non-existent resource.
-            return new NonExistentHttpFileBuilder();
+            return new NonExistentHttpFileBuilder(url.getPath());
         }
 
         // Convert to a real file if possible.
@@ -235,7 +235,7 @@ public interface HttpFile {
         final URL url = classLoader.getResource(path);
         if (url == null) {
             // Non-existent resource.
-            return new NonExistentHttpFileBuilder();
+            return new NonExistentHttpFileBuilder(path);
         }
         return builder(url);
     }
