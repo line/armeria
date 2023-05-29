@@ -134,7 +134,7 @@ public final class ArmeriaHttpUtil {
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/1 to HTTP/2.
      */
-    private static final CaseInsensitiveMap HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST = new CaseInsensitiveMap();
+    static final CaseInsensitiveMap HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST = new CaseInsensitiveMap();
 
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/2 to HTTP/1.
@@ -234,8 +234,8 @@ public final class ArmeriaHttpUtil {
                                         HttpHeaderNames.HOST);
     }
 
-    private static final Splitter COOKIE_SPLITTER = Splitter.on(';').trimResults().omitEmptyStrings();
-    private static final String COOKIE_SEPARATOR = "; ";
+    static final Splitter COOKIE_SPLITTER = Splitter.on(';').trimResults().omitEmptyStrings();
+    static final String COOKIE_SEPARATOR = "; ";
     private static final Joiner COOKIE_JOINER = Joiner.on(COOKIE_SEPARATOR);
 
     @Nullable
@@ -717,8 +717,8 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
-                                                     int arraySizeHint) {
+    static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
+                                             int arraySizeHint) {
         final CaseInsensitiveMap result = new CaseInsensitiveMap(arraySizeHint);
 
         while (valuesIter.hasNext()) {
@@ -753,7 +753,7 @@ public final class ArmeriaHttpUtil {
      * @param entry the entry whose name is {@link HttpHeaderNames#TE}.
      * @param out the resulting HTTP/2 headers.
      */
-    private static void toHttp2HeadersFilterTE(Entry<CharSequence, CharSequence> entry,
+     static void toHttp2HeadersFilterTE(Entry<CharSequence, CharSequence> entry,
                                                HttpHeadersBuilder out) {
         if (AsciiString.indexOf(entry.getValue(), ',', 0) == -1) {
             if (AsciiString.contentEqualsIgnoreCase(AsciiString.trim(entry.getValue()),
@@ -1054,7 +1054,7 @@ public final class ArmeriaHttpUtil {
         return HTTP_TRAILER_DISALLOWED_LIST.contains(name);
     }
 
-    private static final class CaseInsensitiveMap
+    static final class CaseInsensitiveMap
             extends DefaultHeaders<AsciiString, AsciiString, CaseInsensitiveMap> {
 
         CaseInsensitiveMap() {
