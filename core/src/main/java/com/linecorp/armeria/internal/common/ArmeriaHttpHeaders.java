@@ -22,15 +22,15 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil.CaseInsensitiveMap;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.AsciiString;
 
-final class ArmeriaHttpHeaders extends HttpHeaders {
+public final class ArmeriaHttpHeaders extends HttpHeaders {
 
     private final RequestHeadersBuilder builder;
 
-    ArmeriaHttpHeaders(RequestHeadersBuilder builder) {
+    public ArmeriaHttpHeaders(RequestHeadersBuilder builder) {
         this.builder = builder;
     }
 
-    ArmeriaHttpHeaders(RequestHeadersBuilder builder, HttpHeaders headers) {
+    public ArmeriaHttpHeaders(RequestHeadersBuilder builder, HttpHeaders headers) {
         this.builder = builder;
         headers.forEach(e -> builder.add(e.getKey(), e.getValue()));
     }
