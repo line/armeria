@@ -594,81 +594,51 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
-     * Returns a {@link Callable} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code callable}.
+     * Returns a {@link ContextAwareCallable} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code callable}.
      */
     default <T> Callable<T> makeContextAware(Callable<T> callable) {
-        requireNonNull(callable, "callable");
-        return () -> {
-            try (SafeCloseable ignored = push()) {
-                return callable.call();
-            }
-        };
+        return ContextAwareCallable.of(this, callable);
     }
 
     /**
-     * Returns a {@link Runnable} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code runnable}.
+     * Returns a {@link ContextAwareRunnable} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code runnable}.
      */
     default Runnable makeContextAware(Runnable runnable) {
-        requireNonNull(runnable, "runnable");
-        return () -> {
-            try (SafeCloseable ignored = push()) {
-                runnable.run();
-            }
-        };
+        return ContextAwareRunnable.of(this, runnable);
     }
 
     /**
-     * Returns a {@link Function} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code function}.
+     * Returns a {@link ContextAwareFunction} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code function}.
      */
     default <T, R> Function<T, R> makeContextAware(Function<T, R> function) {
-        requireNonNull(function, "function");
-        return t -> {
-            try (SafeCloseable ignored = push()) {
-                return function.apply(t);
-            }
-        };
+        return ContextAwareFunction.of(this, function);
     }
 
     /**
-     * Returns a {@link BiFunction} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code function}.
+     * Returns a {@link ContextAwareBiFunction} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code function}.
      */
     default <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
-        requireNonNull(function, "function");
-        return (t, u) -> {
-            try (SafeCloseable ignored = push()) {
-                return function.apply(t, u);
-            }
-        };
+        return ContextAwareBiFunction.of(this, function);
     }
 
     /**
-     * Returns a {@link Consumer} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code action}.
+     * Returns a {@link ContextAwareConsumer} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code action}.
      */
     default <T> Consumer<T> makeContextAware(Consumer<T> action) {
-        requireNonNull(action, "action");
-        return t -> {
-            try (SafeCloseable ignored = push()) {
-                action.accept(t);
-            }
-        };
+        return ContextAwareConsumer.of(this, action);
     }
 
     /**
-     * Returns a {@link BiConsumer} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code action}.
+     * Returns a {@link ContextAwareBiConsumer} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code action}.
      */
     default <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
-        requireNonNull(action, "action");
-        return (t, u) -> {
-            try (SafeCloseable ignored = push()) {
-                action.accept(t, u);
-            }
-        };
+        return ContextAwareBiConsumer.of(this, action);
     }
 
     /**
