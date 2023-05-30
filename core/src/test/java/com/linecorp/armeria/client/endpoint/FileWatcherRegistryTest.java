@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -63,6 +64,7 @@ class FileWatcherRegistryTest {
         final FileSystem fileSystem = mock(FileSystem.class);
         final WatchService watchService = mock(WatchService.class);
         final WatchKey watchKey = mock(WatchKey.class);
+        lenient().when(path.toRealPath()).thenReturn(path);
         when(path.getParent()).thenReturn(path);
         when(path.getFileSystem()).thenReturn(fileSystem);
         when(fileSystem.newWatchService()).thenReturn(watchService);
@@ -73,7 +75,7 @@ class FileWatcherRegistryTest {
             }
             return watchKey;
         });
-        when(watchKey.reset()).thenReturn(true);
+        lenient().when(watchKey.reset()).thenReturn(true);
         return path;
     }
 
@@ -91,20 +93,20 @@ class FileWatcherRegistryTest {
         final Path file = Files.createFile(folder.resolve("temp-file.properties"));
         final Path file2 = Files.createFile(folder.resolve("temp-file2.properties"));
 
-        final FileWatcherRegistry fileWatcherRegistry =
-                new FileWatcherRegistry();
-        final FileWatchRegisterKey key1 = fileWatcherRegistry.register(file, () -> {});
-        final FileWatchRegisterKey key2 = fileWatcherRegistry.register(file2, () -> {});
+        try (FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry()) {
+            final FileWatchRegisterKey key1 = fileWatcherRegistry.register(file, () -> {});
+            final FileWatchRegisterKey key2 = fileWatcherRegistry.register(file2, () -> {});
 
-        assertThat(fileWatcherRegistry.isRunning()).isTrue();
+            assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        fileWatcherRegistry.unregister(key1);
+            fileWatcherRegistry.unregister(key1);
 
-        assertThat(fileWatcherRegistry.isRunning()).isTrue();
+            assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        fileWatcherRegistry.unregister(key2);
+            fileWatcherRegistry.unregister(key2);
 
-        assertThat(fileWatcherRegistry.isRunning()).isFalse();
+            assertThat(fileWatcherRegistry.isRunning()).isFalse();
+        }
     }
 
     @Test
@@ -165,20 +167,21 @@ class FileWatcherRegistryTest {
 
     @Test
     void testMultipleFileSystems() throws Exception {
+        try (FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry()) {
+            final Path path1 = createMockedPath();
+            final Path path2 = createMockedPath();
 
-        final FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry();
+            final FileWatchRegisterKey key1 = fileWatcherRegistry.register(path1, () -> {
+            });
+            final FileWatchRegisterKey key2 = fileWatcherRegistry.register(path2, () -> {
+            });
+            assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        final Path path1 = createMockedPath();
-        final Path path2 = createMockedPath();
+            fileWatcherRegistry.unregister(key1);
+            assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        final FileWatchRegisterKey key1 = fileWatcherRegistry.register(path1, () -> {});
-        final FileWatchRegisterKey key2 = fileWatcherRegistry.register(path2, () -> {});
-        assertThat(fileWatcherRegistry.isRunning()).isTrue();
-
-        fileWatcherRegistry.unregister(key1);
-        assertThat(fileWatcherRegistry.isRunning()).isTrue();
-
-        fileWatcherRegistry.unregister(key2);
-        assertThat(fileWatcherRegistry.isRunning()).isFalse();
+            fileWatcherRegistry.unregister(key2);
+            assertThat(fileWatcherRegistry.isRunning()).isFalse();
+        }
     }
 }
