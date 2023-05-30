@@ -211,6 +211,14 @@ public interface RequestOnlyLog extends RequestLogAccess {
     String fullName();
 
     /**
+     * Returns the authenticated user which is used to print {@code %u} format of an access log.
+     *
+     * @see <a href="https://httpd.apache.org/docs/current/mod/mod_log_config.html">Custom Log Formats</a>
+     */
+    @Nullable
+    String authenticatedUser();
+
+    /**
      * Returns the {@link RequestHeaders}. If the {@link Request} was not received or sent at all,
      * it will return a dummy {@link RequestHeaders} whose {@code :authority} and {@code :path} are
      * set to {@code "?"}, {@code :scheme} is set to {@code "http"} or {@code "https"}, and {@code :method} is

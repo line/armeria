@@ -35,7 +35,9 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.HttpSession;
+import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -62,6 +64,12 @@ final class HttpClientDelegate implements HttpClient {
         if (throwable != null) {
             return earlyFailedResponse(throwable, ctx, req);
         }
+        if (req != ctx.request()) {
+            return earlyFailedResponse(
+                    new IllegalStateException("ctx.request() does not match the actual request; " +
+                                              "did you forget to call ctx.updateRequest() in your decorator?"),
+                    ctx, req);
+        }
 
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
@@ -76,10 +84,6 @@ final class HttpClientDelegate implements HttpClient {
             //
             // See `DefaultClientRequestContext.init()` for more information.
             return earlyFailedResponse(EmptyEndpointGroupException.get(ctx.endpointGroup()), ctx, req);
-        }
-
-        if (!isValidPath(req)) {
-            return earlyFailedResponse(new IllegalArgumentException("invalid path: " + req.path()), ctx, req);
         }
 
         final SessionProtocol protocol = ctx.sessionProtocol();
@@ -216,10 +220,6 @@ final class HttpClientDelegate implements HttpClient {
         } else {
             ctx.logBuilder().session(null, ctx.sessionProtocol(), connectionTimings);
         }
-    }
-
-    private static boolean isValidPath(HttpRequest req) {
-        return PathAndQuery.parse(req.path()) != null;
     }
 
     private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx, HttpRequest req) {

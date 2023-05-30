@@ -64,6 +64,11 @@ public enum RequestLogProperty {
     NAME(true),
 
     /**
+     * {@link RequestLog#authenticatedUser()}.
+     */
+    AUTHENTICATED_USER(true),
+
+    /**
      * {@link RequestLog#requestHeaders()}.
      */
     REQUEST_HEADERS(true),

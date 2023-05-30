@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,8 +33,13 @@ import org.slf4j.Logger;
 import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -81,8 +87,11 @@ public final class VirtualHost {
     private final long maxRequestLength;
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
-    private final ScheduledExecutorService blockingTaskExecutor;
+    private final BlockingTaskExecutor blockingTaskExecutor;
+    private final long requestAutoAbortDelayMillis;
+    private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
+    private final Function<RoutingContext, RequestId> requestIdGenerator;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
@@ -94,8 +103,11 @@ public final class VirtualHost {
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
-                ScheduledExecutorService blockingTaskExecutor,
-                List<ShutdownSupport> shutdownSupports) {
+                BlockingTaskExecutor blockingTaskExecutor,
+                long requestAutoAbortDelayMillis,
+                Path multipartUploadsLocation,
+                List<ShutdownSupport> shutdownSupports,
+                Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         originalDefaultHostname = defaultHostname;
         originalHostnamePattern = hostnamePattern;
         if (port > 0) {
@@ -113,7 +125,13 @@ public final class VirtualHost {
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = accessLogWriter;
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
+        this.multipartUploadsLocation = multipartUploadsLocation;
         this.shutdownSupports = shutdownSupports;
+        @SuppressWarnings("unchecked")
+        final Function<RoutingContext, RequestId> castRequestIdGenerator =
+                (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        this.requestIdGenerator = castRequestIdGenerator;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(fallbackServiceConfig, "fallbackServiceConfig");
@@ -134,7 +152,10 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, shutdownSupports);
+                               accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
+                               multipartUploadsLocation,
+                               shutdownSupports,
+                               requestIdGenerator);
     }
 
     /**
@@ -347,7 +368,7 @@ public final class VirtualHost {
      *
      * @see ServiceConfig#blockingTaskExecutor()
      */
-    public ScheduledExecutorService blockingTaskExecutor() {
+    public BlockingTaskExecutor blockingTaskExecutor() {
         return blockingTaskExecutor;
     }
 
@@ -362,6 +383,13 @@ public final class VirtualHost {
     @Deprecated
     public boolean shutdownBlockingTaskExecutorOnStop() {
         return false;
+    }
+
+    /**
+     * Returns the {@link Function} that generates a {@link RequestId}.
+     */
+    public Function<RoutingContext, RequestId> requestIdGenerator() {
+        return requestIdGenerator;
     }
 
     /**
@@ -395,6 +423,10 @@ public final class VirtualHost {
                 maybeSetRoutingResult(routingCtx, routed);
                 return routed;
             case NOT_MATCHED:
+                if (routingCtx.method() == HttpMethod.HEAD) {
+                    return findServiceConfig(routingCtx.withMethod(HttpMethod.GET), useFallbackService);
+                }
+
                 if (!useFallbackService) {
                     maybeSetRoutingResult(routingCtx, routed);
                     return routed;
@@ -441,6 +473,22 @@ public final class VirtualHost {
         return shutdownSupports;
     }
 
+    /**
+     * Returns the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    public long requestAutoAbortDelayMillis() {
+        return requestAutoAbortDelayMillis;
+    }
+
+    /**
+     * Returns the {@link Path} that is used to store the files uploaded
+     * through a {@code multipart/form-data} request.
+     */
+    public Path multipartUploadsLocation() {
+        return multipartUploadsLocation;
+    }
+
     VirtualHost decorate(@Nullable Function<? super HttpService, ? extends HttpService> decorator) {
         if (decorator == null) {
             return this;
@@ -458,7 +506,10 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, shutdownSupports);
+                               accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
+                               multipartUploadsLocation,
+                               shutdownSupports,
+                               requestIdGenerator);
     }
 
     @Override
@@ -494,6 +545,10 @@ public final class VirtualHost {
         buf.append(accessLogWriter());
         buf.append(", blockingTaskExecutor: ");
         buf.append(blockingTaskExecutor());
+        buf.append(", requestAutoAbortDelayMillis: ");
+        buf.append(requestAutoAbortDelayMillis());
+        buf.append(", multipartUploadsLocation: ");
+        buf.append(multipartUploadsLocation());
         buf.append(')');
         return buf.toString();
     }

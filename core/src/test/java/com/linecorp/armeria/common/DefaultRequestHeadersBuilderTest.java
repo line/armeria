@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
@@ -118,14 +119,10 @@ class DefaultRequestHeadersBuilderTest {
         assertThatThrownBy(() -> RequestHeaders.builder().uri())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(":scheme")
-                .hasMessageContaining(":authority")
                 .hasMessageContaining(":path");
         assertThatThrownBy(() -> RequestHeaders.builder().path("/").authority("foo.com").uri())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(":scheme");
-        assertThatThrownBy(() -> RequestHeaders.builder().path("/").scheme("http").uri())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining(":authority");
         assertThatThrownBy(() -> RequestHeaders.builder().authority("foo.com").scheme("http").uri())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(":path");
@@ -135,6 +132,17 @@ class DefaultRequestHeadersBuilderTest {
     void authorityFromEndpoint() {
         final RequestHeadersBuilder builder = RequestHeaders.builder();
         assertThat(builder.authority(Endpoint.of("foo", 8080)).authority()).isEqualTo("foo:8080");
+    }
+
+    @Test
+    void uriForNoAuthority() {
+        final URI uri = RequestHeaders.builder().path("/").scheme("http").uri();
+        assertThat(uri.toString()).isEqualTo("http:/");
+        assertThat(uri).hasScheme("http").hasAuthority(null).hasPath("/");
+
+        final URI uri2 = RequestHeaders.builder().path("/asdf").scheme("ftp").uri();
+        assertThat(uri2.toString()).isEqualTo("ftp:/asdf");
+        assertThat(uri2).hasScheme("ftp").hasAuthority(null).hasPath("/asdf");
     }
 
     @Test

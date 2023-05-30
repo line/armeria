@@ -23,6 +23,7 @@ import static org.awaitility.Awaitility.await;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Properties;
@@ -130,7 +131,7 @@ public class PropertiesEndpointGroupTest {
     public void pathWithDefaultPort() throws Exception {
         final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
         assert resourceUrl != null;
-        final Path resourcePath = new File(resourceUrl.getFile()).toPath();
+        final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.builder(
                 resourcePath, "serverA.hosts").defaultPort(80).build();
         assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
@@ -140,10 +141,10 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void pathWithoutDefaultPort() {
+    public void pathWithoutDefaultPort() throws URISyntaxException {
         final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
         assert resourceUrl != null;
-        final Path resourcePath = new File(resourceUrl.getFile()).toPath();
+        final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
                 resourcePath, "serverA.hosts");
         assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),

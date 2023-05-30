@@ -100,7 +100,7 @@ This time, we'll implement a client method for each corresponding server method.
   ```java filename=BlogClient.java
   import example.armeria.blog.grpc.Blog.GetBlogPostRequest;
   ...
-  static void getBlogPost(int id){
+  static void getBlogPost(int id) {
     final BlogPost blogPost = client.getBlogPost(GetBlogPostRequest.newBuilder().setId(id).build());
   }
   ```
@@ -217,7 +217,7 @@ Let's retrieve the second blog post. Apparently, the ID to use is `1`.
 
 1. Call the `getBlogPost()` method.
   ```java filename=BlogClient.java
-  static void testRun(){
+  static void testRun() {
     createBlogPost("Another blog post", "Creating a post via createBlogPost().");
     listBlogPosts();  // feel free to comment this out or leave it
     getBlogPost(1);   // add this

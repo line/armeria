@@ -236,12 +236,12 @@ class ContextAwareMonoTest {
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
         try (SafeCloseable ignored = ctx.push()) {
-            mono = Mono.subscriberContext().handle((reactorCtx, sink) -> {
+            mono = Mono.deferContextual(Mono::just).handle((reactorCtx, sink) -> {
                 assertThat((String) reactorCtx.get("foo")).isEqualTo("bar");
                 sink.next("baz");
             });
         }
-        final Mono<String> mono1 = mono.subscriberContext(reactorCtx -> reactorCtx.put("foo", "bar"));
+        final Mono<String> mono1 = mono.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
         StepVerifier.create(mono1)
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))

@@ -69,7 +69,7 @@ import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
 import io.grpc.ServerCall.Listener;
 import io.grpc.Status;
-import io.grpc.StatusException;
+import io.grpc.StatusRuntimeException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.util.AsciiString;
@@ -187,7 +187,7 @@ class UnaryServerCallTest {
         await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());
         assertThatThrownBy(() -> res.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(StatusException.class)
+                .hasCauseInstanceOf(StatusRuntimeException.class)
                 .hasMessageContaining("More than one request messages for unary call");
         assertThat(buf1.refCnt()).isZero();
         assertThat(buf2.refCnt()).isZero();
@@ -202,7 +202,7 @@ class UnaryServerCallTest {
         await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());
         assertThatThrownBy(() -> res.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(StatusException.class)
+                .hasCauseInstanceOf(StatusRuntimeException.class)
                 .hasMessageContaining("More than one request messages for unary call");
         assertThat(buf1.refCnt()).isZero();
         assertThat(buf2.refCnt()).isZero();

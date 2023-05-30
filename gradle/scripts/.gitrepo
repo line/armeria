@@ -5,8 +5,8 @@
 ;
 [subrepo]
 	remote = https://github.com/line/gradle-scripts
-	branch = master
-	commit = 1a58ba8991d5c51f5dfa8d3f10277ca2c4aea02e
-	parent = b66705894d662a3d1614b600339898be7253348a
+	branch = main
+	commit = c20bc5b416c7fe19475dd1a2ca658d9177d23f35
+	parent = d48d5fa5c0e30f34deac6df1ada7e41b58ae444c
 	method = merge
-	cmdver = 0.4.3
+	cmdver = 0.4.5

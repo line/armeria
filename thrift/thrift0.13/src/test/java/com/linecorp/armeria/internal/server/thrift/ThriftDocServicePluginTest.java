@@ -28,11 +28,12 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
+import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -43,10 +44,12 @@ import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.thrift.THttpService;
+import com.linecorp.armeria.service.test.thrift.main.FooEnum;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
+import com.linecorp.armeria.service.test.thrift.main.TypeDefService;
 
 class ThriftDocServicePluginTest {
 
@@ -212,14 +215,18 @@ class ThriftDocServicePluginTest {
 
     @Test
     void testNewServiceInfo() {
+        final EntryBuilder builder = new EntryBuilder(FooService.class);
+        builder.endpoint(EndpointInfo.builder("*", "/foo")
+                                     .fragment("a")
+                                     .defaultFormat(ThriftSerializationFormats.BINARY)
+                                     .build());
+        builder.endpoint(EndpointInfo.builder("*", "/debug/foo")
+                                     .fragment("b")
+                                     .defaultFormat(ThriftSerializationFormats.TEXT)
+                                     .build());
+        final Entry entry = builder.build();
         final ServiceInfo service = generator.newServiceInfo(
-                FooService.class,
-                ImmutableList.of(EndpointInfo.builder("*", "/foo")
-                                             .fragment("a").defaultFormat(ThriftSerializationFormats.BINARY)
-                                             .build(),
-                                 EndpointInfo.builder("*", "/debug/foo")
-                                             .fragment("b").defaultFormat(ThriftSerializationFormats.TEXT)
-                                             .build()),
+                entry,
                 (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> methods =
@@ -274,14 +281,15 @@ class ThriftDocServicePluginTest {
         final MethodInfo bar6 = methods.get("bar6");
         assertThat(bar6.parameters()).containsExactly(
                 FieldInfo.of("foo1", string),
-                FieldInfo.of("foo2", TypeSignature.ofUnresolved("TypedefedStruct")),
-                FieldInfo.of("foo3", TypeSignature.ofUnresolved("TypedefedEnum")),
-                FieldInfo.of("foo4", TypeSignature.ofUnresolved("TypedefedMap")),
-                FieldInfo.of("foo5", TypeSignature.ofUnresolved("TypedefedList")),
-                FieldInfo.of("foo6", TypeSignature.ofUnresolved("TypedefedSet")),
-                FieldInfo.of("foo7", TypeSignature.ofUnresolved("NestedTypedefedStructs")),
+                FieldInfo.of("foo2", TypeSignature.ofStruct(FooStruct.class)),
+                FieldInfo.of("foo3", TypeSignature.ofEnum(FooEnum.class)),
+                FieldInfo.of("foo4", TypeSignature.ofMap(string, string)),
+                FieldInfo.of("foo5", TypeSignature.ofList(string)),
+                FieldInfo.of("foo6", TypeSignature.ofSet(string)),
+                FieldInfo.of("foo7", TypeSignature.ofList(TypeSignature.ofList(
+                        TypeSignature.ofStruct(FooStruct.class)))),
                 FieldInfo.of("foo8", TypeSignature.ofList(TypeSignature.ofList(
-                        TypeSignature.ofUnresolved("TypedefedStruct")))));
+                        TypeSignature.ofStruct(FooStruct.class)))));
 
         assertThat(bar6.returnTypeSignature()).isEqualTo(TypeSignature.ofBase("void"));
         assertThat(bar6.exceptionTypeSignatures()).isEmpty();
@@ -289,5 +297,40 @@ class ThriftDocServicePluginTest {
 
         final List<HttpHeaders> exampleHeaders = service.exampleHeaders();
         assertThat(exampleHeaders).isEmpty();
+    }
+
+    @Test
+    void typeDefService() {
+        final EntryBuilder builder = new EntryBuilder(TypeDefService.class);
+        builder.endpoint(EndpointInfo.builder("*", "/typeDef")
+                                     .defaultFormat(ThriftSerializationFormats.BINARY)
+                                     .build());
+        final Entry entry = builder.build();
+        final ServiceInfo service = generator.newServiceInfo(
+                entry,
+                (pluginName, serviceName, methodName) -> true);
+
+        final Map<String, MethodInfo> methods =
+                service.methods().stream().collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        assertThat(methods).hasSize(1);
+
+        final MethodInfo typeDefs = methods.get("typeDefs");
+        assertThat(typeDefs.parameters()).containsExactly(
+                FieldInfo.of("td1", TypeSignature.ofBase("string")),
+                FieldInfo.of("td2", TypeSignature.ofList(TypeSignature.ofBase("string"))),
+                FieldInfo.of("td3", TypeSignature.ofBase("bool")),
+                FieldInfo.of("td4", TypeSignature.ofList(TypeSignature.ofBase("bool"))),
+                FieldInfo.of("td5", TypeSignature.ofBase("i8")),
+                FieldInfo.of("td6", TypeSignature.ofList(TypeSignature.ofBase("i8"))),
+                FieldInfo.of("td7", TypeSignature.ofBase("i16")),
+                FieldInfo.of("td8", TypeSignature.ofList(TypeSignature.ofBase("i16"))),
+                FieldInfo.of("td9", TypeSignature.ofBase("i32")),
+                FieldInfo.of("td10", TypeSignature.ofList(TypeSignature.ofBase("i32"))),
+                FieldInfo.of("td11", TypeSignature.ofBase("i64")),
+                FieldInfo.of("td12", TypeSignature.ofList(TypeSignature.ofBase("i64"))),
+                FieldInfo.of("td13", TypeSignature.ofBase("double")),
+                FieldInfo.of("td14", TypeSignature.ofList(TypeSignature.ofBase("double"))),
+                FieldInfo.of("td15", TypeSignature.ofBase("binary")),
+                FieldInfo.of("td16", TypeSignature.ofList(TypeSignature.ofBase("binary"))));
     }
 }

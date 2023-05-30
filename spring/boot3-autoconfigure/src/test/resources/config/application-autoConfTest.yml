@@ -1,0 +1,22 @@
+management:
+  metrics:
+    export:
+      prometheus:
+        enabled: true # In order to inject PrometheusMeterRegistry
+
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+armeria:
+  ports:
+    - port: 0
+      protocol: HTTP
+    - address: 127.0.0.1
+      port: 0
+      protocol: HTTP
+    - address: 0.0.0.0
+      port: 0
+      protocol: HTTP
+  enable-auto-injection: true

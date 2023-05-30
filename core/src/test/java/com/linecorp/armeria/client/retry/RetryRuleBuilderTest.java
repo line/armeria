@@ -122,6 +122,24 @@ class RetryRuleBuilderTest {
     }
 
     @Test
+    void onGrpcTrailers() {
+        final Backoff backoff = Backoff.fixed(1000);
+        final RetryRule rule =
+                RetryRule.builder()
+                         .onGrpcTrailers((unused, trailers) -> trailers.containsInt("grpc-status", 3))
+                         .thenBackoff(backoff);
+
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK, "grpc-status", 3));
+        ctx1.logBuilder().responseTrailers(HttpHeaders.of());
+        assertBackoff(rule.shouldRetry(ctx1, null)).isSameAs(backoff);
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().responseTrailers(HttpHeaders.of("grpc-status", 0));
+        assertBackoff(rule.shouldRetry(ctx2, null)).isNull();
+    }
+
+    @Test
     void onException() {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Backoff backoff1 = Backoff.fixed(1000);

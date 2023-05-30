@@ -23,7 +23,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
 
-      - name: Build with Gradle
+      - name: Update public suffix list
         run: |
           ./gradlew --no-daemon --stacktrace :core:publicSuffixes
 
@@ -36,12 +36,16 @@ jobs:
           git-user-signingkey: true
           git-commit-gpgsign: true
 
-      - name: Push updated public suffix list
-        uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v4
         with:
-          commit_options: '-S'
-          commit_message: Update public suffix list
-          file_pattern: core/src/main/resources/com/linecorp/armeria/public_suffixes.txt
-          commit_user_name: Meri Kim
-          commit_user_email: dl_armeria@linecorp.com
-          commit_author: Meri Kim <dl_armeria@linecorp.com>
+          # The title of the pull request.
+          title: Update public suffix list
+          commit-message: Update public suffix list
+          author: Meri Kim <dl_armeria@linecorp.com>
+          branch: update-public-suffixes
+          committer: Meri Kim <dl_armeria@linecorp.com>
+          delete-branch: true
+          label: miscellaneous
+          add-paths: |
+            core/src/main/resources/com/linecorp/armeria/public_suffixes.txt

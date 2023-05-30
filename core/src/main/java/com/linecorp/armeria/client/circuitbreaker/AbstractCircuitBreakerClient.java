@@ -50,12 +50,12 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
 
     @Nullable
     private final CircuitBreakerRuleWithContent<O> ruleWithContent;
-    private final CircuitBreakerClientHandler<I> handler;
+    private final CircuitBreakerClientHandler handler;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler handler,
                                  CircuitBreakerRule rule) {
         this(delegate, handler, requireNonNull(rule, "rule"), null);
     }
@@ -63,7 +63,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler handler,
                                  CircuitBreakerRuleWithContent<O> ruleWithContent) {
         this(delegate, handler, null, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
@@ -71,7 +71,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    private AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
+    private AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler handler,
                                          @Nullable CircuitBreakerRule rule,
                                          @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
         super(delegate);

@@ -32,7 +32,7 @@ final class ZlibStreamDecoder extends AbstractStreamDecoder {
             SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder", false);
 
     ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc, int maxLength) {
-        super(newZlibDecoder(zlibWrapper, maxLength), alloc, maxLength, false);
+        super(newZlibDecoder(zlibWrapper, maxLength), alloc, maxLength);
     }
 
     private static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper, int maxLength) {

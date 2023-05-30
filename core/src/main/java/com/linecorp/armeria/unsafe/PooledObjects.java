@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.server.file.HttpFile;
 
 import io.netty.buffer.ByteBuf;
@@ -148,7 +149,38 @@ public final class PooledObjects {
                 }
             }
         }
+        if (obj instanceof WebSocketFrame) {
+            final WebSocketFrame frame = (WebSocketFrame) obj;
+            if (frame.isPooled()) {
+                return copyAndCloseWebSocketFrame(frame);
+            }
+        }
+
         return obj;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T copyAndCloseWebSocketFrame(WebSocketFrame frame) {
+        try {
+            switch (frame.type()) {
+                case CONTINUATION:
+                    return (T) WebSocketFrame.ofContinuation(frame.array(), frame.isFinalFragment());
+                case TEXT:
+                    return (T) WebSocketFrame.ofText(frame.array(), frame.isFinalFragment());
+                case BINARY:
+                    return (T) WebSocketFrame.ofBinary(frame.array(), frame.isFinalFragment());
+                case CLOSE:
+                    return (T) WebSocketFrame.ofClose(frame.array());
+                case PING:
+                    return (T) WebSocketFrame.ofPing(frame.array());
+                case PONG:
+                    return (T) WebSocketFrame.ofPong(frame.array());
+            }
+        } finally {
+            frame.close();
+        }
+        // Should never reach here.
+        throw new Error();
     }
 
     private PooledObjects() {}

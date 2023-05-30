@@ -22,18 +22,20 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 
 /**
@@ -127,6 +129,12 @@ public interface ServerConfig {
     Map<ChannelOption<?>, ?> childChannelOptions();
 
     /**
+     * Returns the {@link Consumer} that customizes the Netty child {@link ChannelPipeline}.
+     */
+    @UnstableApi
+    Consumer<? super ChannelPipeline> childChannelPipelineCustomizer();
+
+    /**
      * Returns the maximum allowed number of open connections.
      */
     int maxNumConnections();
@@ -211,19 +219,19 @@ public interface ServerConfig {
     Duration gracefulShutdownTimeout();
 
     /**
-     * Returns the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
-     * Note that the {@link ScheduledExecutorService} returned by this method does not set the
+     * Returns the {@link BlockingTaskExecutor} dedicated to the execution of blocking tasks or invocations.
+     * Note that the {@link BlockingTaskExecutor} returned by this method does not set the
      * {@link ServiceRequestContext} when executing a submitted task.
      * Use {@link ServiceRequestContext#blockingTaskExecutor()} if possible.
      */
-    ScheduledExecutorService blockingTaskExecutor();
+    BlockingTaskExecutor blockingTaskExecutor();
 
     /**
      * Returns whether the worker {@link Executor} is shut down when the {@link Server} stops.
      *
      * @deprecated This method is not used anymore. The {@code blockingTaskExecutor} is shut down if
      *             the {@code shutdownOnStop} of
-     *             {@link ServerBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}
+     *             {@link ServerBuilder#blockingTaskExecutor(BlockingTaskExecutor, boolean)}
      *             is set to {@code true}.
      */
     @Deprecated
@@ -274,9 +282,13 @@ public interface ServerConfig {
     boolean isServerHeaderEnabled();
 
     /**
-     * Returns the {@link Supplier} that generates a {@link RequestId} for each {@link Request}.
+     * Returns the {@link Function} that generates a {@link RequestId} for each {@link Request}.
+     *
+     * @deprecated Use {@link ServiceConfig#requestIdGenerator()} or {@link VirtualHost#requestIdGenerator()}.
      */
-    Supplier<RequestId> requestIdGenerator();
+    @UnstableApi
+    @Deprecated
+    Function<RoutingContext, RequestId> requestIdGenerator();
 
     /**
      * Returns the {@link ServerErrorHandler} that provides the error responses in case of unexpected
@@ -287,7 +299,7 @@ public interface ServerConfig {
     /**
      * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only
-     * supports case sensitive HTTP/1 headers.
+     * supports case-sensitive HTTP/1 headers.
      */
     Http1HeaderNaming http1HeaderNaming();
 
@@ -295,4 +307,16 @@ public interface ServerConfig {
      * Returns the {@link DependencyInjector} that injects dependencies in annotations.
      */
     DependencyInjector dependencyInjector();
+
+    /**
+     * Returns the {@link Function} that transforms the absolute URI in an HTTP/1 request line
+     * into an absolute path.
+     */
+    @UnstableApi
+    Function<String, String> absoluteUriTransformer();
+
+    /**
+     * Returns the interval between reporting unhandled exceptions in milliseconds.
+     */
+    long unhandledExceptionsReportIntervalMillis();
 }

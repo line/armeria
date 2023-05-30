@@ -82,6 +82,8 @@ public final class GraphqlServiceBuilder {
     @Nullable
     private GraphqlErrorHandler errorHandler;
 
+    private ExecutionIdGenerator executionIdGenerator = ExecutionIdGenerator.of();
+
     GraphqlServiceBuilder() {}
 
     /**
@@ -243,11 +245,21 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
+     * Sets the {@link ExecutionIdGenerator}.
+     * If not specified, {@link ExecutionIdGenerator#of()} is used by default.
+     */
+    public GraphqlServiceBuilder executionIdGenerator(ExecutionIdGenerator executionIdGenerator) {
+        this.executionIdGenerator = requireNonNull(executionIdGenerator, "executionIdGenerator");
+        return this;
+    }
+
+    /**
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
         final GraphQLSchema schema = buildSchema();
-        GraphQL.Builder builder = GraphQL.newGraphQL(schema);
+        GraphQL.Builder builder = GraphQL.newGraphQL(schema)
+                                         .executionIdProvider(executionIdGenerator.asExecutionProvider());
         final List<Instrumentation> instrumentations = this.instrumentations.build();
         if (!instrumentations.isEmpty()) {
             builder = builder.instrumentation(new ChainedInstrumentation(instrumentations));

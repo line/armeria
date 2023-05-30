@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
  *
  * // defining a custom handler
  * CircuitBreakerClient.newDecorator(
- *         new CircuitBreakerClientHandler<HttpRequest>() {
+ *         new CircuitBreakerClientHandler() {
  *             ...
  *             public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, HttpRequest req) {
  *                 ...
@@ -61,13 +61,13 @@ import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
  */
 @UnstableApi
 @FunctionalInterface
-public interface CircuitBreakerClientHandler<I extends Request> {
+public interface CircuitBreakerClientHandler {
 
     /**
      * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
      * {@link CircuitBreaker} to handle requests.
      */
-    static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker circuitBreaker) {
+    static CircuitBreakerClientHandler of(CircuitBreaker circuitBreaker) {
         requireNonNull(circuitBreaker, "circuitBreaker");
         return of((ctx, req) -> circuitBreaker);
     }
@@ -76,8 +76,8 @@ public interface CircuitBreakerClientHandler<I extends Request> {
      * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
      * {@link CircuitBreakerMapping} to handle requests.
      */
-    static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreakerMapping mapping) {
-        return new DefaultCircuitBreakerClientHandler<>(requireNonNull(mapping, "mapping"));
+    static CircuitBreakerClientHandler of(CircuitBreakerMapping mapping) {
+        return new DefaultCircuitBreakerClientHandler(requireNonNull(mapping, "mapping"));
     }
 
     /**
@@ -97,5 +97,5 @@ public interface CircuitBreakerClientHandler<I extends Request> {
      * </ul>
      */
     @Nullable
-    CircuitBreakerCallback tryRequest(ClientRequestContext ctx, I req);
+    CircuitBreakerCallback tryRequest(ClientRequestContext ctx, Request req);
 }

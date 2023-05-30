@@ -140,6 +140,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private String name;
     @Nullable
     private String fullName;
+    @Nullable
+    private String authenticatedUser;
 
     @Nullable
     private RequestHeaders requestHeaders;
@@ -818,6 +820,20 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public String authenticatedUser() {
+        ensureAvailable(RequestLogProperty.AUTHENTICATED_USER);
+        return authenticatedUser;
+    }
+
+    @Override
+    public void authenticatedUser(String authenticatedUser) {
+        if (isAvailable(RequestLogProperty.AUTHENTICATED_USER)) {
+            return;
+        }
+        this.authenticatedUser = requireNonNull(authenticatedUser, "authenticatedUser");
+    }
+
+    @Override
     public long requestLength() {
         ensureAvailable(RequestLogProperty.REQUEST_LENGTH);
         return requestLength;
@@ -1151,6 +1167,17 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void responseCause(Throwable cause) {
+        if (isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            return;
+        }
+
+        requireNonNull(cause, "cause");
+        responseCause = cause;
+        updateFlags(RequestLogProperty.RESPONSE_CAUSE);
+    }
+
+    @Override
     public long responseLength() {
         ensureAvailable(RequestLogProperty.RESPONSE_LENGTH);
         return responseLength;
@@ -1244,9 +1271,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             if (!rpcResponse.isDone()) {
                 throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
             }
-            if (rpcResponse.cause() != null) {
-                responseCause = rpcResponse.cause();
-                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
+            final Throwable cause = rpcResponse.cause();
+            if (cause != null) {
+                responseCause(cause);
             }
         }
 
@@ -1641,6 +1668,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public String fullName() {
             return DefaultRequestLog.this.fullName();
+        }
+
+        @Override
+        public String authenticatedUser() {
+            return authenticatedUser;
         }
 
         @Override

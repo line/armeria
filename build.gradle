@@ -49,8 +49,9 @@ gradle.buildFinished({ result ->
 allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
-        maxHeapSize = '512m'
-        if (rootProject.ext.testJavaVersion >= 9) {
+        maxHeapSize = '768m'
+
+        if (project.ext.testJavaVersion >= 9) {
             jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
         }
 
@@ -73,13 +74,20 @@ allprojects {
         // `-Pjava.security.manager` was added in Java 17 and the default value was changed to `disallow` in Java 18.
         // - https://openjdk.org/jeps/411
         // - https://bugs.openjdk.org/browse/JDK-8270380
-        if (rootProject.ext.testJavaVersion >= 17) {
+        if (project.ext.testJavaVersion >= 17) {
             systemProperty "java.security.manager", "allow"
+        }
+
+        // required by blockhound for jvm 13+. See https://github.com/reactor/BlockHound/issues/33.
+        if (rootProject.hasProperty('blockhound') && project.ext.testJavaVersion >= 13) {
+            jvmArgs "-XX:+AllowRedefinitionToAddDeleteMethods"
         }
 
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
+
+        systemProperty 'com.linecorp.armeria.blockhound.reportFile', "${project.buildDir}/blockhound.log"
 
         // Pass special system property to tell our tests that we are measuring coverage.
         if (project.hasFlags('coverage')) {
@@ -164,6 +172,9 @@ configure(projectsWithFlags('java')) {
         // Reflections
         implementation libs.reflections
 
+        // Blockhound
+        optionalImplementation libs.blockhound
+
         // Test-time dependencies
         testImplementation libs.guava.testlib
         testImplementation libs.junit4
@@ -179,9 +190,14 @@ configure(projectsWithFlags('java')) {
         testRuntimeOnly libs.checkerframework // Required by guava-testlib
         testImplementation libs.assertj
         testImplementation libs.mockito
-        testImplementation libs.apache.httpclient
+        testImplementation libs.apache.httpclient5
         testImplementation libs.hamcrest
         testImplementation libs.hamcrest.library
+        testRuntimeOnly libs.kotlin.coroutines.debug
+
+        if (rootProject.hasProperty('blockhound')) {
+            testRuntimeOnly libs.blockhound.junit.platform
+        }
     }
 
     // Configure the default DuplicatesStrategy for such as:

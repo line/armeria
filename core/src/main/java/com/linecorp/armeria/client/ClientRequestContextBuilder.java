@@ -71,8 +71,6 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     @Nullable
-    private final String fragment;
-    @Nullable
     private Endpoint endpoint;
     private ClientOptions options = ClientOptions.of();
     private RequestOptions requestOptions = RequestOptions.of();
@@ -81,12 +79,10 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
     ClientRequestContextBuilder(HttpRequest request) {
         super(false, request);
-        fragment = null;
     }
 
     ClientRequestContextBuilder(RpcRequest request, URI uri) {
         super(false, request, uri);
-        fragment = uri.getRawFragment();
     }
 
     @Override
@@ -157,7 +153,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
-                id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
+                id(), method(), requestTarget(), options, request(), rpcRequest(),
                 requestOptions, responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());

@@ -17,11 +17,15 @@
 package com.linecorp.armeria.client.grpc;
 
 import static com.linecorp.armeria.grpc.testing.Messages.PayloadType.COMPRESSABLE;
+import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.REQUEST_MESSAGE;
+import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -36,10 +40,12 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +56,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Int32Value;
 import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -69,10 +76,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -87,12 +96,17 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
 import com.linecorp.armeria.grpc.testing.UnimplementedServiceGrpc;
+import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
+import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
+import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
+import com.linecorp.armeria.internal.common.util.EventLoopThread;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -104,17 +118,16 @@ import io.grpc.CallOptions;
 import io.grpc.ClientCall;
 import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import io.grpc.SecurityLevel;
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
-import io.grpc.ServerInterceptors;
-import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
-import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
+import io.grpc.protobuf.ProtoUtils;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
@@ -129,8 +142,54 @@ class GrpcClientTest {
 
     private static final Empty EMPTY = Empty.getDefaultInstance();
 
+    private static final CallOptions.Key<String> MY_CALL_OPTION_KEY =
+            CallOptions.Key.create("my-call-option");
+
     private static final AtomicReference<HttpHeaders> CLIENT_HEADERS_CAPTURE = new AtomicReference<>();
     private static final AtomicReference<HttpHeaders> SERVER_TRAILERS_CAPTURE = new AtomicReference<>();
+
+    private static final Key<Int32Value> INT_32_VALUE_KEY =
+            ProtoUtils.keyForProto(Int32Value.getDefaultInstance());
+
+    private static final Key<String> CUSTOM_VALUE_KEY = Key.of("custom-header",
+                                                               Metadata.ASCII_STRING_MARSHALLER);
+
+    private static class UnitTestServiceImpl extends UnitTestServiceImplBase {
+        @Override
+        public void errorNoMessage(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onError(Status.ABORTED.asRuntimeException());
+        }
+
+        @Override
+        public void errorWithMessage(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onError(buildExceptionWithMeta());
+        }
+
+        @Override
+        public StreamObserver<SimpleRequest> errorFromClient(StreamObserver<SimpleResponse> responseObserver) {
+            return new StreamObserver<SimpleRequest>() {
+
+                @Override
+                public void onNext(SimpleRequest value) {
+                    responseObserver.onNext(RESPONSE_MESSAGE);
+                }
+
+                @Override
+                public void onError(Throwable t) { }
+
+                @Override
+                public void onCompleted() { }
+            };
+        }
+
+        static StatusRuntimeException buildExceptionWithMeta() {
+            final Metadata meta = new Metadata();
+            meta.put(INT_32_VALUE_KEY, Int32Value.newBuilder().setValue(1).build());
+            meta.put(CUSTOM_VALUE_KEY, "string");
+            return Status.DATA_LOSS.withDescription("data loss!")
+                                   .asRuntimeException(meta);
+        }
+    }
 
     @RegisterExtension
     public static final ServerExtension server = new ServerExtension() {
@@ -143,32 +202,31 @@ class GrpcClientTest {
             sb.https(0);
             sb.tlsSelfSigned();
 
-            final ServerServiceDefinition interceptService =
-                    ServerInterceptors.intercept(
-                            new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
-                            new ServerInterceptor() {
+            final ServerInterceptor clientHeaderCaptureInterceptor = new ServerInterceptor() {
+                @Override
+                public <REQ, RESP> Listener<REQ> interceptCall(
+                        ServerCall<REQ, RESP> call,
+                        Metadata requestHeaders,
+                        ServerCallHandler<REQ, RESP> next) {
+                    final HttpHeadersBuilder fromClient = HttpHeaders.builder();
+                    MetadataUtil.fillHeaders(requestHeaders, fromClient);
+                    CLIENT_HEADERS_CAPTURE.set(fromClient.build());
+                    return next.startCall(
+                            new SimpleForwardingServerCall<REQ, RESP>(call) {
                                 @Override
-                                public <REQ, RESP> Listener<REQ> interceptCall(
-                                        ServerCall<REQ, RESP> call,
-                                        Metadata requestHeaders,
-                                        ServerCallHandler<REQ, RESP> next) {
-                                    final HttpHeadersBuilder fromClient = HttpHeaders.builder();
-                                    MetadataUtil.fillHeaders(requestHeaders, fromClient);
-                                    CLIENT_HEADERS_CAPTURE.set(fromClient.build());
-                                    return next.startCall(
-                                            new SimpleForwardingServerCall<REQ, RESP>(call) {
-                                                @Override
-                                                public void close(Status status, Metadata trailers) {
-                                                    trailers.merge(requestHeaders);
-                                                    super.close(status, trailers);
-                                                }
-                                            }, requestHeaders);
+                                public void close(Status status, Metadata trailers) {
+                                    trailers.merge(requestHeaders);
+                                    super.close(status, trailers);
                                 }
-                            });
-
+                            }, requestHeaders);
+                }
+            };
             sb.serviceUnder("/",
                             GrpcService.builder()
-                                       .addService(interceptService)
+                                       .addService(new TestServiceImpl(
+                                               Executors.newSingleThreadScheduledExecutor()))
+                                       .addService(new UnitTestServiceImpl())
+                                       .intercept(clientHeaderCaptureInterceptor)
                                        .maxRequestMessageLength(MAX_MESSAGE_SIZE)
                                        .maxResponseMessageLength(MAX_MESSAGE_SIZE)
                                        .useClientTimeoutHeader(false)
@@ -183,9 +241,12 @@ class GrpcClientTest {
     private final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
     private TestServiceBlockingStub blockingStub;
     private TestServiceStub asyncStub;
+    private UnitTestServiceBlockingStub unitTestBlockingStub;
+    private UnitTestServiceStub unitTestAsyncStub;
 
     @BeforeEach
     void setUp() {
+        RequestTargetCache.clearCachedPaths();
         requestLogQueue.clear();
         final DecoratingHttpClientFunction requestLogRecorder = (delegate, ctx, req) -> {
             ctx.log().whenComplete().thenAccept(requestLogQueue::add);
@@ -200,6 +261,13 @@ class GrpcClientTest {
         asyncStub = GrpcClients.builder(uri.getScheme(), server.httpEndpoint())
                                .decorator(requestLogRecorder)
                                .build(TestServiceStub.class);
+        unitTestBlockingStub = GrpcClients.builder(uri)
+                                          .maxResponseLength(MAX_MESSAGE_SIZE)
+                                          .decorator(requestLogRecorder)
+                                          .build(UnitTestServiceBlockingStub.class);
+        unitTestAsyncStub = GrpcClients.builder(uri.getScheme(), server.httpEndpoint())
+                                       .decorator(requestLogRecorder)
+                                       .build(UnitTestServiceStub.class);
     }
 
     @AfterEach
@@ -215,6 +283,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(EMPTY);
             assertThat(rpcRes.get()).isEqualTo(EMPTY);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/EmptyCall"));
     }
 
     @Test
@@ -245,6 +315,73 @@ class GrpcClientTest {
     }
 
     @Test
+    void callOptionsExecutorIsRespected() {
+        final ExecutorService executor = Executors.newSingleThreadExecutor(
+                ThreadFactories.builder("my-calloptions-executor-3")
+                    .daemon(true)
+                    .eventLoop(false)
+                    .build());
+
+        final TestServiceGrpc.TestServiceStub asyncStubWithExecutor = asyncStub.withExecutor(executor);
+        final AtomicReference<String> onMessageThread = new AtomicReference<>();
+        final AtomicReference<String> onCompleteThread = new AtomicReference<>();
+        asyncStubWithExecutor.emptyCall(EMPTY, new StreamObserver<Empty>() {
+            @Override
+            public void onNext(Empty value) {
+                onMessageThread.set(Thread.currentThread().getName());
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onCompleted() {
+                onCompleteThread.set(Thread.currentThread().getName());
+            }
+        });
+
+        await().untilAtomic(onMessageThread, startsWith("my-calloptions-executor-3"));
+        await().untilAtomic(onCompleteThread, startsWith("my-calloptions-executor-3"));
+
+        executor.shutdownNow();
+    }
+
+    @Test
+    void callExecutorIsEventLoopByDefault() {
+        final AtomicReference<Thread> onMessageThread = new AtomicReference<>();
+        final AtomicReference<Thread> onCompleteThread = new AtomicReference<>();
+        asyncStub.emptyCall(EMPTY, new StreamObserver<Empty>() {
+            @Override
+            public void onNext(Empty value) {
+                onMessageThread.set(Thread.currentThread());
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onCompleted() {
+                onCompleteThread.set(Thread.currentThread());
+            }
+        });
+
+        await().untilAtomic(onMessageThread, instanceOf(EventLoopThread.class));
+        await().untilAtomic(onCompleteThread, instanceOf(EventLoopThread.class));
+    }
+
+    void grpcCallOptions() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub
+                    .withOption(MY_CALL_OPTION_KEY, "foo")
+                    .emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(GrpcCallOptions.get(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+        }
+    }
+
+    @Test
     void largeUnary() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
@@ -265,6 +402,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(request);
             assertThat(rpcRes.get()).isEqualTo(goldenResponse);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/UnaryCall"));
     }
 
     @Test
@@ -416,6 +555,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(request);
             assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/StreamingOutputCall"));
     }
 
     @Test
@@ -495,6 +636,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(requests.get(0));
             assertThat(rpcRes.get()).isEqualTo(goldenResponse);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/StreamingInputCall"));
     }
 
     @Test
@@ -577,6 +720,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(requests.get(0));
             assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/FullDuplexCall"));
     }
 
     @Test
@@ -607,8 +752,8 @@ class GrpcClientTest {
         assertThat(log.isComplete()).isTrue();
         assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
         final Throwable cause = ((RpcResponse) log.responseContent()).cause();
-        assertThat(cause).isInstanceOf(StatusException.class);
-        assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.CANCELLED);
+        assertThat(cause).isInstanceOf(StatusRuntimeException.class);
+        assertThat(((StatusRuntimeException) cause).getStatus().getCode()).isEqualTo(Code.CANCELLED);
     }
 
     @Test
@@ -867,7 +1012,9 @@ class GrpcClientTest {
         assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
 
-        assertThat(headers.get()).isNull();
+        assertThat(headers.get().keys()).contains(HttpHeaderNames.CONTENT_TYPE.toString(),
+                                                  GrpcHeaderNames.GRPC_ENCODING.toString(),
+                                                  GrpcHeaderNames.GRPC_ACCEPT_ENCODING.toString());
         assertThat(trailers.get().get(TestServiceImpl.EXTRA_HEADER_KEY)).isEqualTo("dog");
         assertThat(trailers.get().getAll(TestServiceImpl.STRING_VALUE_KEY)).containsExactly(
                 StringValue.newBuilder().setValue("hello").build(),
@@ -900,7 +1047,9 @@ class GrpcClientTest {
         assertThat(clientHeaders.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
 
-        assertThat(headers.get()).isNull();
+        assertThat(headers.get().keys()).contains(HttpHeaderNames.CONTENT_TYPE.toString(),
+                                                  GrpcHeaderNames.GRPC_ENCODING.toString(),
+                                                  GrpcHeaderNames.GRPC_ACCEPT_ENCODING.toString());
         assertThat(trailers.get().get(TestServiceImpl.EXTRA_HEADER_KEY)).isEqualTo("dog");
         assertThat(trailers.get().getAll(TestServiceImpl.STRING_VALUE_KEY)).containsExactly(
                 StringValue.newBuilder().setValue("hello").build(),
@@ -1281,11 +1430,12 @@ class GrpcClientTest {
         if (cause instanceof ResponseTimeoutException) {
             return;
         }
-        if (cause instanceof StatusException) {
-            assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+        if (cause instanceof StatusRuntimeException) {
+            assertThat(((StatusRuntimeException) cause).getStatus().getCode())
+                    .isEqualTo(Code.DEADLINE_EXCEEDED);
             return;
         }
-        fail("cause must be a ResponseTimeoutException or a StatusException: ", cause);
+        fail("cause must be a ResponseTimeoutException or a StatusRuntimeException: ", cause);
     }
 
     @Test
@@ -1363,7 +1513,11 @@ class GrpcClientTest {
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(ResponseParameters.newBuilder().setSize(1))
                                           .build();
-        final int size = blockingStub.streamingOutputCall(request).next().getSerializedSize();
+        final Iterator<StreamingOutputCallResponse> response = blockingStub.streamingOutputCall(request);
+        final int size = response.next().getSerializedSize();
+        // Need to drain the inbound stream to ensure request-log is available.
+        assertThat(response.hasNext()).isFalse();
+
         requestLogQueue.take();
 
         final TestServiceBlockingStub stub =
@@ -1465,6 +1619,95 @@ class GrpcClientTest {
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.UNKNOWN);
             assertThat(grpcStatus.getDescription()).isEqualTo(errorMessage);
+        });
+    }
+
+    @Test
+    void errorNoMessage() throws Exception {
+        final Throwable t = catchThrowable(() -> unitTestBlockingStub.errorNoMessage(REQUEST_MESSAGE));
+        assertThat(t).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
+            assertThat(ex.getStatus()).isNotNull();
+            assertThat(ex.getStatus().getCode()).isEqualTo(Code.ABORTED);
+            assertThat(ex.getStatus().getDescription()).isNull();
+        });
+
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("ErrorNoMessage");
+            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+            assertThat(cause).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
+                assertThat(ex.getStatus()).isNotNull();
+                assertThat(ex.getStatus().getCode()).isEqualTo(Code.ABORTED);
+                assertThat(ex.getStatus().getDescription()).isNull();
+            });
+        });
+    }
+
+    @Test
+    void errorWithMessage() throws Exception {
+        final BiConsumer<Status, Metadata> checkException = (status, meta) -> {
+            assertThat(status).isNotNull();
+            assertThat(status.getCode()).isEqualTo(Code.DATA_LOSS);
+            assertThat(status.getDescription()).isEqualTo("data loss!");
+            assertThat(status.getCause()).isNull();
+            assertThat(meta).isNotNull();
+            assertThat(meta.getAll(INT_32_VALUE_KEY))
+                    .containsExactly(Int32Value.newBuilder().setValue(1).build());
+            assertThat(meta.get(CUSTOM_VALUE_KEY)).isEqualTo("string");
+        };
+        final Throwable t = catchThrowable(() -> unitTestBlockingStub.errorWithMessage(REQUEST_MESSAGE));
+        assertThat(t).isInstanceOfSatisfying(StatusRuntimeException.class,
+                                             ex -> checkException.accept(ex.getStatus(), ex.getTrailers()));
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("ErrorWithMessage");
+            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+            assertThat(cause).isInstanceOfSatisfying(
+                    StatusRuntimeException.class, ex -> checkException.accept(ex.getStatus(),
+                                                                              ex.getTrailers()));
+        });
+    }
+
+    @Test
+    void errorFromClientInStream() throws Exception {
+        final BiConsumer<Status, Metadata> checkException = (status, meta) -> {
+            // the cause is wrapped by CANCELLED
+            assertThat(status).isNotNull();
+            assertThat(status.getCode()).isEqualTo(Code.CANCELLED);
+            assertThat(meta).isNotNull();
+            assertThat(meta.keys()).isEmpty();
+            // but the status holds original cause
+            assertThat(status.getCause()).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
+                assertThat(ex.getStatus()).isNotNull();
+                assertThat(ex.getStatus().getCode()).isEqualTo(Code.DATA_LOSS);
+                assertThat(ex.getStatus().getDescription()).isEqualTo("data loss!");
+                assertThat(ex.getStatus().getCause()).isNull();
+                assertThat(ex.getTrailers()).isNotNull();
+                assertThat(ex.getTrailers().getAll(INT_32_VALUE_KEY))
+                        .containsExactly(Int32Value.newBuilder().setValue(1).build());
+                assertThat(ex.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("string");
+            });
+        };
+        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        final StreamObserver<SimpleRequest> request = unitTestAsyncStub.errorFromClient(response);
+        // Sending request and receiving response is required to ensure connection before calling onError.
+        request.onNext(REQUEST_MESSAGE);
+        response.firstValue().get();
+        request.onError(UnitTestServiceImpl.buildExceptionWithMeta());
+        response.awaitCompletion();
+        assertThat(response.getError()).isInstanceOfSatisfying(
+                StatusRuntimeException.class, ex -> checkException.accept(ex.getStatus(), ex.getTrailers()));
+
+        checkRequestLogError((headers, rpcReq, cause) -> {
+            assertThat(rpcReq).isNotNull();
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("ErrorFromClient");
+            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+            assertThat(cause).isInstanceOfSatisfying(
+                    StatusRuntimeException.class, ex -> checkException.accept(ex.getStatus(),
+                                                                              ex.getTrailers()));
         });
     }
 
@@ -1600,7 +1843,7 @@ class GrpcClientTest {
 
         final Status grpcStatus;
         if (rpcRes.cause() != null) {
-            grpcStatus = ((StatusException) rpcRes.cause()).getStatus();
+            grpcStatus = ((StatusRuntimeException) rpcRes.cause()).getStatus();
         } else {
             grpcStatus = null;
         }

@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
 
@@ -110,7 +111,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
     private final Deque<HealthCheckContextGroup> contextGroupChain = new ArrayDeque<>(4);
 
