@@ -17,6 +17,7 @@ package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.FLAGS_ALL_COMPLETE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.BiFunction;
 
 import javax.net.ssl.SSLSession;
 
@@ -50,7 +50,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -161,26 +160,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private Object rawResponseContent;
 
-    // Fields for caching the string representation.
-    private volatile int requestStrFlags = -1;
-    @Nullable
-    private Object requestStrHeadersSanitizer;
-    @Nullable
-    private Object requestStrContentSanitizer;
-    @Nullable
-    private Object requestStrTrailersSanitizer;
-    private volatile int responseStrFlags = -1;
-    @Nullable
-    private Object responseStrHeadersSanitizer;
-    @Nullable
-    private Object responseStrContentSanitizer;
-    @Nullable
-    private Object responseStrTrailersSanitizer;
-    @Nullable
-    private String requestStr;
-    @Nullable
-    private String responseStr;
-
     DefaultRequestLog(RequestContext ctx) {
         this.ctx = requireNonNull(ctx, "ctx");
     }
@@ -193,7 +172,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private static boolean isComplete(int flags) {
-        return flags == RequestLogProperty.FLAGS_ALL_COMPLETE;
+        return flags == FLAGS_ALL_COMPLETE;
     }
 
     @Override
@@ -263,7 +242,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public CompletableFuture<RequestLog> whenComplete() {
-        return future(RequestLogProperty.FLAGS_ALL_COMPLETE);
+        return future(FLAGS_ALL_COMPLETE);
     }
 
     @Override
@@ -1443,241 +1422,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                   .append('}');
     }
 
-    @Override
-    public String toStringRequestOnly(
-            BiFunction<? super RequestContext, ? super RequestHeaders,
-                    ? extends @Nullable Object> headersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> contentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> trailersSanitizer) {
-
-        requireNonNull(headersSanitizer, "headersSanitizer");
-        requireNonNull(contentSanitizer, "contentSanitizer");
-        requireNonNull(trailersSanitizer, "trailersSanitizer");
-
-        // Only interested in the bits related with request.
-        final int flags = this.flags & RequestLogProperty.FLAGS_REQUEST_COMPLETE;
-        if (requestStrFlags == flags &&
-            requestStrHeadersSanitizer == headersSanitizer &&
-            requestStrContentSanitizer == contentSanitizer &&
-            requestStrTrailersSanitizer == trailersSanitizer) {
-            assert requestStr != null;
-            return requestStr;
-        }
-
-        if (!hasInterestedFlags(flags, RequestLogProperty.REQUEST_START_TIME)) {
-            requestStr = "{}";
-            requestStrFlags = flags;
-            return requestStr;
-        }
-
-        final String requestCauseString;
-        if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CAUSE) && requestCause != null) {
-            requestCauseString = String.valueOf(requestCause);
-        } else {
-            requestCauseString = null;
-        }
-
-        final String sanitizedHeaders;
-        if (requestHeaders != null) {
-            sanitizedHeaders = sanitize(headersSanitizer, requestHeaders);
-        } else {
-            sanitizedHeaders = null;
-        }
-
-        final String sanitizedContent;
-        if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CONTENT) && requestContent != null) {
-            sanitizedContent = sanitize(contentSanitizer, requestContent);
-        } else {
-            sanitizedContent = null;
-        }
-
-        final String sanitizedTrailers;
-        if (!requestTrailers.isEmpty()) {
-            sanitizedTrailers = sanitize(trailersSanitizer, requestTrailers);
-        } else {
-            sanitizedTrailers = null;
-        }
-
-        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("{startTime=");
-            TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
-
-            if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_LENGTH)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, requestLength);
-            }
-
-            if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_END_TIME)) {
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, requestDurationNanos());
-            }
-
-            if (requestCauseString != null) {
-                buf.append(", cause=").append(requestCauseString);
-            }
-
-            buf.append(", scheme=");
-            if (scheme != null) {
-                buf.append(scheme.uriText());
-            } else {
-                buf.append(SerializationFormat.UNKNOWN.uriText())
-                   .append('+')
-                   .append(sessionProtocol != null ? sessionProtocol.uriText() : "unknown");
-            }
-
-            if (name != null) {
-                buf.append(", name=").append(name);
-            }
-
-            if (sanitizedHeaders != null) {
-                buf.append(", headers=").append(sanitizedHeaders);
-            }
-
-            if (sanitizedContent != null) {
-                buf.append(", content=").append(sanitizedContent);
-            } else if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                       requestContentPreview != null) {
-                buf.append(", contentPreview=").append(requestContentPreview);
-            }
-
-            if (sanitizedTrailers != null) {
-                buf.append(", trailers=").append(sanitizedTrailers);
-            }
-            buf.append('}');
-
-            requestStr = buf.toString();
-        }
-
-        requestStrHeadersSanitizer = headersSanitizer;
-        requestStrContentSanitizer = contentSanitizer;
-        requestStrTrailersSanitizer = trailersSanitizer;
-        requestStrFlags = flags;
-
-        return requestStr;
-    }
-
-    @Override
-    public String toStringResponseOnly(
-            BiFunction<? super RequestContext, ? super ResponseHeaders,
-                    ? extends @Nullable Object> headersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> contentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> trailersSanitizer) {
-
-        requireNonNull(headersSanitizer, "headersSanitizer");
-        requireNonNull(contentSanitizer, "contentSanitizer");
-        requireNonNull(trailersSanitizer, "trailersSanitizer");
-
-        // Only interested in the bits related with response.
-        final int flags = this.flags & RequestLogProperty.FLAGS_RESPONSE_COMPLETE;
-        if (responseStrFlags == flags &&
-            responseStrHeadersSanitizer == headersSanitizer &&
-            responseStrContentSanitizer == contentSanitizer &&
-            responseStrTrailersSanitizer == trailersSanitizer) {
-            assert responseStr != null;
-            return responseStr;
-        }
-
-        if (!hasInterestedFlags(flags, RequestLogProperty.RESPONSE_START_TIME)) {
-            responseStr = "{}";
-            responseStrFlags = flags;
-            return responseStr;
-        }
-
-        final String responseCauseString;
-        if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_CAUSE) && responseCause != null) {
-            responseCauseString = String.valueOf(responseCause);
-        } else {
-            responseCauseString = null;
-        }
-
-        final String sanitizedHeaders;
-        if (responseHeaders != null) {
-            sanitizedHeaders = sanitize(headersSanitizer, responseHeaders);
-        } else {
-            sanitizedHeaders = null;
-        }
-
-        final String sanitizedContent;
-        if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_CONTENT) && responseContent != null) {
-            sanitizedContent = sanitize(contentSanitizer, responseContent);
-        } else {
-            sanitizedContent = null;
-        }
-
-        final String sanitizedTrailers;
-        if (!responseTrailers.isEmpty()) {
-            sanitizedTrailers = sanitize(trailersSanitizer, responseTrailers);
-        } else {
-            sanitizedTrailers = null;
-        }
-
-        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("{startTime=");
-            TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
-
-            if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_LENGTH)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, responseLength);
-            }
-
-            if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_END_TIME)) {
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, responseDurationNanos());
-                buf.append(", totalDuration=");
-                TextFormatter.appendElapsed(buf, totalDurationNanos());
-            }
-
-            if (responseCauseString != null) {
-                buf.append(", cause=").append(responseCauseString);
-            }
-
-            if (sanitizedHeaders != null) {
-                buf.append(", headers=").append(sanitizedHeaders);
-            }
-
-            if (sanitizedContent != null) {
-                buf.append(", content=").append(sanitizedContent);
-            } else if (responseContentPreview != null) {
-                buf.append(", contentPreview=").append(responseContentPreview);
-            }
-
-            if (sanitizedTrailers != null) {
-                buf.append(", trailers=").append(sanitizedTrailers);
-            }
-            buf.append('}');
-
-            final int numChildren = children != null ? children.size() : 0;
-            if (numChildren > 1) {
-                // Append only when there were retries which the numChildren is greater than 1.
-                buf.append(", {totalAttempts=");
-                buf.append(numChildren);
-                buf.append('}');
-            }
-
-            responseStr = buf.toString();
-        }
-
-        responseStrHeadersSanitizer = headersSanitizer;
-        responseStrContentSanitizer = contentSanitizer;
-        responseStrTrailersSanitizer = trailersSanitizer;
-        responseStrFlags = flags;
-
-        return responseStr;
-    }
-
-    private <T> String sanitize(
-            BiFunction<? super RequestContext, ? super T, ? extends @Nullable Object> headersSanitizer,
-            T requestHeaders) {
-        final Object sanitized = headersSanitizer.apply(ctx, requestHeaders);
-        return sanitized != null ? sanitized.toString() : "<sanitized>";
-    }
-
     private static final class RequestLogFuture extends EventLoopCheckingFuture<RequestLog> {
 
         final int interestedFlags;
@@ -1820,7 +1564,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public int availabilityStamp() {
-            return RequestLogProperty.FLAGS_ALL_COMPLETE;
+            return FLAGS_ALL_COMPLETE;
         }
 
         @Override
@@ -1961,19 +1705,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         @Override
-        public String toStringRequestOnly(
-                BiFunction<? super RequestContext, ? super RequestHeaders,
-                        ? extends @Nullable Object> headersSanitizer,
-                BiFunction<? super RequestContext, Object,
-                        ? extends @Nullable Object> contentSanitizer,
-                BiFunction<? super RequestContext, ? super HttpHeaders,
-                        ? extends @Nullable Object> trailersSanitizer) {
-
-            return DefaultRequestLog.this.toStringRequestOnly(
-                    headersSanitizer, contentSanitizer, trailersSanitizer);
-        }
-
-        @Override
         public long responseStartTimeMicros() {
             return responseStartTimeMicros;
         }
@@ -2036,19 +1767,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public HttpHeaders responseTrailers() {
             return responseTrailers;
-        }
-
-        @Override
-        public String toStringResponseOnly(
-                BiFunction<? super RequestContext, ? super ResponseHeaders,
-                        ? extends @Nullable Object> headersSanitizer,
-                BiFunction<? super RequestContext, Object,
-                        ? extends @Nullable Object> contentSanitizer,
-                BiFunction<? super RequestContext, ? super HttpHeaders,
-                        ? extends @Nullable Object> trailersSanitizer) {
-
-            return DefaultRequestLog.this.toStringResponseOnly(headersSanitizer, contentSanitizer,
-                                                               trailersSanitizer);
         }
 
         @Override
