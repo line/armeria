@@ -367,6 +367,14 @@ class EndpointTest {
             assertThat(e.port()).isEqualTo(foo.port());
         });
 
+        // When hostname is set to an IP-only endpoint:
+        assertThat(Endpoint.of("127.0.0.1").withHost("foo")).satisfies(e -> {
+            assertThat(e.type()).isSameAs(Type.HOSTNAME_AND_IP);
+            assertThat(e.host()).isEqualTo("foo");
+            assertThat(e.ipAddr()).isEqualTo("127.0.0.1");
+            assertThat(e.hasPort()).isFalse();
+        });
+
         // When domain socket address is specified:
         assertThat(foo.withHost("unix%3A%2Ftmp%2Ffoo.sock")).satisfies(e -> {
             assertThat(e.type()).isSameAs(Type.DOMAIN_SOCKET);

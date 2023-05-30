@@ -382,7 +382,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
                                 weight, attributes);
         } else {
-            return new Endpoint(type, host, ipAddr, port, weight, attributes);
+            return new Endpoint(ipAddr != null ? Type.HOSTNAME_AND_IP : Type.HOSTNAME_ONLY,
+                                host, ipAddr, port, weight, attributes);
         }
     }
 
