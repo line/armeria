@@ -78,9 +78,16 @@ allprojects {
             systemProperty "java.security.manager", "allow"
         }
 
+        // required by blockhound for jvm 13+. See https://github.com/reactor/BlockHound/issues/33.
+        if (rootProject.hasProperty('blockhound') && project.ext.testJavaVersion >= 13) {
+            jvmArgs "-XX:+AllowRedefinitionToAddDeleteMethods"
+        }
+
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
+
+        systemProperty 'com.linecorp.armeria.blockhound.reportFile', "${project.buildDir}/blockhound.log"
 
         // Pass special system property to tell our tests that we are measuring coverage.
         if (project.hasFlags('coverage')) {
@@ -165,6 +172,9 @@ configure(projectsWithFlags('java')) {
         // Reflections
         implementation libs.reflections
 
+        // Blockhound
+        optionalImplementation libs.blockhound
+
         // Test-time dependencies
         testImplementation libs.guava.testlib
         testImplementation libs.junit4
@@ -183,6 +193,11 @@ configure(projectsWithFlags('java')) {
         testImplementation libs.apache.httpclient5
         testImplementation libs.hamcrest
         testImplementation libs.hamcrest.library
+        testRuntimeOnly libs.kotlin.coroutines.debug
+
+        if (rootProject.hasProperty('blockhound')) {
+            testRuntimeOnly libs.blockhound.junit.platform
+        }
     }
 
     // Configure the default DuplicatesStrategy for such as:

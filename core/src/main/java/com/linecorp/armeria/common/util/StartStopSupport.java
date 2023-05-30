@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * Provides asynchronous start-stop life cycle support.
@@ -63,7 +64,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
      */
     private UnmodifiableFuture<?> future = completedFuture(null);
 
-    private final ReentrantLock reentrantLock = new ReentrantLock();
+    private final ReentrantLock reentrantLock = new ReentrantShortLock();
 
     /**
      * Creates a new instance.
