@@ -28,6 +28,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.CompletableFuture;
 
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -39,10 +40,34 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class Http1HeaderNamingTest {
+
+    @RegisterExtension
+    static ServerExtension traditionalHeaderNameServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/", (ctx, req) -> HttpResponse
+                      .of(ResponseHeaders.of(HttpStatus.OK,
+                                             HttpHeaderNames.AUTHORIZATION, "Bearer foo",
+                                             HttpHeaderNames.X_FORWARDED_FOR, "bar")))
+              .http1HeaderNaming(Http1HeaderNaming.traditional());
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/", (ctx, req) -> HttpResponse
+                      .of(ResponseHeaders.of(HttpStatus.OK,
+                                             HttpHeaderNames.AUTHORIZATION, "Bearer foo",
+                                             HttpHeaderNames.X_FORWARDED_FOR, "bar")))
+              .http1HeaderNaming(Http1HeaderNaming.ofDefault());
+        }
+    };
 
     @CsvSource({ "true", "false" })
     @ParameterizedTest
@@ -112,20 +137,12 @@ class Http1HeaderNamingTest {
     @CsvSource({ "true", "false" })
     @ParameterizedTest
     void serverTraditionalHeaderNaming(boolean useHeaderNaming) throws IOException {
-        final ServerBuilder serverBuilder = Server
-                .builder()
-                .service("/", (ctx, req) -> HttpResponse
-                        .of(ResponseHeaders.of(HttpStatus.OK,
-                                               HttpHeaderNames.AUTHORIZATION, "Bearer foo",
-                                               HttpHeaderNames.X_FORWARDED_FOR, "bar")));
-        if (useHeaderNaming) {
-            serverBuilder.http1HeaderNaming(Http1HeaderNaming.traditional());
-        }
-        final Server server = serverBuilder.build();
-        server.start().join();
-
         try (Socket socket = new Socket()) {
-            socket.connect(server.activePort().localAddress());
+            if (useHeaderNaming) {
+                socket.connect(traditionalHeaderNameServer.httpSocketAddress());
+            } else {
+                socket.connect(server.httpSocketAddress());
+            }
 
             final PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
             outWriter.print("GET / HTTP/1.1\r\n");

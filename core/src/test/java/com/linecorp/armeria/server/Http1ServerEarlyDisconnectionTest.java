@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -101,8 +102,10 @@ class Http1ServerEarlyDisconnectionTest {
                 received += httpData.length();
                 if (received >= contentLength) {
                     // All data is received, so it should be safe to close the connection.
-                    clientFactory.close();
-                    latch.countDown();
+                    BlockingUtils.blockingRun(() -> {
+                        clientFactory.close();
+                        latch.countDown();
+                    });
                 }
             }
 

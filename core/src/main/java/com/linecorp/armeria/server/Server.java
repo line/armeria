@@ -77,6 +77,7 @@ import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.micrometer.core.instrument.Gauge;
@@ -115,7 +116,7 @@ public final class Server implements ListenableAsyncCloseable {
     private final UpdatableServerConfig config;
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
@@ -700,11 +701,14 @@ public final class Server implements ListenableAsyncCloseable {
                 builder.addAll(serviceConfig.shutdownSupports());
             }
 
-            CompletableFutures.successfulAsList(builder.build()
-                                                       .stream()
-                                                       .map(ShutdownSupport::shutdown)
-                                                       .collect(toImmutableList()), cause -> null)
-                              .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            CompletableFuture.runAsync(() -> {
+                // ShutdownSupport may be blocking so run the entire block inside the startStopExecutor
+                CompletableFutures.successfulAsList(builder.build()
+                                                           .stream()
+                                                           .map(ShutdownSupport::shutdown)
+                                                           .collect(toImmutableList()), cause -> null)
+                                  .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            }, config.startStopExecutor());
         }
 
         @Override
