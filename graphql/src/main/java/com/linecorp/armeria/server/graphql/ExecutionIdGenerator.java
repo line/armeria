@@ -23,8 +23,7 @@ import graphql.execution.ExecutionId;
 import graphql.execution.ExecutionIdProvider;
 
 /**
- * An interface for generating unique execution ID in the Armeria GraphQL integration.
- * Implementations of this interface provide a mechanism to generate execution ID for GraphQL requests.
+ * Generates a unique execution ID of each GraphQL request.
  */
 @UnstableApi
 @FunctionalInterface
