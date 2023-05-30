@@ -20,15 +20,13 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.util.DomainSocketPathEscaper;
+import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
 
 /**
  * An {@link InetSocketAddress} that refers to the {@link Path} of a Unix domain socket.
@@ -44,13 +42,6 @@ import com.linecorp.armeria.internal.common.util.DomainSocketPathEscaper;
 public final class DomainSocketAddress extends InetSocketAddress {
 
     private static final long serialVersionUID = 41779966264274119L;
-
-    // Use an IPv6 address that falls into RFC 6666 (IPv6 Discard Prefix),
-    // which will never reach anywhere. See https://datatracker.ietf.org/doc/rfc6666/
-    private static final byte[] IPV6_DISCARD_ADDR = {
-            1, 0, 0, 0, 0, 0, 0, 0, // 0100::/64
-            'A', 'r', 'm', 'e', 'r', 'i', 'a', '!'
-    };
 
     /**
      * Returns a newly created {@link DomainSocketAddress} with the specified {@link Path} to the Unix domain
@@ -79,7 +70,7 @@ public final class DomainSocketAddress extends InetSocketAddress {
      */
     public static boolean isDomainSocketAddress(InetAddress addr) {
         requireNonNull(addr, "addr");
-        return Arrays.equals(addr.getAddress(), IPV6_DISCARD_ADDR);
+        return DomainSocketUtil.isDomainSocketAddress(addr);
     }
 
     private final Path path;
@@ -92,16 +83,9 @@ public final class DomainSocketAddress extends InetSocketAddress {
     private io.netty.channel.unix.DomainSocketAddress nettyAddress;
 
     private DomainSocketAddress(Path path) {
-        super(toInetAddress(path), 1);
+        super(DomainSocketUtil.toInetAddress(requireNonNull(path, "path").toString()),
+              DomainSocketUtil.DOMAIN_SOCKET_PORT);
         this.path = path;
-    }
-
-    private static InetAddress toInetAddress(Path path) {
-        try {
-            return InetAddress.getByAddress("unix:" + path, IPV6_DISCARD_ADDR);
-        } catch (UnknownHostException e) {
-            throw new Error(e);
-        }
     }
 
     /**
@@ -120,7 +104,7 @@ public final class DomainSocketAddress extends InetSocketAddress {
             return authority;
         }
 
-        final String newAuthority = DomainSocketPathEscaper.toAuthority(path.toString());
+        final String newAuthority = DomainSocketUtil.toAuthority(path.toString());
         this.authority = newAuthority;
         return newAuthority;
     }

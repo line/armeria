@@ -19,14 +19,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-class DomainSocketPathEscaperTest {
+class DomainSocketUtilTest {
     @Test
     void test() {
-        assertThat(DomainSocketPathEscaper.toAuthority("@")).isEqualTo("unix%3A%40");
-        assertThat(DomainSocketPathEscaper.toAuthority("@@")).isEqualTo("unix%3A%40%40");
-        assertThat(DomainSocketPathEscaper.toAuthority("@foo@")).isEqualTo("unix%3A%40foo%40");
-        assertThat(DomainSocketPathEscaper.toAuthority(":")).isEqualTo("unix%3A%3A");
-        assertThat(DomainSocketPathEscaper.toAuthority("::")).isEqualTo("unix%3A%3A%3A");
-        assertThat(DomainSocketPathEscaper.toAuthority(":bar:")).isEqualTo("unix%3A%3Abar%3A");
+        assertThat(DomainSocketUtil.toAuthority("@")).isEqualTo("unix%3A%40");
+        assertThat(DomainSocketUtil.toAuthority("@@")).isEqualTo("unix%3A%40%40");
+        assertThat(DomainSocketUtil.toAuthority("@foo@")).isEqualTo("unix%3A%40foo%40");
+        assertThat(DomainSocketUtil.toAuthority(":")).isEqualTo("unix%3A%3A");
+        assertThat(DomainSocketUtil.toAuthority("::")).isEqualTo("unix%3A%3A%3A");
+        assertThat(DomainSocketUtil.toAuthority(":bar:")).isEqualTo("unix%3A%3Abar%3A");
     }
 }

@@ -647,7 +647,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         SocketAddress toRemoteAddress() {
             final InetSocketAddress remoteAddr = endpoint.toSocketAddress(-1);
-            if (remoteAddr instanceof com.linecorp.armeria.common.util.DomainSocketAddress) {
+            if (endpoint.isDomainSocket()) {
                 return ((com.linecorp.armeria.common.util.DomainSocketAddress) remoteAddr).asNettyAddress();
             }
 
@@ -689,10 +689,10 @@ final class HttpChannelPool implements AsyncCloseable {
             try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
                 final StringBuilder buf = tempThreadLocals.stringBuilder();
                 buf.append('{').append(host);
-                if (ipAddr != null) {
-                    buf.append('/').append(ipAddr);
-                }
                 if (!isDomainSocket) {
+                    if (ipAddr != null) {
+                        buf.append('/').append(ipAddr);
+                    }
                     buf.append(':').append(port);
                 }
                 if (proxyConfigStr != null) {

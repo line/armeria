@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.OsType;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
 
 import io.netty.util.AttributeKey;
 
@@ -370,8 +371,8 @@ class EndpointTest {
             assertThat(e.type()).isSameAs(Type.DOMAIN_SOCKET);
             assertThat(e.host()).isEqualTo("unix%3A%2Ftmp%2Ffoo.sock");
             assertThat(e.isDomainSocket()).isTrue();
-            assertThat(e.hasIpAddr()).isFalse();
-            assertThat(e.hasPort()).isFalse();
+            assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+            assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
         });
     }
 
@@ -557,8 +558,8 @@ class EndpointTest {
                 assertThat(e.host()).isEqualTo("unix%3A%2Ffoo.sock");
             }
             assertThat(e.isDomainSocket()).isTrue();
-            assertThat(e.hasPort()).isFalse();
-            assertThat(e.hasIpAddr()).isFalse();
+            assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+            assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
         });
 
         // DomainSocketAddress (Netty)
@@ -569,8 +570,8 @@ class EndpointTest {
                 assertThat(e.host()).isEqualTo("unix%3A%2Fbar.sock");
             }
             assertThat(e.isDomainSocket()).isTrue();
-            assertThat(e.hasPort()).isFalse();
-            assertThat(e.hasIpAddr()).isFalse();
+            assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+            assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
         });
     }
 
@@ -632,17 +633,21 @@ class EndpointTest {
     }
 
     @Test
-    void domainSocketDoesNotHaveIpAddr() {
+    void domainSocketAlwaysHasPredefinedIpAddr() {
         final Endpoint endpoint = Endpoint.of("unix%3A%2Ffoo.sock");
         assertThat(endpoint.type()).isSameAs(Type.DOMAIN_SOCKET);
-        assertThat(endpoint.withIpAddr("127.0.0.1").hasIpAddr()).isFalse();
+        assertThat(endpoint.withIpAddr("127.0.0.1").ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+        assertThat(endpoint.withIpAddr("127.0.0.1")).isSameAs(endpoint);
+        assertThat(endpoint.withIpAddr(null).ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+        assertThat(endpoint.withIpAddr(null)).isSameAs(endpoint);
     }
 
     @Test
-    void domainSocketDoesNotHavePort() {
+    void domainSocketAlwaysHasPredefinedPort() {
         final Endpoint endpoint = Endpoint.of("unix%3A%2Ffoo.sock", 8080);
-        assertThat(endpoint.hasPort()).isFalse();
-        assertThat(endpoint.withPort(8080).hasPort()).isFalse();
+        assertThat(endpoint.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
+        assertThat(endpoint.withPort(8080).port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
+        assertThat(endpoint.withPort(8080)).isSameAs(endpoint);
     }
 
     @Test

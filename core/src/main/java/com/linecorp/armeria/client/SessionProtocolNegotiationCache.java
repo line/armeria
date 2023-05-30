@@ -34,7 +34,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.LruMap;
-import com.linecorp.armeria.internal.common.util.DomainSocketPathEscaper;
+import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
 import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 
 /**
@@ -183,7 +183,7 @@ public final class SessionProtocolNegotiationCache {
         }
 
         if (remoteAddress instanceof io.netty.channel.unix.DomainSocketAddress) {
-            return DomainSocketPathEscaper.toAuthority(
+            return DomainSocketUtil.toAuthority(
                     ((io.netty.channel.unix.DomainSocketAddress) remoteAddress).path());
         }
 

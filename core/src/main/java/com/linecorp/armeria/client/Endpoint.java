@@ -17,7 +17,8 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.util.DomainSocketUtil.DOMAIN_SOCKET_IP;
+import static com.linecorp.armeria.internal.common.util.DomainSocketUtil.DOMAIN_SOCKET_PORT;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UnsupportedEncodingException;
@@ -163,7 +164,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (addr instanceof DomainSocketAddress) {
             final DomainSocketAddress domainSocketAddr = (DomainSocketAddress) addr;
             final Endpoint endpoint = new Endpoint(Type.DOMAIN_SOCKET, domainSocketAddr.authority(),
-                                                   null, 0, DEFAULT_WEIGHT, null);
+                                                   DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
+                                                   DEFAULT_WEIGHT, null);
             endpoint.socketAddress = domainSocketAddr;
             return endpoint;
         }
@@ -199,7 +201,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         if (isDomainSocketAuthority(host)) {
-            return new Endpoint(Type.DOMAIN_SOCKET, host, null, 0, DEFAULT_WEIGHT, null);
+            return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
+                                DEFAULT_WEIGHT, null);
         } else {
             if (validateHost) {
                 host = InternetDomainName.from(host).toString();
@@ -255,8 +258,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         endpoints = ImmutableList.of(this);
 
         // type must be HOSTNAME_ONLY or DOMAIN_SOCKET when ipAddr is null and vice versa.
-        assert ipAddr == null && (type == Type.HOSTNAME_ONLY || type == Type.DOMAIN_SOCKET) ||
-               ipAddr != null && (type == Type.IP_ONLY || type == Type.HOSTNAME_AND_IP);
+        assert ipAddr == null && type == Type.HOSTNAME_ONLY ||
+               ipAddr != null && type != Type.HOSTNAME_ONLY;
+
+        // A domain socket endpoint must have the predefined IP address and port number.
+        assert type != Type.DOMAIN_SOCKET || port == DOMAIN_SOCKET_PORT && DOMAIN_SOCKET_IP.equals(ipAddr);
 
         // Pre-generate the authority.
         authority = generateAuthority(type, host, port);
@@ -372,7 +378,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (normalizedIpAddr != null) {
             return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, weight, attributes);
         } else if (isDomainSocketAuthority(host)) {
-            return new Endpoint(Type.DOMAIN_SOCKET, host, null, 0, weight, attributes);
+            return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
+                                weight, attributes);
         } else {
             return new Endpoint(type, host, ipAddr, port, weight, attributes);
         }
@@ -381,7 +388,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     /**
      * Returns the IP address of this endpoint.
      *
-     * @return the IP address, or {@code null} if the host name is a domain socket address or not resolved yet
+     * @return the IP address, or {@code null} if the host name is not resolved yet
      */
     @Nullable
     public String ipAddr() {
@@ -411,7 +418,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns the {@link StandardProtocolFamily} of this endpoint's IP address.
      *
      * @return the {@link StandardProtocolFamily} of this endpoint's IP address, or
-     *         {@code null} if the host name is a domain socket address or not resolved yet.
+     *         {@code null} if the host name is not resolved yet.
      */
     @Nullable
     public StandardProtocolFamily ipFamily() {
@@ -491,7 +498,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withoutPort() {
-        if (port == 0) {
+        if (port == 0 || isDomainSocket()) {
             return this;
         }
         return new Endpoint(type, host, ipAddr, 0, weight, attributes);
@@ -509,7 +516,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public Endpoint withDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
 
-        if (port != 0 || isDomainSocket()) {
+        if (port != 0) {
             return this;
         }
 
@@ -529,6 +536,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public Endpoint withoutDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
+        if (isDomainSocket()) {
+            // A domain socket always has the predefined port number.
+            return this;
+        }
         if (port == defaultPort) {
             return new Endpoint(type, host, ipAddr, 0, weight, attributes);
         }
@@ -545,6 +556,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public Endpoint withIpAddr(@Nullable String ipAddr) {
         if (isDomainSocket()) {
+            // A domain socket always has the predefined IP address.
             return this;
         }
         if (ipAddr == null) {
@@ -795,7 +807,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         final InetSocketAddress newSocketAddress = toSocketAddress0(defaultPort);
-        if (hasPort() || isDomainSocket()) {
+        if (hasPort()) {
             this.socketAddress = newSocketAddress;
         }
         return newSocketAddress;
