@@ -29,7 +29,8 @@ import graphql.execution.ExecutionIdProvider;
 @FunctionalInterface
 public interface ExecutionIdGenerator {
     /**
-     * Returns the default {@link ExecutionIdGenerator} which uses {@link ServiceRequestContext#id()}
+     * Returns the default {@link ExecutionIdGenerator} that uses {@link ServiceRequestContext#id()}
+     * as the execution ID.
      */
     static ExecutionIdGenerator of() {
         return (requestContext, query, operationName, graphqlContext) -> ExecutionId.from(
