@@ -159,7 +159,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 return sz >= total;
             }
 
-            int caculateNumberOfEndpointInTheRing(Iterable<Endpoint> endpoints, int gcd) {
+            int calculateNumberOfEndpointInTheRing(Iterable<Endpoint> endpoints, int gcd) {
                 int numberOfEndpointInTheRing = 0;
                 for (final Endpoint endpoint : endpoints) {
                     int weight = endpoint.weight();
