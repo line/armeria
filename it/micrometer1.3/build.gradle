@@ -1,16 +1,12 @@
 def thriftVersion = ""
-if (project.ext.testJavaVersion >= 11) {
+if (project.ext.targetJavaVersion >= 11) {
     thriftVersion = '0.18'
 } else {
     thriftVersion = '0.17'
 }
 
 dependencies {
-    if (project.ext.testJavaVersion >= 11) {
-        testImplementation project(":thrift$thriftVersion")
-    } else {
-        testImplementation project(":thrift$thriftVersion")
-    }
+    testImplementation project(":thrift$thriftVersion")
     testImplementation project(':grpc')
     testImplementation libs.dropwizard.metrics.core
     testImplementation libs.prometheus

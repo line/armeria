@@ -8,7 +8,6 @@ dependencies {
         testImplementation project(':thrift0.17')
     }
 
-
     testImplementation libs.brave.context.slf4j
     testImplementation libs.brave.instrumentation.http.tests
 }
