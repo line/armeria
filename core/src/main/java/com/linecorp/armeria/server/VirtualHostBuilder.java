@@ -1085,6 +1085,12 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @VisibleForTesting
+    @Nullable
+    SuccessFunction successFunction() {
+        return successFunction;
+    }
+
     /**
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
@@ -1108,12 +1114,6 @@ public final class VirtualHostBuilder implements TlsSetters {
     public VirtualHostBuilder requestAutoAbortDelayMillis(long delayMillis) {
         requestAutoAbortDelayMillis = delayMillis;
         return this;
-    }
-
-    @VisibleForTesting
-    @Nullable
-    SuccessFunction successFunction() {
-        return successFunction;
     }
 
     /**
