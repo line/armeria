@@ -2,15 +2,6 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
 
-String releaseFlagFromVersion(String src) {
-    // Java 9+ are 9, 10, etc, before was 1.8, 1.7, etc.
-    if (src.contains('.')) {
-        src.substring(src.lastIndexOf('.')+1)
-    } else {
-        src
-    }
-}
-
 def mrJarVersions = [9,12]
 
 mrJarVersions.each { version->
@@ -27,24 +18,24 @@ mrJarVersions.each { version->
         }
     }
 
+    def targetJavaVersion = Math.max(version, project.ext.targetJavaVersion)
     "compileJava${version}Java" {
-        sourceCompatibility = version
-        targetCompatibility = version
-        options.release.set(version)
+        sourceCompatibility = targetJavaVersion
+        targetCompatibility = targetJavaVersion
+        options.release.set(targetJavaVersion)
     }
 
     "compileJava${version}TestJava" {
-        sourceCompatibility = version
-        targetCompatibility = version
-        options.release.set(version)
+        sourceCompatibility = targetJavaVersion
+        targetCompatibility = targetJavaVersion
+        options.release.set(targetJavaVersion)
     }
 
     task "testJava${version}"(type: Test, group: 'Verification', description: "Runs unit tests for Java ${version} source set") {
         testClassesDirs = sourceSets."java${version}Test".output.classesDirs
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
-        enabled = Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version &&
-                project.ext.testJavaVersion >= version
+        enabled = project.ext.testJavaVersion >= targetJavaVersion
     }
 
     configurations."java${version}Implementation".extendsFrom configurations.implementation

@@ -64,14 +64,14 @@ configure(projectsWithFlags('java')) {
         minimumJavaVersion = Integer.valueOf(String.valueOf(project.findProperty('minimumJavaVersion')))
         if (minimumJavaVersion < 8) {
             throw new IllegalArgumentException("'minimumJavaVersion' cannot be smaller than 8. " +
-                    "minimumJavaVersion: ${minimumJavaVersion}")
+                                               "minimumJavaVersion: ${minimumJavaVersion}")
         }
     }
     // parse flags for the targetJavaVersion
     def targetJavaVersion = extractTargetJavaVersion(project)
     if (targetJavaVersion != null && targetJavaVersion < 8) {
         throw new IllegalArgumentException("The minimum target Java version ${version} specified " +
-                "for '${project.path}' cannot be smaller than 8")
+                                           "for '${project.path}' cannot be smaller than 8")
     }
 
     if (minimumJavaVersion != null && (targetJavaVersion == null || targetJavaVersion < minimumJavaVersion)) {
