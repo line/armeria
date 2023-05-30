@@ -286,7 +286,7 @@ public final class GraphqlServiceBuilder {
             configurer.configure(builder);
         }
 
-        final Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory;
+        Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory = null;
         if (this.dataLoaderRegistryFactory != null) {
             dataLoaderRegistryFactory = this.dataLoaderRegistryFactory;
         } else if (dataLoaderRegistryConsumers != null) {
@@ -296,6 +296,7 @@ public final class GraphqlServiceBuilder {
             }
             dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
         } else {
+            assert dataLoaderRegistryFactory == null && dataLoaderRegistryConsumers == null;
             dataLoaderRegistryFactory = ctx -> new DataLoaderRegistry();
         }
 
