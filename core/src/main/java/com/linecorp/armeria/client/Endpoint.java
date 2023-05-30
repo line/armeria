@@ -512,8 +512,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @param defaultPort the default port number
      * @return the new endpoint whose port is {@code defaultPort} if this endpoint does not have its port
      *         specified. {@code this} if this endpoint already has its port specified.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
@@ -526,6 +524,19 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
+     * Returns a new host endpoint with the default port number of the specified {@link SessionProtocol}.
+     *
+     * @param protocol the {@link SessionProtocol} that will provide the default port number
+     * @return the new endpoint whose port is the default port number of the specified
+     *         {@link SessionProtocol} if this endpoint does not have its port specified.
+     *         {@code this} if this endpoint already has its port specified.
+     */
+    public Endpoint withDefaultPort(SessionProtocol protocol) {
+        requireNonNull(protocol, "protocol");
+        return withDefaultPort(protocol.defaultPort());
+    }
+
+    /**
      * Returns a new host endpoint with the default port number removed.
      *
      * @param defaultPort the default port number
@@ -533,8 +544,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *         with the specified default port number. {@code this} if this endpoint had a different
      *         port number than the specified default port number or this endpoint already does not have
      *         a port number.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withoutDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
@@ -546,6 +555,21 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return new Endpoint(type, host, ipAddr, 0, weight, attributes);
         }
         return this;
+    }
+
+    /**
+     * Returns a new host endpoint with the default port number of the specified {@link SessionProtocol}
+     * removed.
+     *
+     * @param protocol the {@link SessionProtocol} that will provide the default port number
+     * @return the new endpoint without a port number if this endpoint had the same port number
+     *         with the default port number provided by the specified {@link SessionProtocol}.
+     *         {@code this} if this endpoint had a different port number than the default port number or
+     *         this endpoint already does not have a port number.
+     */
+    public Endpoint withoutDefaultPort(SessionProtocol protocol) {
+        requireNonNull(protocol, "protocol");
+        return withoutDefaultPort(protocol.defaultPort());
     }
 
     /**
@@ -608,8 +632,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns a new host endpoint with the specified weight.
      *
      * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withWeight(int weight) {
         validateWeight(weight);

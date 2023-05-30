@@ -332,7 +332,11 @@ class EndpointTest {
         assertThatThrownBy(() -> foo.withDefaultPort(0)).isInstanceOf(IllegalArgumentException.class)
                                                         .hasMessageContaining("defaultPort");
 
-        // A domain socket endpoint should not have a port.
+        // Shortcut that accepts a SessionProtocol
+        assertThat(foo.withDefaultPort(SessionProtocol.HTTP)).isEqualTo(foo80);
+        assertThat(foo80.withDefaultPort(SessionProtocol.HTTP)).isSameAs(foo80);
+
+        // A domain socket endpoint always has the predefined port.
         final Endpoint domainSocketEndpoint = Endpoint.of("unix%3Afoo.sock");
         assertThat(domainSocketEndpoint.withDefaultPort(80)).isSameAs(domainSocketEndpoint);
     }
@@ -346,6 +350,15 @@ class EndpointTest {
         assertThat(foo80.withoutDefaultPort(8080)).isSameAs(foo80);
         assertThatThrownBy(() -> foo.withoutDefaultPort(0)).isInstanceOf(IllegalArgumentException.class)
                                                            .hasMessageContaining("defaultPort");
+
+        // Shortcut that accepts a SessionProtocol
+        assertThat(foo.withoutDefaultPort(SessionProtocol.HTTP)).isSameAs(foo);
+        assertThat(foo80.withoutDefaultPort(SessionProtocol.HTTP)).isEqualTo(foo);
+
+        // A domain socket endpoint always has the predefined port.
+        final Endpoint domainSocketEndpoint = Endpoint.of("unix%3Afoo.sock");
+        assertThat(domainSocketEndpoint.withoutDefaultPort(DomainSocketUtil.DOMAIN_SOCKET_PORT))
+                .isSameAs(domainSocketEndpoint);
     }
 
     @Test

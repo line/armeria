@@ -96,7 +96,7 @@ final class HttpClientDelegate implements HttpClient {
             return HttpResponse.ofFailure(wrapped);
         }
 
-        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
+        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         // TODO(ikhoon) Use ctx.exchangeType() to create an optimized HttpResponse for non-streaming response.
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
