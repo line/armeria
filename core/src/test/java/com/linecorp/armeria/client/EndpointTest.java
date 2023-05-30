@@ -292,6 +292,7 @@ class EndpointTest {
             final Endpoint e = factoryFunc.apply(sockAddr);
             assertThat(e.type()).isSameAs(Type.DOMAIN_SOCKET);
             assertThat(e.host()).isEqualTo(sockAddr);
+            assertThat(e.authority()).isEqualTo(sockAddr);
             assertThat(e.isDomainSocket()).isTrue();
         });
     }

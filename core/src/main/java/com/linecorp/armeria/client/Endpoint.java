@@ -272,19 +272,20 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     private static String generateAuthority(Type type, String host, int port) {
-        final boolean isIpV6 = type == Type.IP_ONLY && isIpV6(host);
-        if (port != 0) {
-            if (isIpV6) {
-                return '[' + host + "]:" + port;
-            } else {
-                return host + ':' + port;
-            }
-        }
-
-        if (isIpV6) {
-            return '[' + host + ']';
-        } else {
-            return host;
+        switch (type) {
+            case DOMAIN_SOCKET:
+                return host;
+            case IP_ONLY:
+                if (isIpV6(host)) {
+                    if (port != 0) {
+                        return '[' + host + "]:" + port;
+                    } else {
+                        return '[' + host + ']';
+                    }
+                }
+                // fall-through
+            default:
+                return port != 0 ? host + ':' + port : host;
         }
     }
 
