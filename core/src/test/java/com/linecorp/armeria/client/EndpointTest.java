@@ -329,6 +329,10 @@ class EndpointTest {
         assertThat(foo80.withDefaultPort(80)).isSameAs(foo80);
         assertThatThrownBy(() -> foo.withDefaultPort(0)).isInstanceOf(IllegalArgumentException.class)
                                                         .hasMessageContaining("defaultPort");
+
+        // A domain socket endpoint should not have a port.
+        final Endpoint domainSocketEndpoint = Endpoint.of("unix%3Afoo.sock");
+        assertThat(domainSocketEndpoint.withDefaultPort(80)).isSameAs(domainSocketEndpoint);
     }
 
     @Test
@@ -366,8 +370,8 @@ class EndpointTest {
             assertThat(e.type()).isSameAs(Type.DOMAIN_SOCKET);
             assertThat(e.host()).isEqualTo("unix%3A%2Ftmp%2Ffoo.sock");
             assertThat(e.isDomainSocket()).isTrue();
-            assertThat(e.ipAddr()).isNull();
-            assertThat(e.port()).isEqualTo(foo.port());
+            assertThat(e.hasIpAddr()).isFalse();
+            assertThat(e.hasPort()).isFalse();
         });
     }
 
@@ -628,21 +632,17 @@ class EndpointTest {
     }
 
     @Test
-    void domainSocketWithIpAddr() {
+    void domainSocketDoesNotHaveIpAddr() {
         final Endpoint endpoint = Endpoint.of("unix%3A%2Ffoo.sock");
         assertThat(endpoint.type()).isSameAs(Type.DOMAIN_SOCKET);
-        assertThatThrownBy(() -> endpoint.withIpAddr("127.0.0.1"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("domain socket");
+        assertThat(endpoint.withIpAddr("127.0.0.1").hasIpAddr()).isFalse();
     }
 
     @Test
-    void domainSocketCannotHavePort() {
+    void domainSocketDoesNotHavePort() {
         final Endpoint endpoint = Endpoint.of("unix%3A%2Ffoo.sock", 8080);
         assertThat(endpoint.hasPort()).isFalse();
-        assertThatThrownBy(() -> endpoint.withPort(8080))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("domain socket");
+        assertThat(endpoint.withPort(8080).hasPort()).isFalse();
     }
 
     @Test

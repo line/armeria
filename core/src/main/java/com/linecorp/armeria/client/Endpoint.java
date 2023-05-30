@@ -162,7 +162,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         if (addr instanceof DomainSocketAddress) {
             final DomainSocketAddress domainSocketAddr = (DomainSocketAddress) addr;
-            final Endpoint endpoint = unsafeCreate(domainSocketAddr.authority(), 0);
+            final Endpoint endpoint = new Endpoint(Type.DOMAIN_SOCKET, domainSocketAddr.authority(),
+                                                   null, 0, DEFAULT_WEIGHT, null);
             endpoint.socketAddress = domainSocketAddr;
             return endpoint;
         }
@@ -371,7 +372,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (normalizedIpAddr != null) {
             return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, weight, attributes);
         } else if (isDomainSocketAuthority(host)) {
-            return new Endpoint(Type.DOMAIN_SOCKET, host, null, port, weight, attributes);
+            return new Endpoint(Type.DOMAIN_SOCKET, host, null, 0, weight, attributes);
         } else {
             return new Endpoint(type, host, ipAddr, port, weight, attributes);
         }
@@ -473,9 +474,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public Endpoint withPort(int port) {
         validatePort("port", port);
-        checkState(!isDomainSocket(), "cannot set a port number to a domain socket");
 
-        if (this.port == port) {
+        if (this.port == port || isDomainSocket()) {
             return this;
         }
 
@@ -509,7 +509,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public Endpoint withDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
 
-        if (port != 0) {
+        if (port != 0 || isDomainSocket()) {
             return this;
         }
 
@@ -544,6 +544,9 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalArgumentException if the specified IP address is invalid
      */
     public Endpoint withIpAddr(@Nullable String ipAddr) {
+        if (isDomainSocket()) {
+            return this;
+        }
         if (ipAddr == null) {
             return withoutIpAddr();
         }
@@ -553,8 +556,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (normalizedIpAddr.equals(this.ipAddr)) {
             return this;
         }
-
-        checkState(!isDomainSocket(), "A domain socket endpoint can't have an IP address.");
 
         if (isIpAddrOnly()) {
             return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, weight, attributes);
