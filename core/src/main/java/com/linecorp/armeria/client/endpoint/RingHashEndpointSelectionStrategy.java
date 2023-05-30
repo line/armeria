@@ -79,9 +79,9 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 return tailMap.isEmpty() ? ring.get(ring.firstKey()) : tailMap.get(tailMap.firstKey());
             }
 
-            WeightedRingEndpoint(Iterable<Endpoint> endpoints) {
+            WeightedRingEndpoint(List<Endpoint> endpoints) {
                 // prepare immutable endpoints
-                this.endpoints = Streams.stream(endpoints)
+                this.endpoints = endpoints.stream()
                                         .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
                                         .sorted(Comparator.comparing(Endpoint::weight)
                                                           .thenComparing(Endpoint::host)
@@ -91,7 +91,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 // The GCD is properly sized so that it does not exceed the size of the ring
                 final int gcd = findGcdInEndpoints(this.endpoints);
                 final int numberOfEndpointInTheRing = caculateNumberOfEndpointInTheRing(this.endpoints, gcd);
-                final int sizeOfRing = getSize(this.endpoints);
+                final int sizeOfRing = this.endpoints.size();
                 if (sizeOfRing >= numberOfEndpointInTheRing) {
                     for (Endpoint endpoint : this.endpoints) {
                         final int weight = endpoint.weight();
