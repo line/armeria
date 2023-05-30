@@ -25,41 +25,43 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import org.awaitility.Awaitility;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.client.Endpoint;
 
-public class PropertiesEndpointGroupTest {
+class PropertiesEndpointGroupTest {
 
     private static final Properties PROPS = new Properties();
 
-    @BeforeClass
-    public static void before() {
+    @BeforeAll
+    static void before() {
         Awaitility.setDefaultTimeout(1, TimeUnit.MINUTES);
     }
 
-    @AfterClass
-    public static void after() {
+    @AfterAll
+    static void after() {
         Awaitility.setDefaultTimeout(10, TimeUnit.SECONDS);
     }
 
-    @After
-    public void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() throws Exception {
         PropertiesEndpointGroup.resetRegistry();
     }
 
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+    @TempDir
+    Path folder;
 
     static {
         PROPS.setProperty("serverA.hosts.0", "127.0.0.1:8080");
@@ -70,7 +72,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void propertiesWithoutDefaultPort() {
+    void propertiesWithoutDefaultPort() {
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(PROPS, "serverA.hosts");
 
         assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
@@ -79,7 +81,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void propertiesWithDefaultPort() {
+    void propertiesWithDefaultPort() {
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.builder(PROPS, "serverA.hosts")
                                                                               .defaultPort(80)
                                                                               .build();
@@ -95,7 +97,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void resourceWithoutDefaultPort() {
+    void resourceWithoutDefaultPort() {
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
                 getClass().getClassLoader(), "server-list.properties", "serverA.hosts");
 
@@ -105,7 +107,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void resourceWithDefaultPort() {
+    void resourceWithDefaultPort() {
         final PropertiesEndpointGroup endpointGroupA =
                 PropertiesEndpointGroup.builder(getClass().getClassLoader(),
                                                 "server-list.properties",
@@ -128,7 +130,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void pathWithDefaultPort() throws Exception {
+    void pathWithDefaultPort() throws Exception {
         final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
         assert resourceUrl != null;
         final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
@@ -141,7 +143,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void pathWithoutDefaultPort() throws URISyntaxException {
+    void pathWithoutDefaultPort() throws URISyntaxException {
         final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
         assert resourceUrl != null;
         final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
@@ -154,7 +156,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void testWithPrefixThatEndsWithDot() {
+    void testWithPrefixThatEndsWithDot() {
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
                 getClass().getClassLoader(), "server-list.properties", "serverA.hosts.");
 
@@ -164,7 +166,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void containsNoHosts() {
+    void containsNoHosts() {
         assertThat(PropertiesEndpointGroup.builder(getClass().getClassLoader(),
                                                    "server-list.properties", "serverC.hosts")
                                           .defaultPort(8080)
@@ -173,7 +175,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void illegalDefaultPort() {
+    void illegalDefaultPort() {
         assertThatThrownBy(() -> PropertiesEndpointGroup.builder(getClass().getClassLoader(),
                                                                  "server-list.properties", "serverA.hosts")
                                                         .defaultPort(0))
@@ -182,22 +184,23 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void propertiesFileUpdatesCorrectly() throws Exception {
-        final File file = folder.newFile("temp-file.properties");
+    @EnabledForJreRange(min = JRE.JAVA_11) // NIO.2 WatchService doesn't work reliably on older Java.
+    void propertiesFileUpdatesCorrectly() throws Exception {
+        final Path file = folder.resolve("temp-file.properties");
 
-        PrintWriter printWriter = new PrintWriter(file);
+        PrintWriter printWriter = new PrintWriter(file.toFile());
         Properties props = new Properties();
         props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
         props.store(printWriter, "");
         printWriter.close();
 
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                file.toPath(), "serverA.hosts");
+                file, "serverA.hosts");
 
         await().untilAsserted(() -> assertThat(endpointGroupA.endpoints()).hasSize(1));
 
         // Update resource
-        printWriter = new PrintWriter(file);
+        printWriter = new PrintWriter(file.toFile());
         props = new Properties();
         props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
         props.setProperty("serverA.hosts.1", "127.0.0.1:8081");
@@ -210,36 +213,37 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void duplicateResourceUrl() throws IOException {
-        final File file = folder.newFile("temp-file.properties");
+    void duplicateResourceUrl() throws IOException {
+        final Path file = Files.createFile(folder.resolve("temp-file.properties"));
         final PropertiesEndpointGroup propertiesEndpointGroupA =
-                PropertiesEndpointGroup.of(file.toPath(), "serverA.hosts");
+                PropertiesEndpointGroup.of(file, "serverA.hosts");
         final PropertiesEndpointGroup propertiesEndpointGroupB =
-                PropertiesEndpointGroup.of(file.toPath(), "serverA.hosts");
+                PropertiesEndpointGroup.of(file, "serverA.hosts");
         propertiesEndpointGroupA.close();
         propertiesEndpointGroupB.close();
     }
 
     @Test
-    public void propertiesFileRestart() throws Exception {
-        final File file = folder.newFile("temp-file.properties");
+    @EnabledForJreRange(min = JRE.JAVA_11) // NIO.2 WatchService doesn't work reliably on older Java.
+    void propertiesFileRestart() throws Exception {
+        final Path file = folder.resolve("temp-file.properties");
 
-        PrintWriter printWriter = new PrintWriter(file);
+        PrintWriter printWriter = new PrintWriter(file.toFile());
         Properties props = new Properties();
         props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
         props.store(printWriter, "");
         printWriter.close();
 
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                file.toPath(), "serverA.hosts");
+                file, "serverA.hosts");
         await().untilAsserted(() -> assertThat(endpointGroupA.endpoints()).hasSize(1));
         endpointGroupA.close();
 
         final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
-                file.toPath(), "serverB.hosts");
+                file, "serverB.hosts");
         await().untilAsserted(() -> assertThat(endpointGroupB.endpoints()).isEmpty());
 
-        printWriter = new PrintWriter(file);
+        printWriter = new PrintWriter(file.toFile());
         props = new Properties();
         props.setProperty("serverB.hosts.0", "127.0.0.1:8080");
         props.setProperty("serverB.hosts.1", "127.0.0.1:8081");
@@ -251,10 +255,11 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void endpointChangePropagatesToListeners() throws Exception {
-        final File file = folder.newFile("temp-file.properties");
+    @EnabledForJreRange(min = JRE.JAVA_11) // NIO.2 WatchService doesn't work reliably on older Java.
+    void endpointChangePropagatesToListeners() throws Exception {
+        final Path file = folder.resolve("temp-file.properties");
 
-        PrintWriter printWriter = new PrintWriter(file);
+        PrintWriter printWriter = new PrintWriter(file.toFile());
         Properties props = new Properties();
         props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
         props.setProperty("serverA.hosts.1", "127.0.0.1:8081");
@@ -262,20 +267,20 @@ public class PropertiesEndpointGroupTest {
         printWriter.close();
 
         final PropertiesEndpointGroup propertiesEndpointGroup = PropertiesEndpointGroup.of(
-                file.toPath(), "serverA.hosts");
+                file, "serverA.hosts");
         final EndpointGroup fallbackEndpointGroup = Endpoint.of("127.0.0.1", 8081);
         final EndpointGroup endpointGroup = propertiesEndpointGroup.orElse(fallbackEndpointGroup);
 
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(2));
 
-        printWriter = new PrintWriter(file);
+        printWriter = new PrintWriter(file.toFile());
         props = new Properties();
         props.store(printWriter, "");
         printWriter.close();
 
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(1));
 
-        printWriter = new PrintWriter(file);
+        printWriter = new PrintWriter(file.toFile());
         props = new Properties();
         props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
         props.setProperty("serverA.hosts.1", "127.0.0.1:8081");
