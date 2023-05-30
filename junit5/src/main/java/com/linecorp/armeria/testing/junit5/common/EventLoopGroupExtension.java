@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.testing.junit5.common;
 
+import java.util.concurrent.ThreadFactory;
+
 import org.junit.jupiter.api.extension.Extension;
+
+import com.linecorp.armeria.common.util.ThreadFactories;
 
 import io.netty.channel.EventLoopGroup;
 
@@ -79,7 +83,17 @@ public class EventLoopGroupExtension extends AbstractEventLoopGroupExtension {
      * @param useDaemonThreads whether to create daemon threads or not
      */
     public EventLoopGroupExtension(int numThreads, String threadNamePrefix, boolean useDaemonThreads) {
-        super(numThreads, threadNamePrefix, useDaemonThreads);
+        this(numThreads, ThreadFactories.newEventLoopThreadFactory(threadNamePrefix, useDaemonThreads));
+    }
+
+    /**
+     * Creates a new {@link Extension} that provides an {@link EventLoopGroup}.
+     *
+     * @param numThreads the number of event loop threads
+     * @param threadFactory the factory used to create threads.
+     */
+    public EventLoopGroupExtension(int numThreads, ThreadFactory threadFactory) {
+        super(numThreads, threadFactory);
     }
 
     /**
