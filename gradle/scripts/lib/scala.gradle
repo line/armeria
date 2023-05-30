@@ -16,14 +16,22 @@ configure(scala212 + scala213 + scala3) {
         }
     }
 
-    tasks.withType(Test) {
-        useJUnitPlatform {
-            // A workaround for 'java.lang.InternalError: Malformed class name'
-            // when testing scalapb module with Java 8. This bug was fixed in Java 9.
-            // - https://github.com/gradle/gradle/issues/8432
-            // - https://bugs.openjdk.java.net/browse/JDK-8057919
-            if (rootProject.ext.testJavaVersion == 8) {
-                exclude("**/*\$*\$*.class")
+    testing {
+        suites {
+            test {
+                targets {
+                    all {
+                        testTask.configure {
+                            // A workaround for 'java.lang.InternalError: Malformed class name'
+                            // when testing scalapb module with Java 8. This bug was fixed in Java 9.
+                            // - https://github.com/gradle/gradle/issues/8432
+                            // - https://bugs.openjdk.java.net/browse/JDK-8057919
+                            if (project.ext.testJavaVersion == 8) {
+                                exclude("**/*\$*\$*.class")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -33,6 +41,7 @@ configure(scala212 + scala213 + scala3) {
         // Run `scalafmt` to automatically format scala code from source sets
         // https://github.com/alenkacz/gradle-scalafmt#tasks
         project.ext.getLintTask().dependsOn tasks.checkScalafmt
+        tasks.checkScalafmt.dependsOn tasks.processResources
     }
 
     if (project.hasFlags('publish')) {
