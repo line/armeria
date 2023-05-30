@@ -115,7 +115,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                     int weight = endpoint.weight();
                     arr.add(weight);
                 }
-                int x = binarySearch(arr, sizeOfRing);
+                int divider = findClosestDivisor(arr, sizeOfRing);
                 for (Endpoint endpoint : this.endpoints) {
                     final int weight = endpoint.weight();
                     final String host = endpoint.host();
