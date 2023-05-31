@@ -218,6 +218,7 @@ public final class RequestScopedMdc {
     public static void put(RequestContext ctx, String key, @Nullable String value) {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
+
         synchronized (ctx) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;
@@ -250,7 +251,6 @@ public final class RequestScopedMdc {
         synchronized (ctx) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;
-
             if (oldMap.isEmpty()) {
                 newMap = new Object2ObjectOpenHashMap<>(map);
             } else {
@@ -316,6 +316,7 @@ public final class RequestScopedMdc {
     public static void remove(RequestContext ctx, String key) {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
+
         synchronized (ctx) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (!oldMap.containsKey(key)) {
@@ -341,12 +342,12 @@ public final class RequestScopedMdc {
      */
     public static void clear(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
+
         synchronized (ctx) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
-            if (oldMap.isEmpty()) {
-                return;
+            if (!oldMap.isEmpty()) {
+                ctx.setAttr(MAP, Object2ObjectMaps.emptyMap());
             }
-            ctx.setAttr(MAP, Object2ObjectMaps.emptyMap());
         }
     }
 
