@@ -19,12 +19,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 final class DefaultDependencyInjector implements DependencyInjector {
 
@@ -32,7 +34,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
 
     private final Map<Class<?>, Object> singletons = new HashMap<>();
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final Lock lock = new ReentrantShortLock();
     private boolean isShutdown;
 
     DefaultDependencyInjector(Iterable<Object> singletons) {
