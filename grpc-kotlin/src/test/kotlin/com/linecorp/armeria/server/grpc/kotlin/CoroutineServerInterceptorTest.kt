@@ -34,6 +34,7 @@ import com.linecorp.armeria.internal.testing.AnticipatedException
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.auth.Authorizer
+import com.linecorp.armeria.server.grpc.AsyncServerInterceptor
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import io.grpc.Context
@@ -231,8 +232,13 @@ internal class CoroutineServerInterceptorTest {
                     "/non-blocking",
                     GrpcService.builder()
                         .exceptionMapping(statusFunction)
-                        // applying order is coroutineNameInterceptor -> authInterceptor -> threadLocalInterceptor
-                        .intercept(threadLocalInterceptor, authInterceptor, coroutineNameInterceptor)
+                        // applying order is MyAsyncInterceptor -> coroutineNameInterceptor -> authInterceptor -> threadLocalInterceptor
+                        .intercept(
+                            threadLocalInterceptor,
+                            authInterceptor,
+                            coroutineNameInterceptor,
+                            MyAsyncInterceptor(),
+                        )
                         .addService(TestService())
                         .build()
                 )
@@ -241,8 +247,13 @@ internal class CoroutineServerInterceptorTest {
                     GrpcService.builder()
                         .addService(TestService())
                         .exceptionMapping(statusFunction)
-                        // applying order is coroutineNameInterceptor -> authInterceptor -> threadLocalInterceptor
-                        .intercept(threadLocalInterceptor, authInterceptor, coroutineNameInterceptor)
+                        // applying order is MyAsyncInterceptor -> coroutineNameInterceptor -> authInterceptor -> threadLocalInterceptor
+                        .intercept(
+                            threadLocalInterceptor,
+                            authInterceptor,
+                            coroutineNameInterceptor,
+                            MyAsyncInterceptor(),
+                        )
                         .useBlockingTaskExecutor(true)
                         .build()
                 )
@@ -319,6 +330,22 @@ internal class CoroutineServerInterceptorTest {
 
             companion object {
                 val THREAD_LOCAL = ThreadLocal<String>()
+            }
+        }
+
+        private class MyAsyncInterceptor : AsyncServerInterceptor {
+            override fun <I : Any, O : Any> asyncInterceptCall(
+                call: ServerCall<I, O>,
+                headers: Metadata,
+                next: ServerCallHandler<I, O>
+            ): CompletableFuture<ServerCall.Listener<I>> {
+                return CompletableFuture.supplyAsync({
+                    next.startCall(call, headers)
+                }, EXECUTOR)
+            }
+
+            companion object {
+                private val EXECUTOR = Executors.newSingleThreadExecutor()
             }
         }
 

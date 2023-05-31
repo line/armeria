@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server.grpc.kotlin
 
 import com.linecorp.armeria.common.annotation.UnstableApi
+import com.linecorp.armeria.internal.common.kotlin.ArmeriaRequestCoroutineContext
+import com.linecorp.armeria.internal.server.grpc.AbstractServerCall
 import com.linecorp.armeria.server.grpc.AsyncServerInterceptor
 import io.grpc.Context
 import io.grpc.Metadata
@@ -26,6 +28,7 @@ import io.grpc.ServerInterceptor
 import io.grpc.kotlin.CoroutineContextServerInterceptor
 import io.grpc.kotlin.GrpcContextElement
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.future.future
 import java.util.concurrent.CompletableFuture
 import kotlin.coroutines.CoroutineContext
@@ -62,12 +65,24 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
         headers: Metadata,
         next: ServerCallHandler<I, O>
     ): CompletableFuture<ServerCall.Listener<I>> {
+        check(call is AbstractServerCall) {
+            throw IllegalArgumentException(
+                "Cannot use ${AsyncServerInterceptor::class.java.name} with a non-Armeria gRPC server"
+            )
+        }
+        val executor = call.blockingExecutor() ?: call.eventLoop()
+
         // COROUTINE_CONTEXT_KEY.get():
         //   It is necessary to propagate the CoroutineContext set by the previous CoroutineContextServerInterceptor.
         //   (The ArmeriaRequestCoroutineContext is also propagated by CoroutineContextServerInterceptor)
         // GrpcContextElement.current():
         //   In gRPC-kotlin, the Coroutine Context is propagated using the gRPC Context.
-        return CoroutineScope(COROUTINE_CONTEXT_KEY.get() + GrpcContextElement.current()).future {
+        return CoroutineScope(
+            executor.asCoroutineDispatcher() +
+                    ArmeriaRequestCoroutineContext(call.ctx()) +
+                    COROUTINE_CONTEXT_KEY.get() +
+                    GrpcContextElement.current()
+        ).future {
             suspendedInterceptCall(call, headers, next)
         }
     }

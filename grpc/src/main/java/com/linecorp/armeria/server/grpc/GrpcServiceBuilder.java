@@ -948,6 +948,11 @@ public final class GrpcServiceBuilder {
     private ImmutableList.Builder<ServerInterceptor> interceptors() {
         if (interceptors == null) {
             interceptors = ImmutableList.builder();
+            if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
+                final ServerInterceptor coroutineContextInterceptor =
+                        new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
+                interceptors.add(coroutineContextInterceptor);
+            }
         }
         return interceptors;
     }
@@ -961,11 +966,6 @@ public final class GrpcServiceBuilder {
      */
     public GrpcService build() {
         final HandlerRegistry handlerRegistry;
-        if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
-            final ServerInterceptor coroutineContextInterceptor =
-                    new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
-            interceptors().add(coroutineContextInterceptor);
-        }
         if (!enableUnframedRequests && unframedGrpcErrorHandler != null) {
             throw new IllegalStateException(
                     "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
