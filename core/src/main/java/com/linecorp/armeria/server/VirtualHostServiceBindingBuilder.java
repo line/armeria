@@ -299,6 +299,16 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        return (VirtualHostServiceBindingBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (VirtualHostServiceBindingBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (VirtualHostServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
     }

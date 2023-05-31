@@ -19,6 +19,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
+// TODO(minwoox): Use RequestLogBuilder.responseCause() instead.
 @SuppressWarnings("NonExceptionNameEndsWithException")
 final class CapturedServiceException {
 

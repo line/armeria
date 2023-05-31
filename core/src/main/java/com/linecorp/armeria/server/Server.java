@@ -69,15 +69,16 @@ import com.spotify.futures.CompletableFutures;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -115,10 +116,11 @@ public final class Server implements ListenableAsyncCloseable {
     private final UpdatableServerConfig config;
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
+    private boolean hasWebSocketService;
 
     @Nullable
     @VisibleForTesting
@@ -130,10 +132,8 @@ public final class Server implements ListenableAsyncCloseable {
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
-        // Server-wide cache metrics.
-        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsed.path.cache");
-        PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
-
+        // Server-wide metrics.
+        RequestTargetCache.registerServerMetrics(config.meterRegistry());
         setupVersionMetrics();
 
         for (VirtualHost virtualHost : config().virtualHosts()) {
@@ -145,6 +145,7 @@ public final class Server implements ListenableAsyncCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        hasWebSocketService = hasWebSocketService(config);
     }
 
     /**
@@ -478,6 +479,13 @@ public final class Server implements ListenableAsyncCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        hasWebSocketService = hasWebSocketService(config);
+    }
+
+    private static boolean hasWebSocketService(UpdatableServerConfig config) {
+        return config.serviceConfigs()
+                     .stream()
+                     .anyMatch(serviceConfig -> serviceConfig.service().as(WebSocketService.class) != null);
     }
 
     /**
@@ -554,7 +562,8 @@ public final class Server implements ListenableAsyncCloseable {
             b.group(bossGroup, config.workerGroup());
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport));
+            b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,
+                                                              hasWebSocketService));
             return b.bind(port.localAddress());
         }
 
@@ -692,11 +701,14 @@ public final class Server implements ListenableAsyncCloseable {
                 builder.addAll(serviceConfig.shutdownSupports());
             }
 
-            CompletableFutures.successfulAsList(builder.build()
-                                                       .stream()
-                                                       .map(ShutdownSupport::shutdown)
-                                                       .collect(toImmutableList()), cause -> null)
-                              .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            CompletableFuture.runAsync(() -> {
+                // ShutdownSupport may be blocking so run the entire block inside the startStopExecutor
+                CompletableFutures.successfulAsList(builder.build()
+                                                           .stream()
+                                                           .map(ShutdownSupport::shutdown)
+                                                           .collect(toImmutableList()), cause -> null)
+                                  .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            }, config.startStopExecutor());
         }
 
         @Override

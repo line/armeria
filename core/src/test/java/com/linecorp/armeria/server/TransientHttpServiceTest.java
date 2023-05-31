@@ -32,8 +32,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -44,10 +46,10 @@ class TransientHttpServiceTest {
     private static final AtomicBoolean sanitizerCalled = new AtomicBoolean();
     private static final AtomicBoolean serviceCalled = new AtomicBoolean();
 
-    private static final BiFunction<RequestContext, Throwable, Object> sanitizer =
-            (requestContext, cause) -> {
+    private static final BiFunction<RequestContext, HttpHeaders, String> sanitizer =
+            (ctx, header) -> {
                 sanitizerCalled.set(true);
-                return cause;
+                return header.toString();
             };
 
     @RegisterExtension
@@ -61,7 +63,9 @@ class TransientHttpServiceTest {
             sb.service("/", noResponseService.decorate(TransientHttpService.newDecorator()));
             sb.decorator(LoggingService.builder()
                                        .failureResponseLogLevel(LogLevel.DEBUG)
-                                       .responseCauseSanitizer(sanitizer)
+                                       .logFormatter(LogFormatter.builderForText()
+                                                                 .responseHeadersSanitizer(sanitizer)
+                                                                 .build())
                                        .newDecorator());
         }
     };

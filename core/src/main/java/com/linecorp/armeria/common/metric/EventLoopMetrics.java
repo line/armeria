@@ -36,7 +36,7 @@ import io.netty.util.concurrent.EventExecutor;
  * exported per registered {@link MeterIdPrefix}.
  *
  * <ul>
- *   <li>"event.loop.num.workers" (gauge) - the total number of Netty's event loops</li>
+ *   <li>"event.loop.workers" (gauge) - the total number of Netty's event loops</li>
  *   <li>"event.loop.pending.tasks" (gauge)
  *     - the total number of IO tasks waiting to be run on event loops</li>
  * </ul>

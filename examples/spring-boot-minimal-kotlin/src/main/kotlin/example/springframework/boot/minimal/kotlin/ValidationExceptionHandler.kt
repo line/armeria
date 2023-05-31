@@ -26,7 +26,9 @@ class ValidationExceptionHandler : ExceptionHandlerFunction {
                     Instant.now().toString()
                 )
             )
-        } else ExceptionHandlerFunction.fallthrough()
+        } else {
+            ExceptionHandlerFunction.fallthrough()
+        }
     }
 }
 

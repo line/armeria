@@ -16,3 +16,4 @@ task copyJunitSources(type: Copy) {
 
 tasks.compileJava.dependsOn(generateSources)
 tasks.compileJava.dependsOn(copyJunitSources)
+tasks.sourcesJar.dependsOn(copyJunitSources)
