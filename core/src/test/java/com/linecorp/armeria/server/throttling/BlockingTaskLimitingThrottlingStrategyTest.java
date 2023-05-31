@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -58,6 +59,11 @@ class BlockingTaskLimitingThrottlingStrategyTest {
               .decorator(LoggingService.newDecorator());
         }
     };
+
+    @AfterAll
+    public static void after() {
+        executor.shutdown();
+    }
 
     @Test
     void serve() throws Exception {

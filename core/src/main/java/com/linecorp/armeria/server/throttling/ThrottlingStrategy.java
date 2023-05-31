@@ -23,7 +23,6 @@ import java.util.function.IntSupplier;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.common.util.SettableIntSupplier;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -118,7 +117,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
 
     /**
      * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on given
-     * {@link SettableIntSupplier} by comparing it to the size of the tasks of the {@link BlockingTaskExecutor}.
+     * {@link IntSupplier} by comparing it to the size of the tasks of the {@link BlockingTaskExecutor}.
      *
      * @param limitSupplier the {@link IntSupplier} which indicates limit of the tasks
      * @param name the name of the {@link ThrottlingStrategy}
@@ -126,6 +125,18 @@ public abstract class ThrottlingStrategy<T extends Request> {
     public static <T extends Request> ThrottlingStrategy<T> blockingTaskLimiting(
             IntSupplier limitSupplier, @Nullable String name) {
         return new BlockingTaskLimitingThrottlingStrategy<>(limitSupplier, name);
+    }
+
+    /**
+     * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on given limit
+     * by comparing it to the size of the tasks of the {@link BlockingTaskExecutor}.
+     *
+     * @param limit indicates limit of the tasks
+     * @param name the name of the {@link ThrottlingStrategy}
+     */
+    public static <T extends Request> ThrottlingStrategy<T> blockingTaskLimiting(
+            int limit, @Nullable String name) {
+        return new BlockingTaskLimitingThrottlingStrategy<>(() -> limit, name);
     }
 
     private final String name;
