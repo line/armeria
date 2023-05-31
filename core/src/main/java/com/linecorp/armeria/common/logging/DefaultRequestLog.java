@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.Lock;
 
 import javax.net.ssl.SSLSession;
 
@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -101,7 +102,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @GuardedBy("lock")
     private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final Lock lock = new ReentrantShortLock();
     @Nullable
     private UnmodifiableFuture<RequestLog> partiallyCompletedFuture;
     @Nullable
