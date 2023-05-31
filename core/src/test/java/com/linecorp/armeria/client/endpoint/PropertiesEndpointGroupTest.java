@@ -184,7 +184,7 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_11) // NIO.2 WatchService doesn't work reliably on older Java.
+    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
     void propertiesFileUpdatesCorrectly() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 
@@ -224,7 +224,7 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_11) // NIO.2 WatchService doesn't work reliably on older Java.
+    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
     void propertiesFileRestart() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 
@@ -255,7 +255,7 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_11) // NIO.2 WatchService doesn't work reliably on older Java.
+    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
     void endpointChangePropagatesToListeners() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 

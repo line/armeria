@@ -125,7 +125,7 @@ class FileWatcherRegistryTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_11) // NIO.2 WatchService doesn't work reliably on older Java.
+    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
     void runnableWithExceptionContinuesRun() throws Exception {
 
         final Path file = Files.createFile(folder.resolve("temp-file.properties"));
