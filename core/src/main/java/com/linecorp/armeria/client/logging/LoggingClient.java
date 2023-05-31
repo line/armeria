@@ -15,20 +15,19 @@
  */
 package com.linecorp.armeria.client.logging;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
@@ -58,7 +57,7 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}s with the specified sanitizers.
+     * {@link LogLevel}s with the {@link LogFormatter}.
      * If the logger is null, it means that the default logger is used.
      */
     LoggingClient(
@@ -66,26 +65,12 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
             @Nullable Logger logger,
             RequestLogLevelMapper requestLogLevelMapper,
             ResponseLogLevelMapper responseLogLevelMapper,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable,
-                    ? extends @Nullable Object> responseCauseSanitizer,
+            Predicate<Throwable> responseCauseFilter,
             Sampler<? super ClientRequestContext> successSampler,
-            Sampler<? super ClientRequestContext> failureSampler) {
+            Sampler<? super ClientRequestContext> failureSampler,
+            LogFormatter logFormatter) {
 
         super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
-              requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
-              responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-              responseCauseSanitizer, successSampler, failureSampler);
+              responseCauseFilter, successSampler, failureSampler, logFormatter);
     }
 }

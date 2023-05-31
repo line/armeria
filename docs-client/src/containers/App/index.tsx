@@ -478,7 +478,7 @@ const App: React.FunctionComponent<Props> = (props) => {
       }
 
       try {
-        const schemaData: any[] = await fetch(`/docs/schemas.json`).then((r) =>
+        const schemaData: any[] = await fetch(`schemas.json`).then((r) =>
           r.json(),
         );
         setJsonSchemas(schemaData);

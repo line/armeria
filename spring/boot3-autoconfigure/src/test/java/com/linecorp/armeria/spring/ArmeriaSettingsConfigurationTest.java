@@ -38,7 +38,7 @@ import com.linecorp.armeria.spring.ArmeriaSettingsConfigurationTest.TestConfigur
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "settings" })
 @DirtiesContext
-class ArmeriaSettingsConfigurationTest {
+public class ArmeriaSettingsConfigurationTest {
 
     @SpringBootApplication
     static class TestConfiguration {}
