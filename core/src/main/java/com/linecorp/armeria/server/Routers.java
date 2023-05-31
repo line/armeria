@@ -47,6 +47,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.server.RoutingTrie.Node;
 import com.linecorp.armeria.server.RoutingTrie.NodeProcessor;
 

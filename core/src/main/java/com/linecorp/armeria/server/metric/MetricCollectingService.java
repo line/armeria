@@ -27,7 +27,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
@@ -88,11 +90,30 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
+        if (shouldRecordMetrics(ctx)) {
             RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
                                        successFunction != null ? successFunction::test
                                                                : ctx.config().successFunction());
         }
         return unwrap().serve(ctx, req);
+    }
+
+    private boolean shouldRecordMetrics(ServiceRequestContext ctx) {
+        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
+            return false;
+        }
+
+        // An inner `MetricCollectingService` takes precedence over an outer one. Delegate to the inner
+        // `MetricCollectingService` if exists.
+        final Service<HttpRequest, HttpResponse> delegate = unwrap();
+        if (delegate instanceof RouteDecoratingService &&
+            // Can't use `.as(serviceClass)` because RouteDecoratingService is not a decorator but a service
+            // that has a queue for the next decorator chains.
+            ((RouteDecoratingService) delegate).as(ctx, MetricCollectingService.class) != null) {
+            return false;
+        }
+
+        // null if the current decorator is the closest MetricCollectingService to the service.
+        return delegate.as(MetricCollectingService.class) == null;
     }
 }

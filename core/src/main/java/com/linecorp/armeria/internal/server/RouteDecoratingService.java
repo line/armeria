@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.server;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,6 +25,14 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Router;
+import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.util.AttributeKey;
 
@@ -64,12 +72,12 @@ import io.netty.util.AttributeKey;
  *          -> userService
  * }</pre>
  */
-final class RouteDecoratingService implements HttpService {
+public final class RouteDecoratingService implements HttpService {
 
     private static final AttributeKey<Queue<HttpService>> DECORATOR_KEY =
             AttributeKey.valueOf(RouteDecoratingService.class, "SERVICE_CHAIN");
 
-    static Function<? super HttpService, InitialDispatcherService> newDecorator(
+    public static Function<? super HttpService, InitialDispatcherService> newDecorator(
             Router<RouteDecoratingService> router) {
         return delegate -> new InitialDispatcherService(delegate, router);
     }
@@ -77,8 +85,8 @@ final class RouteDecoratingService implements HttpService {
     private final Route route;
     private final HttpService decorator;
 
-    RouteDecoratingService(Route route,
-                           Function<? super HttpService, ? extends HttpService> decoratorFunction) {
+    public RouteDecoratingService(Route route,
+                                  Function<? super HttpService, ? extends HttpService> decoratorFunction) {
         this.route = requireNonNull(route, "route");
         decorator = requireNonNull(decoratorFunction, "decoratorFunction").apply(this);
     }
@@ -92,12 +100,28 @@ final class RouteDecoratingService implements HttpService {
         return delegate.serve(ctx, req);
     }
 
-    Route route() {
+    public Route route() {
         return route;
     }
 
     private HttpService decorator() {
         return decorator;
+    }
+
+    @Nullable
+    public <T extends HttpService> T as(ServiceRequestContext ctx, Class<T> serviceClass) {
+        final Queue<HttpService> delegates = ctx.attr(DECORATOR_KEY);
+        if (delegates == null) {
+            return null;
+        }
+
+        for (HttpService delegate : delegates) {
+            final T service = delegate.as(serviceClass);
+            if (service != null) {
+                return service;
+            }
+        }
+        return null;
     }
 
     @Override
