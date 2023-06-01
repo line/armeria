@@ -40,6 +40,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -470,8 +471,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
             responseDecoder.reserveUnfinishedResponse(Integer.MAX_VALUE);
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, null, ctx.channel().eventLoop(), /* response timeout */ 0,
-                                        UPGRADE_RESPONSE_MAX_LENGTH);
+            final HttpResponseWrapper responseWrapper =
+                    new HttpResponseWrapper(res, null, /* response timeout */ 0, UPGRADE_RESPONSE_MAX_LENGTH);
+            responseDecoder.addResponse(0, ctx.channel().eventLoop(), responseWrapper);
             ctx.fireChannelActive();
         }
 

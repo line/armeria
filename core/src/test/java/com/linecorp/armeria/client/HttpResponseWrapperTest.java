@@ -36,6 +36,7 @@ import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import reactor.test.StepVerifier;
 
 class HttpResponseWrapperTest {
@@ -160,8 +161,11 @@ class HttpResponseWrapperTest {
         final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
         res.init(controller);
-        return decoder.addResponse(1, res, cctx, cctx.eventLoop(), cctx.responseTimeoutMillis(),
-                                   cctx.maxResponseLength());
+
+        final HttpResponseWrapper responseWrapper =
+                new HttpResponseWrapper(res, cctx, cctx.responseTimeoutMillis(), cctx.maxResponseLength());
+        decoder.addResponse(1, cctx.eventLoop(), responseWrapper);
+        return responseWrapper;
     }
 
     private static class TestHttpResponseDecoder extends HttpResponseDecoder {
@@ -170,6 +174,9 @@ class HttpResponseWrapperTest {
         TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
             super(channel, inboundTrafficController);
         }
+
+        @Override
+        void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {}
 
         @Override
         KeepAliveHandler keepAliveHandler() {

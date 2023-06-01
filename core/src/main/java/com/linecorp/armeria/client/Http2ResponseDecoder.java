@@ -27,12 +27,13 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -76,22 +77,15 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     }
 
     @Override
-    HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
-            EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
-
-        final HttpResponseWrapper resWrapper =
-                super.addResponse(id, res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
-
-        resWrapper.whenComplete().handle((unused, cause) -> {
+    void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {
+        responseWrapper.whenComplete().handle((unused, cause) -> {
             if (eventLoop.inEventLoop()) {
-                onWrapperCompleted(resWrapper, id, cause);
+                onWrapperCompleted(responseWrapper, id, cause);
             } else {
-                eventLoop.execute(() -> onWrapperCompleted(resWrapper, id, cause));
+                eventLoop.execute(() -> onWrapperCompleted(responseWrapper, id, cause));
             }
             return null;
         });
-        return resWrapper;
     }
 
     private void onWrapperCompleted(HttpResponseWrapper resWrapper, int id, @Nullable Throwable cause) {
@@ -208,15 +202,26 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                   streamId);
         }
 
-        res.logResponseFirstBytesTransferred();
-
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, false, endOfStream);
-        try {
+        final boolean written;
+        if (converted instanceof ResponseHeaders) {
+            res.logResponseFirstBytesTransferred();
+            res.startResponse();
             res.initTimeout();
-            res.write(converted);
-        } catch (Throwable t) {
-            res.close(t);
-            throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
+            final ResponseHeaders responseHeaders = (ResponseHeaders) converted;
+            if (responseHeaders.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+                written = res.tryWrite(converted);
+            } else {
+                written = res.tryWriteResponseHeaders(responseHeaders);
+            }
+        } else {
+            written = res.tryWriteTrailers(converted);
+        }
+
+        if (!written) {
+            final ClosedStreamException cause = ClosedStreamException.get();
+            res.close(cause);
+            throw connectionError(INTERNAL_ERROR, cause, "failed to consume a HEADERS frame");
         }
 
         if (endOfStream) {
@@ -257,22 +262,17 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         final long writtenBytes = res.writtenBytes();
         if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
             final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
-            res.close(ContentTooLargeException.builder()
-                                              .maxContentLength(maxContentLength)
-                                              .contentLength(res.headers())
-                                              .transferred(transferred)
-                                              .build());
+            res.close(contentTooLargeException(res, transferred));
             throw connectionError(
                     INTERNAL_ERROR,
                     "content too large: transferred(%d + %d) > limit(%d) (stream: %d)",
                     writtenBytes, dataLength, maxContentLength, streamId);
         }
 
-        try {
-            res.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-        } catch (Throwable t) {
-            res.close(t);
-            throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");
+        if (!res.tryWriteData(HttpData.wrap(data.retain()).withEndOfStream(endOfStream))) {
+            final ClosedSessionException cause = ClosedSessionException.get();
+            res.close(cause);
+            throw connectionError(INTERNAL_ERROR, cause, "failed to consume a DATA frame");
         }
 
         if (endOfStream) {

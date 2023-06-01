@@ -19,17 +19,17 @@ package com.linecorp.armeria.client;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -80,24 +80,17 @@ abstract class HttpResponseDecoder {
         return inboundTrafficController;
     }
 
-    HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
-            EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
-
-        final HttpResponseWrapper newRes =
-                new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
-        final HttpResponseWrapper oldRes = responses.put(id, newRes);
-
+    void addResponse(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {
+        final HttpResponseWrapper oldRes = responses.put(id, responseWrapper);
+        assert oldRes == null : "id: " + id + ", responseWrapper: " + responseWrapper + ", oldRes: " + oldRes;
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();
         if (keepAliveHandler != null) {
             keepAliveHandler.increaseNumRequests();
         }
-
-        assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
-                                oldRes;
-
-        return newRes;
+        onResponseAdded(id, eventLoop, responseWrapper);
     }
+
+    abstract void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper);
 
     @Nullable
     final HttpResponseWrapper getResponse(int id) {
@@ -168,12 +161,6 @@ abstract class HttpResponseDecoder {
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
-        enum State {
-            WAIT_NON_INFORMATIONAL,
-            WAIT_DATA_OR_TRAILERS,
-            DONE
-        }
-
         private final DecodedHttpResponse delegate;
         @Nullable
         private final ClientRequestContext ctx;
@@ -182,10 +169,9 @@ abstract class HttpResponseDecoder {
         private final long responseTimeoutMillis;
 
         private boolean loggedResponseFirstBytesTransferred;
+        private long contentLengthHeaderValue = -1;
 
-        private State state = State.WAIT_NON_INFORMATIONAL;
-        @Nullable
-        private ResponseHeaders headers;
+        private boolean done;
 
         HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
                             long responseTimeoutMillis, long maxContentLength) {
@@ -203,9 +189,8 @@ abstract class HttpResponseDecoder {
             return delegate.writtenBytes();
         }
 
-        ResponseHeaders headers() {
-            assert headers != null;
-            return headers;
+        long contentLengthHeaderValue() {
+            return contentLengthHeaderValue;
         }
 
         void logResponseFirstBytesTransferred() {
@@ -253,84 +238,56 @@ abstract class HttpResponseDecoder {
             throw new UnsupportedOperationException();
         }
 
-        /**
-         * Writes the specified {@link HttpObject} to {@link DecodedHttpResponse}. This method is only called
-         * from {@link Http1ResponseDecoder} and {@link Http2ResponseDecoder}. If this returns {@code false},
-         * it means the response stream has been closed due to disconnection or by the response consumer.
-         * So the caller do not need to handle such cases because it will be notified to the response
-         * consumer anyway.
-         */
         @Override
         public boolean tryWrite(HttpObject o) {
-            boolean wrote = false;
-            switch (state) {
-                case WAIT_NON_INFORMATIONAL:
-                    wrote = handleWaitNonInformational(o);
-                    break;
-                case WAIT_DATA_OR_TRAILERS:
-                    wrote = handleWaitDataOrTrailers(o);
-                    break;
-                case DONE:
-                    PooledObjects.close(o);
-                    break;
+            if (done) {
+                PooledObjects.close(o);
+                return false;
             }
-
-            return wrote;
-        }
-
-        @Override
-        public boolean tryWrite(Supplier<? extends HttpObject> o) {
             return delegate.tryWrite(o);
         }
 
-        private boolean handleWaitNonInformational(HttpObject o) {
+        void startResponse() {
             // NB: It's safe to call logBuilder.startResponse() multiple times.
             if (ctx != null) {
                 ctx.logBuilder().startResponse();
             }
-
-            assert o instanceof HttpHeaders && !(o instanceof RequestHeaders) : o;
-
-            if (o instanceof ResponseHeaders) {
-                final ResponseHeaders headers = (ResponseHeaders) o;
-                final HttpStatus status = headers.status();
-                if (!status.isInformational()) {
-                    this.headers = headers;
-                    state = State.WAIT_DATA_OR_TRAILERS;
-                    if (ctx != null) {
-                        ctx.logBuilder().defer(RequestLogProperty.RESPONSE_HEADERS);
-                        try {
-                            return delegate.tryWrite(headers);
-                        } finally {
-                            ctx.logBuilder().responseHeaders(headers);
-                        }
-                    }
-                }
-            }
-
-            return delegate.tryWrite(o);
         }
 
-        private boolean handleWaitDataOrTrailers(HttpObject o) {
-            if (o instanceof HttpHeaders) {
-                state = State.DONE;
-                if (ctx != null) {
-                    ctx.logBuilder().defer(RequestLogProperty.RESPONSE_TRAILERS);
-                    try {
-                        return delegate.tryWrite(o);
-                    } finally {
-                        ctx.logBuilder().responseTrailers((HttpHeaders) o);
-                    }
-                }
-            } else {
-                final HttpData data = (HttpData) o;
-                data.touch(ctx);
-                if (ctx != null) {
-                    ctx.logBuilder().increaseResponseLength(data);
+        boolean tryWriteResponseHeaders(ResponseHeaders responseHeaders) {
+            assert responseHeaders.status().codeClass() != HttpStatusClass.INFORMATIONAL;
+            contentLengthHeaderValue = responseHeaders.contentLength();
+
+            if (ctx != null) {
+                ctx.logBuilder().defer(RequestLogProperty.RESPONSE_HEADERS);
+                try {
+                    return delegate.tryWrite(responseHeaders);
+                } finally {
+                    ctx.logBuilder().responseHeaders(responseHeaders);
                 }
             }
+            return delegate.tryWrite(responseHeaders);
+        }
 
-            return delegate.tryWrite(o);
+        boolean tryWriteData(HttpData data) {
+            data.touch(ctx);
+            if (ctx != null) {
+                ctx.logBuilder().increaseResponseLength(data);
+            }
+            return delegate.tryWrite(data);
+        }
+
+        boolean tryWriteTrailers(HttpHeaders trailers) {
+            done = true;
+            if (ctx != null) {
+                ctx.logBuilder().defer(RequestLogProperty.RESPONSE_TRAILERS);
+                try {
+                    return delegate.tryWrite(trailers);
+                } finally {
+                    ctx.logBuilder().responseTrailers(trailers);
+                }
+            }
+            return delegate.tryWrite(trailers);
         }
 
         @Override
@@ -353,7 +310,7 @@ abstract class HttpResponseDecoder {
         }
 
         private void close(@Nullable Throwable cause, boolean cancel) {
-            state = State.DONE;
+            done = true;
             cancelTimeoutOrLog(cause, cancel);
             if (ctx != null) {
                 if (cause == null) {
@@ -391,7 +348,6 @@ abstract class HttpResponseDecoder {
         }
 
         private void cancelTimeoutOrLog(@Nullable Throwable cause, boolean cancel) {
-
             CancellationScheduler responseCancellationScheduler = null;
             if (ctx != null) {
                 final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
@@ -412,6 +368,7 @@ abstract class HttpResponseDecoder {
                 }
                 return;
             }
+            assert ctx != null;
 
             if (delegate.isOpen()) {
                 closeAction(cause);
@@ -428,11 +385,9 @@ abstract class HttpResponseDecoder {
             }
 
             final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing a request");
-            if (ctx != null) {
-                final String authority = ctx.request().authority();
-                if (authority != null) {
-                    logMsg.append(" to ").append(authority);
-                }
+            final String authority = ctx.request().authority();
+            if (authority != null) {
+                logMsg.append(" to ").append(authority);
             }
 
             logger.warn(logMsg.append(':').toString(), cause);
@@ -456,7 +411,7 @@ abstract class HttpResponseDecoder {
             return new CancellationTask() {
                 @Override
                 public boolean canSchedule() {
-                    return delegate.isOpen() && state != State.DONE;
+                    return delegate.isOpen() && !done;
                 }
 
                 @Override
@@ -474,5 +429,16 @@ abstract class HttpResponseDecoder {
         public String toString() {
             return delegate.toString();
         }
+    }
+
+    static Exception contentTooLargeException(HttpResponseWrapper res, long transferred) {
+        final ContentTooLargeExceptionBuilder builder =
+                ContentTooLargeException.builder()
+                                        .maxContentLength(res.maxContentLength())
+                                        .transferred(transferred);
+        if (res.contentLengthHeaderValue() >= 0) {
+            builder.contentLength(res.contentLengthHeaderValue());
+        }
+        return builder.build();
     }
 }
