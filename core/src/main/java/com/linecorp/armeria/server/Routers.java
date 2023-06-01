@@ -54,7 +54,7 @@ import com.linecorp.armeria.server.RoutingTrie.NodeProcessor;
 /**
  * A factory that creates a {@link Router} instance.
  */
-public final class Routers {
+final class Routers {
     private static final Logger logger = LoggerFactory.getLogger(Routers.class);
 
     /**
@@ -62,8 +62,8 @@ public final class Routers {
      * It consists of several router implementations which use one of Trie and List. It also includes
      * cache mechanism to improve its performance.
      */
-    public static Router<ServiceConfig> ofVirtualHost(VirtualHost virtualHost, Iterable<ServiceConfig> configs,
-                                                      RejectedRouteHandler rejectionHandler) {
+    static Router<ServiceConfig> ofVirtualHost(VirtualHost virtualHost, Iterable<ServiceConfig> configs,
+                                               RejectedRouteHandler rejectionHandler) {
         requireNonNull(virtualHost, "virtualHost");
         requireNonNull(configs, "configs");
         requireNonNull(rejectionHandler, "rejectionHandler");
@@ -118,7 +118,7 @@ public final class Routers {
     /**
      * Returns the default implementation of the {@link Router} to find a {@link RouteDecoratingService}.
      */
-    public static Router<RouteDecoratingService> ofRouteDecoratingService(
+    static Router<RouteDecoratingService> ofRouteDecoratingService(
             List<RouteDecoratingService> routeDecoratingServices) {
         return wrapRouteDecoratingServiceRouter(
                 sequentialRouter(routeDecoratingServices, null, null, RouteDecoratingService::route,
