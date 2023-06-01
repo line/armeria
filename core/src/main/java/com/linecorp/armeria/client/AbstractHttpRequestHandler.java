@@ -185,7 +185,6 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         final long maxContentLength = ctx.maxResponseLength();
         responseWrapper = new HttpResponseWrapper(originalRes, ctx, responseTimeoutMillis, maxContentLength);
         responseDecoder.addResponse(id, ch.eventLoop(), responseWrapper);
-
     }
 
     /**
