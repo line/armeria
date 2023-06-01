@@ -543,10 +543,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         try {
             MetadataUtil.fillHeaders(metadata, trailersBuilder);
         } catch (Exception e) {
-            // Continue by squashing Exception by catch,
-            // because server implementer could have set corrupted metadata.
-            logger.warn("{} {} status: {}", ctx, "Error at filling header with metadata.", status);
-            // Catching exception is necessary, because server implementer could have set corrupted metadata.
+            // A buggy user-implemented custom metadata serializer may throw
+            // an exception. Leave a log message and set the INTERNAL status.
+            logger.warn("{} Failed to serialize metadata; overriding the original status ({}) with INTERNAL:",
+                        ctx, status, e);
             return trailersBuilder
                     .set(GrpcHeaderNames.GRPC_STATUS, GRPC_STATUS_CODE_INTERNAL)
                     .build();
