@@ -173,10 +173,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
             logBuilder().responseFirstBytesTransferred();
             if (tryComplete(cause)) {
                 if (cause == null) {
-                    cause = CapturedServiceException.get(reqCtx);
-                }
-
-                if (cause == null) {
                     endLogRequestAndResponse();
                 } else {
                     endLogRequestAndResponse(cause);

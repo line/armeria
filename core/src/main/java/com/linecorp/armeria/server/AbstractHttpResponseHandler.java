@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
@@ -110,7 +111,10 @@ abstract class AbstractHttpResponseHandler {
         // 3. After successfully flushing, the listener requests next data and
         //    the subscriber attempts to write the next data to the stream closed at 2).
         if (!isWritable()) {
-            Throwable cause = CapturedServiceException.get(reqCtx);
+            Throwable cause = null;
+            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                cause = reqCtx.log().ensureAvailable(RequestLogProperty.RESPONSE_CAUSE).responseCause();
+            }
             if (cause == null) {
                 if (reqCtx.sessionProtocol().isMultiplex()) {
                     cause = ClosedStreamException.get();

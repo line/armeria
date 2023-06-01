@@ -329,12 +329,7 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
 
     private void succeed() {
         if (tryComplete(null)) {
-            final Throwable capturedException = CapturedServiceException.get(reqCtx);
-            if (capturedException != null) {
-                endLogRequestAndResponse(capturedException);
-            } else {
-                endLogRequestAndResponse();
-            }
+            endLogRequestAndResponse();
             maybeWriteAccessLog();
         }
     }
