@@ -90,6 +90,13 @@ public interface RequestOptions {
     long maxResponseLength();
 
     /**
+     * Returns the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    @Nullable
+    Long requestAutoAbortDelayMillis();
+
+    /**
      * Returns the {@link Map} of all attributes this {@link RequestOptions} contains.
      */
     Map<AttributeKey<?>, Object> attrs();

@@ -200,7 +200,8 @@ public final class DefaultClientRequestContext
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, reqTarget,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq,
+              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
+              requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root));
 
         this.eventLoop = eventLoop;
@@ -232,6 +233,7 @@ public final class DefaultClientRequestContext
             maxResponseLength = options.maxResponseLength();
         }
         this.maxResponseLength = maxResponseLength;
+
         for (Entry<AttributeKey<?>, Object> attr : requestOptions.attrs().entrySet()) {
             //noinspection unchecked
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
@@ -249,6 +251,14 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+    }
+
+    private static long requestAutoAbortDelayMillis(ClientOptions options, RequestOptions requestOptions) {
+        final Long requestAutoAbortDelayMillis = requestOptions.requestAutoAbortDelayMillis();
+        if (requestAutoAbortDelayMillis != null) {
+            return requestAutoAbortDelayMillis;
+        }
+        return options.requestAutoAbortDelayMillis();
     }
 
     @Nullable
@@ -458,7 +468,7 @@ public final class DefaultClientRequestContext
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         RequestTarget reqTarget) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
-              req, rpcReq, getAttributes(ctx.root()));
+              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()));
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -479,6 +489,7 @@ public final class DefaultClientRequestContext
                 new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
+
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 

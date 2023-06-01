@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
@@ -417,6 +418,24 @@ public interface RequestContext extends Unwrappable {
      * Returns the {@link MeterRegistry} that collects various stats.
      */
     MeterRegistry meterRegistry();
+
+    /**
+     * Returns the amount of time to wait in millis before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    long requestAutoAbortDelayMillis();
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    void setRequestAutoAbortDelay(Duration delay);
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    void setRequestAutoAbortDelayMillis(long delayMillis);
 
     /**
      * Cancels the current {@link Request} with a {@link Throwable}.

@@ -78,6 +78,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192L; // from Netty default maxHeaderSize
     static final String DEFAULT_BACKOFF_SPEC = "exponential=200:10000,jitter=0.2";
     static final int DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
+    static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS = 0; // No delay.
     static final String ROUTE_CACHE_SPEC = "maximumSize=4096";
     static final String ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
     static final String PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
@@ -297,6 +298,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Integer defaultMaxTotalAttempts() {
         return DEFAULT_MAX_TOTAL_ATTEMPTS;
+    }
+
+    @Override
+    public Long defaultRequestAutoAbortDelayMillis() {
+        return DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
     }
 
     @Override
