@@ -199,10 +199,11 @@ void getInvalidBlogPost() {
   final Throwable exception = catchThrowable(() -> {
     client.getBlogPost(Integer.MAX_VALUE);
   });
-  assertThat(exception).isInstanceOf(BlogNotFoundException.class)
-      .extracting("reason")
-      .asString()
-      .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+  assertThat(exception)
+    .isInstanceOf(BlogNotFoundException.class)
+    .extracting("reason")
+    .asString()
+    .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
 }
 ```
 

@@ -84,10 +84,11 @@ public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<Bl
     resultHandler.onError(
             new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
   } else {
-    final BlogPost newBlogPost = oldBlogPost.deepCopy()
-                                            .setTitle(request.getTitle())
-                                            .setContent(request.getContent())
-                                            .setModifiedAt(Instant.now().toEpochMilli());
+    final BlogPost newBlogPost = oldBlogPost
+            .deepCopy()
+            .setTitle(request.getTitle())
+            .setContent(request.getContent())
+            .setModifiedAt(Instant.now().toEpochMilli());
     blogPosts.put(request.getId(), newBlogPost);
     resultHandler.onComplete(newBlogPost);
   }
@@ -154,10 +155,11 @@ To check that our exception handler is working, let's try updating a post which 
     final Throwable exception = catchThrowable(() -> {
       final BlogPost updated = client.updateBlogPost(Integer.MAX_VALUE, "My first blog", "Hello awesome Armeria!");
     });
-    assertThat(exception).isInstanceOf(BlogNotFoundException.class)
-            .extracting("reason")
-            .asString()
-            .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+    assertThat(exception)
+      .isInstanceOf(BlogNotFoundException.class)
+      .extracting("reason")
+      .asString()
+      .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
   }
   ```
 3. Run all the test cases on your IDE or using Gradle.

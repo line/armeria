@@ -74,10 +74,10 @@ void deleteBlogPost() throws TException {
   final Throwable exception = catchThrowable(() -> {
     client.getBlogPost(1);
   });
-  assertThat(exception).isInstanceOf(BlogNotFoundException.class)
-          .extracting("reason")
-          .asString()
-          .isEqualTo("The blog post does not exist. ID: 1");
+  assertThat(exception)
+    .isInstanceOf(BlogNotFoundException.class)
+    .extracting("reason")
+    .asString()
 }
 ```
 
@@ -97,10 +97,11 @@ void deleteInvalidBlogPost() {
   final Throwable exception = catchThrowable(() -> {
     client.deleteBlogPost(100);
   });
-  assertThat(exception).isInstanceOf(BlogNotFoundException.class)
-                       .extracting("reason")
-                       .asString()
-                       .isEqualTo("The blog post does not exist. ID: 100");
+  assertThat(exception)
+    .isInstanceOf(BlogNotFoundException.class)
+    .extracting("reason")
+    .asString()
+    .isEqualTo("The blog post does not exist. ID: 100");
 }
 ```
 
