@@ -65,7 +65,6 @@ public class HelloConfiguration {
 
                 @Override
                 protected JettyWebServer getJettyWebServer(Server server) {
-                    // This will set autoStart as true. This will let Armeria start the server manually later.
                     return new JettyWebServer(server, true);
                 }
             };
