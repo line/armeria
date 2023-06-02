@@ -165,9 +165,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         assert res != null;
                         this.res = res;
 
-                        res.logResponseFirstBytesTransferred();
                         res.startResponse();
-                        res.initTimeout();
                         final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                         final boolean written;
                         if (nettyRes.status().codeClass() == HttpStatusClass.INFORMATIONAL) {

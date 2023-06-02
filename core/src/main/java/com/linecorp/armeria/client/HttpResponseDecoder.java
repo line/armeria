@@ -168,7 +168,7 @@ abstract class HttpResponseDecoder {
         private final long maxContentLength;
         private final long responseTimeoutMillis;
 
-        private boolean loggedResponseFirstBytesTransferred;
+        private boolean responseStarted;
         private long contentLengthHeaderValue = -1;
 
         private boolean done;
@@ -191,15 +191,6 @@ abstract class HttpResponseDecoder {
 
         long contentLengthHeaderValue() {
             return contentLengthHeaderValue;
-        }
-
-        void logResponseFirstBytesTransferred() {
-            if (!loggedResponseFirstBytesTransferred) {
-                if (ctx != null) {
-                    ctx.logBuilder().responseFirstBytesTransferred();
-                }
-                loggedResponseFirstBytesTransferred = true;
-            }
         }
 
         @Override
@@ -248,10 +239,15 @@ abstract class HttpResponseDecoder {
         }
 
         void startResponse() {
-            // NB: It's safe to call logBuilder.startResponse() multiple times.
+            if (responseStarted) {
+                return;
+            }
+            responseStarted = true;
             if (ctx != null) {
                 ctx.logBuilder().startResponse();
+                ctx.logBuilder().responseFirstBytesTransferred();
             }
+            initTimeout();
         }
 
         boolean tryWriteResponseHeaders(ResponseHeaders responseHeaders) {
@@ -368,6 +364,8 @@ abstract class HttpResponseDecoder {
                 }
                 return;
             }
+            // ctx is not null because if it's null, responseCancellationScheduler is null.
+            // When responseCancellationScheduler is null, the above if statement returns.
             assert ctx != null;
 
             if (delegate.isOpen()) {

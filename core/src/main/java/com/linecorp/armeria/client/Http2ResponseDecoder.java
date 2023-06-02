@@ -205,9 +205,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, false, endOfStream);
         final boolean written;
         if (converted instanceof ResponseHeaders) {
-            res.logResponseFirstBytesTransferred();
             res.startResponse();
-            res.initTimeout();
             final ResponseHeaders responseHeaders = (ResponseHeaders) converted;
             if (responseHeaders.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                 written = res.tryWrite(converted);
