@@ -142,6 +142,7 @@ Let's test if we can create a blog post.
     assertThat(response.getId()).isGreaterThanOrEqualTo(0);
     assertThat(response.getTitle()).isEqualTo("My first blog");
     assertThat(response.getContent()).isEqualTo("Hello Armeria!");
+    System.out.println(response);
   }
   ```
 2. Run the test case on your IDE or using Gradle.

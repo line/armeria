@@ -152,6 +152,7 @@ Let's test if we can retrieve a blog post we created.
 
     assertThat(blogPost.getTitle()).isEqualTo("My first blog");
     assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
+    System.out.println(blogPost);
   }
   ```
 2. Add annotations to configure the order our test methods will be executed.
@@ -231,6 +232,7 @@ void listBlogPosts() throws TException {
   final BlogPost secondBlog = blogs.get(1);
   assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
   assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
+  System.out.println(blogs);
 }
 ```
 

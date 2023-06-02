@@ -121,6 +121,7 @@ void updateBlogPosts() throws TException {
   assertThat(updated.getId()).isZero();
   assertThat(updated.getTitle()).isEqualTo("My first blog");
   assertThat(updated.getContent()).isEqualTo("Hello awesome Armeria!");
+  System.out.println(updated);
 }
 ```
 
