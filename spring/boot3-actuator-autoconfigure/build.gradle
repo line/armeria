@@ -41,4 +41,5 @@ task generateSources(type: Copy) {
     include '**/Ssl.java'
 }
 
-tasks.compileJava.dependsOn(generateSources)
+tasks.compileJava.dependsOn(tasks.generateSources)
+tasks.processTestResources.dependsOn(tasks.generateSources)

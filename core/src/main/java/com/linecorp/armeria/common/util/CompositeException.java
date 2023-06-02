@@ -47,6 +47,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * Represents an exception that is a composite of one or more other exceptions. A {@code CompositeException}
@@ -81,7 +82,7 @@ public final class CompositeException extends RuntimeException {
     @Nullable
     private Throwable cause;
 
-    private final ReentrantLock reentrantLock = new ReentrantLock();
+    private final ReentrantLock reentrantLock = new ReentrantShortLock();
 
     /**
      * Constructs a CompositeException with the given array of Throwables as the

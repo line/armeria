@@ -41,6 +41,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -58,7 +59,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
 
     static final int DEFAULT_MAX_NUM_EVENT_LOOPS = 1;
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
 
     private final List<EventLoop> eventLoops;
 

@@ -57,7 +57,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
@@ -68,6 +67,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -76,6 +76,8 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
@@ -136,6 +138,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Nullable
     private ServiceNaming defaultServiceNaming;
     @Nullable
+    private String defaultLogName;
+    @Nullable
     private Long requestTimeoutMillis;
     @Nullable
     private Long maxRequestLength;
@@ -149,6 +153,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     private BlockingTaskExecutor blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
+    @Nullable
+    private Long requestAutoAbortDelayMillis;
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
@@ -956,6 +962,23 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
+     * {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultLogName the default log name.
+     */
+    public VirtualHostBuilder defaultLogName(String defaultLogName) {
+        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
+        return this;
+    }
+
+    @VisibleForTesting
+    @Nullable
+    String defaultLogName() {
+        return defaultLogName;
+    }
+
+    /**
      * Sets the timeout of a request in milliseconds. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
@@ -1062,6 +1085,37 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @VisibleForTesting
+    @Nullable
+    SuccessFunction successFunction() {
+        return successFunction;
+    }
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * It's useful when you want to receive additional data even after closing the response.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public VirtualHostBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * It's useful when you want to receive additional data even after closing the response.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public VirtualHostBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
+        return this;
+    }
+
     /**
      * Sets the {@link Path} for storing the files uploaded from
      * {@code multipart/form-data} requests.
@@ -1073,6 +1127,7 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @Nullable
     @VisibleForTesting
     Path multipartUploadsLocation() {
         return multipartUploadsLocation;
@@ -1145,6 +1200,9 @@ public final class VirtualHostBuilder implements TlsSetters {
         final ServiceNaming defaultServiceNaming =
                 this.defaultServiceNaming != null ?
                 this.defaultServiceNaming : template.defaultServiceNaming;
+        final String defaultLogName =
+                this.defaultLogName != null ?
+                this.defaultLogName : template.defaultLogName;
         final long requestTimeoutMillis =
                 this.requestTimeoutMillis != null ?
                 this.requestTimeoutMillis : template.requestTimeoutMillis;
@@ -1154,6 +1212,9 @@ public final class VirtualHostBuilder implements TlsSetters {
         final boolean verboseResponses =
                 this.verboseResponses != null ?
                 this.verboseResponses : template.verboseResponses;
+        final long requestAutoAbortDelayMillis =
+                this.requestAutoAbortDelayMillis != null ?
+                this.requestAutoAbortDelayMillis : template.requestAutoAbortDelayMillis;
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
                 this.rejectedRouteHandler : template.rejectedRouteHandler;
@@ -1187,7 +1248,6 @@ public final class VirtualHostBuilder implements TlsSetters {
         } else {
             successFunction = template.successFunction;
         }
-
         final Path multipartUploadsLocation =
                 this.multipartUploadsLocation != null ?
                 this.multipartUploadsLocation : template.multipartUploadsLocation;
@@ -1230,7 +1290,8 @@ public final class VirtualHostBuilder implements TlsSetters {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, multipartUploadsLocation, defaultHeaders,
+                                            successFunction, requestAutoAbortDelayMillis,
+                                            multipartUploadsLocation, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
                                             unhandledExceptionsReporter);
                 }).collect(toImmutableList());
@@ -1239,7 +1300,8 @@ public final class VirtualHostBuilder implements TlsSetters {
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               multipartUploadsLocation, defaultHeaders, requestIdGenerator,
+                               requestAutoAbortDelayMillis, multipartUploadsLocation,
+                               defaultHeaders, requestIdGenerator,
                                defaultErrorHandler, unhandledExceptionsReporter);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
@@ -1249,10 +1311,10 @@ public final class VirtualHostBuilder implements TlsSetters {
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
-                                maxRequestLength, verboseResponses, accessLogWriter,
-                                blockingTaskExecutor, multipartUploadsLocation, builder.build(),
-                                requestIdGenerator);
+                                accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
+                                maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
+                                requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
+                                builder.build(), requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);
@@ -1365,23 +1427,5 @@ public final class VirtualHostBuilder implements TlsSetters {
 
     boolean defaultVirtualHost() {
         return defaultVirtualHost;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("defaultHostname", defaultHostname)
-                          .add("hostnamePattern", hostnamePattern)
-                          .add("serviceConfigSetters", serviceConfigSetters)
-                          .add("routeDecoratingServices", routeDecoratingServices)
-                          .add("accessLoggerMapper", accessLoggerMapper)
-                          .add("rejectedRouteHandler", rejectedRouteHandler)
-                          .add("defaultServiceNaming", defaultServiceNaming)
-                          .add("requestTimeoutMillis", requestTimeoutMillis)
-                          .add("maxRequestLength", maxRequestLength)
-                          .add("verboseResponses", verboseResponses)
-                          .add("accessLogWriter", accessLogWriter)
-                          .add("shutdownSupports", shutdownSupports)
-                          .toString();
     }
 }

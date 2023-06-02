@@ -25,6 +25,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
 
@@ -40,7 +41,7 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     private final Set<Consumer<? super T>> updateListeners =
             new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
 
-    private final ReentrantLock reentrantLock = new ReentrantLock();
+    private final ReentrantLock reentrantLock = new ReentrantShortLock();
 
     /**
      * Notify the new value changes to the listeners added via {@link #addListener(Consumer)}.

@@ -106,7 +106,12 @@ class NullableTypeSupportTest {
                         "/nullable-annot/value-resolver",
                         object {
                             @Get("/of-query-param")
-                            fun ofQueryParam(@Param a: String, @Nullable @Param b: String?) =
+                            fun ofQueryParam(
+                                @Param a: String,
+                                @Nullable
+                                @Param
+                                b: String?
+                            ) =
                                 HttpResponse.of("a: $a, b: $b")
 
                             @Get("/of-request-converter")
@@ -142,16 +147,28 @@ class NullableTypeSupportTest {
         class Baz(@Param("a") val a: String, @Param("b") val b: String?)
 
         // Check for backward-compatibility
-        class Baz0(@Param("a") val a: String, @Nullable @Param("b") val b: String?)
+        class Baz0(
+            @Param("a") val a: String,
+            @Nullable
+            @Param("b")
+            val b: String?
+        )
 
         class Qux {
-            @Param("a") lateinit var a: String
-            @Param("b") var b: String? = null
+            @Param("a")
+            lateinit var a: String
+
+            @Param("b")
+            var b: String? = null
         }
 
         class Qux0 {
-            @Param("a") lateinit var a: String
-            @Nullable @Param("b") var b: String? = null
+            @Param("a")
+            lateinit var a: String
+
+            @Nullable
+            @Param("b")
+            var b: String? = null
         }
 
         class Quux {
@@ -169,7 +186,12 @@ class NullableTypeSupportTest {
             lateinit var a: String
             var b: String? = null
 
-            fun setter(@Param("a") a: String, @Nullable @Param("b") b: String?) {
+            fun setter(
+                @Param("a") a: String,
+                @Nullable
+                @Param("b")
+                b: String?
+            ) {
                 this.a = a
                 this.b = b
             }

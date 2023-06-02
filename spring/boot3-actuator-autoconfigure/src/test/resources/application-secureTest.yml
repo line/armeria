@@ -15,3 +15,4 @@ management:
     web:
       exposure:
         include: health, loggers, prometheus
+        exclude: health # exclude has a higher priority than include

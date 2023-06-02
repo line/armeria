@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
@@ -146,6 +148,49 @@ class LoggingClientTest {
     }
 
     @Test
+    void sanitizeRequestHeadersByLogFormatter() throws Exception {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isInfoEnabled()).thenReturn(true);
+
+        // Before sanitization
+        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains("test.com");
+
+        final LoggingClient client =
+                LoggingClient.builder()
+                             .logger(logger)
+                             .requestLogLevel(LogLevel.INFO)
+                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .logFormatter(LogFormatter.builderForText()
+                                                       .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                                                               Pattern.compile("trustin"),
+                                                               Pattern.compile("com")))
+                                                       .build())
+                             .build(delegate);
+
+        client.execute(ctx, req);
+
+        // After the sanitization.
+        verify(logger, times(2)).isInfoEnabled();
+
+        // verify request log
+        verify(logger).info(eq("{} Request: {}"), eq(ctx),
+                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
+
+        // verify response log
+        verify(logger).info(eq("{} Response: {}"), eq(ctx),
+                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
+
+        verifyNoMoreInteractions(logger);
+    }
+
+    @Test
     void sanitizeRequestContent() throws Exception {
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
                                                                  HttpHeaderNames.SCHEME, "http",
@@ -167,6 +212,49 @@ class LoggingClientTest {
                              .successfulResponseLogLevel(LogLevel.INFO)
                              .requestContentSanitizer(RegexBasedSanitizer.of(
                                      Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                             .build(delegate);
+
+        client.execute(ctx, req);
+
+        // Ensure the request content (the phone number 333-490-4499) is sanitized.
+        verify(logger, times(2)).isInfoEnabled();
+
+        // verify request log
+        verify(logger).info(eq("{} Request: {}"), eq(ctx),
+                            argThat((String text) -> !text.contains("333-490-4499")));
+
+        // verify response log
+        verify(logger).info(eq("{} Response: {}"), eq(ctx),
+                            argThat((String text) -> !text.contains("333-490-4499")));
+
+        verifyNoMoreInteractions(logger);
+    }
+
+    @Test
+    void sanitizeRequestContentByLogFormatter() throws Exception {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
+
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isInfoEnabled()).thenReturn(true);
+
+        // Before sanitization
+        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
+
+        final LoggingClient client =
+                LoggingClient.builder()
+                             .logger(logger)
+                             .requestLogLevel(LogLevel.INFO)
+                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .logFormatter(LogFormatter.builderForText()
+                                                       .requestContentSanitizer(RegexBasedSanitizer.of(
+                                                               Pattern.compile(
+                                                                       "\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                                                       .build())
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -321,5 +409,24 @@ class LoggingClientTest {
         customLoggerClient.execute(ctx, req);
 
         verifyNoInteractions(logger);
+    }
+
+    @Test
+    void sanitizerAndLogFormatterCanNotSetTogether() {
+        assertThatThrownBy(() -> LoggingClient
+                .builder()
+                .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                        Pattern.compile("trustin"),
+                        Pattern.compile("com")))
+                .logFormatter(
+                        LogFormatter.builderForText()
+                                    .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                                            Pattern.compile("trustin"),
+                                            Pattern.compile("com")))
+                                    .build())
+                .build(delegate))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "The log sanitizers and the LogFormatter cannot be used at the same time");
     }
 }
