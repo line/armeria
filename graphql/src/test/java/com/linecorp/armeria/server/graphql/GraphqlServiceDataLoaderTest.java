@@ -19,7 +19,9 @@ package com.linecorp.armeria.server.graphql;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
 import graphql.schema.DataFetcher;
+
 import org.dataloader.DataLoaderRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,14 +45,14 @@ class GraphqlServiceDataLoaderTest {
                     new File(getClass().getResource("/test.graphqls").toURI());
             final GraphqlService service =
                     GraphqlService.builder()
-                            .schemaFile(graphqlSchemaFile)
-                            .dataLoaderRegistry(ctx -> new DataLoaderRegistry())
-                            .runtimeWiring(c -> {
-                                final DataFetcher<String> bar = dataFetcher("bar");
-                                c.type("Query",
-                                        typeWiring -> typeWiring.dataFetcher("foo", bar));
-                            })
-                            .build();
+                                  .schemaFile(graphqlSchemaFile)
+                                  .dataLoaderRegistry(ctx -> new DataLoaderRegistry())
+                                  .runtimeWiring(c -> {
+                                      final DataFetcher<String> bar = dataFetcher("bar");
+                                      c.type("Query",
+                                             typeWiring -> typeWiring.dataFetcher("foo", bar));
+                                  })
+                                  .build();
             sb.service("/graphql", service);
         }
     };
