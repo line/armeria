@@ -137,7 +137,7 @@ To check that our exception handler is working, let's try updating a post which 
   ```java filename=BlogServiceTest.java
   @RegisterExtension
   static final ServerExtension server = new ServerExtension() {
-  @Override
+    @Override
     protected void configure(ServerBuilder sb) throws Exception {
       sb.service("/thrift", THttpService.builder()
           .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
