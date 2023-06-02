@@ -16,22 +16,22 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import com.linecorp.armeria.client.BlockingWebClient;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import graphql.schema.DataFetcher;
+import java.io.File;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.dataloader.DataLoaderRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import graphql.schema.DataFetcher;
 
 class GraphqlServiceDataLoaderTest {
 
