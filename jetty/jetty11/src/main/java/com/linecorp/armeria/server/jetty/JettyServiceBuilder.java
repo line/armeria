@@ -210,6 +210,15 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
                 }
             }
         };
-        return new JettyService(hostname, tlsReverseDnsLookup, serverFactory, null, null);
+
+        final Consumer<Server> postStopTask = server -> {
+            try {
+                JettyService.logger.info("Destroying an embedded Jetty: {}", server);
+                server.destroy();
+            } catch (Exception e) {
+                JettyService.logger.warn("Failed to destroy an embedded Jetty: {}", server, e);
+            }
+        };
+        return new JettyService(hostname, tlsReverseDnsLookup, serverFactory, postStopTask);
     }
 }

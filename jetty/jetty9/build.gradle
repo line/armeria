@@ -1,10 +1,10 @@
 dependencies {
     // Jetty
     api libs.jetty94.server
-    testImplementation libs.jetty94.webapp
     testImplementation libs.jetty94.annotations
     testImplementation libs.jetty94.apache.jsp
     testImplementation libs.jetty94.apache.jstl
+    testImplementation libs.jetty94.webapp
 }
 
 // Use the sources from ':jetty11'.

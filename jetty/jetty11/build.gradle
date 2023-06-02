@@ -7,8 +7,8 @@ dependencies {
 
     testImplementation libs.asm
     testImplementation libs.jetty11.annotations
-    testImplementation libs.logback14
-    testImplementation libs.jetty11.webapp
     testImplementation libs.jetty11.apache.jsp
     testImplementation libs.jetty11.apache.jstl
+    testImplementation libs.jetty11.webapp
+    testImplementation libs.logback14
 }

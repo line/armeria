@@ -42,10 +42,7 @@ public class HelloConfiguration {
     @Bean
     public JettyService jettyService(ServletWebServerApplicationContext applicationContext) {
         final JettyWebServer jettyWebServer = jettyServer(applicationContext);
-        assert jettyWebServer instanceof JettyWebServerWrapper;
-        final JettyWebServerWrapper webServerWrapper = (JettyWebServerWrapper) jettyWebServer;
-        return JettyService.of(jettyWebServer.getServer(), null, false,
-                               webServerWrapper::doStart, webServerWrapper::stop);
+        return JettyService.of(jettyWebServer.getServer(), null, false);
     }
 
     /**
@@ -69,7 +66,7 @@ public class HelloConfiguration {
                 @Override
                 protected JettyWebServer getJettyWebServer(Server server) {
                     // This will set autoStart as true. This will let Armeria start the server manually later.
-                    return new JettyWebServerWrapper(server);
+                    return new JettyWebServer(server, true);
                 }
             };
             factory.getServerCustomizers().addAll(serverCustomizers.orderedStream().toList());
@@ -82,22 +79,5 @@ public class HelloConfiguration {
      */
     private static JettyWebServer jettyServer(ServletWebServerApplicationContext applicationContext) {
         return (JettyWebServer) applicationContext.getWebServer();
-    }
-
-    private static class JettyWebServerWrapper extends JettyWebServer {
-
-        JettyWebServerWrapper(Server server) {
-            super(server);
-        }
-
-        @Override
-        public void start() {
-            // no-op. This will prevent Jetty from starting by the Spring Boot.
-            // We are starting the Jetty server in `JettyService` using the `ServerListener`.
-        }
-
-        void doStart() {
-            super.start();
-        }
     }
 }

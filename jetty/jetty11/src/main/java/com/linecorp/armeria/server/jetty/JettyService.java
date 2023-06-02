@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -114,27 +115,8 @@ public final class JettyService implements HttpService {
      */
     public static JettyService of(Server jettyServer, @Nullable String hostname, boolean tlsReverseDnsLookup) {
         requireNonNull(jettyServer, "jettyServer");
-        return new JettyService(hostname, tlsReverseDnsLookup, blockingTaskExecutor -> jettyServer, null, null);
-    }
-
-    /**
-     * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
-     *
-     * @param jettyServer the Jetty {@link Server}
-     * @param hostname the default hostname, or {@code null} to use Armeria's default virtual host name.
-     * @param tlsReverseDnsLookup whether perform reverse DNS lookup for the remote IP address on a TLS
-     *                            connection. See {@link JettyServiceBuilder#tlsReverseDnsLookup(boolean)}
-     *                            for more information.
-     * @param startTask the task to start the Jetty {@link Server}
-     * @param stopTask the task to stop the Jetty {@link Server}
-     */
-    public static JettyService of(Server jettyServer, @Nullable String hostname, boolean tlsReverseDnsLookup,
-                                  Runnable startTask, Runnable stopTask) {
-        requireNonNull(jettyServer, "jettyServer");
-        requireNonNull(startTask, "startTask");
-        requireNonNull(stopTask, "stopTask");
         return new JettyService(hostname, tlsReverseDnsLookup, blockingTaskExecutor -> jettyServer,
-                                startTask, stopTask);
+                                unused -> { /* unused */ });
     }
 
     /**
@@ -148,10 +130,7 @@ public final class JettyService implements HttpService {
     private final String hostname;
     private final boolean tlsReverseDnsLookup;
     private final Function<BlockingTaskExecutor, Server> serverFactory;
-    @Nullable
-    private final Runnable startTask;
-    @Nullable
-    private final Runnable stopTask;
+    private final Consumer<Server> postStopTask;
 
     private final Configurator configurator;
 
@@ -161,16 +140,16 @@ public final class JettyService implements HttpService {
     private ArmeriaConnector connector;
 
     private com.linecorp.armeria.server.@Nullable Server armeriaServer;
+    private boolean startedServer;
 
     JettyService(@Nullable String hostname,
                  boolean tlsReverseDnsLookup,
                  Function<BlockingTaskExecutor, Server> serverFactory,
-                 @Nullable Runnable startTask, @Nullable Runnable stopTask) {
+                 Consumer<Server> postStopTask) {
         this.hostname = hostname;
         this.tlsReverseDnsLookup = tlsReverseDnsLookup;
         this.serverFactory = serverFactory;
-        this.startTask = startTask;
-        this.stopTask = stopTask;
+        this.postStopTask = postStopTask;
         configurator = new Configurator();
     }
 
@@ -195,10 +174,13 @@ public final class JettyService implements HttpService {
             jettyServer = serverFactory.apply(armeriaServer.config().blockingTaskExecutor());
             connector = new ArmeriaConnector(jettyServer, armeriaServer);
             jettyServer.addConnector(connector);
-            if (startTask != null) {
-                startTask.run();
-            } else {
+
+            if (!jettyServer.isRunning()) {
+                logger.info("Starting an embedded Jetty: {}", jettyServer);
                 jettyServer.start();
+                startedServer = true;
+            } else {
+                startedServer = false;
             }
             success = true;
         } finally {
@@ -214,19 +196,18 @@ public final class JettyService implements HttpService {
         this.jettyServer = null;
         connector = null;
 
-        if (jettyServer == null) {
+        if (jettyServer == null || !startedServer) {
             return;
         }
 
         try {
-            if (stopTask != null) {
-                stopTask.run();
-            } else {
-                jettyServer.stop();
-            }
+            logger.info("Stopping an embedded Jetty: {}", jettyServer);
+            jettyServer.stop();
         } catch (Exception e) {
             logger.warn("Failed to stop an embedded Jetty: {}", jettyServer, e);
         }
+
+        postStopTask.accept(jettyServer);
     }
 
     @Override
