@@ -112,9 +112,11 @@ Note the code is minimal to keep things simple.
     static final ServerExtension server = new ServerExtension() {
       @Override
       protected void configure(ServerBuilder sb) throws Exception {
-        sb.service("/thrift", THttpService.builder()
-                                  .addService(new BlogServiceImpl()) // Add the service to the configuration
-                                  .build());
+        sb.service("/thrift",
+                   THttpService.builder()
+                               // Add the service to the configuration
+                               .addService(new BlogServiceImpl())
+                               .build());
       }
     };
   }
