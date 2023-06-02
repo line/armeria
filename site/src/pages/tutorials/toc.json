@@ -28,7 +28,7 @@
   "Thrift service":[
     "thrift/blog",
     "thrift/blog/create-service",
-    "thrift/blog/run-server-and-client",
+    "thrift/blog/run-server",
     "thrift/blog/define-service-methods",
     "thrift/blog/implement-create",
     "thrift/blog/implement-read",

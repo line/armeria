@@ -12,6 +12,7 @@ type: step
 
 In the previous step, we defined empty service methods.
 In this step, we'll fill in one of the service methods to create a blog post and again, try making a call to a service method.
+Also, we'll use Armeria's <type://ServerExtension> for testing.
 
 <TutorialSteps current={4} />
 
@@ -23,6 +24,7 @@ You need to have the following obtained from previous steps:
 - `Main.java`
 - `BlogServiceImpl.java`
 - `BlogClient.java`
+- `BlogServiceTest.java`
 
 ## 1. Implement server-side
 
@@ -85,42 +87,33 @@ BlogPost createBlogPost(String title, String content) throws TException {
 }
 ```
 
-## 3. Set up for testing
+## 3. Register a ServerExtension
 
-Now, let's get started with the test code so that we can verify what we implement along the way.
-Note the code is minimal to keep things simple.
+In the previous test code, we've connected directly to the server.
+This time, let's use Armeria's <type://ServerExtension> instead.
+This approach simplifies set-up and tear-down of a server.
 
-1. Create a file, `BlogServiceTest.java`, and declare the test class.
-  You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/test/java/example/armeria/server/blog/thrift/BlogServiceTest.java).
-  ```java filename=BlogServiceTest.java
-  package example.armeria.server.blog.thrift;
+In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
+Note that the service instance is added to the configuration.
 
-  class BlogServiceTest {}
-  ```
-2. Register a <type://ServerExtension> to set up a server instance for testing.
-  Note that the service instance is added to the configuration.
-  ```java filename=BlogServiceTest.java
-  import org.junit.jupiter.api.extension.RegisterExtension;
-
-  import com.linecorp.armeria.server.ServerBuilder;
-  import com.linecorp.armeria.server.thrift.THttpService;
-  import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-  class BlogServiceTest {
-
-    @RegisterExtension
-    static final ServerExtension server = new ServerExtension() {
-      @Override
-      protected void configure(ServerBuilder sb) throws Exception {
-        sb.service("/thrift",
-                   THttpService.builder()
-                               // Add the service to the configuration
-                               .addService(new BlogServiceImpl())
-                               .build());
-      }
-    };
+```java filename=BlogServiceTest.java
+import org.junit.jupiter.api.extension.RegisterExtension;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.thrift.THttpService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+...
+@RegisterExtension
+static final ServerExtension server = new ServerExtension() {
+  @Override
+  protected void configure(ServerBuilder sb) throws Exception {
+    sb.service("/thrift",
+               THttpService.builder()
+                           // Add the service to the configuration
+                           .addService(new BlogServiceImpl())
+                           .build());
   }
-  ```
+};
+```
 
 ## 4. Test creating a blog post
 
@@ -157,6 +150,7 @@ Let's test if we can create a blog post.
 ## What's next
 
 In this step, we've implemented a method for creating a blog post.
+We've also registered <type://ServerExtension> to our test.
 
 Next, at [Step 5. Implement READ](/tutorials/thrift/blog/implement-read), we'll implement a READ operation to read a single post and also multiple posts.
 
