@@ -4,4 +4,4 @@ server.port: -1
 armeria:
   ports:
     - port: 0
-      protocol: HTTP
+      protocols: HTTP
