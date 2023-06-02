@@ -6,4 +6,4 @@ spring.config.activate.on-profile: local
 armeria:
   ports:
     - port: 8080
-      protocol: HTTP
+      protocols: HTTP

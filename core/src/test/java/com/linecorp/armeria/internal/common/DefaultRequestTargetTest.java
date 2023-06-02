@@ -359,6 +359,13 @@ class DefaultRequestTargetTest {
     }
 
     @Test
+    void shouldReserveQuestionMark() {
+        // '%3F' must not be decoded into '?'.
+        assertAccepted(forServer("/abc%3F.json?a=%3F"), "/abc%3F.json", "a=%3F");
+        assertAccepted(forClient("/abc%3F.json?a=%3F"), "/abc%3F.json", "a=%3F");
+    }
+
+    @Test
     void serverShouldNormalizePoundSign() {
         // '#' must be encoded into '%23'.
         assertAccepted(forServer("/#?a=b#1"), "/%23", "a=b%231");

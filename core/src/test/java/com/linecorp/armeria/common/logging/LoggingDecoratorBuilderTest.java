@@ -327,6 +327,30 @@ class LoggingDecoratorBuilderTest {
         assertThat(builder.responseCauseSanitizer()).isEqualTo(CAUSE_SANITIZER);
     }
 
+    @Test
+    void buildLogFormatter() {
+        final LogFormatter logFormatter = LogFormatter.ofJson();
+        builder.logFormatter(logFormatter);
+        assertThat(builder.logFormatter()).isEqualTo(logFormatter);
+    }
+
+    @Test
+    void buildLogFormatterWithoutLogFormatter() {
+        builder.responseContentSanitizer(CONTENT_SANITIZER)
+               .requestHeadersSanitizer(HEADER_SANITIZER);
+        final LogFormatter logFormatter = builder.logFormatter();
+        assertThat(logFormatter).isNotNull();
+        assertThat(logFormatter).isInstanceOf(TextLogFormatter.class);
+    }
+
+    @Test
+    void buildLogFormatterThrowsException() {
+        final LogFormatter logFormatter = LogFormatter.ofText();
+        builder.logFormatter(logFormatter);
+        assertThatThrownBy(() -> builder.responseContentSanitizer(CONTENT_SANITIZER))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
     private static final class Builder extends LoggingDecoratorBuilder {
     }
 
