@@ -15,16 +15,13 @@
  */
 package com.linecorp.armeria.internal.common.logging;
 
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
@@ -37,10 +34,9 @@ import com.linecorp.armeria.server.TransientServiceOption;
 /**
  * Utilities for logging decorators.
  */
-public final class LoggingDecorators {
+public final class LoggingUtils {
     private static final String REQUEST_FORMAT = "{} Request: {}";
     private static final String RESPONSE_FORMAT = "{} Response: {}";
-    private static final String RESPONSE_FORMAT2 = "{} Response: {}, cause: {}";
 
     /**
      * Logs request and response using the specified {@code requestLogger} and {@code responseLogger}.
@@ -61,17 +57,12 @@ public final class LoggingDecorators {
     }
 
     /**
-     * Logs a stringified request of {@link RequestLog}.
+     * Logs a stringified request of {@link RequestOnlyLog}.
      */
     public static void logRequest(
             Logger logger, RequestOnlyLog log,
             RequestLogLevelMapper requestLogLevelMapper,
-            BiFunction<? super RequestContext, ? super RequestHeaders,
-                    ? extends @Nullable Object> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestTrailersSanitizer) {
+            LogFormatter logFormatter) {
 
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
         assert requestLogLevel != null;
@@ -80,9 +71,8 @@ public final class LoggingDecorators {
             if (log.requestCause() == null && isTransientService(ctx)) {
                 return;
             }
-            final String requestStr = log.toStringRequestOnly(requestHeadersSanitizer,
-                                                              requestContentSanitizer,
-                                                              requestTrailersSanitizer);
+            final String requestStr = logFormatter.formatRequest(log);
+
             try (SafeCloseable ignored = ctx.push()) {
                 // We don't log requestCause when it's not null because responseCause is the same exception when
                 // the requestCause is not null. That's way we don't have requestCauseSanitizer.
@@ -98,20 +88,8 @@ public final class LoggingDecorators {
             Logger logger, RequestLog log,
             RequestLogLevelMapper requestLogLevelMapper,
             ResponseLogLevelMapper responseLogLevelMapper,
-            BiFunction<? super RequestContext, ? super RequestHeaders,
-                    ? extends @Nullable Object> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super ResponseHeaders,
-                    ? extends @Nullable Object> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable,
-                    ? extends @Nullable Object> responseCauseSanitizer) {
+            Predicate<Throwable> responseCauseFilter,
+            LogFormatter logFormatter) {
 
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
         assert responseLogLevel != null;
@@ -125,9 +103,7 @@ public final class LoggingDecorators {
                 return;
             }
 
-            final String responseStr = log.toStringResponseOnly(responseHeadersSanitizer,
-                                                                responseContentSanitizer,
-                                                                responseTrailersSanitizer);
+            final String responseStr = logFormatter.formatResponse(log);
             try (SafeCloseable ignored = ctx.push()) {
                 if (responseCause == null) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
@@ -139,30 +115,19 @@ public final class LoggingDecorators {
                 if (!requestLogLevel.isEnabled(logger)) {
                     // Request wasn't logged, but this is an unsuccessful response,
                     // so we log the request too to help debugging.
-                    responseLogLevel.log(logger, REQUEST_FORMAT, ctx,
-                                         log.toStringRequestOnly(requestHeadersSanitizer,
-                                                                 requestContentSanitizer,
-                                                                 requestTrailersSanitizer));
+                    responseLogLevel.log(logger, REQUEST_FORMAT, ctx, logFormatter.formatRequest(log));
                 }
 
-                final Object sanitizedResponseCause = responseCauseSanitizer.apply(ctx, responseCause);
-                if (sanitizedResponseCause == null) {
+                if (responseCauseFilter.test(responseCause)) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
-                    return;
-                }
-
-                if (sanitizedResponseCause instanceof Throwable) {
-                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx,
-                                         responseStr, sanitizedResponseCause);
                 } else {
-                    responseLogLevel.log(logger, RESPONSE_FORMAT2, ctx,
-                                         responseStr, sanitizedResponseCause);
+                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr, responseCause);
                 }
             }
         }
     }
 
-    private LoggingDecorators() {}
+    private LoggingUtils() {}
 
     private static void logException(Logger logger, RequestContext ctx,
                                      String requestOrResponse, Throwable cause) {

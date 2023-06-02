@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -72,7 +73,7 @@ public class HttpClientPipeliningTest {
                             lock.unlock();
                         }
 
-                        semaphore.acquireUninterruptibly();
+                        BlockingUtils.blockingRun(() -> semaphore.acquireUninterruptibly());
                         try {
                             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                                                    String.valueOf(ctx.remoteAddress()));
