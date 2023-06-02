@@ -62,10 +62,10 @@ First, add a custom exception handler for the blog service.
   ...
   private static Server newServer(int port) throws Exception {
     final THttpService tHttpService =
-            THttpService.builder()
-                        .addService(new BlogServiceImpl())
-                        .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
-                        .build();
+      THttpService.builder()
+                  .addService(new BlogServiceImpl())
+                  .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
+                  .build();
     ...
   }
   ```

@@ -113,8 +113,8 @@ Note the code is minimal to keep things simple.
       @Override
       protected void configure(ServerBuilder sb) throws Exception {
         sb.service("/thrift", THttpService.builder()
-                                          .addService(new BlogServiceImpl()) // Add the service to the configuration
-                                          .build());
+                                  .addService(new BlogServiceImpl()) // Add the service to the configuration
+                                  .build());
       }
     };
   }
