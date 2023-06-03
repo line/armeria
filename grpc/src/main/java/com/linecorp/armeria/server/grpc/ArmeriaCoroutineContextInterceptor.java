@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -49,7 +50,8 @@ final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInt
         List<?> providers = ImmutableList.of();
         MethodHandle provideMethod = null;
         try {
-            final Class<?> clazz = Class.forName("com.linecorp.armeria.common.kotlin.CoroutineContextProvider");
+            final Class<?> clazz = Class.forName(
+                    RequestContext.class.getPackage().getName() + ".kotlin.CoroutineContextProvider");
             providers = ImmutableList.copyOf(
                     ServiceLoader.load(clazz, ArmeriaCoroutineContextInterceptor.class.getClassLoader()));
             final MethodHandles.Lookup publicLookup = MethodHandles.publicLookup();
