@@ -206,7 +206,7 @@ With Armeria's integration with gRPC-Kotlin, it's easy to set up a custom `Corou
 gRPC-Kotlin service. You can create your own `CoroutineContext` using <type://CoroutineContextProvider>, and 
 add it to your service through Java SPI.
 
-Note that the <type://ServiceRequestContext> is still part of the 
+Note that the <type://ServiceRequestContext> is still a part of the 
 `CoroutineContext`, but the event loop `CoroutineDispatcher` is disabled if the custom `CoroutineContext`
 is used.
 
