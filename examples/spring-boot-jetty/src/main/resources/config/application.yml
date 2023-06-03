@@ -1,0 +1,9 @@
+spring.profiles.active: local
+# Prevent the embedded Tomcat from opening a TCP/IP port.
+server.port: -1
+---
+spring.config.activate.on-profile: local
+armeria:
+  ports:
+    - port: 8080
+      protocols: HTTP
