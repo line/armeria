@@ -19,16 +19,21 @@ package com.linecorp.armeria.server.metric;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -67,59 +72,86 @@ class DuplicateMetricCollectingServiceTest {
             sb.decoratorUnder("/foo",
                               MetricCollectingService.newDecorator(
                                       MeterIdPrefixFunction.ofDefault("foo.metrics")));
-            sb.decoratorUnder("/foo",
-                              LoggingService.newDecorator());
+            sb.decoratorUnder("/foo", LoggingService.newDecorator());
             sb.decorator(
                     MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("global.metrics")));
         }
     };
 
+    @RegisterExtension
+    static ServerExtension serverNoRoutingDecorators = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.meterRegistry(meterRegistry);
+
+            sb.route()
+              .get("/foo")
+              .decorator(MetricCollectingService.newDecorator(
+                      MeterIdPrefixFunction.ofDefault("foo.metrics")))
+              .decorator(MetricCollectingService.newDecorator(
+                      MeterIdPrefixFunction.ofDefault("bar.metrics")))
+              .decorator(MetricCollectingService.newDecorator(
+                      MeterIdPrefixFunction.ofDefault("baz.metrics")))
+              .defaultServiceName("FooService")
+              .build((ctx, req) -> HttpResponse.of("FooService"));
+        }
+    };
+
+    @AfterEach
+    void tearDown() {
+        clearMeters();
+    }
+
     @Test
     void shouldRespectInnermostDecorator() throws InterruptedException {
         final BlockingWebClient client = server.blockingWebClient();
-        AggregatedHttpResponse response = client.get("/foo/bar");
-        assertThat(response.contentUtf8()).isEqualTo("BarService");
+        // Execute multiple times to check the routing result cached in MetricCollectingService.
+        for (int i = 0; i < 3; i++) {
+            AggregatedHttpResponse response = client.get("/foo/bar");
+            assertThat(response.contentUtf8()).isEqualTo("BarService");
+            assertMeters("BarService", "bar.metrics", ImmutableList.of("global.metrics", "foo.metrics"));
+            clearMeters();
 
+            response = client.get("/foo/");
+            assertThat(response.contentUtf8()).isEqualTo("FooService");
+            assertMeters("FooService", "foo.metrics", ImmutableList.of("global.metrics", "bar.metrics"));
+            clearMeters();
+
+            response = client.get("/baz");
+            assertThat(response.contentUtf8()).isEqualTo("BazService");
+            assertMeters("BazService", "global.metrics", ImmutableList.of("foo.metrics", "bar.metrics"));
+            clearMeters();
+        }
+    }
+
+    @Test
+    void shouldRespectInnermostDecorator_noRoutingDecorators() throws InterruptedException {
+        final BlockingWebClient client = serverNoRoutingDecorators.blockingWebClient();
+        // Execute multiple times to check the routing result cached in MetricCollectingService.
+        for (int i = 0; i < 3; i++) {
+            final AggregatedHttpResponse response = client.get("/foo");
+            assertThat(response.contentUtf8()).isEqualTo("FooService");
+            assertMeters("FooService", "foo.metrics", ImmutableList.of("bar.metrics", "baz.metrics"));
+            clearMeters();
+        }
+    }
+
+    private static void assertMeters(String serviceName, String meterName, List<String> unexpectedMeterNames) {
         await().untilAsserted(() -> {
             final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
             assertThat(metrics).allSatisfy((meterId, value) -> {
-                assertThat(meterId).doesNotStartWith("global.metrics");
-                assertThat(meterId).doesNotStartWith("foo.metrics");
+                for (String unexpectedMeterName : unexpectedMeterNames) {
+                    assertThat(meterId).doesNotStartWith(unexpectedMeterName);
+                }
             });
             assertThat(metrics).containsEntry(
-                    "bar.metrics.requests#count{hostname.pattern=*,http.status=200,method=GET," +
-                    "result=success,service=BarService}", 1.0);
+                    meterName + ".requests#count{hostname.pattern=*,http.status=200,method=GET," +
+                    "result=success,service=" + serviceName + '}', 1.0);
         });
+    }
+
+    private static void clearMeters() {
         meterRegistry.clear();
-
-        response = client.get("/foo/");
-        assertThat(response.contentUtf8()).isEqualTo("FooService");
-
-        await().untilAsserted(() -> {
-            final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
-            assertThat(metrics).allSatisfy((meterId, value) -> {
-                assertThat(meterId).doesNotStartWith("global.metrics");
-                assertThat(meterId).doesNotStartWith("bar.metrics");
-            });
-            assertThat(metrics).containsEntry(
-                    "foo.metrics.requests#count{hostname.pattern=*,http.status=200,method=GET," +
-                    "result=success,service=FooService}", 1.0);
-        });
-        meterRegistry.clear();
-
-        response = client.get("/baz");
-        assertThat(response.contentUtf8()).isEqualTo("BazService");
-
-        await().untilAsserted(() -> {
-            final Map<String, Double> fooMetrics = MoreMeters.measureAll(meterRegistry);
-            assertThat(fooMetrics).allSatisfy((meterId, value) -> {
-                assertThat(meterId).doesNotStartWith("foo.metrics");
-                assertThat(meterId).doesNotStartWith("bar.metrics");
-            });
-            assertThat(fooMetrics).containsEntry(
-                    "global.metrics.requests#count{hostname.pattern=*,http.status=200,method=GET," +
-                    "result=success,service=BazService}", 1.0);
-        });
-        meterRegistry.clear();
+        MicrometerUtil.clear();
     }
 }
