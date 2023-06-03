@@ -186,7 +186,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
                         final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
                         final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-                        builder.add(com.linecorp.armeria.common.HttpHeaderNames.HOST, defaultHostname + ':' + port);
+                        builder.add(com.linecorp.armeria.common.HttpHeaderNames.HOST,
+                                    defaultHostname + ':' + port);
                     }
 
                     headers = builder.build();

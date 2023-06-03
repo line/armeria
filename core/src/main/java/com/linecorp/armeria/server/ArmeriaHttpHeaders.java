@@ -38,14 +38,28 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil.CaseInsensitiveMap;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.AsciiString;
 
+/**
+ * Custom implementation of {@link HttpHeaders} that delegates to {@link RequestHeadersBuilder}.
+ */
 public final class ArmeriaHttpHeaders extends HttpHeaders {
 
     private final RequestHeadersBuilder builder;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param builder the builder to delegate to
+     */
     public ArmeriaHttpHeaders(RequestHeadersBuilder builder) {
         this.builder = builder;
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param builder the builder to delegate to
+     * @param headers the headers to copy
+     */
     public ArmeriaHttpHeaders(RequestHeadersBuilder builder, HttpHeaders headers) {
         this.builder = builder;
         headers.forEach(e -> builder.add(e.getKey(), e.getValue()));

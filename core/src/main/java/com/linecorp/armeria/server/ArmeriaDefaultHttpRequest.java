@@ -47,7 +47,8 @@ final class ArmeriaDefaultHttpRequest extends DefaultHttpMessage implements Http
      * @param uri               the URI or path of the request
      * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
      */
-    public ArmeriaDefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
+    ArmeriaDefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+                                     boolean validateHeaders) {
         super(httpVersion, validateHeaders, false);
         this.method = checkNotNull(method, "method");
         this.uri = checkNotNull(uri, "uri");
@@ -115,7 +116,7 @@ final class ArmeriaDefaultHttpRequest extends DefaultHttpMessage implements Http
             return false;
         }
 
-        ArmeriaDefaultHttpRequest other = (ArmeriaDefaultHttpRequest) o;
+        final ArmeriaDefaultHttpRequest other = (ArmeriaDefaultHttpRequest) o;
 
         return method().equals(other.method()) &&
                uri().equalsIgnoreCase(other.uri()) &&
@@ -124,10 +125,10 @@ final class ArmeriaDefaultHttpRequest extends DefaultHttpMessage implements Http
 
     @Override
     public String toString() {
-        ToStringHelper toStringHelper = MoreObjects.toStringHelper(this)
-                                        .add("decoderResult", decoderResult())
-                                        .add("version", protocolVersion())
-                                        .add("method", method());
+        final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this)
+                                                         .add("decoderResult", decoderResult())
+                                                         .add("version", protocolVersion())
+                                                         .add("method", method());
 
         for (Map.Entry<String, String> e: headers()) {
             toStringHelper.add(e.getKey(), e.getValue());

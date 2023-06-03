@@ -99,8 +99,9 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
-                           int initialBufferSize, boolean allowDuplicateContentLengths) {
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+                           boolean validateHeaders, int initialBufferSize,
+                           boolean allowDuplicateContentLengths) {
         init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders,
                                           initialBufferSize, allowDuplicateContentLengths),
              new HttpServerResponseEncoder());
