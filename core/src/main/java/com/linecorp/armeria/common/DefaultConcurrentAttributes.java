@@ -40,13 +40,13 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterators;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.AttributeKey;
 
@@ -378,7 +378,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
     }
 
     @VisibleForTesting
-    static final class DefaultAttribute<T> extends ReentrantLock implements Entry<AttributeKey<T>, T> {
+    static final class DefaultAttribute<T> extends ReentrantShortLock implements Entry<AttributeKey<T>, T> {
 
         @Nullable
         private final AttributeKey<T> key;
