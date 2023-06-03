@@ -816,7 +816,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * Converts this endpoint into a {@link InetSocketAddress}. The specified {@code defaultPort} is used
+     * Converts this endpoint into an {@link InetSocketAddress}. The specified {@code defaultPort} is used
      * if this endpoint does not have a port number. A {@link DomainSocketAddress} is returned if this
      * endpoint refers to a Unix domain socket.
      *
