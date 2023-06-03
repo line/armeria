@@ -2,6 +2,31 @@ import versions from '../../../gen-src/versions.json';
 
 # Scala integration
 
+As a matter of fact, there are three distinct ways to integrate Armeria and Scala:
+
+* by using the `armeria-scala` library;
+* by using the [`http4s-armeria`](https://github.com/http4s/http4s-armeria) library;
+* or just by using Armeria directly in your Scala projects.
+In that case, the supplied API would be fully in `Java`.
+
+If you're searching for the most Scala-way experience of using Armeria,
+take a look at `armeria-scala` and `http4s-armeria`. These two libraries differentiate
+from each other significantly.
+
+* `armeria-scala` is built on top of the Scala Standard Library, and asynchronous computations
+are provided by the `scala.concurrent` library. By picking this library, you will work with
+HTTP through the Armeria API and get the handy functionality to bridge Java API to Scala.
+* [`http4s-armeria`](https://github.com/http4s/http4s-armeria), in turn, is built on top
+of the Functional Programming Libraries — [`http4s`](https://http4s.org/) exposes typeful,
+functional, streaming HTTP API, and [`Cats-Effect`](https://typelevel.org/cats-effect/)
+accords a reach functionality for the asynchronous and concurrent computations.
+This means that Armeria is used as the underlying Backend for the Server and Client.
+
+Since the `http4s-armeria` is a third-party project,
+its documentation is not listed here, so discover it on their resources. Below on this page
+is the documentation of the `armeria-scala` library. Choose the most fittable way to integrate
+Armeria and Scala according to your demands and needs!
+
 <Tip>
 
 The `armeria-scala` module is still experimental. We may make a breaking change if we find a better way
