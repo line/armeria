@@ -23,7 +23,8 @@
     "server-cors",
     "server-sse",
     "server-service-registration",
-    "server-multipart"
+    "server-multipart",
+    "server-timeouts"
   ],
   "Client": [
     "client-http",

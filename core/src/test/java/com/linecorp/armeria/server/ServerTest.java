@@ -76,6 +76,7 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -112,12 +113,8 @@ class ServerTest {
             final HttpService delayedResponseOnIoThread = new EchoService() {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
-                    try {
-                        Thread.sleep(processDelayMillis);
-                        return super.echo(aReq);
-                    } catch (InterruptedException e) {
-                        return HttpResponse.ofFailure(e);
-                    }
+                    BlockingUtils.blockingRun(() -> Thread.sleep(processDelayMillis));
+                    return super.echo(aReq);
                 }
             }.decorate(LoggingService.newDecorator());
 
@@ -416,7 +413,7 @@ class ServerTest {
         threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
         threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
 
-        threads.forEach(t -> assertThat(t.getName()).startsWith("globalEventExecutor"));
+        threads.forEach(t -> assertThat(t.getName()).startsWith("startstop-support"));
     }
 
     @Test
