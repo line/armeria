@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.CoreBlockHoundIntegration;
  * This lock may be preferred over {@link ReentrantLock} when it is known that the
  * lock won't block the event loop over long periods of time.
  */
-public final class ReentrantShortLock extends ReentrantLock {
+public class ReentrantShortLock extends ReentrantLock {
     private static final long serialVersionUID = 8999619612996643502L;
 
     @Override
