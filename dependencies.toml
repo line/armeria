@@ -4,6 +4,7 @@ akka-http-cors = "1.0.0"
 akka-grpc-runtime = "1.0.3"
 apache-httpclient5 = "5.2.1"
 apache-httpclient4 = "4.5.14"
+asm = "9.5"
 assertj = "3.24.2"
 awaitility = "4.2.0"
 blockhound = "1.0.8.RELEASE"
@@ -52,8 +53,14 @@ javax-inject = "1"
 javax-jsr311 = "1.1.1"
 javax-validation = "2.0.1.Final"
 jctools = "4.0.1"
-jetty93 = '9.3.30.v20211001'
-jetty94 = "9.4.50.v20221201"
+# Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/jetty-server/
+jetty10 = "10.0.15"
+# Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/apache-jstl/
+jetty10-jstl = "10.0.15"
+jetty11 = "11.0.15"
+jetty11-jstl = "11.0.0"
+jetty93 = "9.3.30.v20211001"
+jetty94 = "9.4.51.v20230217"
 jetty-alpn-api = "1.1.3.v20160715"
 jetty-alpn-agent = "2.0.10"
 jmh-core = "1.36"
@@ -71,6 +78,7 @@ kotlin = "1.8.10"
 kotlin-coroutine = "1.6.4"
 ktlint-gradle-plugin = "11.3.2"
 logback = "1.2.11"
+logback14 = "1.4.7"
 micrometer = "1.10.5"
 micrometer13 = "1.3.20"
 mockito = "4.11.0"
@@ -116,6 +124,7 @@ shadow-gradle-plugin = "7.1.2"
 shibboleth-utilities = "7.5.2"
 snappy = "1.1.9.1"
 slf4j = "1.7.36"
+slf4j2 = "2.0.7"
 spring6 = "6.0.6"
 spring-boot2 = "2.7.10"
 spring-boot3 = "3.0.5"
@@ -172,6 +181,11 @@ exclusions = "commons-logging:commons-logging"
 module = "org.apache.httpcomponents:httpclient"
 version.ref = "apache-httpclient4"
 exclusions = "commons-logging:commons-logging"
+
+# This is only used for testing Jetty
+[libraries.asm]
+module = "org.ow2.asm:asm"
+version.ref = "asm"
 
 [libraries.assertj]
 module = "org.assertj:assertj-core"
@@ -565,6 +579,40 @@ module = "org.jctools:jctools-core"
 version.ref = "jctools"
 relocations = { from = "org.jctools", to = "com.linecorp.armeria.internal.shaded.jctools" }
 
+[libraries.jetty10-annotations]
+module = "org.eclipse.jetty:jetty-annotations"
+version.ref = "jetty10"
+[libraries.jetty10-apache-jsp]
+module = "org.eclipse.jetty:apache-jsp"
+version.ref = "jetty10"
+[libraries.jetty10-apache-jstl]
+module = "org.eclipse.jetty:apache-jstl"
+version.ref = "jetty10-jstl"
+[libraries.jetty10-server]
+module = "org.eclipse.jetty:jetty-server"
+version.ref = "jetty10"
+# jetty-webapp for testing interoperability with other servers.
+[libraries.jetty10-webapp]
+module = "org.eclipse.jetty:jetty-webapp"
+version.ref = "jetty10"
+
+[libraries.jetty11-annotations]
+module = "org.eclipse.jetty:jetty-annotations"
+version.ref = "jetty11"
+[libraries.jetty11-apache-jsp]
+module = "org.eclipse.jetty:apache-jsp"
+version.ref = "jetty11"
+[libraries.jetty11-apache-jstl]
+module = "org.eclipse.jetty:apache-jstl"
+version.ref = "jetty11-jstl"
+[libraries.jetty11-server]
+module = "org.eclipse.jetty:jetty-server"
+version.ref = "jetty11"
+# jetty-webapp for testing interoperability with other servers.
+[libraries.jetty11-webapp]
+module = "org.eclipse.jetty:jetty-webapp"
+version.ref = "jetty11"
+
 [libraries.jetty93-annotations]
 module = "org.eclipse.jetty:jetty-annotations"
 exclusions = ["org.ow2.asm:asm", "org.ow2.asm:asm-commons"]
@@ -704,6 +752,11 @@ version.ref = "kotlin-coroutine"
 module = "ch.qos.logback:logback-classic"
 version.ref = "logback"
 javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.12/"
+
+[libraries.logback14]
+module = "ch.qos.logback:logback-classic"
+version.ref = "logback14"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.4.7/"
 
 [libraries.micrometer-core]
 module = "io.micrometer:micrometer-core"
@@ -1028,6 +1081,11 @@ version.ref = "slf4j"
 module = "org.slf4j:slf4j-simple"
 version.ref = "slf4j"
 
+[libraries.slf4j2-api]
+module = "org.slf4j:slf4j-api"
+version.ref = "slf4j2"
+javadocs = "https://www.javadoc.io/doc/org.slf4j/slf4j-api/2.0.7/"
+
 [libraries.spring6-web]
 module = "org.springframework:spring-web"
 version.ref = "spring6"
@@ -1074,6 +1132,9 @@ version.ref = "spring-boot3"
 javadocs = "https://docs.spring.io/spring/docs/current/javadoc-api/"
 [libraries.spring-boot3-starter-actuator]
 module = "org.springframework.boot:spring-boot-starter-actuator"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-jetty]
+module = "org.springframework.boot:spring-boot-starter-jetty"
 version.ref = "spring-boot3"
 [libraries.spring-boot3-starter-security]
 module = "org.springframework.boot:spring-boot-starter-security"

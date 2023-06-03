@@ -69,7 +69,7 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
                                          "assertThatJson");
         builder.allowBlockingCallsInside("com.linecorp.armeria.testing.server.ServiceRequestContextCaptor$2",
                                          "serve");
-
+        builder.allowBlockingCallsInside("org.slf4j.impl.SimpleLogger", "write");
         builder.allowBlockingCallsInside(
                 "com.linecorp.armeria.internal.testing.InternalTestingBlockHoundIntegration",
                 "writeBlockingMethod");

@@ -57,7 +57,7 @@ public final class DefaultRequestTarget implements RequestTarget {
      * other implementations in the ecosystem, e.g. HTTP/JSON to gRPC transcoding. See
      * <a href="https://github.com/googleapis/googleapis/blob/02710fa0ea5312d79d7fb986c9c9823fb41049a9/google/api/http.proto#L257-L258">http.proto</a>.
      */
-    private static final BitSet PATH_MUST_PRESERVE_ENCODING = toBitSet("/");
+    private static final BitSet PATH_MUST_PRESERVE_ENCODING = toBitSet("/?");
 
     /**
      * The lookup table for the characters that whose percent encoding must be preserved
