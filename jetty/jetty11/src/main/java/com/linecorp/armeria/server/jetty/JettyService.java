@@ -257,7 +257,7 @@ public final class JettyService implements HttpService {
                     // Perform a reverse DNS lookup if needed.
                     if (needsReverseDnsLookup) {
                         try {
-                            ((InetSocketAddress) ctx.remoteAddress()).getHostName();
+                            ctx.remoteAddress().getHostName();
                         } catch (Throwable t) {
                             logger.warn("{} Failed to perform a reverse DNS lookup:", ctx, t);
                         }
