@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.jetty;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
