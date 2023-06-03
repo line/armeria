@@ -174,29 +174,22 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers;
-                    if (nettyReq instanceof ArmeriaDefaultHttpRequest) {
-                        final RequestHeadersBuilder builder =
-                                ((ArmeriaDefaultHttpRequest) nettyReq).requestHeadersBuilder();
+                    assert nettyReq instanceof ArmeriaDefaultHttpRequest;
+                    final RequestHeadersBuilder builder =
+                            ((ArmeriaDefaultHttpRequest) nettyReq).requestHeadersBuilder();
 
-                        final ArmeriaDefaultHttpRequest armeriaDefaultHttpRequest = (ArmeriaDefaultHttpRequest) nettyReq;
-                        final HttpHeaders inHeaders = armeriaDefaultHttpRequest.headers();
+                    builder.scheme(scheme.toString());
 
-                        builder.sizeHint(inHeaders.size());
-                        builder.scheme(scheme.toString());
-
-                        if (!builder.contains(com.linecorp.armeria.common.HttpHeaderNames.HOST)) {
-                            // The client violates the spec that the request headers must contain a Host header.
-                            // But we just add Host header to allow the request.
-                            // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
-                            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-                            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-                            builder.add(com.linecorp.armeria.common.HttpHeaderNames.HOST, defaultHostname + ':' + port);
-                        }
-
-                        headers = builder.build();
-                    } else {
-                        headers = ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), reqTarget);
+                    if (!builder.contains(com.linecorp.armeria.common.HttpHeaderNames.HOST)) {
+                        // The client violates the spec that the request headers must contain a Host header.
+                        // But we just add Host header to allow the request.
+                        // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
+                        final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
+                        final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
+                        builder.add(com.linecorp.armeria.common.HttpHeaderNames.HOST, defaultHostname + ':' + port);
                     }
+
+                    headers = builder.build();
                     // Do not accept unsupported methods.
                     final HttpMethod method = headers.method();
                     switch (method) {

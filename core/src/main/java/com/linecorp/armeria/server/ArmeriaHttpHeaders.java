@@ -1,4 +1,20 @@
-package com.linecorp.armeria.internal.common;
+/*
+ * Copyright 2023 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SEPARATOR;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SPLITTER;
@@ -7,9 +23,9 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.convertHeader
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp2HeadersFilterTE;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toLowercaseMap;
 
+import java.util.AbstractMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -78,7 +94,7 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
     @Override
     public List<Entry<String, String>> entries() {
         return builder.stream()
-                      .map(e -> Map.entry(e.getKey().toString(), e.getValue()))
+                      .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().toString(), e.getValue()))
                       .collect(Collectors.toList());
     }
 
@@ -90,14 +106,18 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
     @Override
     public Iterator<Entry<String, String>> iterator() {
         return builder.stream()
-                      .map(e -> Map.entry(e.getKey().toString(), e.getValue()))
+                      .map(e -> (Entry<String, String>) new AbstractMap.SimpleEntry<>(
+                              e.getKey().toString(), e.getValue())
+                      )
                       .iterator();
     }
 
     @Override
     public Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence() {
         return  builder.stream()
-                       .map(e -> Map.entry((CharSequence) e.getKey().toString(),(CharSequence) e.getValue()))
+                       .map(e -> (Entry<CharSequence, CharSequence>) new AbstractMap.SimpleEntry<>(
+                               (CharSequence) e.getKey().toString(),(CharSequence) e.getValue())
+                       )
                        .iterator();
     }
 
@@ -129,7 +149,10 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
 
         final CharSequence charSequenceValue = (CharSequence) value;
         if (asciiName.equals(HttpHeaderNames.TE)) {
-            toHttp2HeadersFilterTE(Map.entry(name, charSequenceValue), builder);
+            toHttp2HeadersFilterTE(
+                    new AbstractMap.SimpleEntry<>(name, charSequenceValue),
+                    builder
+            );
             return this;
         }
 
