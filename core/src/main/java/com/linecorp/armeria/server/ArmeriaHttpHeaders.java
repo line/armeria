@@ -62,7 +62,7 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
      */
     public ArmeriaHttpHeaders(RequestHeadersBuilder builder, HttpHeaders headers) {
         this.builder = builder;
-        headers.forEach(e -> builder.add(e.getKey(), e.getValue()));
+        headers.forEach(e -> this.add(e.getKey(), e.getValue()));
     }
 
     @Override
