@@ -408,8 +408,8 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void setState(State oldState, State newState) {
-            assert state == oldState :
-                    "curState: " + state + ", oldState: " + oldState + ", newState: " + newState;
+            assert state == oldState
+                    : "curState: " + state + ", oldState: " + oldState + ", newState: " + newState;
             assert newState != State.REQUIRE_HEAD : "oldState: " + oldState + ", newState: " + newState;
             state = newState;
         }
