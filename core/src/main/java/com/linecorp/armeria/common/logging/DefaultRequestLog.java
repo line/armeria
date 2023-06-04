@@ -1286,9 +1286,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
 
             if (rpcResponse.cause() != null && responseCause == null) {
-                // Don't use 'responseCause(Throwable)' to set responseCause because if the HTTP response was
-                // ended successfully the RequestLogProperty.RESPONSE_CAUSE flag becomes available with a null
-                // value.
+                // Don't use 'responseCause(Throwable)' to set 'RpcResponse.cause()'.
+                // 'responseCause(Throwable)' performs nothing if the HTTP response was ended successfully.
                 responseCause = rpcResponse.cause();
                 updateFlags(RequestLogProperty.RESPONSE_CAUSE);
             }
