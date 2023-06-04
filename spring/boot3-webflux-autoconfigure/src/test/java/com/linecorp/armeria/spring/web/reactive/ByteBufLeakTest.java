@@ -104,8 +104,10 @@ public class ByteBufLeakTest {
 
             private static void addListenerForCountingCompletedRequests() {
                 ServiceRequestContext.current().log().whenComplete()
-                                     .thenAccept(log -> completed.incrementAndGet());
-                requestReceived.set(true);
+                                     .thenAccept(log -> {
+                                         completed.incrementAndGet();
+                                         requestReceived.set(true);
+                                     });
             }
         }
     }
