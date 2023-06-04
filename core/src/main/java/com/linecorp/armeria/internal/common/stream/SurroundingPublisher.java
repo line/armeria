@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -33,6 +32,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -48,7 +48,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
     @Nullable
     private final T head;
-    private final Publisher<? extends T> publisher;
+    private final StreamMessage<T> publisher;
     @Nullable
     private final T tail;
 
@@ -58,10 +58,15 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
     @Nullable
     private volatile SurroundingSubscriber<T> surroundingSubscriber;
 
+    @SuppressWarnings("unchecked")
     public SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail) {
         requireNonNull(publisher, "publisher");
         this.head = head;
-        this.publisher = publisher;
+        if (publisher instanceof StreamMessage) {
+            this.publisher = (StreamMessage<T>) publisher;
+        } else {
+            this.publisher = new PublisherBasedStreamMessage<>(publisher);
+        }
         this.tail = tail;
     }
 
@@ -118,8 +123,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                             SubscriptionOption... options) {
 
         final SurroundingSubscriber<T> surroundingSubscriber = new SurroundingSubscriber<>(
-                head, publisher, tail, subscriber, executor,
-                completionFuture, containsNotifyCancellation(options));
+                head, publisher, tail, subscriber, executor, completionFuture, options);
         this.surroundingSubscriber = surroundingSubscriber;
         subscriber.onSubscribe(surroundingSubscriber);
 
@@ -154,10 +158,6 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
     static final class SurroundingSubscriber<T> implements Subscriber<T>, Subscription {
 
-        @SuppressWarnings("rawtypes")
-        private static final AtomicReferenceFieldUpdater<SurroundingSubscriber, State> stateUpdater =
-                AtomicReferenceFieldUpdater.newUpdater(SurroundingSubscriber.class, State.class, "state");
-
         enum State {
             REQUIRE_HEAD,
             REQUIRE_BODY,
@@ -170,7 +170,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
         @Nullable
         private final T head;
-        private final Publisher<? extends T> publisher;
+        private final StreamMessage<T> publisher;
         @Nullable
         private final T tail;
 
@@ -185,11 +185,11 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         private volatile boolean closed;
 
         private final CompletableFuture<Void> completionFuture;
-        private final boolean notifyCancellation;
+        private final SubscriptionOption[] options;
 
-        SurroundingSubscriber(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail,
+        SurroundingSubscriber(@Nullable T head, StreamMessage<T> publisher, @Nullable T tail,
                               Subscriber<? super T> downstream, EventExecutor executor,
-                              CompletableFuture<Void> completionFuture, boolean notifyCancellation) {
+                              CompletableFuture<Void> completionFuture, SubscriptionOption... options) {
             requireNonNull(publisher, "publisher");
             requireNonNull(downstream, "downstream");
             requireNonNull(executor, "executor");
@@ -200,7 +200,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             this.downstream = downstream;
             this.executor = executor;
             this.completionFuture = completionFuture;
-            this.notifyCancellation = notifyCancellation;
+            this.options = options;
         }
 
         @Override
@@ -253,7 +253,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                 case REQUIRE_BODY: {
                     if (!subscribed) {
                         subscribed = true;
-                        publisher.subscribe(this);
+                        publisher.subscribe(this, executor, options);
                         return;
                     }
                     if (upstream != null) {
@@ -362,7 +362,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             closed = true;
 
             final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
-            if (notifyCancellation) {
+            if (containsNotifyCancellation(options)) {
                 downstream.onError(cause);
             }
             downstream = NoopSubscriber.get();
@@ -407,9 +407,11 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             }
         }
 
-        private boolean setState(State oldState, State newState) {
+        private void setState(State oldState, State newState) {
+            assert state == oldState :
+                    "curState: " + state + ", oldState: " + oldState + ", newState: " + newState;
             assert newState != State.REQUIRE_HEAD : "oldState: " + oldState + ", newState: " + newState;
-            return stateUpdater.compareAndSet(this, oldState, newState);
+            state = newState;
         }
     }
 }

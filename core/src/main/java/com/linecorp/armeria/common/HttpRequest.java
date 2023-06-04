@@ -288,6 +288,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
      * release the elements. See {@link PublisherBasedStreamMessage} for more information.
      */
+    @UnstableApi
     static HttpRequest of(RequestHeaders headers,
                           Publisher<? extends HttpData> publisher,
                           HttpHeaders trailers) {

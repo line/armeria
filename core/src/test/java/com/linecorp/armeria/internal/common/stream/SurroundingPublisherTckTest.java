@@ -50,20 +50,12 @@ public class SurroundingPublisherTckTest extends StreamMessageVerification<Objec
             return publisher;
         }
         if (elements == 1) {
-            // return new SurroundingPublisher<>("head", Mono.empty(), null);
-            // return new SurroundingPublisher<>(null, Mono.just(1), null);
-            return new SurroundingPublisher<>(null, Mono.empty(), "tail");
+            return new SurroundingPublisher<>("head", Mono.empty(), null);
         }
         if (elements == 2) {
-            // return new SurroundingPublisher<>("head", Mono.just(1), null);
-            // return new SurroundingPublisher<>("head", Mono.empty(), "tail");
-            // return new SurroundingPublisher<>(null, Mono.just(1), "tail");
-            return new SurroundingPublisher<>(null, Flux.just(1, 2), null);
+            return new SurroundingPublisher<>(null, Mono.just(1), "tail");
         }
-        // return new SurroundingPublisher<>("head", Flux.fromStream(LongStream.range(0, elements - 1).boxed()), null);
-        // return new SurroundingPublisher<>("head", Flux.fromStream(LongStream.range(0, elements - 2).boxed()), "tail");
-        // return new SurroundingPublisher<>(null, Flux.fromStream(LongStream.range(0, elements - 1).boxed()), "tail");
-        return new SurroundingPublisher<>(null, Flux.fromStream(LongStream.range(0, elements).boxed()), null);
+        return new SurroundingPublisher<>("head", Flux.fromStream(LongStream.range(0, elements - 2).boxed()), "tail");
     }
 
     /**
