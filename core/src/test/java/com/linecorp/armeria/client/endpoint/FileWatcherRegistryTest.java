@@ -163,6 +163,7 @@ class FileWatcherRegistryTest {
         assertThat(fileWatcherRegistry.isRunning()).isFalse();
 
         fileWatcherRegistry.close();
+        Files.delete(file);
     }
 
     @Test
