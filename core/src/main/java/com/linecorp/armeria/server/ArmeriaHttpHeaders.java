@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SEPARA
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SPLITTER;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.convertHeaderValue;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.splitByCommaAndAdd;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp2HeadersFilterTE;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toLowercaseMap;
 
@@ -44,6 +45,7 @@ import io.netty.util.AsciiString;
 public final class ArmeriaHttpHeaders extends HttpHeaders {
 
     private final RequestHeadersBuilder builder;
+    private final CaseInsensitiveMap connectionDisallowedList;
 
     /**
      * Creates a new instance.
@@ -52,6 +54,7 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
      */
     public ArmeriaHttpHeaders(RequestHeadersBuilder builder) {
         this.builder = builder;
+        connectionDisallowedList = toLowercaseMap(valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
     }
 
     /**
@@ -63,6 +66,7 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
     public ArmeriaHttpHeaders(RequestHeadersBuilder builder, HttpHeaders headers) {
         this.builder = builder;
         headers.forEach(e -> this.add(e.getKey(), e.getValue()));
+        connectionDisallowedList = toLowercaseMap(valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
     }
 
     @Override
@@ -152,10 +156,13 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
 
     @Override
     public HttpHeaders add(String name, Object value) {
-        final CaseInsensitiveMap connectionDisallowedList =
-                toLowercaseMap(valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
-
         final AsciiString asciiName = AsciiString.of(name);
+
+        if (asciiName.equals(HttpHeaderNames.CONNECTION)) {
+            final AsciiString lowerCased = AsciiString.of(value.toString().toLowerCase());
+            splitByCommaAndAdd(connectionDisallowedList, lowerCased);
+        }
+
         if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(asciiName) ||
             connectionDisallowedList.contains(asciiName)) {
             return this;
@@ -172,7 +179,16 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
 
         if (asciiName.equals(HttpHeaderNames.COOKIE)) {
             final StringJoiner cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
+
+            final String existingCookies = builder.get(HttpHeaderNames.COOKIE);
+            if (existingCookies != null) {
+                COOKIE_SPLITTER.split(existingCookies).forEach(cookieJoiner::add);
+            }
             COOKIE_SPLITTER.split(charSequenceValue).forEach(cookieJoiner::add);
+
+            if (cookieJoiner.length() != 0) {
+                builder.set(HttpHeaderNames.COOKIE, cookieJoiner.toString());
+            }
         } else {
             builder.add(asciiName, convertHeaderValue(asciiName, charSequenceValue));
         }
