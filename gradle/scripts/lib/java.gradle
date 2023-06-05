@@ -145,7 +145,7 @@ configure(projectsWithFlags('java')) {
         options.compilerArgs += '-parameters'
     }
 
-    project.ext.configureFlakyTests = { testTask ->
+    project.ext.configureFlakyTests = { Test testTask ->
         def flakyTests = rootProject.findProperty('flakyTests')
         if (flakyTests == 'true') {
             testTask.options {
