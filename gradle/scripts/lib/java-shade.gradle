@@ -185,21 +185,11 @@ configure(relocatedProjects) {
             targets.configureEach {
                 testTask.configure {
 
-                    def flakyTests = rootProject.findProperty('flakyTests')
-                    if (flakyTests == 'true') {
-                        options {
-                            includeTags 'FLAKY_TESTS'
-                        }
-                    } else if (flakyTests == 'false') {
-                        options {
-                            excludeTags 'FLAKY_TESTS'
-                        }
-                    } else if (flakyTests != null) {
-                        throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
-                    }
-
                     group = 'Verification'
                     description = 'Runs the unit tests with the shaded classes.'
+
+                    project.ext.configureFlakyTests(it)
+                    project.ext.configureCommonTestSettings(it)
 
                     dependsOn tasks.copyShadedTestClasses
 
@@ -244,7 +234,7 @@ configure(relocatedProjects) {
                 configureShadedTestImplementConfiguration(p)
             }
             relocatedProjects.each { p ->
-                p.testing.suites.shadedTest.targets.all {
+                p.testing.suites.shadedTest.targets.configureEach {
                     testTask.configure {
                         classpath += p.files(p.configurations.getByName('shadedJarTestRuntime').resolve())
                     }
