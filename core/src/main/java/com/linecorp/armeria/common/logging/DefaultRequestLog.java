@@ -352,7 +352,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             lock.lock();
             try {
                 pendingFutures.add(newFuture);
-                satisfiedFutures = removeSatisfiedFutures(pendingFutures, flags);
+                satisfiedFutures = removeSatisfiedFutures(pendingFutures);
             } finally {
                 lock.unlock();
             }
@@ -398,7 +398,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 final RequestLogFuture[] satisfiedFutures;
                 lock.lock();
                 try {
-                    satisfiedFutures = removeSatisfiedFutures(pendingFutures, newFlags);
+                    satisfiedFutures = removeSatisfiedFutures(pendingFutures);
                 } finally {
                     lock.unlock();
                 }
@@ -421,8 +421,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Nullable
-    private static RequestLogFuture[] removeSatisfiedFutures(List<RequestLogFuture> pendingFutures,
-                                                             int flags) {
+    private RequestLogFuture[] removeSatisfiedFutures(List<RequestLogFuture> pendingFutures) {
         if (pendingFutures.isEmpty()) {
             return null;
         }
@@ -435,6 +434,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         do {
             final RequestLogFuture e = i.next();
             final int interestedFlags = e.interestedFlags;
+            // 'flags' should be read inside 'lock' when completing 'pendingFutures' to ensure visibility.
             if ((flags & interestedFlags) == interestedFlags) {
                 i.remove();
                 if (satisfied == null) {
