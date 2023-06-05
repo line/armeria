@@ -58,6 +58,11 @@ final class ArmeriaDefaultHttpRequest extends DefaultHttpMessage implements Http
     }
 
     @Override
+    public HttpHeaders headers() {
+        return headers;
+    }
+
+    @Override
     @Deprecated
     public HttpMethod getMethod() {
         return method();
