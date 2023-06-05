@@ -64,7 +64,7 @@ configure(relocatedProjects) {
         archiveBaseName.set("test-${tasks.jar.archiveBaseName.get()}-shaded")
     }
 
-    task shadedTestClasses(
+    task copyShadedTestClasses(
             type: Copy,
             group: 'Build',
             description: 'Extracts the shaded test JAR.',
@@ -166,9 +166,9 @@ configure(relocatedProjects) {
 
 // NB: Configure in a new closure so that all relocated projects have a 'shadedJar' or 'trimShadedJar' task.
 configure(relocatedProjects) {
-    // Make sure the main classes are ready as well when `shadedTestClasses` is run,
-    // so that the tasks that require `shadedTestClasses` have everything required to run shaded tests.
-    tasks.shadedTestClasses.configure {
+    // Make sure the main classes are ready as well when `copyShadedTestClasses` is run,
+    // so that the tasks that require `copyShadedTestClasses` have everything required to run shaded tests.
+    tasks.copyShadedTestClasses.configure {
         relocatedProjects.each {
             if (it.tasks.findByName('trimShadedJar')) {
                 dependsOn it.tasks.trimShadedJar.path
@@ -179,41 +179,61 @@ configure(relocatedProjects) {
     }
 
     // Add tests for the shaded JAR.
-    task shadedTest(
-            type: Test,
-            group: 'Verification',
-            description: 'Runs the unit tests with the shaded classes.') {
+    testing.suites {
+        shadedTest(JvmTestSuite) {
 
-        dependsOn tasks.shadedTestClasses
+            targets.configureEach {
+                testTask.configure {
 
-        // The tests against the shaded artifacts should run after the tests against the unshaded ones.
-        shouldRunAfter tasks.test
+                    def flakyTests = rootProject.findProperty('flakyTests')
+                    if (flakyTests == 'true') {
+                        options {
+                            includeTags 'FLAKY_TESTS'
+                        }
+                    } else if (flakyTests == 'false') {
+                        options {
+                            excludeTags 'FLAKY_TESTS'
+                        }
+                    } else if (flakyTests != null) {
+                        throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
+                    }
 
-        testClassesDirs = files(tasks.shadedTestClasses.destinationDir)
-        classpath = testClassesDirs
+                    group = 'Verification'
+                    description = 'Runs the unit tests with the shaded classes.'
 
-        project.ext.relocations.each {
-            exclude "${it['to'].replace('.', '/')}/**"
+                    dependsOn tasks.copyShadedTestClasses
+
+                    // The tests against the shaded artifacts should run after the tests against the unshaded ones.
+                    shouldRunAfter tasks.test
+
+                    testClassesDirs = files(tasks.copyShadedTestClasses.destinationDir)
+                    classpath = testClassesDirs
+
+                    project.ext.relocations.each {
+                        exclude "${it['to'].replace('.', '/')}/**"
+                    }
+                }
+            }
         }
     }
-    tasks.check.dependsOn tasks.shadedTest
+    tasks.check.dependsOn testing.suites.shadedTest
 
     // Configurations shouldn't be created in afterEvaluate so create it eagerly here before configuring it.
 
     // In Gradle 8, dependencies can't be declared in a resolvable (canBeResolved=true) configuration. As a
     // workaround two configurations are created to separate the declaration and resolving roles.
-    // - Directly declares dependencies to `shadedTestImplementation`.
-    // - Indirectly resolves the dependencies of `shadedTestImplementation` by creating a new configuration
-    //   and extends `shadedTestImplementation`.
+    // - Directly declares dependencies to `shadedJarTestImplementation`.
+    // - Indirectly resolves the dependencies of `shadedJarTestImplementation` by creating a new configuration
+    //   and extends `shadedJarTestImplementation`.
     // https://discuss.gradle.org/t/problem-with-compileclasspath-after-gradle-8-update/44940
-    project.configurations.create("shadedTestImplementation") {
+    project.configurations.create("shadedJarTestImplementation") {
         canBeResolved = false
         canBeConsumed = false
     }
-    project.configurations.create("shadedTestRuntime") {
+    project.configurations.create("shadedJarTestRuntime") {
         canBeResolved = true
         canBeConsumed = false
-        extendsFrom(project.configurations.shadedTestImplementation)
+        extendsFrom(project.configurations.shadedJarTestImplementation)
     }
 
     // Update the classpath of the 'shadedTest' task after all shaded projects are evaluated
@@ -224,8 +244,11 @@ configure(relocatedProjects) {
                 configureShadedTestImplementConfiguration(p)
             }
             relocatedProjects.each { p ->
-                def testTask = p.tasks.shadedTest
-                testTask.classpath += p.files(p.configurations.getByName('shadedTestRuntime').resolve())
+                p.testing.suites.shadedTest.targets.all {
+                    testTask.configure {
+                        classpath += p.files(p.configurations.getByName('shadedJarTestRuntime').resolve())
+                    }
+                }
             }
         }
     }
@@ -284,25 +307,25 @@ private void configureShadowTask(Project project, ShadowJar task, boolean isMain
 
 /**
  * Finds the dependencies of {@code project} recursively and adds the found dependencies to
- * the configuration named as {@code 'shadedTestImplementation'}.
+ * the configuration named as {@code 'shadedJarTestImplementation'}.
  */
 private Configuration configureShadedTestImplementConfiguration(
         Project project, Project recursedProject = project,
         Set<ExcludeRule> excludeRules = new HashSet<>(),
         Set<Project> visitedProjects = new HashSet<>()) {
 
-    def shadedTestImplementation = project.configurations.getByName('shadedTestImplementation')
+    def shadedJarTestImplementation = project.configurations.getByName('shadedJarTestImplementation')
 
     if (visitedProjects.contains(recursedProject)) {
-        return shadedTestImplementation
+        return shadedJarTestImplementation
     } else {
         visitedProjects.add(recursedProject);
     }
 
     if (recursedProject.tasks.findByName('trimShadedJar')) {
-        project.dependencies.add(shadedTestImplementation.name, files(recursedProject.tasks.trimShadedJar.outJarFiles))
+        project.dependencies.add(shadedJarTestImplementation.name, files(recursedProject.tasks.trimShadedJar.outJarFiles))
     } else if (recursedProject.tasks.findByName('shadedJar')) {
-        project.dependencies.add(shadedTestImplementation.name, files(recursedProject.tasks.shadedJar.archivePath))
+        project.dependencies.add(shadedJarTestImplementation.name, files(recursedProject.tasks.shadedJar.archivePath))
     }
 
     def shadedDependencyNames = project.ext.relocations.collect { it['name'] }
@@ -336,7 +359,7 @@ private Configuration configureShadedTestImplementConfiguration(
                 }
                 // Do not use `project.dependencies.add(name, dep)` that discards the classifier of
                 // a dependency. See https://github.com/gradle/gradle/issues/23096
-                project.configurations.getByName(shadedTestImplementation.name).dependencies.add(dep)
+                project.configurations.getByName(shadedJarTestImplementation.name).dependencies.add(dep)
             }
         }
     }
@@ -348,5 +371,5 @@ private Configuration configureShadedTestImplementConfiguration(
                 excludeRules + dep.excludeRules, visitedProjects)
     }
 
-    return shadedTestImplementation
+    return shadedJarTestImplementation
 }

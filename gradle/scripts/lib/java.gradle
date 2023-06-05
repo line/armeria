@@ -145,45 +145,47 @@ configure(projectsWithFlags('java')) {
         options.compilerArgs += '-parameters'
     }
 
-    testing {
-        suites {
-            test {
-                // Use JUnit platform.
-                useJUnitJupiter()
+    testing.suites {
+        test {
+            // Use JUnit platform.
+            useJUnitJupiter()
 
-                targets {
-                    all {
-                        testTask.configure {
-                             testLogging.exceptionFormat = 'full'
-
-                            def flakyTests = rootProject.findProperty('flakyTests')
-                            if (flakyTests == 'true') {
-                                useJUnitPlatform {
-                                    includeTags 'FLAKY_TESTS'
-                                }
-                            } else if (flakyTests == 'false') {
-                                useJUnitPlatform {
-                                    excludeTags 'FLAKY_TESTS'
-                                }
-                            } else if (flakyTests != null) {
-                                throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
-                            }
-
-                            // Use a different JRE for testing if necessary.
-                            if (rootProject.ext.buildJdkVersion != project.ext.testJavaVersion) {
-                                javaLauncher = javaToolchains.launcherFor {
-                                    languageVersion = JavaLanguageVersion.of(project.ext.testJavaVersion)
-                                }
-                            }
-
-                            // disable tests for projects which target a higher java version
-                            if (project.ext.testJavaVersion < project.ext.targetJavaVersion) {
-                                project.logger.lifecycle("Skipping tests for ${project.path} since the " +
-                                        "testJavaVersion(${project.ext.testJavaVersion}) is smaller than the " +
-                                        "targetJavaVersion(${project.ext.targetJavaVersion})")
-                                enabled = false
-                            }
+            targets.configureEach {
+                testTask.configure {
+                    def flakyTests = rootProject.findProperty('flakyTests')
+                    if (flakyTests == 'true') {
+                        options {
+                            includeTags 'FLAKY_TESTS'
                         }
+                    } else if (flakyTests == 'false') {
+                        options {
+                            excludeTags 'FLAKY_TESTS'
+                        }
+                    } else if (flakyTests != null) {
+                        throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
+                    }
+                }
+            }
+        }
+
+        configureEach {
+            targets.configureEach {
+                testTask.configure {
+                    testLogging.exceptionFormat = 'full'
+
+                    // Use a different JRE for testing if necessary.
+                    if (rootProject.ext.buildJdkVersion != project.ext.testJavaVersion) {
+                        javaLauncher = javaToolchains.launcherFor {
+                            languageVersion = JavaLanguageVersion.of(project.ext.testJavaVersion)
+                        }
+                    }
+
+                    // disable tests for projects which target a higher java version
+                    if (project.ext.testJavaVersion < project.ext.targetJavaVersion) {
+                        project.logger.lifecycle("Skipping tests for ${project.path} since the " +
+                                                 "testJavaVersion(${project.ext.testJavaVersion}) is smaller than the " +
+                                                 "targetJavaVersion(${project.ext.targetJavaVersion})")
+                        enabled = false
                     }
                 }
             }

@@ -193,7 +193,7 @@ testing {
 
                         // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
                         doFirst {
-                            classpath += project.files(configurations.shadedTestRuntime.resolve())
+                            classpath += project.files(configurations.shadedJarTestRuntime.resolve())
                         }
                     }
                 }
@@ -220,7 +220,7 @@ if (rootProject.findProperty('flakyTests') != 'true') {
                             testClassesDirs = tasks.shadedTest.testClassesDirs
                             classpath = testClassesDirs
                             doFirst {
-                                classpath += project.files(configurations.shadedTestRuntime.resolve())
+                                classpath += project.files(configurations.shadedJarTestRuntime.resolve())
                             }
                         }
                     }
