@@ -88,12 +88,11 @@ class FileWatcherRegistryTest {
         PropertiesEndpointGroup.resetRegistry();
     }
 
-
     @Test
     void emptyGroupStopsBackgroundThread() throws Exception {
 
-        final Path file = Files.createFile(folder.newFile().resolve("temp-file.properties"));
-        final Path file2 = Files.createFile(folder.newFile().resolve("temp-file2.properties"));
+        final Path file = folder.newFile("temp-file.properties");
+        final Path file2 = folder.newFile("temp-file2.properties");
 
         try (FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry()) {
             final FileWatchRegisterKey key1 = fileWatcherRegistry.register(file, () -> {});
@@ -114,7 +113,7 @@ class FileWatcherRegistryTest {
     @Test
     void closeEndpointGroupStopsRegistry() throws Exception {
 
-        final Path file = Files.createFile(folder.newFile().resolve("temp-file.properties"));
+        final Path file = folder.newFile("temp-file.properties");
 
         final FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry();
         fileWatcherRegistry.register(file, () -> {});
@@ -130,7 +129,7 @@ class FileWatcherRegistryTest {
     @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
     void runnableWithExceptionContinuesRun() throws Exception {
 
-        final Path file = Files.createFile(folder.newFile().resolve("temp-file.properties"));
+        final Path file = folder.newFile("temp-file.properties");
         final FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry();
 
         final AtomicInteger val = new AtomicInteger(0);

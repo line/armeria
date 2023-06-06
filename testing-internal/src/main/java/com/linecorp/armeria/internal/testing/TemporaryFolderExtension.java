@@ -80,6 +80,10 @@ public class TemporaryFolderExtension extends AbstractAllOrEachExtension {
         return delegate.newFile();
     }
 
+    public Path newFile(String name) throws IOException {
+        return delegate.newFile(name);
+    }
+
     public void delete() throws IOException {
         delegate.delete();
     }
