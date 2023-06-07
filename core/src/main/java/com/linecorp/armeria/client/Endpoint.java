@@ -257,7 +257,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         endpoints = ImmutableList.of(this);
 
-        // type must be HOSTNAME_ONLY or DOMAIN_SOCKET when ipAddr is null and vice versa.
+        // type must be HOSTNAME_ONLY when ipAddr is null and vice versa.
         assert ipAddr == null && type == Type.HOSTNAME_ONLY ||
                ipAddr != null && type != Type.HOSTNAME_ONLY;
 
