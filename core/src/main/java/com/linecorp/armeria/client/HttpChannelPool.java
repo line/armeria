@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -225,7 +224,7 @@ final class HttpChannelPool implements AsyncCloseable {
         assert remoteAddress instanceof DomainSocketAddress : remoteAddress;
 
         if (unixBootstraps == null) {
-            throw new IllegalArgumentException("Domain sockets are not supported by " + eventLoop.parent().toString());
+            throw new IllegalArgumentException("Domain sockets are not supported by " + eventLoop.getClass().getName());
         }
 
         return unixBootstraps[desiredProtocol.ordinal()];
