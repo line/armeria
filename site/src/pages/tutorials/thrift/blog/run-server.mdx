@@ -146,6 +146,7 @@ Note that we'll use test code to verify what we implement along the way.
     void hello() throws TException {
       final BlogClient client = new BlogClient(URI.create("http://127.0.0.1:8080"), "/thrift");
       final String response = client.hello();
+      assertThat(response).isEqualTo("Hello, Armeria!");
       System.out.println(response);
     }
   ```
