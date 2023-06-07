@@ -71,7 +71,8 @@ allprojects {
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
         jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
 
-        // `-Pjava.security.manager` was added in Java 17 and the default value was changed to `disallow` in Java 18.
+        // `-Djava.security.manager` was added in Java 17 and the default value was changed to
+        // `disallow` in Java 18.
         // - https://openjdk.org/jeps/411
         // - https://bugs.openjdk.org/browse/JDK-8270380
         if (project.ext.testJavaVersion >= 17) {

@@ -63,6 +63,10 @@ public final class TemporaryFolder {
         return Files.createTempFile(getRoot(), "", "");
     }
 
+    public Path newFile(String name) throws IOException {
+        return Files.createFile(newFolder().resolve(name));
+    }
+
     public void delete() throws IOException {
         if (root == null) {
             return;
