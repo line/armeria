@@ -27,11 +27,13 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.locks.Lock;
 
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -52,6 +54,7 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -95,7 +98,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      * Updated by {@link #deferredFlagsUpdater}.
      */
     private volatile int deferredFlags;
+
+    @GuardedBy("lock")
     private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
+
+    private final Lock lock = new ReentrantShortLock();
     @Nullable
     private UnmodifiableFuture<RequestLog> partiallyCompletedFuture;
     @Nullable
@@ -342,9 +349,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             final RequestLogFuture[] satisfiedFutures;
             final RequestLogFuture newFuture = new RequestLogFuture(interestedFlags);
-            synchronized (pendingFutures) {
+            lock.lock();
+            try {
                 pendingFutures.add(newFuture);
-                satisfiedFutures = removeSatisfiedFutures();
+                satisfiedFutures = removeSatisfiedFutures(pendingFutures);
+            } finally {
+                lock.unlock();
             }
             if (satisfiedFutures != null) {
                 completeSatisfiedFutures(satisfiedFutures, partial(flags));
@@ -386,8 +396,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             if (flagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
                 final RequestLogFuture[] satisfiedFutures;
-                synchronized (pendingFutures) {
-                    satisfiedFutures = removeSatisfiedFutures();
+                lock.lock();
+                try {
+                    satisfiedFutures = removeSatisfiedFutures(pendingFutures);
+                } finally {
+                    lock.unlock();
                 }
                 if (satisfiedFutures != null) {
                     final RequestLog log = partial(newFlags);
@@ -408,12 +421,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Nullable
-    private RequestLogFuture[] removeSatisfiedFutures() {
+    private RequestLogFuture[] removeSatisfiedFutures(List<RequestLogFuture> pendingFutures) {
         if (pendingFutures.isEmpty()) {
             return null;
         }
 
-        final int flags = this.flags;
         final int maxNumListeners = pendingFutures.size();
         final Iterator<RequestLogFuture> i = pendingFutures.iterator();
         RequestLogFuture[] satisfied = null;
@@ -422,6 +434,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         do {
             final RequestLogFuture e = i.next();
             final int interestedFlags = e.interestedFlags;
+            // 'flags' should be read inside 'lock' when completing 'pendingFutures' to ensure visibility.
             if ((flags & interestedFlags) == interestedFlags) {
                 i.remove();
                 if (satisfied == null) {
@@ -1271,9 +1284,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             if (!rpcResponse.isDone()) {
                 throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
             }
-            final Throwable cause = rpcResponse.cause();
-            if (cause != null) {
-                responseCause(cause);
+
+            if (rpcResponse.cause() != null && responseCause == null) {
+                // Don't use 'responseCause(Throwable)' to set 'RpcResponse.cause()'.
+                // 'responseCause(Throwable)' performs nothing if the HTTP response was ended successfully.
+                responseCause = rpcResponse.cause();
+                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
             }
         }
 
