@@ -36,7 +36,12 @@ includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'rel
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate'
 includeWithFlags ':graphql',                             'java', 'publish', 'relocate'
 includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate'
-includeWithFlags ':jetty9',                              'java', 'publish', 'relocate'
+includeWithFlags ':jetty9',                              'java', 'publish', 'relocate', 'no_aggregation'
+project(':jetty9').projectDir = file('jetty/jetty9')
+includeWithFlags ':jetty10',                             'java11', 'publish', 'relocate', 'no_aggregation'
+project(':jetty10').projectDir = file('jetty/jetty10')
+includeWithFlags ':jetty11',                             'java11', 'publish', 'relocate'
+project(':jetty11').projectDir = file('jetty/jetty11')
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate'
@@ -141,6 +146,7 @@ includeWithFlags ':it:thrift0.9.1',                 'java', 'relocate'
 includeWithFlags ':it:trace-context-leak',          'java', 'relocate'
 includeWithFlags ':it:websocket',                   'java', 'relocate'
 includeWithFlags ':jetty9.3',                       'java', 'relocate'
+project(':jetty9.3').projectDir = file('jetty/jetty9.3')
 includeWithFlags ':testing-internal',               'java', 'relocate'
 includeWithFlags ':thrift0.12',                     'java', 'relocate'
 project(':thrift0.12').projectDir = file('thrift/thrift0.12')
@@ -183,6 +189,7 @@ includeWithFlags ':examples:proxy-server',                         'java11'
 includeWithFlags ':examples:resilience4j-spring',                  'java17'
 includeWithFlags ':examples:saml-service-provider',                'java11'
 includeWithFlags ':examples:server-sent-events',                   'java11'
+includeWithFlags ':examples:spring-boot-jetty',                    'java17'
 includeWithFlags ':examples:spring-boot-minimal',                  'java17'
 includeWithFlags ':examples:spring-boot-minimal-kotlin',           'java17', 'kotlin'
 includeWithFlags ':examples:spring-boot-tomcat',                   'java17'

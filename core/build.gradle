@@ -41,8 +41,10 @@ mrJarVersions.each { version->
         testClassesDirs = sourceSets."java${version}Test".output.classesDirs
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
+        project.ext.configureCommonTestSettings(it)
+
         enabled = Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version &&
-                project.ext.testJavaVersion >= version
+                  project.ext.testJavaVersion >= version
     }
 
     configurations."java${version}Implementation".extendsFrom configurations.implementation
@@ -118,10 +120,14 @@ dependencies {
     api libs.netty.codec.haproxy
     api libs.netty.codec.http2
     api libs.netty.resolver.dns
-    implementation(variantOf(libs.netty.transport.native.unix.common) { classifier("linux-x86_64") })
-    implementation(variantOf(libs.netty.transport.native.epoll) { classifier("linux-x86_64") })
-    implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier("osx-x86_64") })
-    implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier("osx-aarch_64") })
+    ['linux-x86_64', 'linux-aarch_64'].each { arch ->
+        implementation(variantOf(libs.netty.transport.native.unix.common) { classifier(arch) })
+        implementation(variantOf(libs.netty.transport.native.epoll) { classifier(arch) })
+        optionalImplementation(variantOf(libs.netty.io.uring) { classifier(arch) })
+    }
+    ['osx-x86_64', 'osx-aarch_64'].each { arch ->
+        implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier(arch) })
+    }
 
     // Note that tcnative now needs explicit classifiers
     // Related: https://github.com/netty/netty-tcnative/pull/709
@@ -129,7 +135,6 @@ dependencies {
         implementation(variantOf(libs.netty.tcnative.boringssl) { classifier(arch) })
     }
     implementation libs.netty.handler.proxy
-    optionalImplementation(variantOf(libs.netty.io.uring) { classifier("linux-x86_64") })
 
     // TestNG
     testImplementation libs.testng
@@ -157,6 +162,7 @@ dependencies {
     // Brotli
     implementation libs.brotli4j
     optionalImplementation libs.brotli4j.linux
+    optionalImplementation libs.brotli4j.linux.aarch64
     optionalImplementation libs.brotli4j.osx
     optionalImplementation libs.brotli4j.osx.aarch64
     optionalImplementation libs.brotli4j.windows
@@ -173,29 +179,27 @@ if (!rootProject.hasProperty('noWeb')) {
 // Run HttpServerStreamingTest separately with memory constraint.
 tasks.test.exclude '**/HttpServerStreamingTest**'
 tasks.shadedTest.exclude '**/HttpServerStreamingTest**'
-testing {
-    suites {
-        testStreaming(JvmTestSuite) {
+testing.suites {
+    testStreaming(JvmTestSuite) {
 
-            targets {
-                all {
-                    testTask.configure {
-                        group = 'Verification'
-                        description = 'Runs the streaming tests.'
+        targets.configureEach {
+            testTask.configure {
+                group = 'Verification'
+                description = 'Runs the streaming tests.'
 
-                        dependsOn(tasks.shadedTestClasses)
-                        // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
-                        maxHeapSize = '64m'
+                project.ext.configureCommonTestSettings(it)
 
-                        include '**/HttpServerStreamingTest**'
-                        testClassesDirs = tasks.shadedTest.testClassesDirs
-                        classpath = testClassesDirs
+                dependsOn(tasks.shadedTestClasses)
+                // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
+                maxHeapSize = '64m'
 
-                        // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
-                        doFirst {
-                            classpath += project.files(configurations.shadedTestRuntime.resolve())
-                        }
-                    }
+                include '**/HttpServerStreamingTest**'
+                testClassesDirs = tasks.shadedTest.testClassesDirs
+                classpath = testClassesDirs
+
+                // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
+                doFirst {
+                    classpath += project.files(configurations.shadedJarTestRuntime.resolve())
                 }
             }
         }
@@ -206,23 +210,21 @@ tasks.check.dependsOn testing.suites.testStreaming
 
 // Run the test cases based on reactive-streams-tck only with non-flaky mode
 if (rootProject.findProperty('flakyTests') != 'true') {
-    testing {
-        suites {
-            testNg(JvmTestSuite) {
-                useTestNG()
+    testing.suites {
+        testNg(JvmTestSuite) {
+            useTestNG()
 
-                targets {
-                    all {
-                        testTask.configure {
-                            include '/com/linecorp/armeria/**/common/**'
-                            dependsOn tasks.shadedTestClasses
-                            scanForTestClasses = false
-                            testClassesDirs = tasks.shadedTest.testClassesDirs
-                            classpath = testClassesDirs
-                            doFirst {
-                                classpath += project.files(configurations.shadedTestRuntime.resolve())
-                            }
-                        }
+            targets.configureEach {
+                testTask.configure {
+
+                    project.ext.configureCommonTestSettings(it)
+                    include '/com/linecorp/armeria/**/common/**'
+                    dependsOn tasks.shadedTestClasses
+                    scanForTestClasses = false
+                    testClassesDirs = tasks.shadedTest.testClassesDirs
+                    classpath = testClassesDirs
+                    doFirst {
+                        classpath += project.files(configurations.shadedJarTestRuntime.resolve())
                     }
                 }
             }
