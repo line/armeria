@@ -16,20 +16,16 @@ configure(scala212 + scala213 + scala3) {
         }
     }
 
-    testing {
-        suites {
-            test {
-                targets {
-                    all {
-                        testTask.configure {
-                            // A workaround for 'java.lang.InternalError: Malformed class name'
-                            // when testing scalapb module with Java 8. This bug was fixed in Java 9.
-                            // - https://github.com/gradle/gradle/issues/8432
-                            // - https://bugs.openjdk.java.net/browse/JDK-8057919
-                            if (project.ext.testJavaVersion == 8) {
-                                exclude("**/*\$*\$*.class")
-                            }
-                        }
+    testing.suites {
+        configureEach {
+            targets.configureEach {
+                testTask.configure {
+                    // A workaround for 'java.lang.InternalError: Malformed class name'
+                    // when testing scalapb module with Java 8. This bug was fixed in Java 9.
+                    // - https://github.com/gradle/gradle/issues/8432
+                    // - https://bugs.openjdk.java.net/browse/JDK-8057919
+                    if (project.ext.testJavaVersion == 8) {
+                        exclude("**/*\$*\$*.class")
                     }
                 }
             }
