@@ -80,14 +80,22 @@ abstract class HttpResponseDecoder {
         return inboundTrafficController;
     }
 
-    void addResponse(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {
-        final HttpResponseWrapper oldRes = responses.put(id, responseWrapper);
-        assert oldRes == null : "id: " + id + ", responseWrapper: " + responseWrapper + ", oldRes: " + oldRes;
+    HttpResponseWrapper addResponse(
+            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
+            EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
+
+        final HttpResponseWrapper newRes =
+                new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
+        final HttpResponseWrapper oldRes = responses.put(id, newRes);
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();
         if (keepAliveHandler != null) {
             keepAliveHandler.increaseNumRequests();
         }
-        onResponseAdded(id, eventLoop, responseWrapper);
+
+        assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
+                                oldRes;
+        onResponseAdded(id, eventLoop, newRes);
+        return newRes;
     }
 
     abstract void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper);
