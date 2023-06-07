@@ -33,33 +33,26 @@ Let's write two methods for retrieving blog posts; one for a single post and ano
 <Tabs>
 <TabPane tab="Single post" key="1">
 
-1. Implement the `getBlogPost()` method in the `BlogServiceImpl` class to retrieve a single post.
-  ```java filename=BlogServiceImpl.java
-  @Override
-  public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
-          throws TException {
-    final BlogPost blogPost = blogPosts.get(request.getId());
+In the `BlogServiceImpl` class, implement the `getBlogPost()` method to retrieve a single post.
+Let's throw an exception in case there is no blog post for the given ID.
+
+```java filename=BlogServiceImpl.java
+import example.armeria.blog.thrift.BlogNotFoundException;
+...
+@Override
+public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+        throws TException {
+  final BlogPost blogPost = blogPosts.get(request.getId());
+  if (blogPost == null) {
+    // throwing an exception will also have the same effect
+    // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+    resultHandler.onError(
+            new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+  } else {
     resultHandler.onComplete(blogPost);
   }
-  ```
-2. Add an if-else statement to throw an exception in case there is no blog post for the given ID.
-  ```java filename=BlogServiceImpl.java
-  import example.armeria.blog.thrift.BlogNotFoundException;
-  ...
-  @Override
-  public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
-          throws TException {
-    final BlogPost blogPost = blogPosts.get(request.getId());
-    if (blogPost == null) {
-      // throwing an exception will also have the same effect
-      // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
-      resultHandler.onError(
-              new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
-    } else {
-      resultHandler.onComplete(blogPost);
-    }
-  }
-  ```
+}
+```
 
 </TabPane>
 <TabPane tab="Multiple posts" key="2">
@@ -76,8 +69,8 @@ Let's write two methods for retrieving blog posts; one for a single post and ano
     resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
   }
   ```
-2. Add an if-else statement to sort the blog posts based on the value of the `descending` parameter.
-  ```java filename=BlogServiceImpl.java
+2. Add an if-else statement by adding line 9-16, to sort the blog posts based on the value of the `descending` parameter.
+  ```java filename=BlogServiceImpl.java showlineno=true
   import java.util.Collections;
   import java.util.Comparator;
   import java.util.Map.Entry;
