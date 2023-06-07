@@ -40,7 +40,6 @@ import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
-import graphql.execution.ExecutionId;
 
 final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService {
 
@@ -89,7 +88,6 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
         final ExecutionInput executionInput =
                 builder.context(ctx)
-                       .executionId(ExecutionId.from(ctx.id().text()))
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
                        .dataLoaderRegistry(dataLoaderRegistry)
                        .build();

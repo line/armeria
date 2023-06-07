@@ -1,0 +1,36 @@
+dependencies {
+    // Jetty
+    api libs.jetty94.server
+    testImplementation libs.jetty94.annotations
+    testImplementation libs.jetty94.apache.jsp
+    testImplementation libs.jetty94.apache.jstl
+    testImplementation libs.jetty94.webapp
+}
+
+// Use the sources from ':jetty11'.
+def jetty11ProjectDir = "${rootProject.projectDir}/jetty/jetty11"
+
+// Copy common files from jetty11 module to gen-src directory in order to use them as a source set.
+tasks.register('generateSources', Copy.class) {
+    from "${jetty11ProjectDir}/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+    exclude '**/ArmeriaEndPoint.java'
+    exclude '**/DispatcherTypeUtil.java'
+    exclude '**/JettyService.java'
+    exclude '**/JettyServiceBuilder.java'
+    exclude '**/server/jetty/package-info.java'
+}
+
+tasks.register('generateTestSources', Copy.class) {
+    from "${jetty11ProjectDir}/src/test/java"
+    into "${project.ext.genSrcDir}/test/java"
+    exclude '**/AsyncStreamingHandlerFunction.java'
+    exclude '**/JettyServiceTest.java'
+    exclude '**/JettyServiceTestUtil.java'
+}
+
+tasks.generateSources.dependsOn(generateTestSources)
+tasks.compileJava.dependsOn(generateSources)
+tasks.compileTestJava.dependsOn(generateSources)
+
+tasks.processTestResources.from "${jetty11ProjectDir}/src/test/resources"
