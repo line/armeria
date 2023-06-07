@@ -225,7 +225,7 @@ final class HttpChannelPool implements AsyncCloseable {
         assert remoteAddress instanceof DomainSocketAddress : remoteAddress;
 
         if (unixBootstraps == null) {
-            throw new UnsupportedAddressTypeException();
+            throw new IllegalArgumentException("Domain sockets are not supported by " + eventLoop.parent().toString());
         }
 
         return unixBootstraps[desiredProtocol.ordinal()];
