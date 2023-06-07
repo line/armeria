@@ -22,7 +22,6 @@ import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExec
 
 import java.time.Duration;
 import java.util.Date;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
@@ -326,9 +325,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                            (context, cause) -> HttpResponse.ofFailure(cause));
         }
         final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
-        if (!ctx.exchangeType().isResponseStreaming() ||
-            config.getRequiredLogProperties().contains(RequestLogProperty.RESPONSE_TRAILERS) ||
-            config.getRequiredLogProperties().contains(RequestLogProperty.RESPONSE_END_TIME)) {
+        if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
             // XXX(ikhoon): Should we use `response.aggregateWithPooledObjects()`?
             response.aggregate().handle((aggregated, cause) -> {
                 if (cause != null) {
@@ -374,9 +371,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                 @Nullable HttpResponse response,
                                 @Nullable AggregatedHttpResponse aggregatedRes) {
         assert response != null || aggregatedRes != null;
-        final Set<RequestLogProperty> logProperties = retryConfig.getRequiredLogProperties();
+        final RequestLogProperty logProperty =
+                retryConfig.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
+                                                       : RequestLogProperty.RESPONSE_HEADERS;
 
-        derivedCtx.log().whenAvailable(logProperties).thenAccept(log -> {
+        derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable responseCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             if (retryConfig.needsContentInRule() && responseCause == null) {

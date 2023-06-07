@@ -21,7 +21,6 @@ import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
@@ -36,7 +35,6 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
@@ -82,11 +80,11 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
                                                     exceptionFilter(), responseDurationFilter(), false);
-        return build(ruleFilter, decision, getRequiredLogProperties());
+        return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
     static RetryRule build(BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
-                           RetryDecision decision, Set<RequestLogProperty> requiredLogProperties) {
+                           RetryDecision decision, boolean requiresResponseTrailers) {
         final CompletableFuture<RetryDecision> decisionFuture;
         if (decision == RetryDecision.DEFAULT) {
             decisionFuture = DEFAULT_DECISION;
@@ -102,8 +100,8 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }

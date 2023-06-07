@@ -95,7 +95,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
                                                     exceptionFilter(), responseDurationFilter(),
                                                     hasResponseFilter);
         final RetryRule first = RetryRuleBuilder.build(
-                ruleFilter, decision, getRequiredLogProperties());
+                ruleFilter, decision, requiresResponseTrailers());
 
         if (!hasResponseFilter) {
             return RetryRuleUtil.fromRetryRule(first);

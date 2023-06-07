@@ -16,18 +16,14 @@
 
 package com.linecorp.armeria.client.retry;
 
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class RetryRuleUtil {
@@ -46,8 +42,8 @@ final class RetryRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return retryRule.getRequiredLogProperties();
+            public boolean requiresResponseTrailers() {
+                return retryRule.requiresResponseTrailers();
             }
         };
     }
@@ -61,19 +57,16 @@ final class RetryRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return retryRule.getRequiredLogProperties();
+            public boolean requiresResponseTrailers() {
+                return retryRule.requiresResponseTrailers();
             }
         };
     }
 
     static RetryRule orElse(RetryRule first, RetryRule second) {
 
-        final Set<RequestLogProperty> requiredLogProperties = ImmutableSet
-                .<RequestLogProperty>builder()
-                .addAll(first.getRequiredLogProperties())
-                .addAll(second.getRequiredLogProperties())
-                .build();
+        final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
+                                                 second.requiresResponseTrailers();
 
         return new RetryRule() {
             @Override
@@ -96,8 +89,8 @@ final class RetryRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
@@ -106,11 +99,8 @@ final class RetryRuleUtil {
     static <T extends Response> RetryRuleWithContent<T> orElse(RetryRule first,
                                                                RetryRuleWithContent<T> second) {
 
-        final Set<RequestLogProperty> requiredLogProperties = ImmutableSet
-                .<RequestLogProperty>builder()
-                .addAll(first.getRequiredLogProperties())
-                .addAll(second.getRequiredLogProperties())
-                .build();
+        final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
+                                                 second.requiresResponseTrailers();
 
         return new RetryRuleWithContent<T>() {
             @Override
@@ -134,8 +124,8 @@ final class RetryRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
@@ -144,11 +134,8 @@ final class RetryRuleUtil {
     static <T extends Response> RetryRuleWithContent<T> orElse(RetryRuleWithContent<T> first,
                                                                RetryRule second) {
 
-        final Set<RequestLogProperty> requiredLogProperties = ImmutableSet
-                .<RequestLogProperty>builder()
-                .addAll(first.getRequiredLogProperties())
-                .addAll(second.getRequiredLogProperties())
-                .build();
+        final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
+                                                 second.requiresResponseTrailers();
 
         return new RetryRuleWithContent<T>() {
             @Override
@@ -167,8 +154,8 @@ final class RetryRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
@@ -176,11 +163,8 @@ final class RetryRuleUtil {
     @SuppressWarnings("unchecked")
     static <T extends Response> RetryRuleWithContent<T> orElse(RetryRuleWithContent<T> first,
                                                                RetryRuleWithContent<T> second) {
-        final Set<RequestLogProperty> requiredLogProperties = ImmutableSet
-                .<RequestLogProperty>builder()
-                .addAll(first.getRequiredLogProperties())
-                .addAll(second.getRequiredLogProperties())
-                .build();
+        final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
+                                                 second.requiresResponseTrailers();
 
         return new RetryRuleWithContent<T>() {
             @Override
@@ -207,8 +191,8 @@ final class RetryRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
@@ -243,8 +227,8 @@ final class RetryRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return ruleWithContent.getRequiredLogProperties();
+            public boolean requiresResponseTrailers() {
+                return ruleWithContent.requiresResponseTrailers();
             }
         };
     }

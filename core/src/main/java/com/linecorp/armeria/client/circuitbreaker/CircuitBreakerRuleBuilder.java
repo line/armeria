@@ -22,7 +22,6 @@ import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.SUCCESS_DECISION;
 
 import java.time.Duration;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
@@ -38,7 +37,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -77,14 +75,14 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), responseDurationFilter(), false);
-        return build(ruleFilter, decision, getRequiredLogProperties());
+                        responseTrailersFilter(), grpcTrailersFilter(),
+                        exceptionFilter(), responseDurationFilter(), false);
+        return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
     static CircuitBreakerRule build(
             BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
-            CircuitBreakerDecision decision, Set<RequestLogProperty> requiredLogProperties) {
+            CircuitBreakerDecision decision, boolean requiresResponseTrailers) {
         final CompletableFuture<CircuitBreakerDecision> decisionFuture;
         if (decision == CircuitBreakerDecision.success()) {
             decisionFuture = SUCCESS_DECISION;
@@ -104,13 +102,14 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
 
     // Override the return type and Javadoc of chaining methods in superclass.
+
     /**
      * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRule}.
      * If the specified {@code responseHeadersFilter} returns {@code true},

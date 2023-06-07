@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * A skeletal builder implementation for {@link RetryRule}, {@link RetryRuleWithContent},
@@ -260,16 +259,11 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Returns a set of {@link RequestLogProperty} to be required to evaluate this rule.
+     * Returns whether this rule being built requires HTTP response trailers.
      */
-    protected final Set<RequestLogProperty> getRequiredLogProperties() {
-        final ImmutableSet.Builder<RequestLogProperty> builder = ImmutableSet.builder();
-        if (responseTrailersFilter != null || grpcTrailersFilter != null) {
-            builder.add(RequestLogProperty.RESPONSE_TRAILERS);
-        }
-        if (responseDurationFilter != null) {
-            builder.add(RequestLogProperty.RESPONSE_END_TIME);
-        }
-        return builder.build();
+    protected final boolean requiresResponseTrailers() {
+        return responseTrailersFilter != null ||
+               grpcTrailersFilter != null ||
+               responseDurationFilter != null;
     }
 }

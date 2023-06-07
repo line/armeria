@@ -80,7 +80,7 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
                                                     exceptionFilter(), responseDurationFilter(),
                                                     hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
-                ruleFilter, decision, getRequiredLogProperties());
+                ruleFilter, decision, requiresResponseTrailers());
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }

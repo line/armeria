@@ -19,8 +19,6 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiPredicate;
 
@@ -38,7 +36,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * Determines whether a {@link Response} should be reported as a success or failure to a
@@ -255,10 +252,10 @@ public interface CircuitBreakerRule {
                                                                   @Nullable Throwable cause);
 
     /**
-     * Returns a set of {@link RequestLogProperty} to be required to evaluate this rule and to determine
-     * if a {@link Response} is successful or not.
+     * Returns whether this rule requires the response trailers to determine if a {@link Response} is
+     * successful or not.
      */
-    default Set<RequestLogProperty> getRequiredLogProperties() {
-        return Collections.emptySet();
+    default boolean requiresResponseTrailers() {
+        return false;
     }
 }

@@ -16,18 +16,14 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class CircuitBreakerRuleUtil {
@@ -52,8 +48,8 @@ final class CircuitBreakerRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return circuitBreakerRule.getRequiredLogProperties();
+            public boolean requiresResponseTrailers() {
+                return circuitBreakerRule.requiresResponseTrailers();
             }
         };
     }
@@ -68,19 +64,16 @@ final class CircuitBreakerRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return circuitBreakerRuleWithContent.getRequiredLogProperties();
+            public boolean requiresResponseTrailers() {
+                return circuitBreakerRuleWithContent.requiresResponseTrailers();
             }
         };
     }
 
     static CircuitBreakerRule orElse(CircuitBreakerRule first, CircuitBreakerRule second) {
 
-        final Set<RequestLogProperty> requiredLogProperties = ImmutableSet
-                .<RequestLogProperty>builder()
-                .addAll(first.getRequiredLogProperties())
-                .addAll(second.getRequiredLogProperties())
-                .build();
+        final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
+                                                 second.requiresResponseTrailers();
 
         return new CircuitBreakerRule() {
             @Override
@@ -106,8 +99,8 @@ final class CircuitBreakerRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
@@ -115,11 +108,8 @@ final class CircuitBreakerRuleUtil {
     static <T extends Response> CircuitBreakerRuleWithContent<T> orElse(
             CircuitBreakerRule first, CircuitBreakerRuleWithContent<T> second) {
 
-        final Set<RequestLogProperty> requiredLogProperties = ImmutableSet
-                .<RequestLogProperty>builder()
-                .addAll(first.getRequiredLogProperties())
-                .addAll(second.getRequiredLogProperties())
-                .build();
+        final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
+                                                 second.requiresResponseTrailers();
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
@@ -140,8 +130,8 @@ final class CircuitBreakerRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
@@ -149,11 +139,8 @@ final class CircuitBreakerRuleUtil {
     static <T extends Response> CircuitBreakerRuleWithContent<T> orElse(CircuitBreakerRuleWithContent<T> first,
                                                                         CircuitBreakerRule second) {
 
-        final Set<RequestLogProperty> requiredLogProperties = ImmutableSet
-                .<RequestLogProperty>builder()
-                .addAll(first.getRequiredLogProperties())
-                .addAll(second.getRequiredLogProperties())
-                .build();
+        final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
+                                                 second.requiresResponseTrailers();
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
@@ -174,8 +161,8 @@ final class CircuitBreakerRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
@@ -184,11 +171,8 @@ final class CircuitBreakerRuleUtil {
     static <T extends Response> CircuitBreakerRuleWithContent<T> orElse(
             CircuitBreakerRuleWithContent<T> first, CircuitBreakerRuleWithContent<T> second) {
 
-        final Set<RequestLogProperty> requiredLogProperties = ImmutableSet
-                .<RequestLogProperty>builder()
-                .addAll(first.getRequiredLogProperties())
-                .addAll(second.getRequiredLogProperties())
-                .build();
+        final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
+                                                 second.requiresResponseTrailers();
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
@@ -211,8 +195,8 @@ final class CircuitBreakerRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return requiredLogProperties;
+            public boolean requiresResponseTrailers() {
+                return requiresResponseTrailers;
             }
         };
     }
@@ -253,8 +237,8 @@ final class CircuitBreakerRuleUtil {
             }
 
             @Override
-            public Set<RequestLogProperty> getRequiredLogProperties() {
-                return ruleWithContent.getRequiredLogProperties();
+            public boolean requiresResponseTrailers() {
+                return ruleWithContent.requiresResponseTrailers();
             }
         };
     }

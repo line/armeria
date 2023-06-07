@@ -19,8 +19,6 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Set;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +26,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 /**
  * Holds retry config used by a {@link RetryingClient}.
@@ -196,12 +193,12 @@ public final class RetryConfig<T extends Response> {
     }
 
     /**
-     * Returns a set of {@link RequestLogProperty} to be required to evaluate the associated {@link RetryRule}
-     * or {@link RetryRuleWithContent}.
+     * Returns whether the associated {@link RetryRule} or {@link RetryRuleWithContent} requires
+     * response trailers.
      */
-    public Set<RequestLogProperty> getRequiredLogProperties() {
+    public boolean requiresResponseTrailers() {
         return needsContentInRule() ?
-               retryRuleWithContent().getRequiredLogProperties() : retryRule().getRequiredLogProperties();
+               retryRuleWithContent().requiresResponseTrailers() : retryRule().requiresResponseTrailers();
     }
 
     /**
