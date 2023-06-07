@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import javax.net.ssl.SSLException;
 
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
@@ -33,6 +35,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 
 class H2WithoutAlpnTest {
 
@@ -44,8 +47,13 @@ class H2WithoutAlpnTest {
         @Override
         protected void configure(ServerBuilder sb) throws SSLException {
 
-            sb.service("/", (ctx, req) -> HttpResponse.of("OK"));
-            sb.requestTimeoutMillis(0);
+            sb.service("/", (ctx, req) -> {
+                final SslHandler sslHandler =
+                        ctx.log().ensureAvailable(RequestLogProperty.SESSION).channel()
+                           .pipeline().get(SslHandler.class);
+                assertThat(sslHandler.applicationProtocol()).isNull();
+                return HttpResponse.of("OK");
+            });
             sb.childChannelPipelineCustomizer(pipeline -> {
                 final SslContext sslContext;
                 try {
@@ -64,18 +72,34 @@ class H2WithoutAlpnTest {
     void shouldSupportH2WithoutAlpn() {
         try (ClientFactory factory = ClientFactory.builder()
                                                   .useHttp2WithoutALPN(true)
-                                                  .connectTimeoutMillis(Long.MAX_VALUE)
                                                   .tlsCustomizer(b -> b.trustManager(cert.certificate()))
                                                   .build()) {
 
             final BlockingWebClient client = WebClient.builder("h2://127.0.0.1:" + server.httpPort())
                                                       .factory(factory)
-                                                      .responseTimeoutMillis(Long.MAX_VALUE)
                                                       .build()
                                                       .blocking();
 
             final AggregatedHttpResponse response = client.get("/");
             assertThat(response.contentUtf8()).isEqualTo("OK");
+        }
+    }
+
+    @Test
+    void shouldRejectH2WithoutAlpn() {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .tlsCustomizer(b -> b.trustManager(cert.certificate()))
+                                                  .build()) {
+
+            final BlockingWebClient client = WebClient.builder("h2://127.0.0.1:" + server.httpPort())
+                                                      .factory(factory)
+                                                      .build()
+                                                      .blocking();
+
+            assertThatThrownBy(() -> client.get("/"))
+                    .isInstanceOf(UnprocessedRequestException.class)
+                    .hasCauseInstanceOf(SessionProtocolNegotiationException.class)
+                    .hasMessageContaining("expected: h2, actual: h1, reason: unexpected protocol negotiation result");
         }
     }
 }
