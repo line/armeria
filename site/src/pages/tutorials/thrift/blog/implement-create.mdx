@@ -91,7 +91,8 @@ BlogPost createBlogPost(String title, String content) throws TException {
 
 In the previous test code, we've connected directly to the server.
 This time, let's use Armeria's <type://ServerExtension> instead.
-This approach simplifies set-up and tear-down of a server.
+This approach will automatically set-up and tear-down a server before tests are run.
+Now we don't have to invoke the main method to set up a server before running our tests.
 
 In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
 Note that the service instance is added to the configuration.
