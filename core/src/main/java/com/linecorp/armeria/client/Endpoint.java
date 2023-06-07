@@ -567,6 +567,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *         {@code this} if this endpoint had a different port number than the default port number or
      *         this endpoint already does not have a port number.
      */
+    @UnstableApi
     public Endpoint withoutDefaultPort(SessionProtocol protocol) {
         requireNonNull(protocol, "protocol");
         return withoutDefaultPort(protocol.defaultPort());
