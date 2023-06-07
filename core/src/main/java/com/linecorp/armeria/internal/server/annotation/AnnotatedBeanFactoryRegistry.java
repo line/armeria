@@ -34,6 +34,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,7 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.annotation.RequestConverter;
@@ -61,6 +63,8 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  */
 final class AnnotatedBeanFactoryRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedBeanFactoryRegistry.class);
+
+    private static final ReentrantLock lock = new ReentrantShortLock();
 
     private static final ClassValue<AnnotatedBeanFactories> factories =
             new ClassValue<AnnotatedBeanFactories>() {
@@ -85,22 +89,27 @@ final class AnnotatedBeanFactoryRegistry {
      * Returns a {@link BeanFactoryId} of the specified {@link Class} and {@code pathParams} for finding its
      * factory from the factory cache later.
      */
-    static synchronized BeanFactoryId register(Class<?> clazz, Set<String> pathParams,
-                                               List<RequestObjectResolver> objectResolvers,
-                                               DependencyInjector dependencyInjector) {
-        final BeanFactoryId beanFactoryId = new BeanFactoryId(clazz, pathParams);
-        final AnnotatedBeanFactories annotatedBeanFactories = factories.get(clazz);
-        if (!annotatedBeanFactories.containsKey(beanFactoryId.pathParams)) {
-            final AnnotatedBeanFactory<?> factory =
-                    createFactory(beanFactoryId, objectResolvers, dependencyInjector);
-            if (factory != null) {
-                annotatedBeanFactories.put(beanFactoryId.pathParams, factory);
-                logger.debug("Registered a bean factory: {}", beanFactoryId);
-            } else {
-                annotatedBeanFactories.put(beanFactoryId.pathParams, unsupportedBeanFactory);
+    static BeanFactoryId register(Class<?> clazz, Set<String> pathParams,
+                                  List<RequestObjectResolver> objectResolvers,
+                                  DependencyInjector dependencyInjector) {
+        lock.lock();
+        try {
+            final BeanFactoryId beanFactoryId = new BeanFactoryId(clazz, pathParams);
+            final AnnotatedBeanFactories annotatedBeanFactories = factories.get(clazz);
+            if (!annotatedBeanFactories.containsKey(beanFactoryId.pathParams)) {
+                final AnnotatedBeanFactory<?> factory =
+                        createFactory(beanFactoryId, objectResolvers, dependencyInjector);
+                if (factory != null) {
+                    annotatedBeanFactories.put(beanFactoryId.pathParams, factory);
+                    logger.debug("Registered a bean factory: {}", beanFactoryId);
+                } else {
+                    annotatedBeanFactories.put(beanFactoryId.pathParams, unsupportedBeanFactory);
+                }
             }
+            return beanFactoryId;
+        } finally {
+            lock.unlock();
         }
-        return beanFactoryId;
     }
 
     /**

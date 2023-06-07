@@ -25,8 +25,11 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -49,17 +52,45 @@ public interface RoutingContext {
     HttpMethod method();
 
     /**
+     * Returns a wrapped {@link RoutingContext} which holds the specified {@link HttpMethod}.
+     */
+    @UnstableApi
+    default RoutingContext withMethod(HttpMethod method) {
+        requireNonNull(method, "method");
+        if (method == method()) {
+            return this;
+        }
+        return new RoutingContextWrapper(this) {
+            @Override
+            public HttpMethod method() {
+                return method;
+            }
+        };
+    }
+
+    /**
+     * Returns the {@link RequestTarget} of the request. The form of the returned {@link RequestTarget} is
+     * never {@link RequestTargetForm#ABSOLUTE}, which means it is always {@link RequestTargetForm#ORIGIN} or
+     * {@link RequestTargetForm#ASTERISK}.
+     */
+    RequestTarget requestTarget();
+
+    /**
      * Returns the absolute path retrieved from the request,
      * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
-    String path();
+    default String path() {
+        return requestTarget().path();
+    }
 
     /**
      * Returns the query retrieved from the request,
      * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     @Nullable
-    String query();
+    default String query() {
+        return requestTarget().query();
+    }
 
     /**
      * Returns the query parameters retrieved from the request path.
@@ -103,17 +134,39 @@ public interface RoutingContext {
     HttpStatusException deferredStatusException();
 
     /**
-     * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
+     * (Advanced users only) Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
      * It is usually used to find an {@link HttpService} with a prefix-stripped path.
+     * Note that specifying a malformed or relative path will lead to unspecified behavior.
      */
-    default RoutingContext overridePath(String path) {
+    default RoutingContext withPath(String path) {
         requireNonNull(path, "path");
+        final RequestTarget oldReqTarget = requestTarget();
+        final RequestTarget newReqTarget =
+                DefaultRequestTarget.createWithoutValidation(
+                        oldReqTarget.form(),
+                        oldReqTarget.scheme(),
+                        oldReqTarget.authority(),
+                        path,
+                        oldReqTarget.query(),
+                        oldReqTarget.fragment());
+
         return new RoutingContextWrapper(this) {
             @Override
-            public String path() {
-                return path;
+            public RequestTarget requestTarget() {
+                return newReqTarget;
             }
         };
+    }
+
+    /**
+     * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
+     * It is usually used to find an {@link HttpService} with a prefix-stripped path.
+     *
+     * @deprecated Use {@link #withPath(String)}.
+     */
+    @Deprecated
+    default RoutingContext overridePath(String path) {
+        return withPath(path);
     }
 
     /**

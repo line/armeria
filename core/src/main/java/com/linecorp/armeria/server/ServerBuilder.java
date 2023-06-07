@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -69,6 +71,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -83,6 +86,7 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -92,15 +96,17 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -160,10 +166,14 @@ public final class ServerBuilder implements TlsSetters {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
+    private static final Consumer<ChannelPipeline> DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER =
+            v -> { /* no-op */ };
 
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
+    private static final ExecutorService START_STOP_EXECUTOR = Executors.newSingleThreadExecutor(
+            ThreadFactories.newThreadFactory("startstop-support", true));
 
     static {
         RequestContextUtil.init();
@@ -178,9 +188,11 @@ public final class ServerBuilder implements TlsSetters {
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
-    private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
+    private Executor startStopExecutor = START_STOP_EXECUTOR;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
+    private Consumer<ChannelPipeline> childChannelPipelineCustomizer =
+            DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER;
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
@@ -207,10 +219,12 @@ public final class ServerBuilder implements TlsSetters {
             ProxiedAddresses::sourceAddress;
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
-    private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
     @Nullable
     private DependencyInjector dependencyInjector;
+    private Function<? super String, String> absoluteUriTransformer = Function.identity();
+    private long unhandledExceptionsReportIntervalMillis =
+            Flags.defaultUnhandledExceptionsReportIntervalMillis();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     ServerBuilder() {
@@ -228,7 +242,9 @@ public final class ServerBuilder implements TlsSetters {
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
+        virtualHostTemplate.requestAutoAbortDelayMillis(0); // TODO(minwoox): add to Flags.
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
+        virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -468,6 +484,24 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * (Advanced users only) Adds the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * This customizer is run right after the initial set of {@link ChannelHandler}s are configured.
+     * This customizer is no-op by default.
+     *
+     * <p>Note that usage of this customizer is an advanced feature and may produce unintended side effects,
+     * including complete breakdown. It is not recommended if you are not familiar with Armeria and Netty
+     * internals.
+     */
+    @UnstableApi
+    public ServerBuilder childChannelPipelineCustomizer(
+            Consumer<? super ChannelPipeline> childChannelPipelineCustomizer) {
+        requireNonNull(childChannelPipelineCustomizer, "childChannelPipelineCustomizer");
+        this.childChannelPipelineCustomizer =
+                this.childChannelPipelineCustomizer.andThen(childChannelPipelineCustomizer);
+        return this;
+    }
+
+    /**
      * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
@@ -497,8 +531,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the {@link Executor} which will invoke the callbacks of {@link Server#start()},
-     * {@link Server#stop()} and {@link ServerListener}. If not set, {@link GlobalEventExecutor} will be used
-     * by default.
+     * {@link Server#stop()} and {@link ServerListener}.
      */
     public ServerBuilder startStopExecutor(Executor startStopExecutor) {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
@@ -798,6 +831,31 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to receive additional data even after closing the response.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public ServerBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * It's useful when you want to receive additional data even after closing the response.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public ServerBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        virtualHostTemplate.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    /**
      * Sets the {@link Path} for storing upload file through multipart/form-data.
      *
      * @param path the path of the directory stores the file.
@@ -817,6 +875,20 @@ public final class ServerBuilder implements TlsSetters {
      *                       {@link Server} stops
      */
     public ServerBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                              boolean shutdownOnStop) {
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        virtualHostTemplate.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    /**
+     * Sets the {@link BlockingTaskExecutor} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link BlockingTaskExecutor} when the
+     *                       {@link Server} stops
+     */
+    public ServerBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
                                               boolean shutdownOnStop) {
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         virtualHostTemplate.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
@@ -1518,8 +1590,17 @@ public final class ServerBuilder implements TlsSetters {
      */
     @UnstableApi
     public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
-        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        requireNonNull(errorHandler, "errorHandler");
+        if (errorHandler != ServerErrorHandler.ofDefault()) {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
+            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
+        }
+        this.errorHandler = errorHandler;
         return this;
+    }
+
+    ServerErrorHandler errorHandler() {
+        return errorHandler;
     }
 
     /**
@@ -1711,10 +1792,23 @@ public final class ServerBuilder implements TlsSetters {
      * Sets the {@link Supplier} which generates a {@link RequestId}.
      * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
+     * @deprecated Use {@link #requestIdGenerator(Function)}
+     */
+    @Deprecated
+    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdSupplier) {
+        requireNonNull(requestIdSupplier, "requestIdSupplier");
+        return requestIdGenerator(routingContext -> requestIdSupplier.get());
+    }
+
+    /**
+     * Sets the {@link Function} that generates a {@link RequestId} for each {@link Request}.
+     * By default, a {@link RequestId} is generated from a random 64-bit integer.
+     *
      * @see RequestContext#id()
      */
-    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
-        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+    public ServerBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        virtualHostTemplate.requestIdGenerator(requestIdGenerator);
         return this;
     }
 
@@ -1798,13 +1892,63 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link Function} that transforms the absolute URI in an HTTP/1 request line
+     * into an absolute path. Use this property when you have to handle a client that sends
+     * such an HTTP/1 request, because Armeria always assumes that request path is an absolute path and
+     * return a {@code 400 Bad Request} response otherwise. For example:
+     * <pre>{@code
+     * builder.absoluteUriTransformer(absoluteUri -> {
+     *   // https://foo.com/bar -> /bar
+     *   return absoluteUri.replaceFirst("^https://\\.foo\\.com/", "/");
+     *   // or..
+     *   // return "/proxy?uri=" + URLEncoder.encode(absoluteUri);
+     * });
+     * }</pre>
+     */
+    @UnstableApi
+    public ServerBuilder absoluteUriTransformer(Function<? super String, String> absoluteUriTransformer) {
+        this.absoluteUriTransformer = requireNonNull(absoluteUriTransformer, "absoluteUriTransformer");
+        return this;
+    }
+
+    /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
-     * case sensitive HTTP/1 headers.
+     * case-sensitive HTTP/1 headers.
      */
     public ServerBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.http1HeaderNaming = http1HeaderNaming;
+        return this;
+    }
+
+    /**
+     * Sets the interval between reporting exceptions which is not handled or logged
+     * by any decorators or services such as {@link LoggingService}.
+     * @param unhandledExceptionsReportInterval the interval between reports,
+     *        or {@link Duration#ZERO} to disable this feature
+     * @throws IllegalArgumentException if specified {@code interval} is negative.
+     */
+    @UnstableApi
+    public ServerBuilder unhandledExceptionsReportInterval(Duration unhandledExceptionsReportInterval) {
+        requireNonNull(unhandledExceptionsReportInterval, "unhandledExceptionsReportInterval");
+        checkArgument(!unhandledExceptionsReportInterval.isNegative());
+        return unhandledExceptionsReportIntervalMillis(unhandledExceptionsReportInterval.toMillis());
+    }
+
+    /**
+     * Sets the interval between reporting exceptions which is not handled or logged
+     * by any decorators or services such as {@link LoggingService}.
+     * @param unhandledExceptionsReportIntervalMillis the interval between reports in milliseconds,
+     *        or {@code 0} to disable this feature
+     * @throws IllegalArgumentException if specified {@code interval} is negative.
+     */
+    @UnstableApi
+    public ServerBuilder unhandledExceptionsReportIntervalMillis(long unhandledExceptionsReportIntervalMillis) {
+        checkArgument(unhandledExceptionsReportIntervalMillis >= 0,
+                      "unhandledExceptionsReportIntervalMillis: %s (expected: >= 0)",
+                      unhandledExceptionsReportIntervalMillis);
+        this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
         return this;
     }
 
@@ -1827,11 +1971,22 @@ public final class ServerBuilder implements TlsSetters {
         assert extensions != null;
         final DependencyInjector dependencyInjector = dependencyInjectorOrReflective();
 
+        final UnhandledExceptionsReporter unhandledExceptionsReporter;
+        if (unhandledExceptionsReportIntervalMillis > 0) {
+            unhandledExceptionsReporter = UnhandledExceptionsReporter.of(
+                    meterRegistry, unhandledExceptionsReportIntervalMillis);
+            serverListeners.add(unhandledExceptionsReporter);
+        } else {
+            unhandledExceptionsReporter = null;
+        }
+
         final VirtualHost defaultVirtualHost =
-                defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector);
+                defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
+                                                unhandledExceptionsReporter);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
-                                   .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector))
+                                   .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
+                                                         unhandledExceptionsReporter))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -1920,13 +2075,7 @@ public final class ServerBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ServerErrorHandler errorHandler = this.errorHandler;
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
-        }
-
-        final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
+        final BlockingTaskExecutor blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
@@ -1937,9 +2086,11 @@ public final class ServerBuilder implements TlsSetters {
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
+                childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports));
+                enableServerHeader, enableDateHeader, errorHandler, sslContexts,
+                http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
+                unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
     }
 
     /**
@@ -2022,18 +2173,5 @@ public final class ServerBuilder implements TlsSetters {
                             path, service);
             }
         }
-    }
-
-    @Override
-    public String toString() {
-        return DefaultServerConfig.toString(
-                getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
-                maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
-                http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
-                meterRegistry, channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, dependencyInjector);
     }
 }

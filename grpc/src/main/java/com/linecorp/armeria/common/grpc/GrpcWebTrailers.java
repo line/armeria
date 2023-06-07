@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.internal.common.InternalGrpcWebTrailers;
 
 /**
  * Retrieves <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a> trailers.
@@ -65,14 +66,14 @@ public final class GrpcWebTrailers {
      */
     @Nullable
     public static HttpHeaders get(RequestContext ctx) {
-        return com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers.get(ctx);
+        return InternalGrpcWebTrailers.get(ctx);
     }
 
     /**
      * Sets the specified gRPC-Web trailers to the {@link RequestContext}.
      */
     public static void set(RequestContext ctx, HttpHeaders trailers) {
-        com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers.set(ctx, trailers);
+        InternalGrpcWebTrailers.set(ctx, trailers);
     }
 
     private GrpcWebTrailers() {}

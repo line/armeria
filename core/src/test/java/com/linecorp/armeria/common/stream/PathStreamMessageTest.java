@@ -212,6 +212,97 @@ class PathStreamMessageTest {
         assertThat(result).isEqualTo("A1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
     }
 
+    @Test
+    void skip0() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build()
+                                                         .range(0, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("A1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
+    @Test
+    void skip0_take13() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build()
+                                                         .range(0, 13);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("A1234567890\nB");
+    }
+
+    @Test
+    void skip12() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build()
+                                                         .range(12, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("B1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
+    @Test
+    void skip12_take13() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build()
+                                                         .range(12, 13);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("B1234567890\nC");
+    }
+
+    @Test
+    void skipAll() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build()
+                                                         .range(999, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void skipMost() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build()
+                                                         .range(48, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("E1234567890\n");
+    }
+
+    @Test
+    void skip1() {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build()
+                                                         .range(1, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
     private static class StringAggregator implements Subscriber<HttpData> {
         private final StringBuilder stringBuilder = new StringBuilder();
         private final CompletableFuture<String> future = new CompletableFuture<>();

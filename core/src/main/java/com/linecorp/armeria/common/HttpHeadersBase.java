@@ -204,8 +204,19 @@ class HttpHeadersBase
             final String scheme = scheme();
             checkState(scheme != null, ":scheme header does not exist.");
             final String authority = authority();
-            checkState(authority != null, ":authority header does not exist.");
-            uri = scheme + "://" + authority + path;
+
+            final StringBuilder sb = new StringBuilder(
+                    scheme.length() + 1 +
+                    (authority != null ? (authority.length() + 2) : 0) +
+                    path.length());
+            sb.append(scheme);
+            sb.append(':');
+            if (authority != null) {
+                sb.append("//");
+                sb.append(authority);
+            }
+            sb.append(path);
+            uri = sb.toString();
         }
 
         try {

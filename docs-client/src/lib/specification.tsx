@@ -53,6 +53,14 @@ export interface Service {
   descriptionInfo: DescriptionInfo;
 }
 
+export enum ServiceType {
+  UNKNOWN = 'UNKNOWN',
+  HTTP = 'HTTP',
+  THRIFT = 'THRIFT',
+  GRPC = 'GRPC',
+  GRAPHQL = 'GRAPHQL',
+}
+
 export interface Value {
   name: string;
   intValue?: number;

@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
@@ -88,13 +90,23 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
+     * Returns an {@link Executor} that will execute callbacks in the given {@code executor}, propagating
+     * the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor is only used from a single request then it's better to use
+     * {@link #makeContextAware(Executor)}
+     */
+    static Executor makeContextPropagating(Executor executor) {
+        return PropagatingContextAwareExecutor.of(executor);
+    }
+
+    /**
      * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, propagating
      * the caller's {@link RequestContext} (if any) into the callback execution.
      * If this executor service is only used from a single request then it's better to use
      * {@link #makeContextAware(ExecutorService)}
      */
     static ExecutorService makeContextPropagating(ExecutorService executor) {
-        return new PropagatingContextAwareExecutorService(executor);
+        return PropagatingContextAwareExecutorService.of(executor);
     }
 
     /**
@@ -104,7 +116,17 @@ public interface RequestContext extends Unwrappable {
      * {@link #makeContextAware(ScheduledExecutorService)}
      */
     static ScheduledExecutorService makeContextPropagating(ScheduledExecutorService executor) {
-        return new PropagatingContextAwareScheduledExecutorService(executor);
+        return PropagatingContextAwareScheduledExecutorService.of(executor);
+    }
+
+    /**
+     * Returns a {@link BlockingTaskExecutor} that will execute callbacks in the given {@code executor},
+     * propagating the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor service is only used from a single request then it's better to use
+     * {@link #makeContextAware(BlockingTaskExecutor)}
+     */
+    static BlockingTaskExecutor makeContextPropagating(BlockingTaskExecutor executor) {
+        return PropagatingContextAwareBlockingTaskExecutor.of(executor);
     }
 
     /**
@@ -372,6 +394,15 @@ public interface RequestContext extends Unwrappable {
     String query();
 
     /**
+     * Returns the {@link URI} associated with the current {@link Request}.
+     *
+     * @see ServiceRequestContext#uri()
+     * @see ClientRequestContext#uri()
+     */
+    @UnstableApi
+    URI uri();
+
+    /**
      * Returns the {@link RequestLogAccess} that provides the access to the {@link RequestLog}, which
      * contains the information collected while processing the current {@link Request}.
      */
@@ -450,6 +481,16 @@ public interface RequestContext extends Unwrappable {
     ExchangeType exchangeType();
 
     /**
+     * Initiates connection shutdown and returns {@link CompletableFuture} that completes when the connection
+     * associated with this context is closed.
+     *
+     * @see ClientRequestContext#initiateConnectionShutdown()
+     * @see ServiceRequestContext#initiateConnectionShutdown()
+     */
+    @UnstableApi
+    CompletableFuture<Void> initiateConnectionShutdown();
+
+    /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
@@ -513,111 +554,91 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
-     * Returns an {@link Executor} that will execute callbacks in the given {@code executor}, making sure to
-     * propagate the current {@link RequestContext} into the callback execution. It is generally preferred to
-     * use {@link #eventLoop()} to ensure the callback stays on the same thread as well.
+     * Returns a {@link ContextAwareExecutor} that will execute callbacks in the given {@code executor},
+     * making sure to propagate the current {@link RequestContext} into the callback execution. It is generally
+     * preferred to use {@link #eventLoop()} to ensure the callback stays on the same thread as well.
      */
-    default Executor makeContextAware(Executor executor) {
+    default ContextAwareExecutor makeContextAware(Executor executor) {
         requireNonNull(executor, "executor");
-        return runnable -> executor.execute(makeContextAware(runnable));
+        return ContextAwareExecutor.of(this, executor);
     }
 
     /**
-     * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, making
-     * sure to propagate this {@link RequestContext} into the callback execution.
-     * If this executor service will be used for callbacks from several different requests, use
+     * Returns a {@link ContextAwareExecutorService} that will execute callbacks in the given {@code executor},
+     * making sure to propagate this {@link RequestContext} into the callback execution.
+     * If this executor service will be used for callbacks from several requests, use
      * {@link #makeContextPropagating(ExecutorService)} instead.
      */
-    default ExecutorService makeContextAware(ExecutorService executor) {
+    default ContextAwareExecutorService makeContextAware(ExecutorService executor) {
         return ContextAwareExecutorService.of(this, executor);
     }
 
     /**
-     * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
-     * making sure to propagate this {@link RequestContext} into the callback execution.
-     * If this executor service will be used for callbacks from several different requests, use
+     * Returns a {@link ContextAwareScheduledExecutorService} that will execute callbacks in the given
+     * {@code executor}, making sure to propagate this {@link RequestContext} into the callback execution.
+     * If this executor service will be used for callbacks from several requests, use
      * {@link #makeContextPropagating(ScheduledExecutorService)} instead.
      */
-    default ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
+    default ContextAwareScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
         return ContextAwareScheduledExecutorService.of(this, executor);
     }
 
     /**
-     * Returns a {@link Callable} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code callable}.
+     * Returns a {@link ContextAwareBlockingTaskExecutor} that will execute callbacks in the given
+     * {@code executor}, making sure to propagate this {@link RequestContext} into the callback execution.
+     * If this executor service will be used for callbacks from several requests, use
+     * {@link #makeContextPropagating(BlockingTaskExecutor)} instead.
+     */
+    default ContextAwareBlockingTaskExecutor makeContextAware(BlockingTaskExecutor executor) {
+        return ContextAwareBlockingTaskExecutor.of(this, executor);
+    }
+
+    /**
+     * Returns a {@link ContextAwareCallable} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code callable}.
      */
     default <T> Callable<T> makeContextAware(Callable<T> callable) {
-        requireNonNull(callable, "callable");
-        return () -> {
-            try (SafeCloseable ignored = push()) {
-                return callable.call();
-            }
-        };
+        return ContextAwareCallable.of(this, callable);
     }
 
     /**
-     * Returns a {@link Runnable} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code runnable}.
+     * Returns a {@link ContextAwareRunnable} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code runnable}.
      */
     default Runnable makeContextAware(Runnable runnable) {
-        requireNonNull(runnable, "runnable");
-        return () -> {
-            try (SafeCloseable ignored = push()) {
-                runnable.run();
-            }
-        };
+        return ContextAwareRunnable.of(this, runnable);
     }
 
     /**
-     * Returns a {@link Function} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code function}.
+     * Returns a {@link ContextAwareFunction} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code function}.
      */
     default <T, R> Function<T, R> makeContextAware(Function<T, R> function) {
-        requireNonNull(function, "function");
-        return t -> {
-            try (SafeCloseable ignored = push()) {
-                return function.apply(t);
-            }
-        };
+        return ContextAwareFunction.of(this, function);
     }
 
     /**
-     * Returns a {@link BiFunction} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code function}.
+     * Returns a {@link ContextAwareBiFunction} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code function}.
      */
     default <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
-        requireNonNull(function, "function");
-        return (t, u) -> {
-            try (SafeCloseable ignored = push()) {
-                return function.apply(t, u);
-            }
-        };
+        return ContextAwareBiFunction.of(this, function);
     }
 
     /**
-     * Returns a {@link Consumer} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code action}.
+     * Returns a {@link ContextAwareConsumer} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code action}.
      */
     default <T> Consumer<T> makeContextAware(Consumer<T> action) {
-        requireNonNull(action, "action");
-        return t -> {
-            try (SafeCloseable ignored = push()) {
-                action.accept(t);
-            }
-        };
+        return ContextAwareConsumer.of(this, action);
     }
 
     /**
-     * Returns a {@link BiConsumer} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code action}.
+     * Returns a {@link ContextAwareBiConsumer} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code action}.
      */
     default <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
-        requireNonNull(action, "action");
-        return (t, u) -> {
-            try (SafeCloseable ignored = push()) {
-                action.accept(t, u);
-            }
-        };
+        return ContextAwareBiConsumer.of(this, action);
     }
 
     /**

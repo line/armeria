@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -36,7 +35,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Endpoint;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -60,7 +60,6 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
-import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
@@ -118,7 +117,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final CompressorRegistry compressorRegistry;
     private final SerializationFormat serializationFormat;
     private final boolean unsafeWrapResponseBuffers;
-    @Nullable
     private final Executor executor;
     private final DecompressorRegistry decompressorRegistry;
     private final int maxInboundMessageSizeBytes;
@@ -172,18 +170,23 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        endpointInitialized = endpointGroup instanceof Endpoint || endpointGroup instanceof StaticEndpointGroup;
-        if (!endpointInitialized) {
-            ctx.whenInitialized().handle((unused1, unused2) -> {
-                runPendingTask();
-                return null;
-            });
-        }
+
+        ctx.whenInitialized().handle((unused1, unused2) -> {
+            runPendingTask();
+            return null;
+        });
 
         requestFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapResponseBuffers);
-        executor = callOptions.getExecutor();
+
+        if (callOptions.getExecutor() == null) {
+            executor = MoreExecutors.directExecutor();
+        } else {
+            // We wrap CallOptions' executor with SequentialExecutor to linearize the events, just like it's
+            // done in vanilla grpc-java.
+            executor = MoreExecutors.newSequentialExecutor(callOptions.getExecutor());
+        }
 
         req.whenComplete().handle((unused1, unused2) -> {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
@@ -199,21 +202,24 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         requireNonNull(responseListener, "responseListener");
         requireNonNull(metadata, "metadata");
 
+        // The listener is set by the callers thread. The safe-publishing (aka visibility)
+        // to event-loop is guaranteed via semantics of EventLoop.execute(...) call.
+        listener = responseListener;
+
         final Compressor compressor;
         if (callOptions.getCompressor() != null) {
             compressor = compressorRegistry.lookupCompressor(callOptions.getCompressor());
             if (compressor == null) {
-                responseListener.onClose(
-                        Status.INTERNAL.withDescription(
-                                "Unable to find compressor by name " + callOptions.getCompressor()),
-                        new Metadata());
+                final Status status = Status.INTERNAL
+                        .withDescription("Unable to find compressor by name " + callOptions.getCompressor());
+                close(status, new Metadata());
                 return;
             }
         } else {
             compressor = this.compressor;
         }
+
         requestFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
-        listener = responseListener;
 
         final long remainingNanos;
         if (callOptions.getDeadline() != null) {
@@ -223,6 +229,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                         .augmentDescription("ClientCall started after deadline exceeded: " +
                                             callOptions.getDeadline());
                 close(status, new Metadata());
+                return;
             } else {
                 ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(remainingNanos));
             }
@@ -239,8 +246,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        final HttpStreamDeframer deframer = new HttpStreamDeframer(decompressorRegistry, ctx, this, null,
-                                                                   maxInboundMessageSizeBytes, grpcWebText);
+        final HttpStreamDeframer deframer = new HttpStreamDeframer(
+                decompressorRegistry, ctx, this, null,
+                maxInboundMessageSizeBytes, grpcWebText, false);
         final StreamMessage<DeframedMessage> deframed = res.decode(deframer, ctx.alloc());
         deframer.setDeframedStreamMessage(deframed);
 
@@ -251,7 +259,15 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
             });
         }
-        responseListener.onReady();
+
+        executor.execute(() -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                assert listener != null;
+                listener.onReady();
+            } catch (Throwable t) {
+                closeWhenListenerThrows(t);
+            }
+        });
     }
 
     @Override
@@ -289,9 +305,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             cause = new CancellationException("Cancelled without a message or cause");
             logger.warn("Cancelling without a message or cause is suboptimal", cause);
         }
+
         if (closed) {
             return;
         }
+
         Status status = Status.CANCELLED;
         if (message != null) {
             status = status.withDescription(message);
@@ -347,12 +365,14 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             req.write(requestFramer.writePayload(serialized));
             req.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    try (SafeCloseable ignored = ctx.push()) {
-                        assert listener != null;
-                        listener.onReady();
-                    } catch (Throwable t) {
-                        close(GrpcStatus.fromThrowable(t), new Metadata());
-                    }
+                    executor.execute(() -> {
+                        try (SafeCloseable ignored = ctx.push()) {
+                            assert listener != null;
+                            listener.onReady();
+                        } catch (Throwable t) {
+                            closeWhenListenerThrows(t);
+                        }
+                    });
                 }
             });
         } catch (Throwable t) {
@@ -416,17 +436,17 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 GrpcUnsafeBufferUtil.storeBuffer(buf, msg, ctx);
             }
 
-            try (SafeCloseable ignored = ctx.push()) {
-                assert listener != null;
-                listener.onMessage(msg);
-            }
+            executor.execute(() -> {
+                try (SafeCloseable ignored = ctx.push()) {
+                    assert listener != null;
+                    listener.onMessage(msg);
+                } catch (Throwable t) {
+                    closeWhenListenerThrows(t);
+                }
+            });
         } catch (Throwable t) {
-            final Status status = GrpcStatus.fromThrowable(t);
-            req.close(status.asRuntimeException());
-            close(status, new Metadata());
+            close(GrpcStatus.fromThrowable(t), new Metadata());
         }
-
-        notifyExecutor();
     }
 
     @Override
@@ -441,13 +461,22 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportStatus(Status status, Metadata metadata) {
-        close(status, metadata);
+        // This method is invoked in ctx.eventLoop and we need to bounce it through
+        // CallOptions executor (in case it's configured) to serialize with closes
+        // that were potentially triggered when Listener throws (closeWhenListenerThrows).
+        executor.execute(() -> closeWhenEos(status, metadata));
     }
 
     @Override
     public void transportReportHeaders(Metadata metadata) {
-        assert listener != null;
-        listener.onHeaders(metadata);
+        executor.execute(() -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                assert listener != null;
+                listener.onHeaders(metadata);
+            } catch (Throwable t) {
+                closeWhenListenerThrows(t);
+            }
+        });
     }
 
     private void prepareHeaders(Compressor compressor, Metadata metadata, long remainingNanos) {
@@ -471,6 +500,26 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         ctx.updateRequest(newReq);
     }
 
+    private void closeWhenListenerThrows(Throwable t) {
+        closeWhenEos(GrpcStatus.fromThrowable(t), new Metadata());
+    }
+
+    private void closeWhenEos(Status status, Metadata metadata) {
+        if (needsDirectInvocation()) {
+            close(status, metadata);
+        } else {
+            execute(() -> close(status, metadata));
+        }
+    }
+
+    // 'close' deserves a commentary about thread safety as it might be called from two separate threads:
+    //  - event-loop (very normal pathway)
+    //  - ClientCall driving thread (via ClientCall.start() - abnormal, early-return pathway)
+    //
+    // We're not worried to ensure any form of synchronization between these two parties as they should
+    // never do this concurrently: the abnormal call into close() from the caller thread happens in case
+    // of early return, before event-loop is being assigned to this call. After event-loop is being
+    // assigned, the driving call won't be able to trigger close() anymore.
     private void close(Status status, Metadata metadata) {
         if (closed) {
             // 'close()' could be called twice if a call is closed with non-OK status.
@@ -490,36 +539,33 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                MILLISECONDS.toNanos(ctx.responseTimeoutMillis()) + "ns.");
         }
 
-        final RequestLogBuilder logBuilder = ctx.logBuilder();
         final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
+
+        // We want to close the user-facing ClientCall.Listener right away, before we move on to recycling
+        // underlying resources.
+        executor.execute(() -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                assert listener != null;
+                listener.onClose(statusAndMetadata.status(), statusAndMetadata.metadata());
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception while closing {}", listener, t);
+            }
+        });
+
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
-        if (status.isOk()) {
-            req.abort();
-        } else {
+
+        if (!status.isOk()) {
+            // In the happy case, the request stream will be closed either by the client (via this.halfClose)
+            // or by the server (via this.closeWhenEos). In both cases the req.close() will be called out of
+            // band so we don't need to call it again.
+            //
+            // In the unhappy case, when exception is thrown by ClientCall.Listener, the request needs to be
+            // aborted.
             req.abort(statusAndMetadata.asRuntimeException());
         }
         if (upstream != null) {
             upstream.cancel();
-        }
-
-        try (SafeCloseable ignored = ctx.push()) {
-            assert listener != null;
-            listener.onClose(status, metadata);
-        }
-
-        notifyExecutor();
-    }
-
-    /**
-     * Armeria does not support {@link CallOptions} set by the user, however gRPC stubs set an {@link Executor}
-     * within blocking stubs which is used to notify the stub when processing is finished. It's unclear why
-     * the stubs use a loop and {@link Future#isDone()} instead of just blocking on
-     * {@link Future#get}, but we make sure to run the {@link Executor} so the stub can
-     * be notified of completion.
-     */
-    private void notifyExecutor() {
-        if (executor != null) {
-            executor.execute(NO_OP);
         }
     }
 

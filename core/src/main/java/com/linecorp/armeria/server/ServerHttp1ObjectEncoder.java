@@ -33,43 +33,43 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.Http2Error;
+import io.netty.util.ReferenceCountUtil;
 
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
     private final KeepAliveHandler keepAliveHandler;
-    private final boolean enableServerHeader;
-    private final boolean enableDateHeader;
     private final Http1HeaderNaming http1HeaderNaming;
 
-    private boolean shouldSendConnectionCloseHeader;
-    private boolean sentConnectionCloseHeader;
+    /**
+     * The ID of the last request whose response headers is written.
+     */
+    private int lastResponseHeadersId;
+    private boolean webSocketUpgrading;
+    private boolean webSocketUpgraded;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
-                             boolean enableDateHeader, boolean enableServerHeader,
                              Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
         assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
                keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
-        this.enableServerHeader = enableServerHeader;
-        this.enableDateHeader = enableDateHeader;
         this.http1HeaderNaming = http1HeaderNaming;
     }
 
     @Override
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
-    }
-
-    public void initiateConnectionShutdown() {
-        shouldSendConnectionCloseHeader = true;
     }
 
     @Override
@@ -79,15 +79,20 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             return newClosedSessionFuture();
         }
 
+        if (webSocketUpgrading && headers.status() == HttpStatus.SWITCHING_PROTOCOLS) {
+            webSocketUpgraded = true;
+            final HttpResponse res = new DefaultHttpResponse(
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS, false);
+            // Call toNettyHttp1Server directly not to remove "Connection: Upgrade" header.
+            ArmeriaHttpUtil.toNettyHttp1Server(headers, res.headers(), http1HeaderNaming, false);
+            return write(id, res, false);
+        }
+
         final HttpResponse converted = convertHeaders(headers, endStream, isTrailersEmpty);
         if (headers.status().isInformational()) {
             return write(id, converted, false);
         }
 
-        if (shouldSendConnectionCloseHeader || keepAliveHandler.needToCloseConnection()) {
-            converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-            sentConnectionCloseHeader = true;
-        }
         return writeNonInformationalHeaders(id, converted, endStream, channel().newPromise());
     }
 
@@ -98,7 +103,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         final HttpResponse res;
         if (headers.status().isInformational()) {
             res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
-            ArmeriaHttpUtil.toNettyHttp1ServerHeaders(headers, res.headers(), http1HeaderNaming);
+            ArmeriaHttpUtil.toNettyHttp1ServerHeaders(headers, res.headers(), http1HeaderNaming, true);
         } else if (endStream) {
             res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, Unpooled.EMPTY_BUFFER, false);
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
@@ -123,9 +128,10 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return res;
     }
 
-    private void convertHeaders(HttpHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
+    private void convertHeaders(ResponseHeaders inHeaders, io.netty.handler.codec.http.HttpHeaders outHeaders,
                                 boolean isTrailersEmpty) {
-        ArmeriaHttpUtil.toNettyHttp1ServerHeaders(inHeaders, outHeaders, http1HeaderNaming);
+        ArmeriaHttpUtil.toNettyHttp1ServerHeaders(inHeaders, outHeaders, http1HeaderNaming,
+                                                  !keepAliveHandler.needsDisconnection());
 
         if (!isTrailersEmpty && outHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
@@ -160,6 +166,29 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     }
 
     @Override
+    protected ChannelFuture write(HttpObject obj, ChannelPromise promise) {
+        // Use FQCN for Netty HttpResponse to avoid confusion with Armeria HttpResponse
+        // We check if obj is an HttpResponse here because server-side writes both headers
+        // and errors as an HttpResponse.
+        //noinspection UnnecessaryFullyQualifiedName
+        if (obj instanceof io.netty.handler.codec.http.HttpResponse) {
+            final int currentId = currentId();
+            if (lastResponseHeadersId >= currentId) {
+                // Response headers were written already. This may occur Http1RequestDecoder sends an error
+                // response while HttpResponseSubscriber writes a response headers and then waits for bodies.
+                ReferenceCountUtil.release(obj);
+                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR);
+            }
+            if (webSocketUpgraded ||
+                ((HttpResponse) obj).status().codeClass() != HttpStatusClass.INFORMATIONAL) {
+                lastResponseHeadersId = currentId;
+            }
+        }
+
+        return channel().write(obj, promise);
+    }
+
+    @Override
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
         ArmeriaHttpUtil.toNettyHttp1ServerTrailers(inputHeaders, outputHeaders, http1HeaderNaming);
@@ -170,26 +199,22 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return false;
     }
 
-    boolean isSentConnectionCloseHeader() {
-        return sentConnectionCloseHeader;
-    }
-
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
-        return id <= lastResponseHeadersId();
+        return id <= lastResponseHeadersId;
     }
 
     @Override
     public ChannelFuture writeErrorResponse(int id, int streamId,
                                             ServiceConfig serviceConfig,
-                                            RequestHeaders headers,
+                                            @Nullable RequestHeaders headers,
                                             HttpStatus status,
                                             @Nullable String message,
                                             @Nullable Throwable cause) {
 
-        // Destroy keepAlive handler before writing headers so that ServerHttp1ObjectEncoder sets
+        // Mark keepAlive handler as disconnected before writing headers so that ServerHttp1ObjectEncoder sets
         // "Connection: close" to the response headers
-        keepAliveHandler().destroy();
+        keepAliveHandler().disconnectWhenFinished();
 
         final ChannelFuture future = ServerHttpObjectEncoder.super.writeErrorResponse(
                 id, streamId, serviceConfig, headers, status, message, cause);
@@ -198,5 +223,9 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         updateClosedId(id);
 
         return future.addListener(ChannelFutureListener.CLOSE);
+    }
+
+    void webSocketUpgrading() {
+        webSocketUpgrading = true;
     }
 }

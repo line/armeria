@@ -2,12 +2,15 @@
 akka = "2.6.20"
 akka-http-cors = "1.0.0"
 akka-grpc-runtime = "1.0.3"
-apache-httpclient = "4.5.14"
+apache-httpclient5 = "5.2.1"
+apache-httpclient4 = "4.5.14"
+asm = "9.5"
 assertj = "3.24.2"
 awaitility = "4.2.0"
+blockhound = "1.0.8.RELEASE"
 bouncycastle = "1.70"
 brave = "5.15.0"
-brotli4j = "1.9.0"
+brotli4j = "1.11.0"
 bucket4j = "7.6.0"
 caffeine = "2.9.3"
 cglib = "3.3.0"
@@ -15,78 +18,90 @@ checkerframework = "2.5.5"
 checkstyle = "10.3.2"
 consul = "2.2.1"
 curator = "5.4.0"
-dagger = "2.44.2"
+dagger = "2.45"
 dgs = "5.5.0"
 dropwizard1 = "1.3.29"
-dropwizard2 = "2.1.4"
-dropwizard-metrics = "4.2.15"
+dropwizard2 = "2.1.5"
+dropwizard-metrics = "4.2.18"
 errorprone = "2.18.0"
 errorprone-gradle-plugin = "3.0.1"
 eureka = "2.0.0"
-fastutil = "8.5.11"
+fastutil = "8.5.12"
 finagle = "22.12.0"
 findbugs = "3.0.2"
 futures-completable = "0.3.5"
 futures-extra = "4.3.1"
 gax-grpc = "2.20.1"
 graphql-java = "20.0"
-graphql-kotlin = "6.3.5"
-groovy = "3.0.14"
-grpc-java = "1.49.1"
+graphql-kotlin = "6.4.0"
+groovy = "3.0.16"
+grpc-java = "1.54.0"
 grpc-kotlin = "1.3.0"
 guava = "31.1-jre"
 hamcrest = "2.2"
 hbase = "1.2.6"
-hibernate-validator = "6.2.5.Final"
+hibernate-validator6 = "6.2.5.Final"
+hibernate-validator8 = "8.0.0.Final"
 j2objc = "2.8"
 jackson = "2.14.2"
+jakarta-inject = "2.0.1"
+jakarta-validation = "3.0.2"
+jakarta-websocket= "2.1.0"
+java-websocket = "1.5.3"
 javax-annotation = "1.3.2"
 javax-inject = "1"
 javax-jsr311 = "1.1.1"
 javax-validation = "2.0.1.Final"
 jctools = "4.0.1"
-jetty93 = '9.3.30.v20211001'
-jetty94 = "9.4.50.v20221201"
+# Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/jetty-server/
+jetty10 = "10.0.15"
+# Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/apache-jstl/
+jetty10-jstl = "10.0.15"
+jetty11 = "11.0.15"
+jetty11-jstl = "11.0.0"
+jetty93 = "9.3.30.v20211001"
+jetty94 = "9.4.51.v20230217"
 jetty-alpn-api = "1.1.3.v20160715"
 jetty-alpn-agent = "2.0.10"
 jmh-core = "1.36"
 jmh-extras = "0.3.7"
-jmh-gradle-plugin = "0.6.8"
+jmh-gradle-plugin = "0.7.0"
 joor = "0.9.14"
-json-unit = "2.36.1"
+json-unit = "2.37.0"
 jsoup = "1.15.3"
 junit4 = "4.13.2"
 junit5 = "5.9.2"
 junit-pioneer = "1.9.1"
-jwt = "4.2.2"
+jwt = "4.3.0"
 kafka = "3.4.0"
 kotlin = "1.8.10"
 kotlin-coroutine = "1.6.4"
-ktlint-gradle-plugin = "11.1.0"
+ktlint-gradle-plugin = "11.3.2"
 logback = "1.2.11"
-micrometer = "1.10.3"
+logback14 = "1.4.7"
+micrometer = "1.10.5"
 micrometer13 = "1.3.20"
 mockito = "4.11.0"
 monix = "3.4.1"
 munit = "0.7.29"
-netty = "4.1.87.Final"
-netty-incubator-transport-native-io_uring = "0.0.17.Final"
-nexus-publish = "1.1.0"
+netty = "4.1.91.Final"
+netty-incubator-transport-native-io_uring = "0.0.19.Final"
+nexus-publish = "1.3.0"
 node-gradle-plugin = "3.5.1"
 okhttp2 = "2.7.5"
 okhttp3 = { strictly = "3.14.9" }
 okhttp4 = "4.10.0"
 opensaml = "3.4.6"
-osdetector = "1.7.2"
+osdetector = "1.7.3"
 proguard = "7.3.1"
 prometheus = "0.16.0"
-protobuf = "3.21.1"
+protobuf = "3.22.3"
 protobuf-gradle-plugin = "0.8.19"
 protobuf-jackson = "2.0.0"
 reactive-grpc = "1.2.3"
 reactive-streams = "1.0.4"
-reactor = "3.4.26"
-reactor-kotlin = "1.2.1"
+reactor = "3.5.1"
+reactor-kotlin = "1.2.2"
 reflections = "0.9.11"
 resilience4j = "2.0.2"
 resteasy = "5.0.5.Final"
@@ -95,7 +110,7 @@ resteasy-jboss-logging-annotations = "2.2.1.Final"
 retrofit2 = "2.9.0"
 rxjava2 = "2.2.21"
 rxjava3 = "3.1.6"
-sangria = "3.5.0"
+sangria = "3.5.3"
 sangria-slowlog = "2.0.5"
 scala-collection-compat = "2.9.0"
 scala-java8-compat = "1.0.2"
@@ -109,9 +124,10 @@ shadow-gradle-plugin = "7.1.2"
 shibboleth-utilities = "7.5.2"
 snappy = "1.1.9.1"
 slf4j = "1.7.36"
-spring = "5.3.25"
-spring-boot1 = "1.5.22.RELEASE"
-spring-boot2 = "2.7.8"
+slf4j2 = "2.0.7"
+spring6 = "6.0.6"
+spring-boot2 = "2.7.10"
+spring-boot3 = "3.0.5"
 testng = "7.5"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
@@ -121,6 +137,7 @@ thrift015 = { strictly = "0.15.0" }
 thrift016 = { strictly = "0.16.0" }
 tomcat8 = "8.5.85"
 tomcat9 = "9.0.71"
+tomcat10 = "10.1.4"
 xml-apis = "1.4.01"
 zookeeper = "3.7.1"
 zookeeper-junit = "1.2"
@@ -153,10 +170,22 @@ version.ref = "akka"
 module = "com.typesafe.akka:akka-stream_2.13"
 version.ref = "akka"
 
-[libraries.apache-httpclient]
-module = "org.apache.httpcomponents:httpclient"
-version.ref = "apache-httpclient"
+[libraries.apache-httpclient5]
+module = "org.apache.httpcomponents.client5:httpclient5"
+version.ref = "apache-httpclient5"
 exclusions = "commons-logging:commons-logging"
+
+# needed to test thrift apis
+# https://github.com/apache/thrift/blob/master/lib/java/gradle.properties#L28
+[libraries.apache-httpclient4]
+module = "org.apache.httpcomponents:httpclient"
+version.ref = "apache-httpclient4"
+exclusions = "commons-logging:commons-logging"
+
+# This is only used for testing Jetty
+[libraries.asm]
+module = "org.ow2.asm:asm"
+version.ref = "asm"
 
 [libraries.assertj]
 module = "org.assertj:assertj-core"
@@ -165,6 +194,14 @@ version.ref = "assertj"
 [libraries.awaitility]
 module = "org.awaitility:awaitility"
 version.ref = "awaitility"
+
+[libraries.blockhound-junit-platform]
+module="io.projectreactor.tools:blockhound-junit-platform"
+version.ref = "blockhound"
+
+[libraries.blockhound]
+module="io.projectreactor.tools:blockhound"
+version.ref = "blockhound"
 
 [libraries.bouncycastle-bcpkix]
 module = "org.bouncycastle:bcpkix-jdk15on"
@@ -197,6 +234,9 @@ module = "com.aayushatharva.brotli4j:brotli4j"
 version.ref = "brotli4j"
 [libraries.brotli4j-linux]
 module = "com.aayushatharva.brotli4j:native-linux-x86_64"
+version.ref = "brotli4j"
+[libraries.brotli4j-linux-aarch64]
+module = "com.aayushatharva.brotli4j:native-linux-aarch64"
 version.ref = "brotli4j"
 [libraries.brotli4j-osx]
 module = "com.aayushatharva.brotli4j:native-osx-x86_64"
@@ -244,13 +284,13 @@ version.ref = "consul"
 module = "org.apache.curator:curator-recipes"
 version.ref = "curator"
 javadocs = [
-    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.3.0/",
-    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.3.0/"]
+    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.4.0/",
+    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.4.0/"]
 exclusions = "org.apache.zookeeper:zookeeper"
 [libraries.curator-discovery]
 module = "org.apache.curator:curator-x-discovery"
 version.ref = "curator"
-javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.3.0/"
+javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.4.0/"
 
 # This is only used for examples/context-propagation/dagger
 [libraries.dagger]
@@ -296,7 +336,7 @@ version.ref = "dropwizard1"
 [libraries.dropwizard2-core]
 module = "io.dropwizard:dropwizard-core"
 version.ref = "dropwizard2"
-javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.4/"
+javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.5/"
 [libraries.dropwizard2-jackson]
 module = "io.dropwizard:dropwizard-jackson"
 version.ref = "dropwizard2"
@@ -391,8 +431,8 @@ version.ref = "groovy"
 [libraries.grpc-core]
 module = "io.grpc:grpc-core"
 javadocs = [
-    "https://grpc.io/grpc-java/javadoc/",
-    "https://developers.google.com/protocol-buffers/docs/reference/java/"]
+    "https://grpc.github.io/grpc-java/javadoc/",
+    "https://protobuf.dev/reference/java/api-docs/"]
 exclusions = [
     "com.google.errorprone:error_prone_annotations",
     "org.codehaus.mojo:animal-sniffer-annotations"]
@@ -472,15 +512,31 @@ exclusions = [
 
 # Validator is only used for examples and testings in Spring
 # version 7 starts using jakarta api, which isn't compatible with spring-boot2
-[libraries.hibernate-validator]
+[libraries.hibernate-validator6]
 module = "org.hibernate.validator:hibernate-validator"
-version.ref = "hibernate-validator"
+version.ref = "hibernate-validator6"
+[libraries.hibernate-validator8]
+module = "org.hibernate.validator:hibernate-validator"
+version.ref = "hibernate-validator8"
 
 # We do not depend on j2objc-annotations. We just need this to stop Javadoc from
 # complaining about "unknown enum constant Level.FULL".
 [libraries.j2objc]
 module = "com.google.j2objc:j2objc-annotations"
 version.ref = "j2objc"
+
+[libraries.jakarta-inject]
+module = "jakarta.inject:jakarta.inject-api"
+version.ref = "jakarta-inject"
+[libraries.jakarta-validation]
+module = "jakarta.validation:jakarta.validation-api"
+version.ref = "jakarta-validation"
+[libraries.jakarta-websocket]
+module = "jakarta.websocket:jakarta.websocket-api"
+version.ref = "jakarta-websocket"
+[libraries.jakarta-websocket-client]
+module = "jakarta.websocket:jakarta.websocket-client-api"
+version.ref = "jakarta-websocket"
 
 [libraries.jackson-annotations]
 module = "com.fasterxml.jackson.core:jackson-annotations"
@@ -526,13 +582,47 @@ module = "org.jctools:jctools-core"
 version.ref = "jctools"
 relocations = { from = "org.jctools", to = "com.linecorp.armeria.internal.shaded.jctools" }
 
+[libraries.jetty10-annotations]
+module = "org.eclipse.jetty:jetty-annotations"
+version.ref = "jetty10"
+[libraries.jetty10-apache-jsp]
+module = "org.eclipse.jetty:apache-jsp"
+version.ref = "jetty10"
+[libraries.jetty10-apache-jstl]
+module = "org.eclipse.jetty:apache-jstl"
+version.ref = "jetty10-jstl"
+[libraries.jetty10-server]
+module = "org.eclipse.jetty:jetty-server"
+version.ref = "jetty10"
+# jetty-webapp for testing interoperability with other servers.
+[libraries.jetty10-webapp]
+module = "org.eclipse.jetty:jetty-webapp"
+version.ref = "jetty10"
+
+[libraries.jetty11-annotations]
+module = "org.eclipse.jetty:jetty-annotations"
+version.ref = "jetty11"
+[libraries.jetty11-apache-jsp]
+module = "org.eclipse.jetty:apache-jsp"
+version.ref = "jetty11"
+[libraries.jetty11-apache-jstl]
+module = "org.eclipse.jetty:apache-jstl"
+version.ref = "jetty11-jstl"
+[libraries.jetty11-server]
+module = "org.eclipse.jetty:jetty-server"
+version.ref = "jetty11"
+# jetty-webapp for testing interoperability with other servers.
+[libraries.jetty11-webapp]
+module = "org.eclipse.jetty:jetty-webapp"
+version.ref = "jetty11"
+
 [libraries.jetty93-annotations]
 module = "org.eclipse.jetty:jetty-annotations"
 exclusions = ["org.ow2.asm:asm", "org.ow2.asm:asm-commons"]
 version.ref = "jetty93"
 [libraries.jetty93-server]
 module = "org.eclipse.jetty:jetty-server"
-javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.42.v20210604/"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.3.30.v20211001/"
 version.ref = "jetty93"
 # jetty-webapp for testing interoperability with other servers.
 [libraries.jetty93-webapp]
@@ -551,7 +641,7 @@ exclusions = ["org.ow2.asm:asm", "org.ow2.asm:asm-commons"]
 version.ref = "jetty94"
 [libraries.jetty94-server]
 module = "org.eclipse.jetty:jetty-server"
-javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.42.v20210604/"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.51.v20230217/"
 version.ref = "jetty94"
 # jetty-webapp for testing interoperability with other servers.
 [libraries.jetty94-webapp]
@@ -597,12 +687,12 @@ version.ref = "jsoup"
 [libraries.junit4]
 module = "junit:junit"
 version.ref = "junit4"
-javadocs = "https://junit.org/junit4/javadoc/4.13/"
+javadocs = "https://junit.org/junit4/javadoc/latest/"
 
 [libraries.junit5-jupiter-api]
 module = "org.junit.jupiter:junit-jupiter-api"
 # ":site:javadoc" fails when we use a newer version of Javadoc.
-javadocs = "https://junit.org/junit5/docs/5.5.2/api/"
+javadocs = "https://junit.org/junit5/docs/current/api/"
 [libraries.junit5-jupiter-params]
 module = "org.junit.jupiter:junit-jupiter-params"
 [libraries.junit5-jupiter-engine]
@@ -622,12 +712,12 @@ version.ref = "junit-pioneer"
 [libraries.jwt]
 module = "com.auth0:java-jwt"
 version.ref = "jwt"
-javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.0.0/"
+javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.4.0/"
 
 [libraries.kafka]
 module = "org.apache.kafka:kafka-clients"
 version.ref = "kafka"
-javadocs = "https://kafka.apache.org/30/javadoc/"
+javadocs = "https://kafka.apache.org/33/javadoc/"
 
 [libraries.kotlin-allopen]
 module = "org.jetbrains.kotlin:kotlin-allopen"
@@ -652,26 +742,37 @@ version.ref = "kotlin-coroutine"
 [libraries.kotlin-coroutines-rx2]
 module = "org.jetbrains.kotlinx:kotlinx-coroutines-rx2"
 version.ref = "kotlin-coroutine"
+[libraries.kotlin-coroutines-test]
+module = "org.jetbrains.kotlinx:kotlinx-coroutines-test"
+version.ref = "kotlin-coroutine"
+[libraries.kotlin-coroutines-debug]
+module = "org.jetbrains.kotlinx:kotlinx-coroutines-debug"
+version.ref = "kotlin-coroutine"
 
 # Don't upgrade Logback 1.4.0 which requires Java 11
 # TODO(ikhoon): Upgrade Logback to 1.3.0 when Spring Boot 2 supports it.
 [libraries.logback]
 module = "ch.qos.logback:logback-classic"
 version.ref = "logback"
-javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.11/"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.12/"
+
+[libraries.logback14]
+module = "ch.qos.logback:logback-classic"
+version.ref = "logback14"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.4.7/"
 
 [libraries.micrometer-core]
 module = "io.micrometer:micrometer-core"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.10.2/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.10.6/"
 [libraries.micrometer-prometheus]
 module = "io.micrometer:micrometer-registry-prometheus"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.10.2/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.10.6/"
 [libraries.micrometer-spring-legacy]
 module = "io.micrometer:micrometer-spring-legacy"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.9/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.20/"
 exclusions = ["org.springframework:spring-web", "org.springframework:spring-webmvc"]
 
 [libraries.micrometer13-core]
@@ -792,7 +893,7 @@ version.ref = "resteasy"
 [libraries.resteasy-core-spi]
 module = "org.jboss.resteasy:resteasy-core-spi"
 version.ref = "resteasy"
-javadocs = "https://docs.jboss.org/resteasy/docs/5.0.2.Final/javadocs/"
+javadocs = "https://docs.jboss.org/resteasy/docs/5.0.6.Final/javadocs/"
 [libraries.resteasy-client]
 module = "org.jboss.resteasy:resteasy-client"
 version.ref = "resteasy"
@@ -981,22 +1082,14 @@ version.ref = "slf4j"
 module = "org.slf4j:slf4j-simple"
 version.ref = "slf4j"
 
-[libraries.spring-web]
-module = "org.springframework:spring-web"
-version.ref = "spring"
+[libraries.slf4j2-api]
+module = "org.slf4j:slf4j-api"
+version.ref = "slf4j2"
+javadocs = "https://www.javadoc.io/doc/org.slf4j/slf4j-api/2.0.7/"
 
-[libraries.spring-boot1-autoconfigure]
-module = "org.springframework.boot:spring-boot-autoconfigure"
-version.ref = "spring-boot1"
-[libraries.spring-boot1-configuration-processor]
-module = "org.springframework.boot:spring-boot-configuration-processor"
-version.ref = "spring-boot1"
-[libraries.spring-boot1-starter]
-module = "org.springframework.boot:spring-boot-starter"
-version.ref = "spring-boot1"
-[libraries.spring-boot1-starter-test]
-module = "org.springframework.boot:spring-boot-starter-test"
-version.ref = "spring-boot1"
+[libraries.spring6-web]
+module = "org.springframework:spring-web"
+version.ref = "spring6"
 
 [libraries.spring-boot2-actuator-autoconfigure]
 module = "org.springframework.boot:spring-boot-actuator-autoconfigure"
@@ -1027,6 +1120,39 @@ exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
 [libraries.spring-boot2-configuration-processor]
 module = "org.springframework.boot:spring-boot-configuration-processor"
 version.ref = "spring-boot2"
+
+[libraries.spring-boot3-actuator-autoconfigure]
+module = "org.springframework.boot:spring-boot-actuator-autoconfigure"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-autoconfigure]
+module = "org.springframework.boot:spring-boot-autoconfigure"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter]
+module = "org.springframework.boot:spring-boot-starter"
+version.ref = "spring-boot3"
+javadocs = "https://docs.spring.io/spring/docs/current/javadoc-api/"
+[libraries.spring-boot3-starter-actuator]
+module = "org.springframework.boot:spring-boot-starter-actuator"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-jetty]
+module = "org.springframework.boot:spring-boot-starter-jetty"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-security]
+module = "org.springframework.boot:spring-boot-starter-security"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-test]
+module = "org.springframework.boot:spring-boot-starter-test"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-web]
+module = "org.springframework.boot:spring-boot-starter-web"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-webflux]
+module = "org.springframework.boot:spring-boot-starter-webflux"
+version.ref = "spring-boot3"
+exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
+[libraries.spring-boot3-configuration-processor]
+module = "org.springframework.boot:spring-boot-configuration-processor"
+version.ref = "spring-boot3"
 
 # jdk 11 is required from testng version 7.6
 [libraries.testng]
@@ -1088,7 +1214,7 @@ exclusions = [
 [libraries.tomcat8-core]
 module = "org.apache.tomcat.embed:tomcat-embed-core"
 version.ref = "tomcat8"
-javadocs = "https://tomcat.apache.org/tomcat-9.0-doc/api/"
+javadocs = "https://tomcat.apache.org/tomcat-8.0-doc/api/"
 [libraries.tomcat8-jasper]
 module = "org.apache.tomcat.embed:tomcat-embed-jasper"
 version.ref = "tomcat8"
@@ -1105,6 +1231,21 @@ version.ref = "tomcat9"
 [libraries.tomcat9-el]
 module = "org.apache.tomcat.embed:tomcat-embed-el"
 version.ref = "tomcat9"
+[libraries.tomcat10-core]
+module = "org.apache.tomcat.embed:tomcat-embed-core"
+version.ref = "tomcat10"
+javadocs = "https://tomcat.apache.org/tomcat-10.0-doc/api/"
+[libraries.tomcat10-jasper]
+module = "org.apache.tomcat.embed:tomcat-embed-jasper"
+version.ref = "tomcat10"
+[libraries.tomcat10-el]
+module = "org.apache.tomcat.embed:tomcat-embed-el"
+version.ref = "tomcat10"
+
+# java-websocket is only used for testing in it:websocket module.
+[libraries.java-websocket]
+module = "org.java-websocket:Java-WebSocket"
+version.ref = "java-websocket"
 
 # Needed to work around the problem with Gradle not supporting POM relocation correctly.
 [libraries.xml-apis]

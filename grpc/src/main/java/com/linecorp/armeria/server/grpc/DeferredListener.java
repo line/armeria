@@ -19,24 +19,19 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.netty.util.concurrent.EventExecutor;
 
 final class DeferredListener<I> extends ServerCall.Listener<I> {
-
-    private static final List<?> NOOP_TASKS = ImmutableList.of();
-
     @Nullable
     private final Executor blockingExecutor;
     @Nullable
@@ -45,7 +40,9 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     // The following values are intentionally non-volatile, although the callback methods, which can be called
     // by non-`sequentialExecutor()` thread, access the values. Because `maybeAddPendingTask()` double-checks
     // the status of the values in the `sequentialExecutor()`.
-    private List<Consumer<Listener<I>>> pendingTasks = new ArrayList<>();
+    @Nullable
+    private ArrayDeque<Consumer<Listener<I>>> pendingQueue = new ArrayDeque<>();
+
     @Nullable
     private Listener<I> delegate;
     private boolean callClosed;
@@ -75,102 +72,83 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
 
             this.delegate = delegate;
             try {
-                for (Consumer<Listener<I>> task : pendingTasks) {
-                    task.accept(delegate);
+                for (;;) {
+                    final Consumer<Listener<I>> task = pendingQueue.poll();
+                    if (task != null) {
+                        task.accept(delegate);
+                    } else {
+                        break;
+                    }
                 }
             } catch (Throwable ex) {
                 callClosed = true;
                 armeriaServerCall.close(ex);
                 return null;
+            } finally {
+                pendingQueue = null;
             }
-            //noinspection unchecked
-            pendingTasks = (List<Consumer<Listener<I>>>) NOOP_TASKS;
             return null;
         }, sequentialExecutor());
     }
 
     @Override
     public void onMessage(I message) {
-        if (callClosed) {
-            return;
-        }
-
-        if (pendingTasks == NOOP_TASKS) {
-            // listenerFuture has completed successfully. No race with the listenerFuture's callback.
-            delegate.onMessage(message);
-        } else {
-            maybeAddPendingTask(listener -> listener.onMessage(message));
-        }
+        maybeAddPendingTask(listener -> listener.onMessage(message));
     }
 
     @Override
     public void onHalfClose() {
-        if (callClosed) {
-            return;
-        }
-
-        if (pendingTasks == NOOP_TASKS) {
-            delegate.onHalfClose();
-        } else {
-            maybeAddPendingTask(Listener::onHalfClose);
-        }
+        maybeAddPendingTask(Listener::onHalfClose);
     }
 
     @Override
     public void onCancel() {
-        if (callClosed) {
-            return;
-        }
-
-        if (pendingTasks == NOOP_TASKS) {
-            delegate.onCancel();
-        } else {
-            maybeAddPendingTask(Listener::onCancel);
-        }
+        maybeAddPendingTask(Listener::onCancel);
     }
 
     @Override
     public void onComplete() {
-        if (callClosed) {
-            return;
-        }
-
-        if (pendingTasks == NOOP_TASKS) {
-            delegate.onComplete();
-        } else {
-            maybeAddPendingTask(Listener::onComplete);
-        }
+        maybeAddPendingTask(Listener::onComplete);
     }
 
     @Override
     public void onReady() {
+        maybeAddPendingTask(Listener::onReady);
+    }
+
+    private void maybeAddPendingTask(Consumer<ServerCall.Listener<I>> task) {
         if (callClosed) {
             return;
         }
 
-        if (pendingTasks == NOOP_TASKS) {
-            delegate.onReady();
-        } else {
-            maybeAddPendingTask(Listener::onReady);
+        if (!shouldBePending()) {
+            task.accept(delegate);
+            return;
         }
-    }
 
-    private void maybeAddPendingTask(Consumer<ServerCall.Listener<I>> task) {
         if (eventLoop != null && eventLoop.inEventLoop()) {
-            pendingTasks.add(task);
+            addPendingTask(task);
         } else {
             // It is unavoidable to reschedule the task to ensure the execution order.
             sequentialExecutor().execute(() -> {
                 if (callClosed) {
                     return;
                 }
-                if (pendingTasks == NOOP_TASKS) {
+                if (!shouldBePending()) {
                     task.accept(delegate);
                 } else {
-                    pendingTasks.add(task);
+                    addPendingTask(task);
                 }
             });
         }
+    }
+
+    private void addPendingTask(Consumer<ServerCall.Listener<I>> task) {
+        pendingQueue.add(task);
+    }
+
+    private boolean shouldBePending() {
+        return delegate == null;
     }
 
     private Executor sequentialExecutor() {

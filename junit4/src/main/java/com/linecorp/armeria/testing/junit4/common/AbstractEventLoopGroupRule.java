@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.testing.junit4.common;
 
+import java.util.concurrent.ThreadFactory;
+
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
@@ -25,8 +27,8 @@ import io.netty.channel.EventLoopGroup;
 abstract class AbstractEventLoopGroupRule extends ExternalResource {
     private final EventLoopGroupRuleDelegate delegate;
 
-    AbstractEventLoopGroupRule(int numThreads, String threadNamePrefix, boolean useDaemonThreads) {
-        delegate = new EventLoopGroupRuleDelegate(numThreads, threadNamePrefix, useDaemonThreads);
+    AbstractEventLoopGroupRule(int numThreads, ThreadFactory threadFactory) {
+        delegate = new EventLoopGroupRuleDelegate(numThreads, threadFactory);
     }
 
     EventLoopGroup group() {

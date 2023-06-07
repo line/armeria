@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -143,7 +144,7 @@ public final class ServiceSpecification {
         this.services = Streams.stream(requireNonNull(services, "services"))
                                .collect(toImmutableSortedSet(comparing(ServiceInfo::name)));
         this.enums = collectDescriptiveTypeInfo(enums, "enums");
-        this.structs = collectDescriptiveTypeInfo(structs, "structs");
+        this.structs = collectStructInfo(structs);
         this.exceptions = collectDescriptiveTypeInfo(exceptions, "exceptions");
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
     }
@@ -152,6 +153,24 @@ public final class ServiceSpecification {
             Iterable<T> values, String name) {
         return Streams.stream(requireNonNull(values, name))
                       .collect(toImmutableSortedSet(comparing(DescriptiveTypeInfo::name)));
+    }
+
+    private static Set<StructInfo> collectStructInfo(Iterable<StructInfo> structInfos) {
+        requireNonNull(structInfos, "structInfos");
+        return Streams.stream(structInfos)
+                      .collect(Collectors.toMap(StructInfo::name, Function.identity(),
+                                                (a, b) -> {
+                                                    // If the name is duplicate, prefer the one with alias.
+                                                    if (a.alias() != null) {
+                                                        return a;
+                                                    }
+                                                    if (b.alias() != null) {
+                                                        return b;
+                                                    }
+                                                    return a;
+                                                }))
+                      .values().stream()
+                      .collect(toImmutableSortedSet(comparing(StructInfo::name)));
     }
 
     /**
