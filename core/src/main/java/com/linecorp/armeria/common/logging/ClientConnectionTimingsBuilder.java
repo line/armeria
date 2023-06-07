@@ -150,8 +150,7 @@ public final class ClientConnectionTimingsBuilder {
             logger.warn("Should call pendingAcquisitionEnd() if pendingAcquisitionStart() was invoked.");
         }
         if (existingAcquisitionStartTimeMicros > 0 && !existingAcquisitionEndSet) {
-            logger.warn("Should call existingAcquisitionEnd() if " +
-                        "existingAcquisitionStart() was invoked.");
+            logger.warn("Should call existingAcquisitionEnd() if existingAcquisitionStart() was invoked.");
         }
 
         return new ClientConnectionTimings(
