@@ -792,6 +792,7 @@ public final class Flags {
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUseHttp2WithoutALPN=true} JVM option to enable it.
      */
+    @UnstableApi
     public static boolean defaultUseHttp2WithoutALPN() {
         return DEFAULT_USE_HTTP2_WITHOUT_ALPN;
     }

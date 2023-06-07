@@ -129,6 +129,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     @Nullable
     private InetSocketAddress remoteAddress;
 
+    private final SessionProtocol http1;
+    private final SessionProtocol http2;
+
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
                                    SessionProtocol sessionProtocol,
                                    @Nullable SslContext sslCtx) {
@@ -147,8 +150,12 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         if (sessionProtocol.isTls()) {
             this.sslCtx = sslCtx;
+            http1 = H1;
+            http2 = H2;
         } else {
             this.sslCtx = null;
+            http1 = H1C;
+            http2 = H2C;
         }
     }
 
@@ -234,7 +241,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     addBeforeSessionHandler(p, newHttp2ConnectionHandler(ch, H2));
                     protocol = H2;
                 } else if (clientFactory.useHttp2WithoutALPN() && attemptUpgrade()) {
-                    upgrade(h -> addBeforeSessionHandler(p, h), ch);
+                    configureUpgradeCodec(ch, h -> addBeforeSessionHandler(p, h));
                     p.remove(this);
                     return;
                 } else {
@@ -309,11 +316,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
     }
 
-    private void upgrade(Consumer<ChannelHandler> pipelineConsumer, Channel ch) {
-        Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, isHttps() ? H2 : H2C);
+    private void configureUpgradeCodec(Channel ch, Consumer<ChannelHandler> pipelineCustomizer) {
+        final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, http2);
         if (clientFactory.useHttp2Preface()) {
-            pipelineConsumer.accept(new DowngradeHandler());
-            pipelineConsumer.accept(http2Handler);
+            pipelineCustomizer.accept(new DowngradeHandler());
+            pipelineCustomizer.accept(http2Handler);
         } else {
             final HttpClientCodec http1Codec = newHttp1Codec(
                     clientFactory.http1MaxInitialLineLength(),
@@ -326,10 +333,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                             http1Codec, http2ClientUpgradeCodec,
                             (int) Math.min(Integer.MAX_VALUE, UPGRADE_RESPONSE_MAX_LENGTH));
 
-            pipelineConsumer.accept(http1Codec);
-            pipelineConsumer.accept(new WorkaroundHandler());
-            pipelineConsumer.accept(http2UpgradeHandler);
-            pipelineConsumer.accept(new UpgradeRequestHandler(http2Handler.responseDecoder()));
+            pipelineCustomizer.accept(http1Codec);
+            pipelineCustomizer.accept(new WorkaroundHandler());
+            pipelineCustomizer.accept(http2UpgradeHandler);
+            pipelineCustomizer.accept(new UpgradeRequestHandler(http2Handler.responseDecoder()));
         }
     }
 
@@ -339,7 +346,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         pipeline.addLast(TrafficLoggingHandler.CLIENT);
 
         if (attemptUpgrade()) {
-            upgrade(pipeline::addLast, ch);
+            configureUpgradeCodec(ch, pipeline::addLast);
         } else {
             pipeline.addLast(newHttp1Codec(
                     clientFactory.http1MaxInitialLineLength(),
@@ -557,8 +564,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         private void onUpgradeResponse(ChannelHandlerContext ctx, boolean success) {
             final UpgradeEvent upgradeEvt = this.upgradeEvt;
             assert upgradeEvt != null : "received an upgrade response before an UpgradeEvent";
-            final SessionProtocol h2 = isHttps() ? H2 : H2C;
-            final SessionProtocol h1 = isHttps() ? H1 : H1C;
             final ChannelPipeline p = ctx.pipeline();
 
             // Done with this handler, remove it from the pipeline.
@@ -567,28 +572,28 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (needsToClose) {
                 // Server wants us to close the connection, which means we cannot use this connection
                 // to send the request that contains the actual invocation.
-                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), h2);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), http2);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, h2, h1, upgradeRejectionCause);
+                    finishWithNegotiationFailure(ctx, http2, http1, upgradeRejectionCause);
                 } else {
                     // We can silently retry with H1C.
-                    retryWith(ctx, h1);
+                    retryWith(ctx, http1);
                 }
                 return;
             }
 
             if (success) {
-                finishSuccessfully(p, h2);
+                finishSuccessfully(p, http2);
             } else {
-                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), h2);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), http2);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, h2, h1, upgradeRejectionCause);
+                    finishWithNegotiationFailure(ctx, http2, http1, upgradeRejectionCause);
                     return;
                 }
 
-                finishSuccessfully(p, h1);
+                finishSuccessfully(p, http1);
             }
         }
     }
@@ -600,8 +605,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private final class DowngradeHandler extends ByteToMessageDecoder {
 
         private boolean handledResponse;
-        final SessionProtocol h2 = isHttps() ? H2 : H2C;
-        final SessionProtocol h1 = isHttps() ? H1 : H1C;
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -616,20 +619,20 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (!isSettingsFrame(in)) { // The first frame must be a settings frame.
                 // Http2ConnectionHandler sent the connection preface, but the server responded with
                 // something else, which means the server does not support HTTP/2.
-                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), h2);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), http2);
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
                     finishWithNegotiationFailure(
-                            ctx, h2, h1, "received a non-HTTP/2 response for the HTTP/2 connection preface");
+                            ctx, http2, http1, "received a non-HTTP/2 response for the HTTP/2 connection preface");
                 } else {
                     // We can silently retry with HTTP/1.
-                    retryWith(ctx, h1);
+                    retryWith(ctx, http1);
                 }
 
                 // We are going to close the connection really soon, so we don't need the response.
                 in.skipBytes(in.readableBytes());
             } else {
                 // The server responded with a non-HTTP/1 response. Continue treating the connection as HTTP/2.
-                finishSuccessfully(p, h2);
+                finishSuccessfully(p, http2);
             }
 
             p.remove(this);
@@ -648,11 +651,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 // If the connection has been closed even without receiving anything useful,
                 // it is likely that the server failed to decode the preface string.
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, h2, h1,
+                    finishWithNegotiationFailure(ctx, http2, http1,
                                                  "too little data to determine the HTTP version");
                 } else {
                     // We can silently retry with HTTP/1.
-                    retryWith(ctx, h1);
+                    retryWith(ctx, http1);
                 }
             }
         }

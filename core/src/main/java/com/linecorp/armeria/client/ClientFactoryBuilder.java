@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -728,8 +729,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
-     * Sets whether to use HTTP/2 without ALPN.
+     * Sets whether to use HTTP/2 without ALPN. This is useful if you want to communicate with an HTTP/2
+     * server over TLS but the server does not support ALPN.
      */
+    @UnstableApi
     public ClientFactoryBuilder useHttp2WithoutALPN(boolean useHttp2WithoutALPN) {
         option(ClientFactoryOptions.USE_HTTP2_WITHOUT_ALPN, useHttp2WithoutALPN);
         return this;

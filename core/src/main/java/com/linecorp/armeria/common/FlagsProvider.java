@@ -447,6 +447,7 @@ public interface FlagsProvider {
      * {@code -Dcom.linecorp.armeria.useHttp2WithoutALPN=true} JVM option to enable it.
      */
     @Nullable
+    @UnstableApi
     default Boolean defaultUseHttp2WithoutALPN() {
         return null;
     }
