@@ -24,13 +24,15 @@ import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Spy;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -57,86 +59,52 @@ class ExceptionReportingServiceErrorHandlerTest {
         logAppender.list.clear();
     }
 
+    @RegisterExtension
+    static ServerExtension serverWithIgnorableException = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.decorator(service -> (ctx, req) -> {
+                throw new ClosedSessionException("Ignorable exception");
+            });
+            sb.unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis));
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension serverWithNonIgnorableException = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.decorator(service -> (ctx, req) -> {
+                throw new IllegalArgumentException("Non-ignorable exception");
+            });
+            sb.unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis));
+        }
+    };
+
     @Test
-    void httpStatusExceptionWithCauseLogged() throws Exception {
-        final Server server = Server.builder()
-                                    .service("/hello", (ctx, req) -> {
-                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST,
-                                                                     new IllegalArgumentException("test"));
-                                    })
-                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
-                                    .build();
-        try {
-            server.start().join();
-            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
+    void ignorableExceptionShouldNotBeLogged() throws Exception {
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            serverWithIgnorableException.blockingWebClient(cb -> cb.factory(cf)).get("/hello");
+            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+            assertThat(logAppender.list).isEmpty();
+        }
+    }
+
+    @Test
+    void nonIgnorableExceptionShouldBeLogged() {
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            serverWithNonIgnorableException.blockingWebClient(cb -> cb.factory(cf)).get("/hello");
             await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
                    .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
             assertThat(logAppender.list
                                .stream()
                                .filter(event -> event.getFormattedMessage().contains(
-                                       "Observed 1 unhandled exceptions"))
+                                       "Observed 1 exceptions that didn't reach a LoggingService"))
                                .findAny()
             ).isNotEmpty();
-        } finally {
-            server.stop();
-        }
-    }
-
-    @Test
-    void httpStatusExceptionWithoutCauseIsIgnored() throws Exception {
-        final Server server = Server.builder()
-                                    .service("/hello", (ctx, req) -> {
-                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
-                                    })
-                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
-                                    .build();
-        try {
-            server.start().join();
-            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-
-            assertThat(logAppender.list).isEmpty();
-        } finally {
-            server.stop();
-        }
-    }
-
-    @Test
-    void exceptionShouldNotBeLoggedWhenDecoratedWithLoggingService() throws Exception {
-        final Server server = Server.builder()
-                                    .service("/hello", (ctx, req) -> {
-                                        throw new IllegalArgumentException("test");
-                                    })
-                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
-                                    .decorator(LoggingService.newDecorator())
-                                    .build();
-
-        try {
-            server.start().join();
-            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-
-            assertThat(logAppender.list).isEmpty();
-        } finally {
-            server.stop();
-        }
-    }
-
-    @Test
-    void exceptionShouldNotBeLoggedWhenNoExceptionIsThrown() throws Exception {
-        final Server server = Server.builder()
-                                    .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                    .decorator(LoggingService.newDecorator())
-                                    .build();
-        try {
-            server.start().join();
-            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-
-            assertThat(logAppender.list).isEmpty();
-        } finally {
-            server.stop();
         }
     }
 }
