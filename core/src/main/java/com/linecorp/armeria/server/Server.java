@@ -921,7 +921,7 @@ public final class Server implements ListenableAsyncCloseable {
                     (localAddr.getAddress().isAnyLocalAddress() ? "*" : localAddr.getHostString()) +
                     ':' + localAddr.getPort();
         } else {
-            localAddrText = localAddr.toString();
+            localAddrText = "unix:" + localAddr;
         }
 
         return "armeria-boss-" + protocolNames + '-' + localAddrText;
