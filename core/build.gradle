@@ -157,6 +157,7 @@ dependencies {
     // Brotli
     implementation libs.brotli4j
     optionalImplementation libs.brotli4j.linux
+    optionalImplementation libs.brotli4j.linux.aarch64
     optionalImplementation libs.brotli4j.osx
     optionalImplementation libs.brotli4j.osx.aarch64
     optionalImplementation libs.brotli4j.windows
