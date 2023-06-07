@@ -127,6 +127,11 @@ public final class RequestMetricSupport {
                 metrics.pendingAcquisitionDuration().record(pendingAcquisitionDurationNanos,
                                                             TimeUnit.NANOSECONDS);
             }
+            final long existingAcquisitionDurationNanos = timings.existingAcquisitionDurationNanos();
+            if (pendingAcquisitionDurationNanos >= 0) {
+                metrics.existingAcquisitionDuration().record(existingAcquisitionDurationNanos,
+                                                             TimeUnit.NANOSECONDS);
+            }
         }
         if (log.requestCause() != null) {
             if (log.requestCause() instanceof WriteTimeoutException) {
@@ -201,6 +206,7 @@ public final class RequestMetricSupport {
         Timer socketConnectDuration();
 
         Timer pendingAcquisitionDuration();
+        Timer existingAcquisitionDuration();
 
         Counter writeTimeouts();
 
@@ -284,6 +290,7 @@ public final class RequestMetricSupport {
         private final Timer dnsResolutionDuration;
         private final Timer socketConnectDuration;
         private final Timer pendingAcquisitionDuration;
+        private final Timer existingAcquisitionDuration;
 
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
@@ -310,6 +317,8 @@ public final class RequestMetricSupport {
                     parent, idPrefix.name("socket.connect.duration"), idPrefix.tags());
             pendingAcquisitionDuration = newTimer(
                     parent, idPrefix.name("pending.acquisition.duration"), idPrefix.tags());
+            existingAcquisitionDuration = newTimer(
+                    parent, idPrefix.name("existing.acquisition.duration"), idPrefix.tags());
 
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
@@ -341,6 +350,11 @@ public final class RequestMetricSupport {
 
         @Override
         public Timer pendingAcquisitionDuration() {
+            return pendingAcquisitionDuration;
+        }
+
+        @Override
+        public Timer existingAcquisitionDuration() {
             return pendingAcquisitionDuration;
         }
 

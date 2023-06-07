@@ -45,6 +45,11 @@ public final class ClientConnectionTimingsBuilder {
     private long pendingAcquisitionEndNanos;
     private boolean pendingAcquisitionEndSet;
 
+    private long existingAcquisitionStartTimeMicros;
+    private long existingAcquisitionStartNanos;
+    private long existingAcquisitionEndNanos;
+    private boolean existingAcquisitionEndSet;
+
     ClientConnectionTimingsBuilder() {
         connectionAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
         connectionAcquisitionStartNanos = System.nanoTime();
@@ -77,7 +82,7 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #socketConnectStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder socketConnectEnd() {
-        checkState(socketConnectStartTimeMicros >= 0, "socketConnectStart() is not called yet.");
+        checkState(socketConnectStartTimeMicros > 0, "socketConnectStart() is not called yet.");
         checkState(!socketConnectEndSet, "socketConnectEnd() is already called.");
         socketConnectEndNanos = System.nanoTime();
         socketConnectEndSet = true;
@@ -103,9 +108,34 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionEnd() {
-        checkState(pendingAcquisitionStartTimeMicros >= 0, "pendingAcquisitionStart() is not called yet.");
+        checkState(pendingAcquisitionStartTimeMicros > 0, "pendingAcquisitionStart() is not called yet.");
         pendingAcquisitionEndNanos = System.nanoTime();
         pendingAcquisitionEndSet = true;
+        return this;
+    }
+
+    /**
+     * Sets the time when the client started checking if an existing connection can be acquired.
+     */
+    public ClientConnectionTimingsBuilder existingAcquisitionStart() {
+        if (existingAcquisitionStartTimeMicros == 0 && !existingAcquisitionEndSet) {
+            existingAcquisitionStartTimeMicros = SystemInfo.currentTimeMicros();
+            existingAcquisitionStartNanos = System.nanoTime();
+        }
+        return this;
+    }
+
+    /**
+     * Sets the time when the client completed checking if an existing connection can be acquired.
+     *
+     * @throws IllegalStateException if {@link #existingAcquisitionStart()} is not invoked
+     * before calling this.
+     */
+    public ClientConnectionTimingsBuilder existingAcquisitionEnd() {
+        checkState(existingAcquisitionStartTimeMicros > 0,
+                   "existingAcquisitionStart() is not called yet.");
+        existingAcquisitionEndNanos = System.nanoTime();
+        existingAcquisitionEndSet = true;
         return this;
     }
 
@@ -119,6 +149,10 @@ public final class ClientConnectionTimingsBuilder {
         if (pendingAcquisitionStartTimeMicros > 0 && !pendingAcquisitionEndSet) {
             logger.warn("Should call pendingAcquisitionEnd() if pendingAcquisitionStart() was invoked.");
         }
+        if (existingAcquisitionStartTimeMicros > 0 && !existingAcquisitionEndSet) {
+            logger.warn("Should call existingAcquisitionEnd() if " +
+                        "existingAcquisitionStart() was invoked.");
+        }
 
         return new ClientConnectionTimings(
                 connectionAcquisitionStartTimeMicros,
@@ -128,6 +162,8 @@ public final class ClientConnectionTimingsBuilder {
                 socketConnectEndSet ? socketConnectStartTimeMicros : -1,
                 socketConnectEndSet ? socketConnectEndNanos - socketConnectStartNanos : -1,
                 pendingAcquisitionEndSet ? pendingAcquisitionStartTimeMicros : -1,
-                pendingAcquisitionEndSet ? pendingAcquisitionEndNanos - pendingAcquisitionStartNanos : -1);
+                pendingAcquisitionEndSet ? pendingAcquisitionEndNanos - pendingAcquisitionStartNanos : -1,
+                existingAcquisitionEndSet ? existingAcquisitionStartTimeMicros : -1,
+                existingAcquisitionEndSet ? existingAcquisitionEndNanos - existingAcquisitionStartNanos : -1);
     }
 }

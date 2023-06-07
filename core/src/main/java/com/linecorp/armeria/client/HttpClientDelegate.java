@@ -169,11 +169,15 @@ final class HttpClientDelegate implements HttpClient {
                                               ProxyConfig proxyConfig) {
         final String ipAddr = endpoint.ipAddr();
         final SessionProtocol protocol = ctx.sessionProtocol();
+
+        timingsBuilder.existingAcquisitionStart();
         final PoolKey key = new PoolKey(endpoint.host(), ipAddr, endpoint.port(), proxyConfig);
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
+        timingsBuilder.existingAcquisitionEnd();
+
         if (pooledChannel != null) {
-            logSession(ctx, pooledChannel, null);
+            logSession(ctx, pooledChannel, timingsBuilder.build());
             doExecute(pooledChannel, ctx, req, res);
         } else {
             pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {

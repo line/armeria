@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 public final class ClientConnectionTimings {
 
     @VisibleForTesting
-    static final int TO_STRING_BUILDER_CAPACITY = 466;
+    static final int TO_STRING_BUILDER_CAPACITY = 500;
 
     private final long connectionAcquisitionStartTimeMicros;
     private final long connectionAcquisitionDurationNanos;
@@ -43,7 +43,8 @@ public final class ClientConnectionTimings {
     private final long socketConnectDurationNanos;
     private final long pendingAcquisitionStartTimeMicros;
     private final long pendingAcquisitionDurationNanos;
-
+    private final long existingAcquisitionStartTimeMicros;
+    private final long existingAcquisitionDurationNanos;
     /**
      * Returns a newly created {@link ClientConnectionTimingsBuilder}.
      */
@@ -54,7 +55,9 @@ public final class ClientConnectionTimings {
     ClientConnectionTimings(long connectionAcquisitionStartTimeMicros, long connectionAcquisitionDurationNanos,
                             long dnsResolutionStartTimeMicros, long dnsResolutionDurationNanos,
                             long socketConnectStartTimeMicros, long socketConnectDurationNanos,
-                            long pendingAcquisitionStartTimeMicros, long pendingAcquisitionDurationNanos) {
+                            long pendingAcquisitionStartTimeMicros, long pendingAcquisitionDurationNanos,
+                            long existingAcquisitionStartTimeMicros,
+                            long existingAcquisitionDurationNanos) {
         this.connectionAcquisitionStartTimeMicros = connectionAcquisitionStartTimeMicros;
         this.connectionAcquisitionDurationNanos = connectionAcquisitionDurationNanos;
         this.dnsResolutionStartTimeMicros = dnsResolutionStartTimeMicros;
@@ -63,6 +66,8 @@ public final class ClientConnectionTimings {
         this.socketConnectDurationNanos = socketConnectDurationNanos;
         this.pendingAcquisitionStartTimeMicros = pendingAcquisitionStartTimeMicros;
         this.pendingAcquisitionDurationNanos = pendingAcquisitionDurationNanos;
+        this.existingAcquisitionStartTimeMicros = existingAcquisitionStartTimeMicros;
+        this.existingAcquisitionDurationNanos = existingAcquisitionDurationNanos;
     }
 
     /**
@@ -181,6 +186,37 @@ public final class ClientConnectionTimings {
         return pendingAcquisitionDurationNanos;
     }
 
+    /**
+     * Returns the time when the client started checking if an existing connection can be acquired,
+     * in microseconds since the epoch.
+     *
+     * @return the start time, or {@code -1} if there was no action to get a pending connection.
+     */
+    public long existingAcquisitionStartTimeMicros() {
+        return existingAcquisitionStartTimeMicros;
+    }
+
+    /**
+     * Returns the time when the client started checking if an existing connection can be acquired.
+     *
+     * @return the start time, or {@code -1} if there was no action to get an existing connection.
+     */
+    public long existingAcquisitionStartTimeMillis() {
+        if (existingAcquisitionStartTimeMicros >= 0) {
+            return TimeUnit.MICROSECONDS.toMillis(existingAcquisitionStartTimeMicros);
+        }
+        return -1;
+    }
+
+    /**
+     * Returns the duration which was taken to check if an existing connection can be acquired.
+     *
+     * @return the duration, or {@code -1} if there was no action to get a pending connection.
+     */
+    public long existingAcquisitionDurationNanos() {
+        return existingAcquisitionDurationNanos;
+    }
+
     @Override
     public String toString() {
         // 33 + 31 + 26 + 23 + 26 + 23 + 31 + 28 + 45 * 4 + 16 * 4 + 1 = 466
@@ -208,6 +244,12 @@ public final class ClientConnectionTimings {
             TextFormatter.appendEpochMicros(buf, pendingAcquisitionStartTimeMicros);
             buf.append(", pendingAcquisitionDuration=");
             TextFormatter.appendElapsed(buf, pendingAcquisitionDurationNanos);
+        }
+        if (existingAcquisitionDurationNanos >= 0) {
+            buf.append(", existingConnectionAcquisitionStartTime=");
+            TextFormatter.appendEpochMicros(buf, existingAcquisitionStartTimeMicros);
+            buf.append(", existingConnectionAcquisitionDuration=");
+            TextFormatter.appendElapsed(buf, existingAcquisitionDurationNanos);
         }
         buf.append('}');
         return buf.toString();

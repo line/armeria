@@ -175,9 +175,14 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                               timings.socketConnectDurationNanos());
                 }
                 if (timings.pendingAcquisitionDurationNanos() != -1) {
-                    logTiming(span, "connection-reuse.start", "connection-reuse.end",
+                    logTiming(span, "connection-pending.start", "connection-pending.end",
                               timings.pendingAcquisitionStartTimeMicros(),
                               timings.pendingAcquisitionDurationNanos());
+                }
+                if (timings.existingAcquisitionDurationNanos() != -1) {
+                    logTiming(span, "connection-existing.start", "connection-existing.end",
+                              timings.existingAcquisitionStartTimeMicros(),
+                              timings.existingAcquisitionDurationNanos());
                 }
             }
 
