@@ -87,6 +87,7 @@ abstract class HttpResponseDecoder {
         final HttpResponseWrapper newRes =
                 new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
+
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();
         if (keepAliveHandler != null) {
             keepAliveHandler.increaseNumRequests();

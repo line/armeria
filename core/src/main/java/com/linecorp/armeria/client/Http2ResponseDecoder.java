@@ -77,12 +77,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     }
 
     @Override
-    void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {
-        responseWrapper.whenComplete().handle((unused, cause) -> {
+    void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper resWrapper) {
+        resWrapper.whenComplete().handle((unused, cause) -> {
             if (eventLoop.inEventLoop()) {
-                onWrapperCompleted(responseWrapper, id, cause);
+                onWrapperCompleted(resWrapper, id, cause);
             } else {
-                eventLoop.execute(() -> onWrapperCompleted(responseWrapper, id, cause));
+                eventLoop.execute(() -> onWrapperCompleted(resWrapper, id, cause));
             }
             return null;
         });

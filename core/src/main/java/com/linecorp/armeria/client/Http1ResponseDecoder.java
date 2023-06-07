@@ -71,12 +71,12 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     @Override
-    void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {
-        responseWrapper.whenComplete().handle((unused, cause) -> {
+    void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper resWrapper) {
+        resWrapper.whenComplete().handle((unused, cause) -> {
             if (eventLoop.inEventLoop()) {
-                onWrapperCompleted(responseWrapper, cause);
+                onWrapperCompleted(resWrapper, cause);
             } else {
-                eventLoop.execute(() -> onWrapperCompleted(responseWrapper, cause));
+                eventLoop.execute(() -> onWrapperCompleted(resWrapper, cause));
             }
             return null;
         });
