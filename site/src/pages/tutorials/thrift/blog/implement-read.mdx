@@ -144,7 +144,7 @@ List<BlogPost> listBlogPosts(boolean descending) throws TException {
 Let's test if we can retrieve a blog post we created.
 
 1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
-  ```java filename=BlogServiceTest.jvaa
+  ```java filename=BlogServiceTest.java
   @Test
   void getBlogPost() throws TException {
     final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
