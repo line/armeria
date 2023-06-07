@@ -18,11 +18,6 @@ import example.armeria.blog.thrift.UpdateBlogPostRequest;
 
 public final class BlogClient {
 
-    public static void main(String[] args) throws Exception {
-        final BlogClient client = new BlogClient(URI.create("http://127.0.0.1:8080"), "/thrift");
-        // some operations...
-    }
-
     private final BlogService.Iface blogService;
 
     BlogClient(URI uri, String path) {
