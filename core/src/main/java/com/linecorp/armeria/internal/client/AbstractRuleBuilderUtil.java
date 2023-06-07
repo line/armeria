@@ -53,8 +53,7 @@ public final class AbstractRuleBuilderUtil {
                 hasResponseFilter);
     }
 
-    private AbstractRuleBuilderUtil() {
-    }
+    private AbstractRuleBuilderUtil() {}
 
     private static class Filter implements BiFunction<ClientRequestContext, Throwable, Boolean> {
         private final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter;
@@ -104,7 +103,7 @@ public final class AbstractRuleBuilderUtil {
 
         private boolean applySlow(ClientRequestContext ctx, @Nullable Throwable cause, RequestLog log) {
             if (cause != null && exceptionFilter != null &&
-                    exceptionFilter.test(ctx, Exceptions.peel(cause))) {
+                exceptionFilter.test(ctx, Exceptions.peel(cause))) {
                 return true;
             }
 
