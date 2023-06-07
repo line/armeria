@@ -77,7 +77,7 @@ void deleteBlogPost() throws TException {
   assertThat(exception)
     .isInstanceOf(BlogNotFoundException.class)
     .extracting("reason")
-    .asString()
+    .asString();
 }
 ```
 
