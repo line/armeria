@@ -321,9 +321,9 @@ class HttpClientIntegrationTest {
 
             sb.service("glob:/oneparam/**", (ctx, req) -> {
                 // The client was able to send a request with an escaped path param. Armeria servers always
-                // decode the path so ctx.path == '/oneparam/foo' here (without query string).
-                if ("/oneparam/foo?bar".equals(req.headers().path()) &&
-                    "/oneparam/foo".equals(ctx.path())) {
+                // decode the path so ctx.path == '/oneparam/foo%3Fbar' here.
+                if ("/oneparam/foo%3Fbar".equals(req.headers().path()) &&
+                    "/oneparam/foo%3Fbar".equals(ctx.path())) {
                     return HttpResponse.of("routed");
                 }
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);

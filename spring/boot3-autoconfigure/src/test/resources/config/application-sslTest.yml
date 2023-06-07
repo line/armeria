@@ -1,9 +1,9 @@
 armeria:
   ports:
     - port: 0
-      protocol: HTTP
+      protocols: HTTP
     - port: 0
-      protocol: HTTPS
+      protocols: HTTPS
   ssl:
     enabled: true # Use self-signed certificate because no key-store configuration is specified.
   # Make sure that port-based virtual host settings are compatible with Server Name Indication.
