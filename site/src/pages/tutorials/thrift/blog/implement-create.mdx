@@ -94,27 +94,35 @@ This time, let's use Armeria's <type://ServerExtension> instead.
 This approach will automatically set-up and tear-down a server before tests are run.
 Now we don't have to invoke the main method to set up a server before running our tests.
 
-In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
-Note that the service instance is added to the configuration.
-
-```java filename=BlogServiceTest.java
-import org.junit.jupiter.api.extension.RegisterExtension;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-...
-@RegisterExtension
-static final ServerExtension server = new ServerExtension() {
-  @Override
-  protected void configure(ServerBuilder sb) throws Exception {
-    sb.service("/thrift",
-               THttpService.builder()
-                           // Add the service to the configuration
-                           .addService(new BlogServiceImpl())
-                           .build());
+1. In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
+  Note that the service instance is added to the configuration.
+  ```java filename=BlogServiceTest.java
+  import org.junit.jupiter.api.extension.RegisterExtension;
+  import com.linecorp.armeria.server.ServerBuilder;
+  import com.linecorp.armeria.server.thrift.THttpService;
+  import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+  ...
+  @RegisterExtension
+  static final ServerExtension server = new ServerExtension() {
+    @Override
+    protected void configure(ServerBuilder sb) throws Exception {
+      sb.service("/thrift",
+                 THttpService.builder()
+                             // Add the service to the configuration
+                             .addService(new BlogServiceImpl())
+                             .build());
+    }
+  };
+  ```
+  2. Either remove the test method `hello()` or add the `@Disabled` annotation as follows
+  to prevent it from attempting a direct connection to the server.
+  ```java filename=BlogServiceTest.java
+  @Disabled // Add this
+  @Test
+  void hello() throws TException {
+    ...
   }
-};
-```
+  ```
 
 ## 4. Test creating a blog post
 
@@ -156,3 +164,5 @@ We've also registered <type://ServerExtension> to our test.
 Next, at [Step 5. Implement READ](/tutorials/thrift/blog/implement-read), we'll implement a READ operation to read a single post and also multiple posts.
 
 <TutorialSteps current={4} />
+
+
