@@ -172,7 +172,7 @@ abstract class HttpResponseDecoder {
         closing = true;
 
         for (final Iterator<HttpResponseWrapper> iterator = responses.values().iterator();
-             iterator.hasNext(); ) {
+             iterator.hasNext();) {
             final HttpResponseWrapper res = iterator.next();
             // To avoid calling removeResponse by res.close(cause), remove before closing.
             iterator.remove();
