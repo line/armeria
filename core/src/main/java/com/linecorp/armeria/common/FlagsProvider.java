@@ -674,7 +674,7 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the default delay which is the amount of time to wait before aborting an {@link HttpRequest} when
+     * Returns the amount of time to wait by default before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#requestAutoAbortDelayMillis(long)} or

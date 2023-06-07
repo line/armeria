@@ -368,13 +368,15 @@ abstract class HttpResponseDecoder {
                     request.abort(cause);
                     return;
                 }
-                if (ctx.requestAutoAbortDelayMillis() == 0 || !request.isOpen()) {
+                final long requestAutoAbortDelayMillis = ctx.requestAutoAbortDelayMillis();
+                if (requestAutoAbortDelayMillis == 0) {
                     request.abort(ResponseCompleteException.get());
                     return;
                 }
-                if (ctx.requestAutoAbortDelayMillis() > 0) {
+                if (requestAutoAbortDelayMillis > 0 &&
+                    requestAutoAbortDelayMillis < Long.MAX_VALUE) {
                     ctx.eventLoop().schedule(() -> request.abort(ResponseCompleteException.get()),
-                                             ctx.requestAutoAbortDelayMillis(), TimeUnit.MILLISECONDS);
+                                             requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
                 }
             }
         }

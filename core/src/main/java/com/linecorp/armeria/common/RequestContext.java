@@ -427,13 +427,15 @@ public interface RequestContext extends Unwrappable {
 
     /**
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
-     * its corresponding {@link HttpResponse} is complete.
+     * its corresponding {@link HttpResponse} is complete. Note that this method must be
+     * called before the {@link HttpResponse} is completed to take effect.
      */
     void setRequestAutoAbortDelay(Duration delay);
 
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
-     * its corresponding {@link HttpResponse} is complete.
+     * its corresponding {@link HttpResponse} is complete. Note that this method must be
+     * called before the {@link HttpResponse} is completed to take effect.
      */
     void setRequestAutoAbortDelayMillis(long delayMillis);
 
