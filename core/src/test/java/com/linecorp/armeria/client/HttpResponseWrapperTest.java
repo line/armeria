@@ -46,9 +46,9 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(
+        assertThat(wrapper.tryWriteResponseHeaders(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
-        assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
+        assertThat(wrapper.tryWriteData(HttpData.ofUtf8("foo"))).isTrue();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -63,8 +63,8 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -79,10 +79,10 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
-        assertThat(wrapper.tryWrite(
+        assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue(); // Second header is trailers.
-        assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isFalse();
+        assertThat(wrapper.tryWriteData(HttpData.ofUtf8("foo"))).isFalse();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -97,9 +97,9 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
+        assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -114,11 +114,11 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(
+        assertThat(wrapper.tryWriteResponseHeaders(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
-        assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
+        assertThat(wrapper.tryWriteData(HttpData.ofUtf8("foo"))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -136,10 +136,10 @@ class HttpResponseWrapperTest {
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(100))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("a"), "b"))).isTrue();
-        assertThat(wrapper.tryWrite(
+        assertThat(wrapper.tryWriteResponseHeaders(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
-        assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(wrapper.tryWriteData(HttpData.ofUtf8("foo"))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         wrapper.close();
 
         StepVerifier.create(res)

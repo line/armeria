@@ -275,6 +275,10 @@ abstract class HttpResponseDecoder {
         }
 
         boolean tryWriteData(HttpData data) {
+            if (done) {
+                PooledObjects.close(data);
+                return false;
+            }
             data.touch(ctx);
             if (ctx != null) {
                 ctx.logBuilder().increaseResponseLength(data);
@@ -283,6 +287,9 @@ abstract class HttpResponseDecoder {
         }
 
         boolean tryWriteTrailers(HttpHeaders trailers) {
+            if (done) {
+                return false;
+            }
             done = true;
             if (ctx != null) {
                 ctx.logBuilder().defer(RequestLogProperty.RESPONSE_TRAILERS);
