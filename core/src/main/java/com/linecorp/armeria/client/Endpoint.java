@@ -531,6 +531,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *         {@link SessionProtocol} if this endpoint does not have its port specified.
      *         {@code this} if this endpoint already has its port specified.
      */
+    @UnstableApi
     public Endpoint withDefaultPort(SessionProtocol protocol) {
         requireNonNull(protocol, "protocol");
         return withDefaultPort(protocol.defaultPort());
