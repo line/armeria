@@ -30,10 +30,12 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * The Default cpu health checker.<br>
- * Here's an example of how to use it.<br>
+ * A {@link HealthChecker} that reports as unhealthy when the current
+ * CPU usage or CPU load exceeds threshold. For example:
+ * <pre>{@code
  * final DefaultCpuHealthChecker cpuHealthChecker = HealthChecker.of(10, 10);<br>
  * final boolean healthy = cpuHealthChecker.isHealthy();
+ * }</pre>
  */
 // Forked from <a href="https://github.com/micrometer-metrics/micrometer/blob/8339d57bef8689beb8d7a18b429a166f6595f2af/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/system/ProcessorMetrics.java">ProcessorMetrics.java</a> in the micrometer core.
 final class DefaultCpuHealthChecker implements HealthChecker {
