@@ -154,46 +154,48 @@ configure(projectsWithFlags('java')) {
         options.compilerArgs += '-parameters'
     }
 
-    testing {
-        suites {
-            test {
-                // Use JUnit platform.
-                useJUnitJupiter()
+    project.ext.configureFlakyTests = { Test testTask ->
+        def flakyTests = rootProject.findProperty('flakyTests')
+        if (flakyTests == 'true') {
+            testTask.options {
+                includeTags 'FLAKY_TESTS'
+            }
+        } else if (flakyTests == 'false') {
+            testTask.options {
+                excludeTags 'FLAKY_TESTS'
+            }
+        } else if (flakyTests != null) {
+            throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
+        }
+    }
 
-                targets {
-                    all {
-                        testTask.configure {
-                            testLogging.exceptionFormat = 'full'
+    project.ext.configureCommonTestSettings = { Test testTask ->
+        testTask.testLogging.exceptionFormat = 'full'
+        // Use a different JRE for testing if necessary.
+        if (rootProject.ext.buildJdkVersion != project.ext.testJavaVersion) {
+            testTask.javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(project.ext.testJavaVersion)
+            }
+        }
 
-                            def flakyTests = rootProject.findProperty('flakyTests')
-                            if (flakyTests == 'true') {
-                                useJUnitPlatform {
-                                    includeTags 'FLAKY_TESTS'
-                                }
-                            } else if (flakyTests == 'false') {
-                                useJUnitPlatform {
-                                    excludeTags 'FLAKY_TESTS'
-                                }
-                            } else if (flakyTests != null) {
-                                throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
-                            }
+        // disable tests for projects which target a higher java version
+        if (project.ext.testJavaVersion < project.ext.targetJavaVersion) {
+            project.logger.lifecycle("Skipping tests for ${project.path} since the " +
+                                     "testJavaVersion(${project.ext.testJavaVersion}) is smaller than the " +
+                                     "targetJavaVersion(${project.ext.targetJavaVersion})")
+            testTask.enabled = false
+        }
+    }
 
-                            // Use a different JRE for testing if necessary.
-                            if (rootProject.ext.buildJdkVersion != project.ext.testJavaVersion) {
-                                javaLauncher = javaToolchains.launcherFor {
-                                    languageVersion = JavaLanguageVersion.of(project.ext.testJavaVersion)
-                                }
-                            }
+    testing.suites {
+        test {
+            // Use JUnit platform.
+            useJUnitJupiter()
 
-                            // disable tests for projects which target a higher java version
-                            if (project.ext.testJavaVersion < project.ext.targetJavaVersion) {
-                                project.logger.lifecycle("Skipping tests for ${project.path} since the " +
-                                        "testJavaVersion(${project.ext.testJavaVersion}) is smaller than the " +
-                                        "targetJavaVersion(${project.ext.targetJavaVersion})")
-                                enabled = false
-                            }
-                        }
-                    }
+            targets.configureEach {
+                testTask.configure {
+                    project.ext.configureFlakyTests(it)
+                    project.ext.configureCommonTestSettings(it)
                 }
             }
         }

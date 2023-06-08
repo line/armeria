@@ -49,12 +49,12 @@ import io.netty.channel.EventLoopGroup;
  * armeria:
  *   ports:
  *     - port: 8080
- *       protocol: HTTP
+ *       protocols: HTTP
  *     - address: 127.0.0.1
  *       port: 8081
- *       protocol:HTTP
+ *       protocols: HTTP
  *     - port: 8443
- *       protocol: HTTPS
+ *       protocols: HTTPS
  *   ssl:
  *     key-alias: "host.name.com"
  *     key-store: "keystore.jks"

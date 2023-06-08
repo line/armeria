@@ -51,6 +51,8 @@ jobs:
           - java: 19
             on: self-hosted
             snapshot: true
+            # blockhound makes the build run about 10 minutes slower
+            blockhound: true
 
     steps:
       - uses: actions/checkout@v2
@@ -93,6 +95,7 @@ jobs:
           ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           ${{ matrix.leak && '-Pleak' || '' }} \
+          ${{ matrix.blockhound && '-Pblockhound' || '' }} \
           -PnoLint \
           -PflakyTests=false \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
@@ -142,17 +145,23 @@ jobs:
         if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v1
 
+      - name: Fail the run if any threads were blocked
+        if: ${{ matrix.blockhound }}
+        run: "if [[ -z `find . -name 'blockhound.log' -size +0` ]]; then exit 0; else exit 1; fi"
+        shell: bash
+
       - name: Collect the test reports
         if: failure()
-        run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' -or -path '*/javadoc.options' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+        run: |
+          find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' -or -path '*/javadoc.options' -or -name 'blockhound.log' ')' -exec tar rf "reports-JVM-${{ matrix.on }}-${{ matrix.java }}.tar" {} ';'
         shell: bash
 
       - name: Upload the artifacts
         if: failure()
         uses: actions/upload-artifact@v2
         with:
-          name: reports-JVM-${{ matrix.java }}
-          path: reports-JVM-${{ matrix.java }}.tar
+          name: reports-JVM-${{ matrix.on }}-${{ matrix.java }}
+          path: reports-JVM-${{ matrix.on }}-${{ matrix.java }}.tar
           retention-days: 3
 
   lint:
