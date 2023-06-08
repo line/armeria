@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.common;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -164,22 +163,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
      */
     @Nullable
     protected abstract Channel channel();
-
-    @Nullable
-    @Override
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A remoteAddress() {
-        final Channel ch = channel();
-        return ch != null ? (A) ch.remoteAddress() : null;
-    }
-
-    @Nullable
-    @Override
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A localAddress() {
-        final Channel ch = channel();
-        return ch != null ? (A) ch.localAddress() : null;
-    }
 
     @Override
     public final RequestId id() {

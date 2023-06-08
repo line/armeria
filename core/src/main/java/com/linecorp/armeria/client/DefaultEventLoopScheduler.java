@@ -170,8 +170,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
             secondTryHost = null;
         }
 
-        final int port = endpoint.hasPort() ? endpoint.port() : sessionProtocol.defaultPort();
-        final Endpoint endpointWithPort = endpoint.withPort(port);
+        final Endpoint endpointWithPort = endpoint.withDefaultPort(sessionProtocol);
+        final int port = endpointWithPort.port();
         final boolean isHttp1 = isHttp1(sessionProtocol, endpointWithPort);
         final StateKey firstKey = new StateKey(firstTryHost, port, isHttp1);
         AbstractEventLoopState state = states.get(firstKey);
