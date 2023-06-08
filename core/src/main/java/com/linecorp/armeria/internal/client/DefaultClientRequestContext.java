@@ -21,12 +21,14 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -73,6 +75,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -113,6 +116,12 @@ public final class DefaultClientRequestContext
     private Endpoint endpoint;
     @Nullable
     private ContextAwareEventLoop contextAwareEventLoop;
+    @Nullable
+    private Channel channel;
+    @Nullable
+    private InetSocketAddress remoteAddress;
+    @Nullable
+    private InetSocketAddress localAddress;
     @Nullable
     private final ServiceRequestContext root;
 
@@ -582,11 +591,42 @@ public final class DefaultClientRequestContext
     @Override
     @Nullable
     protected Channel channel() {
-        if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.partial().channel();
-        } else {
+        final Channel channel = this.channel;
+        if (channel != null) {
+            return channel;
+        }
+
+        if (!log.isAvailable(RequestLogProperty.SESSION)) {
             return null;
         }
+
+        final Channel newChannel = log.partial().channel();
+        this.channel = newChannel;
+        return newChannel;
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        final InetSocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress != null) {
+            return remoteAddress;
+        }
+
+        final InetSocketAddress newRemoteAddress = ChannelUtil.remoteAddress(channel());
+        this.remoteAddress = newRemoteAddress;
+        return newRemoteAddress;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        final InetSocketAddress localAddress = this.localAddress;
+        if (localAddress != null) {
+            return localAddress;
+        }
+
+        final InetSocketAddress newLocalAddress = ChannelUtil.localAddress(channel());
+        this.localAddress = newLocalAddress;
+        return newLocalAddress;
     }
 
     @Override
@@ -826,13 +866,14 @@ public final class DefaultClientRequestContext
         }
 
         strValAvailabilities = newAvailability;
-        return strVal = toStringSlow(ch, parent);
+        return strVal = toStringSlow(parent);
     }
 
-    private String toStringSlow(@Nullable Channel ch, @Nullable RequestLogAccess parent) {
+    private String toStringSlow(@Nullable RequestLogAccess parent) {
         // Prepare all properties required for building a String, so that we don't have a chance of
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
+        final Channel ch = channel();
         final String creqId = id().shortText();
         final String preqId = parent != null ? parent.context().id().shortText() : null;
         final String sreqId = root() != null ? root().id().shortText() : null;
@@ -853,11 +894,16 @@ public final class DefaultClientRequestContext
                 buf.append(", sreqId=").append(sreqId);
             }
             if (ch != null) {
-                buf.append(", chanId=").append(chanId)
-                   .append(", laddr=");
-                TextFormatter.appendSocketAddress(buf, ch.localAddress());
-                buf.append(", raddr=");
-                TextFormatter.appendSocketAddress(buf, ch.remoteAddress());
+                final InetSocketAddress laddr = localAddress();
+                final InetSocketAddress raddr = remoteAddress();
+
+                buf.append(", chanId=").append(chanId);
+                buf.append(", laddr=");
+                TextFormatter.appendSocketAddress(buf, laddr);
+                if (!Objects.equals(laddr, raddr)) {
+                    buf.append(", raddr=");
+                    TextFormatter.appendSocketAddress(buf, raddr);
+                }
             }
             buf.append("][")
                .append(proto).append("://").append(authority).append(path).append('#').append(method)

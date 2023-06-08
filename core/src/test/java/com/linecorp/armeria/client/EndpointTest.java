@@ -19,18 +19,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
+import com.linecorp.armeria.client.Endpoint.Type;
 import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.OsType;
+import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
 
 import io.netty.util.AttributeKey;
 
@@ -41,6 +51,7 @@ class EndpointTest {
         final Endpoint foo = Endpoint.parse("foo");
         assertThat(foo).isEqualTo(Endpoint.of("foo"));
         assertThatThrownBy(foo::port).isInstanceOf(IllegalStateException.class);
+        assertThat(foo.type()).isSameAs(Type.HOSTNAME_ONLY);
         assertThat(foo.weight()).isEqualTo(1000);
         assertThat(foo.ipAddr()).isNull();
         assertThat(foo.ipFamily()).isNull();
@@ -50,6 +61,7 @@ class EndpointTest {
 
         final Endpoint bar = Endpoint.parse("bar:80");
         assertThat(bar).isEqualTo(Endpoint.of("bar", 80));
+        assertThat(bar.type()).isSameAs(Type.HOSTNAME_ONLY);
         assertThat(bar.port()).isEqualTo(80);
         assertThat(bar.weight()).isEqualTo(1000);
         assertThat(bar.ipAddr()).isNull();
@@ -60,6 +72,7 @@ class EndpointTest {
 
         final Endpoint barWithUserInfo = Endpoint.parse("foo@bar:80");
         assertThat(barWithUserInfo).isEqualTo(Endpoint.of("bar", 80));
+        assertThat(barWithUserInfo.type()).isSameAs(Type.HOSTNAME_ONLY);
         assertThat(barWithUserInfo.port()).isEqualTo(80);
         assertThat(barWithUserInfo.weight()).isEqualTo(1000);
         assertThat(barWithUserInfo.ipAddr()).isNull();
@@ -72,6 +85,7 @@ class EndpointTest {
     @Test
     void hostWithoutPort() {
         final Endpoint foo = Endpoint.of("foo.com");
+        assertThat(foo.type()).isSameAs(Type.HOSTNAME_ONLY);
         assertThat(foo.host()).isEqualTo("foo.com");
         assertThat(foo.ipAddr()).isNull();
         assertThat(foo.ipFamily()).isNull();
@@ -91,6 +105,7 @@ class EndpointTest {
     @Test
     void hostWithPort() {
         final Endpoint foo = Endpoint.of("foo.com", 80);
+        assertThat(foo.type()).isSameAs(Type.HOSTNAME_ONLY);
         assertThat(foo.host()).isEqualTo("foo.com");
         assertThat(foo.ipAddr()).isNull();
         assertThat(foo.ipFamily()).isNull();
@@ -126,6 +141,7 @@ class EndpointTest {
     void hostWithIpAddr(String specifiedIpAddr, String normalizedIpAddr,
                         StandardProtocolFamily expectedIpFamily) {
         final Endpoint foo = Endpoint.of("foo.com");
+        assertThat(foo.withIpAddr(specifiedIpAddr).type()).isSameAs(Type.HOSTNAME_AND_IP);
         assertThat(foo.withIpAddr(specifiedIpAddr).authority()).isEqualTo("foo.com");
         assertThat(foo.withIpAddr(specifiedIpAddr).ipAddr()).isEqualTo(normalizedIpAddr);
         assertThat(foo.withIpAddr(specifiedIpAddr).ipFamily()).isEqualTo(expectedIpFamily);
@@ -137,6 +153,7 @@ class EndpointTest {
     @Test
     void hostWithIpAddrRemoved() {
         final Endpoint foo = Endpoint.of("foo.com").withIpAddr("192.168.0.1");
+        assertThat(foo.withIpAddr(null).type()).isSameAs(Type.HOSTNAME_ONLY);
         assertThat(foo.withIpAddr(null).ipAddr()).isNull();
         assertThat(foo.withIpAddr(null).ipFamily()).isNull();
         assertThat(foo.withIpAddr(null).hasIpAddr()).isFalse();
@@ -170,7 +187,9 @@ class EndpointTest {
     @Test
     void ipV4() {
         final Endpoint a = Endpoint.of("192.168.0.1");
+        assertThat(a.type()).isSameAs(Type.IP_ONLY);
         assertThat(a.host()).isEqualTo("192.168.0.1");
+        assertThat(a.isDomainSocket()).isFalse();
         assertThat(a.ipAddr()).isEqualTo("192.168.0.1");
         assertThat(a.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
         assertThat(a.hasIpAddr()).isTrue();
@@ -186,6 +205,7 @@ class EndpointTest {
     @Test
     void ipV4Parse() {
         final Endpoint a = Endpoint.parse("192.168.0.1:80");
+        assertThat(a.type()).isSameAs(Type.IP_ONLY);
         assertThat(a.host()).isEqualTo("192.168.0.1");
         assertThat(a.ipAddr()).isEqualTo("192.168.0.1");
         assertThat(a.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
@@ -198,7 +218,9 @@ class EndpointTest {
     @Test
     void ipV6() {
         final Endpoint a = Endpoint.of("::1");
+        assertThat(a.type()).isSameAs(Type.IP_ONLY);
         assertThat(a.host()).isEqualTo("::1");
+        assertThat(a.isDomainSocket()).isFalse();
         assertThat(a.ipAddr()).isEqualTo("::1");
         assertThat(a.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(a.hasIpAddr()).isTrue();
@@ -211,6 +233,7 @@ class EndpointTest {
         assertThat(a.withIpAddr("[::2]")).isEqualTo(Endpoint.of("::2"));
 
         final Endpoint b = Endpoint.of("::1", 80);
+        assertThat(b.type()).isSameAs(Type.IP_ONLY);
         assertThat(b.host()).isEqualTo("::1");
         assertThat(b.ipAddr()).isEqualTo("::1");
         assertThat(b.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
@@ -220,6 +243,7 @@ class EndpointTest {
 
         // Surrounding '[' and ']' should be handled correctly.
         final Endpoint c = Endpoint.of("[::1]");
+        assertThat(c.type()).isSameAs(Type.IP_ONLY);
         assertThat(c.host()).isEqualTo("::1");
         assertThat(c.ipAddr()).isEqualTo("::1");
         assertThat(c.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
@@ -228,6 +252,7 @@ class EndpointTest {
         assertThat(c.toUri("none+http").toString()).isEqualTo("none+http://[::1]");
 
         final Endpoint d = Endpoint.of("[::1]", 80);
+        assertThat(d.type()).isSameAs(Type.IP_ONLY);
         assertThat(d.host()).isEqualTo("::1");
         assertThat(d.ipAddr()).isEqualTo("::1");
         assertThat(d.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
@@ -237,6 +262,7 @@ class EndpointTest {
 
         // withIpAddr() should handle surrounding '[' and ']' correctly.
         final Endpoint e = Endpoint.of("foo").withIpAddr("[::1]");
+        assertThat(e.type()).isSameAs(Type.HOSTNAME_AND_IP);
         assertThat(e.host()).isEqualTo("foo");
         assertThat(e.ipAddr()).isEqualTo("::1");
         assertThat(e.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
@@ -246,6 +272,7 @@ class EndpointTest {
     @Test
     void ipV6Parse() {
         final Endpoint a = Endpoint.parse("[::1]:80");
+        assertThat(a.type()).isSameAs(Type.IP_ONLY);
         assertThat(a.host()).isEqualTo("::1");
         assertThat(a.ipAddr()).isEqualTo("::1");
         assertThat(a.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
@@ -253,6 +280,21 @@ class EndpointTest {
         assertThat(a.port()).isEqualTo(80);
         assertThat(a.authority()).isEqualTo("[::1]:80");
         assertThat(a.toUri("none+http").toString()).isEqualTo("none+http://[::1]:80");
+    }
+
+    @Test
+    void domainSocket() {
+        final String sockAddr = "unix%3Afoo.sock";
+        final List<Function<String, Endpoint>> factoryFunctions =
+                ImmutableList.of(Endpoint::of, Endpoint::parse);
+
+        factoryFunctions.forEach(factoryFunc -> {
+            final Endpoint e = factoryFunc.apply(sockAddr);
+            assertThat(e.type()).isSameAs(Type.DOMAIN_SOCKET);
+            assertThat(e.host()).isEqualTo(sockAddr);
+            assertThat(e.authority()).isEqualTo(sockAddr);
+            assertThat(e.isDomainSocket()).isTrue();
+        });
     }
 
     @Test
@@ -289,6 +331,14 @@ class EndpointTest {
         assertThat(foo80.withDefaultPort(80)).isSameAs(foo80);
         assertThatThrownBy(() -> foo.withDefaultPort(0)).isInstanceOf(IllegalArgumentException.class)
                                                         .hasMessageContaining("defaultPort");
+
+        // Shortcut that accepts a SessionProtocol
+        assertThat(foo.withDefaultPort(SessionProtocol.HTTP)).isEqualTo(foo80);
+        assertThat(foo80.withDefaultPort(SessionProtocol.HTTP)).isSameAs(foo80);
+
+        // A domain socket endpoint always has the predefined port.
+        final Endpoint domainSocketEndpoint = Endpoint.of("unix%3Afoo.sock");
+        assertThat(domainSocketEndpoint.withDefaultPort(80)).isSameAs(domainSocketEndpoint);
     }
 
     @Test
@@ -300,6 +350,52 @@ class EndpointTest {
         assertThat(foo80.withoutDefaultPort(8080)).isSameAs(foo80);
         assertThatThrownBy(() -> foo.withoutDefaultPort(0)).isInstanceOf(IllegalArgumentException.class)
                                                            .hasMessageContaining("defaultPort");
+
+        // Shortcut that accepts a SessionProtocol
+        assertThat(foo.withoutDefaultPort(SessionProtocol.HTTP)).isSameAs(foo);
+        assertThat(foo80.withoutDefaultPort(SessionProtocol.HTTP)).isEqualTo(foo);
+
+        // A domain socket endpoint always has the predefined port.
+        final Endpoint domainSocketEndpoint = Endpoint.of("unix%3Afoo.sock");
+        assertThat(domainSocketEndpoint.withoutDefaultPort(DomainSocketUtil.DOMAIN_SOCKET_PORT))
+                .isSameAs(domainSocketEndpoint);
+    }
+
+    @Test
+    void withHost() {
+        // Simple hostname change
+        final Endpoint foo = Endpoint.of("foo", 80).withIpAddr("127.0.0.1");
+        assertThat(foo.withHost("bar")).satisfies(e -> {
+            assertThat(e.type()).isSameAs(Type.HOSTNAME_AND_IP);
+            assertThat(e.host()).isEqualTo("bar");
+            assertThat(e.ipAddr()).isEqualTo(foo.ipAddr());
+            assertThat(e.port()).isEqualTo(foo.port());
+        });
+
+        // When IP address is specified:
+        assertThat(foo.withHost("::1")).satisfies(e -> {
+            assertThat(e.type()).isSameAs(Type.IP_ONLY);
+            assertThat(e.host()).isEqualTo("::1");
+            assertThat(e.ipAddr()).isEqualTo("::1");
+            assertThat(e.port()).isEqualTo(foo.port());
+        });
+
+        // When hostname is set to an IP-only endpoint:
+        assertThat(Endpoint.of("127.0.0.1").withHost("foo")).satisfies(e -> {
+            assertThat(e.type()).isSameAs(Type.HOSTNAME_AND_IP);
+            assertThat(e.host()).isEqualTo("foo");
+            assertThat(e.ipAddr()).isEqualTo("127.0.0.1");
+            assertThat(e.hasPort()).isFalse();
+        });
+
+        // When domain socket address is specified:
+        assertThat(foo.withHost("unix%3A%2Ftmp%2Ffoo.sock")).satisfies(e -> {
+            assertThat(e.type()).isSameAs(Type.DOMAIN_SOCKET);
+            assertThat(e.host()).isEqualTo("unix%3A%2Ftmp%2Ffoo.sock");
+            assertThat(e.isDomainSocket()).isTrue();
+            assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+            assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
+        });
     }
 
     @Test
@@ -445,11 +541,135 @@ class EndpointTest {
         assertThat(endpointWithIpv4.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
         assertThat(endpointWithIpv4.ipAddr()).isEqualTo("1.1.1.1");
 
-        final InetAddress ipv6Address = InetAddress.getByName("[::1]");
+        final InetAddress ipv6Address = InetAddress.getByName("[0:0:0:0:0:0:0:1]");
         final Endpoint endpointWithIpv6 = endpoint.withInetAddress(ipv6Address);
         assertThat(endpointWithIpv6.hasIpAddr()).isTrue();
         assertThat(endpointWithIpv6.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
-        assertThat(endpointWithIpv6.ipAddr()).isEqualTo("0:0:0:0:0:0:0:1");
+        assertThat(endpointWithIpv6.ipAddr()).isEqualTo("::1");
+    }
+
+    @Test
+    void conversionFromSocketAddress() throws Exception {
+        // Unresolved InetSocketAddress
+        assertThat(Endpoint.of(InetSocketAddress.createUnresolved("foo", 80))).satisfies(e -> {
+            assertThat(e.host()).isEqualTo("foo");
+            assertThat(e.isDomainSocket()).isFalse();
+            assertThat(e.hasPort()).isTrue();
+            assertThat(e.port()).isEqualTo(80);
+            assertThat(e.hasIpAddr()).isFalse();
+        });
+
+        // Resolved InetSocketAddress
+        assertThat(Endpoint.of(new InetSocketAddress(
+                InetAddress.getByAddress("bar", new byte[] { 127, 0, 0, 42 }), 443))
+        ).satisfies(e -> {
+            assertThat(e.host()).isEqualTo("bar");
+            assertThat(e.isDomainSocket()).isFalse();
+            assertThat(e.hasPort()).isTrue();
+            assertThat(e.port()).isEqualTo(443);
+            assertThat(e.hasIpAddr()).isTrue();
+            assertThat(e.ipAddr()).isEqualTo("127.0.0.42");
+            assertThat(e.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
+        });
+
+        // DomainSocketAddress (Armeria)
+        assertThat(Endpoint.of(DomainSocketAddress.of(Paths.get("/foo.sock")))).satisfies(e -> {
+            if (SystemInfo.osType() == OsType.WINDOWS) {
+                assertThat(e.host()).isEqualTo("unix%3A%5Cfoo.sock");
+            } else {
+                assertThat(e.host()).isEqualTo("unix%3A%2Ffoo.sock");
+            }
+            assertThat(e.isDomainSocket()).isTrue();
+            assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+            assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
+        });
+
+        // DomainSocketAddress (Netty)
+        assertThat(Endpoint.of(new io.netty.channel.unix.DomainSocketAddress("/bar.sock"))).satisfies(e -> {
+            if (SystemInfo.osType() == OsType.WINDOWS) {
+                assertThat(e.host()).isEqualTo("unix%3A%5Cbar.sock");
+            } else {
+                assertThat(e.host()).isEqualTo("unix%3A%2Fbar.sock");
+            }
+            assertThat(e.isDomainSocket()).isTrue();
+            assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+            assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
+        });
+    }
+
+    @Test
+    void conversionToSocketAddress() throws Exception {
+        // InetSocketAddress
+        assertThat(Endpoint.of("foo").toSocketAddress(42)).isEqualTo(
+                InetSocketAddress.createUnresolved("foo", 42));
+        assertThat(Endpoint.of("bar", 4242).toSocketAddress(42)).isEqualTo(
+                InetSocketAddress.createUnresolved("bar", 4242));
+        assertThat(Endpoint.of("baz").withIpAddr("127.0.0.1").toSocketAddress(443)).isEqualTo(
+                new InetSocketAddress(InetAddress.getByAddress("baz", new byte[] { 127, 0, 0, 1 }), 443));
+
+        // DomainSocketAddress
+        assertThat(Endpoint.of("unix%3A%2Ffoo.sock").toSocketAddress(0)).isEqualTo(
+                DomainSocketAddress.of(Paths.get("/foo.sock")));
+    }
+
+    @Test
+    void socketAddressCache() {
+        final Endpoint endpointWithPort = Endpoint.of("foo", 42);
+        assertThat(endpointWithPort.toSocketAddress(-1))
+                .isSameAs(endpointWithPort.toSocketAddress(1));
+
+        final Endpoint endpointWithoutPort = Endpoint.of("foo");
+        assertThat(endpointWithoutPort.toSocketAddress(80))
+                .isNotSameAs(endpointWithoutPort.toSocketAddress(80));
+
+        final Endpoint endpointWithDomainSocket = Endpoint.of("unix%3A%2Ffoo.sock");
+        assertThat(endpointWithDomainSocket.toSocketAddress(-1))
+                .isSameAs(endpointWithDomainSocket.toSocketAddress(1));
+    }
+
+    @Test
+    void socketAddressPrecache() throws Exception {
+        final DomainSocketAddress domainSocketAddress = DomainSocketAddress.of(Paths.get("/foo.sock"));
+        assertThat(Endpoint.of(domainSocketAddress).toSocketAddress(-1))
+                .isSameAs(domainSocketAddress);
+
+        final InetSocketAddress unresolvedSocketAddress = InetSocketAddress.createUnresolved("foo", 42);
+        assertThat(Endpoint.of(unresolvedSocketAddress).toSocketAddress(-1))
+                .isSameAs(unresolvedSocketAddress);
+
+        final InetSocketAddress resolvedSocketAddress = new InetSocketAddress(
+                InetAddress.getByAddress("foo", new byte[] { 127, 0, 0, 1 }), 42);
+        assertThat(Endpoint.of(resolvedSocketAddress).toSocketAddress(-1))
+                .isSameAs(resolvedSocketAddress);
+
+        // Should not be cached because the normalized IP address is different from the original hostname.
+        final InetSocketAddress uncacheableSocketAddress = new InetSocketAddress(
+                InetAddress.getByAddress("1.1.1.1", // A mismatching IP string in hostname
+                                         new byte[] { 127, 0, 0, 1 }), 42);
+        final InetSocketAddress normalizedSocketAddress = Endpoint.of(uncacheableSocketAddress)
+                                                                  .toSocketAddress(-1);
+        assertThat(normalizedSocketAddress).isNotSameAs(uncacheableSocketAddress);
+        assertThat(normalizedSocketAddress.getHostString()).isEqualTo("127.0.0.1");
+        assertThat(normalizedSocketAddress.getAddress().getHostAddress())
+                .isEqualTo(uncacheableSocketAddress.getAddress().getHostAddress());
+    }
+
+    @Test
+    void domainSocketAlwaysHasPredefinedIpAddr() {
+        final Endpoint endpoint = Endpoint.of("unix%3A%2Ffoo.sock");
+        assertThat(endpoint.type()).isSameAs(Type.DOMAIN_SOCKET);
+        assertThat(endpoint.withIpAddr("127.0.0.1").ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+        assertThat(endpoint.withIpAddr("127.0.0.1")).isSameAs(endpoint);
+        assertThat(endpoint.withIpAddr(null).ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
+        assertThat(endpoint.withIpAddr(null)).isSameAs(endpoint);
+    }
+
+    @Test
+    void domainSocketAlwaysHasPredefinedPort() {
+        final Endpoint endpoint = Endpoint.of("unix%3A%2Ffoo.sock", 8080);
+        assertThat(endpoint.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
+        assertThat(endpoint.withPort(8080).port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
+        assertThat(endpoint.withPort(8080)).isSameAs(endpoint);
     }
 
     @Test

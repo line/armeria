@@ -141,7 +141,13 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public TransportType transportType() {
-        return TransportType.EPOLL.isAvailable() ? TransportType.EPOLL : TransportType.NIO;
+        if (TransportType.EPOLL.isAvailable()) {
+            return TransportType.EPOLL;
+        }
+        if (TransportType.KQUEUE.isAvailable()) {
+            return TransportType.KQUEUE;
+        }
+        return TransportType.NIO;
     }
 
     @Override

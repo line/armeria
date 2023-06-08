@@ -156,37 +156,33 @@ public final class Flags {
     private static final Predicate<TransportType> TRANSPORT_TYPE_VALIDATOR = transportType -> {
         switch (transportType) {
             case IO_URING:
-                if (TransportType.IO_URING.isAvailable()) {
-                    logger.info("Using io_uring");
-                    return true;
-                } else {
-                    final Throwable cause = TransportType.IO_URING.unavailabilityCause();
-                    if (cause != null) {
-                        logger.info("io_uring not available: {}", cause.toString());
-                    } else {
-                        logger.info("io_uring not available: ?");
-                    }
-                    return false;
-                }
+                return validateTransportType(TransportType.IO_URING, "io_uring");
+            case KQUEUE:
+                return validateTransportType(TransportType.KQUEUE, "Kqueue");
             case EPOLL:
-                if (TransportType.EPOLL.isAvailable()) {
-                    logger.info("Using /dev/epoll");
-                    return true;
-                } else {
-                    final Throwable cause = TransportType.EPOLL.unavailabilityCause();
-                    if (cause != null) {
-                        logger.info("/dev/epoll not available: {}", cause.toString());
-                    } else {
-                        logger.info("/dev/epoll not available: ?");
-                    }
-                    return false;
-                }
+                return validateTransportType(TransportType.EPOLL, "/dev/epoll");
             case NIO:
                 return true;
             default:
                 return false;
         }
     };
+
+    private static boolean validateTransportType(TransportType transportType, String friendlyName) {
+        if (transportType.isAvailable()) {
+            logger.info("Using {}", friendlyName);
+            return true;
+        } else {
+            final Throwable cause = transportType.unavailabilityCause();
+            if (cause != null) {
+                logger.info("{} not available: {}", friendlyName, cause.toString());
+            } else {
+                logger.info("{} not available: ?", friendlyName);
+            }
+            return false;
+        }
+    }
+
     private static final TransportType TRANSPORT_TYPE =
             getValue(FlagsProvider::transportType, "transportType", TRANSPORT_TYPE_VALIDATOR);
 
