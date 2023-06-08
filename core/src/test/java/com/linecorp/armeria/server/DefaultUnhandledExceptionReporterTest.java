@@ -28,7 +28,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Spy;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -46,7 +45,7 @@ class DefaultUnhandledExceptionReporterTest {
             (Logger) LoggerFactory.getLogger(DefaultUnhandledExceptionsReporter.class);
     private static final long reportIntervalMillis = 1000;
     private static final long awaitIntervalMillis = 2000;
-    private static boolean throwNonIgnorableException;
+    private static volatile boolean throwNonIgnorableException;
 
     @BeforeEach
     public void attachAppender() {
@@ -114,72 +113,58 @@ class DefaultUnhandledExceptionReporterTest {
 
     @Test
     void httpStatusExceptionWithCauseShouldBeLogged() {
-        try (ClientFactory cf = ClientFactory.builder().build()) {
-            server.blockingWebClient(cb -> cb.factory(cf)).get("/bad-request-with-cause");
-            await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
-                   .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
+        server.blockingWebClient().get("/bad-request-with-cause");
+        await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
+               .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
-            assertThat(logAppender.list
-                               .stream()
-                               .filter(event -> event.getFormattedMessage().contains(
-                                       "Observed 1 exceptions that didn't reach a LoggingService"))
-                               .findAny()
-            ).isNotEmpty();
-        }
+        assertThat(logAppender.list
+                           .stream()
+                           .filter(event -> event.getFormattedMessage().contains(
+                                   "Observed 1 exceptions that didn't reach a LoggingService"))
+                           .findAny()).isNotEmpty();
     }
 
     @Test
     void httpStatusExceptionWithoutCauseShouldBeIgnored() throws Exception {
-        try (ClientFactory cf = ClientFactory.builder().build()) {
-            server.blockingWebClient(cb -> cb.factory(cf)).get("/bad-request-without-cause");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-            assertThat(logAppender.list).isEmpty();
-        }
+        server.blockingWebClient().get("/bad-request-without-cause");
+        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test
     void exceptionShouldNotBeLoggedWhenDecoratedWithLoggingService() throws Exception {
-        try (ClientFactory cf = ClientFactory.builder().build()) {
-            serverWithNonOutermostLoggingService.blockingWebClient(cb -> cb.factory(cf))
-                                                .get("/bad-request-with-cause");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-            assertThat(logAppender.list).isEmpty();
-        }
+        serverWithNonOutermostLoggingService.blockingWebClient()
+                                            .get("/bad-request-with-cause");
+        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test
     void exceptionShouldNotBeLoggedWhenNoExceptionIsThrown() throws Exception {
-        try (ClientFactory cf = ClientFactory.builder().build()) {
-            serverWithNonOutermostLoggingService.blockingWebClient(cb -> cb.factory(cf)).get("/hello");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-            assertThat(logAppender.list).isEmpty();
-        }
+        serverWithNonOutermostLoggingService.blockingWebClient().get("/hello");
+        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+        assertThat(logAppender.list).isEmpty();
     }
 
     @Test
     void nonIgnorableExceptionShouldBeLoggedIfLoggingServiceIsNotDecoratedOutermost() {
         throwNonIgnorableException = true;
-        try (ClientFactory cf = ClientFactory.builder().build()) {
-            serverWithNonOutermostLoggingService.blockingWebClient(cb -> cb.factory(cf)).get("/hello");
-            await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
-                   .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
+        serverWithNonOutermostLoggingService.blockingWebClient().get("/hello");
+        await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
+               .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
-            assertThat(logAppender.list
-                               .stream()
-                               .filter(event -> event.getFormattedMessage().contains(
-                                       "Observed 1 exceptions that didn't reach a LoggingService"))
-                               .findAny()
-            ).isNotEmpty();
-        }
+        assertThat(logAppender.list
+                           .stream()
+                           .filter(event -> event.getFormattedMessage().contains(
+                                   "Observed 1 exceptions that didn't reach a LoggingService"))
+                           .findAny()).isNotEmpty();
     }
 
     @Test
     void nonIgnorableExceptionShouldNotBeLoggedIfLoggingServiceIsDecoratedOutermost() throws Exception {
         throwNonIgnorableException = true;
-        try (ClientFactory cf = ClientFactory.builder().build()) {
-            serverWithOutermostLoggingService.blockingWebClient(cb -> cb.factory(cf)).get("/hello");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-            assertThat(logAppender.list).isEmpty();
-        }
+        serverWithOutermostLoggingService.blockingWebClient().get("/hello");
+        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+        assertThat(logAppender.list).isEmpty();
     }
 }
