@@ -18,6 +18,7 @@ concurrency:
 env:
   LC_ALL: "en_US.UTF-8"
   BUILD_JDK_VERSION: "19"
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
 
 jobs:
   build:
