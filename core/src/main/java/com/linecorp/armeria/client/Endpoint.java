@@ -176,7 +176,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         final InetSocketAddress inetAddr = (InetSocketAddress) addr;
         final String ipAddr = inetAddr.isUnresolved() ? null : inetAddr.getAddress().getHostAddress();
         final Endpoint endpoint = of(inetAddr.getHostString(), inetAddr.getPort()).withIpAddr(ipAddr);
-        if (endpoint.host.equals(inetAddr.getHostString())) {
+        if (!endpoint.wasTrailingDotStripped && endpoint.host.equals(inetAddr.getHostString())) {
             // Cache only when the normalized host name is the same as the original host name.
             endpoint.socketAddress = inetAddr;
         }
