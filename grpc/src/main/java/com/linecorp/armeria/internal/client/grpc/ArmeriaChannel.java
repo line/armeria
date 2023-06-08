@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -134,6 +135,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
         final HttpRequestWriter req = HttpRequest.streaming(headersBuilder.build());
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req, method);
+
+        GrpcCallOptions.set(ctx, callOptions);
 
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,

@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -47,9 +46,6 @@ import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.ReferenceCountUtil;
 
 class TrailingDotAddressResolverTest {
-
-    @RegisterExtension
-    static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {

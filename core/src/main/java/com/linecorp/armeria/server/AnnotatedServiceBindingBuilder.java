@@ -276,6 +276,18 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     }
 
     @Override
+    public AnnotatedServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        defaultServiceConfigSetters.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    @Override
     public AnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
         return this;

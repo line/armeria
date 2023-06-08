@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,14 @@ public abstract class LoggingDecoratorBuilder {
     private static final BiFunction<RequestContext, Throwable, Throwable> DEFAULT_CAUSE_SANITIZER =
             Functions.second();
 
+    private static <T, U> BiFunction<T, U, @Nullable String> convertToStringSanitizer(
+            BiFunction<T, U, ? extends @Nullable Object> originalSanitizer) {
+        return (first, second) -> {
+            final Object sanitized = originalSanitizer.apply(first, second);
+            return sanitized != null ? sanitized.toString() : null;
+        };
+    }
+
     @Nullable
     private Logger logger;
     @Nullable
@@ -68,6 +77,11 @@ public abstract class LoggingDecoratorBuilder {
             responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
+    private Predicate<Throwable> responseCauseFilter = throwable -> false;
+    @Nullable
+    private LogFormatter logFormatter;
+
+    private boolean useSanitizers;
 
     /**
      * Sets the {@link Logger} to use when logging.
@@ -236,11 +250,20 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize request headers before logging. It is common to have the
      * {@link BiFunction} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will
      * not sanitize request headers.
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer) {
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
+        useSanitizers = true;
+        if (logFormatter != null) {
+            throw new IllegalStateException(
+                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+        }
         return this;
     }
 
@@ -256,11 +279,20 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize response headers before logging. It is common to have the
      * {@link BiFunction} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will not sanitize response headers.
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseHeadersSanitizer) {
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
+        useSanitizers = true;
+        if (logFormatter != null) {
+            throw new IllegalStateException(
+                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+        }
         return this;
     }
 
@@ -275,11 +307,20 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link BiFunction} to use to sanitize request trailers before logging. If unset,
      * will not sanitize request trailers.
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestTrailersSanitizer) {
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
+        useSanitizers = true;
+        if (logFormatter != null) {
+            throw new IllegalStateException(
+                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+        }
         return this;
     }
 
@@ -294,11 +335,20 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link BiFunction} to use to sanitize response trailers before logging. If unset,
      * will not sanitize response trailers.
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseTrailersSanitizer) {
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
+        useSanitizers = true;
+        if (logFormatter != null) {
+            throw new IllegalStateException(
+                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+        }
         return this;
     }
 
@@ -321,11 +371,14 @@ public abstract class LoggingDecoratorBuilder {
      * builder.responseTrailersSanitizer(headersSanitizer);
      * }</pre>
      *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
      * @see #requestHeadersSanitizer(BiFunction)
      * @see #requestTrailersSanitizer(BiFunction)
      * @see #responseHeadersSanitizer(BiFunction)
      * @see #responseTrailersSanitizer(BiFunction)
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder headersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> headersSanitizer) {
@@ -342,11 +395,20 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize request content before logging. It is common to have the
      * {@link BiFunction} that removes sensitive content, such as an GPS location query, before logging.
      * If unset, will not sanitize request content.
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> requestContentSanitizer) {
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
+        useSanitizers = true;
+        if (logFormatter != null) {
+            throw new IllegalStateException(
+                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+        }
         return this;
     }
 
@@ -362,11 +424,20 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize response content before logging. It is common to have the
      * {@link BiFunction} that removes sensitive content, such as an address, before logging. If unset,
      * will not sanitize response content.
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder responseContentSanitizer(
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> responseContentSanitizer) {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
+        useSanitizers = true;
+        if (logFormatter != null) {
+            throw new IllegalStateException(
+                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+        }
         return this;
     }
 
@@ -388,9 +459,12 @@ public abstract class LoggingDecoratorBuilder {
      * builder.responseContentSanitizer(contentSanitizer);
      * }</pre>
      *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
      * @see #requestContentSanitizer(BiFunction)
      * @see #responseContentSanitizer(BiFunction)
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder contentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends @Nullable Object> contentSanitizer) {
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -404,11 +478,19 @@ public abstract class LoggingDecoratorBuilder {
      * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
      * the stack trace completely by returning {@code null} in the {@link BiFunction}. If unset, will not
      * sanitize a response cause.
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
+     * @deprecated Use {@link #responseCauseFilter(Predicate)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder responseCauseSanitizer(
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
+        if (logFormatter != null) {
+            throw new IllegalStateException(
+                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+        }
         return this;
     }
 
@@ -420,12 +502,69 @@ public abstract class LoggingDecoratorBuilder {
         return responseCauseSanitizer;
     }
 
+    /**
+     * Sets the {@link Predicate} used for evaluating whether to log the response cause or not.
+     * You can prevent logging the response cause by returning {@code true}
+     * in the {@link Predicate}. By default, the response cause will always be logged.
+     */
+    @UnstableApi
+    public LoggingDecoratorBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
+        this.responseCauseFilter = requireNonNull(responseCauseFilter, "responseCauseFilter");
+        return this;
+    }
+
+    /**
+     * Returns the {@link Predicate} used to evaluate whether to log the response cause.
+     */
+    @UnstableApi
+    protected final Predicate<Throwable> responseCauseFilter() {
+        return responseCauseFilter;
+    }
+
+    /**
+     * Sets the {@link LogFormatter} which converts a {@link RequestOnlyLog} or {@link RequestLog}
+     * into a log message. By default {@link LogFormatter#ofText()} will be used.
+     *
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
+     */
+    @UnstableApi
+    public LoggingDecoratorBuilder logFormatter(LogFormatter logFormatter) {
+        this.logFormatter = requireNonNull(logFormatter, "logFormatter");
+        if (useSanitizers) {
+            throw new IllegalStateException(
+                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+        }
+        return this;
+    }
+
+    /**
+     * Returns a {@link LogFormatter} which converts a {@link RequestOnlyLog} or {@link RequestLog}
+     * into a log message. If a {@link LogFormatter} has been set using {@link #logFormatter}, it is returned.
+     * Otherwise, a text based {@link LogFormatter} built using the set sanitizers is returned.
+     */
+    @UnstableApi
+    protected LogFormatter logFormatter() {
+        if (logFormatter != null) {
+            return logFormatter;
+        } else {
+            return LogFormatter.builderForText()
+                               .requestHeadersSanitizer(convertToStringSanitizer(requestHeadersSanitizer))
+                               .responseHeadersSanitizer(convertToStringSanitizer(responseHeadersSanitizer))
+                               .requestTrailersSanitizer(convertToStringSanitizer(requestTrailersSanitizer))
+                               .responseTrailersSanitizer(convertToStringSanitizer(responseTrailersSanitizer))
+                               .requestContentSanitizer(convertToStringSanitizer(requestContentSanitizer))
+                               .responseContentSanitizer(convertToStringSanitizer(responseContentSanitizer))
+                               .build();
+        }
+    }
+
     @Override
     public String toString() {
         return toString(this, logger, requestLogLevelMapper(), responseLogLevelMapper(),
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-                        responseCauseSanitizer);
+                        responseCauseSanitizer, logFormatter);
     }
 
     private static String toString(
@@ -446,11 +585,13 @@ public abstract class LoggingDecoratorBuilder {
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
-                    ? extends @Nullable Object> responseCauseSanitizer) {
+                    ? extends @Nullable Object> responseCauseSanitizer,
+            @Nullable LogFormatter logFormatter) {
 
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .omitNullValues()
-                                                 .add("logger", logger);
+                                                 .add("logger", logger)
+                                                 .add("logFormatter", logFormatter);
 
         helper.add("requestLogLevelMapper", requestLogLevelMapper);
         helper.add("responseLogLevelMapper", responseLogLevelMapper);
