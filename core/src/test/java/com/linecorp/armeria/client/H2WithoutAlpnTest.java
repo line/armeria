@@ -70,6 +70,7 @@ class H2WithoutAlpnTest {
 
     @Test
     void shouldSupportH2WithoutAlpn() {
+        SessionProtocolNegotiationCache.clear();
         try (ClientFactory factory = ClientFactory.builder()
                                                   .useHttp2WithoutALPN(true)
                                                   .tlsCustomizer(b -> b.trustManager(cert.certificate()))
@@ -87,6 +88,7 @@ class H2WithoutAlpnTest {
 
     @Test
     void shouldRejectH2WithoutAlpn() {
+        SessionProtocolNegotiationCache.clear();
         try (ClientFactory factory = ClientFactory.builder()
                                                   .tlsCustomizer(b -> b.trustManager(cert.certificate()))
                                                   .build()) {
