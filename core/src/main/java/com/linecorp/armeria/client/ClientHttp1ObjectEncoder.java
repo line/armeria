@@ -65,7 +65,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
 
         if (!nettyHeaders.contains(HttpHeaderNames.HOST)) {
             final InetSocketAddress remoteAddress = (InetSocketAddress) channel().remoteAddress();
-            nettyHeaders.add(HttpHeaderNames.HOST, ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostName(),
+            nettyHeaders.add(HttpHeaderNames.HOST, ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostString(),
                                                                                    remoteAddress.getPort(),
                                                                                    protocol().defaultPort()));
         }
