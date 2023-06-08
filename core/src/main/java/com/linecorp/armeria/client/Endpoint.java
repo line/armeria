@@ -384,7 +384,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         final String normalizedIpAddr = IpAddrUtil.normalize(host);
         if (normalizedIpAddr != null) {
-            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, weight, attributes, false);
+            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port,
+                                weight, attributes, false);
         } else if (isDomainSocketAuthority(host)) {
             return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
                                 weight, attributes, false);
@@ -610,7 +611,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         if (isIpAddrOnly()) {
-            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, weight, attributes, false);
+            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port,
+                                weight, attributes, false);
         } else {
             return new Endpoint(Type.HOSTNAME_AND_IP, host, normalizedIpAddr, port, weight, attributes,
                                 wasTrailingDotStripped);

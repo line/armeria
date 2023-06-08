@@ -131,10 +131,10 @@ final class HttpClientDelegate implements HttpClient {
 
         // IP address has not been resolved yet.
         assert !endpoint.hasIpAddr() && endpoint.hasPort();
+
         final Future<InetSocketAddress> resolveFuture =
                 addressResolverGroup.getResolver(ctx.eventLoop().withoutContext())
                                     .resolve(endpoint.toSocketAddress(-1));
-
         if (resolveFuture.isSuccess()) {
             final InetAddress address = resolveFuture.getNow().getAddress();
             onComplete.accept(endpoint.withInetAddress(address), null);
