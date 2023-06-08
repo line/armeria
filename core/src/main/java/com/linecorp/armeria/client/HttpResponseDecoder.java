@@ -72,7 +72,7 @@ abstract class HttpResponseDecoder {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseDecoder.class);
 
-    private static final RequestLogBuilder NOOP_REQUEST_LOG_BUILDER = new NoopRequestLogBuilder();
+    private static final RequestLogBuilder NOOP_REQUEST_LOG_BUILDER = new NoopRequestLog();
     private static final HttpRequest NOOP_HTTP_REQUEST = new NoopHttpRequest();
 
     private final IntObjectMap<HttpResponseWrapper> responses = new IntObjectHashMap<>();
@@ -461,7 +461,7 @@ abstract class HttpResponseDecoder {
         return builder.build();
     }
 
-    private static class NoopRequestLogBuilder implements RequestLogBuilder {
+    private static class NoopRequestLog implements RequestLogBuilder {
 
         @Override
         public boolean isComplete() {
