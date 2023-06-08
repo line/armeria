@@ -720,7 +720,7 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    private static boolean maybeWebSocketUpgrade(AsciiString header, CharSequence value) {
+    public static boolean maybeWebSocketUpgrade(AsciiString header, CharSequence value) {
         if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(header) &&
             HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
             return true;
