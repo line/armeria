@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
@@ -28,6 +30,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.unix.DomainSocketChannel;
+import io.netty.channel.unix.ServerDomainSocketChannel;
 
 /**
  * Native transport types.
@@ -36,6 +40,7 @@ public enum TransportType {
 
     NIO(TransportTypeProvider.NIO),
     EPOLL(TransportTypeProvider.EPOLL),
+    KQUEUE(TransportTypeProvider.KQUEUE),
     IO_URING(TransportTypeProvider.IO_URING);
 
     private final TransportTypeProvider provider;
@@ -45,12 +50,14 @@ public enum TransportType {
     }
 
     /**
-     * Returns the {@link ServerChannel} class for {@code eventLoopGroup}.
+     * Returns the {@link ServerChannel} class that is compatible with the specified
+     * {@link EventLoopGroup}.
      *
      * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
      *                               its {@link TransportType} is not currently available.
      */
     public static Class<? extends ServerChannel> serverChannelType(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
         return find(eventLoopGroup).serverChannelType();
     }
 
@@ -64,12 +71,14 @@ public enum TransportType {
     }
 
     /**
-     * Returns the available {@link SocketChannel} class for {@code eventLoopGroup}.
+     * Returns the available {@link SocketChannel} class that is compatible with the specified
+     * {@link EventLoopGroup}.
      *
      * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
      *                               its {@link TransportType} is not currently available.
      */
     public static Class<? extends SocketChannel> socketChannelType(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
         return find(eventLoopGroup).socketChannelType();
     }
 
@@ -83,12 +92,75 @@ public enum TransportType {
     }
 
     /**
-     * Returns the available {@link DatagramChannel} class for {@code eventLoopGroup}.
+     * Returns whether the specified {@link EventLoopGroup} supports Unix domain sockets or not.
+     */
+    public static boolean supportsDomainSockets(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
+        final TransportType found = findOrNull(eventLoopGroup);
+        return found != null ? found.supportsDomainSockets() : false;
+    }
+
+    /**
+     * Returns whether this {@link TransportType} supports Unix domain sockets or not.
+     */
+    public boolean supportsDomainSockets() {
+        return provider.supportsDomainSockets();
+    }
+
+    /**
+     * Returns the {@link ServerDomainSocketChannel} class that is compatible with the specified
+     * {@link EventLoopGroup}.
+     *
+     * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
+     *                               its {@link TransportType} is not currently available.
+     */
+    public static Class<? extends ServerDomainSocketChannel> domainServerChannelType(
+            EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
+        return find(eventLoopGroup).domainServerChannelType();
+    }
+
+    /**
+     * Returns the {@link ServerDomainSocketChannel} class that is available for this transport type.
+     *
+     * @throws IllegalStateException if this {@link TransportType} is not currently available or
+     *                               doesn't support Unix domain sockets.
+     */
+    public Class<? extends ServerDomainSocketChannel> domainServerChannelType() {
+        return provider.domainServerChannelType();
+    }
+
+    /**
+     * Returns the available {@link DomainSocketChannel} class that is compatible with the specified
+     * {@link EventLoopGroup}.
+     *
+     * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
+     *                               its {@link TransportType} is not currently available or
+     *                               doesn't support Unix domain sockets.
+     */
+    public static Class<? extends DomainSocketChannel> domainSocketChannelType(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
+        return find(eventLoopGroup).domainSocketChannelType();
+    }
+
+    /**
+     * Returns the {@link DomainSocketChannel} class that is available for this transport type.
+     *
+     * @throws IllegalStateException if this {@link TransportType} is not currently available.
+     */
+    public Class<? extends DomainSocketChannel> domainSocketChannelType() {
+        return provider.domainSocketChannelType();
+    }
+
+    /**
+     * Returns the available {@link DatagramChannel} class that is compatible with the specified
+     * {@link EventLoopGroup}.
      *
      * @throws IllegalStateException if the specified {@link EventLoopGroup} is not supported or
      *                               its {@link TransportType} is not currently available.
      */
     public static Class<? extends DatagramChannel> datagramChannelType(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
         return find(eventLoopGroup).datagramChannelType();
     }
 
@@ -106,6 +178,7 @@ public enum TransportType {
      * {@link TransportType}s.
      */
     public static boolean isSupported(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
         if (eventLoopGroup instanceof EventLoop) {
             eventLoopGroup = ((EventLoop) eventLoopGroup).parent();
             if (eventLoopGroup == null) {

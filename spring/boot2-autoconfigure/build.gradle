@@ -45,7 +45,7 @@ tasks.withType(Checkstyle) {
 }
 
 // allows illegal access by cglib
-if (rootProject.ext.testJavaVersion >= 16) {
+if (project.ext.testJavaVersion >= 16) {
     tasks.withType(Test) {
         jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
     }

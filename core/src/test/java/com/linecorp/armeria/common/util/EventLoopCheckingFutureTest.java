@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import ch.qos.logback.classic.Level;
@@ -117,7 +118,7 @@ class EventLoopCheckingFutureTest {
 
     private void testBlockingOperationOnEventLoop(EventLoopCheckingFutureTask task) {
         final EventLoopCheckingFuture<String> future = new EventLoopCheckingFuture<>();
-        eventLoop.get().submit(() -> task.run(future));
+        eventLoop.get().submit(() -> BlockingUtils.blockingRun(() -> task.run(future)));
         try {
             await().untilAsserted(() -> {
                 verify(appender, atLeast(0)).doAppend(eventCaptor.capture());

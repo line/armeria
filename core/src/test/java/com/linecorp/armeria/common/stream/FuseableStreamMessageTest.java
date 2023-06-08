@@ -241,6 +241,22 @@ class FuseableStreamMessageTest {
                     .verify();
     }
 
+    @Test
+    void mapErrorWithNoError() {
+        StreamMessage<Integer> fixed = StreamMessage.of(1, 2, 3, 4);
+        StreamMessage<Integer> mapped = fixed.mapError(IllegalStateException::new);
+        // Test subscribe()
+        StepVerifier.create(mapped)
+                    .expectNext(1, 2, 3, 4)
+                    .expectComplete()
+                    .verify();
+
+        fixed = StreamMessage.of(1, 2, 3, 4, 5);
+        mapped = fixed.mapError(IllegalStateException::new);
+        // Test collect()
+        assertThat(mapped.collect().join()).containsExactly(1, 2, 3, 4, 5);
+    }
+
     @CsvSource({ "true", "false" })
     @ParameterizedTest
     void mapWithPooledObjects_collect(boolean withPooledObjects) {

@@ -1,6 +1,5 @@
 package example.armeria.proxy;
 
-import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 
@@ -119,7 +118,7 @@ public final class ProxyService extends AbstractHttpService {
         // This is a simplified example. Please refer to https://datatracker.ietf.org/doc/rfc7239/
         // for more information about Forwarded header.
         final StringBuilder sb = new StringBuilder();
-        sb.append("for: ").append(ctx.<InetSocketAddress>remoteAddress().getAddress().getHostAddress());
+        sb.append("for: ").append(ctx.remoteAddress().getAddress().getHostAddress());
         sb.append(", host: ").append(req.authority());
         sb.append(", proto: ").append(ctx.sessionProtocol());
 
