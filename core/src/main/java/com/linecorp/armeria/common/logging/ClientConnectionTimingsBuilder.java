@@ -129,7 +129,7 @@ public final class ClientConnectionTimingsBuilder {
      * Sets the time when the client completed checking if an existing connection can be acquired.
      *
      * @throws IllegalStateException if {@link #existingAcquisitionStart()} is not invoked
-     * before calling this.
+     *                               before calling this.
      */
     public ClientConnectionTimingsBuilder existingAcquisitionEnd() {
         checkState(existingAcquisitionStartTimeMicros > 0,

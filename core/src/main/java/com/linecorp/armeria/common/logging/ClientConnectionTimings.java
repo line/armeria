@@ -45,6 +45,7 @@ public final class ClientConnectionTimings {
     private final long pendingAcquisitionDurationNanos;
     private final long existingAcquisitionStartTimeMicros;
     private final long existingAcquisitionDurationNanos;
+
     /**
      * Returns a newly created {@link ClientConnectionTimingsBuilder}.
      */

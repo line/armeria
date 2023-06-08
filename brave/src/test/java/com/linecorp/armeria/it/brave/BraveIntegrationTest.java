@@ -282,6 +282,8 @@ class BraveIntegrationTest {
                             "connection-acquire.start",
                             "socket-connect.start",
                             "socket-connect.end",
+                            "connection-existing.start",
+                            "connection-existing.end",
                             "connection-acquire.end",
                             "ws",
                             "wr");
@@ -459,8 +461,8 @@ class BraveIntegrationTest {
 
         // Server timed out meaning it did still send a timeout response to the client and we have all
         // annotations.
-        assertThat(serverSpan.annotations()).hasSize(2);
-        assertThat(clientSpan.annotations()).hasSize(2);
+        assertThat(serverSpan.annotations()).hasSize(6);
+        assertThat(clientSpan.annotations()).hasSize(6);
     }
 
     @Test

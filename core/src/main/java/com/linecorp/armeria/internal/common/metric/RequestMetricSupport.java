@@ -206,6 +206,7 @@ public final class RequestMetricSupport {
         Timer socketConnectDuration();
 
         Timer pendingAcquisitionDuration();
+
         Timer existingAcquisitionDuration();
 
         Counter writeTimeouts();
