@@ -165,7 +165,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             final DomainSocketAddress domainSocketAddr = (DomainSocketAddress) addr;
             final Endpoint endpoint = new Endpoint(Type.DOMAIN_SOCKET, domainSocketAddr.authority(),
                                                    DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
-                                                   DEFAULT_WEIGHT, null, false);
+                                                   DEFAULT_WEIGHT, null);
             endpoint.socketAddress = domainSocketAddr;
             return endpoint;
         }
@@ -176,7 +176,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         final InetSocketAddress inetAddr = (InetSocketAddress) addr;
         final String ipAddr = inetAddr.isUnresolved() ? null : inetAddr.getAddress().getHostAddress();
         final Endpoint endpoint = of(inetAddr.getHostString(), inetAddr.getPort()).withIpAddr(ipAddr);
-        if (!endpoint.wasTrailingDotStripped && endpoint.host.equals(inetAddr.getHostString())) {
+        if (endpoint.host.equals(inetAddr.getHostString())) {
             // Cache only when the normalized host name is the same as the original host name.
             endpoint.socketAddress = inetAddr;
         }
@@ -197,22 +197,23 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private static Endpoint create(String host, int port, boolean validateHost) {
         final String normalizedIpAddr = IpAddrUtil.normalize(host);
         if (normalizedIpAddr != null) {
-            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, DEFAULT_WEIGHT, null,
-                                false);
+            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, DEFAULT_WEIGHT, null);
         }
 
         if (isDomainSocketAuthority(host)) {
             return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
-                                DEFAULT_WEIGHT, null, false);
+                                DEFAULT_WEIGHT, null);
         } else {
-            boolean hasTrailingDot = false;
             if (validateHost) {
-                if (host.endsWith(".")) {
-                    hasTrailingDot = true;
-                }
+                final boolean hasTrailingDot = host.endsWith(".");
                 host = InternetDomainName.from(host).toString();
+                // InternetDomainName.from() removes the trailing dot if exists.
+                assert !host.endsWith(".");
+                if (hasTrailingDot) {
+                    host += '.';
+                }
             }
-            return new Endpoint(Type.HOSTNAME_ONLY, host, null, port, DEFAULT_WEIGHT, null, hasTrailingDot);
+            return new Endpoint(Type.HOSTNAME_ONLY, host, null, port, DEFAULT_WEIGHT, null);
         }
     }
 
@@ -239,7 +240,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final int weight;
     private final List<Endpoint> endpoints;
     private final String authority;
-    private final boolean wasTrailingDotStripped;
     private final String strVal;
 
     @Nullable
@@ -254,7 +254,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private int hashCode;
 
     private Endpoint(Type type, String host, @Nullable String ipAddr, int port, int weight,
-                     @Nullable Attributes attributes, boolean wasTrailingDotStripped) {
+                     @Nullable Attributes attributes) {
         this.type = type;
         this.host = host;
         this.ipAddr = ipAddr;
@@ -272,7 +272,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
         // Pre-generate the authority.
         authority = generateAuthority(type, host, port);
-        this.wasTrailingDotStripped = wasTrailingDotStripped;
         // Pre-generate toString() value.
         strVal = generateToString(type, authority, ipAddr, weight);
         this.attributes = attributes;
@@ -292,6 +291,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
                 }
                 // fall-through
             default:
+                if (host.endsWith(".")) {
+                    // Strip the trailing dot for the authority.
+                    host = host.substring(0, host.length() - 1);
+                }
                 return port != 0 ? host + ':' + port : host;
         }
     }
@@ -385,18 +388,18 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         final String normalizedIpAddr = IpAddrUtil.normalize(host);
         if (normalizedIpAddr != null) {
             return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port,
-                                weight, attributes, false);
+                                weight, attributes);
         } else if (isDomainSocketAuthority(host)) {
             return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
-                                weight, attributes, false);
+                                weight, attributes);
         } else {
-            boolean hasTrailingDot = false;
-            if (host.endsWith(".")) {
-                hasTrailingDot = true;
-            }
+            final boolean hasTrailingDot = host.endsWith(".");
             host = InternetDomainName.from(host).toString();
+            if (hasTrailingDot) {
+                host += '.';
+            }
             return new Endpoint(ipAddr != null ? Type.HOSTNAME_AND_IP : Type.HOSTNAME_ONLY,
-                                host, ipAddr, port, weight, attributes, hasTrailingDot);
+                                host, ipAddr, port, weight, attributes);
         }
     }
 
@@ -501,7 +504,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
 
-        return new Endpoint(type, host, ipAddr, port, weight, attributes, wasTrailingDotStripped);
+        return new Endpoint(type, host, ipAddr, port, weight, attributes);
     }
 
     /**
@@ -516,7 +519,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (port == 0 || isDomainSocket()) {
             return this;
         }
-        return new Endpoint(type, host, ipAddr, 0, weight, attributes, wasTrailingDotStripped);
+        return new Endpoint(type, host, ipAddr, 0, weight, attributes);
     }
 
     /**
@@ -533,7 +536,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
 
-        return new Endpoint(type, host, ipAddr, defaultPort, weight, attributes, wasTrailingDotStripped);
+        return new Endpoint(type, host, ipAddr, defaultPort, weight, attributes);
     }
 
     /**
@@ -566,7 +569,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
         if (port == defaultPort) {
-            return new Endpoint(type, host, ipAddr, 0, weight, attributes, wasTrailingDotStripped);
+            return new Endpoint(type, host, ipAddr, 0, weight, attributes);
         }
         return this;
     }
@@ -611,11 +614,9 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         if (isIpAddrOnly()) {
-            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port,
-                                weight, attributes, false);
+            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, weight, attributes);
         } else {
-            return new Endpoint(Type.HOSTNAME_AND_IP, host, normalizedIpAddr, port, weight, attributes,
-                                wasTrailingDotStripped);
+            return new Endpoint(Type.HOSTNAME_AND_IP, host, normalizedIpAddr, port, weight, attributes);
         }
     }
 
@@ -642,7 +643,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         assert type == Type.HOSTNAME_AND_IP : type;
-        return new Endpoint(Type.HOSTNAME_ONLY, host, null, port, weight, attributes, wasTrailingDotStripped);
+        return new Endpoint(Type.HOSTNAME_ONLY, host, null, port, weight, attributes);
     }
 
     /**
@@ -655,7 +656,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (this.weight == weight) {
             return this;
         }
-        return new Endpoint(type, host, ipAddr, port, weight, attributes, wasTrailingDotStripped);
+        return new Endpoint(type, host, ipAddr, port, weight, attributes);
     }
 
     /**
@@ -726,7 +727,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
 
-        return new Endpoint(type, host, ipAddr, port, weight, newAttributes, wasTrailingDotStripped);
+        return new Endpoint(type, host, ipAddr, port, weight, newAttributes);
     }
 
     /**
@@ -869,10 +870,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         final int port = hasPort() ? this.port : defaultPort;
-        String host = this.host;
-        if (wasTrailingDotStripped) {
-            host += '.';
-        }
         if (!hasIpAddr()) {
             return InetSocketAddress.createUnresolved(host, port);
         }

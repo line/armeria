@@ -133,14 +133,19 @@ class EndpointTest {
     @Test
     void hostWithTrailingDot() {
         final Endpoint endpoint = Endpoint.of("foo.com.");
-        assertThat(endpoint.host()).isEqualTo("foo.com");
+        // The trailing dot should be preserved for the hostname.
+        assertThat(endpoint.host()).isEqualTo("foo.com.");
+        // The trailing dot should be removed for the authority.
+        assertThat(endpoint.authority()).isEqualTo("foo.com");
         assertThat(endpoint.toSocketAddress(80).getHostString()).isEqualTo("foo.com.");
         final Endpoint barEndpoint = endpoint.withHost("bar.com");
         assertThat(barEndpoint.host()).isEqualTo("bar.com");
+        assertThat(barEndpoint.authority()).isEqualTo("bar.com");
         assertThat(barEndpoint.toSocketAddress(80).getHostString()).isEqualTo("bar.com");
 
         final Endpoint bazEndpoint = barEndpoint.withHost("baz.com.");
-        assertThat(bazEndpoint.host()).isEqualTo("baz.com");
+        assertThat(bazEndpoint.host()).isEqualTo("baz.com.");
+        assertThat(bazEndpoint.authority()).isEqualTo("baz.com");
         assertThat(bazEndpoint.toSocketAddress(80).getHostString()).isEqualTo("baz.com.");
     }
 
