@@ -283,9 +283,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler, CircuitBreakerRule rule) {
-        super(delegate, handler, rule, null);
-        needsContentInRule = false;
-        maxContentLength = 0;
+        this(delegate, handler, rule, null);
     }
 
     /**

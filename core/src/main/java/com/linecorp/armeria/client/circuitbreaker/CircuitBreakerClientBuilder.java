@@ -94,16 +94,6 @@ public final class CircuitBreakerClientBuilder
     @Override
     public CircuitBreakerClientBuilder recover(BiFunction<? super ClientRequestContext, ? super HttpRequest,
             ? extends HttpResponse> fallback) {
-        requireNonNull(fallback, "fallback");
-        super.recover(fallback);
-        return this;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("needsContentInRule", needsContentInRule)
-                          .add("maxContentLength", maxContentLength)
-                          .toString();
+        return (CircuitBreakerClientBuilder) super.recover(fallback);
     }
 }

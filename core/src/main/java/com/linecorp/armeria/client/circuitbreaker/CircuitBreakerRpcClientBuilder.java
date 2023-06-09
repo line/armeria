@@ -66,8 +66,6 @@ public final class CircuitBreakerRpcClientBuilder
     @Override
     public CircuitBreakerRpcClientBuilder recover(BiFunction<? super ClientRequestContext, ? super RpcRequest,
             ? extends RpcResponse> fallback) {
-        requireNonNull(fallback, "fallback");
-        super.recover(fallback);
-        return this;
+        return (CircuitBreakerRpcClientBuilder) super.recover(fallback);
     }
 }

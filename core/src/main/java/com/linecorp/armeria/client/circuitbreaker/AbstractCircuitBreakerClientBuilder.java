@@ -132,16 +132,8 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
     @UnstableApi
     public AbstractCircuitBreakerClientBuilder<I, O> recover(
             BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
+        requireNonNull(fallback, "fallback");
         this.fallback = fallback;
         return this;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("rule", rule)
-                          .add("ruleWithContent", ruleWithContent)
-                          .add("handler", handler)
-                          .toString();
     }
 }
