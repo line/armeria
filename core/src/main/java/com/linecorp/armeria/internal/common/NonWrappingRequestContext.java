@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.common;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -210,11 +209,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public long requestAutoAbortDelayMillis() {
         return requestAutoAbortDelayMillis;
-    }
-
-    @Override
-    public void setRequestAutoAbortDelay(Duration delay) {
-        requestAutoAbortDelayMillis = requireNonNull(delay, "delay").toMillis();
     }
 
     @Override

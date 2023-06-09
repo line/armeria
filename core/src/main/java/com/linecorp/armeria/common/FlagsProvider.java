@@ -680,6 +680,7 @@ public interface FlagsProvider {
      * {@link ServerBuilder#requestAutoAbortDelayMillis(long)} or
      * {@link ClientBuilder#requestAutoAbortDelayMillis(long)}.
      */
+    @UnstableApi
     @Nullable
     default Long defaultRequestAutoAbortDelayMillis() {
         return null;

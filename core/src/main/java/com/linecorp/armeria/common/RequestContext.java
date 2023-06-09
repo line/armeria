@@ -428,6 +428,7 @@ public interface RequestContext extends Unwrappable {
      * Returns the amount of time to wait in millis before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
      */
+    @UnstableApi
     long requestAutoAbortDelayMillis();
 
     /**
@@ -435,13 +436,18 @@ public interface RequestContext extends Unwrappable {
      * its corresponding {@link HttpResponse} is complete. Note that this method must be
      * called before the {@link HttpResponse} is completed to take effect.
      */
-    void setRequestAutoAbortDelay(Duration delay);
+    @UnstableApi
+    default void setRequestAutoAbortDelay(Duration delay) {
+        requireNonNull(delay, "delay");
+        setRequestAutoAbortDelayMillis(delay.toMillis());
+    }
 
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete. Note that this method must be
      * called before the {@link HttpResponse} is completed to take effect.
      */
+    @UnstableApi
     void setRequestAutoAbortDelayMillis(long delayMillis);
 
     /**

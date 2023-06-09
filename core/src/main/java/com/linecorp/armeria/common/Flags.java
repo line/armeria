@@ -1013,6 +1013,7 @@ public final class Flags {
      * Specify the {@code -Dcom.linecorp.armeria.defaultRequestAutoAbortDelayMillis=<long>} JVM option
      * to override the default value.
      */
+    @UnstableApi
     public static long defaultRequestAutoAbortDelayMillis() {
         return DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
     }
