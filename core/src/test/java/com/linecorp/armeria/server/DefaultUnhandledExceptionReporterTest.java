@@ -110,7 +110,7 @@ class DefaultUnhandledExceptionReporterTest {
         assertThat(logAppender.list
                            .stream()
                            .filter(event -> event.getFormattedMessage().contains(
-                                   "Observed 1 exceptions that didn't reach a LoggingService"))
+                                   "Observed 1 exception(s) that didn't reach a LoggingService"))
                            .findAny()).isNotEmpty();
     }
 
