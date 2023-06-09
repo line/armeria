@@ -101,20 +101,10 @@ abstract class HttpResponseDecoder {
     HttpResponseWrapper addResponse(
             int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
-        final HttpResponseWrapper newRes;
-        if (ctx != null) {
-            final HttpRequest request = ctx.request();
-            assert request != null;
-            newRes = new HttpResponseWrapper(
-                    res, ctx, ctx.logBuilder(), request, responseTimeoutMillis, maxContentLength);
-        } else {
-            newRes = new HttpResponseWrapper(
-                    res, null, NOOP_REQUEST_LOG_BUILDER, NOOP_HTTP_REQUEST,
-                    responseTimeoutMillis, maxContentLength);
-        }
 
+        final HttpResponseWrapper newRes =
+                new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
-
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();
         if (keepAliveHandler != null) {
             keepAliveHandler.increaseNumRequests();
@@ -212,12 +202,18 @@ abstract class HttpResponseDecoder {
         private boolean done;
 
         HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
-                            RequestLogBuilder logBuilder, HttpRequest request,
                             long responseTimeoutMillis, long maxContentLength) {
             this.delegate = delegate;
             this.ctx = ctx;
-            this.logBuilder = logBuilder;
-            this.request = request;
+            if (ctx != null) {
+                logBuilder = ctx.logBuilder();
+                final HttpRequest request = ctx.request();
+                assert request != null;
+                this.request = request;
+            } else {
+                logBuilder = NOOP_REQUEST_LOG_BUILDER;
+                request = NOOP_HTTP_REQUEST;
+            }
             this.maxContentLength = maxContentLength;
             this.responseTimeoutMillis = responseTimeoutMillis;
         }
