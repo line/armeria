@@ -981,9 +981,9 @@ public final class GrpcServiceBuilder {
         if (grpcHealthCheckService != null) {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
-        if (interceptors != null) {
+        final ImmutableList<ServerInterceptor> interceptors = interceptors().build();
+        if (!interceptors.isEmpty()) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
-            final ImmutableList<ServerInterceptor> interceptors = this.interceptors.build();
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
