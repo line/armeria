@@ -23,6 +23,8 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.DoubleSupplier;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -33,12 +35,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A {@link HealthChecker} that reports as unhealthy when the current
  * CPU usage or CPU load exceeds threshold. For example:
  * <pre>{@code
- * final DefaultCpuHealthChecker cpuHealthChecker = HealthChecker.of(10, 10);<br>
+ * final CpuHealthChecker cpuHealthChecker = HealthChecker.of(10, 10);<br>
  * final boolean healthy = cpuHealthChecker.isHealthy();
  * }</pre>
  */
 // Forked from <a href="https://github.com/micrometer-metrics/micrometer/blob/8339d57bef8689beb8d7a18b429a166f6595f2af/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/system/ProcessorMetrics.java">ProcessorMetrics.java</a> in the micrometer core.
-final class DefaultCpuHealthChecker implements HealthChecker {
+final class CpuHealthChecker implements HealthChecker {
 
     private static final List<String> OPERATING_SYSTEM_BEAN_CLASS_NAMES = ImmutableList.of(
             "com.ibm.lang.management.OperatingSystemMXBean", // J9
@@ -61,13 +63,17 @@ final class DefaultCpuHealthChecker implements HealthChecker {
 
     private final double targetProcessCpuLoad;
 
+    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+
+    private static final ConcurrentHashMap<String, MethodHandle> CACHE = new ConcurrentHashMap<>();
+
     /**
      * Instantiates a new Default cpu health checker.
      *
      * @param targetCpuUsage the target cpu usage
      * @param targetProcessCpuLoad the target process cpu usage
      */
-    private DefaultCpuHealthChecker(int targetCpuUsage, int targetProcessCpuLoad) {
+    private CpuHealthChecker(double targetCpuUsage, double targetProcessCpuLoad) {
         this.targetCpuUsage = targetCpuUsage;
         this.targetProcessCpuLoad = targetProcessCpuLoad;
         this.operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
@@ -76,8 +82,8 @@ final class DefaultCpuHealthChecker implements HealthChecker {
         this.processCpuUsage = detectMethod("getProcessCpuLoad");
     }
 
-    public static DefaultCpuHealthChecker of(int targetCpuUsage, int targetProcessCpuLoad) {
-        return new DefaultCpuHealthChecker(targetCpuUsage, targetProcessCpuLoad);
+    public static CpuHealthChecker of(double targetCpuUsage, double targetProcessCpuLoad) {
+        return new CpuHealthChecker(targetCpuUsage, targetProcessCpuLoad);
     }
 
     /**
@@ -85,15 +91,34 @@ final class DefaultCpuHealthChecker implements HealthChecker {
      */
     @Override
     public boolean isHealthy() {
+        assert systemCpuUsage != null;
+        assert processCpuUsage != null;
         final double currentSystemCpuUsage = invoke(systemCpuUsage);
         final double currentProcessCpuUsage = invoke(processCpuUsage);
         return currentSystemCpuUsage <= targetCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
     }
 
+    @VisibleForTesting
+    public boolean isHealthy(
+            DoubleSupplier currentSystemCpuUsageSupplier, DoubleSupplier currentProcessCpuUsageSupplier) {
+        final double currentSystemCpuUsage = currentSystemCpuUsageSupplier.getAsDouble();
+        final double currentProcessCpuUsage = currentProcessCpuUsageSupplier.getAsDouble();
+        return currentSystemCpuUsage <= targetCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
+    }
+
     private double invoke(final Method method) {
+        MethodHandle mh = CACHE.get(method.getName());
+        if (mh == null) {
+            try {
+                mh = LOOKUP.unreflect(method);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+
+            CACHE.put(method.getName(), mh);
+        }
+
         try {
-            final MethodHandles.Lookup lookup = MethodHandles.lookup();
-            final MethodHandle mh = lookup.unreflect(method);
             return (double) mh.invoke(operatingSystemBean);
         } catch (Throwable e) {
             return Double.NaN;
@@ -115,7 +140,7 @@ final class DefaultCpuHealthChecker implements HealthChecker {
     private static Class<?> getFirstClassFound(final List<String> classNames) {
         for (String className : classNames) {
             try {
-                return Class.forName(className, false, DefaultCpuHealthChecker.class.getClassLoader());
+                return Class.forName(className, false, CpuHealthChecker.class.getClassLoader());
             } catch (ClassNotFoundException ignore) {
             }
         }
