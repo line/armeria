@@ -70,7 +70,7 @@ public interface RequestOptions {
      * Returns the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started or the {@link Request} was fully sent.
      * {@code 0} disables the limit.
-     * {@code -1} disables this option and the response timeout of a client will be used instead.
+     * {@code -1} means the response timeout of a client will be used instead.
      */
     long responseTimeoutMillis();
 
@@ -78,20 +78,21 @@ public interface RequestOptions {
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds.
      * {@code 0} disables the limit.
-     * {@code -1} disables this option and the write timeout of a client will be used instead.
+     * {@code -1} means the write timeout of a client will be used instead.
      */
     long writeTimeoutMillis();
 
     /**
      * Returns the maximum length of the received {@link Response}.
      * {@code 0} disables the limit.
-     * {@code -1} disables this option and the maximum response length of a client will be used instead.
+     * {@code -1} means the maximum response length of a client will be used instead.
      */
     long maxResponseLength();
 
     /**
      * Returns the amount of time to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
+     * {@code null} means the request auto abort delay of a client will be used instead.
      */
     @Nullable
     Long requestAutoAbortDelayMillis();
