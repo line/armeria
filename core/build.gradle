@@ -2,15 +2,6 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
 
-String releaseFlagFromVersion(String src) {
-    // Java 9+ are 9, 10, etc, before was 1.8, 1.7, etc.
-    if (src.contains('.')) {
-        src.substring(src.lastIndexOf('.')+1)
-    } else {
-        src
-    }
-}
-
 def mrJarVersions = [9,12]
 
 mrJarVersions.each { version->
@@ -27,14 +18,17 @@ mrJarVersions.each { version->
         }
     }
 
+    def targetJavaVersion = Math.max(version, project.ext.targetJavaVersion)
     "compileJava${version}Java" {
-        sourceCompatibility = version
-        targetCompatibility = version
+        sourceCompatibility = targetJavaVersion
+        targetCompatibility = targetJavaVersion
+        options.release.set(targetJavaVersion)
     }
 
     "compileJava${version}TestJava" {
-        sourceCompatibility = version
-        targetCompatibility = version
+        sourceCompatibility = targetJavaVersion
+        targetCompatibility = targetJavaVersion
+        options.release.set(targetJavaVersion)
     }
 
     task "testJava${version}"(type: Test, group: 'Verification', description: "Runs unit tests for Java ${version} source set") {
@@ -42,9 +36,7 @@ mrJarVersions.each { version->
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
         project.ext.configureCommonTestSettings(it)
-
-        enabled = Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version &&
-                  project.ext.testJavaVersion >= version
+        enabled = project.ext.testJavaVersion >= targetJavaVersion
     }
 
     configurations."java${version}Implementation".extendsFrom configurations.implementation
@@ -52,13 +44,6 @@ mrJarVersions.each { version->
     configurations."java${version}TestRuntimeClasspath".extendsFrom configurations.testRuntimeClasspath
 
     check.dependsOn "testJava${version}"
-}
-
-tasks.withType(JavaCompile) {
-    if (project.rootProject.ext.buildJdkVersion >= 9) {
-        def version = releaseFlagFromVersion(sourceCompatibility)
-        options.release.set(Integer.parseInt(version))
-    }
 }
 
 tasks.withType(Jar) {
