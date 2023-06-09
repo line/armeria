@@ -1186,8 +1186,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         requireNonNull(cause, "cause");
-        responseCause = cause;
-        updateFlags(RequestLogProperty.RESPONSE_CAUSE);
+        setResponseCause(cause, true);
     }
 
     @Override
@@ -1285,11 +1284,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
             }
 
-            if (rpcResponse.cause() != null && responseCause == null) {
-                // Don't use 'responseCause(Throwable)' to set 'RpcResponse.cause()'.
-                // 'responseCause(Throwable)' performs nothing if the HTTP response was ended successfully.
-                responseCause = rpcResponse.cause();
-                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
+            if (rpcResponse.cause() != null) {
+                setResponseCause(rpcResponse.cause(), true);
             }
         }
 
@@ -1388,16 +1384,25 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 responseHeaders = DUMMY_RESPONSE_HEADERS;
             }
         }
-        if (this.responseCause == null) {
-            if (responseCause instanceof HttpStatusException ||
-                responseCause instanceof HttpResponseException) {
-                // Log the responseCause only when an Http{Status,Response}Exception was created with a cause.
-                this.responseCause = responseCause.getCause();
-            } else {
-                this.responseCause = responseCause;
+        setResponseCause(responseCause, false);
+        updateFlags(flags);
+    }
+
+    private void setResponseCause(@Nullable Throwable responseCause, boolean updateFlag) {
+        if (this.responseCause != null) {
+            return;
+        }
+        if (responseCause instanceof HttpStatusException ||
+            responseCause instanceof HttpResponseException) {
+            // Log the responseCause only when an Http{Status,Response}Exception was created with a cause.
+            responseCause = responseCause.getCause();
+        }
+        if (responseCause != null) {
+            this.responseCause = responseCause;
+            if (updateFlag) {
+                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
             }
         }
-        updateFlags(flags);
     }
 
     @Override
