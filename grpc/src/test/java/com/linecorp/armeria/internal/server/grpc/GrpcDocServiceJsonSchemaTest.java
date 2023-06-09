@@ -106,7 +106,7 @@ class GrpcDocServiceJsonSchemaTest {
 
         final List<JsonNode> jsonSchemas = getJsonSchemas();
 
-        assert (jsonSchemas.size() == 1);
+        assertThat(jsonSchemas).hasSize(1);
     }
 
     @Test

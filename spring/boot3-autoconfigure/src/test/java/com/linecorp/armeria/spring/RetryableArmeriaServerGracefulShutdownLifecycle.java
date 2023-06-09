@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.spring;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -65,7 +67,7 @@ public final class RetryableArmeriaServerGracefulShutdownLifecycle implements Ar
             }
         }
 
-        assert caughtException != null;
+        assertThat(caughtException).isNotNull();
         Exceptions.throwUnsafely(caughtException);
     }
 
