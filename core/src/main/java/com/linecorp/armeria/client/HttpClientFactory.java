@@ -101,7 +101,7 @@ final class HttpClientFactory implements ClientFactory {
     private final long maxConnectionAgeMillis;
     private final int maxNumRequestsPerConnection;
     private final boolean useHttp2Preface;
-    private final boolean useHttp2WithoutALPN;
+    private final boolean useHttp2WithoutAlpn;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private MeterRegistry meterRegistry;
@@ -176,7 +176,7 @@ final class HttpClientFactory implements ClientFactory {
         http1MaxChunkSize = options.http1MaxChunkSize();
         idleTimeoutMillis = options.idleTimeoutMillis();
         useHttp2Preface = options.useHttp2Preface();
-        useHttp2WithoutALPN = options.useHttp2WithoutALPN();
+        useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
@@ -262,8 +262,8 @@ final class HttpClientFactory implements ClientFactory {
         return useHttp2Preface;
     }
 
-    boolean useHttp2WithoutALPN() {
-        return useHttp2WithoutALPN;
+    boolean useHttp2WithoutAlpn() {
+        return useHttp2WithoutAlpn;
     }
 
     boolean useHttp1Pipelining() {

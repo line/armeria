@@ -249,7 +249,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
                     addBeforeSessionHandler(p, newHttp2ConnectionHandler(ch, H2));
                     protocol = H2;
-                } else if (clientFactory.useHttp2WithoutALPN() && attemptUpgrade()) {
+                } else if (clientFactory.useHttp2WithoutAlpn() && attemptUpgrade()) {
                     configureUpgradeCodec(ch, h -> addBeforeSessionHandler(p, h));
                     p.remove(this);
                     return;

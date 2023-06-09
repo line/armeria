@@ -209,7 +209,7 @@ public final class ClientFactoryOptions
      */
     @UnstableApi
     public static final ClientFactoryOption<Boolean> USE_HTTP2_WITHOUT_ALPN =
-            ClientFactoryOption.define("USE_HTTP2_WITHOUT_ALPN", Flags.defaultUseHttp2WithoutALPN());
+            ClientFactoryOption.define("USE_HTTP2_WITHOUT_ALPN", Flags.defaultUseHttp2WithoutAlpn());
 
     /**
      * Whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
@@ -503,7 +503,7 @@ public final class ClientFactoryOptions
      * Returns whether to use HTTP/2 over TLS without ALPN.
      */
     @UnstableApi
-    public boolean useHttp2WithoutALPN() {
+    public boolean useHttp2WithoutAlpn() {
         return get(USE_HTTP2_WITHOUT_ALPN);
     }
 

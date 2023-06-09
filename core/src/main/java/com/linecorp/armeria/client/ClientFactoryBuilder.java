@@ -733,8 +733,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * server over TLS but the server does not support ALPN.
      */
     @UnstableApi
-    public ClientFactoryBuilder useHttp2WithoutALPN(boolean useHttp2WithoutALPN) {
-        option(ClientFactoryOptions.USE_HTTP2_WITHOUT_ALPN, useHttp2WithoutALPN);
+    public ClientFactoryBuilder useHttp2WithoutAlpn(boolean useHttp2WithoutAlpn) {
+        option(ClientFactoryOptions.USE_HTTP2_WITHOUT_ALPN, useHttp2WithoutAlpn);
         return this;
     }
 

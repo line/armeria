@@ -294,7 +294,7 @@ public final class Flags {
             getValue(FlagsProvider::defaultUseHttp2Preface, "defaultUseHttp2Preface");
 
     private static final boolean DEFAULT_USE_HTTP2_WITHOUT_ALPN =
-            getValue(FlagsProvider::defaultUseHttp2WithoutALPN, "defaultUseHttp2WithoutALPN");
+            getValue(FlagsProvider::defaultUseHttp2WithoutAlpn, "defaultUseHttp2WithoutAlpn");
 
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING =
             getValue(FlagsProvider::defaultUseHttp1Pipelining, "defaultUseHttp1Pipelining");
@@ -778,18 +778,18 @@ public final class Flags {
     }
 
     /**
-     * Returns the default value of the {@link ClientFactoryBuilder#useHttp2WithoutALPN(boolean)} option.
+     * Returns the default value of the {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)} option.
      * If enabled, even when ALPN negotiation fails client will try to attempt upgrade to HTTP/2 when needed.
      * This will be either HTTP/2 connection preface or HTTP/1-to-2 upgrade request,
      * depending on {@link ClientFactoryBuilder#useHttp2Preface(boolean)} setting.
      * If disabled, when ALPN negotiation fails client will also fail in case HTTP/2 was required.
-     * {@link ClientFactoryBuilder#useHttp2WithoutALPN(boolean)}.
+     * {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)}.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp2WithoutALPN=true} JVM option to enable it.
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2WithoutAlpn=true} JVM option to enable it.
      */
     @UnstableApi
-    public static boolean defaultUseHttp2WithoutALPN() {
+    public static boolean defaultUseHttp2WithoutAlpn() {
         return DEFAULT_USE_HTTP2_WITHOUT_ALPN;
     }
 
