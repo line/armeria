@@ -205,13 +205,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
                                 DEFAULT_WEIGHT, null);
         } else {
             if (validateHost) {
-                final boolean hasTrailingDot = host.endsWith(".");
-                host = InternetDomainName.from(host).toString();
-                // InternetDomainName.from() removes the trailing dot if exists.
-                assert !host.endsWith(".");
-                if (hasTrailingDot) {
-                    host += '.';
-                }
+                host = normalizeHost(host);
             }
             return new Endpoint(Type.HOSTNAME_ONLY, host, null, port, DEFAULT_WEIGHT, null);
         }
@@ -222,6 +216,21 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return host.length() > 7 &&
                host.startsWith("unix%3") &&
                Ascii.toUpperCase(host.charAt(6)) == 'A';
+    }
+
+    private static String normalizeHost(String host) {
+        final boolean hasTrailingDot = hasTrailingDot(host);
+        host = InternetDomainName.from(host).toString();
+        // InternetDomainName.from() removes the trailing dot if exists.
+        assert !hasTrailingDot(host);
+        if (hasTrailingDot) {
+            host += '.';
+        }
+        return host;
+    }
+
+    private static boolean hasTrailingDot(String host) {
+        return !host.isEmpty() && host.charAt(host.length() - 1) == '.';
     }
 
     @VisibleForTesting
@@ -291,7 +300,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
                 }
                 // fall-through
             default:
-                if (host.endsWith(".")) {
+                if (hasTrailingDot(host)) {
                     // Strip the trailing dot for the authority.
                     host = host.substring(0, host.length() - 1);
                 }
@@ -393,11 +402,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
                                 weight, attributes);
         } else {
-            final boolean hasTrailingDot = host.endsWith(".");
-            host = InternetDomainName.from(host).toString();
-            if (hasTrailingDot) {
-                host += '.';
-            }
+            host = normalizeHost(host);
             return new Endpoint(ipAddr != null ? Type.HOSTNAME_AND_IP : Type.HOSTNAME_ONLY,
                                 host, ipAddr, port, weight, attributes);
         }
