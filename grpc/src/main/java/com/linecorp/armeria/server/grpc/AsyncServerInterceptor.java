@@ -36,10 +36,12 @@ import io.grpc.ServerInterceptor;
  *     @Override
  *     <I, O> CompletableFuture<Listener<I>> asyncInterceptCall(
  *             ServerCall<I, O> call, Metadata headers, ServerCallHandler<I, O> next) {
- *
+ *        Context grpcContext = Context.current();
  *        return authorizer.authorize(headers).thenApply(result -> {
  *             if (result) {
- *                 return next.startCall(call, headers);
+ *                 // `next.startCall()` should be wrapped with `grpcContext.call()` if you want to propagate
+ *                 // the context to the next interceptor.
+ *                 return grpcContext.call(() -> next.startCall(call, headers));
  *             } else {
  *                 throw new AuthenticationException("Invalid access");
  *             }

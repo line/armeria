@@ -232,8 +232,10 @@ internal class CoroutineServerInterceptorTest {
                     "/non-blocking",
                     GrpcService.builder()
                         .exceptionMapping(statusFunction)
-                        // applying order is MyAsyncInterceptor -> coroutineNameInterceptor -> authInterceptor -> threadLocalInterceptor
+                        // applying order is "MyAsyncInterceptor -> coroutineNameInterceptor ->
+                        // authInterceptor -> threadLocalInterceptor -> MyAsyncInterceptor"
                         .intercept(
+                            MyAsyncInterceptor(),
                             threadLocalInterceptor,
                             authInterceptor,
                             coroutineNameInterceptor,
@@ -247,8 +249,10 @@ internal class CoroutineServerInterceptorTest {
                     GrpcService.builder()
                         .addService(TestService())
                         .exceptionMapping(statusFunction)
-                        // applying order is MyAsyncInterceptor -> coroutineNameInterceptor -> authInterceptor -> threadLocalInterceptor
+                        // applying order is "MyAsyncInterceptor -> coroutineNameInterceptor ->
+                        // authInterceptor -> threadLocalInterceptor -> MyAsyncInterceptor"
                         .intercept(
+                            MyAsyncInterceptor(),
                             threadLocalInterceptor,
                             authInterceptor,
                             coroutineNameInterceptor,
@@ -339,8 +343,12 @@ internal class CoroutineServerInterceptorTest {
                 headers: Metadata,
                 next: ServerCallHandler<I, O>
             ): CompletableFuture<ServerCall.Listener<I>> {
+                val context = Context.current();
                 return CompletableFuture.supplyAsync({
-                    next.startCall(call, headers)
+                    // NB: When the current thread invoking `startCall` is different from the thread which
+                    // started `asyncInterceptCall`, `next.startCall()` should be wrapped with `context.call()`
+                    // to propagate the context to the next interceptor.
+                    context.call { next.startCall(call, headers) }
                 }, EXECUTOR)
             }
 
