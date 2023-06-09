@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -84,10 +86,12 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -96,13 +100,14 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -162,10 +167,14 @@ public final class ServerBuilder implements TlsSetters {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
+    private static final Consumer<ChannelPipeline> DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER =
+            v -> { /* no-op */ };
 
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
+    private static final ExecutorService START_STOP_EXECUTOR = Executors.newSingleThreadExecutor(
+            ThreadFactories.newThreadFactory("startstop-support", true));
 
     static {
         RequestContextUtil.init();
@@ -180,9 +189,11 @@ public final class ServerBuilder implements TlsSetters {
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
-    private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
+    private Executor startStopExecutor = START_STOP_EXECUTOR;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
+    private Consumer<ChannelPipeline> childChannelPipelineCustomizer =
+            DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER;
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
@@ -474,6 +485,24 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * (Advanced users only) Adds the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * This customizer is run right after the initial set of {@link ChannelHandler}s are configured.
+     * This customizer is no-op by default.
+     *
+     * <p>Note that usage of this customizer is an advanced feature and may produce unintended side effects,
+     * including complete breakdown. It is not recommended if you are not familiar with Armeria and Netty
+     * internals.
+     */
+    @UnstableApi
+    public ServerBuilder childChannelPipelineCustomizer(
+            Consumer<? super ChannelPipeline> childChannelPipelineCustomizer) {
+        requireNonNull(childChannelPipelineCustomizer, "childChannelPipelineCustomizer");
+        this.childChannelPipelineCustomizer =
+                this.childChannelPipelineCustomizer.andThen(childChannelPipelineCustomizer);
+        return this;
+    }
+
+    /**
      * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
@@ -503,8 +532,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the {@link Executor} which will invoke the callbacks of {@link Server#start()},
-     * {@link Server#stop()} and {@link ServerListener}. If not set, {@link GlobalEventExecutor} will be used
-     * by default.
+     * {@link Server#stop()} and {@link ServerListener}.
      */
     public ServerBuilder startStopExecutor(Executor startStopExecutor) {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
@@ -2059,6 +2087,7 @@ public final class ServerBuilder implements TlsSetters {
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
+                childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,

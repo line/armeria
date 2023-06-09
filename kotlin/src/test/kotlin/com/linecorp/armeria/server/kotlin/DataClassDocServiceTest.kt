@@ -100,7 +100,7 @@ data class ExampleQueries2(
     @Param
     val topic: String,
     @Param
-    val group: String,
+    val group: String
 )
 
 data class ExampleBody(val name: String, val limit: Int?)
