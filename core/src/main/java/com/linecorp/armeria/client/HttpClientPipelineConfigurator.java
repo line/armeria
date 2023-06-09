@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.client.ClientRequestContextBuilder.noopResponseCancellationScheduler;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -40,11 +41,17 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
@@ -469,8 +476,16 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }, ctx.channel().eventLoop());
 
             responseDecoder.reserveUnfinishedResponse(Integer.MAX_VALUE);
+            final DefaultClientRequestContext reqCtx = new DefaultClientRequestContext(
+                    ctx.channel().eventLoop(), Flags.meterRegistry(), H1C, RequestId.random(),
+                    com.linecorp.armeria.common.HttpMethod.OPTIONS,
+                    RequestTarget.forClient("*"), ClientOptions.of(),
+                    HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
+                    null, RequestOptions.of(), noopResponseCancellationScheduler,
+                    System.nanoTime(), SystemInfo.currentTimeMicros());
+
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, null, ctx.channel().eventLoop(), /* response timeout */ 0,
+            responseDecoder.addResponse(0, res, reqCtx, ctx.channel().eventLoop(), /* response timeout */ 0,
                                         UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();
         }
