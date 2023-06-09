@@ -217,9 +217,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         if (!written) {
-            final ClosedStreamException cause = ClosedStreamException.get();
-            res.close(cause);
-            throw connectionError(INTERNAL_ERROR, cause, "failed to consume a HEADERS frame");
+            throw connectionError(INTERNAL_ERROR, ClosedStreamException.get(),
+                                  "failed to consume a HEADERS frame");
         }
 
         if (endOfStream) {
@@ -268,9 +267,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         if (!res.tryWriteData(HttpData.wrap(data.retain()).withEndOfStream(endOfStream))) {
-            final ClosedSessionException cause = ClosedSessionException.get();
-            res.close(cause);
-            throw connectionError(INTERNAL_ERROR, cause, "failed to consume a DATA frame");
+            throw connectionError(INTERNAL_ERROR, ClosedSessionException.get(),
+                                  "failed to consume a DATA frame");
         }
 
         if (endOfStream) {
