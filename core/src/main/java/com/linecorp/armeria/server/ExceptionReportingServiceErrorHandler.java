@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.Objects;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -45,7 +43,7 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
     }
 
     private static boolean isIgnorableException(Throwable cause) {
-        if (Objects.nonNull(cause) && Exceptions.isExpected(cause)) {
+        if (cause != null && Exceptions.isExpected(cause)) {
             return true;
         }
         return (cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
