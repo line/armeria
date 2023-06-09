@@ -239,7 +239,7 @@ internal class CoroutineServerInterceptorTest {
                             threadLocalInterceptor,
                             authInterceptor,
                             coroutineNameInterceptor,
-                            MyAsyncInterceptor(),
+                            MyAsyncInterceptor()
                         )
                         .addService(TestService())
                         .build()
@@ -256,7 +256,7 @@ internal class CoroutineServerInterceptorTest {
                             threadLocalInterceptor,
                             authInterceptor,
                             coroutineNameInterceptor,
-                            MyAsyncInterceptor(),
+                            MyAsyncInterceptor()
                         )
                         .useBlockingTaskExecutor(true)
                         .build()
@@ -343,7 +343,7 @@ internal class CoroutineServerInterceptorTest {
                 headers: Metadata,
                 next: ServerCallHandler<I, O>
             ): CompletableFuture<ServerCall.Listener<I>> {
-                val context = Context.current();
+                val context = Context.current()
                 return CompletableFuture.supplyAsync({
                     // NB: When the current thread invoking `startCall` is different from the thread which
                     // started `asyncInterceptCall`, `next.startCall()` should be wrapped with `context.call()`
