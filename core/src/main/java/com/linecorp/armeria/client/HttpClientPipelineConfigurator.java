@@ -642,7 +642,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), http2);
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
                     finishWithNegotiationFailure(
-                            ctx, http2, http1, "received a non-HTTP/2 response for the HTTP/2 connection preface");
+                            ctx, http2, http1,
+                            "received a non-HTTP/2 response for the HTTP/2 connection preface");
                 } else {
                     // We can silently retry with HTTP/1.
                     retryWith(ctx, http1);
