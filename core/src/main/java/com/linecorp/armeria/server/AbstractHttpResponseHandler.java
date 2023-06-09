@@ -76,6 +76,7 @@ abstract class AbstractHttpResponseHandler {
 
     void disconnectWhenFinished() {
         needsDisconnection = true;
+        responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 
     final boolean tryComplete(@Nullable Throwable cause) {

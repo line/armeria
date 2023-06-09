@@ -30,6 +30,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ResourceUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
@@ -67,14 +69,17 @@ public final class GraphqlServiceBuilder {
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators =
             ImmutableList.builder();
-    private final ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers =
-            ImmutableList.builder();
     private final ImmutableList.Builder<GraphQLTypeVisitor> typeVisitors = ImmutableList.builder();
     private final ImmutableList.Builder<Instrumentation> instrumentations = ImmutableList.builder();
     private final ImmutableList.Builder<GraphqlConfigurator> graphqlBuilderConsumers =
             ImmutableList.builder();
 
+    @Nullable
+    private ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers;
     private boolean useBlockingTaskExecutor;
+
+    @Nullable
+    private Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory;
 
     @Nullable
     private GraphQLSchema schema;
@@ -148,8 +153,23 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Adds the {@link DataLoaderRegistry} consumers.
+     * Sets {@link DataLoaderRegistry} creation function.
      */
+    public GraphqlServiceBuilder dataLoaderRegistry(
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory) {
+        checkState(dataLoaderRegistryConsumers == null,
+                   "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+        this.dataLoaderRegistryFactory =
+                requireNonNull(dataLoaderRegistryFactory, "dataLoaderRegistryFactory");
+        return this;
+    }
+
+    /**
+     * Adds the {@link DataLoaderRegistry} consumers.
+     *
+     * @deprecated Use {@link #dataLoaderRegistry(Function)} instead.
+     */
+    @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(Consumer<DataLoaderRegistry>... configurers) {
         requireNonNull(configurers, "configurers");
         return configureDataLoaderRegistry(ImmutableList.copyOf(configurers));
@@ -157,9 +177,17 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link DataLoaderRegistry} consumers.
+     *
+     * @deprecated Use {@link #dataLoaderRegistry(Function)} instead.
      */
+    @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(
             Iterable<? extends Consumer<? super DataLoaderRegistry>> configurers) {
+        checkState(dataLoaderRegistryFactory == null,
+                   "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+        if (dataLoaderRegistryConsumers == null) {
+            dataLoaderRegistryConsumers = ImmutableList.builder();
+        }
         dataLoaderRegistryConsumers.addAll(requireNonNull(configurers, "configurers"));
         return this;
     }
@@ -270,11 +298,18 @@ public final class GraphqlServiceBuilder {
             configurer.configure(builder);
         }
 
-        final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
-        final List<Consumer<? super DataLoaderRegistry>> dataLoaderRegistries =
-                dataLoaderRegistryConsumers.build();
-        for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistries) {
-            configurer.accept(dataLoaderRegistry);
+        Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory = null;
+        if (this.dataLoaderRegistryFactory != null) {
+            dataLoaderRegistryFactory = this.dataLoaderRegistryFactory;
+        } else if (dataLoaderRegistryConsumers != null) {
+            final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
+            for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers.build()) {
+                configurer.accept(dataLoaderRegistry);
+            }
+            dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
+        } else {
+            assert dataLoaderRegistryFactory == null && dataLoaderRegistryConsumers == null;
+            dataLoaderRegistryFactory = ctx -> new DataLoaderRegistry();
         }
 
         final GraphqlErrorHandler errorHandler;
@@ -284,7 +319,7 @@ public final class GraphqlServiceBuilder {
             errorHandler = this.errorHandler.orElse(GraphqlErrorHandler.of());
         }
         return new DefaultGraphqlService(builder.build(),
-                                         dataLoaderRegistry,
+                                         dataLoaderRegistryFactory,
                                          useBlockingTaskExecutor,
                                          errorHandler);
     }

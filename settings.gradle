@@ -6,6 +6,8 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id("org.gradle.toolchains.foojay-resolver") version "0.5.0"
+    id "com.gradle.enterprise" version "3.13.3"
+
 }
 toolchainManagement {
     jvm {
@@ -13,6 +15,17 @@ toolchainManagement {
             repository("foojay") {
                 resolverClass = org.gradle.toolchains.foojay.FoojayToolchainResolver
             }
+        }
+    }
+}
+gradleEnterprise {
+    server = "https://ge.armeria.dev"
+    buildScan {
+        // publish build scans if the access key is provided
+        publishAlwaysIf(System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY") != null)
+        uploadInBackground = false
+        capture {
+            taskInputFiles = true
         }
     }
 }
