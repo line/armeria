@@ -400,7 +400,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
     }
 
-    void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
+    private void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
         final ChannelHandlerContext lastContext = pipeline.lastContext();
         if (lastContext.handler().getClass() == HttpSessionHandler.class) {
             // Get the name of the HttpSessionHandler so that we can put our handlers before it.
@@ -421,11 +421,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         ctx.close();
     }
 
-    boolean isHttps() {
+    private boolean isHttps() {
         return sslCtx != null;
     }
 
-    boolean isHttp2Protocol(SslHandler sslHandler) {
+    private static boolean isHttp2Protocol(SslHandler sslHandler) {
         return ApplicationProtocolNames.HTTP_2.equals(sslHandler.applicationProtocol());
     }
 
