@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -172,6 +173,19 @@ public abstract class AbstractRuleBuilder {
      */
     public AbstractRuleBuilder onException() {
         return onException((unused1, unused2) -> true);
+    }
+
+    /**
+     * Adds {@link TimeoutException}.
+     */
+    public AbstractRuleBuilder onTimeoutException() {
+        return onException((ctx, ex) -> {
+            if (ctx.isTimedOut()) {
+                return true;
+            }
+            return ex instanceof TimeoutException ||
+                   ex instanceof UnprocessedRequestException && ex.getCause() instanceof TimeoutException;
+        });
     }
 
     private static <T> BiPredicate<ClientRequestContext, T> combinePredicates(
