@@ -27,7 +27,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.grpc.ForwardingServerCall;
 import io.grpc.ServerCall;
 
-class ServerCallUtil {
+final class ServerCallUtil {
 
     @Nullable
     private static MethodHandle delegateMH;
@@ -69,4 +69,6 @@ class ServerCallUtil {
             return null;
         }
     }
+
+    private ServerCallUtil() {}
 }
