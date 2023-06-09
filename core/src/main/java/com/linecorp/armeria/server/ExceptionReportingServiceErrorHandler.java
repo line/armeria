@@ -43,7 +43,7 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
     }
 
     private static boolean isIgnorableException(Throwable cause) {
-        if (cause != null && Exceptions.isExpected(cause)) {
+        if (Exceptions.isExpected(cause)) {
             return true;
         }
         return (cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
