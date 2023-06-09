@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.util.concurrent.ScheduledExecutorService;
 
-import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Metadata;
@@ -39,10 +38,9 @@ final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInt
 
     @Override
     public CoroutineContext coroutineContext(ServerCall<?, ?> serverCall, Metadata metadata) {
-        checkState(serverCall instanceof AbstractServerCall,
-                   "Cannot use %s with a non-Armeria gRPC server",
-                   ArmeriaCoroutineContextInterceptor.class.getName());
-        final ServiceRequestContext ctx = ((AbstractServerCall<?, ?>) serverCall).ctx();
+        final ServiceRequestContext ctx = ServerCallUtil.findRequestContext(serverCall);
+        checkState(ctx != null, "Failed to find the current %s from %s",
+                   ServiceRequestContext.class.getSimpleName(), serverCall);
         final ArmeriaRequestCoroutineContext coroutineContext = new ArmeriaRequestCoroutineContext(ctx);
         final ScheduledExecutorService executor;
         if (useBlockingTaskExecutor) {
