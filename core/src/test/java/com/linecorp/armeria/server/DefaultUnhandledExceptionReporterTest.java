@@ -28,7 +28,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Spy;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -64,56 +63,47 @@ class DefaultUnhandledExceptionReporterTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/bad-request-with-cause", (ctx, req) -> {
-                throw HttpStatusException.of(HttpStatus.BAD_REQUEST, new IllegalArgumentException("test"));
-            });
-            sb.service("/bad-request-without-cause", (ctx, req) -> {
-                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
-            });
-            sb.unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis));
-        }
-    };
-
-    @RegisterExtension
-    static ServerExtension serverWithNonOutermostLoggingService = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
-            sb.service("/bad-request-with-cause", (ctx, req) -> {
-                throw HttpStatusException.of(HttpStatus.BAD_REQUEST, new IllegalArgumentException("test"));
-            });
-            // LoggingService is not decorated as the outermost service
-            sb.decorator(LoggingService.newDecorator());
-            sb.decorator(service -> (ctx, req) -> {
-                if (throwNonIgnorableException) {
-                    throw new IllegalArgumentException("Non-ignorable exception");
-                }
-                return service.serve(ctx, req);
-            });
-            sb.unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis));
-        }
-    };
-
-    @RegisterExtension
-    static ServerExtension serverWithOutermostLoggingService = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
-            sb.decorator(service -> (ctx, req) -> {
-                if (throwNonIgnorableException) {
-                    throw new IllegalArgumentException("Non-ignorable exception");
-                }
-                return service.serve(ctx, req);
-            });
-            // decorate LoggingService as the outermost service
-            sb.decorator(LoggingService.newDecorator());
+            sb.route()
+              .get("/logging-service-subsequently-decorated")
+              .decorator(service -> (ctx, req) -> {
+                  if (throwNonIgnorableException) {
+                      throw new IllegalArgumentException("Non-ignorable exception");
+                  }
+                  return service.serve(ctx, req);
+              })
+              .decorator(LoggingService.newDecorator())
+              .build((ctx, req) -> {
+                  throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+              });
+            sb.route()
+              .get("/logging-service-previously-decorated")
+              .decorator(LoggingService.newDecorator())
+              .decorator(service -> (ctx, req) -> {
+                  if (throwNonIgnorableException) {
+                      throw new IllegalArgumentException("Non-ignorable exception");
+                  }
+                  return service.serve(ctx, req);
+              })
+              .build((ctx, req) -> {
+                  throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+              });
             sb.unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis));
         }
     };
 
     @Test
-    void httpStatusExceptionWithCauseShouldBeLogged() {
-        server.blockingWebClient().get("/bad-request-with-cause");
+    void allExceptionShouldNotBeReportedWhenLoggingServiceIsSubsequentlyDecorated() throws Exception {
+        server.blockingWebClient().get("/logging-service-subsequently-decorated");
+        throwNonIgnorableException = true;
+        server.blockingWebClient().get("/logging-service-subsequently-decorated");
+        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+        assertThat(logAppender.list).isEmpty();
+    }
+
+    @Test
+    void nonIgnorableExceptionShouldBeReportedWhenLoggingServiceIsPreviouslyDecorated() {
+        throwNonIgnorableException = true;
+        server.blockingWebClient().get("/logging-service-previously-decorated");
         await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
                .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
@@ -125,45 +115,8 @@ class DefaultUnhandledExceptionReporterTest {
     }
 
     @Test
-    void httpStatusExceptionWithoutCauseShouldBeIgnored() throws Exception {
-        server.blockingWebClient().get("/bad-request-without-cause");
-        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        assertThat(logAppender.list).isEmpty();
-    }
-
-    @Test
-    void exceptionShouldNotBeLoggedWhenDecoratedWithLoggingService() throws Exception {
-        serverWithNonOutermostLoggingService.blockingWebClient()
-                                            .get("/bad-request-with-cause");
-        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        assertThat(logAppender.list).isEmpty();
-    }
-
-    @Test
-    void exceptionShouldNotBeLoggedWhenNoExceptionIsThrown() throws Exception {
-        serverWithNonOutermostLoggingService.blockingWebClient().get("/hello");
-        Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-        assertThat(logAppender.list).isEmpty();
-    }
-
-    @Test
-    void nonIgnorableExceptionShouldBeLoggedIfLoggingServiceIsNotDecoratedOutermost() {
-        throwNonIgnorableException = true;
-        serverWithNonOutermostLoggingService.blockingWebClient().get("/hello");
-        await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
-               .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
-
-        assertThat(logAppender.list
-                           .stream()
-                           .filter(event -> event.getFormattedMessage().contains(
-                                   "Observed 1 exceptions that didn't reach a LoggingService"))
-                           .findAny()).isNotEmpty();
-    }
-
-    @Test
-    void nonIgnorableExceptionShouldNotBeLoggedIfLoggingServiceIsDecoratedOutermost() throws Exception {
-        throwNonIgnorableException = true;
-        serverWithOutermostLoggingService.blockingWebClient().get("/hello");
+    void ignorableExceptionShouldNotBeReportedEvenThoughLoggingServiceIsPreviouslyDecorated() throws Exception {
+        server.blockingWebClient().get("/logging-service-previously-decorated");
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
         assertThat(logAppender.list).isEmpty();
     }
