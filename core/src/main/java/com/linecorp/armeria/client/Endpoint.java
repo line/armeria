@@ -222,7 +222,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         final boolean hasTrailingDot = hasTrailingDot(host);
         host = InternetDomainName.from(host).toString();
         // InternetDomainName.from() removes the trailing dot if exists.
-        assert !hasTrailingDot(host);
+        assert !hasTrailingDot(host) : host;
         if (hasTrailingDot) {
             host += '.';
         }
