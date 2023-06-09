@@ -101,7 +101,8 @@ class H2WithoutAlpnTest {
             assertThatThrownBy(() -> client.get("/"))
                     .isInstanceOf(UnprocessedRequestException.class)
                     .hasCauseInstanceOf(SessionProtocolNegotiationException.class)
-                    .hasMessageContaining("expected: h2, actual: h1, reason: unexpected protocol negotiation result");
+                    .hasMessageContaining("expected: h2, actual: h1, " +
+                                          "reason: unexpected protocol negotiation result");
         }
     }
 }
