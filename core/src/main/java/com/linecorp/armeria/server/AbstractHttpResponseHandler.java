@@ -213,14 +213,14 @@ abstract class AbstractHttpResponseHandler {
         return response;
     }
 
-    final void endLogRequestAndResponse(Throwable cause) {
-        logBuilder().endRequest(cause);
-        logBuilder().endResponse(cause);
-    }
-
-    final void endLogRequestAndResponse() {
-        logBuilder().endRequest();
-        logBuilder().endResponse();
+    final void endLogRequestAndResponse(@Nullable Throwable cause) {
+        if (cause != null) {
+            logBuilder().endRequest(cause);
+            logBuilder().endResponse(cause);
+        } else {
+            logBuilder().endRequest();
+            logBuilder().endResponse();
+        }
     }
 
     /**
