@@ -51,6 +51,10 @@ public interface EndpointSelectionStrategy {
         return RoundRobinStrategy.INSTANCE;
     }
 
+    static EndpointSelectionStrategy ringHash() {
+        return RingHashEndpointSelectionStrategy.INSTANCE;
+    }
+
     /**
      * Returns a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
      * {@link Endpoint}s using {@link EndpointWeightTransition#linear()}. The {@link Endpoint} is selected

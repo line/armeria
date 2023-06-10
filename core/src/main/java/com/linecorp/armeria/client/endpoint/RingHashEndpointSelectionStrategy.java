@@ -23,17 +23,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 import java.util.SortedMap;
 
-import com.google.common.collect.Streams;
+import com.google.common.hash.Hashing;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.XxHash;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 
 final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy{
@@ -55,7 +54,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
         RingHashSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
             endpointGroup.addListener(endpoints ->
-                weightedRingEndpoint = new WeightedRingEndpoint(endpoints), true
+                                              weightedRingEndpoint = new WeightedRingEndpoint(endpoints), true
             );
         }
 
@@ -74,12 +73,14 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             private final Iterable<Endpoint> endpoints;
 
             Endpoint select(Endpoint point) {
-                final int key = getXXHash(point.host());
+                final Random random = new Random();
+                final String randomString = String.valueOf(random.nextInt());
+                final int key = getXXHash(randomString);
                 final SortedMap<Integer, Endpoint> tailMap = ring.tailMap(key);
                 return tailMap.isEmpty() ? ring.get(ring.firstKey()) : tailMap.get(tailMap.firstKey());
             }
-
             WeightedRingEndpoint(List<Endpoint> endpoints) {
+                final int sizeOfRing = getSize(endpoints);
                 // prepare immutable endpoints
                 this.endpoints = endpoints.stream()
                                         .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
@@ -90,43 +91,46 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
 
                 // The GCD is properly sized so that it does not exceed the size of the ring
                 final int gcd = findGcdInEndpoints(this.endpoints);
-                final int numberOfEndpointInTheRing = caculateNumberOfEndpointInTheRing(this.endpoints, gcd);
-                final int sizeOfRing = this.endpoints.size();
+                final int numberOfEndpointInTheRing = calculateNumberOfEndpointInTheRing(this.endpoints, gcd);
+
+//                final int sizeOfRing = getSize(this.endpoints);
                 if (sizeOfRing >= numberOfEndpointInTheRing) {
                     for (Endpoint endpoint : this.endpoints) {
                         final int weight = endpoint.weight();
                         final String host = endpoint.host();
+                        final String port = String.valueOf(endpoint.port());
                         // If weight is 3 and gcd is 1, place 3 times in the ring
                         // if weight is 1 and gcd is 1, place once in the ring
                         // If weight is 3 and gcd is 3, place 1 times in the ring
                         final int count = weight / gcd;
                         for (int i = 0; i < count; i++) {
-                            final String weightedHost = host + weight;
+                            final String weightedHost = host + port + String.valueOf(weight);
                             final int hash = getXXHash(weightedHost);
                             ring.put(hash, endpoint);
                         }
                     }
                 }
-
-                // When the size of the GCD is too small and exceeds the size of the ring,
-                // using binary search for find x where Σ (w[i] / x) ≤ ring_size, w[i] is endpoint's weight at index i
-                List<Integer> arr = new ArrayList<>();
-                for (Endpoint endpoint : this.endpoints) {
-                    int weight = endpoint.weight();
-                    arr.add(weight);
-                }
-                int divider = findClosestDivisor(arr, sizeOfRing);
-                for (Endpoint endpoint : this.endpoints) {
-                    final int weight = endpoint.weight();
-                    final String host = endpoint.host();
-                    // If weight is 3 and x is 1, place 3 times in the ring
-                    // if weight is 1 and x is 1, place once in the ring
-                    // If weight is 3 and x is 3, place 1 times in the ring
-                    final int count = weight / x;
-                    for (int i = 0; i < count; i++) {
-                        final String weightedHost = host + weight;
-                        final int hash = getXXHash(weightedHost);
-                        ring.put(hash, endpoint);
+                else {
+                    // When the size of the GCD is too small and exceeds the size of the ring,
+                    // using binary search for find x where Σ (w[i] / x) ≤ ring_size, w[i] is endpoint's weight at index i
+                    List<Integer> arr = new ArrayList<>();
+                    for (Endpoint endpoint : this.endpoints) {
+                        int weight = endpoint.weight();
+                        arr.add(weight);
+                    }
+                    final int divider = binarySearch(arr, sizeOfRing);
+                    for (Endpoint endpoint : this.endpoints) {
+                        final int weight = endpoint.weight();
+                        final String host = endpoint.host();
+                        // If weight is 3 and x is 1, place 3 times in the ring
+                        // if weight is 1 and x is 1, place once in the ring
+                        // If weight is 3 and x is 3, place 1 times in the ring
+                        final int count = weight / divider;
+                        for (int i = 0; i < count; i++) {
+                            final String weightedHost = host + weight;
+                            final int hash = getXXHash(weightedHost);
+                            ring.put(hash, endpoint);
+                        }
                     }
                 }
             }
@@ -186,18 +190,18 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             }
 
             int gcd(int a, int b) {
-                if (b == 0) {
-                    return a;
-                } else {
-                    return gcd(b, a % b);
+                while (b != 0) {
+                    int temp = b;
+                    b = a % b;
+                    a = temp;
                 }
+                return a;
             }
 
             // Returned int values range from -2,147,483,648 to 2,147,483,647, same as java int type
             int getXXHash(String input) {
                 final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
-                final XxHash xxHash = new XxHash();
-                final long hashBytes = xxHash.hash(inputBytes, inputBytes.length);
+                final long hashBytes = Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
                 return (int) (hashBytes >>> 32);
             }
         }
