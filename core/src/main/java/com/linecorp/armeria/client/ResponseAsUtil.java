@@ -22,27 +22,10 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.Exceptions;
 
 final class ResponseAsUtil {
 
-    static final ResponseAs<HttpResponse, AggregatedHttpResponse> BLOCKING =
-            new ResponseAs<HttpResponse, AggregatedHttpResponse>() {
-                @Override
-                public AggregatedHttpResponse as(HttpResponse response) {
-                    requireNonNull(response, "response");
-                    try {
-                        return response.aggregate().join();
-                    } catch (Exception ex) {
-                        return Exceptions.throwUnsafely(Exceptions.peel(ex));
-                    }
-                }
-
-                @Override
-                public boolean requiresAggregation() {
-                    return true;
-                }
-            };
+    static final BlockingResponseAs BLOCKING = new BlockingResponseAs();
 
     static <T> FutureResponseAs<T> aggregateAndConvert(ResponseAs<AggregatedHttpResponse, T> responseAs) {
         requireNonNull(responseAs, "responseAs");
