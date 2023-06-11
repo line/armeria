@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 
-final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy{
+final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy {
 
     static final RingHashEndpointSelectionStrategy INSTANCE = new RingHashEndpointSelectionStrategy();
 
@@ -45,7 +45,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new RingHashSelector(endpointGroup);
     }
-    
+
     static class RingHashSelector extends AbstractEndpointSelector {
 
         @Nullable
@@ -79,6 +79,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 final SortedMap<Integer, Endpoint> tailMap = ring.tailMap(key);
                 return tailMap.isEmpty() ? ring.get(ring.firstKey()) : tailMap.get(tailMap.firstKey());
             }
+
             WeightedRingEndpoint(List<Endpoint> endpoints) {
                 final int sizeOfRing = getSize(endpoints);
                 // prepare immutable endpoints
@@ -104,7 +105,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                         // If weight is 3 and gcd is 3, place 1 times in the ring
                         final int count = weight / gcd;
                         for (int i = 0; i < count; i++) {
-                            final String weightedHost = host + port + String.valueOf(weight);
+                            final String weightedHost = host + port + weight;
                             final int hash = getXXHash(weightedHost);
                             ring.put(hash, endpoint);
                         }
@@ -149,8 +150,8 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 int rt = arr.get(arr.size() - 1);
                 while (rt > lt + 1) {
                     int mid = (lt + rt) / 2;
-                    if (isPossible(mid, arr, sz)) mid = rt;
-                    else mid = lt + 1;
+                    if (isPossible(mid, arr, sz)) rt = mid;
+                    else lt = mid + 1;
                 }
                 return lt;
             }
