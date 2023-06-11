@@ -51,6 +51,9 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
         @Nullable
         private volatile WeightedRingEndpoint weightedRingEndpoint;
 
+        /**
+         * A Ring hash select strategy.
+         */
         RingHashSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
             endpointGroup.addListener(endpoints ->
@@ -65,9 +68,10 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 // 'endpointGroup' has not been initialized yet.
                 return null;
             }
+
             return weightedRingEndpoint.select(ctx.endpoint());
         }
-        
+
         private final class WeightedRingEndpoint {
             private final Int2ObjectSortedMap<Endpoint> ring = new Int2ObjectAVLTreeMap<>();
             private final Iterable<Endpoint> endpoints;
@@ -81,7 +85,6 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             }
 
             WeightedRingEndpoint(List<Endpoint> endpoints) {
-                final int sizeOfRing = getSize(endpoints);
                 // prepare immutable endpoints
                 this.endpoints = endpoints.stream()
                                         .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
@@ -94,7 +97,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 final int gcd = findGcdInEndpoints(this.endpoints);
                 final int numberOfEndpointInTheRing = calculateNumberOfEndpointInTheRing(this.endpoints, gcd);
 
-//                final int sizeOfRing = getSize(this.endpoints);
+                final int sizeOfRing = getSize(endpoints);
                 if (sizeOfRing >= numberOfEndpointInTheRing) {
                     for (Endpoint endpoint : this.endpoints) {
                         final int weight = endpoint.weight();
@@ -110,13 +113,13 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                             ring.put(hash, endpoint);
                         }
                     }
-                }
-                else {
+                } else {
                     // When the size of the GCD is too small and exceeds the size of the ring,
-                    // using binary search for find x where Σ (w[i] / x) ≤ ring_size, w[i] is endpoint's weight at index i
-                    List<Integer> arr = new ArrayList<>();
+                    // using binary search for find x
+                    // where Σ (w[i] / x) ≤ ring_size, w[i] is endpoint's weight at index i
+                    final List<Integer> arr = new ArrayList<>();
                     for (Endpoint endpoint : this.endpoints) {
-                        int weight = endpoint.weight();
+                        final int weight = endpoint.weight();
                         arr.add(weight);
                     }
                     final int divider = binarySearch(arr, sizeOfRing);
@@ -149,9 +152,12 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 int lt = arr.get(0);
                 int rt = arr.get(arr.size() - 1);
                 while (rt > lt + 1) {
-                    int mid = (lt + rt) / 2;
-                    if (isPossible(mid, arr, sz)) rt = mid;
-                    else lt = mid + 1;
+                    final int mid = (lt + rt) / 2;
+                    if (isPossible(mid, arr, sz)) {
+                        rt = mid;
+                    } else {
+                        lt = mid + 1;
+                    }
                 }
                 return lt;
             }
@@ -159,16 +165,17 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             private boolean isPossible(int x, List<Integer> arr, int sz) {
                 int total = 0;
                 for (int w : arr) {
-                    total += w/x;
+                    total += w / x;
                 }
+
                 return sz >= total;
             }
 
             int calculateNumberOfEndpointInTheRing(Iterable<Endpoint> endpoints, int gcd) {
                 int numberOfEndpointInTheRing = 0;
                 for (final Endpoint endpoint : endpoints) {
-                    int weight = endpoint.weight();
-                    int count = weight / gcd;
+                    final int weight = endpoint.weight();
+                    final int count = weight / gcd;
                     numberOfEndpointInTheRing += count;
                 }
                 return numberOfEndpointInTheRing;
@@ -177,8 +184,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             int findGcdInEndpoints(Iterable<Endpoint> endpoints) {
                 int gcd = -1;
                 for (Endpoint endpoint : endpoints) {
-                    int weight = endpoint.weight();
-
+                    final int weight = endpoint.weight();
                     // initialize gcd
                     if (gcd == -1) {
                         gcd = weight;
@@ -192,7 +198,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
 
             int gcd(int a, int b) {
                 while (b != 0) {
-                    int temp = b;
+                    final int temp = b;
                     b = a % b;
                     a = temp;
                 }

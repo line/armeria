@@ -51,6 +51,9 @@ public interface EndpointSelectionStrategy {
         return RoundRobinStrategy.INSTANCE;
     }
 
+    /**
+     * Returns a ring-hash strategy.
+     */
     static EndpointSelectionStrategy ringHash() {
         return RingHashEndpointSelectionStrategy.INSTANCE;
     }
