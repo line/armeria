@@ -65,9 +65,10 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
 
         if (!nettyHeaders.contains(HttpHeaderNames.HOST)) {
             final InetSocketAddress remoteAddress = (InetSocketAddress) channel().remoteAddress();
-            nettyHeaders.add(HttpHeaderNames.HOST, ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostName(),
-                                                                                   remoteAddress.getPort(),
-                                                                                   protocol().defaultPort()));
+            nettyHeaders.add(HttpHeaderNames.HOST,
+                             ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostString(),
+                                                             remoteAddress.getPort(),
+                                                             protocol().defaultPort()));
         }
 
         if (endStream) {
@@ -100,6 +101,11 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
             nettyHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         }
         return req;
+    }
+
+    @Override
+    protected ChannelFuture write(HttpObject obj, ChannelPromise promise) {
+        return channel().write(obj, promise);
     }
 
     @Override

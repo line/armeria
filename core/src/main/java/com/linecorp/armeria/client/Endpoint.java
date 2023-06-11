@@ -17,14 +17,20 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.DomainSocketUtil.DOMAIN_SOCKET_IP;
+import static com.linecorp.armeria.internal.common.util.DomainSocketUtil.DOMAIN_SOCKET_PORT;
 import static java.util.Objects.requireNonNull;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.net.UnknownHostException;
+import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -36,6 +42,8 @@ import java.util.regex.Pattern;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
@@ -49,7 +57,9 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.AttributeKey;
@@ -105,6 +115,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         });
     }
 
+    private static String removeUserInfo(String authority) {
+        final int indexOfDelimiter = authority.lastIndexOf('@');
+        if (indexOfDelimiter == -1) {
+            return authority;
+        }
+        return authority.substring(indexOfDelimiter + 1);
+    }
+
     /**
      * Creates a new host {@link Endpoint}.
      *
@@ -126,6 +144,46 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
+     * Creates a new {@link Endpoint} from the specified {@link SocketAddress}.
+     * This method converts the following address types into an endpoint:
+     * <ul>
+     *   <li>{@link InetSocketAddress}</li>
+     *   <li>{@link DomainSocketAddress}</li>
+     *   <li>{@link io.netty.channel.unix.DomainSocketAddress}</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified {@link SocketAddress} is not supported
+     */
+    @UnstableApi
+    public static Endpoint of(SocketAddress addr) {
+        requireNonNull(addr, "addr");
+        if (addr instanceof io.netty.channel.unix.DomainSocketAddress) {
+            addr = DomainSocketAddress.of((io.netty.channel.unix.DomainSocketAddress) addr);
+        }
+
+        if (addr instanceof DomainSocketAddress) {
+            final DomainSocketAddress domainSocketAddr = (DomainSocketAddress) addr;
+            final Endpoint endpoint = new Endpoint(Type.DOMAIN_SOCKET, domainSocketAddr.authority(),
+                                                   DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
+                                                   DEFAULT_WEIGHT, null);
+            endpoint.socketAddress = domainSocketAddr;
+            return endpoint;
+        }
+
+        checkArgument(addr instanceof InetSocketAddress,
+                      "unsupported address: %s", addr);
+
+        final InetSocketAddress inetAddr = (InetSocketAddress) addr;
+        final String ipAddr = inetAddr.isUnresolved() ? null : inetAddr.getAddress().getHostAddress();
+        final Endpoint endpoint = of(inetAddr.getHostString(), inetAddr.getPort()).withIpAddr(ipAddr);
+        if (endpoint.host.equals(inetAddr.getHostString())) {
+            // Cache only when the normalized host name is the same as the original host name.
+            endpoint.socketAddress = inetAddr;
+        }
+        return endpoint;
+    }
+
+    /**
      * Creates a new host {@link Endpoint} <strong>without</strong> validation.
      *
      * <p>Note that you should carefully use this method only when both {@code host} and {@code port} are
@@ -137,50 +195,44 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     private static Endpoint create(String host, int port, boolean validateHost) {
-        if (NetUtil.isValidIpV4Address(host)) {
-            return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY, null);
+        final String normalizedIpAddr = IpAddrUtil.normalize(host);
+        if (normalizedIpAddr != null) {
+            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, DEFAULT_WEIGHT, null);
         }
 
-        if (NetUtil.isValidIpV6Address(host)) {
-            final String ipV6Addr;
-            if (host.charAt(0) == '[') {
-                // Strip surrounding '[' and ']'.
-                ipV6Addr = host.substring(1, host.length() - 1);
-            } else {
-                ipV6Addr = host;
+        if (isDomainSocketAuthority(host)) {
+            return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
+                                DEFAULT_WEIGHT, null);
+        } else {
+            if (validateHost) {
+                host = InternetDomainName.from(host).toString();
             }
-            return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY, null);
+            return new Endpoint(Type.HOSTNAME_ONLY, host, null, port, DEFAULT_WEIGHT, null);
         }
-
-        if (validateHost) {
-            host = InternetDomainName.from(host).toString();
-        }
-        return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY, null);
     }
 
-    private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf('@');
-        if (indexOfDelimiter == -1) {
-            return authority;
-        }
-        return authority.substring(indexOfDelimiter + 1);
+    private static boolean isDomainSocketAuthority(String host) {
+        // Return true if `host` starts with `unix%3A` or `unix%3a`.
+        return host.length() > 7 &&
+               host.startsWith("unix%3") &&
+               Ascii.toUpperCase(host.charAt(6)) == 'A';
     }
 
-    private enum HostType {
+    @VisibleForTesting
+    enum Type {
         HOSTNAME_ONLY,
-        HOSTNAME_AND_IPv4,
-        HOSTNAME_AND_IPv6,
-        IPv4_ONLY,
-        IPv6_ONLY
+        IP_ONLY,
+        HOSTNAME_AND_IP,
+        DOMAIN_SOCKET
     }
 
+    private final Type type;
     private final String host;
     @Nullable
     private final String ipAddr;
     private final int port;
     private final int weight;
     private final List<Endpoint> endpoints;
-    private final HostType hostType;
     private final String authority;
     private final String strVal;
 
@@ -191,52 +243,58 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private CompletableFuture<Endpoint> selectFuture;
     @Nullable
     private CompletableFuture<List<Endpoint>> whenReadyFuture;
+    @Nullable
+    private InetSocketAddress socketAddress;
     private int hashCode;
 
-    private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType,
+    private Endpoint(Type type, String host, @Nullable String ipAddr, int port, int weight,
                      @Nullable Attributes attributes) {
+        this.type = type;
         this.host = host;
         this.ipAddr = ipAddr;
         this.port = port;
         this.weight = weight;
-        this.hostType = hostType;
 
         endpoints = ImmutableList.of(this);
 
-        // hostType must be HOSTNAME_ONLY when ipAddr is null and vice versa.
-        assert ipAddr == null && hostType == HostType.HOSTNAME_ONLY ||
-               ipAddr != null && hostType != HostType.HOSTNAME_ONLY;
+        // type must be HOSTNAME_ONLY when ipAddr is null and vice versa.
+        assert ipAddr == null && type == Type.HOSTNAME_ONLY ||
+               ipAddr != null && type != Type.HOSTNAME_ONLY;
+
+        // A domain socket endpoint must have the predefined IP address and port number.
+        assert type != Type.DOMAIN_SOCKET || port == DOMAIN_SOCKET_PORT && DOMAIN_SOCKET_IP.equals(ipAddr);
 
         // Pre-generate the authority.
-        authority = generateAuthority(host, port, hostType);
+        authority = generateAuthority(type, host, port);
         // Pre-generate toString() value.
-        strVal = generateToString(authority, ipAddr, weight, hostType);
+        strVal = generateToString(type, authority, ipAddr, weight);
         this.attributes = attributes;
     }
 
-    private static String generateAuthority(String host, int port, HostType hostType) {
-        if (port != 0) {
-            if (hostType == HostType.IPv6_ONLY) {
-                return '[' + host + "]:" + port;
-            } else {
-                return host + ':' + port;
-            }
-        }
-
-        if (hostType == HostType.IPv6_ONLY) {
-            return '[' + host + ']';
-        } else {
-            return host;
+    private static String generateAuthority(Type type, String host, int port) {
+        switch (type) {
+            case DOMAIN_SOCKET:
+                return host;
+            case IP_ONLY:
+                if (isIpV6(host)) {
+                    if (port != 0) {
+                        return '[' + host + "]:" + port;
+                    } else {
+                        return '[' + host + ']';
+                    }
+                }
+                // fall-through
+            default:
+                return port != 0 ? host + ':' + port : host;
         }
     }
 
-    private static String generateToString(String authority, @Nullable String ipAddr,
-                                           int weight, HostType hostType) {
+    private static String generateToString(Type type, String authority, @Nullable String ipAddr,
+                                           int weight) {
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
             buf.append("Endpoint{").append(authority);
-            if (hostType == HostType.HOSTNAME_AND_IPv4 ||
-                hostType == HostType.HOSTNAME_AND_IPv6) {
+            if (type == Type.HOSTNAME_AND_IP) {
                 buf.append(", ipAddr=").append(ipAddr);
             }
             return buf.append(", weight=").append(weight).append('}').toString();
@@ -295,6 +353,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return whenReadyFuture;
     }
 
+    @VisibleForTesting
+    Type type() {
+        return type;
+    }
+
     /**
      * Returns the host name of this endpoint.
      */
@@ -311,7 +374,17 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (host.equals(this.host)) {
             return this;
         }
-        return new Endpoint(host, ipAddr, port, weight, hostType, attributes);
+
+        final String normalizedIpAddr = IpAddrUtil.normalize(host);
+        if (normalizedIpAddr != null) {
+            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, weight, attributes);
+        } else if (isDomainSocketAuthority(host)) {
+            return new Endpoint(Type.DOMAIN_SOCKET, host, DOMAIN_SOCKET_IP, DOMAIN_SOCKET_PORT,
+                                weight, attributes);
+        } else {
+            return new Endpoint(ipAddr != null ? Type.HOSTNAME_AND_IP : Type.HOSTNAME_ONLY,
+                                host, ipAddr, port, weight, attributes);
+        }
     }
 
     /**
@@ -340,27 +413,34 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @return {@code true} if and only if this endpoint's host name is an IP address
      */
     public boolean isIpAddrOnly() {
-        return hostType == HostType.IPv4_ONLY || hostType == HostType.IPv6_ONLY;
+        return type == Type.IP_ONLY;
     }
 
     /**
      * Returns the {@link StandardProtocolFamily} of this endpoint's IP address.
      *
      * @return the {@link StandardProtocolFamily} of this endpoint's IP address, or
-     *         {@code null} if the host name is not resolved yet
+     *         {@code null} if the host name is not resolved yet.
      */
     @Nullable
     public StandardProtocolFamily ipFamily() {
-        switch (hostType) {
-            case HOSTNAME_AND_IPv4:
-            case IPv4_ONLY:
-                return StandardProtocolFamily.INET;
-            case HOSTNAME_AND_IPv6:
-            case IPv6_ONLY:
-                return StandardProtocolFamily.INET6;
-            default:
-                return null;
+        if (ipAddr == null) {
+            return null;
         }
+
+        return isIpV6(ipAddr) ? StandardProtocolFamily.INET6 : StandardProtocolFamily.INET;
+    }
+
+    private static boolean isIpV6(String ipAddr) {
+        return ipAddr.indexOf(':') >= 0;
+    }
+
+    /**
+     * Returns whether this endpoint connects to a domain socket.
+     */
+    @UnstableApi
+    public boolean isDomainSocket() {
+        return type == Type.DOMAIN_SOCKET;
     }
 
     /**
@@ -403,10 +483,12 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public Endpoint withPort(int port) {
         validatePort("port", port);
-        if (this.port == port) {
+
+        if (this.port == port || isDomainSocket()) {
             return this;
         }
-        return new Endpoint(host, ipAddr, port, weight, hostType, attributes);
+
+        return new Endpoint(type, host, ipAddr, port, weight, attributes);
     }
 
     /**
@@ -418,10 +500,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withoutPort() {
-        if (port == 0) {
+        if (port == 0 || isDomainSocket()) {
             return this;
         }
-        return new Endpoint(host, ipAddr, 0, weight, hostType, attributes);
+        return new Endpoint(type, host, ipAddr, 0, weight, attributes);
     }
 
     /**
@@ -430,8 +512,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @param defaultPort the default port number
      * @return the new endpoint whose port is {@code defaultPort} if this endpoint does not have its port
      *         specified. {@code this} if this endpoint already has its port specified.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
@@ -440,7 +520,21 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
 
-        return new Endpoint(host, ipAddr, defaultPort, weight, hostType, attributes);
+        return new Endpoint(type, host, ipAddr, defaultPort, weight, attributes);
+    }
+
+    /**
+     * Returns a new host endpoint with the default port number of the specified {@link SessionProtocol}.
+     *
+     * @param protocol the {@link SessionProtocol} that will provide the default port number
+     * @return the new endpoint whose port is the default port number of the specified
+     *         {@link SessionProtocol} if this endpoint does not have its port specified.
+     *         {@code this} if this endpoint already has its port specified.
+     */
+    @UnstableApi
+    public Endpoint withDefaultPort(SessionProtocol protocol) {
+        requireNonNull(protocol, "protocol");
+        return withDefaultPort(protocol.defaultPort());
     }
 
     /**
@@ -451,15 +545,33 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *         with the specified default port number. {@code this} if this endpoint had a different
      *         port number than the specified default port number or this endpoint already does not have
      *         a port number.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withoutDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
+        if (isDomainSocket()) {
+            // A domain socket always has the predefined port number.
+            return this;
+        }
         if (port == defaultPort) {
-            return new Endpoint(host, ipAddr, 0, weight, hostType, attributes);
+            return new Endpoint(type, host, ipAddr, 0, weight, attributes);
         }
         return this;
+    }
+
+    /**
+     * Returns a new host endpoint with the default port number of the specified {@link SessionProtocol}
+     * removed.
+     *
+     * @param protocol the {@link SessionProtocol} that will provide the default port number
+     * @return the new endpoint without a port number if this endpoint had the same port number
+     *         with the default port number provided by the specified {@link SessionProtocol}.
+     *         {@code this} if this endpoint had a different port number than the default port number or
+     *         this endpoint already does not have a port number.
+     */
+    @UnstableApi
+    public Endpoint withoutDefaultPort(SessionProtocol protocol) {
+        requireNonNull(protocol, "protocol");
+        return withoutDefaultPort(protocol.defaultPort());
     }
 
     /**
@@ -471,49 +583,25 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * @throws IllegalArgumentException if the specified IP address is invalid
      */
     public Endpoint withIpAddr(@Nullable String ipAddr) {
+        if (isDomainSocket()) {
+            // A domain socket always has the predefined IP address.
+            return this;
+        }
         if (ipAddr == null) {
             return withoutIpAddr();
         }
 
-        if (ipAddr.equals(this.ipAddr)) {
+        final String normalizedIpAddr = IpAddrUtil.normalize(ipAddr);
+        checkArgument(normalizedIpAddr != null, "ipAddr: %s (expected: a valid IP address)", ipAddr);
+        if (normalizedIpAddr.equals(this.ipAddr)) {
             return this;
         }
 
-        if (NetUtil.isValidIpV4Address(ipAddr)) {
-            return withIpAddr(ipAddr, StandardProtocolFamily.INET);
-        }
-
-        if (NetUtil.isValidIpV6Address(ipAddr)) {
-            final boolean wrappedByBracket = ipAddr.charAt(0) == '[';
-            final int percentIdx = ipAddr.indexOf('%');
-            if (percentIdx < 0) {
-                if (wrappedByBracket) {
-                    ipAddr = ipAddr.substring(1, ipAddr.length() - 1);
-                }
-            } else {
-                ipAddr = ipAddr.substring(wrappedByBracket ? 1 : 0, percentIdx);
-            }
-            return withIpAddr(ipAddr, StandardProtocolFamily.INET6);
-        }
-
-        throw new IllegalArgumentException("ipAddr: " + ipAddr + " (expected: an IP address)");
-    }
-
-    private Endpoint withIpAddr(String ipAddr, StandardProtocolFamily ipFamily) {
-        if (ipAddr.equals(this.ipAddr)) {
-            return this;
-        }
-
-        // Replace the host name as well if the host name is an IP address.
         if (isIpAddrOnly()) {
-            return new Endpoint(ipAddr, ipAddr, port, weight,
-                                ipFamily == StandardProtocolFamily.INET ? HostType.IPv4_ONLY
-                                                                        : HostType.IPv6_ONLY, attributes);
+            return new Endpoint(Type.IP_ONLY, normalizedIpAddr, normalizedIpAddr, port, weight, attributes);
+        } else {
+            return new Endpoint(Type.HOSTNAME_AND_IP, host, normalizedIpAddr, port, weight, attributes);
         }
-
-        return new Endpoint(host(), ipAddr, port, weight,
-                            ipFamily == StandardProtocolFamily.INET ? HostType.HOSTNAME_AND_IPv4
-                                                                    : HostType.HOSTNAME_AND_IPv6, attributes);
     }
 
     /**
@@ -525,40 +613,34 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public Endpoint withInetAddress(InetAddress address) {
         requireNonNull(address, "address");
-        final String ipAddr = address.getHostAddress();
-        if (address instanceof Inet4Address) {
-            return withIpAddr(ipAddr, StandardProtocolFamily.INET);
-        } else if (address instanceof Inet6Address) {
-            return withIpAddr(ipAddr, StandardProtocolFamily.INET6);
-        } else {
-            return withIpAddr(ipAddr);
-        }
+        return withIpAddr(address.getHostAddress());
     }
 
     private Endpoint withoutIpAddr() {
         if (ipAddr == null) {
             return this;
         }
+
         if (isIpAddrOnly()) {
             throw new IllegalStateException("can't clear the IP address if host name is an IP address: " +
                                             this);
         }
-        return new Endpoint(host(), null, port, weight, HostType.HOSTNAME_ONLY, attributes);
+
+        assert type == Type.HOSTNAME_AND_IP : type;
+        return new Endpoint(Type.HOSTNAME_ONLY, host,null, port, weight, attributes);
     }
 
     /**
      * Returns a new host endpoint with the specified weight.
      *
      * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
-     *
-     * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public Endpoint withWeight(int weight) {
         validateWeight(weight);
         if (this.weight == weight) {
             return this;
         }
-        return new Endpoint(host(), ipAddr(), port, weight, hostType, attributes);
+        return new Endpoint(type, host, ipAddr, port, weight, attributes);
     }
 
     /**
@@ -629,7 +711,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
 
-        return new Endpoint(host, ipAddr, port, weight, hostType, newAttributes);
+        return new Endpoint(type, host, ipAddr, port, weight, newAttributes);
     }
 
     /**
@@ -735,6 +817,61 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
     }
 
+    /**
+     * Converts this endpoint into an {@link InetSocketAddress}. The specified {@code defaultPort} is used
+     * if this endpoint does not have a port number. A {@link DomainSocketAddress} is returned if this
+     * endpoint refers to a Unix domain socket.
+     *
+     * @see #hasPort()
+     * @see #isDomainSocket()
+     */
+    @UnstableApi
+    public InetSocketAddress toSocketAddress(int defaultPort) {
+        final InetSocketAddress socketAddress = this.socketAddress;
+        if (socketAddress != null) {
+            return socketAddress;
+        }
+
+        final InetSocketAddress newSocketAddress = toSocketAddress0(defaultPort);
+        if (hasPort()) {
+            this.socketAddress = newSocketAddress;
+        }
+        return newSocketAddress;
+    }
+
+    private InetSocketAddress toSocketAddress0(int defaultPort) {
+        if (isDomainSocket()) {
+            final String decodedHost;
+            try {
+                decodedHost = URLDecoder.decode(host, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                // Should never reach here.
+                throw new Error(e);
+            }
+
+            assert decodedHost.startsWith("unix:") : decodedHost;
+            return DomainSocketAddress.of(Paths.get(decodedHost.substring(5))); // Strip "unix:"
+        }
+
+        final int port = hasPort() ? this.port : defaultPort;
+        if (!hasIpAddr()) {
+            return InetSocketAddress.createUnresolved(host, port);
+        }
+
+        assert ipAddr != null;
+        try {
+            return new InetSocketAddress(
+                    InetAddress.getByAddress(
+                            // Let JDK use the normalized IP address as the host name.
+                            isIpAddrOnly() ? null : host,
+                            NetUtil.createByteArrayFromIpAddressString(ipAddr)),
+                    port);
+        } catch (UnknownHostException e) {
+            // Should never reach here.
+            throw new Error(e);
+        }
+    }
+
     private static void validatePort(String name, int port) {
         checkArgument(port > 0 && port <= 65535, "%s: %s (expected: 1-65535)", name, port);
     }
@@ -770,17 +907,26 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         final Endpoint that = (Endpoint) obj;
-        return host().equals(that.host()) &&
+        return hashCode() == that.hashCode() &&
+               host.equals(that.host) &&
                Objects.equals(ipAddr, that.ipAddr) &&
                port == that.port;
     }
 
     @Override
     public int hashCode() {
-        if (hashCode == 0) {
-            hashCode = (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        final int hashCode = this.hashCode;
+        if (hashCode != 0) {
+            return hashCode;
         }
-        return hashCode;
+
+        int newHashCode = (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        if (newHashCode == 0) {
+            newHashCode = 1;
+        }
+
+        this.hashCode = newHashCode;
+        return newHashCode;
     }
 
     @Override

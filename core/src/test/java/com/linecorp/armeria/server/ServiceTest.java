@@ -64,7 +64,7 @@ public class ServiceTest {
                                   AccessLogWriter.disabled(),
                                   CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   ctx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler());
         outer.serviceAdded(cfg);

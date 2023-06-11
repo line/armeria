@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderFactory;
+import org.dataloader.DataLoaderRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -130,13 +131,8 @@ class GraphqlServiceBuilderTest {
         final File graphqlSchemaFile =
                 new File(getClass().getResource("/test.graphqls").toURI());
         final GraphqlServiceBuilder builder = new GraphqlServiceBuilder();
-        final DataLoader<String, String> dataLoader =
-                DataLoaderFactory.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));
         final GraphqlService service = builder.schemaFile(graphqlSchemaFile)
                                               .instrumentation(SimpleInstrumentation.INSTANCE)
-                                              .configureDataLoaderRegistry(dlr -> {
-                                                  dlr.register("dummy1", dataLoader);
-                                              })
                                               .runtimeWiring(it -> {
                                                   // noop
                                               })
@@ -145,5 +141,27 @@ class GraphqlServiceBuilderTest {
                                                   // noop
                                               }).build();
         assertThat(service).isNotNull();
+    }
+
+    @Test
+    void bothDataLoaderConfig() {
+        final DataLoader<String, String> dataLoader =
+                DataLoaderFactory.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));
+
+        assertThatThrownBy(() -> {
+            new GraphqlServiceBuilder()
+                    .dataLoaderRegistry(ctx -> new DataLoaderRegistry())
+                    .configureDataLoaderRegistry(dlr -> dlr.register("dummy1", dataLoader));
+        })
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+
+        assertThatThrownBy(() -> {
+            new GraphqlServiceBuilder()
+                    .configureDataLoaderRegistry(dlr -> dlr.register("dummy1", dataLoader))
+                    .dataLoaderRegistry(ctx -> new DataLoaderRegistry());
+        })
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
     }
 }

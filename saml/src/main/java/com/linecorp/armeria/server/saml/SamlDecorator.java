@@ -137,7 +137,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
             }).thenCompose(arg -> {
                 return ssoHandler.beforeInitiatingSso(ctx, req, arg.messageContext, arg.idpConfig)
                                  .thenApply(unused -> arg);
-            }).thenApply(arg -> {
+            }).thenApplyAsync(arg -> {
                 final SAMLBindingContext bindingContext =
                         arg.messageContext.getSubcontext(SAMLBindingContext.class);
                 final String relayState = bindingContext != null ? bindingContext.getRelayState() : null;
@@ -153,6 +153,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
                                 signingCredential, sp.signatureAlgorithm(),
                                 relayState));
                     } else {
+                        // signing can incur a blocking call
                         final String value = toSignedBase64(
                                 arg.messageContext.getMessage(),
                                 signingCredential,
@@ -166,7 +167,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
                 } catch (SamlException e) {
                     return fail(ctx, e);
                 }
-            }).exceptionally(e -> fail(ctx, e)));
+            }, ctx.blockingTaskExecutor()).exceptionally(e -> fail(ctx, e)));
         }));
     }
 

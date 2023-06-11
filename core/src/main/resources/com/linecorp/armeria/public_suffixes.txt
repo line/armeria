@@ -178,7 +178,6 @@ aaa.pro
 aarborte.no
 aarp
 ab.ca
-abarth
 abashiri.hokkaido.jp
 abb
 abbott
@@ -380,7 +379,6 @@ alaheadju.no
 aland.fi
 alessandria.it
 alesund.no
-alfaromeo
 algard.no
 alibaba
 alipay
@@ -2361,7 +2359,6 @@ fi.cloudplatform.fi
 fi.cr
 fi.eu.org
 fi.it
-fiat
 fidelity
 fido
 fie.ee
@@ -4362,7 +4359,6 @@ lamborghini
 lamer
 lanbib.se
 lancaster
-lancia
 land
 land-4-sale.us
 landrover
@@ -4676,7 +4672,6 @@ marshalls
 marugame.kagawa.jp
 marumori.miyagi.jp
 masaki.ehime.jp
-maserati
 masfjorden.no
 mashike.hokkaido.jp
 mashiki.kumamoto.jp
