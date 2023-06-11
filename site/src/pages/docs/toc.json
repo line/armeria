@@ -24,7 +24,8 @@
     "server-sse",
     "server-service-registration",
     "server-multipart",
-    "server-timeouts"
+    "server-timeouts",
+    "server-flags-provider"
   ],
   "Client": [
     "client-http",
