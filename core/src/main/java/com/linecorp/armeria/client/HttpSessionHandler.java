@@ -121,7 +121,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      * If set to {@code true}, another connection attempt will follow.
      */
     @Nullable
-    private SessionProtocol needsRetryWith;
+    private SessionProtocol retryProtocol;
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
@@ -274,7 +274,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void retryWith(SessionProtocol protocol) {
-        needsRetryWith = protocol;
+        retryProtocol = protocol;
     }
 
     @Override
@@ -443,13 +443,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         isAcquirable = false;
 
         // Protocol upgrade has failed, but needs to retry.
-        if (needsRetryWith != null) {
+        if (retryProtocol != null) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, needsRetryWith, poolKey, sessionPromise);
+                channelPool.connect(proxyDestinationAddress, retryProtocol, poolKey, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, needsRetryWith, poolKey, sessionPromise);
+                channelPool.connect(remoteAddress, retryProtocol, poolKey, sessionPromise);
             }
         } else {
             // Fail all pending responses.
