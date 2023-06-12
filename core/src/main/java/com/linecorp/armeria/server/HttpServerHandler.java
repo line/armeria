@@ -397,8 +397,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
 
             final RequestAndResponseCompleteHandler handler =
-                    new RequestAndResponseCompleteHandler(eventLoop, ctx, reqCtx.logBuilder(),
-                                                          req, serviceCfg, isTransientService);
+                    new RequestAndResponseCompleteHandler(eventLoop, ctx, reqCtx, req,
+                                                          isTransientService);
             req.whenComplete().handle(handler.requestCompleteHandler);
 
             // A future which is completed when the all response objects are written to channel and
@@ -639,8 +639,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         private final boolean isTransientService;
 
         RequestAndResponseCompleteHandler(EventLoop eventLoop, ChannelHandlerContext ctx,
-                                          RequestLogBuilder logBuilder, DecodedHttpRequest req,
-                                          ServiceConfig serviceCfg, boolean isTransientService) {
+                                          ServiceRequestContext reqCtx, DecodedHttpRequest req,
+                                          boolean isTransientService) {
             this.ctx = ctx;
             this.req = req;
             this.isTransientService = isTransientService;
@@ -649,22 +649,23 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             requestCompleteHandler = (unused, cause) -> {
                 if (eventLoop.inEventLoop()) {
-                    handleRequestComplete(logBuilder, cause);
+                    handleRequestComplete(reqCtx.logBuilder(), cause);
                 } else {
-                    eventLoop.execute(() -> handleRequestComplete(logBuilder, cause));
+                    eventLoop.execute(() -> handleRequestComplete(reqCtx.logBuilder(), cause));
                 }
                 return null;
             };
 
             responseCompleteHandler = (unused, cause) -> {
                 assert eventLoop.inEventLoop();
-                if (cause != null || !req.isOpen() || serviceCfg.requestAutoAbortDelayMillis() == 0) {
+                final long requestAutoAbortDelayMillis = reqCtx.requestAutoAbortDelayMillis();
+                if (cause != null || !req.isOpen() || requestAutoAbortDelayMillis == 0) {
                     handleResponseComplete(cause);
                     return null;
                 }
-                if (serviceCfg.requestAutoAbortDelayMillis() > 0) {
+                if (requestAutoAbortDelayMillis > 0 && requestAutoAbortDelayMillis < Long.MAX_VALUE) {
                     eventLoop.schedule(() -> handleResponseComplete(null),
-                                       serviceCfg.requestAutoAbortDelayMillis(), TimeUnit.MILLISECONDS);
+                                       requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
                     return null;
                 }
                 // Auto aborting request is disabled.

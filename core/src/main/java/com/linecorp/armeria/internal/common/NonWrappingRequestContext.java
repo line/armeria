@@ -63,6 +63,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     private final HttpMethod method;
     private RequestTarget reqTarget;
     private final ExchangeType exchangeType;
+    private long requestAutoAbortDelayMillis;
 
     @Nullable
     private String decodedPath;
@@ -76,15 +77,11 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
 
     /**
      * Creates a new instance.
-     *
-     * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param id the {@link RequestId} associated with this context
-     * @param req the {@link HttpRequest} associated with this context
-     * @param rpcReq the {@link RpcRequest} associated with this context
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget, ExchangeType exchangeType,
+            long requestAutoAbortDelayMillis,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             @Nullable AttributesGetters rootAttributeMap) {
         assert req != null || rpcReq != null;
@@ -101,6 +98,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         this.method = requireNonNull(method, "method");
         this.reqTarget = requireNonNull(reqTarget, "reqTarget");
         this.exchangeType = requireNonNull(exchangeType, "exchangeType");
+        this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         originalRequest = firstNonNull(req, rpcReq);
         this.req = req;
         this.rpcReq = rpcReq;
@@ -206,6 +204,16 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public final MeterRegistry meterRegistry() {
         return meterRegistry;
+    }
+
+    @Override
+    public long requestAutoAbortDelayMillis() {
+        return requestAutoAbortDelayMillis;
+    }
+
+    @Override
+    public void setRequestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
     }
 
     @Nullable

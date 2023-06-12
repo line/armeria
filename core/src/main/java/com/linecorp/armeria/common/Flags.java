@@ -310,6 +310,9 @@ public final class Flags {
     private static final int DEFAULT_MAX_TOTAL_ATTEMPTS =
             getValue(FlagsProvider::defaultMaxTotalAttempts, "defaultMaxTotalAttempts", value -> value > 0);
 
+    private static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS =
+            getValue(FlagsProvider::defaultRequestAutoAbortDelayMillis, "defaultRequestAutoAbortDelayMillis");
+
     @Nullable
     private static final String ROUTE_CACHE_SPEC =
             nullableCaffeineSpec(FlagsProvider::routeCacheSpec, "routeCacheSpec");
@@ -996,6 +999,23 @@ public final class Flags {
      */
     public static int defaultMaxTotalAttempts() {
         return DEFAULT_MAX_TOTAL_ATTEMPTS;
+    }
+
+    /**
+     * Returns the amount of time to wait by default before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#requestAutoAbortDelayMillis(long)} (long)} or
+     * {@link ClientBuilder#requestAutoAbortDelayMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultRequestAutoAbortDelayMillis=<long>} JVM option
+     * to override the default value.
+     */
+    @UnstableApi
+    public static long defaultRequestAutoAbortDelayMillis() {
+        return DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
     }
 
     /**

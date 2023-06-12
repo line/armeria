@@ -243,7 +243,7 @@ public final class ServerBuilder implements TlsSetters {
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
-        virtualHostTemplate.requestAutoAbortDelayMillis(0); // TODO(minwoox): add to Flags.
+        virtualHostTemplate.requestAutoAbortDelayMillis(0);
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
@@ -846,7 +846,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
-     * It's useful when you want to receive additional data even after closing the response.
+     * This may be useful when you want to receive additional data even after closing the response.
      * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
      * abort the request automatically. There is no delay by default.
      */

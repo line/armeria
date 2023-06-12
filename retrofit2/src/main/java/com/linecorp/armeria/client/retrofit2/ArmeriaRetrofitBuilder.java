@@ -333,6 +333,16 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ArmeriaRetrofitBuilder requestAutoAbortDelay(Duration delay) {
+        return (ArmeriaRetrofitBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (ArmeriaRetrofitBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public ArmeriaRetrofitBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (ArmeriaRetrofitBuilder) super.requestIdGenerator(requestIdGenerator);
     }

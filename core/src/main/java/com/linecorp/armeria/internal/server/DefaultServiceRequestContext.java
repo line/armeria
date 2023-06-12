@@ -163,7 +163,7 @@ public final class DefaultServiceRequestContext
 
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(),
-              routingContext.requestTarget(), exchangeType,
+              routingContext.requestTarget(), exchangeType, cfg.requestAutoAbortDelayMillis(),
               requireNonNull(req, "req"), null, null);
 
         this.ch = requireNonNull(ch, "ch");

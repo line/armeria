@@ -299,6 +299,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public @Nullable Long defaultRequestAutoAbortDelayMillis() {
+        return getLong("defaultRequestAutoAbortDelayMillis");
+    }
+
+    @Override
     public String routeCacheSpec() {
         return getNormalized("routeCacheSpec");
     }
