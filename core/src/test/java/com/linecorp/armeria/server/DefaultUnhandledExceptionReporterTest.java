@@ -93,9 +93,11 @@ class DefaultUnhandledExceptionReporterTest {
 
     @Test
     void allExceptionShouldNotBeReportedWhenLoggingServiceIsSubsequentlyDecorated() throws Exception {
-        server.blockingWebClient().get("/logging-service-subsequently-decorated");
+        assertThat(server.blockingWebClient().get("/logging-service-subsequently-decorated").status().code())
+                .isEqualTo(400);
         throwNonIgnorableException = true;
-        server.blockingWebClient().get("/logging-service-subsequently-decorated");
+        assertThat(server.blockingWebClient().get("/logging-service-subsequently-decorated").status().code())
+                .isEqualTo(500);
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
         assertThat(logAppender.list).isEmpty();
     }
@@ -103,7 +105,8 @@ class DefaultUnhandledExceptionReporterTest {
     @Test
     void nonIgnorableExceptionShouldBeReportedWhenLoggingServiceIsPreviouslyDecorated() {
         throwNonIgnorableException = true;
-        server.blockingWebClient().get("/logging-service-previously-decorated");
+        assertThat(server.blockingWebClient().get("/logging-service-previously-decorated").status().code())
+                .isEqualTo(500);
         await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
                .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
@@ -116,7 +119,8 @@ class DefaultUnhandledExceptionReporterTest {
 
     @Test
     void ignorableExceptionShouldNotBeReportedEvenThoughLoggingServiceIsPreviouslyDecorated() throws Exception {
-        server.blockingWebClient().get("/logging-service-previously-decorated");
+        assertThat(server.blockingWebClient().get("/logging-service-previously-decorated").status().code())
+                .isEqualTo(400);
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
         assertThat(logAppender.list).isEmpty();
     }
