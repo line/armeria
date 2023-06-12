@@ -68,7 +68,7 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
         // GrpcContextElement.current():
         //   In gRPC-kotlin, the Coroutine Context is propagated using the gRPC Context.
         return CoroutineScope(
-                COROUTINE_CONTEXT_KEY.get() + GrpcContextElement.current()
+            COROUTINE_CONTEXT_KEY.get() + GrpcContextElement.current()
         ).future {
             suspendedInterceptCall(call, headers, next)
         }
