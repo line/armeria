@@ -154,6 +154,14 @@ public final class MicrometerUtil {
         }
     }
 
+    /**
+     * Clears the cached {@link MeterIdPrefix}s. This method is useful for tests that measure metrics after
+     * {@linkplain MeterRegistry#clear() clearing} the {@link MeterRegistry}.
+     */
+    public static void clear() {
+        map.clear();
+    }
+
     private MicrometerUtil() {}
 
     private static final class RegistrationState {

@@ -667,6 +667,10 @@ The flag may be added like the following:
 Note that if the target Java version is greater than the build JDK version,
 an `UnsupportedClassVersionError` may be raised.
 
+Plus, you can use `-PminimumJavaVersion` property to override the minimum version of `javaTargetCompatibility`
+set by `java` flag. For example, if you set `-PminimumJavaVersion=11`, `javaTargetCompatibility` lower than 
+Java 11 will be upgraded to Java 11.
+
 ## Tagging conveniently with `release` task
 
 The task called `release` is added at the top level project. It will update the
