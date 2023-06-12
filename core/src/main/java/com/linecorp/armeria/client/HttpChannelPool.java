@@ -16,10 +16,8 @@
 package com.linecorp.armeria.client;
 
 import java.lang.reflect.Array;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -28,7 +26,6 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -38,8 +35,6 @@ import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
@@ -56,6 +51,8 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -64,13 +61,13 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import reactor.core.scheduler.NonBlocking;
@@ -91,7 +88,9 @@ final class HttpChannelPool implements AsyncCloseable {
     private final ConnectionPoolListener listener;
 
     // Fields for creating a new connection:
-    private final Bootstrap[] bootstraps;
+    private final Bootstrap[] inetBootstraps;
+    @Nullable
+    private final Bootstrap[] unixBootstraps;
     private final int connectTimeoutMillis;
 
     private final SslContext sslCtxHttp1Or2;
@@ -118,10 +117,25 @@ final class HttpChannelPool implements AsyncCloseable {
         this.sslCtxHttp1Only = sslCtxHttp1Only;
         this.sslCtxHttp1Or2 = sslCtxHttp1Or2;
 
-        final Bootstrap baseBootstrap = clientFactory.newBootstrap();
+        final Bootstrap inetBaseBootstrap = clientFactory.newInetBootstrap();
+        inetBootstraps = newBootstrapMap(inetBaseBootstrap, clientFactory, eventLoop);
+
+        final Bootstrap unixBaseBootstrap = clientFactory.newUnixBootstrap();
+        if (unixBaseBootstrap != null) {
+            unixBootstraps = newBootstrapMap(unixBaseBootstrap, clientFactory, eventLoop);
+        } else {
+            unixBootstraps = null;
+        }
+
+        connectTimeoutMillis = (Integer) inetBaseBootstrap.config().options()
+                                                          .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+    }
+
+    private Bootstrap[] newBootstrapMap(Bootstrap baseBootstrap,
+                                        HttpClientFactory clientFactory,
+                                        EventLoop eventLoop) {
         baseBootstrap.group(eventLoop);
-        bootstraps = newEnumMap(
-                Bootstrap.class,
+        return newEnumMap(Bootstrap.class,
                 desiredProtocol -> {
                     final SslContext sslCtx = determineSslContext(desiredProtocol);
                     final Bootstrap bootstrap = baseBootstrap.clone();
@@ -137,8 +151,6 @@ final class HttpChannelPool implements AsyncCloseable {
                 SessionProtocol.HTTP, SessionProtocol.HTTPS,
                 SessionProtocol.H1, SessionProtocol.H1C,
                 SessionProtocol.H2, SessionProtocol.H2C);
-        connectTimeoutMillis = (Integer) baseBootstrap.config().options()
-                                                      .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
     }
 
     private SslContext determineSslContext(SessionProtocol desiredProtocol) {
@@ -204,8 +216,19 @@ final class HttpChannelPool implements AsyncCloseable {
         return maps;
     }
 
-    private Bootstrap getBootstrap(SessionProtocol desiredProtocol) {
-        return bootstraps[desiredProtocol.ordinal()];
+    private Bootstrap getBootstrap(SessionProtocol desiredProtocol, SocketAddress remoteAddress) {
+        if (remoteAddress instanceof InetSocketAddress) {
+            return inetBootstraps[desiredProtocol.ordinal()];
+        }
+
+        assert remoteAddress instanceof DomainSocketAddress : remoteAddress;
+
+        if (unixBootstraps == null) {
+            throw new IllegalArgumentException("Domain sockets are not supported by " +
+                                               eventLoop.getClass().getName());
+        }
+
+        return unixBootstraps[desiredProtocol.ordinal()];
     }
 
     @Nullable
@@ -352,15 +375,8 @@ final class HttpChannelPool implements AsyncCloseable {
         setPendingAcquisition(desiredProtocol, key, promise);
         timingsBuilder.socketConnectStart();
 
-        final InetSocketAddress remoteAddress;
-        try {
-            remoteAddress = key.toRemoteAddress();
-        } catch (UnknownHostException e) {
-            notifyConnect(desiredProtocol, key, eventLoop.newFailedFuture(e), promise, timingsBuilder);
-            return;
-        }
-
-        // Fail immediately if it is sure that the remote address doesn't support the desired protocol.
+        // Fail immediately if it is certain that the remote address doesn't support the desired protocol.
+        final SocketAddress remoteAddress = key.toRemoteAddress();
         if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, desiredProtocol)) {
             notifyConnect(desiredProtocol, key,
                           eventLoop.newFailedFuture(
@@ -394,7 +410,13 @@ final class HttpChannelPool implements AsyncCloseable {
     void connect(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
                  PoolKey poolKey, Promise<Channel> sessionPromise) {
 
-        final Bootstrap bootstrap = getBootstrap(desiredProtocol);
+        final Bootstrap bootstrap;
+        try {
+            bootstrap = getBootstrap(desiredProtocol, remoteAddress);
+        } catch (Exception e) {
+            sessionPromise.tryFailure(e);
+            return;
+        }
 
         bootstrap.register().addListener((ChannelFuture registerFuture) -> {
             if (!registerFuture.isSuccess()) {
@@ -438,7 +460,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
                 final ProxyConfigSelector proxyConfigSelector = clientFactory.proxyConfigSelector();
-                proxyConfigSelector.connectFailed(protocol, Endpoint.unsafeCreate(poolKey.host, poolKey.port),
+                proxyConfigSelector.connectFailed(protocol, poolKey.endpoint,
                                                   proxyAddress, UnprocessedRequestException.of(cause));
             }
         } catch (Throwable t) {
@@ -488,11 +510,12 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 allChannels.put(channel, Boolean.TRUE);
 
+                final InetSocketAddress remoteAddr = ChannelUtil.remoteAddress(channel);
+                final InetSocketAddress localAddr = ChannelUtil.localAddress(channel);
+                assert remoteAddr != null && localAddr != null
+                        : "raddr: " + remoteAddr + ", laddr: " + localAddr;
                 try {
-                    listener.connectionOpen(protocol,
-                                            (InetSocketAddress) channel.remoteAddress(),
-                                            (InetSocketAddress) channel.localAddress(),
-                                            channel);
+                    listener.connectionOpen(protocol, remoteAddr, localAddr, channel);
                 } catch (Exception e) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("{} Exception handling {}.connectionOpen()",
@@ -532,10 +555,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     }
 
                     try {
-                        listener.connectionClosed(protocol,
-                                                  (InetSocketAddress) channel.remoteAddress(),
-                                                  (InetSocketAddress) channel.localAddress(),
-                                                  channel);
+                        listener.connectionClosed(protocol, remoteAddr, localAddr, channel);
                     } catch (Exception e) {
                         if (logger.isWarnEnabled()) {
                             logger.warn("{} Exception handling {}.connectionClosed()",
@@ -615,31 +635,26 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     static final class PoolKey {
-        final String host;
-        @Nullable
-        final String ipAddr;
-        final int port;
-        final int hashCode;
+        final Endpoint endpoint;
         final ProxyConfig proxyConfig;
+        private final int hashCode;
 
-        PoolKey(String host, @Nullable String ipAddr, int port, ProxyConfig proxyConfig) {
-            this.host = host;
-            this.ipAddr = ipAddr;
-            this.port = port;
+        PoolKey(Endpoint endpoint, ProxyConfig proxyConfig) {
+            this.endpoint = endpoint;
             this.proxyConfig = proxyConfig;
-            hashCode = Objects.hash(host, ipAddr, port, proxyConfig);
+            hashCode = endpoint.hashCode() * 31 + proxyConfig.hashCode();
         }
 
-        private InetSocketAddress toRemoteAddress() throws UnknownHostException {
-            if (ipAddr != null) {
-                final InetAddress inetAddr = InetAddress.getByAddress(
-                        host, NetUtil.createByteArrayFromIpAddressString(ipAddr));
-                return new InetSocketAddress(inetAddr, port);
-            } else {
-                // key.ipAddr can be null for forward proxies
-                assert proxyConfig.proxyType().isForwardProxy();
-                return InetSocketAddress.createUnresolved(host, port);
+        SocketAddress toRemoteAddress() {
+            final InetSocketAddress remoteAddr = endpoint.toSocketAddress(-1);
+            if (endpoint.isDomainSocket()) {
+                return ((com.linecorp.armeria.common.util.DomainSocketAddress) remoteAddr).asNettyAddress();
             }
+
+            assert !remoteAddr.isUnresolved() || proxyConfig.proxyType().isForwardProxy()
+                    : remoteAddr + ", " + proxyConfig;
+
+            return remoteAddr;
         }
 
         @Override
@@ -653,10 +668,8 @@ final class HttpChannelPool implements AsyncCloseable {
             }
 
             final PoolKey that = (PoolKey) o;
-            // Compare IP address first, which is most likely to differ.
-            return Objects.equals(ipAddr, that.ipAddr) &&
-                   port == that.port &&
-                   host.equals(that.host) &&
+            return hashCode == that.hashCode &&
+                   endpoint.equals(that.endpoint) &&
                    proxyConfig.equals(that.proxyConfig);
         }
 
@@ -667,12 +680,28 @@ final class HttpChannelPool implements AsyncCloseable {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("host", host)
-                              .add("ipAddr", ipAddr)
-                              .add("port", port)
-                              .add("proxyConfig", proxyConfig)
-                              .toString();
+            final String host = endpoint.host();
+            final String ipAddr = endpoint.ipAddr();
+            final int port = endpoint.port();
+            final boolean isDomainSocket = endpoint.isDomainSocket();
+            final String proxyConfigStr = proxyConfig.proxyType() != ProxyType.DIRECT ? proxyConfig.toString()
+                                                                                      : null;
+            try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+                final StringBuilder buf = tempThreadLocals.stringBuilder();
+                buf.append('{').append(host);
+                if (!isDomainSocket) {
+                    if (ipAddr != null) {
+                        buf.append('/').append(ipAddr);
+                    }
+                    buf.append(':').append(port);
+                }
+                if (proxyConfigStr != null) {
+                    buf.append(" via ");
+                    buf.append(proxyConfigStr);
+                }
+                buf.append('}');
+                return buf.toString();
+            }
         }
     }
 
@@ -729,7 +758,7 @@ final class HttpChannelPool implements AsyncCloseable {
         /**
          * Piggybacking failed, but there's another pending acquisition.
          */
-        PIGGYBACKED_AGAIN;
+        PIGGYBACKED_AGAIN
     }
 
     /**

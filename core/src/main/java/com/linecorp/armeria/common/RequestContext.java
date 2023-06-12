@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
@@ -347,15 +348,19 @@ public interface RequestContext extends Unwrappable {
 
     /**
      * Returns the remote address of this request, or {@code null} if the connection is not established yet.
+     *
+     * @return an {@link InetSocketAddress}, a {@link DomainSocketAddress} or {@code null}
      */
     @Nullable
-    <A extends SocketAddress> A remoteAddress();
+    InetSocketAddress remoteAddress();
 
     /**
      * Returns the local address of this request, or {@code null} if the connection is not established yet.
+     *
+     * @return an {@link InetSocketAddress}, a {@link DomainSocketAddress} or {@code null}
      */
     @Nullable
-    <A extends SocketAddress> A localAddress();
+    InetSocketAddress localAddress();
 
     /**
      * The {@link SSLSession} for this request if the connection is made over TLS, or {@code null} if

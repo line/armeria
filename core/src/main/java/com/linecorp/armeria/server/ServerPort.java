@@ -35,6 +35,8 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 
 /**
  * A pair of server-side bind address and {@link SessionProtocol}.
@@ -121,19 +123,23 @@ public final class ServerPort implements Comparable<ServerPort> {
         }
 
         this.localAddress = localAddress;
-        this.protocols = Sets.immutableEnumSet(requireNonNull(protocols, "protocols"));
+        this.protocols = checkProtocols(protocols);
         this.portGroup = portGroup;
-
-        checkArgument(!this.protocols.isEmpty(),
-                      "protocols: %s (must not be empty)", this.protocols);
-        checkArgument(this.protocols.contains(HTTP) || this.protocols.contains(HTTPS),
-                      "protocols: %s (must contain HTTP or HTTPS)", this.protocols);
-        checkArgument(this.protocols.stream().allMatch(p -> p == HTTP || p == HTTPS || p == PROXY),
-                      "protocols: %s (must not contain other than %s, %s or %s)",
-                      this.protocols, HTTP, HTTPS, PROXY);
 
         comparisonStr = localAddress.getAddress().getHostAddress() + '/' +
                         localAddress.getPort() + '/' + protocols;
+    }
+
+    private static Set<SessionProtocol> checkProtocols(Iterable<SessionProtocol> protocols) {
+        final Set<SessionProtocol> copy = Sets.immutableEnumSet(requireNonNull(protocols, "protocols"));
+        checkArgument(!copy.isEmpty(),
+                      "protocols: %s (must not be empty)", copy);
+        checkArgument(copy.contains(HTTP) || copy.contains(HTTPS),
+                      "protocols: %s (must contain HTTP or HTTPS)", copy);
+        checkArgument(copy.stream().allMatch(p -> p == HTTP || p == HTTPS || p == PROXY),
+                      "protocols: %s (must not contain other than %s, %s or %s)",
+                      copy, HTTP, HTTPS, PROXY);
+        return copy;
     }
 
     /**
@@ -141,6 +147,15 @@ public final class ServerPort implements Comparable<ServerPort> {
      */
     public InetSocketAddress localAddress() {
         return localAddress;
+    }
+
+    /**
+     * Returns whether this {@link ServerPort} listens to a Unix domain socket. If {@code true},
+     * the address returned by {@link #localAddress()} is a {@link DomainSocketAddress}.
+     */
+    @UnstableApi
+    public boolean isDomainSocket() {
+        return localAddress instanceof DomainSocketAddress;
     }
 
     /**
