@@ -948,11 +948,6 @@ public final class GrpcServiceBuilder {
     private ImmutableList.Builder<ServerInterceptor> interceptors() {
         if (interceptors == null) {
             interceptors = ImmutableList.builder();
-            if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
-                final ServerInterceptor coroutineContextInterceptor =
-                        new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
-                interceptors.add(coroutineContextInterceptor);
-            }
         }
         return interceptors;
     }
@@ -966,6 +961,11 @@ public final class GrpcServiceBuilder {
      */
     public GrpcService build() {
         final HandlerRegistry handlerRegistry;
+        if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
+            final ServerInterceptor coroutineContextInterceptor =
+                    new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
+            interceptors().add(coroutineContextInterceptor);
+        }
         if (!enableUnframedRequests && unframedGrpcErrorHandler != null) {
             throw new IllegalStateException(
                     "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
@@ -981,9 +981,9 @@ public final class GrpcServiceBuilder {
         if (grpcHealthCheckService != null) {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
-        final ImmutableList<ServerInterceptor> interceptors = interceptors().build();
-        if (!interceptors.isEmpty()) {
+        if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
+            final ImmutableList<ServerInterceptor> interceptors = this.interceptors.build();
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =

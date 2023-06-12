@@ -65,20 +65,12 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
         headers: Metadata,
         next: ServerCallHandler<I, O>
     ): CompletableFuture<ServerCall.Listener<I>> {
-        check(call is AbstractServerCall) {
-            throw IllegalArgumentException(
-                "Cannot use ${AsyncServerInterceptor::class.java.name} with a non-Armeria gRPC server"
-            )
-        }
-        val executor = call.blockingExecutor() ?: call.eventLoop()
-
         // COROUTINE_CONTEXT_KEY.get():
         //   It is necessary to propagate the CoroutineContext set by the previous CoroutineContextServerInterceptor.
         //   (The ArmeriaRequestCoroutineContext is also propagated by CoroutineContextServerInterceptor)
         // GrpcContextElement.current():
         //   In gRPC-kotlin, the Coroutine Context is propagated using the gRPC Context.
         return CoroutineScope(
-            executor.asCoroutineDispatcher() + ArmeriaRequestCoroutineContext(call.ctx()) +
                 COROUTINE_CONTEXT_KEY.get() + GrpcContextElement.current()
         ).future {
             suspendedInterceptCall(call, headers, next)
