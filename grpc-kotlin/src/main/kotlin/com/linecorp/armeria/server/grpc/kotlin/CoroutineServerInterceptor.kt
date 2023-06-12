@@ -17,8 +17,6 @@
 package com.linecorp.armeria.server.grpc.kotlin
 
 import com.linecorp.armeria.common.annotation.UnstableApi
-import com.linecorp.armeria.internal.common.kotlin.ArmeriaRequestCoroutineContext
-import com.linecorp.armeria.internal.server.grpc.AbstractServerCall
 import com.linecorp.armeria.server.grpc.AsyncServerInterceptor
 import io.grpc.Context
 import io.grpc.Metadata
@@ -28,7 +26,6 @@ import io.grpc.ServerInterceptor
 import io.grpc.kotlin.CoroutineContextServerInterceptor
 import io.grpc.kotlin.GrpcContextElement
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.future.future
 import java.util.concurrent.CompletableFuture
 import kotlin.coroutines.CoroutineContext
