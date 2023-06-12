@@ -148,7 +148,18 @@ jobs:
 
       - name: Fail the run if any threads were blocked
         if: ${{ matrix.blockhound }}
-        run: "if [[ -z `find . -name 'blockhound.log' -size +0` ]]; then exit 0; else exit 1; fi"
+        run: |
+          blockhound_logs=$(find . -name 'blockhound.log' -size +0); \
+          if [[ -z ${blockhound_logs} ]]; then \
+            exit 0; \
+          else \
+             while IFS= read -r log; do \
+               echo "- Detected file: ${log}"; \
+               head --lines=1000 "${log}"; \
+               echo; \
+             done <<< "${blockhound_logs}"; \
+             exit 1; \
+          fi
         shell: bash
 
       - name: Collect the test reports
