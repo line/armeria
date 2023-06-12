@@ -22,15 +22,13 @@ def boot3ActuatorProjectDir = "${rootProject.projectDir}/spring/$boot3Actuator"
 tasks.compileJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileJava)
 tasks.compileTestJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileTestJava)
 tasks.sourcesJar.dependsOn(project(":spring:$boot3Actuator").tasks.sourcesJar)
-tasks.processTestResources.dependsOn(project(":spring:$boot3Actuator").tasks.generateTestSources)
 
 tasks.compileJava.source "${boot3ActuatorProjectDir}/src/main/java",
         "${boot3ActuatorProjectDir}/gen-src/main/java"
 tasks.processResources.from "${boot3ActuatorProjectDir}/src/main/resources"
 tasks.compileTestJava.source "${boot3ActuatorProjectDir}/src/test/java",
         "${boot3ActuatorProjectDir}/gen-src/test/java"
-tasks.processTestResources.from "${boot3ActuatorProjectDir}/src/test/resources",
-        "${boot3ActuatorProjectDir}/gen-src/test/resources"
+tasks.processTestResources.from "${boot3ActuatorProjectDir}/src/test/resources"
 tasks.sourcesJar.from "${boot3ActuatorProjectDir}/src/main/java", "${boot3ActuatorProjectDir}/gen-src/main/java"
 tasks.sourcesJar.from "${boot3ActuatorProjectDir}/src/main/resources"
 tasks.javadoc.source "${boot3ActuatorProjectDir}/src/main/java", "${boot3ActuatorProjectDir}/gen-src/main/java"
