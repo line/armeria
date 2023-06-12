@@ -17,7 +17,6 @@ package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
@@ -60,9 +59,6 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class LoggingServiceTest {
-
-    private static final String REQUEST_FORMAT = "{} Request: {}";
-    private static final String RESPONSE_FORMAT = "{} Response: {}";
 
     private static final HttpService delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
@@ -114,10 +110,8 @@ class LoggingServiceTest {
         service.serve(ctx, ctx.request());
 
         verify(logger).isWarnEnabled();
-        verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
+        verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).warn(matches(".*Response:.*cause=java\\.lang\\.IllegalStateException: Failed.*"),
                             same(cause));
     }
 
@@ -143,12 +137,12 @@ class LoggingServiceTest {
 
         if (cause == null) {
             // Log a response without an HttpResponseException or HttpStatusException
-            verify(logger).debug(eq(REQUEST_FORMAT), same(ctx), anyString());
-            verify(logger).debug(eq(RESPONSE_FORMAT), same(ctx), anyString());
+            verify(logger).debug(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+            verify(logger).debug(matches(".*Response:.*"));
         } else {
-            verify(logger).warn(eq(REQUEST_FORMAT), same(ctx), anyString());
-            verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                                matches(".*cause=" + cause.getClass().getName() + ".*"), same(cause));
+            verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+            verify(logger).warn(matches(".*Response:.*cause=" + cause.getClass().getName() + ".*"),
+                                same(cause));
         }
     }
 
@@ -172,10 +166,9 @@ class LoggingServiceTest {
 
         service.serve(ctx, ctx.request());
 
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*headers=\\[:status=200].*"));
+        verify(logger).info(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).info(matches(".*Response:.*headers=\\[:status=200].*"));
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -211,9 +204,9 @@ class LoggingServiceTest {
         service.serve(ctx, ctx.request());
         verify(logger, never()).isInfoEnabled();
         verify(logger, times(2)).isWarnEnabled();
-        verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/, x-req=test, x-res=test].*"));
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx), anyString());
+        verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/, x-req=test, x-res=test].*"));
+        verify(logger).warn(matches(".*Response:.*"));
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -248,9 +241,8 @@ class LoggingServiceTest {
         service.serve(ctx, ctx.request());
         verify(logger, times(2)).isInfoEnabled();
         verify(logger, never()).isWarnEnabled();
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx), anyString());
+        verify(logger).info(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -308,12 +300,10 @@ class LoggingServiceTest {
         service.serve(ctx, ctx.request());
 
         verify(logger, times(2)).isInfoEnabled();
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*" + sanitizedRequestHeaders + ".*" + sanitizedRequestContent + ".*" +
-                                    sanitizedRequestTrailers + ".*"));
-        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*" + sanitizedResponseHeaders + ".*" + sanitizedResponseContent + ".*" +
-                                    sanitizedResponseTrailers + ".*"));
+        verify(logger).info(matches(".*Request:.*" + sanitizedRequestHeaders + ".*" + sanitizedRequestContent +
+                                    ".*" + sanitizedRequestTrailers + ".*"));
+        verify(logger).info(matches(".*Response:.*" + sanitizedResponseHeaders + ".*" +
+                                    sanitizedResponseContent + ".*" + sanitizedResponseTrailers + ".*"));
     }
 
     @Test
@@ -369,12 +359,10 @@ class LoggingServiceTest {
         service.serve(ctx, ctx.request());
 
         verify(logger, times(2)).isInfoEnabled();
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*" + sanitizedRequestHeaders + ".*" + sanitizedRequestContent + ".*" +
-                                    sanitizedRequestTrailers + ".*"));
-        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*" + sanitizedResponseHeaders + ".*" + sanitizedResponseContent + ".*" +
-                                    sanitizedResponseTrailers + ".*"));
+        verify(logger).info(matches(".*Request:.*" + sanitizedRequestHeaders + ".*" + sanitizedRequestContent +
+                                    ".*" + sanitizedRequestTrailers + ".*"));
+        verify(logger).info(matches(".*Response:.*" + sanitizedResponseHeaders + ".*" +
+                                    sanitizedResponseContent + ".*" + sanitizedResponseTrailers + ".*"));
     }
 
     @Test
@@ -393,7 +381,7 @@ class LoggingServiceTest {
         when(logger.isWarnEnabled()).thenReturn(true);
 
         // Before sanitization
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
         assertThat(ctx.logBuilder().toString()).contains("test.com");
 
         final LogFormatter logFormatter =
@@ -419,15 +407,13 @@ class LoggingServiceTest {
 
         // verify request logs
         for (int i = 0; i < 2; i++) {
-            verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                                argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
+            verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                         !(text.contains(":path=/hello/trustin") ||
+                                                           text.contains("com"))));
         }
 
         // verify response log
-        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))),
-                            eq(cause));
-
+        verify(logger).warn(matches(".*Response:.*"), eq(cause));
         verifyNoMoreInteractions(logger);
     }
 
@@ -447,7 +433,7 @@ class LoggingServiceTest {
         when(logger.isWarnEnabled()).thenReturn(true);
 
         // Before sanitization
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
         assertThat(ctx.logBuilder().toString()).contains("test.com");
 
         final LogFormatter logFormatter =
@@ -473,15 +459,13 @@ class LoggingServiceTest {
 
         // verify request logs
         for (int i = 0; i < 2; i++) {
-            verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                                argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
+            verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                         !(text.contains(":path=/hello/trustin") ||
+                                                           text.contains("com"))));
         }
 
         // verify response log
-        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))),
-                            eq(cause));
-
+        verify(logger).warn(matches(".*Response:.*"), eq(cause));
         verifyNoMoreInteractions(logger);
     }
 
@@ -522,14 +506,8 @@ class LoggingServiceTest {
         // Ensure the request content (the phone number 333-490-4499) is sanitized.
         verify(logger, times(2)).isInfoEnabled();
 
-        // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
-        // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        // verify request and response log
+        verify(logger, times(2)).info(argThat((String text) -> !text.contains("333-490-4499")));
         verifyNoMoreInteractions(logger);
     }
 
@@ -569,14 +547,8 @@ class LoggingServiceTest {
         // Ensure the request content (the phone number 333-490-4499) is sanitized.
         verify(logger, times(2)).isInfoEnabled();
 
-        // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
-        // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        // verify request and response log
+        verify(logger, times(2)).info(argThat((String text) -> !text.contains("333-490-4499")));
         verifyNoMoreInteractions(logger);
     }
 
@@ -596,7 +568,7 @@ class LoggingServiceTest {
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
-        verifyNoInteractions(logger);
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -616,11 +588,10 @@ class LoggingServiceTest {
 
         service.serve(ctx, ctx.request());
         verify(logger).isWarnEnabled();
-        verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
+        verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).warn(matches(".* Response: .*cause=java\\.lang\\.IllegalStateException: Failed.*"),
                             same(cause));
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -659,10 +630,8 @@ class LoggingServiceTest {
         service.serve(ctx, ctx.request());
 
         verify(logger).isWarnEnabled();
-        verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).warn(eq(RESPONSE_FORMAT), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")));
+        verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).warn(argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")));
     }
 
     @Test

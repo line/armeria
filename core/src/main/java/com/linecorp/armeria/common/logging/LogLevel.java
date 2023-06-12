@@ -135,6 +135,35 @@ public enum LogLevel {
     /**
      * Logs a message at this level.
      */
+    public void log(Logger logger, String format, Throwable throwable) {
+        requireNonNull(logger, "logger");
+        requireNonNull(format, "format");
+        switch (this) {
+            case OFF:
+                break;
+            case TRACE:
+                logger.trace(format, throwable);
+                break;
+            case DEBUG:
+                logger.debug(format, throwable);
+                break;
+            case INFO:
+                logger.info(format, throwable);
+                break;
+            case WARN:
+                logger.warn(format, throwable);
+                break;
+            case ERROR:
+                logger.error(format, throwable);
+                break;
+            default:
+                throw new Error();
+        }
+    }
+
+    /**
+     * Logs a message at this level.
+     */
     @SuppressWarnings("MethodParameterNamingConvention")
     public void log(Logger logger, String format, @Nullable Object arg1, @Nullable Object arg2) {
         requireNonNull(logger, "logger");

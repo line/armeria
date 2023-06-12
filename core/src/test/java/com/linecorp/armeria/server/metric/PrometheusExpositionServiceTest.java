@@ -87,7 +87,7 @@ class PrometheusExpositionServiceTest {
         assertThat(client.get("/api").aggregate().join().status()).isSameAs(HttpStatus.OK);
         await().until(() -> logs.size() == 1);
         verify(logger, times(2)).isDebugEnabled();
-        verify(logger, times(2)).debug(anyString(), any(), any());
+        verify(logger, times(2)).debug(anyString());
 
         final String exportedContent = client.get("/disabled").aggregate().join().contentUtf8();
         assertThat(exportedContent).contains("armeria_build_info{");
@@ -107,7 +107,7 @@ class PrometheusExpositionServiceTest {
         // Access log is not written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).then().until(() -> logs.size() == 1);
         verify(logger, times(4)).isDebugEnabled();
-        verify(logger, times(2)).debug(anyString(), any(), any());
+        verify(logger, times(2)).debug(anyString());
 
         client.get("/enabled").aggregate().join();
         // prometheus requests are collected.
@@ -122,7 +122,7 @@ class PrometheusExpositionServiceTest {
         // Access log is written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).until(() -> logs.size() == 2);
         verify(logger, times(6)).isDebugEnabled();
-        verify(logger, times(4)).debug(anyString(), any(), any());
+        verify(logger, times(4)).debug(anyString());
     }
 
     @Nested

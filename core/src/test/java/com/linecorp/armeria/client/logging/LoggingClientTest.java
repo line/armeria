@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.times;
@@ -86,12 +87,12 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).info(argThat((String actLog) -> actLog.contains("Request:") &&
+                                                       actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")));
+        verify(logger).info(argThat((String actLog) -> actLog.contains("Response:") &&
+                                                       actLog.endsWith("headers=[:status=0]}")));
 
         verifyNoMoreInteractions(logger);
         clearInvocations(logger);
@@ -121,8 +122,8 @@ class LoggingClientTest {
         when(logger.isInfoEnabled()).thenReturn(true);
 
         // Before sanitization
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
+        assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
+        assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
 
         final LogFormatter logFormatter = LogFormatter.builderForText()
                                                       .requestHeadersSanitizer(RegexBasedSanitizer.of(
@@ -148,13 +149,11 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
-
+        verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                     !(text.contains(":path=/hello/trustin") ||
+                                                       text.contains(":authority=test.com"))));
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
-
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -171,7 +170,7 @@ class LoggingClientTest {
 
         // Before sanitization
         assertThat(ctx.logBuilder().toString()).contains("trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
+        assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
 
         final LogFormatter logFormatter =
                 LogFormatter.builderForText()
@@ -194,13 +193,11 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
-
+        verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                     !(text.contains(":path=/hello/trustin") ||
+                                                       text.contains(":authority=test.com"))));
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
-
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -240,13 +237,10 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                     !text.contains("333-490-4499")));
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -287,13 +281,10 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                     !text.contains("333-490-4499")));
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -317,12 +308,12 @@ class LoggingClientTest {
         verify(logger, times(2)).isDebugEnabled();
 
         // verify request log
-        verify(logger).debug(eq("{} Request: {}"), eq(ctx),
-                             argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).debug(argThat((String actLog) -> actLog.contains("Request:") &&
+                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).debug(eq("{} Response: {}"), eq(ctx),
-                             argThat((String actLog) -> actLog.endsWith("headers=[:status=500]}")));
+        verify(logger).debug(argThat((String actLog) -> actLog.contains("Response:") &&
+                                                        actLog.endsWith("headers=[:status=500]}")));
     }
 
     @Test
@@ -348,12 +339,12 @@ class LoggingClientTest {
         verify(logger, times(1)).isWarnEnabled();
 
         // verify request log
-        verify(logger).debug(eq("{} Request: {}"), eq(ctx),
-                             argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).debug(argThat((String actLog) -> actLog.contains("Request:") &&
+                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")),
+        verify(logger).warn(argThat((String actLog) -> actLog.contains("Response:") &&
+                                                       actLog.endsWith("headers=[:status=0]}")),
                             same(cause));
     }
 
@@ -380,12 +371,12 @@ class LoggingClientTest {
         verify(logger, times(1)).isWarnEnabled();
 
         // verify request log
-        verify(logger).warn(eq("{} Request: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).warn(argThat((String actLog) -> actLog.contains("Request:") &&
+                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")),
+        verify(logger).warn(argThat((String actLog) -> actLog.contains("Response:") &&
+                                                       actLog.endsWith("headers=[:status=0]}")),
                             same(cause));
     }
 

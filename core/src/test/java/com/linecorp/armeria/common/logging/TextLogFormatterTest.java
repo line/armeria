@@ -33,8 +33,8 @@ class TextLogFormatterTest {
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
         final String requestLog = logFormatter.formatRequest(log);
-        assertThat(requestLog)
-                .matches("^\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+}$");
+        assertThat(requestLog).matches(
+                ".* Request: .*\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+}$");
     }
 
     @Test
@@ -44,7 +44,7 @@ class TextLogFormatterTest {
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endResponse();
         final String responseLog = logFormatter.formatResponse(log);
-        assertThat(responseLog)
-                .matches("^\\{startTime=.+, length=.+, duration=.+, totalDuration=.+, headers=.+}$");
+        assertThat(responseLog).matches(
+                ".* Response: .*\\{startTime=.+, length=.+, duration=.+, totalDuration=.+, headers=.+}$");
     }
 }

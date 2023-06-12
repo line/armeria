@@ -88,8 +88,9 @@ final class JsonLogFormatter implements LogFormatter {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
+        final RequestContext ctx = log.context();
         if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
-            return "{}";
+            return "{\"ctx\": \"" + ctx + "\", \"request\": {}}";
         }
 
         try {
@@ -101,7 +102,6 @@ final class JsonLogFormatter implements LogFormatter {
                 }
             }
 
-            final RequestContext ctx = log.context();
             final JsonNode sanitizedHeaders;
             if (RequestLogProperty.REQUEST_HEADERS.isAvailable(flags)) {
                 sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
@@ -131,49 +131,52 @@ final class JsonLogFormatter implements LogFormatter {
             }
 
             final ObjectNode objectNode = objectMapper.createObjectNode();
-            objectNode.put("startTime",
+            objectNode.put("ctx", ctx.toString());
+            final ObjectNode requestNode = objectMapper.createObjectNode();
+            objectNode.set("request", requestNode);
+            requestNode.put("startTime",
                            TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
 
             if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
-                objectNode.put("length", TextFormatter.size(log.requestLength()).toString());
+                requestNode.put("length", TextFormatter.size(log.requestLength()).toString());
             }
 
             if (RequestLogProperty.REQUEST_END_TIME.isAvailable(flags)) {
-                objectNode.put("duration",
+                requestNode.put("duration",
                                TextFormatter.elapsed(log.requestDurationNanos()).toString());
             }
 
             if (requestCauseString != null) {
-                objectNode.put("cause", requestCauseString);
+                requestNode.put("cause", requestCauseString);
             }
 
             if (RequestLogProperty.SCHEME.isAvailable(flags)) {
-                objectNode.put("scheme", log.scheme().uriText());
+                requestNode.put("scheme", log.scheme().uriText());
             } else if (RequestLogProperty.SESSION.isAvailable(flags)) {
-                objectNode.put("scheme",
+                requestNode.put("scheme",
                                SerializationFormat.UNKNOWN.uriText() + '+' +
                                log.sessionProtocol());
             } else {
-                objectNode.put("scheme",
+                requestNode.put("scheme",
                                SerializationFormat.UNKNOWN.uriText() + "+unknown");
             }
 
             if (RequestLogProperty.NAME.isAvailable(flags)) {
-                objectNode.put("name", log.name());
+                requestNode.put("name", log.name());
             }
 
             if (sanitizedHeaders != null) {
-                objectNode.set("headers", sanitizedHeaders);
+                requestNode.set("headers", sanitizedHeaders);
             }
 
             if (sanitizedContent != null) {
-                objectNode.set("content", sanitizedContent);
+                requestNode.set("content", sanitizedContent);
             }
 
             if (sanitizedTrailers != null) {
-                objectNode.set("trailers", sanitizedTrailers);
+                requestNode.set("trailers", sanitizedTrailers);
             }
-            return objectMapper.writeValueAsString(objectNode);
+            return objectMapper.writeValueAsString(requestNode);
         } catch (Exception e) {
             logger.warn("Unexpected exception while formatting a request log: {}", log, e);
             return "{}";
@@ -185,8 +188,9 @@ final class JsonLogFormatter implements LogFormatter {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
+        final RequestContext ctx = log.context();
         if (!RequestLogProperty.RESPONSE_START_TIME.isAvailable(flags)) {
-            return "{}";
+            return "{\"ctx\": \"" + ctx + "\", \"response\": {}}";
         }
 
         try {
@@ -198,7 +202,6 @@ final class JsonLogFormatter implements LogFormatter {
                 }
             }
 
-            final RequestContext ctx = log.context();
             final JsonNode sanitizedHeaders;
             if (RequestLogProperty.RESPONSE_HEADERS.isAvailable(flags)) {
                 sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
@@ -228,42 +231,45 @@ final class JsonLogFormatter implements LogFormatter {
             }
 
             final ObjectNode objectNode = objectMapper.createObjectNode();
-            objectNode.put("startTime",
+            objectNode.put("ctx", ctx.toString());
+            final ObjectNode responseNode = objectMapper.createObjectNode();
+            objectNode.set("response", responseNode);
+            responseNode.put("startTime",
                            TextFormatter.epochMicros(log.responseStartTimeMicros()).toString());
 
             if (RequestLogProperty.RESPONSE_LENGTH.isAvailable(flags)) {
-                objectNode.put("length", TextFormatter.size(log.responseLength()).toString());
+                responseNode.put("length", TextFormatter.size(log.responseLength()).toString());
             }
 
             if (RequestLogProperty.RESPONSE_END_TIME.isAvailable(flags)) {
-                objectNode.put("duration", TextFormatter.elapsed(log.responseDurationNanos()).toString());
-                objectNode.put("totalDuration",
+                responseNode.put("duration", TextFormatter.elapsed(log.responseDurationNanos()).toString());
+                responseNode.put("totalDuration",
                                TextFormatter.elapsed(log.totalDurationNanos()).toString());
             }
 
             if (responseCauseString != null) {
-                objectNode.put("cause", responseCauseString);
+                responseNode.put("cause", responseCauseString);
             }
 
             if (sanitizedHeaders != null) {
-                objectNode.set("headers", sanitizedHeaders);
+                responseNode.set("headers", sanitizedHeaders);
             }
 
             if (sanitizedContent != null) {
-                objectNode.set("content", sanitizedContent);
+                responseNode.set("content", sanitizedContent);
             }
 
             if (sanitizedTrailers != null) {
-                objectNode.set("trailers", sanitizedTrailers);
+                responseNode.set("trailers", sanitizedTrailers);
             }
 
             final List<RequestLogAccess> children = log.children();
             final int numChildren = children != null ? children.size() : 0;
             if (numChildren > 1) {
                 // Append only when there were retries which the numChildren is greater than 1.
-                objectNode.put("totalAttempts", String.valueOf(numChildren));
+                responseNode.put("totalAttempts", String.valueOf(numChildren));
             }
-            return objectMapper.writeValueAsString(objectNode);
+            return objectMapper.writeValueAsString(responseNode);
         } catch (Exception e) {
             logger.warn("Unexpected exception while formatting a response log: {}", log, e);
             return "{}";

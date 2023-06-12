@@ -190,7 +190,7 @@ class HealthCheckServiceTest {
                              "connection: close\r\n\r\n" +
                              "{\"healthy\":false}");
         await().untilAsserted(() -> {
-            verify(logger).debug(anyString(), any(), any());
+            verify(logger).debug(anyString());
         });
     }
 
@@ -215,7 +215,7 @@ class HealthCheckServiceTest {
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 17\r\n" +
                              "connection: close\r\n\r\n");
-        verify(logger).debug(anyString(), any(), any());
+        verify(logger).debug(anyString());
     }
 
     private static void assertResponseEquals(String request, String expectedResponse) throws Exception {

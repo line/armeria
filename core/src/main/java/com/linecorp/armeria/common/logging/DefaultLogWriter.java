@@ -41,9 +41,6 @@ final class DefaultLogWriter implements LogWriter {
                                  DEFAULT_RESPONSE_LOG_LEVEL_MAPPER,
                                  throwable -> false, LogFormatter.ofText());
 
-    private static final String REQUEST_FORMAT = "{} Request: {}";
-    private static final String RESPONSE_FORMAT = "{} Response: {}";
-
     private final Logger logger;
     private final RequestLogLevelMapper requestLogLevelMapper;
     private final ResponseLogLevelMapper responseLogLevelMapper;
@@ -70,12 +67,10 @@ final class DefaultLogWriter implements LogWriter {
             if (log.requestCause() == null && isTransientService(ctx)) {
                 return;
             }
-            final String requestStr = logFormatter.formatRequest(log);
-
             try (SafeCloseable ignored = ctx.push()) {
                 // We don't log requestCause when it's not null because responseCause is the same exception when
                 // the requestCause is not null. That's way we don't have requestCauseSanitizer.
-                requestLogLevel.log(logger, REQUEST_FORMAT, ctx, requestStr);
+                requestLogLevel.log(logger, logFormatter.formatRequest(log));
             }
         }
     }
@@ -98,7 +93,7 @@ final class DefaultLogWriter implements LogWriter {
             final String responseStr = logFormatter.formatResponse(log);
             try (SafeCloseable ignored = ctx.push()) {
                 if (responseCause == null) {
-                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
+                    responseLogLevel.log(logger, responseStr);
                     return;
                 }
 
@@ -107,13 +102,13 @@ final class DefaultLogWriter implements LogWriter {
                 if (!requestLogLevel.isEnabled(logger)) {
                     // Request wasn't logged, but this is an unsuccessful response,
                     // so we log the request too to help debugging.
-                    responseLogLevel.log(logger, REQUEST_FORMAT, ctx, logFormatter.formatRequest(log));
+                    responseLogLevel.log(logger, logFormatter.formatRequest(log));
                 }
 
                 if (responseCauseFilter.test(responseCause)) {
-                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
+                    responseLogLevel.log(logger, responseStr);
                 } else {
-                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr, responseCause);
+                    responseLogLevel.log(logger, responseStr, responseCause);
                 }
             }
         }

@@ -281,6 +281,6 @@ public interface RequestLog extends RequestOnlyLog {
                                return sanitized.toString();
                            })
                            .build()
-                           .formatRequest(this);
+                           .formatResponse(this);
     }
 }

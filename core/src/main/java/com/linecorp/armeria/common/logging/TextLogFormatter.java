@@ -74,8 +74,9 @@ final class TextLogFormatter implements LogFormatter {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
+        final RequestContext ctx = log.context();
         if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
-            return "{}";
+            return ctx + " Request: {}";
         }
 
         String requestCauseString = null;
@@ -86,7 +87,6 @@ final class TextLogFormatter implements LogFormatter {
             }
         }
 
-        final RequestContext ctx = log.context();
         final String sanitizedHeaders;
         if (RequestLogProperty.REQUEST_HEADERS.isAvailable(flags)) {
             sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
@@ -115,9 +115,11 @@ final class TextLogFormatter implements LogFormatter {
             sanitizedTrailers = null;
         }
 
+        // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
+        final String ctxString = ctx.toString();
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("{startTime=");
+            buf.append(ctxString).append(" Request: {startTime=");
             TextFormatter.appendEpochMicros(buf, log.requestStartTimeMicros());
 
             if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
@@ -173,8 +175,9 @@ final class TextLogFormatter implements LogFormatter {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
+        final RequestContext ctx = log.context();
         if (!RequestLogProperty.RESPONSE_START_TIME.isAvailable(flags)) {
-            return "{}";
+            return ctx + " Response: {}";
         }
 
         String responseCauseString = null;
@@ -185,7 +188,6 @@ final class TextLogFormatter implements LogFormatter {
             }
         }
 
-        final RequestContext ctx = log.context();
         final String sanitizedHeaders;
         if (RequestLogProperty.RESPONSE_HEADERS.isAvailable(flags)) {
             sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
@@ -214,9 +216,11 @@ final class TextLogFormatter implements LogFormatter {
             sanitizedTrailers = null;
         }
 
+        // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
+        final String ctxString = ctx.toString();
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("{startTime=");
+            buf.append(ctxString).append(" Response: {startTime=");
             TextFormatter.appendEpochMicros(buf, log.responseStartTimeMicros());
 
             if (RequestLogProperty.RESPONSE_LENGTH.isAvailable(flags)) {
