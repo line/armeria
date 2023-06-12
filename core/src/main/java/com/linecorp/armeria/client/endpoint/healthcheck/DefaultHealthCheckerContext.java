@@ -78,7 +78,7 @@ final class DefaultHealthCheckerContext
         originalEndpoint = endpoint;
 
         if (port == 0) {
-            this.endpoint = endpoint.withoutDefaultPort(protocol.defaultPort());
+            this.endpoint = endpoint.withoutDefaultPort(protocol);
         } else if (port == protocol.defaultPort()) {
             this.endpoint = endpoint.withoutPort();
         } else {

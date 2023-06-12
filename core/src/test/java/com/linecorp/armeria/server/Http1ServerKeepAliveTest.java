@@ -29,8 +29,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.common.HttpHeadersUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -58,12 +63,27 @@ class Http1ServerKeepAliveTest {
                     throw HttpResponseException.of(delayedResponse);
                 }
             });
+
+            sb.service("/close", new HttpService() {
+                @Override
+                public ExchangeType exchangeType(RoutingContext routingContext) {
+                    return ExchangeType.valueOf(routingContext.params().get("exchangeType"));
+                }
+
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.OK,
+                                                                       HttpHeaderNames.CONNECTION,
+                                                                       HttpHeadersUtil.CLOSE_STRING);
+                    return HttpResponse.of(headers, HttpData.ofUtf8("The last response"));
+                }
+            });
         }
     };
 
     @EnumSource(ExchangeType.class)
     @ParameterizedTest
-    void noKeepAlive(ExchangeType exchangeType) throws Exception {
+    void noKeepAliveByClient(ExchangeType exchangeType) throws Exception {
         try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             socket.setSoTimeout(10000);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
@@ -87,6 +107,37 @@ class Http1ServerKeepAliveTest {
                     continue;
                 }
                 assertThat(line).isEqualTo("A late response");
+            }
+            assertThat(hasConnectionClose).isTrue();
+        }
+    }
+
+    @EnumSource(ExchangeType.class)
+    @ParameterizedTest
+    void noKeepAliveByServer(ExchangeType exchangeType) throws Exception {
+        try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
+            socket.setSoTimeout(10000);
+            final PrintWriter writer = new PrintWriter(socket.getOutputStream());
+            writer.print("GET /close?exchangeType=" + exchangeType.name() + " HTTP/1.1\r\n");
+            writer.print("\r\n");
+            writer.flush();
+
+            final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            assertThat(in.readLine()).isEqualTo("HTTP/1.1 200 OK");
+
+            String line;
+            boolean hasConnectionClose = false;
+            while ((line = in.readLine()) != null) {
+                if ("connection: close".equalsIgnoreCase(line)) {
+                    // If "Connection: close" was sent by the client,
+                    // the server should return "Connection: close" as well.
+                    hasConnectionClose = true;
+                }
+                if (line.isEmpty() || line.contains(":")) {
+                    // Skip headers.
+                    continue;
+                }
+                assertThat(line).isEqualTo("The last response");
             }
             assertThat(hasConnectionClose).isTrue();
         }

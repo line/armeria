@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common.metric;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
@@ -114,5 +115,12 @@ public final class DefaultMeterIdPrefixFunction implements MeterIdPrefixFunction
     private static void addMethodAndService(Builder<Tag> tagListBuilder, RequestOnlyLog log) {
         tagListBuilder.add(Tag.of("method", log.name()));
         tagListBuilder.add(Tag.of("service", firstNonNull(log.serviceName(), "none")));
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("name", name)
+                          .toString();
     }
 }

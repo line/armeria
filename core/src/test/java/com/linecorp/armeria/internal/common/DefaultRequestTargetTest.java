@@ -359,6 +359,13 @@ class DefaultRequestTargetTest {
     }
 
     @Test
+    void shouldReserveQuestionMark() {
+        // '%3F' must not be decoded into '?'.
+        assertAccepted(forServer("/abc%3F.json?a=%3F"), "/abc%3F.json", "a=%3F");
+        assertAccepted(forClient("/abc%3F.json?a=%3F"), "/abc%3F.json", "a=%3F");
+    }
+
+    @Test
     void serverShouldNormalizePoundSign() {
         // '#' must be encoded into '%23'.
         assertAccepted(forServer("/#?a=b#1"), "/%23", "a=b%231");
@@ -384,7 +391,7 @@ class DefaultRequestTargetTest {
                        "a=/%23/:[]@!$&'()*+,;=");
         assertAccepted(forServer("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
                                  "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
-                       "/%23%2F:@!$&'()*+,;=?",
+                       "/%23%2F:@!$&'()*+,;=%3F",
                        "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
     }
 
@@ -397,9 +404,9 @@ class DefaultRequestTargetTest {
         assertAccepted(forClient("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
                                  "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
                                  "#%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
-                       "/%23%2F:@!$&'()*+,;=?",
+                       "/%23%2F:@!$&'()*+,;=%3F",
                        "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
-                       "%23%2F:@!$&'()*+,;=?");
+                       "%23%2F:@!$&'()*+,;=%3F");
     }
 
     @ParameterizedTest
@@ -413,7 +420,7 @@ class DefaultRequestTargetTest {
     void shouldHandleSquareBracketsInPath(Mode mode) {
         assertAccepted(parse(mode, "/@/:[]!$&'()*+,;="), "/@/:%5B%5D!$&'()*+,;=");
         assertAccepted(parse(mode, "/%40%2F%3A%5B%5D%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
-                       "/@%2F:%5B%5D!$&'()*+,;=?");
+                       "/@%2F:%5B%5D!$&'()*+,;=%3F");
     }
 
     @ParameterizedTest

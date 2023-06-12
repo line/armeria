@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseCompleteException;
@@ -186,6 +187,7 @@ abstract class HttpResponseDecoder {
         private State state = State.WAIT_NON_INFORMATIONAL;
         @Nullable
         private ResponseHeaders headers;
+        private boolean closed;
 
         HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
                             long responseTimeoutMillis, long maxContentLength) {
@@ -353,13 +355,28 @@ abstract class HttpResponseDecoder {
         }
 
         private void close(@Nullable Throwable cause, boolean cancel) {
+            if (closed) {
+                return;
+            }
+            closed = true;
             state = State.DONE;
             cancelTimeoutOrLog(cause, cancel);
             if (ctx != null) {
-                if (cause == null) {
-                    ctx.request().abort(ResponseCompleteException.get());
-                } else {
-                    ctx.request().abort(cause);
+                final HttpRequest request = ctx.request();
+                assert request != null;
+                if (cause != null) {
+                    request.abort(cause);
+                    return;
+                }
+                final long requestAutoAbortDelayMillis = ctx.requestAutoAbortDelayMillis();
+                if (requestAutoAbortDelayMillis == 0) {
+                    request.abort(ResponseCompleteException.get());
+                    return;
+                }
+                if (requestAutoAbortDelayMillis > 0 &&
+                    requestAutoAbortDelayMillis < Long.MAX_VALUE) {
+                    ctx.eventLoop().schedule(() -> request.abort(ResponseCompleteException.get()),
+                                             requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
                 }
             }
         }

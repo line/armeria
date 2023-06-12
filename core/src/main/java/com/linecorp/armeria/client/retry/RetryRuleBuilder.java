@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
@@ -218,6 +219,14 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     @Override
     public RetryRuleBuilder onException() {
         return (RetryRuleBuilder) super.onException();
+    }
+
+    /**
+     * Makes a {@link RetryRule} retry on a {@link TimeoutException}.
+     */
+    @Override
+    public RetryRuleBuilder onTimeoutException() {
+        return (RetryRuleBuilder) super.onTimeoutException();
     }
 
     /**

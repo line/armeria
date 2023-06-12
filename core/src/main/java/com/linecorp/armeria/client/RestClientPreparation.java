@@ -277,6 +277,18 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     }
 
     @Override
+    public RestClientPreparation requestAutoAbortDelay(Duration delay) {
+        delegate.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation requestAutoAbortDelayMillis(long delayMillis) {
+        delegate.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    @Override
     public <V> RestClientPreparation attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
         return this;
