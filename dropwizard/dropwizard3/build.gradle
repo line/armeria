@@ -15,10 +15,6 @@ dependencies {
     implementation libs.javax.validation
 
     testImplementation libs.dropwizard3.testing
-
-    // Manifold preprocessor compiler plugins
-    annotationProcessor libs.manifold.preprocessor
-    testAnnotationProcessor libs.manifold.preprocessor
 }
 
 tasks.withType(JavaCompile).configureEach {

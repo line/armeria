@@ -13,10 +13,6 @@ dependencies {
     implementation libs.dropwizard.metrics.core
 
     testImplementation libs.dropwizard1.testing
-
-    // Manifold preprocessor compiler plugins
-    annotationProcessor libs.manifold.preprocessor
-    testAnnotationProcessor libs.manifold.preprocessor
 }
 
 tasks.withType(JavaCompile).configureEach {
