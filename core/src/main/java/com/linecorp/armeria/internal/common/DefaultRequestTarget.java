@@ -565,7 +565,7 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Nullable
     private static URI normalizeSchemeAndAuthority(String scheme, String authority) {
         try {
-            return new URI(scheme, authority, null, null, null);
+            return new URI(scheme + "://" + authority);
         } catch (Exception unused) {
             return null;
         }
