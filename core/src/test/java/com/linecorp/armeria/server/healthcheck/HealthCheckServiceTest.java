@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -123,7 +124,9 @@ class HealthCheckServiceTest {
                                              });
                                          })
                                          .build());
-            sb.decorator(LoggingService.builder().logger(logger).newDecorator());
+            sb.decorator(LoggingService.builder()
+                                       .logWriter(LogWriter.of(logger))
+                                       .newDecorator());
             sb.gracefulShutdownTimeout(Duration.ofSeconds(10), Duration.ofSeconds(10));
             sb.disableServerHeader();
             sb.disableDateHeader();

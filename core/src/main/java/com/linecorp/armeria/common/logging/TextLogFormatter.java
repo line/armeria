@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.function.BiFunction;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -58,8 +60,7 @@ final class TextLogFormatter implements LogFormatter {
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer,
-            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer
-    ) {
+            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
         this.responseHeadersSanitizer = responseHeadersSanitizer;
         this.requestTrailersSanitizer = requestTrailersSanitizer;
@@ -258,5 +259,17 @@ final class TextLogFormatter implements LogFormatter {
 
             return buf.toString();
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("requestHeadersSanitizer", requestHeadersSanitizer)
+                          .add("requestContentSanitizer", requestContentSanitizer)
+                          .add("requestTrailersSanitizer", requestTrailersSanitizer)
+                          .add("responseHeadersSanitizer", responseHeadersSanitizer)
+                          .add("responseContentSanitizer", responseContentSanitizer)
+                          .add("responseTrailersSanitizer", responseTrailersSanitizer)
+                          .toString();
     }
 }

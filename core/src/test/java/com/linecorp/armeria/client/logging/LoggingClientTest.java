@@ -17,7 +17,6 @@ package com.linecorp.armeria.client.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
@@ -46,9 +45,9 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
-import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class LoggingClientTest {
     private static final HttpClient delegate = (ctx, req) -> {
@@ -75,9 +74,11 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .logWriter(LogWriter.builder()
+                                                 .logger(logger)
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .build())
                              .build(delegate);
 
         customLoggerClient.execute(ctx, req);
@@ -98,8 +99,10 @@ class LoggingClientTest {
         // use default logger
         final LoggingClient defaultLoggerClient =
                 LoggingClient.builder()
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .logWriter(LogWriter.builder()
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .build())
                              .build(delegate);
 
         defaultLoggerClient.execute(ctx, req);
@@ -121,14 +124,22 @@ class LoggingClientTest {
         assertThat(ctx.logBuilder().toString()).contains("trustin");
         assertThat(ctx.logBuilder().toString()).contains("test.com");
 
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                                                              Pattern.compile("trustin"),
+                                                              Pattern.compile("com")))
+                                                      .build();
+
+        // use custom logger
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .logFormatter(logFormatter)
+                                             .build();
         final LoggingClient client =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
-                             .requestHeadersSanitizer(RegexBasedSanitizer.of(
-                                     Pattern.compile("trustin"),
-                                     Pattern.compile("com")))
+                             .logWriter(logWriter)
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -162,16 +173,19 @@ class LoggingClientTest {
         assertThat(ctx.logBuilder().toString()).contains("trustin");
         assertThat(ctx.logBuilder().toString()).contains("test.com");
 
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestHeadersSanitizer(RegexBasedSanitizer.of(Pattern.compile("trustin"),
+                                                                            Pattern.compile("com")))
+                            .build();
         final LoggingClient client =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
-                             .logFormatter(LogFormatter.builderForText()
-                                                       .requestHeadersSanitizer(RegexBasedSanitizer.of(
-                                                               Pattern.compile("trustin"),
-                                                               Pattern.compile("com")))
-                                                       .build())
+                             .logWriter(LogWriter.builder()
+                                                 .logger(logger)
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .logFormatter(logFormatter)
+                                                 .build())
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -205,13 +219,19 @@ class LoggingClientTest {
         // Before sanitization
         assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
 
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestContentSanitizer(RegexBasedSanitizer.of(
+                                    Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                            .build();
         final LoggingClient client =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
-                             .requestContentSanitizer(RegexBasedSanitizer.of(
-                                     Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                             .logWriter(LogWriter.builder()
+                                                 .logger(logger)
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .logFormatter(logFormatter)
+                                                 .build())
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -245,16 +265,20 @@ class LoggingClientTest {
         // Before sanitization
         assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
 
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestContentSanitizer(RegexBasedSanitizer.of(
+                                    Pattern.compile(
+                                            "\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                            .build();
         final LoggingClient client =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
-                             .logFormatter(LogFormatter.builderForText()
-                                                       .requestContentSanitizer(RegexBasedSanitizer.of(
-                                                               Pattern.compile(
-                                                                       "\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
-                                                       .build())
+                             .logWriter(LogWriter.builder()
+                                                 .logger(logger)
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .logFormatter(logFormatter)
+                                                 .build())
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -274,31 +298,6 @@ class LoggingClientTest {
     }
 
     @Test
-    void exceptionWhileLogging() throws Exception {
-        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
-                                                                 HttpHeaderNames.SCHEME, "http",
-                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
-        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
-        final LoggingClient loggingClient = LoggingClient.builder()
-                                                         .logger(logger)
-                                                         .requestLogLevelMapper(log -> {
-                                                             throw new AnticipatedException();
-                                                         })
-                                                         .responseLogLevelMapper(log -> {
-                                                             throw new AnticipatedException();
-                                                         })
-                                                         .build(delegate);
-        loggingClient.execute(ctx, req);
-        verify(logger).warn(eq("{} Unexpected exception while logging {}: "), eq(ctx), eq("request"),
-                            any(AnticipatedException.class));
-        verify(logger).warn(eq("{} Unexpected exception while logging {}: "), eq(ctx), eq("response"),
-                            any(AnticipatedException.class));
-        verifyNoMoreInteractions(logger);
-        clearInvocations(logger);
-    }
-
-    @Test
     void internalServerError() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext ctx = ClientRequestContext.of(req);
@@ -310,7 +309,7 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
+                             .logWriter(LogWriter.of(logger))
                              .build(delegate);
 
         customLoggerClient.execute(ctx, req);
@@ -340,7 +339,7 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
+                             .logWriter(LogWriter.of(logger))
                              .build(delegate);
 
         customLoggerClient.execute(ctx, req);
@@ -372,7 +371,7 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
+                             .logWriter(LogWriter.of(logger))
                              .successSamplingRate(0.0f)
                              .build(delegate);
 
@@ -402,7 +401,7 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
+                             .logWriter(LogWriter.of(logger))
                              .samplingRate(0.0f)
                              .build(delegate);
 
@@ -412,21 +411,16 @@ class LoggingClientTest {
     }
 
     @Test
-    void sanitizerAndLogFormatterCanNotSetTogether() {
+    void sanitizerAndLogWriterCanNotSetTogether() {
         assertThatThrownBy(() -> LoggingClient
                 .builder()
                 .requestHeadersSanitizer(RegexBasedSanitizer.of(
                         Pattern.compile("trustin"),
                         Pattern.compile("com")))
-                .logFormatter(
-                        LogFormatter.builderForText()
-                                    .requestHeadersSanitizer(RegexBasedSanitizer.of(
-                                            Pattern.compile("trustin"),
-                                            Pattern.compile("com")))
-                                    .build())
+                .logWriter(LogWriter.of())
                 .build(delegate))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
-                        "The log sanitizers and the LogFormatter cannot be used at the same time");
+                        "The logWriter and the log properties cannot be set together.");
     }
 }

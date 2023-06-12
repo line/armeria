@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -73,7 +74,9 @@ class PrometheusExpositionServiceTest {
                                                   .transientServiceOptions(TransientServiceOption.allOf())
                                                   .build());
             sb.accessLogWriter(logs::add, false);
-            sb.decorator(LoggingService.builder().logger(logger).newDecorator());
+            sb.decorator(LoggingService.builder()
+                                       .logWriter(LogWriter.of(logger))
+                                       .newDecorator());
         }
     };
 

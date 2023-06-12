@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
@@ -72,8 +73,7 @@ final class JsonLogFormatter implements LogFormatter {
                     responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object, ? extends JsonNode> requestContentSanitizer,
             BiFunction<? super RequestContext, Object, ? extends JsonNode> responseContentSanitizer,
-            ObjectMapper objectMapper
-    ) {
+            ObjectMapper objectMapper) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
         this.responseHeadersSanitizer = responseHeadersSanitizer;
         this.requestTrailersSanitizer = requestTrailersSanitizer;
@@ -268,5 +268,18 @@ final class JsonLogFormatter implements LogFormatter {
             logger.warn("Unexpected exception while formatting a response log: {}", log, e);
             return "{}";
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("objectMapper", objectMapper)
+                          .add("requestHeadersSanitizer", requestHeadersSanitizer)
+                          .add("requestContentSanitizer", requestContentSanitizer)
+                          .add("requestTrailersSanitizer", requestTrailersSanitizer)
+                          .add("responseHeadersSanitizer", responseHeadersSanitizer)
+                          .add("responseContentSanitizer", responseContentSanitizer)
+                          .add("responseTrailersSanitizer", responseTrailersSanitizer)
+                          .toString();
     }
 }
