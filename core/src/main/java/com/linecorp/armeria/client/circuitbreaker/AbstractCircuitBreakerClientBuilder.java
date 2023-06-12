@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;

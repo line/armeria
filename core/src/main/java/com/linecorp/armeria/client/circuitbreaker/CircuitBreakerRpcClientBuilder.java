@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
