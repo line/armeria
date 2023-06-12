@@ -351,6 +351,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 final long pingIntervalMillis = clientFactory.pingIntervalMillis();
                 final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
                 final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
+                final boolean keepAliveOnPing = clientFactory.keepAliveOnPing();
                 final boolean needsKeepAliveHandler =
                         needsKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
                                               maxConnectionAgeMillis, maxNumRequestsPerConnection);
@@ -363,7 +364,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                                                 ImmutableList.of(Tag.of("protocol", protocol.uriText())));
                     keepAliveHandler = new Http1ClientKeepAliveHandler(
                             channel, responseDecoder, keepAliveTimer, idleTimeoutMillis,
-                            pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                            pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                            keepAliveOnPing);
                 } else {
                     keepAliveHandler = new NoopKeepAliveHandler();
                 }
