@@ -1,0 +1,56 @@
+dependencies {
+    implementation project(':jetty9')
+    // Dropwizard
+    api libs.dropwizard2.core
+    api libs.dropwizard2.util
+    api libs.dropwizard2.lifecycle
+    api libs.dropwizard2.jackson
+    api libs.dropwizard2.validation
+    api libs.dropwizard2.jersey
+    api libs.dropwizard2.jetty
+
+    // Dropwizard Metrics
+    implementation libs.dropwizard.metrics.core
+
+    implementation libs.javax.validation
+
+    testImplementation libs.dropwizard2.testing
+
+    // Manifold preprocessor compiler plugins
+    annotationProcessor libs.manifold.preprocessor
+    testAnnotationProcessor libs.manifold.preprocessor
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-ADROPWIZARD_2']
+}
+
+// Use the sources from ':dropwizard4'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+tasks.compileJava.source "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/java"
+tasks.processResources.from "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/resources"
+tasks.compileTestJava.source "${rootProject.projectDir}/dropwizard/dropwizard4/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/dropwizard/dropwizard4/src/test/resources"
+tasks.sourcesJar.from "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/java"
+tasks.sourcesJar.from "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/resources"
+tasks.javadoc.source "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/java"
+
+// Do not relocate Guava because it's part of Dropwizard's public API.
+[tasks.shadedJar, tasks.shadedTestJar].each { task ->
+    task.relocators.clear()
+    project.ext.relocations.each { Map<String, String> props ->
+        def from = props['from']
+        def to = props['to']
+        if (from in ['com.google.common', 'com.google.thirdparty.publicsuffix']) {
+            return
+        }
+        task.relocate from, to
+    }
+}
+
+// Disable checkstyle because it's checked by ':dropwizard2'.
+tasks.withType(Checkstyle) {
+    onlyIf { false }
+}

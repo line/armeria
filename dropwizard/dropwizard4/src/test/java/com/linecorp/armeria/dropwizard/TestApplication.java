@@ -18,9 +18,15 @@ package com.linecorp.armeria.dropwizard;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 
+#if DROPWIZARD_1 || DROPWIZARD_2
 import io.dropwizard.Application;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+#else
+import io.dropwizard.core.Application;
+import io.dropwizard.core.setup.Bootstrap;
+import io.dropwizard.core.setup.Environment;
+#endif
 
 public class TestApplication extends Application<TestConfiguration> {
     @Override

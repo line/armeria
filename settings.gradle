@@ -101,8 +101,14 @@ includeWithFlags ':spring:boot3-starter',                'java17', 'publish', 'r
 includeWithFlags ':spring:boot3-webflux-autoconfigure',  'java17', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot3-webflux-starter',        'java17', 'publish', 'relocate', 'no_aggregation'
 
-includeWithFlags ':dropwizard1',                         'java', 'publish', 'relocate', 'no_aggregation'
-includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'
+includeWithFlags ':dropwizard1',                         'java', 'manifold', 'publish', 'relocate', 'no_aggregation'
+project(':dropwizard1').projectDir = file('dropwizard/dropwizard1')
+includeWithFlags ':dropwizard2',                         'java', 'manifold', 'publish', 'relocate', 'no_aggregation'
+project(':dropwizard2').projectDir = file('dropwizard/dropwizard2')
+includeWithFlags ':dropwizard3',                         'java11', 'manifold', 'publish', 'relocate', 'no_aggregation'
+project(':dropwizard3').projectDir = file('dropwizard/dropwizard3')
+includeWithFlags ':dropwizard4',                         'java11', 'manifold', 'publish', 'relocate'
+project(':dropwizard4').projectDir = file('dropwizard/dropwizard4')
 includeWithFlags ':thrift0.9',                           'java', 'publish', 'relocate', 'no_aggregation'
 project(':thrift0.9').projectDir = file('thrift/thrift0.9')
 includeWithFlags ':thrift0.13',                          'java', 'publish', 'relocate'

@@ -22,7 +22,11 @@ import java.lang.reflect.Method;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+#if DROPWIZARD_1 || DROPWIZARD_2 || DROPWIZARD_3
 import javax.validation.Valid;
+#else
+import jakarta.validation.Valid;
+#endif
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -49,11 +53,18 @@ import com.linecorp.armeria.server.jetty.JettyService;
 import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.jetty.ContextRoutingHandler;
 import io.dropwizard.jetty.MutableServletContextHandler;
+
+#if DROPWIZARD_1 || DROPWIZARD_2
 import io.dropwizard.server.AbstractServerFactory;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.setup.AdminEnvironment;
 import io.dropwizard.setup.Environment;
-
+#else
+import io.dropwizard.core.server.AbstractServerFactory;
+import io.dropwizard.core.server.ServerFactory;
+import io.dropwizard.core.setup.AdminEnvironment;
+import io.dropwizard.core.setup.Environment;
+#endif
 /**
  * A Dropwizard {@link ServerFactory} implementation for Armeria that replaces
  * Dropwizard's default Jetty handler with one provided by Armeria.

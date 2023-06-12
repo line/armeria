@@ -15,6 +15,14 @@
  */
 package com.linecorp.armeria.dropwizard;
 
+#if DROPWIZARD_1 || DROPWIZARD_2
 import io.dropwizard.Configuration;
+#else
+import io.dropwizard.core.Configuration;
+#endif
 
-class TestConfiguration extends Configuration {}
+class TestConfiguration extends Configuration {
+    TestConfiguration() {
+        setServerFactory(new ArmeriaServerFactory());
+    }
+}

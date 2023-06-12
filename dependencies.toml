@@ -22,6 +22,8 @@ dagger = "2.45"
 dgs = "5.5.0"
 dropwizard1 = "1.3.29"
 dropwizard2 = "2.1.5"
+dropwizard3 = "3.0.0"
+dropwizard4 = "4.0.0"
 dropwizard-metrics = "4.2.18"
 errorprone = "2.18.0"
 errorprone-gradle-plugin = "3.0.1"
@@ -79,6 +81,8 @@ kotlin-coroutine = "1.6.4"
 ktlint-gradle-plugin = "11.3.2"
 logback = "1.2.11"
 logback14 = "1.4.7"
+manifold = "2023.1.10"
+manifold-gradle-plugin = "0.0.2-alpha"
 micrometer = "1.10.5"
 micrometer13 = "1.3.20"
 mockito = "4.11.0"
@@ -360,6 +364,58 @@ version.ref = "dropwizard2"
 [libraries.dropwizard2-validation]
 module = "io.dropwizard:dropwizard-validation"
 version.ref = "dropwizard2"
+
+[libraries.dropwizard3-core]
+module = "io.dropwizard:dropwizard-core"
+version.ref = "dropwizard3"
+javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/3.0.0/"
+[libraries.dropwizard3-jackson]
+module = "io.dropwizard:dropwizard-jackson"
+version.ref = "dropwizard3"
+[libraries.dropwizard3-lifecycle]
+module = "io.dropwizard:dropwizard-lifecycle"
+version.ref = "dropwizard3"
+[libraries.dropwizard3-jersey]
+module = "io.dropwizard:dropwizard-jersey"
+version.ref = "dropwizard3"
+[libraries.dropwizard3-jetty]
+module = "io.dropwizard:dropwizard-jetty"
+version.ref = "dropwizard3"
+[libraries.dropwizard3-testing]
+module = "io.dropwizard:dropwizard-testing"
+version.ref = "dropwizard3"
+[libraries.dropwizard3-util]
+module = "io.dropwizard:dropwizard-util"
+version.ref = "dropwizard3"
+[libraries.dropwizard3-validation]
+module = "io.dropwizard:dropwizard-validation"
+version.ref = "dropwizard3"
+
+[libraries.dropwizard4-core]
+module = "io.dropwizard:dropwizard-core"
+version.ref = "dropwizard4"
+javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/4.0.0/"
+[libraries.dropwizard4-jackson]
+module = "io.dropwizard:dropwizard-jackson"
+version.ref = "dropwizard4"
+[libraries.dropwizard4-lifecycle]
+module = "io.dropwizard:dropwizard-lifecycle"
+version.ref = "dropwizard4"
+[libraries.dropwizard4-jersey]
+module = "io.dropwizard:dropwizard-jersey"
+version.ref = "dropwizard4"
+[libraries.dropwizard4-jetty]
+module = "io.dropwizard:dropwizard-jetty"
+version.ref = "dropwizard4"
+[libraries.dropwizard4-testing]
+module = "io.dropwizard:dropwizard-testing"
+version.ref = "dropwizard4"
+[libraries.dropwizard4-util]
+module = "io.dropwizard:dropwizard-util"
+version.ref = "dropwizard4"
+[libraries.dropwizard4-validation]
+module = "io.dropwizard:dropwizard-validation"
+version.ref = "dropwizard4"
 
 [libraries.dropwizard-metrics-core]
 module = "io.dropwizard.metrics:metrics-core"
@@ -762,6 +818,10 @@ javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.12/"
 module = "ch.qos.logback:logback-classic"
 version.ref = "logback14"
 javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.4.7/"
+
+[libraries.manifold-preprocessor]
+module = "systems.manifold:manifold-preprocessor"
+version.ref = "manifold"
 
 [libraries.micrometer-core]
 module = "io.micrometer:micrometer-core"
@@ -1303,3 +1363,4 @@ ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle-pl
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-gradle-plugin" }
 node-gradle = { id = "com.github.node-gradle.node", version.ref = "node-gradle-plugin" }
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot2" }
+manifold = { id = "systems.manifold.manifold-gradle-plugin", version.ref = "manifold-gradle-plugin" }

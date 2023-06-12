@@ -17,7 +17,11 @@ package com.linecorp.armeria.dropwizard;
 
 import static java.util.Objects.requireNonNull;
 
+#if DROPWIZARD_1 || DROPWIZARD_2 || DROPWIZARD_3
 import javax.validation.Valid;
+#else
+import jakarta.validation.Valid;
+#endif
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,9 +31,15 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
-import io.dropwizard.Configuration;
 import io.dropwizard.lifecycle.Managed;
+
+#if DROPWIZARD_1 || DROPWIZARD_2
+import io.dropwizard.Configuration;
 import io.dropwizard.server.ServerFactory;
+#else
+import io.dropwizard.core.Configuration;
+import io.dropwizard.core.server.ServerFactory;
+#endif
 
 /**
  * An Armeria {@link Server} wrapper class that accepts a Dropwizard Configuration
