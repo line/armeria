@@ -674,6 +674,19 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the amount of time to wait by default before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#requestAutoAbortDelayMillis(long)} or
+     * {@link ClientBuilder#requestAutoAbortDelayMillis(long)}.
+     */
+    @UnstableApi
+    @Nullable
+    default Long defaultRequestAutoAbortDelayMillis() {
+        return null;
+    }
+
+    /**
      * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
      * request routing history for all {@link Service}s.
      *

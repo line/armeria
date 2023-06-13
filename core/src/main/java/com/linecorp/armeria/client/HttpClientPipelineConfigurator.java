@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.client.ClientRequestContextBuilder.noopResponseCancellationScheduler;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -40,11 +41,17 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
@@ -61,6 +68,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -126,7 +134,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private final SslContext sslCtx;
     private final HttpPreference httpPreference;
     @Nullable
-    private InetSocketAddress remoteAddress;
+    private SocketAddress remoteAddress;
 
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
                                    SessionProtocol sessionProtocol,
@@ -156,8 +164,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                         ChannelPromise promise) throws Exception {
 
         // Remember the requested remote address for later use.
-        final InetSocketAddress inetRemoteAddr = (InetSocketAddress) remoteAddress;
-        this.remoteAddress = inetRemoteAddr;
+        this.remoteAddress = remoteAddress;
 
         // Configure the pipeline.
         final Channel ch = ctx.channel();
@@ -169,7 +176,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         try {
             if (sslCtx != null) {
-                configureAsHttps(ch, inetRemoteAddr);
+                configureAsHttps(ch, remoteAddress);
             } else {
                 configureAsHttp(ch);
             }
@@ -189,13 +196,21 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     /**
      * See <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>.
      */
-    private void configureAsHttps(Channel ch, InetSocketAddress remoteAddr) {
+    private void configureAsHttps(Channel ch, SocketAddress remoteAddr) {
         assert sslCtx != null;
 
         final ChannelPipeline p = ch.pipeline();
-        final SslHandler sslHandler = sslCtx.newHandler(ch.alloc(),
-                                                        remoteAddr.getHostString(),
-                                                        remoteAddr.getPort());
+        final SslHandler sslHandler;
+        if (remoteAddr instanceof InetSocketAddress) {
+            final InetSocketAddress raddr = (InetSocketAddress) remoteAddr;
+            sslHandler = sslCtx.newHandler(ch.alloc(),
+                                           raddr.getHostString(),
+                                           raddr.getPort());
+        } else {
+            assert remoteAddr instanceof DomainSocketAddress : remoteAddr;
+            sslHandler = sslCtx.newHandler(ch.alloc());
+        }
+
         p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
@@ -340,8 +355,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     clientFactory.http1MaxChunkSize()));
 
             // NB: We do not call finishSuccessfully() immediately here
-            //     because it assumes HttpSessionHandler to be in the pipeline,
-            //     which is only true after the connection attempt is successful.
+            //     because it triggers a userEvent that must be received by HttpSessionHandler,
+            //     which is only added after the connection attempt is successful.
             pipeline.addLast(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -378,11 +393,14 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
-        // Get the name of the HttpSessionHandler so that we can put our handlers before it.
         final ChannelHandlerContext lastContext = pipeline.lastContext();
-        assert lastContext.handler().getClass() == HttpSessionHandler.class;
-
-        pipeline.addBefore(lastContext.name(), null, handler);
+        if (lastContext.handler().getClass() == HttpSessionHandler.class) {
+            // Get the name of the HttpSessionHandler so that we can put our handlers before it.
+            pipeline.addBefore(lastContext.name(), null, handler);
+        } else {
+            // HttpSessionHandler was not added yet.
+            pipeline.addLast(handler);
+        }
     }
 
     void finishWithNegotiationFailure(
@@ -426,8 +444,16 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             //       because they are filled by Http2ClientUpgradeCodec.
 
             assert remoteAddress != null;
-            final String host = ArmeriaHttpUtil.authorityHeader(
-                    remoteAddress.getHostString(), remoteAddress.getPort(), H1C.defaultPort());
+
+            final String host;
+            if (remoteAddress instanceof InetSocketAddress) {
+                final InetSocketAddress raddr = (InetSocketAddress) remoteAddress;
+                host = ArmeriaHttpUtil.authorityHeader(
+                        raddr.getHostString(), raddr.getPort(), H1C.defaultPort());
+            } else {
+                assert remoteAddress instanceof DomainSocketAddress : remoteAddress;
+                host = SystemInfo.hostname();
+            }
 
             upgradeReq.headers().set(HttpHeaderNames.HOST, host);
             upgradeReq.headers().set(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT);
@@ -469,8 +495,16 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }, ctx.channel().eventLoop());
 
             responseDecoder.reserveUnfinishedResponse(Integer.MAX_VALUE);
+            final DefaultClientRequestContext reqCtx = new DefaultClientRequestContext(
+                    ctx.channel().eventLoop(), Flags.meterRegistry(), H1C, RequestId.random(),
+                    com.linecorp.armeria.common.HttpMethod.OPTIONS,
+                    RequestTarget.forClient("*"), ClientOptions.of(),
+                    HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
+                    null, RequestOptions.of(), noopResponseCancellationScheduler,
+                    System.nanoTime(), SystemInfo.currentTimeMicros());
+
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, null, ctx.channel().eventLoop(), /* response timeout */ 0,
+            responseDecoder.addResponse(0, res, reqCtx, ctx.channel().eventLoop(), /* response timeout */ 0,
                                         UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();
         }

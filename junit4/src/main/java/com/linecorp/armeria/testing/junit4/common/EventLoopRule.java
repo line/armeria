@@ -15,7 +15,11 @@
  */
 package com.linecorp.armeria.testing.junit4.common;
 
+import java.util.concurrent.ThreadFactory;
+
 import org.junit.rules.TestRule;
+
+import com.linecorp.armeria.common.util.ThreadFactories;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -71,7 +75,16 @@ public final class EventLoopRule extends AbstractEventLoopGroupRule {
      * @param useDaemonThread whether to create a daemon thread or not
      */
     public EventLoopRule(String threadNamePrefix, boolean useDaemonThread) {
-        super(1, threadNamePrefix, useDaemonThread);
+        super(1, ThreadFactories.newEventLoopThreadFactory(threadNamePrefix, useDaemonThread));
+    }
+
+    /**
+     * Creates a new {@link TestRule} that provides an {@link EventLoop}.
+     *
+     * @param threadFactory the factory used to create threads.
+     */
+    public EventLoopRule(ThreadFactory threadFactory) {
+        super(1, threadFactory);
     }
 
     /**
