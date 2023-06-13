@@ -84,13 +84,17 @@ final class JsonLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatRequest(RequestOnlyLog log) {
+    public String formatRequest(RequestOnlyLog log, boolean containContext) {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
         final RequestContext ctx = log.context();
         if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
-            return "{\"ctx\": \"" + ctx + "\", \"request\": {}}";
+            if (containContext) {
+                return "{\"ctx\": \"" + ctx + "\", \"request\": {}}";
+            } else {
+                return "{\"request\": {}}";
+            }
         }
 
         try {
@@ -131,7 +135,9 @@ final class JsonLogFormatter implements LogFormatter {
             }
 
             final ObjectNode objectNode = objectMapper.createObjectNode();
-            objectNode.put("ctx", ctx.toString());
+            if (containContext) {
+                objectNode.put("ctx", ctx.toString());
+            }
             final ObjectNode requestNode = objectMapper.createObjectNode();
             objectNode.set("request", requestNode);
             requestNode.put("startTime",
@@ -184,7 +190,7 @@ final class JsonLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatResponse(RequestLog log) {
+    public String formatResponse(RequestLog log, boolean containContext) {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();

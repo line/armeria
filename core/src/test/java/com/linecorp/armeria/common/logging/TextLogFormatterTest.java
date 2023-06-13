@@ -32,7 +32,7 @@ class TextLogFormatterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
-        final String requestLog = logFormatter.formatRequest(log);
+        final String requestLog = logFormatter.formatRequest(log, true);
         assertThat(requestLog).matches(
                 ".* Request: .*\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+}$");
     }
@@ -43,7 +43,7 @@ class TextLogFormatterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endResponse();
-        final String responseLog = logFormatter.formatResponse(log);
+        final String responseLog = logFormatter.formatResponse(log, true);
         assertThat(responseLog).matches(
                 ".* Response: .*\\{startTime=.+, length=.+, duration=.+, totalDuration=.+, headers=.+}$");
     }

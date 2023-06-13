@@ -70,7 +70,7 @@ final class DefaultLogWriter implements LogWriter {
             try (SafeCloseable ignored = ctx.push()) {
                 // We don't log requestCause when it's not null because responseCause is the same exception when
                 // the requestCause is not null. That's way we don't have requestCauseSanitizer.
-                requestLogLevel.log(logger, logFormatter.formatRequest(log));
+                requestLogLevel.log(logger, logFormatter.formatRequest(log, true));
             }
         }
     }
@@ -90,7 +90,7 @@ final class DefaultLogWriter implements LogWriter {
                 return;
             }
 
-            final String responseStr = logFormatter.formatResponse(log);
+            final String responseStr = logFormatter.formatResponse(log, true);
             try (SafeCloseable ignored = ctx.push()) {
                 if (responseCause == null) {
                     responseLogLevel.log(logger, responseStr);
@@ -102,7 +102,7 @@ final class DefaultLogWriter implements LogWriter {
                 if (!requestLogLevel.isEnabled(logger)) {
                     // Request wasn't logged, but this is an unsuccessful response,
                     // so we log the request too to help debugging.
-                    responseLogLevel.log(logger, logFormatter.formatRequest(log));
+                    responseLogLevel.log(logger, logFormatter.formatRequest(log, true));
                 }
 
                 if (responseCauseFilter.test(responseCause)) {

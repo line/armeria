@@ -68,10 +68,10 @@ public interface LogFormatter {
     /**
      * Returns the formatted request log message of the {@link RequestOnlyLog}.
      */
-    String formatRequest(RequestOnlyLog log);
+    String formatRequest(RequestOnlyLog log, boolean containContext);
 
     /**
      * Returns the formatted response log message that is constructed by {@link RequestLog}.
      */
-    String formatResponse(RequestLog log);
+    String formatResponse(RequestLog log, boolean containContext);
 }

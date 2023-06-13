@@ -70,13 +70,17 @@ final class TextLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatRequest(RequestOnlyLog log) {
+    public String formatRequest(RequestOnlyLog log, boolean containContext) {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
         final RequestContext ctx = log.context();
         if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
-            return ctx + " Request: {}";
+            if (containContext) {
+                return ctx + " Request: {}";
+            } else {
+                return "Request: {}";
+            }
         }
 
         String requestCauseString = null;
@@ -115,11 +119,20 @@ final class TextLogFormatter implements LogFormatter {
             sanitizedTrailers = null;
         }
 
-        // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
-        final String ctxString = ctx.toString();
+        final String ctxString;
+        if (containContext) {
+            // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
+            ctxString = ctx.toString() + ' ';
+        } else {
+            ctxString = null;
+        }
+
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append(ctxString).append(" Request: {startTime=");
+            if (ctxString != null) {
+                buf.append(ctxString);
+            }
+            buf.append("Request: {startTime=");
             TextFormatter.appendEpochMicros(buf, log.requestStartTimeMicros());
 
             if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
@@ -171,13 +184,17 @@ final class TextLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatResponse(RequestLog log) {
+    public String formatResponse(RequestLog log, boolean containContext) {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
         final RequestContext ctx = log.context();
         if (!RequestLogProperty.RESPONSE_START_TIME.isAvailable(flags)) {
-            return ctx + " Response: {}";
+            if (containContext) {
+                return ctx + " Response: {}";
+            } else {
+                return "Response: {}";
+            }
         }
 
         String responseCauseString = null;
@@ -216,11 +233,20 @@ final class TextLogFormatter implements LogFormatter {
             sanitizedTrailers = null;
         }
 
-        // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
-        final String ctxString = ctx.toString();
+        final String ctxString;
+        if (containContext) {
+            // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
+            ctxString = ctx.toString() + ' ';
+        } else {
+            ctxString = null;
+        }
+
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append(ctxString).append(" Response: {startTime=");
+            if (ctxString != null) {
+                buf.append(ctxString);
+            }
+            buf.append("Response: {startTime=");
             TextFormatter.appendEpochMicros(buf, log.responseStartTimeMicros());
 
             if (RequestLogProperty.RESPONSE_LENGTH.isAvailable(flags)) {
