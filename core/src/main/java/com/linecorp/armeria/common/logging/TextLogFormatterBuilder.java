@@ -88,6 +88,7 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
     /**
      * Sets whether to include stringified {@link RequestContext} in the result of
      * {@link LogFormatter#formatRequest(RequestOnlyLog)} and {@link LogFormatter#formatResponse(RequestLog)}.
+     * The context is included by default.
      */
     public TextLogFormatterBuilder includeContext(boolean includeContext) {
         this.includeContext = includeContext;

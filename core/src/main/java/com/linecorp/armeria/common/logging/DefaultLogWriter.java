@@ -110,7 +110,6 @@ final class DefaultLogWriter implements LogWriter {
             final String responseStr = logFormatter.formatResponse(log);
             try (SafeCloseable ignored = ctx.push()) {
                 if (responseCause == null) {
-                    String format = "{} Response: {}";
                     responseLogLevel.log(logger, responseStr);
                     return;
                 }
