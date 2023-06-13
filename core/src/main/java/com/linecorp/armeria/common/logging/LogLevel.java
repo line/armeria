@@ -109,6 +109,10 @@ public enum LogLevel {
     public void log(Logger logger, String format, @Nullable Object arg1) {
         requireNonNull(logger, "logger");
         requireNonNull(format, "format");
+        if (arg1 instanceof Throwable) {
+            log(logger, format, (Throwable) arg1);
+            return;
+        }
         switch (this) {
             case OFF:
                 break;
@@ -135,9 +139,7 @@ public enum LogLevel {
     /**
      * Logs a message at this level.
      */
-    public void log(Logger logger, String format, Throwable throwable) {
-        requireNonNull(logger, "logger");
-        requireNonNull(format, "format");
+    private void log(Logger logger, String format, Throwable throwable) {
         switch (this) {
             case OFF:
                 break;
