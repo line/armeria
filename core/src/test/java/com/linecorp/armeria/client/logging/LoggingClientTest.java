@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
@@ -169,7 +168,7 @@ class LoggingClientTest {
         when(logger.isInfoEnabled()).thenReturn(true);
 
         // Before sanitization
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
+        assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
         assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
 
         final LogFormatter logFormatter =

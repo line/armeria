@@ -382,7 +382,7 @@ class LoggingServiceTest {
 
         // Before sanitization
         assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
+        assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
 
         final LogFormatter logFormatter =
                 LogFormatter.builderForText()
@@ -409,7 +409,7 @@ class LoggingServiceTest {
         for (int i = 0; i < 2; i++) {
             verify(logger).info(argThat((String text) -> text.contains("Request:") &&
                                                          !(text.contains(":path=/hello/trustin") ||
-                                                           text.contains("com"))));
+                                                           text.contains(":authority=test.com"))));
         }
 
         // verify response log
@@ -434,7 +434,7 @@ class LoggingServiceTest {
 
         // Before sanitization
         assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
+        assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
 
         final LogFormatter logFormatter =
                 LogFormatter.builderForText()
@@ -461,7 +461,7 @@ class LoggingServiceTest {
         for (int i = 0; i < 2; i++) {
             verify(logger).info(argThat((String text) -> text.contains("Request:") &&
                                                          !(text.contains(":path=/hello/trustin") ||
-                                                           text.contains("com"))));
+                                                           text.contains(":authority=test.com"))));
         }
 
         // verify response log
