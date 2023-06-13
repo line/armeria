@@ -36,6 +36,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Stack;
+import java.util.UUID;
 
 import org.apache.thrift.TBase;
 import org.apache.thrift.TEnum;
@@ -389,6 +390,12 @@ final class TTextProtocol extends TProtocol {
         writeNameOrValue(TypedParser.LONG, i64);
     }
 
+    // UUID is added in Thrift 0.18.
+    public void writeUuid(UUID uuid) throws TException {
+        writeCurrentContext();
+        writeNameOrValue(TypedParser.STRING, uuid.toString());
+    }
+
     @Override
     public void writeDouble(double dub) throws TException {
         writeCurrentContext();
@@ -668,6 +675,12 @@ final class TTextProtocol extends TProtocol {
     public long readI64() throws TException {
         readCurrentContext();
         return readNameOrValue(TypedParser.LONG);
+    }
+
+    // UUID is added in Thrift 0.18.0.
+    public UUID readUuid() throws TException {
+        readCurrentContext();
+        return UUID.fromString(readNameOrValue(TypedParser.STRING));
     }
 
     @Override

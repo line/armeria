@@ -17,12 +17,14 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,8 +33,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -152,6 +158,39 @@ class RequestOptionsTest {
         }
     }
 
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void setRequestAutoAbortDelayMillis(boolean usePreparation) {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final long requestAutoAbortDelayMillis = 2000;
+            final StreamWriter<HttpData> streaming = StreamMessage.streaming();
+            final CompletableFuture<AggregatedHttpResponse> res;
+            if (usePreparation) {
+                res = client.prepare()
+                            .get("/ping")
+                            .content(MediaType.ANY_TYPE, streaming)
+                            .requestAutoAbortDelayMillis(requestAutoAbortDelayMillis)
+                            .execute()
+                            .aggregate();
+            } else {
+                final HttpRequest req = HttpRequest.builder()
+                                                   .get("/ping")
+                                                   .content(MediaType.ANY_TYPE, streaming)
+                                                   .build();
+                final RequestOptions options =
+                        RequestOptions.builder()
+                                      .requestAutoAbortDelayMillis(requestAutoAbortDelayMillis)
+                                      .build();
+                res = client.execute(req, options).aggregate();
+            }
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.requestAutoAbortDelayMillis()).isEqualTo(requestAutoAbortDelayMillis);
+            assertThat(res.join().contentUtf8()).isEqualTo("pong");
+            // Buffer 1 second
+            await().atLeast(1, TimeUnit.SECONDS).until(() -> ctx.log().isRequestComplete());
+        }
+    }
+
     @Test
     void overwriteTest() {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -159,6 +198,7 @@ class RequestOptionsTest {
                                                                 .responseTimeoutMillis(2000)
                                                                 .writeTimeoutMillis(1000)
                                                                 .maxResponseLength(1028)
+                                                                .requestAutoAbortDelayMillis(1000)
                                                                 .attr(foo, "hello")
                                                                 .attr(bar, "options")
                                                                 .build();
@@ -168,6 +208,7 @@ class RequestOptionsTest {
                         .maxResponseLength(10)
                         .responseTimeoutMillis(500)
                         .writeTimeoutMillis(300)
+                        .requestAutoAbortDelayMillis(300)
                         .attr(foo, "world")
                         .requestOptions(requestOptions)
                         .execute()
@@ -176,6 +217,8 @@ class RequestOptionsTest {
             assertThat(ctx.responseTimeoutMillis()).isEqualTo(requestOptions.responseTimeoutMillis());
             assertThat(ctx.writeTimeoutMillis()).isEqualTo(requestOptions.writeTimeoutMillis());
             assertThat(ctx.maxResponseLength()).isEqualTo(requestOptions.maxResponseLength());
+            assertThat(ctx.requestAutoAbortDelayMillis()).isEqualTo(
+                    requestOptions.requestAutoAbortDelayMillis());
             final Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
             while (attrs.hasNext()) {
                 final Entry<AttributeKey<?>, Object> next = attrs.next();
@@ -192,6 +235,7 @@ class RequestOptionsTest {
                                                              .responseTimeoutMillis(2000)
                                                              .writeTimeoutMillis(1000)
                                                              .maxResponseLength(1028)
+                                                             .requestAutoAbortDelayMillis(1000)
                                                              .attr(foo, "hello")
                                                              .attr(bar, "options")
                                                              .build();
@@ -204,6 +248,8 @@ class RequestOptionsTest {
 
         assertThat(requestOptions2.responseTimeoutMillis()).isEqualTo(requestOptions1.responseTimeoutMillis());
         assertThat(requestOptions2.writeTimeoutMillis()).isEqualTo(requestOptions1.writeTimeoutMillis());
+        assertThat(requestOptions2.requestAutoAbortDelayMillis()).isEqualTo(
+                requestOptions1.requestAutoAbortDelayMillis());
         assertThat(requestOptions2.maxResponseLength()).isEqualTo(3000);
         final Map<AttributeKey<?>, Object> attrs = requestOptions2.attrs();
         assertThat(attrs.get(foo)).isEqualTo("world");
