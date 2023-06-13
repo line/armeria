@@ -53,6 +53,7 @@ final class TextLogFormatter implements LogFormatter {
     private final BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer;
 
     private final BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer;
+    private final boolean includeContext;
 
     TextLogFormatter(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer,
@@ -60,23 +61,25 @@ final class TextLogFormatter implements LogFormatter {
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer,
-            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer) {
+            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer,
+            boolean includeContext) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
         this.responseHeadersSanitizer = responseHeadersSanitizer;
         this.requestTrailersSanitizer = requestTrailersSanitizer;
         this.responseTrailersSanitizer = responseTrailersSanitizer;
         this.requestContentSanitizer = requestContentSanitizer;
         this.responseContentSanitizer = responseContentSanitizer;
+        this.includeContext = includeContext;
     }
 
     @Override
-    public String formatRequest(RequestOnlyLog log, boolean containContext) {
+    public String formatRequest(RequestOnlyLog log) {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
         final RequestContext ctx = log.context();
         if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
-            if (containContext) {
+            if (includeContext) {
                 return ctx + " Request: {}";
             } else {
                 return "Request: {}";
@@ -120,7 +123,7 @@ final class TextLogFormatter implements LogFormatter {
         }
 
         final String ctxString;
-        if (containContext) {
+        if (includeContext) {
             // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
             ctxString = ctx.toString() + ' ';
         } else {
@@ -184,13 +187,13 @@ final class TextLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatResponse(RequestLog log, boolean containContext) {
+    public String formatResponse(RequestLog log) {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
         final RequestContext ctx = log.context();
         if (!RequestLogProperty.RESPONSE_START_TIME.isAvailable(flags)) {
-            if (containContext) {
+            if (includeContext) {
                 return ctx + " Response: {}";
             } else {
                 return "Response: {}";
@@ -234,7 +237,7 @@ final class TextLogFormatter implements LogFormatter {
         }
 
         final String ctxString;
-        if (containContext) {
+        if (includeContext) {
             // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
             ctxString = ctx.toString() + ' ';
         } else {

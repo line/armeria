@@ -87,7 +87,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link Logger} to use when logging.
      * If unset, a default {@link Logger} will be used.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#logger(Logger)} instead.
+     * @deprecated Use {@link LogWriterBuilder#logger(Logger)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder logger(Logger logger) {
@@ -100,7 +100,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the name of the {@link Logger} to use when logging.
      * This method is a shortcut for {@code this.logger(LoggerFactory.getLogger(loggerName))}.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#logger(String)} instead.
+     * @deprecated Use {@link LogWriterBuilder#logger(String)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder logger(String loggerName) {
@@ -122,7 +122,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#DEBUG}.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#requestLogLevel(LogLevel)} instead.
+     * @deprecated Use {@link LogWriterBuilder#requestLogLevel(LogLevel)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder requestLogLevel(LogLevel requestLogLevel) {
@@ -133,7 +133,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#requestLogLevel(Class, LogLevel)} instead.
+     * @deprecated Use {@link LogWriterBuilder#requestLogLevel(Class, LogLevel)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
@@ -157,7 +157,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link RequestLogLevelMapper} to use when mapping the log level of request logs.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#requestLogLevelMapper(RequestLogLevelMapper)} instead.
+     * @deprecated Use {@link LogWriterBuilder#requestLogLevelMapper(RequestLogLevelMapper)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
@@ -185,7 +185,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging responses whose status is equal to the specified
      * {@link HttpStatus}.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#responseLogLevel(HttpStatus, LogLevel)} instead.
+     * @deprecated Use {@link LogWriterBuilder#responseLogLevel(HttpStatus, LogLevel)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
@@ -196,7 +196,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging responses whose status belongs to the specified
      * {@link HttpStatusClass}.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#responseLogLevel(HttpStatusClass, LogLevel)} instead.
+     * @deprecated Use {@link LogWriterBuilder#responseLogLevel(HttpStatusClass, LogLevel)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
@@ -206,7 +206,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#responseLogLevel(Class, LogLevel)} instead.
+     * @deprecated Use {@link LogWriterBuilder#responseLogLevel(Class, LogLevel)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
@@ -219,7 +219,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      * {@link LogLevel#DEBUG} will be used by default.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#successfulResponseLogLevel(LogLevel)} instead.
+     * @deprecated Use {@link LogWriterBuilder#successfulResponseLogLevel(LogLevel)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
@@ -231,7 +231,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      * {@link LogLevel#WARN} will be used by default.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#failureResponseLogLevel(LogLevel)} instead.
+     * @deprecated Use {@link LogWriterBuilder#failureResponseLogLevel(LogLevel)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
@@ -254,7 +254,7 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link ResponseLogLevelMapper} to use when mapping the log level of response logs.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#responseLogLevelMapper(ResponseLogLevelMapper)} instead.
+     * @deprecated Use {@link LogWriterBuilder#responseLogLevelMapper(ResponseLogLevelMapper)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
@@ -487,7 +487,7 @@ public abstract class LoggingDecoratorBuilder {
      * sanitize a response cause.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     * @deprecated Use {@link DefaultLogWriterBuilder#responseCauseFilter(Predicate)} instead.
+     * @deprecated Use {@link LogWriterBuilder#responseCauseFilter(Predicate)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseCauseSanitizer(
@@ -511,7 +511,7 @@ public abstract class LoggingDecoratorBuilder {
      * You can prevent logging the response cause by returning {@code true}
      * in the {@link Predicate}. By default, the response cause will always be logged.
      *
-     * @deprecated Use {@link DefaultLogWriterBuilder#responseCauseFilter(Predicate)} instead.
+     * @deprecated Use {@link LogWriterBuilder#responseCauseFilter(Predicate)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
@@ -555,7 +555,7 @@ public abstract class LoggingDecoratorBuilder {
                             .requestContentSanitizer(convertToStringSanitizer(requestContentSanitizer))
                             .responseContentSanitizer(convertToStringSanitizer(responseContentSanitizer))
                             .build();
-        final DefaultLogWriterBuilder builder = LogWriter.builder();
+        final LogWriterBuilder builder = LogWriter.builder();
         builder.logFormatter(logFormatter);
         if (logger != null) {
             builder.logger(logger);

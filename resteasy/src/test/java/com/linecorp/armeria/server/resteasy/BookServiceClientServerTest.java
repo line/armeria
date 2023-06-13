@@ -236,11 +236,11 @@ public class BookServiceClientServerTest {
 
     private static WebTarget newWebTarget() {
         final LogWriter logWriter = LogWriter.builder()
-                                         .logger(logger)
-                                         .requestLogLevel(LogLevel.INFO)
-                                         .successfulResponseLogLevel(LogLevel.INFO)
-                                         .failureResponseLogLevel(LogLevel.WARN)
-                                         .build();
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .failureResponseLogLevel(LogLevel.WARN)
+                                             .build();
         final WebClient httpClient = WebClient.builder()
                                               .decorator(LoggingClient.builder()
                                                                       .logWriter(logWriter)

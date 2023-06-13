@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -48,10 +50,10 @@ public interface LogWriter {
     }
 
     /**
-     * Returns the {@link DefaultLogWriterBuilder} for building a new {@link LogWriter}.
+     * Returns the {@link LogWriterBuilder} for building a new {@link LogWriter}.
      */
-    static DefaultLogWriterBuilder builder() {
-        return new DefaultLogWriterBuilder();
+    static LogWriterBuilder builder() {
+        return new LogWriterBuilder();
     }
 
     /**
@@ -63,4 +65,30 @@ public interface LogWriter {
      * Writes the response-side {@link RequestLog}.
      */
     void logResponse(RequestLog log);
+
+    /**
+     * Returns a new {@link LogWriter} which combines two {@link LogWriter}s.
+     */
+    default LogWriter andThen(LogWriter after) {
+        requireNonNull(after, "after");
+        return new LogWriter() {
+            @Override
+            public void logRequest(RequestOnlyLog log) {
+                try {
+                    LogWriter.this.logRequest(log);
+                } finally {
+                    after.logRequest(log);
+                }
+            }
+
+            @Override
+            public void logResponse(RequestLog log) {
+                try {
+                    LogWriter.this.logResponse(log);
+                } finally {
+                    after.logResponse(log);
+                }
+            }
+        };
+    }
 }

@@ -19,22 +19,27 @@ package com.linecorp.armeria.common.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class JsonLogFormatterTest {
-    @Test
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
     void formatRequest() {
         final LogFormatter logFormatter = LogFormatter.ofJson();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
-        final String requestLog = logFormatter.formatRequest(log, true);
+        final String requestLog = logFormatter.formatRequest(log);
+        System.err.println(requestLog);
         assertThat(requestLog)
-                .matches("^\\{\"startTime\":\".+\",\"length\":\".+\",\"duration\":\".+\"," +
-                         "\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}$");
+                .matches("^\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
+                         "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}$");
     }
 
     @Test
@@ -43,9 +48,9 @@ class JsonLogFormatterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endResponse();
-        final String responseLog = logFormatter.formatResponse(log, true);
+        final String responseLog = logFormatter.formatResponse(log);
         assertThat(responseLog)
-                .matches("^\\{\"startTime\":\".+\",\"length\":\".+\",\"duration\":\".+\"," +
-                         "\"totalDuration\":\".+\",\"headers\":\\{\".+\"}}$");
+                .matches("^\\{\"type\":\"response\",\"startTime\":\".+\",\"length\":\".+\"," +
+                         "\"duration\":\".+\",\"totalDuration\":\".+\",\"headers\":\\{\".+\"}}$");
     }
 }

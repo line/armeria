@@ -32,10 +32,12 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Builds a new {@link LogWriter}.
  */
 @UnstableApi
-public final class DefaultLogWriterBuilder {
+public final class LogWriterBuilder {
+
+    static final LogLevel DEFAULT_REQUEST_LOG_LEVEL = LogLevel.DEBUG;
 
     static final RequestLogLevelMapper DEFAULT_REQUEST_LOG_LEVEL_MAPPER =
-            RequestLogLevelMapper.of(LogLevel.DEBUG);
+            RequestLogLevelMapper.of(DEFAULT_REQUEST_LOG_LEVEL);
 
     static final ResponseLogLevelMapper DEFAULT_RESPONSE_LOG_LEVEL_MAPPER =
             ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN);
@@ -48,13 +50,13 @@ public final class DefaultLogWriterBuilder {
     private Predicate<Throwable> responseCauseFilter = throwable -> false;
     private LogFormatter logFormatter = LogFormatter.ofText();
 
-    DefaultLogWriterBuilder() {}
+    LogWriterBuilder() {}
 
     /**
      * Sets the {@link Logger} to use when logging.
      * If unset, a default {@link Logger} will be used.
      */
-    public DefaultLogWriterBuilder logger(Logger logger) {
+    public LogWriterBuilder logger(Logger logger) {
         this.logger = requireNonNull(logger, "logger");
         return this;
     }
@@ -63,7 +65,7 @@ public final class DefaultLogWriterBuilder {
      * Sets the name of the {@link Logger} to use when logging.
      * This method is a shortcut for {@code this.logger(LoggerFactory.getLogger(loggerName))}.
      */
-    public DefaultLogWriterBuilder logger(String loggerName) {
+    public LogWriterBuilder logger(String loggerName) {
         requireNonNull(loggerName, "loggerName");
         logger = LoggerFactory.getLogger(loggerName);
         return this;
@@ -72,7 +74,7 @@ public final class DefaultLogWriterBuilder {
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#DEBUG}.
      */
-    public DefaultLogWriterBuilder requestLogLevel(LogLevel requestLogLevel) {
+    public LogWriterBuilder requestLogLevel(LogLevel requestLogLevel) {
         requireNonNull(requestLogLevel, "requestLogLevel");
         return requestLogLevelMapper(RequestLogLevelMapper.of(requestLogLevel));
     }
@@ -80,7 +82,7 @@ public final class DefaultLogWriterBuilder {
     /**
      * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
      */
-    public DefaultLogWriterBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
+    public LogWriterBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
         requireNonNull(clazz, "clazz");
         requireNonNull(requestLogLevel, "requestLogLevel");
         return requestLogLevelMapper(RequestLogLevelMapper.of(clazz, requestLogLevel));
@@ -89,7 +91,7 @@ public final class DefaultLogWriterBuilder {
     /**
      * Sets the {@link RequestLogLevelMapper} to use when mapping the log level of request logs.
      */
-    public DefaultLogWriterBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
+    public LogWriterBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         if (this.requestLogLevelMapper == null) {
             this.requestLogLevelMapper = requestLogLevelMapper;
@@ -110,7 +112,7 @@ public final class DefaultLogWriterBuilder {
      * Sets the {@link LogLevel} to use when logging responses whose status is equal to the specified
      * {@link HttpStatus}.
      */
-    public DefaultLogWriterBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
+    public LogWriterBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
         return responseLogLevelMapper(ResponseLogLevelMapper.of(status, logLevel));
     }
 
@@ -118,14 +120,14 @@ public final class DefaultLogWriterBuilder {
      * Sets the {@link LogLevel} to use when logging responses whose status belongs to the specified
      * {@link HttpStatusClass}.
      */
-    public DefaultLogWriterBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
+    public LogWriterBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return responseLogLevelMapper(ResponseLogLevelMapper.of(statusClass, logLevel));
     }
 
     /**
      * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
      */
-    public DefaultLogWriterBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
+    public LogWriterBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
         requireNonNull(clazz, "clazz");
         requireNonNull(logLevel, "logLevel");
         return responseLogLevelMapper(ResponseLogLevelMapper.of(clazz, logLevel));
@@ -135,7 +137,7 @@ public final class DefaultLogWriterBuilder {
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      * {@link LogLevel#DEBUG} will be used by default.
      */
-    public DefaultLogWriterBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
+    public LogWriterBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
         return responseLogLevelMapper(log -> log.responseCause() == null ? successfulResponseLogLevel : null);
     }
@@ -144,7 +146,7 @@ public final class DefaultLogWriterBuilder {
      * Sets the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      * {@link LogLevel#WARN} will be used by default.
      */
-    public DefaultLogWriterBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
+    public LogWriterBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         return responseLogLevelMapper(log -> log.responseCause() != null ? failedResponseLogLevel : null);
     }
@@ -152,7 +154,7 @@ public final class DefaultLogWriterBuilder {
     /**
      * Sets the {@link ResponseLogLevelMapper} to use when mapping the log level of response logs.
      */
-    public DefaultLogWriterBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
+    public LogWriterBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         if (this.responseLogLevelMapper == null) {
             this.responseLogLevelMapper = responseLogLevelMapper;
@@ -174,7 +176,7 @@ public final class DefaultLogWriterBuilder {
      * You can prevent logging the response cause by returning {@code true}
      * in the {@link Predicate}. By default, the response cause will always be logged.
      */
-    public DefaultLogWriterBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
+    public LogWriterBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
         this.responseCauseFilter = requireNonNull(responseCauseFilter, "responseCauseFilter");
         return this;
     }
@@ -185,7 +187,7 @@ public final class DefaultLogWriterBuilder {
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
      */
-    public DefaultLogWriterBuilder logFormatter(LogFormatter logFormatter) {
+    public LogWriterBuilder logFormatter(LogFormatter logFormatter) {
         this.logFormatter = requireNonNull(logFormatter, "logFormatter");
         return this;
     }
