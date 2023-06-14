@@ -132,6 +132,22 @@ serverBuilder
     .build(MyAnnotatedService())
 ```
 
+## Coroutines support for <type://RestClient>
+
+Armeria provides extension methods to convert <type://RestClientPreparation#execute(Class)> to a `suspend` function.
+
+```kotlin
+val client = RestClient.of("https://armeria.dev")
+// In a coroutine scope.
+val response: ResponseEntity<RestResponse> =
+   client.get("/api/v1/users/{id}")
+         .pathParam("id", "Armeria")
+         .header(HttpHeaderNames.AUTHORIZATION, "...")
+         // The suspend function executes the request and
+         // returns the response.
+         .execute<RestResponse>()
+```
+
 ## Coroutines support for [gRPC-Kotlin](https://github.com/grpc/grpc-kotlin)
 
 <Tip>
