@@ -415,7 +415,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 // Expected event
             } else {
                 final Throwable handshakeException = sslCompletionEvent.cause();
-                final Throwable pendingException = getPendingException(ctx, null);
+                final Throwable pendingException = getPendingException(ctx);
                 if (pendingException != null) {
                     handshakeException.addSuppressed(pendingException);
                 }
@@ -469,7 +469,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final HttpResponseDecoder responseDecoder = this.responseDecoder;
             final Throwable pendingException;
             if (responseDecoder != null && responseDecoder.hasUnfinishedResponses()) {
-                pendingException = getPendingException(ctx);
+                pendingException = maybeGetPendingException(ctx);
                 responseDecoder.failUnfinishedResponses(pendingException);
             } else {
                 pendingException = null;
@@ -480,7 +480,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             sessionTimeoutFuture.cancel(false);
             if (!sessionPromise.isDone()) {
                 sessionPromise.tryFailure(pendingException != null ? pendingException
-                                                                   : getPendingException(ctx));
+                                                                   : maybeGetPendingException(ctx));
             }
         }
     }
@@ -502,8 +502,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
     }
 
-    private static Throwable getPendingException(ChannelHandlerContext ctx) {
-        final Throwable pendingException = getPendingException(ctx, null);
+    private static Throwable maybeGetPendingException(ChannelHandlerContext ctx) {
+        final Throwable pendingException = getPendingException(ctx);
         if (pendingException != null) {
             return pendingException;
         }
@@ -511,12 +511,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Nullable
-    private static Throwable getPendingException(ChannelHandlerContext ctx, @Nullable Throwable defaultCause) {
+    private static Throwable getPendingException(ChannelHandlerContext ctx) {
         if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
             return ctx.channel().attr(PENDING_EXCEPTION).get();
         }
 
-        return defaultCause;
+        return null;
     }
 
     static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {

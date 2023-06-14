@@ -57,7 +57,9 @@ class IisServerCompatibilityTest {
                 .hasMessageContaining("Connection closed while SSL/TLS handshake was in progress");
         assertThat(suppressed[1])
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("An unexpected exception during TLS handshake. " +
-                                      "One possible reason behind the failure is no cipher suites in common. ciphers:");
+                .hasMessageFindingMatch(
+                        "An unexpected exception during TLS handshake. " +
+                        "Possible reasons: no cipher suites in common, unsupported TLS version, etc. " +
+                        "\\(TLS version: .*, cipher suites: .*\\)");
     }
 }

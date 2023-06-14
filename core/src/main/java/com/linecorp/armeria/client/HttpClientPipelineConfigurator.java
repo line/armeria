@@ -268,10 +268,12 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     // An exception was raised before the handshake event was completed.
                     // A legacy HTTPS server such as Microsoft-IIS/8.5 may reset the connection
                     // if no cipher suites in common.
+                    final String tlsVersion = sslHandler.engine().getSession().getProtocol();
                     final IllegalStateException maybeHandshakeException = new IllegalStateException(
-                            "An unexpected exception during TLS handshake. One possible reason behind the " +
-                            "failure is no cipher suites in common. " +
-                            "ciphers: " + sslCtx.cipherSuites(), cause);
+                            "An unexpected exception during TLS handshake. " +
+                            "Possible reasons: no cipher suites in common, unsupported TLS version, etc. " +
+                            "(TLS version: " + tlsVersion + ", cipher suites: " + sslCtx.cipherSuites() + ')',
+                            cause);
                     HttpSessionHandler.setPendingException(ctx, maybeHandshakeException);
                     return;
                 }
