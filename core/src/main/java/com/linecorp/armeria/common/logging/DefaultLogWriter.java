@@ -28,10 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.TransientServiceOption;
 
 final class DefaultLogWriter implements LogWriter {
 
@@ -73,11 +70,7 @@ final class DefaultLogWriter implements LogWriter {
             requestLogLevel = DEFAULT_REQUEST_LOG_LEVEL;
         }
         if (requestLogLevel.isEnabled(logger)) {
-            final RequestContext ctx = log.context();
-            if (log.requestCause() == null && isTransientService(ctx)) {
-                return;
-            }
-            try (SafeCloseable ignored = ctx.push()) {
+            try (SafeCloseable ignored = log.context().push()) {
                 // We don't log requestCause when it's not null because responseCause is the same exception when
                 // the requestCause is not null. That's way we don't have requestCauseSanitizer.
                 requestLogLevel.log(logger, logFormatter.formatRequest(log));
@@ -100,15 +93,8 @@ final class DefaultLogWriter implements LogWriter {
         final Throwable responseCause = log.responseCause();
 
         if (responseLogLevel.isEnabled(logger)) {
-            final RequestContext ctx = log.context();
-            if (responseCause == null &&
-                !log.responseHeaders().status().isServerError() &&
-                isTransientService(ctx)) {
-                return;
-            }
-
             final String responseStr = logFormatter.formatResponse(log);
-            try (SafeCloseable ignored = ctx.push()) {
+            try (SafeCloseable ignored = log.context().push()) {
                 if (responseCause == null) {
                     responseLogLevel.log(logger, responseStr);
                     return;
@@ -140,12 +126,5 @@ final class DefaultLogWriter implements LogWriter {
                           .add("responseCauseFilter", responseCauseFilter)
                           .add("logFormatter", logFormatter)
                           .toString();
-    }
-
-    private static boolean isTransientService(RequestContext ctx) {
-        return ctx instanceof ServiceRequestContext &&
-               !((ServiceRequestContext) ctx).config()
-                                             .transientServiceOptions()
-                                             .contains(TransientServiceOption.WITH_SERVICE_LOGGING);
     }
 }

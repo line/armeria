@@ -22,6 +22,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
  * Utilities for logging decorators.
@@ -34,15 +36,21 @@ public final class LoggingUtils {
      * Logs request and response using the specified {@link LogWriter}.
      */
     public static void log(RequestContext ctx, RequestLog requestLog, LogWriter logWriter) {
-        try {
-            logWriter.logRequest(requestLog);
-        } catch (Throwable t) {
-            logException(ctx, "request", t);
+        if (requestLog.requestCause() != null || !isTransientService(ctx)) {
+            try {
+                logWriter.logRequest(requestLog);
+            } catch (Throwable t) {
+                logException(ctx, "request", t);
+            }
         }
-        try {
-            logWriter.logResponse(requestLog);
-        } catch (Throwable t) {
-            logException(ctx, "response", t);
+        if (requestLog.responseCause() != null ||
+            requestLog.responseHeaders().status().isServerError() ||
+            !isTransientService(ctx)) {
+            try {
+                logWriter.logResponse(requestLog);
+            } catch (Throwable t) {
+                logException(ctx, "response", t);
+            }
         }
     }
 
@@ -51,6 +59,13 @@ public final class LoggingUtils {
         try (SafeCloseable ignored = ctx.push()) {
             logger.warn("{} Unexpected exception while logging {}: ", ctx, requestOrResponse, cause);
         }
+    }
+
+    private static boolean isTransientService(RequestContext ctx) {
+        return ctx instanceof ServiceRequestContext &&
+               !((ServiceRequestContext) ctx).config()
+                                             .transientServiceOptions()
+                                             .contains(TransientServiceOption.WITH_SERVICE_LOGGING);
     }
 
     private LoggingUtils() {}

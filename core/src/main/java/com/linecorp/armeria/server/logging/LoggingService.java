@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
  * Decorates an {@link HttpService} to log {@link HttpRequest}s and {@link HttpResponse}s.
@@ -79,5 +80,11 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             }
         });
         return unwrap().serve(ctx, req);
+    }
+
+    private static boolean isTransientService(ServiceRequestContext ctx) {
+        return !ctx.config()
+                   .transientServiceOptions()
+                   .contains(TransientServiceOption.WITH_SERVICE_LOGGING);
     }
 }
