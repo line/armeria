@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -36,7 +38,9 @@ final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInt
 
     @Override
     public CoroutineContext coroutineContext(ServerCall<?, ?> serverCall, Metadata metadata) {
-        final ServiceRequestContext ctx = ServiceRequestContext.current();
+        final ServiceRequestContext ctx = ServerCallUtil.findRequestContext(serverCall);
+        checkState(ctx != null, "Failed to find the current %s from %s",
+                   ServiceRequestContext.class.getSimpleName(), serverCall);
         final ArmeriaRequestCoroutineContext coroutineContext = new ArmeriaRequestCoroutineContext(ctx);
         final ScheduledExecutorService executor;
         if (useBlockingTaskExecutor) {
