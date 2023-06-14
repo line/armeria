@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.websocket;
+package com.linecorp.armeria.internal.common.websocket;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -26,11 +26,11 @@ import com.linecorp.armeria.common.websocket.WebSocketFrame;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class WebSocketWrapper implements WebSocket {
+public final class WebSocketWrapper implements WebSocket {
 
     private final StreamMessage<WebSocketFrame> delegate;
 
-    WebSocketWrapper(StreamMessage<WebSocketFrame> delegate) {
+    public WebSocketWrapper(StreamMessage<WebSocketFrame> delegate) {
         this.delegate = delegate;
     }
 
