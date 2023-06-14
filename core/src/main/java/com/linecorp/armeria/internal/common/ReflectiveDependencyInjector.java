@@ -31,6 +31,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 public final class ReflectiveDependencyInjector implements DependencyInjector {
 
@@ -57,7 +58,7 @@ public final class ReflectiveDependencyInjector implements DependencyInjector {
         return instance;
     }
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
 
     private final Map<Class<?>, Object> instances = new HashMap<>();
 

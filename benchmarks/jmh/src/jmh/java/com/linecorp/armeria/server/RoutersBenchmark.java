@@ -52,7 +52,7 @@ public class RoutersBenchmark {
     private static final RequestTarget METHOD1_REQ_TARGET = RequestTarget.forServer(METHOD1_HEADERS.path());
 
     static {
-        final String defaultLogName = null;
+        final String defaultLogName = "log";
         final String defaultServiceName = null;
         final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
         final Route route1 = Route.builder().exact("/grpc.package.Service/Method1").build();
@@ -63,25 +63,25 @@ public class RoutersBenchmark {
                 new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of(),
+                                  SuccessFunction.always(), 0, multipartUploadsLocation, ImmutableList.of(),
                                   HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler),
                 new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of(),
+                                  SuccessFunction.always(), 0, multipartUploadsLocation, ImmutableList.of(),
                                   HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler));
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
                                              defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              CommonPools.blockingTaskExecutor(),
-                                             SuccessFunction.always(), multipartUploadsLocation,
+                                             SuccessFunction.always(), 0, multipartUploadsLocation,
                                              ImmutableList.of(), HttpHeaders.of(), ctx -> RequestId.random(),
                                              serviceErrorHandler);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
-                unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
-                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), multipartUploadsLocation,
-                ImmutableList.of(),
+                unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, defaultLogName, 0, 0, false,
+                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), 0, SuccessFunction.ofDefault(),
+                multipartUploadsLocation, ImmutableList.of(),
                 ctx -> RequestId.random());
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }

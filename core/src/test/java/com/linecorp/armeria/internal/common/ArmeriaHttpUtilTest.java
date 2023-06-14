@@ -377,18 +377,18 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void excludeDisallowedHeadersWhileHttp2ToHttp1() {
-        final HttpHeaders in = HttpHeaders.builder()
-                                          .add(HttpHeaderNames.TRAILER, "foo")
-                                          .add(HttpHeaderNames.HOST, "bar")
-                                          .add(HttpHeaderNames.PATH, "dummy")
-                                          .add(HttpHeaderNames.METHOD, "dummy")
-                                          .add(HttpHeaderNames.SCHEME, "dummy")
-                                          .add(HttpHeaderNames.STATUS, "dummy")
-                                          .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
-                                          .add(ExtensionHeaderNames.STREAM_ID.text(), "dummy")
-                                          .add(ExtensionHeaderNames.SCHEME.text(), "dummy")
-                                          .add(ExtensionHeaderNames.PATH.text(), "dummy")
-                                          .build();
+        final ResponseHeaders in = ResponseHeaders.builder()
+                                                  .add(HttpHeaderNames.TRAILER, "foo")
+                                                  .add(HttpHeaderNames.HOST, "bar")
+                                                  .add(HttpHeaderNames.PATH, "dummy")
+                                                  .add(HttpHeaderNames.METHOD, "dummy")
+                                                  .add(HttpHeaderNames.SCHEME, "dummy")
+                                                  .add(HttpHeaderNames.STATUS, "dummy")
+                                                  .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
+                                                  .add(ExtensionHeaderNames.STREAM_ID.text(), "dummy")
+                                                  .add(ExtensionHeaderNames.SCHEME.text(), "dummy")
+                                                  .add(ExtensionHeaderNames.PATH.text(), "dummy")
+                                                  .build();
 
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
@@ -462,9 +462,11 @@ class ArmeriaHttpUtilTest {
                                                        .add("Content-Length", "dummy")
                                                        .add("Cache-Control", "dummy"));
 
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(200).add(in).build();
         final io.netty.handler.codec.http.HttpHeaders serverOutHeaders =
                 new DefaultHttpHeaders();
-        toNettyHttp1ServerHeaders(in, serverOutHeaders, Http1HeaderNaming.traditional(), true);
+        toNettyHttp1ServerHeaders(responseHeaders, serverOutHeaders, Http1HeaderNaming.traditional(), true);
+        // 200 status is included in the status-line.
         assertThat(serverOutHeaders).isEqualTo(new DefaultHttpHeaders()
                                                        .add("foo", "bar")
                                                        .add("Authorization", "dummy")
