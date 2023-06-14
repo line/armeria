@@ -264,13 +264,7 @@ public final class AnnotatedService implements HttpService {
         final HttpResponse response;
         if (aggregationType == AggregationType.NONE && !useBlockingTaskExecutor) {
             // Fast-path: No aggregation required and blocking task executor is not used.
-            final Object result = invoke(ctx, req, AggregatedResult.EMPTY);
-            if (responseType == ResponseType.HTTP_RESPONSE) {
-                assert result != null;
-                response = (HttpResponse) result;
-            } else {
-                response = convertResponse(ctx, result);
-            }
+            response = convertResponse(ctx, invoke(ctx, req, AggregatedResult.EMPTY));
         } else {
             response = HttpResponse.from(serve0(ctx, req, aggregationType));
         }
