@@ -18,8 +18,9 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -130,13 +131,13 @@ public abstract class RequestContextWrapper<T extends RequestContext>
 
     @Nullable
     @Override
-    public <A extends SocketAddress> A remoteAddress() {
+    public InetSocketAddress remoteAddress() {
         return unwrap().remoteAddress();
     }
 
     @Nullable
     @Override
-    public <A extends SocketAddress> A localAddress() {
+    public InetSocketAddress localAddress() {
         return unwrap().localAddress();
     }
 
@@ -189,6 +190,21 @@ public abstract class RequestContextWrapper<T extends RequestContext>
     @Override
     public MeterRegistry meterRegistry() {
         return unwrap().meterRegistry();
+    }
+
+    @Override
+    public long requestAutoAbortDelayMillis() {
+        return unwrap().requestAutoAbortDelayMillis();
+    }
+
+    @Override
+    public void setRequestAutoAbortDelay(Duration delay) {
+        unwrap().setRequestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public void setRequestAutoAbortDelayMillis(long delayMillis) {
+        unwrap().setRequestAutoAbortDelayMillis(delayMillis);
     }
 
     @Override

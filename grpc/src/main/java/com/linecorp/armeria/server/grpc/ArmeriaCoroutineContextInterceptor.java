@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -75,8 +77,11 @@ final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInt
 
     @Override
     public CoroutineContext coroutineContext(ServerCall<?, ?> serverCall, Metadata metadata) {
-        final ServiceRequestContext ctx = ServiceRequestContext.current();
+        final ServiceRequestContext ctx = ServerCallUtil.findRequestContext(serverCall);
+        checkState(ctx != null, "Failed to find the current %s from %s",
+                   ServiceRequestContext.class.getSimpleName(), serverCall);
         CoroutineContext coroutineContext = new ArmeriaRequestCoroutineContext(ctx);
+
         if (PROVIDE_METHOD != null && !COROUTINE_CONTEXT_PROVIDERS.isEmpty()) {
             for (Object provider : COROUTINE_CONTEXT_PROVIDERS) {
                 try {

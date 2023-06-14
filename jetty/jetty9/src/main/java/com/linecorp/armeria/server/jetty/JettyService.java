@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.function.Consumer;
@@ -302,7 +301,7 @@ public final class JettyService implements HttpService {
                     // Perform a reverse DNS lookup if needed.
                     if (needsReverseDnsLookup) {
                         try {
-                            ((InetSocketAddress) ctx.remoteAddress()).getHostName();
+                            ctx.remoteAddress().getHostName();
                         } catch (Throwable t) {
                             logger.warn("{} Failed to perform a reverse DNS lookup:", ctx, t);
                         }

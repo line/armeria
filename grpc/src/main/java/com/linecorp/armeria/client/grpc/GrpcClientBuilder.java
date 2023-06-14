@@ -466,6 +466,16 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public GrpcClientBuilder requestAutoAbortDelay(Duration delay) {
+        return (GrpcClientBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public GrpcClientBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (GrpcClientBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public GrpcClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (GrpcClientBuilder) super.requestIdGenerator(requestIdGenerator);
     }

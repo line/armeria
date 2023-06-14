@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server;
 
 import java.net.InetAddress;
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -64,13 +64,13 @@ public class ServiceRequestContextWrapper
 
     @Nonnull
     @Override
-    public <A extends SocketAddress> A remoteAddress() {
+    public InetSocketAddress remoteAddress() {
         return unwrap().remoteAddress();
     }
 
     @Nonnull
     @Override
-    public <A extends SocketAddress> A localAddress() {
+    public InetSocketAddress localAddress() {
         return unwrap().localAddress();
     }
 

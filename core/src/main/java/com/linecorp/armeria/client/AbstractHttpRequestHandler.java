@@ -330,6 +330,9 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         if (cause instanceof ProxyConnectException || cause instanceof ResponseCompleteException) {
             // - ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
             // - ResponseCompleteException means the response is successfully received.
+            state = State.DONE;
+            cancel();
+            logBuilder.endRequest(cause);
             return;
         }
 

@@ -28,7 +28,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.FileSystem;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
@@ -42,11 +41,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchRegisterKey;
+import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
 
 class FileWatcherRegistryTest {
+
+    @RegisterExtension
+    static TemporaryFolderExtension folder = new TemporaryFolderExtension();
 
     @BeforeAll
     static void before() {
@@ -58,7 +61,7 @@ class FileWatcherRegistryTest {
         Awaitility.setDefaultTimeout(10, TimeUnit.SECONDS);
     }
 
-    // Not sure if there is a better way to test multi-filesystem other than mocking..
+    // Not sure if there is a better way to test multi-filesystem other than mocking.
     private static Path createMockedPath() throws Exception {
         final Path path = mock(Path.class);
         final FileSystem fileSystem = mock(FileSystem.class);
@@ -84,14 +87,11 @@ class FileWatcherRegistryTest {
         PropertiesEndpointGroup.resetRegistry();
     }
 
-    @TempDir
-    Path folder;
-
     @Test
     void emptyGroupStopsBackgroundThread() throws Exception {
 
-        final Path file = Files.createFile(folder.resolve("temp-file.properties"));
-        final Path file2 = Files.createFile(folder.resolve("temp-file2.properties"));
+        final Path file = folder.newFile("temp-file.properties");
+        final Path file2 = folder.newFile("temp-file2.properties");
 
         try (FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry()) {
             final FileWatchRegisterKey key1 = fileWatcherRegistry.register(file, () -> {});
@@ -112,7 +112,7 @@ class FileWatcherRegistryTest {
     @Test
     void closeEndpointGroupStopsRegistry() throws Exception {
 
-        final Path file = Files.createFile(folder.resolve("temp-file.properties"));
+        final Path file = folder.newFile("temp-file.properties");
 
         final FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry();
         fileWatcherRegistry.register(file, () -> {});
@@ -128,7 +128,7 @@ class FileWatcherRegistryTest {
     @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
     void runnableWithExceptionContinuesRun() throws Exception {
 
-        final Path file = Files.createFile(folder.resolve("temp-file.properties"));
+        final Path file = folder.newFile("temp-file.properties");
         final FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry();
 
         final AtomicInteger val = new AtomicInteger(0);
