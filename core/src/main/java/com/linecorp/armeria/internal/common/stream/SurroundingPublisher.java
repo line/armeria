@@ -284,16 +284,15 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         private void sendHead() {
             setState(State.REQUIRE_HEAD, State.REQUIRE_BODY);
             assert head != null;
-            publishDownstream(head);
+            publishDownstream(head, true);
         }
 
         private void sendTail() {
             setState(State.REQUIRE_TAIL, State.REQUIRE_COMPLETE);
             if (tail != null) {
-                publishDownstream(tail);
-            } else {
-                sendComplete();
+                downstream.onNext(tail);
             }
+            sendComplete();
         }
 
         private void sendComplete() {
@@ -313,18 +312,24 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             subscription.request(upstreamRequested);
         }
 
-        private void publishDownstream(T item) {
+        private void publishDownstream(T item, boolean head) {
             requireNonNull(item, "item");
             if (closed) {
                 return;
             }
             downstream.onNext(item);
-            if (0 < upstreamRequested && upstreamRequested < Long.MAX_VALUE) {
-                upstreamRequested--;
-            } else if (requested < Long.MAX_VALUE) {
-                // Have to decrease when the head is published.
-                requested--;
+
+            if (head) {
+                if (requested < Long.MAX_VALUE) {
+                    requested--;
+                }
+            } else {
+                assert upstreamRequested > 0;
+                if (upstreamRequested < Long.MAX_VALUE) {
+                    upstreamRequested--;
+                }
             }
+
             if (!publishedAny) {
                 publishedAny = true;
             }
@@ -346,7 +351,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         @Override
         public void onNext(T item) {
             requireNonNull(item, "item");
-            publishDownstream(item);
+            publishDownstream(item, false);
         }
 
         @Override
