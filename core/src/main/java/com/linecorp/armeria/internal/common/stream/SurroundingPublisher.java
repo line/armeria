@@ -166,7 +166,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             DONE,
         }
 
-        private volatile State state;
+        private State state;
 
         @Nullable
         private final T head;
@@ -179,10 +179,11 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         @Nullable
         private volatile Subscription upstream;
 
-        private volatile long requested;
-        private volatile boolean subscribed;
+        private long requested;
+        private long upstreamRequested;
+        private boolean subscribed;
         private volatile boolean publishedAny;
-        private volatile boolean closed;
+        private boolean closed;
 
         private final CompletableFuture<Void> completionFuture;
         private final SubscriptionOption[] options;
@@ -241,7 +242,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void publish() {
-            if (closed || requested <= 0) {
+            if (closed || requested <= 0 && upstreamRequested <= 0) {
                 return;
             }
 
@@ -256,6 +257,10 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                         publisher.subscribe(this, executor, options);
                         return;
                     }
+                    if (upstreamRequested > 0) {
+                        return;
+                    }
+                    final Subscription upstream = this.upstream;
                     if (upstream != null) {
                        requestUpstream(upstream);
                     }
@@ -293,14 +298,18 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         private void sendComplete() {
             setState(State.REQUIRE_COMPLETE, State.DONE);
             close0(null);
-            requested--;
         }
 
         private void requestUpstream(Subscription subscription) {
             if (requested <= 0) {
                 return;
             }
-            subscription.request(1);
+            assert upstreamRequested == 0;
+            upstreamRequested = requested;
+            if (requested < Long.MAX_VALUE) {
+                requested = 0;
+            }
+            subscription.request(upstreamRequested);
         }
 
         private void publishDownstream(T item) {
@@ -309,7 +318,11 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                 return;
             }
             downstream.onNext(item);
-            requested--;
+            if (0 < upstreamRequested && upstreamRequested < Long.MAX_VALUE) {
+                upstreamRequested--;
+            } else if (requested < Long.MAX_VALUE) {
+                requested--;
+            }
             if (!publishedAny) {
                 publishedAny = true;
             }
