@@ -59,6 +59,7 @@ object ScalaResponseAs {
   def json[A: JavaTypeable](mapper: ClassTagExtensions): ResponseAs[HttpResponse, Future[ResponseEntity[A]]] =
     _.aggregate()
       .thenApply[ResponseEntity[A]] { agg =>
+        println("CONTENT" + agg.contentUtf8())
         val content = mapper.readValue(agg.content().array())
         ResponseEntity.of(agg.headers(), content, agg.trailers())
       }

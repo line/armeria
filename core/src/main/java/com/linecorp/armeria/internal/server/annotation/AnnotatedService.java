@@ -249,6 +249,13 @@ public final class AnnotatedService implements HttpService {
         return route;
     }
 
+    HttpService withExceptionHandler(HttpService service) {
+        if (exceptionHandler == null) {
+            return service;
+        }
+        return new ExceptionHandlingHttpService(service, exceptionHandler);
+    }
+
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (!defaultHttpHeaders.isEmpty()) {
@@ -258,16 +265,7 @@ public final class AnnotatedService implements HttpService {
             ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
         }
 
-        final AggregationType aggregationType =
-                AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers());
-
-        final HttpResponse response;
-        if (aggregationType == AggregationType.NONE && !useBlockingTaskExecutor) {
-            // Fast-path: No aggregation required and blocking task executor is not used.
-            response = convertResponse(ctx, invoke(ctx, req, AggregatedResult.EMPTY));
-        } else {
-            response = HttpResponse.from(serve0(ctx, req, aggregationType));
-        }
+        final HttpResponse response = serve0(ctx, req);
 
         if (exceptionHandler == null) {
             // If an error occurs, the default ExceptionHandler will handle the error.
@@ -283,11 +281,21 @@ public final class AnnotatedService implements HttpService {
         return response;
     }
 
-    HttpService withExceptionHandler(HttpService service) {
-        if (exceptionHandler == null) {
-            return service;
+    private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req) {
+        final AggregationType aggregationType =
+                AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers());
+
+        if (aggregationType == AggregationType.NONE && !useBlockingTaskExecutor) {
+            // Fast-path: No aggregation required and blocking task executor is not used.
+            switch (responseType) {
+                case HTTP_RESPONSE:
+                    return (HttpResponse) invoke(ctx, req, AggregatedResult.EMPTY);
+                case OTHER_OBJECTS:
+                    return convertResponse(ctx, invoke(ctx, req, AggregatedResult.EMPTY));
+            }
         }
-        return new ExceptionHandlingHttpService(service, exceptionHandler);
+
+        return HttpResponse.from(serve1(ctx, req, aggregationType));
     }
 
     /**
@@ -295,7 +303,7 @@ public final class AnnotatedService implements HttpService {
      * required to be aggregated. If the return type of the method is not a {@link CompletionStage} or
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
-    private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req,
+    private CompletionStage<HttpResponse> serve1(ServiceRequestContext ctx, HttpRequest req,
                                                  AggregationType aggregationType) {
         final CompletableFuture<AggregatedResult> f;
         switch (aggregationType) {
