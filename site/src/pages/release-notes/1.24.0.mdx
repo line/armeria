@@ -160,7 +160,7 @@ date: 2023-06-15
   - `armeria.client.actual.requests.attempts`
 - Synchronized blocks in `core/common` have been migrated to `ReentrantLock` for improved compatibility with
   virtual threads. #4578
-- Armeria has paved the way for adding support for two major key store formats for configuring TLS. #4801
+- We did a groundwork for supporting PKCS#12 and JKS keystore formats when configuring TLS in a future release. #4801
 
 ## 🛠️ Bug fixes
 
@@ -182,11 +182,11 @@ date: 2023-06-15
 - <type://CoroutineServerInterceptor> is not correctly propagate the coroutine context #4889 #4894
 - Armeria gRPC client now respects `CallOptions.getExecutor()` #4850 #4851
 - <type://GraphqlService> now creates `DataLoaderRegistry` for each request #4237 #4455
-- Fixed regression on "Copy as a cURL command" and "Copy response" on debug page #4929
+- Fixed a regression where "Copy as a cURL command" and "Copy response" in debug page did not work #4929
 
 ## 📃 Documentation
 
-- Added documentation for setting [request timeouts](/docs/server-timeouts)) at the server side. #4595 #4860
+- Added documentation for setting [request timeouts](/docs/server-timeouts) at the server side. #4595 #4860
 - Added documentation for [Kotlin integration](/docs/advanced-kotlin) with Armeria. #4866
 - Mentioned [http4s-armeria](https://github.com/http4s/http4s-armeria) as a part of the Scala integration #4919 #4920
 
