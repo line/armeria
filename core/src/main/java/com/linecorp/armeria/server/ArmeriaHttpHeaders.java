@@ -36,7 +36,6 @@ import io.netty.util.AsciiString;
 public final class ArmeriaHttpHeaders extends HttpHeaders {
 
     private final RequestHeadersBuilder builder;
-//    private final CaseInsensitiveMap connectionDisallowedList;
 
     /**
      * Creates a new instance.
@@ -45,7 +44,6 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
      */
     public ArmeriaHttpHeaders(RequestHeadersBuilder builder) {
         this.builder = builder;
-//        connectionDisallowedList = toLowercaseMap(valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
     }
 
     /**
@@ -57,7 +55,6 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
     public ArmeriaHttpHeaders(RequestHeadersBuilder builder, HttpHeaders headers) {
         this.builder = builder;
         headers.forEach(e -> this.add(e.getKey(), e.getValue()));
-//        connectionDisallowedList = toLowercaseMap(valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
     }
 
     @Override
@@ -118,6 +115,7 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
                       .map(e -> (Entry<String, String>) new AbstractMap.SimpleEntry<>(
                               e.getKey().toString(), e.getValue())
                       )
+                      .collect(Collectors.toList())
                       .iterator();
     }
 
@@ -127,6 +125,7 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
                        .map(e -> (Entry<CharSequence, CharSequence>) new AbstractMap.SimpleEntry<>(
                                (CharSequence) e.getKey().toString(),(CharSequence) e.getValue())
                        )
+                       .collect(Collectors.toList())
                        .iterator();
     }
 

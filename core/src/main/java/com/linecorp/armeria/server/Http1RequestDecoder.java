@@ -185,7 +185,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
-                    final boolean transferEncodingChunked = !HttpUtil.isTransferEncodingChunked(nettyReq);
+                    final boolean transferEncodingChunked = HttpUtil.isTransferEncodingChunked(nettyReq);
 
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers;
@@ -336,7 +336,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         }
                     }
 
-                    final boolean endOfStream = contentEmpty && transferEncodingChunked;
+                    final boolean endOfStream = contentEmpty && !transferEncodingChunked;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);
 
