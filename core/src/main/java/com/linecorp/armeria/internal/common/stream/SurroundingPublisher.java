@@ -283,6 +283,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
         private void sendHead() {
             setState(State.REQUIRE_HEAD, State.REQUIRE_BODY);
+            assert head != null;
             publishDownstream(head);
         }
 
@@ -321,6 +322,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             if (0 < upstreamRequested && upstreamRequested < Long.MAX_VALUE) {
                 upstreamRequested--;
             } else if (requested < Long.MAX_VALUE) {
+                // Have to decrease when the head is published.
                 requested--;
             }
             if (!publishedAny) {
