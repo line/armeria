@@ -51,9 +51,9 @@ import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 import com.linecorp.armeria.server.websocket.WebSocketService;
+import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class WebSocketServiceItTest {
