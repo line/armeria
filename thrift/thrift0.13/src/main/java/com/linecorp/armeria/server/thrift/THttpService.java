@@ -529,13 +529,17 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 decodedReq = toRpcRequest(f.serviceType(), header.name, args);
                 ctx.logBuilder().requestContent(decodedReq, new ThriftCall(header, args));
             } catch (Exception e) {
-                // Failed to decode the invocation parameters.
-                logger.debug("{} Failed to decode Thrift arguments:", ctx, e);
-
-                final TApplicationException cause = new TApplicationException(
-                        TApplicationException.PROTOCOL_ERROR, "failed to decode arguments: " + e);
-
-                handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
+                final TApplicationException cause;
+                if (ctx.config().verboseResponses()) {
+                    cause = new TApplicationException(
+                            TApplicationException.PROTOCOL_ERROR, "failed to decode arguments: " + e);
+                } else {
+                    // The exception could have sensitive information such as the required field.
+                    // So we don't include the cause message unless verboseResponses returns true.
+                    cause = new TApplicationException(TApplicationException.PROTOCOL_ERROR,
+                                                      "failed to decode arguments for " + header.name);
+                }
+                handleException(ctx, httpRes, serializationFormat, seqId, f, cause);
                 return;
             }
         } finally {
