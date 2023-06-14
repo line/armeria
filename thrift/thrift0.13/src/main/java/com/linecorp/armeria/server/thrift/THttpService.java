@@ -539,7 +539,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                     cause = new TApplicationException(TApplicationException.PROTOCOL_ERROR,
                                                       "failed to decode arguments for " + header.name);
                 }
-                handleException(ctx, httpRes, serializationFormat, seqId, f, cause);
+                handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
         } finally {
