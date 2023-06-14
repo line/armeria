@@ -81,29 +81,28 @@ public final class WebSocketService extends AbstractHttpService {
     private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(false);
 
     /**
-     * Returns a new {@link WebSocketService} with the {@link WebSocketServiceSessionHandler}.
+     * Returns a new {@link WebSocketService} with the {@link WebSocketServiceHandler}.
      */
-    public static WebSocketService of(WebSocketServiceSessionHandler handler) {
+    public static WebSocketService of(WebSocketServiceHandler handler) {
         return new WebSocketServiceBuilder(handler).build();
     }
 
     /**
-     * Returns a new {@link WebSocketServiceBuilder} with the {@link WebSocketServiceSessionHandler}.
+     * Returns a new {@link WebSocketServiceBuilder} with the {@link WebSocketServiceHandler}.
      */
-    public static WebSocketServiceBuilder builder(WebSocketServiceSessionHandler handler) {
+    public static WebSocketServiceBuilder builder(WebSocketServiceHandler handler) {
         return new WebSocketServiceBuilder(handler);
     }
 
-    private final WebSocketServiceSessionHandler handler;
+    private final WebSocketServiceHandler handler;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     private final Set<String> subprotocols;
     private final Set<String> allowedOrigins;
     private final boolean allowAnyOrigin;
 
-    WebSocketService(WebSocketServiceSessionHandler handler, int maxFramePayloadLength,
-                     boolean allowMaskMismatch, Set<String> subprotocols, Set<String> allowedOrigins,
-                     boolean allowAnyOrigin) {
+    WebSocketService(WebSocketServiceHandler handler, int maxFramePayloadLength, boolean allowMaskMismatch,
+                     Set<String> subprotocols, Set<String> allowedOrigins, boolean allowAnyOrigin) {
         this.handler = handler;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;

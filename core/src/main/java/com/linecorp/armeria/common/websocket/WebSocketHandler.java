@@ -13,20 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.websocket;
+package com.linecorp.armeria.common.websocket;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.websocket.WebSocketFrame;
-import com.linecorp.armeria.common.websocket.WebSocketSessionHandler;
-import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 
 /**
  * Implement this interface to handle incoming {@link WebSocketFrame}s from the peer and
  * send {@link WebSocketFrame}s to the peer.
  *
- * @see WebSocketService
+ * @see WebSocketServiceHandler
  */
 @UnstableApi
 @FunctionalInterface
-public interface WebSocketServiceSessionHandler extends WebSocketSessionHandler<ServiceRequestContext> {
+public interface WebSocketHandler<T extends RequestContext> {
+
+    /**
+     * Handles the incoming {@link WebSocket} and returns {@link WebSocket} created via
+     * {@link WebSocket#streaming()} to send {@link WebSocketFrame}s.
+     */
+    WebSocket handle(T ctx, WebSocket in);
 }
