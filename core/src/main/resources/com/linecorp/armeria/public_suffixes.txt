@@ -312,6 +312,7 @@ ah.cn
 ah.no
 ai
 ai.in
+ai.vn
 aibetsu.hokkaido.jp
 aichi.jp
 aid.pl
@@ -3407,6 +3408,7 @@ id.lv
 id.ly
 id.repl.co
 id.us
+id.vn
 ide.kyoto.jp
 idf.il
 idrett.no
@@ -3599,6 +3601,7 @@ inzai.chiba.jp
 io
 io.in
 io.kg
+io.vn
 iobb.net
 iopsys.se
 ip.linodeusercontent.com
