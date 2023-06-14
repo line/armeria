@@ -51,7 +51,7 @@ import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.websocket.WebSocketHandler;
+import com.linecorp.armeria.server.websocket.WebSocketServiceSessionHandler;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -227,7 +227,7 @@ class WebSocketServiceItTest {
         public void onError(Exception ex) {}
     }
 
-    static final class WebSocketEchoHandler implements WebSocketHandler {
+    static final class WebSocketEchoHandler implements WebSocketServiceSessionHandler {
 
         @Override
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {

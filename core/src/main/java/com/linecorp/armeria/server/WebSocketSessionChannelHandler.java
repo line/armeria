@@ -38,16 +38,16 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
 
-final class WebSocketSessionHandler extends ChannelDuplexHandler {
+final class WebSocketSessionChannelHandler extends ChannelDuplexHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebSocketSessionHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketSessionChannelHandler.class);
 
     private final StreamingDecodedHttpRequest req;
     private final ServerHttpObjectEncoder encoder;
     private final ServiceConfig serviceConfig;
 
-    WebSocketSessionHandler(StreamingDecodedHttpRequest req, ServerHttpObjectEncoder encoder,
-                            ServiceConfig serviceConfig) {
+    WebSocketSessionChannelHandler(StreamingDecodedHttpRequest req, ServerHttpObjectEncoder encoder,
+                                   ServiceConfig serviceConfig) {
         this.req = req;
         this.encoder = encoder;
         this.serviceConfig = serviceConfig;

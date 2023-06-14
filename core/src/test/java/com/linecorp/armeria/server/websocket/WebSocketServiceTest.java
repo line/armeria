@@ -128,7 +128,7 @@ class WebSocketServiceTest {
         return HttpData.wrap(encoder.encode(ctx, frame));
     }
 
-    static class AbstractWebSocketHandler implements WebSocketHandler {
+    static class AbstractWebSocketHandler implements WebSocketServiceSessionHandler {
 
         @Override
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {

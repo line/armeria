@@ -41,14 +41,14 @@ public final class WebSocketServiceBuilder {
 
     static final int DEFAULT_MAX_FRAME_PAYLOAD_LENGTH = 65535; // 64 * 1024 -1
 
-    private final WebSocketHandler handler;
+    private final WebSocketServiceSessionHandler handler;
 
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
 
-    WebSocketServiceBuilder(WebSocketHandler handler) {
+    WebSocketServiceBuilder(WebSocketServiceSessionHandler handler) {
         this.handler = requireNonNull(handler, "handler");
     }
 
