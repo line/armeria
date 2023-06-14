@@ -49,17 +49,17 @@ class IisServerCompatibilityTest {
     @Test
     void shouldRaiseSslHandleShakeExceptionWhenConnectionIsResetDuringTlsHandshake() {
         final Throwable cause = catchThrowable(() -> server.blockingWebClient().get("/"));
-        assertThat(cause).isInstanceOf(UnprocessedRequestException.class);
-        assertThat(cause.getCause()).isInstanceOf(ClosedChannelException.class);
+        assertThat(cause).isInstanceOf(UnprocessedRequestException.class)
+                         .getCause().isInstanceOf(IllegalStateException.class)
+                         .hasMessageFindingMatch(
+                                 "An unexpected exception during TLS handshake. " +
+                                 "Possible reasons: no cipher suites in common, unsupported TLS version, etc. " +
+                                 "\\(TLS version: .*, cipher suites: .*\\)");
         final Throwable[] suppressed = cause.getCause().getSuppressed();
         assertThat(suppressed[0])
+                .isInstanceOf(ClosedChannelException.class);
+        assertThat(suppressed[1])
                 .isInstanceOf(SSLHandshakeException.class)
                 .hasMessageContaining("Connection closed while SSL/TLS handshake was in progress");
-        assertThat(suppressed[1])
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageFindingMatch(
-                        "An unexpected exception during TLS handshake. " +
-                        "Possible reasons: no cipher suites in common, unsupported TLS version, etc. " +
-                        "\\(TLS version: .*, cipher suites: .*\\)");
     }
 }

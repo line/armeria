@@ -414,10 +414,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             if (sslCompletionEvent.isSuccess()) {
                 // Expected event
             } else {
-                final Throwable handshakeException = sslCompletionEvent.cause();
+                Throwable handshakeException = sslCompletionEvent.cause();
                 final Throwable pendingException = getPendingException(ctx);
                 if (pendingException != null) {
-                    handshakeException.addSuppressed(pendingException);
+                    pendingException.addSuppressed(handshakeException);
+                    // Propagate suppressed exceptions in handshakeException to pendingException.
+                    for (Throwable suppressed : handshakeException.getSuppressed()) {
+                        pendingException.addSuppressed(suppressed);
+                    }
+                    handshakeException = pendingException;
                 }
                 sessionTimeoutFuture.cancel(false);
                 sessionPromise.tryFailure(handshakeException);
