@@ -57,7 +57,7 @@ public interface LogWriter {
     }
 
     /**
-     * Writes the request-side {@link RequestLog}.
+     * Writes the request-side {@link RequestOnlyLog}.
      */
     void logRequest(RequestOnlyLog log);
 

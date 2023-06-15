@@ -45,12 +45,12 @@ final class DefaultLogWriter implements LogWriter {
     private final Logger logger;
     private final RequestLogLevelMapper requestLogLevelMapper;
     private final ResponseLogLevelMapper responseLogLevelMapper;
-    private final Predicate<Throwable> responseCauseFilter;
+    private final Predicate<? super Throwable> responseCauseFilter;
     private final LogFormatter logFormatter;
 
     DefaultLogWriter(Logger logger, RequestLogLevelMapper requestLogLevelMapper,
                      ResponseLogLevelMapper responseLogLevelMapper,
-                     Predicate<Throwable> responseCauseFilter, LogFormatter logFormatter) {
+                     Predicate<? super Throwable> responseCauseFilter, LogFormatter logFormatter) {
         this.logger = logger;
         this.requestLogLevelMapper = requestLogLevelMapper;
         this.responseLogLevelMapper = responseLogLevelMapper;

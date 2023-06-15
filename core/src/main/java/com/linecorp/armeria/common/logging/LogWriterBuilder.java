@@ -47,7 +47,7 @@ public final class LogWriterBuilder {
     private RequestLogLevelMapper requestLogLevelMapper;
     @Nullable
     private ResponseLogLevelMapper responseLogLevelMapper;
-    private Predicate<Throwable> responseCauseFilter = throwable -> false;
+    private Predicate<? super Throwable> responseCauseFilter = throwable -> false;
     private LogFormatter logFormatter = LogFormatter.ofText();
 
     LogWriterBuilder() {}
@@ -176,7 +176,7 @@ public final class LogWriterBuilder {
      * You can prevent logging the response cause by returning {@code true}
      * in the {@link Predicate}. By default, the response cause will always be logged.
      */
-    public LogWriterBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
+    public LogWriterBuilder responseCauseFilter(Predicate<? super Throwable> responseCauseFilter) {
         this.responseCauseFilter = requireNonNull(responseCauseFilter, "responseCauseFilter");
         return this;
     }
