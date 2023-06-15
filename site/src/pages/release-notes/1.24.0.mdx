@@ -182,6 +182,7 @@ date: 2023-06-15
 - Armeria gRPC client now respects `CallOptions.getExecutor()`. #4850 #4851
 - <type://GraphqlService> now creates `DataLoaderRegistry` for each request. #4237 #4455
 - Fixed a regression where "Copy as a cURL command" and "Copy response" in debug page did not work. #4929
+- <type://THttpService> no longer exposes field information in the response when failing to deserialize a request. #4953
 
 ## 📃 Documentation
 
