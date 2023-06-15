@@ -71,7 +71,7 @@ date: 2023-06-15
   GraphqlService
     .builder()
     .executionIdGenerator((requestCtx, query, operation, graphqlCtx) -> {
-       return ExedcutionId.from(requestContext.headers.get("traceparent"));
+       return ExecutionId.from(requestContext.headers.get("traceparent"));
     })
     ...
     .build();
