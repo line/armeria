@@ -151,7 +151,7 @@ class WebSocketServiceTest {
                                 onBinary(writer, frame.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
                                 break;
                             case CLOSE:
-                                assert frame instanceof CloseWebSocketFrame;
+                                assertThat(frame).isInstanceOf(CloseWebSocketFrame.class);
                                 final CloseWebSocketFrame closeFrame = (CloseWebSocketFrame) frame;
                                 onClose(writer, closeFrame.status(), closeFrame.reasonPhrase());
                                 break;

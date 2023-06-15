@@ -92,7 +92,7 @@ class ReactiveWebServerCompressionLeakTest {
                             public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
                                 final Mono<? extends DataBuffer> buffer = Mono.from(body);
                                 return super.writeWith(buffer.doOnNext(b -> {
-                                    assert b instanceof NettyDataBuffer;
+                                    assertThat(b).isInstanceOf(NettyDataBuffer.class);
                                     nettyData.add((NettyDataBuffer) b);
                                 }));
                             }

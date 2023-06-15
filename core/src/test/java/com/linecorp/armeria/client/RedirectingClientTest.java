@@ -121,7 +121,7 @@ class RedirectingClientTest {
                           .filter(port -> port.localAddress().getPort() !=
                                           ctx.localAddress().getPort())
                           .findFirst();
-            assert serverPort.isPresent();
+            assertThat(serverPort).isPresent();
             return serverPort.get().localAddress().getPort();
         }
     };
