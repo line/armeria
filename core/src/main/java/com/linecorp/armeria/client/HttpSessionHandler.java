@@ -416,12 +416,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             } else {
                 Throwable handshakeException = sslCompletionEvent.cause();
                 final Throwable pendingException = getPendingException(ctx);
-                if (pendingException != null) {
+                if (pendingException != null && handshakeException != pendingException) {
+                    // Use pendingException as the primary cause.
                     pendingException.addSuppressed(handshakeException);
-                    // Propagate suppressed exceptions in handshakeException to pendingException.
-                    for (Throwable suppressed : handshakeException.getSuppressed()) {
-                        pendingException.addSuppressed(suppressed);
-                    }
                     handshakeException = pendingException;
                 }
                 sessionTimeoutFuture.cancel(false);

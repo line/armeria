@@ -57,10 +57,10 @@ class IisServerCompatibilityTest {
                                  "An unexpected exception during TLS handshake. " +
                                  "Possible reasons: no cipher suites in common, unsupported TLS version," +
                                  " etc. \\(TLS version: .*, cipher suites: .*\\)");
-        final Throwable[] suppressed = cause.getCause().getSuppressed();
-        assertThat(suppressed[0])
+        final Throwable suppressed0 = cause.getCause().getSuppressed()[0];
+        assertThat(suppressed0)
                 .isInstanceOf(ClosedChannelException.class);
-        assertThat(suppressed[1])
+        assertThat(suppressed0.getSuppressed()[0])
                 .isInstanceOf(SSLHandshakeException.class)
                 .hasMessageContaining("Connection closed while SSL/TLS handshake was in progress");
     }
