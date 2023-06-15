@@ -91,9 +91,8 @@ date: 2023-06-15
   `META-INF/services/com.linecorp.armeria.common.kotlin.CoroutineContextProvider`.
  
   </Tip>
-- **Retrieving CallOptions with GrpcCallOptions**: With GrpcCallOptions in Armeria, you can now easily retrieve
-  `CallOptions` from a given <type://RequestContext>.
-  #4776 #4822
+- **Retrieving CallOptions with GrpcCallOptions**: With <type://GrpcCallOptions> in Armeria, you can now easily
+  retrieve `CallOptions` from a given <type://RequestContext>. #4776 #4822
   ```java
   GrpcClients
     .builder(grpcServerUri)
@@ -144,7 +143,7 @@ date: 2023-06-15
   <type://ContextAwareCallable>, <type://ContextAwareFunction>, <type://ContextAwareBiFunction>,
   <type://ContextAwareConsumer> and <type://ContextAwareBiConsumer>. #4878 #4890
 - Annotated services now perform as fast as functional-style services under the following conditions: #4888
-  - The annotated method returns an `HttpResponse`
+  - The annotated method returns an `HttpResponse`.
   - The annotated method is run on the event loop (i.e. not annotated with `@Blocking`).
 - You can now use the following features with Spring Boot Actuator integration. #4874 #4880
   - `management.endpoints.web.exposure.*`
@@ -153,42 +152,42 @@ date: 2023-06-15
   - `management.endpoint.health.status.http-mapping.*`
   - `application/vnd.spring-boot.actuator.v3+json`, `application/vnd.spring-boot.actuator.v2+json` and
     `application/json`
-- You can now correctly set the default log name for <type://VirtualHost> via
-  <type://VirtualHostBuilder#defaultLogName(String)> #4817
-- Armeria client now exports metrics for <type://RetryingClient> with the following metric names: #3350 #4707
-  - `armeria.client.actual.requests`
+- Armeria client now exports metrics for <type://RetryingClient> with the following metric name: #3350 #4707
   - `armeria.client.actual.requests.attempts`
+- You can now set the default log name for <type://VirtualHost> via
+  <type://VirtualHostBuilder#defaultLogName(String)> #4817
 - Synchronized blocks in `core/common` have been migrated to `ReentrantLock` for improved compatibility with
   virtual threads. #4578
-- We did a groundwork for supporting PKCS#12 and JKS keystore formats when configuring TLS in a future release. #4801
+- We did groundwork for supporting PKCS#12 and JKS keystore formats when configuring TLS in a future release. #4801
 
 ## 🛠️ Bug fixes
 
-- <type://WebClient> no longer decode percent-encoded `?` (`%3F`) in a request path. #4907
+- <type://WebClient> no longer decodes a percent-encoded `?` (`%3F`) in a request path. #4907
 - Search domains are no longer used in DNS resolution when an authority ends with a trailing dot. #4538 #4875
 - <type://FailFastException> is now correctly converted to `Status.UNAVAILABLE`. #4805 #4924
 - `DocService` now correctly makes the link to <type://StructInfo> even when a protobuf `Message` is used in both gRPC
   services and annotated services. #4885
-- Set `connection: close` correctly in the response when an HTTP/1.1 request contains `connection: close`.
-  #4864
+- <type://ConcurrencyLimitingClient> used with <type://RetryingClient> or <type://CircuitBreakerClient> now 
+  doesn't produce a deadlock. #4826 #4834
+- `connection: close` is set correctly in the response when an HTTP/1.1 request contains `connection: close`. #4864
 - You no longer see `NullPointerException` when using <type://StreamMessage.mapError(Function)> #4852 #4859
 - <type://DocService> now correctly generates specifications for Thrift services compiled with `java:fullcamel`
   option. #4858
-- Fix to use a relative path for `schemas.json` in the <type://DocService> client #4840
+- <type://DocService> with relative paths now correctly provide autocompletion. #4840
 - The unhandled exception reporter no longer reports ignorable exceptions. #4861 #4922
 - Fixed an issue where <type://@Param> annotation swallows exceptions raised from
   <type://RequestConverterFunction> #4826 #4834
 - `armeria-logback` is now compatible with Logback 1.3.x. #4855 #4856
-- <type://CoroutineServerInterceptor> is not correctly propagate the coroutine context #4889 #4894
-- Armeria gRPC client now respects `CallOptions.getExecutor()` #4850 #4851
-- <type://GraphqlService> now creates `DataLoaderRegistry` for each request #4237 #4455
-- Fixed a regression where "Copy as a cURL command" and "Copy response" in debug page did not work #4929
+- <type://CoroutineServerInterceptor> now correctly propagates the coroutine context. #4889 #4894
+- Armeria gRPC client now respects `CallOptions.getExecutor()`. #4850 #4851
+- <type://GraphqlService> now creates `DataLoaderRegistry` for each request. #4237 #4455
+- Fixed a regression where "Copy as a cURL command" and "Copy response" in debug page did not work. #4929
 
 ## 📃 Documentation
 
 - Added documentation for setting [request timeouts](/docs/server-timeouts) at the server side. #4595 #4860
 - Added documentation for [Kotlin integration](/docs/advanced-kotlin) with Armeria. #4866
-- Mentioned [http4s-armeria](https://github.com/http4s/http4s-armeria) as a part of the Scala integration #4919 #4920
+- Mentioned [http4s-armeria](https://github.com/http4s/http4s-armeria) as a part of the Scala integration. #4919 #4920
 
 ## 🏚️ Deprecations
 
@@ -203,14 +202,13 @@ date: 2023-06-15
 - Changed the return type of <type://RequestContext#localAddress()>
   and <type://RequestContext#remoteAddress()> from `SocketAddress` to `InetSocketAddress`
   because <type://DomainSocketAddress> is now an `InetSocketAddress`. #4846
-- The parameter type of the following methods has been changed from `SocketAddress` to `InetSocketAddress`:
-  #4846
+- The parameter type of the following methods has been changed from `SocketAddress` to `InetSocketAddress`: #4846
   - <type://ClientRequestContextBuilder#localAddress(InetSocketAddress)>
   - <type://ClientRequestContextBuilder#remoteAddress(InetSocketAddress)>
   - <type://ServiceRequestContextBuilder#localAddress(InetSocketAddress)>
   - <type://ClientRequestContextBuilder#remoteAddress(InetSocketAddress)>
 - An innermost <type://MetricCollectingService> is now chosen to measure metrics for a service. #4908
-  - Previously, the outermost one is used to collect metrics.
+  - Previously, the outermost one was used to collect metrics.
 
 ## ⛓ Dependencies
 
