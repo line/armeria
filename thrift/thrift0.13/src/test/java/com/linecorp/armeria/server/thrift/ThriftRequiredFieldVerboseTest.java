@@ -41,7 +41,8 @@ class ThriftRequiredFieldVerboseTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/hello", THttpService.ofFormats(HELLO_SERVICE, TEXT))
+            sb.verboseResponses(true)
+              .service("/hello", THttpService.ofFormats(HELLO_SERVICE, TEXT))
               .route().verboseResponses(false)
               .path("/hello_no_verbose")
               .build(THttpService.ofFormats(HELLO_SERVICE, TEXT));
@@ -50,7 +51,7 @@ class ThriftRequiredFieldVerboseTest {
 
     @CsvSource({ "true", "false" })
     @ParameterizedTest
-    public void containRequiredFiledIfVerbose(boolean verbose) throws Exception {
+    void containRequiredFiledIfVerbose(boolean verbose) throws Exception {
         final String path = verbose ? "/hello" : "/hello_no_verbose";
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, path,
                                                          HttpHeaderNames.CONTENT_TYPE, "application/x-thrift");
