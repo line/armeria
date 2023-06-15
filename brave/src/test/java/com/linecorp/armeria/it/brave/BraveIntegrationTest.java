@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.HelloService.AsyncIface;
+import com.linecorp.armeria.common.brave.HelloService.Iface;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -92,7 +93,6 @@ class BraveIntegrationTest {
 
     private static HelloService.Iface fooClient;
     private static HelloService.Iface fooClientWithoutTracing;
-    private static HelloService.Iface timeoutClient;
     private static HelloService.Iface timeoutClientClientTimesOut;
     private static HelloService.Iface http1TimeoutClientClientTimesOut;
     private static HelloService.AsyncIface barClient;
@@ -212,10 +212,6 @@ class BraveIntegrationTest {
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
         poolWebClient = WebClient.of(server.httpUri());
-        timeoutClient = ThriftClients.builder(server.httpUri())
-                                     .path("/timeout")
-                                     .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                                     .build(HelloService.Iface.class);
         timeoutClientClientTimesOut =
                 ThriftClients.builder(server.httpUri())
                              .path("/timeout")
@@ -454,19 +450,27 @@ class BraveIntegrationTest {
     }
 
     @Test
-    void testServerTimesOut() throws Exception {
-        assertThatThrownBy(() -> timeoutClient.hello("name"))
-                .isInstanceOf(TTransportException.class)
-                .hasCauseInstanceOf(InvalidResponseHeadersException.class);
-        final MutableSpan[] spans = spanHandler.take(2);
+    void testServerTimesOut() {
+        try (ClientFactory cf = ClientFactory.builder().build()) {
+            Iface timeoutClient =
+                    ThriftClients.builder(server.httpUri())
+                                 .path("/timeout")
+                                 .factory(cf)
+                                 .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
+                                 .build(Iface.class);
+            assertThatThrownBy(() -> timeoutClient.hello("name"))
+                    .isInstanceOf(TTransportException.class)
+                    .hasCauseInstanceOf(InvalidResponseHeadersException.class);
+            final MutableSpan[] spans = spanHandler.take(2);
 
-        final MutableSpan serverSpan = findSpan(spans, "service/timeout");
-        final MutableSpan clientSpan = findSpan(spans, "client/timeout");
+            final MutableSpan serverSpan = findSpan(spans, "service/timeout");
+            final MutableSpan clientSpan = findSpan(spans, "client/timeout");
 
-        // Server timed out meaning it did still send a timeout response to the client and we have all
-        // annotations.
-        assertThat(serverSpan.annotations()).hasSize(2);
-        assertThat(clientSpan.annotations()).hasSize(8);
+            // Server timed out meaning it did still send a timeout response to the client and we have all
+            // annotations.
+            assertThat(serverSpan.annotations()).hasSize(2);
+            assertThat(clientSpan.annotations()).hasSize(8);
+        }
     }
 
     @Test
