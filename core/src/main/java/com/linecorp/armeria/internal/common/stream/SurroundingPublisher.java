@@ -156,7 +156,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
     }
 
-    static final class SurroundingSubscriber<T> implements Subscriber<T>, Subscription {
+    private static final class SurroundingSubscriber<T> implements Subscriber<T>, Subscription {
 
         enum State {
             REQUIRE_HEAD,
@@ -183,7 +183,6 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         private long upstreamRequested;
         private boolean subscribed;
         private volatile boolean publishedAny;
-        private boolean closed;
 
         private final CompletableFuture<Void> completionFuture;
         private final SubscriptionOption[] options;
@@ -218,7 +217,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void request0(long n) {
-            if (closed || state == State.DONE) {
+            if (state == State.DONE) {
                 return;
             }
 
@@ -242,7 +241,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void publish() {
-            if (closed || requested <= 0 && upstreamRequested <= 0) {
+            if (state == State.DONE || requested <= 0 && upstreamRequested <= 0) {
                 return;
             }
 
@@ -271,11 +270,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                     break;
                 }
                 case REQUIRE_COMPLETE: {
-                    sendComplete();
-                    break;
-                }
-                case DONE: {
-                    closed = true;
+                    close0(null);
                     break;
                 }
             }
@@ -292,11 +287,6 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             if (tail != null) {
                 downstream.onNext(tail);
             }
-            sendComplete();
-        }
-
-        private void sendComplete() {
-            setState(State.REQUIRE_COMPLETE, State.DONE);
             close0(null);
         }
 
@@ -314,7 +304,8 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
         private void publishDownstream(T item, boolean head) {
             requireNonNull(item, "item");
-            if (closed) {
+            if (state == State.DONE) {
+                PooledObjects.close(item);
                 return;
             }
             downstream.onNext(item);
@@ -340,7 +331,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            if (closed) {
+            if (state == State.DONE) {
                 subscription.cancel();
                 return;
             }
@@ -376,11 +367,15 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void cancel0() {
-            if (closed) {
+            if (state == State.DONE) {
                 return;
             }
-            closed = true;
+            state = State.DONE;
 
+            final Subscription upstream = this.upstream;
+            if (upstream != null) {
+                upstream.cancel();
+            }
             final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
             if (containsNotifyCancellation(options)) {
                 downstream.onError(cause);
@@ -399,15 +394,19 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void close0(@Nullable Throwable cause) {
-            if (closed) {
+            if (state == State.DONE) {
                 return;
             }
-            closed = true;
+            state = State.DONE;
 
             if (cause == null) {
                 downstream.onComplete();
                 completionFuture.complete(null);
             } else {
+                final Subscription upstream = this.upstream;
+                if (upstream != null) {
+                    upstream.cancel();
+                }
                 downstream.onError(cause);
                 completionFuture.completeExceptionally(cause);
             }
@@ -415,10 +414,6 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void release() {
-            final Subscription upstream = this.upstream;
-            if (upstream != null) {
-                upstream.cancel();
-            }
             if (head != null) {
                 PooledObjects.close(head);
             }
