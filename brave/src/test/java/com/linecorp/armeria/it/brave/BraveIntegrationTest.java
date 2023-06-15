@@ -295,7 +295,11 @@ class BraveIntegrationTest {
             assertThat(secondConnectSpans[0].annotations())
                     .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
                             "ws",
-                            "wr");
+                            "wr",
+                            "connection-acquire.start",
+                            "connection-acquire.end",
+                            "connection-existing.start",
+                            "connection-existing.end");
         }
     }
 
@@ -461,8 +465,8 @@ class BraveIntegrationTest {
 
         // Server timed out meaning it did still send a timeout response to the client and we have all
         // annotations.
-        assertThat(serverSpan.annotations()).hasSize(6);
-        assertThat(clientSpan.annotations()).hasSize(6);
+        assertThat(serverSpan.annotations()).hasSize(2);
+        assertThat(clientSpan.annotations()).hasSize(8);
     }
 
     @Test
