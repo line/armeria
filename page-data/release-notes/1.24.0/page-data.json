@@ -1,0 +1,5 @@
+{
+    "componentChunkName": "component---src-pages-release-notes-1-24-0-mdx",
+    "path": "/release-notes/1.24.0/",
+    "result": {"pageContext":{"frontmatter":{"date":"2023-06-15T00:00:00.000Z"},"hrefs":{"next":{"label":"Older: 1.23.1","href":"/release-notes/1.23.1"}}}},
+    "staticQueryHashes": ["1552981879","512065377","636866790"]}
