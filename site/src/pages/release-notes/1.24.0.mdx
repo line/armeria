@@ -144,7 +144,7 @@ date: 2023-06-15
   <type://ContextAwareCallable>, <type://ContextAwareFunction>, <type://ContextAwareBiFunction>,
   <type://ContextAwareConsumer> and <type://ContextAwareBiConsumer>. #4878 #4890
 - Annotated services now perform as fast as functional-style services under the following conditions: #4888
-  - The annotated method returns an `HttpResponse`; and
+  - The annotated method returns an `HttpResponse`
   - The annotated method is run on the event loop (i.e. not annotated with `@Blocking`).
 - You can now use the following features with Spring Boot Actuator integration. #4874 #4880
   - `management.endpoints.web.exposure.*`
