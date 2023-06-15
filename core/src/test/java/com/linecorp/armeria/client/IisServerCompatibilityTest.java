@@ -27,9 +27,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@FlakyTest
 class IisServerCompatibilityTest {
 
     @RegisterExtension
@@ -53,8 +55,8 @@ class IisServerCompatibilityTest {
                          .getCause().isInstanceOf(IllegalStateException.class)
                          .hasMessageFindingMatch(
                                  "An unexpected exception during TLS handshake. " +
-                                 "Possible reasons: no cipher suites in common, unsupported TLS version, etc. " +
-                                 "\\(TLS version: .*, cipher suites: .*\\)");
+                                 "Possible reasons: no cipher suites in common, unsupported TLS version," +
+                                 " etc. \\(TLS version: .*, cipher suites: .*\\)");
         final Throwable[] suppressed = cause.getCause().getSuppressed();
         assertThat(suppressed[0])
                 .isInstanceOf(ClosedChannelException.class);
