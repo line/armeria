@@ -136,7 +136,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
     val future =
       restClient
         .post("/future")
-        .execute[RestResponse] ()
+        .execute[RestResponse]()
 
     val content = Await.result(future, Duration.Inf).content()
     assertEquals(content.id, "1")
