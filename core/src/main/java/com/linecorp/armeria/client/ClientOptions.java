@@ -32,6 +32,8 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -71,6 +73,14 @@ public final class ClientOptions
      */
     public static final ClientOption<Long> MAX_RESPONSE_LENGTH =
             ClientOption.define("MAX_RESPONSE_LENGTH", Flags.defaultMaxResponseLength());
+
+    /**
+     * The amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    public static final ClientOption<Long> REQUEST_AUTO_ABORT_DELAY_MILLIS =
+            ClientOption.define("REQUEST_AUTO_ABORT_DELAY_MILLIS",
+                                Flags.defaultRequestAutoAbortDelayMillis());
 
     /**
      * The redirect configuration.
@@ -286,6 +296,14 @@ public final class ClientOptions
      */
     public long maxResponseLength() {
         return get(MAX_RESPONSE_LENGTH);
+    }
+
+    /**
+     * Returns the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    public long requestAutoAbortDelayMillis() {
+        return get(REQUEST_AUTO_ABORT_DELAY_MILLIS);
     }
 
     /**

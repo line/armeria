@@ -182,7 +182,7 @@ interface ServiceConfigSetters {
     /**
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
-     * It's useful when you want to receive additional data even after closing the response.
+     * This may be useful when you want to receive additional data even after closing the response.
      * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
      * abort the request automatically. There is no delay by default.
      */
@@ -192,7 +192,7 @@ interface ServiceConfigSetters {
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
-     * It's useful when you want to receive additional data even after closing the response.
+     * This may be useful when you want to receive additional data even after closing the response.
      * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
      * abort the request automatically. There is no delay by default.
      */

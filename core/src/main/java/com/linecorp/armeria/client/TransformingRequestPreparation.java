@@ -318,6 +318,18 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
     }
 
     @Override
+    public TransformingRequestPreparation<T, R> requestAutoAbortDelay(Duration delay) {
+        delegate.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public TransformingRequestPreparation<T, R> requestAutoAbortDelayMillis(long delayMillis) {
+        delegate.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    @Override
     public <V> TransformingRequestPreparation<T, R> attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
         return this;

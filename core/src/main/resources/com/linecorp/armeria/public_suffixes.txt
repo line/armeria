@@ -178,7 +178,6 @@ aaa.pro
 aarborte.no
 aarp
 ab.ca
-abarth
 abashiri.hokkaido.jp
 abb
 abbott
@@ -313,6 +312,7 @@ ah.cn
 ah.no
 ai
 ai.in
+ai.vn
 aibetsu.hokkaido.jp
 aichi.jp
 aid.pl
@@ -380,7 +380,6 @@ alaheadju.no
 aland.fi
 alessandria.it
 alesund.no
-alfaromeo
 algard.no
 alibaba
 alipay
@@ -2361,7 +2360,6 @@ fi.cloudplatform.fi
 fi.cr
 fi.eu.org
 fi.it
-fiat
 fidelity
 fido
 fie.ee
@@ -3410,6 +3408,7 @@ id.lv
 id.ly
 id.repl.co
 id.us
+id.vn
 ide.kyoto.jp
 idf.il
 idrett.no
@@ -3602,6 +3601,7 @@ inzai.chiba.jp
 io
 io.in
 io.kg
+io.vn
 iobb.net
 iopsys.se
 ip.linodeusercontent.com
@@ -4362,7 +4362,6 @@ lamborghini
 lamer
 lanbib.se
 lancaster
-lancia
 land
 land-4-sale.us
 landrover
@@ -4676,7 +4675,6 @@ marshalls
 marugame.kagawa.jp
 marumori.miyagi.jp
 masaki.ehime.jp
-maserati
 masfjorden.no
 mashike.hokkaido.jp
 mashiki.kumamoto.jp

@@ -45,6 +45,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.unix.DomainSocketChannel;
+import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.Version;
 
@@ -94,7 +96,7 @@ public final class TransportTypeProvider {
     }
 
     public static final TransportTypeProvider NIO = new TransportTypeProvider(
-            "NIO", NioServerSocketChannel.class, NioSocketChannel.class, NioDatagramChannel.class,
+            "NIO", NioServerSocketChannel.class, NioSocketChannel.class, null, null, NioDatagramChannel.class,
             NioEventLoopGroup.class, NioEventLoop.class, NioEventLoopGroup::new, null);
 
     public static final TransportTypeProvider EPOLL = of(
@@ -103,9 +105,23 @@ public final class TransportTypeProvider {
             ".epoll.Epoll",
             ".epoll.EpollServerSocketChannel",
             ".epoll.EpollSocketChannel",
+            ".epoll.EpollServerDomainSocketChannel",
+            ".epoll.EpollDomainSocketChannel",
             ".epoll.EpollDatagramChannel",
             ".epoll.EpollEventLoopGroup",
             ".epoll.EpollEventLoop");
+
+    public static final TransportTypeProvider KQUEUE = of(
+            "KQUEUE",
+            ChannelUtil.channelPackageName(),
+            ".kqueue.KQueue",
+            ".kqueue.KQueueServerSocketChannel",
+            ".kqueue.KQueueSocketChannel",
+            ".kqueue.KQueueServerDomainSocketChannel",
+            ".kqueue.KQueueDomainSocketChannel",
+            ".kqueue.KQueueDatagramChannel",
+            ".kqueue.KQueueEventLoopGroup",
+            ".kqueue.KQueueEventLoop");
 
     public static final TransportTypeProvider IO_URING = of(
             "IO_URING",
@@ -113,18 +129,21 @@ public final class TransportTypeProvider {
             ".uring.IOUring",
             ".uring.IOUringServerSocketChannel",
             ".uring.IOUringSocketChannel",
+            null, null,
             ".uring.IOUringDatagramChannel",
             ".uring.IOUringEventLoopGroup",
             ".uring.IOUringEventLoop");
 
     private static TransportTypeProvider of(
             String name, @Nullable String channelPackageName, String entryPointTypeName,
-            String serverSocketChannelTypeName, String socketChannelTypeName, String datagramChannelTypeName,
+            String serverSocketChannelTypeName, String socketChannelTypeName,
+            @Nullable String domainServerSocketChannelTypeName, @Nullable String domainSocketChannelTypeName,
+            String datagramChannelTypeName,
             String eventLoopGroupTypeName, String eventLoopTypeName) {
 
         if (channelPackageName == null) {
             return new TransportTypeProvider(
-                    name, null, null, null, null, null, null,
+                    name, null, null, null, null, null, null, null, null,
                     new IllegalStateException("Failed to determine the shaded package name"));
         }
 
@@ -133,7 +152,7 @@ public final class TransportTypeProvider {
         if ("IO_URING".equals(name) && !"io_uring".equals(Ascii.toLowerCase(
                 System.getProperty("com.linecorp.armeria.transportType", "")))) {
             return new TransportTypeProvider(
-                    name, null, null, null, null, null, null,
+                    name, null, null, null, null, null, null, null, null,
                     new IllegalStateException("io_uring not enabled explicitly"));
         }
 
@@ -153,8 +172,15 @@ public final class TransportTypeProvider {
                     findClass(channelPackageName, serverSocketChannelTypeName);
             final Class<? extends SocketChannel> sc =
                     findClass(channelPackageName, socketChannelTypeName);
+
+            final Class<? extends ServerDomainSocketChannel> sdsc =
+                    findClass(channelPackageName, domainServerSocketChannelTypeName);
+            final Class<? extends DomainSocketChannel> dsc =
+                    findClass(channelPackageName, domainSocketChannelTypeName);
+
             final Class<? extends DatagramChannel> dc =
                     findClass(channelPackageName, datagramChannelTypeName);
+
             final Class<? extends EventLoopGroup> elg =
                     findClass(channelPackageName, eventLoopGroupTypeName);
             final Class<? extends EventLoop> el =
@@ -162,9 +188,10 @@ public final class TransportTypeProvider {
             final BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> elgc =
                     findEventLoopGroupConstructor(elg);
 
-            return new TransportTypeProvider(name, ssc, sc, dc, elg, el, elgc, null);
+            return new TransportTypeProvider(name, ssc, sc, sdsc, dsc, dc, elg, el, elgc, null);
         } catch (Throwable cause) {
-            return new TransportTypeProvider(name, null, null, null, null, null, null, Exceptions.peel(cause));
+            return new TransportTypeProvider(name, null, null, null, null, null, null, null, null,
+                                             Exceptions.peel(cause));
         } finally {
             // TODO(trustin): Remove this block which works around the bug where loading both epoll and
             //                io_uring native libraries may revert the initialization of
@@ -188,8 +215,14 @@ public final class TransportTypeProvider {
         }
     }
 
+    @Nullable
     @SuppressWarnings("unchecked")
-    private static <T> Class<T> findClass(String channelPackageName, String className) throws Exception {
+    private static <T> Class<T> findClass(String channelPackageName,
+                                          @Nullable String className) throws Exception {
+        if (className == null) {
+            return null;
+        }
+
         return (Class<T>) Class.forName(channelPackageName + className, false,
                                         TransportTypeProvider.class.getClassLoader());
     }
@@ -215,6 +248,10 @@ public final class TransportTypeProvider {
     @Nullable
     private final Class<? extends SocketChannel> socketChannelType;
     @Nullable
+    private final Class<? extends ServerDomainSocketChannel> domainServerChannelType;
+    @Nullable
+    private final Class<? extends DomainSocketChannel> domainSocketChannelType;
+    @Nullable
     private final Class<? extends DatagramChannel> datagramChannelType;
     @Nullable
     private final Class<? extends EventLoopGroup> eventLoopGroupType;
@@ -232,6 +269,10 @@ public final class TransportTypeProvider {
             @Nullable
             Class<? extends SocketChannel> socketChannelType,
             @Nullable
+            Class<? extends ServerDomainSocketChannel> domainServerChannelType,
+            @Nullable
+            Class<? extends DomainSocketChannel> domainSocketChannelType,
+            @Nullable
             Class<? extends DatagramChannel> datagramChannelType,
             @Nullable
             Class<? extends EventLoopGroup> eventLoopGroupType,
@@ -244,6 +285,8 @@ public final class TransportTypeProvider {
 
         assert (serverChannelType == null &&
                 socketChannelType == null &&
+                domainServerChannelType == null &&
+                domainSocketChannelType == null &&
                 datagramChannelType == null &&
                 eventLoopGroupType == null &&
                 eventLoopType == null &&
@@ -257,9 +300,15 @@ public final class TransportTypeProvider {
                 eventLoopGroupConstructor != null &&
                 unavailabilityCause == null);
 
+        assert domainServerChannelType != null && domainSocketChannelType != null ||
+               domainServerChannelType == null && domainSocketChannelType == null
+                : domainServerChannelType + ", " + domainSocketChannelType;
+
         this.name = name;
         this.serverChannelType = serverChannelType;
         this.socketChannelType = socketChannelType;
+        this.domainServerChannelType = domainServerChannelType;
+        this.domainSocketChannelType = domainSocketChannelType;
         this.datagramChannelType = datagramChannelType;
         this.eventLoopGroupType = eventLoopGroupType;
         this.eventLoopType = eventLoopType;
@@ -273,6 +322,18 @@ public final class TransportTypeProvider {
 
     public Class<? extends SocketChannel> socketChannelType() {
         return ensureSupported(socketChannelType);
+    }
+
+    public boolean supportsDomainSockets() {
+        return domainSocketChannelType != null;
+    }
+
+    public Class<? extends ServerDomainSocketChannel> domainServerChannelType() {
+        return ensureSupported(domainServerChannelType);
+    }
+
+    public Class<? extends DomainSocketChannel> domainSocketChannelType() {
+        return ensureSupported(domainSocketChannelType);
     }
 
     public Class<? extends DatagramChannel> datagramChannelType() {
