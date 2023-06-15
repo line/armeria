@@ -64,7 +64,7 @@ class ThriftRequiredFieldVerboseTest {
         if (verbose) {
             assertThat(response.contentUtf8()).contains("Required field", "was not present");
         } else {
-            assertThat(response.contentUtf8()).doesNotContain("Required filed", "was not present");
+            assertThat(response.contentUtf8()).doesNotContain("Required field", "was not present");
         }
     }
 }
