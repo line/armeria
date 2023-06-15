@@ -54,8 +54,14 @@ date: 2023-06-15
 - **BlockHound Integrations**: Armeria now provides BlockHound integrations, offering enhanced support for
   detecting with blocking calls in event loops. #4493
 - **Delayed Request Abortion**: You can now delay aborting the <type://HttpRequest> when the <type://HttpResponse>
-  completes on the client side. This may be useful when you want to send additional data even after the response is complete. #4913
+  completes. This may be useful when you want to send additional data even after the response is complete. #4913
   ```java
+  Server
+    .builder()
+    .requestAutoAbortDelayMillis(2000) // Delay aborting the request for 2 second.
+    ...
+    .build();
+  
   WebClient
     .builder()
     .requestAutoAbortDelayMillis(1000) // Delay aborting the request for 1 second.
@@ -77,7 +83,7 @@ date: 2023-06-15
     .build();
   ```
 - **Custom CoroutineContext for gRPC-Kotlin**: You can now inject a custom `CoroutineContext` for gRPC-Kotlin
-  with <type://CoroutinContextProvider>. #4842 #4866
+  with <type://CoroutineContextProvider>. #4842 #4866
   ```kotlin
   class CustomCoroutineContextProvider : CoroutineContextProvider { 
     override fun provide(ctx: ServiceRequestContext): CoroutineContext { 
@@ -126,7 +132,7 @@ date: 2023-06-15
     .build();
   ```
 - **HTTP/2 over TLS without ALPN**: Armeria now supports using HTTP/2 over TLS without the need for 
-  [ALPN](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-http2-17#section-3.3) #4702 #4704
+  [ALPN](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-http2-17#section-3.3). #4702 #4704
   ```java
   ClientFactory
     .builder()
@@ -134,7 +140,7 @@ date: 2023-06-15
     ...
     .build();
   ```
-- **Armeria with Jetty**: Armeria is now compatible with Jetty 10 and Jetty 11 #4845
+- **Armeria with Jetty**: Armeria is now compatible with Jetty 10 and Jetty 11. #4845
 - **Armeria with Thrift**: Armeria is now compatible with Thrift 0.18.1. #4812
 
 ## 📈 Improvements
@@ -158,25 +164,25 @@ date: 2023-06-15
   <type://VirtualHostBuilder#defaultLogName(String)> #4817
 - Synchronized blocks in `core/common` have been migrated to `ReentrantLock` for improved compatibility with
   virtual threads. #4578
-- We did groundwork for supporting PKCS#12 and JKS keystore formats when configuring TLS in a future release. #4801
+- We did groundwork for supporting PKCS\#12 and JKS keystore formats when configuring TLS in a future release. #4801
 
 ## 🛠️ Bug fixes
 
 - <type://WebClient> no longer decodes a percent-encoded `?` (`%3F`) in a request path. #4907
 - Search domains are no longer used in DNS resolution when an authority ends with a trailing dot. #4538 #4875
-- <type://FailFastException> is now correctly converted to `Status.UNAVAILABLE`. #4805 #4924
+- <type://FailFastException> is now correctly converted to `Status.UNAVAILABLE` in gRPC clients. #4805 #4924
 - `DocService` now correctly makes the link to <type://StructInfo> even when a protobuf `Message` is used in both gRPC
   services and annotated services. #4885
 - <type://ConcurrencyLimitingClient> used with <type://RetryingClient> or <type://CircuitBreakerClient> now 
   doesn't produce a deadlock. #4826 #4834
 - `connection: close` is set correctly in the response when an HTTP/1.1 request contains `connection: close`. #4864
-- You no longer see `NullPointerException` when using <type://StreamMessage.mapError(Function)> #4852 #4859
+- You no longer see `NullPointerException` when using <type://StreamMessage#mapError(Function)> #4852 #4859
 - <type://DocService> now correctly generates specifications for Thrift services compiled with `java:fullcamel`
   option. #4858
-- <type://DocService> with relative paths now correctly provide autocompletion. #4840
+- <type://DocService> with relative paths now correctly provides autocompletion. #4840
 - The unhandled exception reporter no longer reports ignorable exceptions. #4861 #4922
 - Fixed an issue where <type://@Param> annotation swallows exceptions raised from
-  <type://RequestConverterFunction> #4826 #4834
+  <type://RequestConverterFunction>. #4826 #4834
 - `armeria-logback` is now compatible with Logback 1.3.x. #4855 #4856
 - <type://CoroutineServerInterceptor> now correctly propagates the coroutine context. #4889 #4894
 - Armeria gRPC client now respects `CallOptions.getExecutor()`. #4850 #4851
@@ -192,7 +198,7 @@ date: 2023-06-15
 
 ## 🏚️ Deprecations
 
-- The following APIs have been deprecated in favor of <type://LogWriterBuilder>
+- The following APIs have been deprecated in favor of <type://LogWriterBuilder>:
   - <type://LoggingDecoratorBuilder#logger(Logger)>
   - <type://LoggingDecoratorBuilder#requestLogLevelMapper(RequestLogLevelMapper)>
   - <type://LoggingDecoratorBuilder#responseLogLevelMapper(ResponseLogLevelMapper)>
