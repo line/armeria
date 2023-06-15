@@ -21,7 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.File;
 import java.net.InetSocketAddress;
 
+#if DROPWIZARD_1 || DROPWIZARD_2 || DROPWIZARD_3
 import javax.validation.Validator;
+#else
+import jakarta.validation.Validator;
+#endif
 
 import org.junit.jupiter.api.Test;
 

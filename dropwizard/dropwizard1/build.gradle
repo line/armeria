@@ -1,5 +1,3 @@
-final def DROPWIZARD_VERSION = '1.3.29'
-
 dependencies {
     implementation project(':jetty9')
     // Dropwizard
@@ -17,17 +15,21 @@ dependencies {
     testImplementation libs.dropwizard1.testing
 }
 
-// Use the sources from ':dropwizard2'.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-ADROPWIZARD_1']
+}
+
+// Use the sources from ':dropwizard4'.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-tasks.compileJava.source "${rootProject.projectDir}/dropwizard2/src/main/java"
-tasks.processResources.from "${rootProject.projectDir}/dropwizard2/src/main/resources"
-tasks.compileTestJava.source "${rootProject.projectDir}/dropwizard2/src/test/java"
-tasks.processTestResources.from "${rootProject.projectDir}/dropwizard2/src/test/resources"
-tasks.sourcesJar.from "${rootProject.projectDir}/dropwizard2/src/main/java"
-tasks.sourcesJar.from "${rootProject.projectDir}/dropwizard2/src/main/resources"
-tasks.javadoc.source "${rootProject.projectDir}/dropwizard2/src/main/java"
+tasks.compileJava.source "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/java"
+tasks.processResources.from "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/resources"
+tasks.compileTestJava.source "${rootProject.projectDir}/dropwizard/dropwizard4/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/dropwizard/dropwizard4/src/test/resources"
+tasks.sourcesJar.from "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/java"
+tasks.sourcesJar.from "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/resources"
+tasks.javadoc.source "${rootProject.projectDir}/dropwizard/dropwizard4/src/main/java"
 
 // Do not relocate Guava because it's part of Dropwizard's public API.
 [tasks.shadedJar, tasks.shadedTestJar].each { task ->
