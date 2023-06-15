@@ -452,7 +452,7 @@ class BraveIntegrationTest {
     @Test
     void testServerTimesOut() {
         try (ClientFactory cf = ClientFactory.builder().build()) {
-            Iface timeoutClient =
+            final Iface timeoutClient =
                     ThriftClients.builder(server.httpUri())
                                  .path("/timeout")
                                  .factory(cf)
