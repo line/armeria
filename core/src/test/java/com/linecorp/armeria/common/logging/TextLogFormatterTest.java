@@ -18,7 +18,8 @@ package com.linecorp.armeria.common.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -26,25 +27,37 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 class TextLogFormatterTest {
 
-    @Test
-    void formatRequest() {
-        final LogFormatter logFormatter = LogFormatter.ofText();
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void formatRequest(boolean containContext) {
+        final LogFormatter logFormatter = LogFormatter.builderForText().includeContext(containContext).build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
         final String requestLog = logFormatter.formatRequest(log);
-        assertThat(requestLog)
-                .matches("^\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+}$");
+        final String regex =
+                "Request: .*\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+}$";
+        if (containContext) {
+            assertThat(requestLog).matches("\\[sreqId=.* " + regex);
+        } else {
+            assertThat(requestLog).matches(regex);
+        }
     }
 
-    @Test
-    void formatResponse() {
-        final LogFormatter logFormatter = LogFormatter.ofText();
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void formatResponse(boolean containContext) {
+        final LogFormatter logFormatter = LogFormatter.builderForText().includeContext(containContext).build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endResponse();
         final String responseLog = logFormatter.formatResponse(log);
-        assertThat(responseLog)
-                .matches("^\\{startTime=.+, length=.+, duration=.+, totalDuration=.+, headers=.+}$");
+        final String regex =
+                "Response: .*\\{startTime=.+, length=.+, duration=.+, totalDuration=.+, headers=.+}$";
+        if (containContext) {
+            assertThat(responseLog).matches("\\[sreqId=.* " + regex);
+        } else {
+            assertThat(responseLog).matches(regex);
+        }
     }
 }

@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<String> {
 
+    private boolean includeContext = true;
+
     TextLogFormatterBuilder() {}
 
     @Override
@@ -84,6 +86,16 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
     }
 
     /**
+     * Sets whether to include stringified {@link RequestContext} in the result of
+     * {@link LogFormatter#formatRequest(RequestOnlyLog)} and {@link LogFormatter#formatResponse(RequestLog)}.
+     * The context is included by default.
+     */
+    public TextLogFormatterBuilder includeContext(boolean includeContext) {
+        this.includeContext = includeContext;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link TextLogFormatter} based on the properties of this builder.
      */
     public TextLogFormatter build() {
@@ -93,7 +105,8 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
                 firstNonNull(requestTrailersSanitizer(), defaultSanitizer()),
                 firstNonNull(responseTrailersSanitizer(), defaultSanitizer()),
                 firstNonNull(requestContentSanitizer(), defaultSanitizer()),
-                firstNonNull(responseContentSanitizer(), defaultSanitizer()));
+                firstNonNull(responseContentSanitizer(), defaultSanitizer()),
+                includeContext);
     }
 
     private static <T> BiFunction<? super RequestContext, T, String> defaultSanitizer() {

@@ -61,8 +61,11 @@ class ContentPreviewerTest {
 
             client = builder.decorator(ContentPreviewingClient.newDecorator(factory))
                             .decorator(LoggingClient.builder()
-                                                    .requestLogLevel(LogLevel.INFO)
-                                                    .successfulResponseLogLevel(LogLevel.INFO)
+                                                    .logWriter(LogWriter.builder()
+                                                                        .requestLogLevel(LogLevel.INFO)
+                                                                        .successfulResponseLogLevel(
+                                                                                LogLevel.INFO)
+                                                                        .build())
                                                     .newDecorator())
                             .build();
         }

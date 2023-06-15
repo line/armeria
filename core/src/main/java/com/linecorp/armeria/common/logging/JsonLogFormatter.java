@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
@@ -72,8 +73,7 @@ final class JsonLogFormatter implements LogFormatter {
                     responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object, ? extends JsonNode> requestContentSanitizer,
             BiFunction<? super RequestContext, Object, ? extends JsonNode> responseContentSanitizer,
-            ObjectMapper objectMapper
-    ) {
+            ObjectMapper objectMapper) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
         this.responseHeadersSanitizer = responseHeadersSanitizer;
         this.requestTrailersSanitizer = requestTrailersSanitizer;
@@ -88,8 +88,9 @@ final class JsonLogFormatter implements LogFormatter {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
+        final RequestContext ctx = log.context();
         if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
-            return "{}";
+            return "{\"type\": \"request\"}";
         }
 
         try {
@@ -101,7 +102,6 @@ final class JsonLogFormatter implements LogFormatter {
                 }
             }
 
-            final RequestContext ctx = log.context();
             final JsonNode sanitizedHeaders;
             if (RequestLogProperty.REQUEST_HEADERS.isAvailable(flags)) {
                 sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
@@ -131,6 +131,7 @@ final class JsonLogFormatter implements LogFormatter {
             }
 
             final ObjectNode objectNode = objectMapper.createObjectNode();
+            objectNode.put("type", "request");
             objectNode.put("startTime",
                            TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
 
@@ -185,8 +186,9 @@ final class JsonLogFormatter implements LogFormatter {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
+        final RequestContext ctx = log.context();
         if (!RequestLogProperty.RESPONSE_START_TIME.isAvailable(flags)) {
-            return "{}";
+            return "{\"type\": \"response\"}";
         }
 
         try {
@@ -198,7 +200,6 @@ final class JsonLogFormatter implements LogFormatter {
                 }
             }
 
-            final RequestContext ctx = log.context();
             final JsonNode sanitizedHeaders;
             if (RequestLogProperty.RESPONSE_HEADERS.isAvailable(flags)) {
                 sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
@@ -228,6 +229,7 @@ final class JsonLogFormatter implements LogFormatter {
             }
 
             final ObjectNode objectNode = objectMapper.createObjectNode();
+            objectNode.put("type", "response");
             objectNode.put("startTime",
                            TextFormatter.epochMicros(log.responseStartTimeMicros()).toString());
 
@@ -268,5 +270,18 @@ final class JsonLogFormatter implements LogFormatter {
             logger.warn("Unexpected exception while formatting a response log: {}", log, e);
             return "{}";
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("objectMapper", objectMapper)
+                          .add("requestHeadersSanitizer", requestHeadersSanitizer)
+                          .add("requestContentSanitizer", requestContentSanitizer)
+                          .add("requestTrailersSanitizer", requestTrailersSanitizer)
+                          .add("responseHeadersSanitizer", responseHeadersSanitizer)
+                          .add("responseContentSanitizer", responseContentSanitizer)
+                          .add("responseTrailersSanitizer", responseTrailersSanitizer)
+                          .toString();
     }
 }

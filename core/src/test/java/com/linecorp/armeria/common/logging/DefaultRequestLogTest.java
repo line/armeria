@@ -464,7 +464,7 @@ class DefaultRequestLogTest {
         log.endRequest();
         log.endResponse();
 
-        assertThat(log.toString()).matches("^\\{req=\\{.*}, res=\\{.*}}$");
+        assertThat(log.toString()).matches("^\\{Request: \\{.*}, Response: \\{.*}}$");
     }
 
     @Test
@@ -488,9 +488,9 @@ class DefaultRequestLogTest {
 
         final String[] lines = logStr.split("\\r?\\n");
         assertThat(lines).hasSize(4);
-        assertThat(lines[0]).matches("^\\{req=\\{.*}, res=\\{.*}}$");
+        assertThat(lines[0]).matches("^\\{Request: \\{.*}, Response: \\{.*}}$");
         assertThat(lines[1]).matches("^Children:$");
-        assertThat(lines[2]).matches("^\\t\\{req=\\{.*}, res=\\{.*}}$");
-        assertThat(lines[3]).matches("^\\t\\{req=\\{.*}, res=\\{.*}}$");
+        assertThat(lines[2]).matches("^\\t\\{Request: \\{.*}, Response: \\{.*}}$");
+        assertThat(lines[3]).matches("^\\t\\{Request: \\{.*}, Response: \\{.*}}$");
     }
 }

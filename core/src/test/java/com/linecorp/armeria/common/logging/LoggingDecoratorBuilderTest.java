@@ -328,25 +328,25 @@ class LoggingDecoratorBuilderTest {
     }
 
     @Test
-    void buildLogFormatter() {
-        final LogFormatter logFormatter = LogFormatter.ofJson();
-        builder.logFormatter(logFormatter);
-        assertThat(builder.logFormatter()).isEqualTo(logFormatter);
+    void buildLogWriter() {
+        final LogWriter logWriter = LogWriter.of();
+        builder.logWriter(logWriter);
+        assertThat(builder.logWriter()).isEqualTo(logWriter);
     }
 
     @Test
-    void buildLogFormatterWithoutLogFormatter() {
+    void buildLogWriterWithoutLogWriter() {
         builder.responseContentSanitizer(CONTENT_SANITIZER)
                .requestHeadersSanitizer(HEADER_SANITIZER);
-        final LogFormatter logFormatter = builder.logFormatter();
-        assertThat(logFormatter).isNotNull();
-        assertThat(logFormatter).isInstanceOf(TextLogFormatter.class);
+        final LogWriter logWriter = builder.logWriter();
+        assertThat(logWriter).isNotNull();
+        assertThat(logWriter).isInstanceOf(DefaultLogWriter.class);
     }
 
     @Test
-    void buildLogFormatterThrowsException() {
-        final LogFormatter logFormatter = LogFormatter.ofText();
-        builder.logFormatter(logFormatter);
+    void buildLogWriterThrowsException() {
+        final LogWriter logWriter = LogWriter.of();
+        builder.logWriter(logWriter);
         assertThatThrownBy(() -> builder.responseContentSanitizer(CONTENT_SANITIZER))
                 .isInstanceOf(IllegalStateException.class);
     }
