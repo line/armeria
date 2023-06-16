@@ -147,6 +147,7 @@ class HttpClientWithRequestLogTest {
         await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
         final ClientConnectionTimings timings = ref.get();
         assertThat(timings.connectionAcquisitionStartTimeMicros()).isPositive();
+        assertThat(timings.existingAcquisitionStartTimeMicros()).isPositive();
 
         final long connectDurationNanos = timings.socketConnectDurationNanos();
         assertThat(connectDurationNanos).isPositive();
