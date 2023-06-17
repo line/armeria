@@ -27,11 +27,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-@FlakyTest
 class IisServerCompatibilityTest {
 
     @RegisterExtension
@@ -40,9 +38,9 @@ class IisServerCompatibilityTest {
         protected void configure(ServerBuilder sb) {
             sb.https(0);
             sb.tlsSelfSigned();
-            sb.childChannelPipelineCustomizer(childChannel -> {
+            sb.childChannelPipelineCustomizer(pipeline -> {
                 // Simulate the behavior of IIS.
-                childChannel.channel().close();
+                pipeline.channel().close();
             });
             sb.service("/", (ctx, req) -> HttpResponse.of("OK"));
         }
@@ -50,7 +48,11 @@ class IisServerCompatibilityTest {
 
     @Test
     void shouldRaiseSslHandleShakeExceptionWhenConnectionIsResetDuringTlsHandshake() {
-        final Throwable cause = catchThrowable(() -> server.blockingWebClient().get("/"));
+        final BlockingWebClient client = WebClient.builder(server.httpsUri())
+                                                  .factory(ClientFactory.insecure())
+                                                  .build()
+                                                  .blocking();
+        final Throwable cause = catchThrowable(() -> client.get("/"));
         assertThat(cause).isInstanceOf(UnprocessedRequestException.class)
                          .getCause().isInstanceOf(IllegalStateException.class)
                          .hasMessageFindingMatch(
