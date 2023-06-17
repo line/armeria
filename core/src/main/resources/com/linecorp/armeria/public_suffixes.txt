@@ -1652,7 +1652,6 @@ contagem.br
 contractors
 control.aero
 cooking
-cookingchannel
 cool
 coolblog.jp
 coop
@@ -2446,7 +2445,6 @@ folkebibl.no
 folldal.no
 foo
 food
-foodnetwork
 fool.jp
 football
 for-better.biz
@@ -3173,7 +3171,6 @@ herokussl.com
 heroy.more-og-romsdal.no
 heroy.nordland.no
 heteml.net
-hgtv
 hi.cn
 hi.us
 hicam.net
@@ -7769,7 +7766,6 @@ travel
 travel.in
 travel.pl
 travel.tt
-travelchannel
 travelers
 travelersinsurance
 trd.br
