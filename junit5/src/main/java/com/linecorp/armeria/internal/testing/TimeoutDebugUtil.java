@@ -19,7 +19,7 @@ package com.linecorp.armeria.internal.testing;
 import java.lang.management.ManagementFactory;
 import java.util.List;
 
-class TimeoutDebugUtil {
+final class TimeoutDebugUtil {
 
     // disable only if explicitly set to false
     private static final boolean enableTimeoutOnDebug =
