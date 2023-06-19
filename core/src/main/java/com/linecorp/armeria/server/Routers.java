@@ -145,15 +145,16 @@ final class Routers {
         final Set<Route> dynamicRoutes =
                 allRoutes.stream()
                          .filter(route -> !route.paramPredicates().isEmpty() ||
-                                          !route.headerPredicates().isEmpty())
+                                          !route.headerPredicates().isEmpty() ||
+                                          !route.excludedRoutes().isEmpty())
                          .collect(toImmutableSet());
         final Set<List<Object>> dynamicRouteKeys =
-                dynamicRoutes.stream().map(Routers::duplicateRouteKey)
+                dynamicRoutes.stream().map(Routers::dynamicRouteKey)
                              .collect(toImmutableSet());
 
         final Set<Route> routes = new HashSet<>(dynamicRoutes);
         allRoutes.forEach(route -> {
-            final List<Object> key = duplicateRouteKey(route);
+            final List<Object> key = dynamicRouteKey(route);
             if (dynamicRouteKeys.contains(key)) {
                 routes.add(route);
             }
@@ -161,7 +162,7 @@ final class Routers {
         return ImmutableSet.copyOf(routes);
     }
 
-    private static List<Object> duplicateRouteKey(Route route) {
+    private static List<Object> dynamicRouteKey(Route route) {
         return ImmutableList.builder()
                             .add(route.pathType())
                             .addAll(route.paths())
