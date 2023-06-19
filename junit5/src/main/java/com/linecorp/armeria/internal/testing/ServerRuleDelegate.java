@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -90,6 +91,10 @@ public abstract class ServerRuleDelegate {
         }
 
         final ServerBuilder sb = Server.builder();
+        if (TimeoutDebugUtil.isTimeoutDisabled()) {
+            sb.idleTimeout(Duration.ZERO)
+              .requestTimeout(Duration.ZERO);
+        }
         try {
             configure(sb);
         } catch (Exception e) {
@@ -412,6 +417,10 @@ public abstract class ServerRuleDelegate {
     private WebClientBuilder webClientBuilder() {
         final boolean hasHttps = hasHttps();
         final WebClientBuilder webClientBuilder = WebClient.builder(hasHttps ? httpsUri() : httpUri());
+        if (TimeoutDebugUtil.isTimeoutDisabled()) {
+            webClientBuilder.responseTimeout(Duration.ZERO)
+                            .responseTimeout(Duration.ZERO);
+        }
         if (hasHttps) {
             webClientBuilder.factory(ClientFactory.insecure());
         }
