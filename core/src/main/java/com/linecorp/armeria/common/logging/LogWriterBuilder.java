@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Builds a new {@link LogWriter}.
  */
 @UnstableApi
-public final class LogWriterBuilder extends AbstractLogWriterBuilder{
+public final class LogWriterBuilder extends AbstractLogWriterBuilder {
 
     private Predicate<? super Throwable> responseCauseFilter = throwable -> false;
 

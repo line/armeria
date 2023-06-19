@@ -68,7 +68,8 @@ public class KafkaLogWriterBuilder<K> extends AbstractLogWriterBuilder {
     }
 
     @Override
-    public KafkaLogWriterBuilder<K> requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
+    public KafkaLogWriterBuilder<K> requestLogLevel(Class<? extends Throwable> clazz,
+                                                    LogLevel requestLogLevel) {
         return (KafkaLogWriterBuilder<K>) super.requestLogLevel(clazz, requestLogLevel);
     }
 

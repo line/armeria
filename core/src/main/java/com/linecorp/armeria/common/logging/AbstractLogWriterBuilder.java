@@ -41,13 +41,13 @@ public abstract class AbstractLogWriterBuilder {
             ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN);
 
     @Nullable
-    protected Logger logger;
+    private Logger logger;
     @Nullable
-    protected RequestLogLevelMapper requestLogLevelMapper;
+    private RequestLogLevelMapper requestLogLevelMapper;
     @Nullable
-    protected ResponseLogLevelMapper responseLogLevelMapper;
+    private ResponseLogLevelMapper responseLogLevelMapper;
     @Nullable
-    protected LogFormatter logFormatter;
+    private LogFormatter logFormatter;
 
     /**
      * Sets the {@link Logger} to use when logging.
@@ -58,6 +58,9 @@ public abstract class AbstractLogWriterBuilder {
         return this;
     }
 
+    /**
+     * Returns a {@link Logger}.
+     */
     @Nullable
     protected Logger logger() {
         return logger;
@@ -84,7 +87,8 @@ public abstract class AbstractLogWriterBuilder {
     /**
      * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
      */
-    public AbstractLogWriterBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
+    public AbstractLogWriterBuilder requestLogLevel(Class<? extends Throwable> clazz,
+                                                    LogLevel requestLogLevel) {
         requireNonNull(clazz, "clazz");
         requireNonNull(requestLogLevel, "requestLogLevel");
         return requestLogLevelMapper(RequestLogLevelMapper.of(clazz, requestLogLevel));
@@ -103,6 +107,10 @@ public abstract class AbstractLogWriterBuilder {
         return this;
     }
 
+    /**
+     * Returns a {@link RequestLogLevelMapper}.
+     * If unset, returns a default {@link RequestLogLevelMapper}.
+     */
     protected RequestLogLevelMapper requestLogLevelMapper() {
         if (requestLogLevelMapper == null) {
             return DEFAULT_REQUEST_LOG_LEVEL_MAPPER;
@@ -166,6 +174,10 @@ public abstract class AbstractLogWriterBuilder {
         return this;
     }
 
+    /**
+     * Returns a {@link ResponseLogLevelMapper}.
+     * If unset, returns a default {@link ResponseLogLevelMapper}.
+     */
     protected ResponseLogLevelMapper responseLogLevelMapper() {
         if (responseLogLevelMapper == null) {
             return DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
@@ -182,6 +194,9 @@ public abstract class AbstractLogWriterBuilder {
         return this;
     }
 
+    /**
+     * Returns a {@link LogFormatter}.
+     */
     @Nullable
     protected LogFormatter logFormatter() {
         return logFormatter;

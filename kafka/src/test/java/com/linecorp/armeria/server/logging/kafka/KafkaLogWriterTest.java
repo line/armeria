@@ -63,7 +63,8 @@ class KafkaLogWriterTest {
                                                        .requestLogKeyExtractor(requestOnlyLog -> "request")
                                                        .responseLogKeyExtractor(requestLog -> "response")
                                                        .requestLogLevelMapper(DEFAULT_REQUEST_LOG_LEVEL_MAPPER)
-                                                       .responseLogLevelMapper(DEFAULT_RESPONSE_LOG_LEVEL_MAPPER)
+                                                       .responseLogLevelMapper(
+                                                               DEFAULT_RESPONSE_LOG_LEVEL_MAPPER)
                                                        .logFormatter(LogFormatter.ofJson())
                                                        .build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/kafka"));
@@ -86,7 +87,8 @@ class KafkaLogWriterTest {
                                                        .requestLogKeyExtractor(requestOnlyLog -> "request")
                                                        .responseLogKeyExtractor(requestLog -> "response")
                                                        .requestLogLevelMapper(DEFAULT_REQUEST_LOG_LEVEL_MAPPER)
-                                                       .responseLogLevelMapper(DEFAULT_RESPONSE_LOG_LEVEL_MAPPER)
+                                                       .responseLogLevelMapper(
+                                                               DEFAULT_RESPONSE_LOG_LEVEL_MAPPER)
                                                        .logFormatter(LogFormatter.ofJson())
                                                        .build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/kafka"));

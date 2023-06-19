@@ -40,13 +40,13 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 
 /**
- * An implementation of {@link LogWriter} that sends request/response logs to a Kafka backend
+ * An implementation of {@link LogWriter} that sends request/response logs to a Kafka backend.
  */
 @UnstableApi
 public final class KafkaLogWriter<K> implements LogWriter {
 
     /**
-     * Returns a newly-created {@link KafkaLogWriterBuilder<K>}
+     * Returns a newly-created {@link KafkaLogWriterBuilder}.
      */
     public static <K> KafkaLogWriterBuilder<K> builder() {
         return new KafkaLogWriterBuilder<>();
