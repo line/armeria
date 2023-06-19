@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -302,6 +303,16 @@ final class DefaultRoute implements Route {
         requireNonNull(prefix, "prefix");
         return new DefaultRoute(pathMapping.withPrefix(prefix), methods, consumes, produces, paramPredicates,
                                 headerPredicates, isFallback, excludedRoutes);
+    }
+
+    @Override
+    public List<? extends Predicate<QueryParams>> paramPredicates() {
+        return paramPredicates;
+    }
+
+    @Override
+    public List<? extends Predicate<HttpHeaders>> headerPredicates() {
+        return headerPredicates;
     }
 
     @Override
