@@ -29,7 +29,7 @@ class ConsulClientBuilderTest extends ConsulTestBase {
 
     @Test
     void gets403WhenNoToken() throws Exception {
-        final HttpStatus status = WebClient.of("http://localhost:" + consul().getHttpPort())
+        final HttpStatus status = WebClient.of(consulUri())
                                            .blocking()
                                            .get("/v1/agent/self")
                                            .status();
