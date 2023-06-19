@@ -42,4 +42,6 @@ class TimeoutDebugUtil {
         }
         return false;
     }
+
+    private TimeoutDebugUtil() {}
 }
