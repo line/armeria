@@ -155,7 +155,8 @@ class HttpServerParamPredicatesMatchingTest {
                                                      .execute();
         assertThat(res1.status().code()).isEqualTo(200);
         assertThat(res1.contentUtf8()).isEqualTo("fallthroughExclude");
-        final AggregatedHttpResponse res2 = extension.blockingWebClient().get("/fallthroughExclude?my-param=my-value");
+        final AggregatedHttpResponse res2 =
+                extension.blockingWebClient().get("/fallthroughExclude?my-param=my-value");
         assertThat(res2.status().code()).isEqualTo(404);
     }
 }
