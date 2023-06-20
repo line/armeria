@@ -111,9 +111,10 @@ Let's create a client to send a request to the service.
     private final BlogService.Iface blogService;
 
     BlogClient(URI uri, String path) {
-      blogService = ThriftClients.builder(uri)
-                .path(path)
-                .build(BlogService.Iface.class);
+      blogService =
+        ThriftClients.builder(uri)
+          .path(path)
+          .build(BlogService.Iface.class);
     }
   }
   ```
@@ -144,7 +145,8 @@ Note that we'll use test code to verify what we implement along the way.
     ...
     @Test
     void hello() throws TException {
-      final BlogClient client = new BlogClient(URI.create("http://127.0.0.1:8080"), "/thrift");
+      final BlogClient client =
+        new BlogClient(URI.create("http://127.0.0.1:8080"), "/thrift");
       final String response = client.hello();
       assertThat(response).isEqualTo("Hello, Armeria!");
       System.out.println(response);

@@ -28,7 +28,7 @@ We'll add structs, an exception, and service methods.
 You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/main/thrift/blog.thrift).
 
 1. Add the `BlogPost` struct.
-  ```thrift filename=blog.thrift
+  ```cpp filename=blog.thrift
   struct BlogPost {
     1: i32 id;
     2: string title;
@@ -38,7 +38,7 @@ You can see the full version of the file [here](https://github.com/line/armeria-
   }
   ```
 2. Add structs for request and response objects as follows.
-  ```thrift filename=blog.thrift
+  ```cpp filename=blog.thrift
   struct CreateBlogPostRequest {
     1: string title;
     2: string content;
@@ -67,13 +67,13 @@ You can see the full version of the file [here](https://github.com/line/armeria-
   }
   ```
 3. Add the `BlogNotFoundException`.
-  ```thrift filename=blog.thrift
+  ```cpp filename=blog.thrift
   exception BlogNotFoundException {
     1: string reason
   }
   ```
 4. Add service methods for create, read, update, and delete operations.
-  ```thrift filename=blog.thrift
+  ```cpp filename=blog.thrift
   service BlogService {
     ...
 
