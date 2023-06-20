@@ -130,7 +130,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         // To make sure to close the SurroundingSubscriber when this is aborted.
         if (completionFuture.isCompletedExceptionally()) {
             completionFuture.exceptionally(cause -> {
-                surroundingSubscriber.close0(cause);
+                surroundingSubscriber.close(cause);
                 return null;
             });
         }
@@ -162,7 +162,6 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             REQUIRE_HEAD,
             REQUIRE_BODY,
             REQUIRE_TAIL,
-            REQUIRE_COMPLETE,
             DONE,
         }
 
@@ -269,10 +268,6 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                     sendTail();
                     break;
                 }
-                case REQUIRE_COMPLETE: {
-                    close0(null);
-                    break;
-                }
             }
         }
 
@@ -283,7 +278,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         }
 
         private void sendTail() {
-            setState(State.REQUIRE_TAIL, State.REQUIRE_COMPLETE);
+            assert state == State.REQUIRE_TAIL;
             if (tail != null) {
                 downstream.onNext(tail);
             }
