@@ -23,12 +23,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Paths;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
-import io.netty.util.NetUtil;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 
 class SessionProtocolNegotiationCacheTest {
 
@@ -65,20 +69,80 @@ class SessionProtocolNegotiationCacheTest {
         assertThat(SessionProtocolNegotiationCache.isUnsupported(ip, H2C)).isFalse();
     }
 
-    private static InetSocketAddress toRemoteAddress(Endpoint endpoint) throws UnknownHostException {
-        final String ipAddr;
-        if (endpoint.hasIpAddr()) {
-            ipAddr = endpoint.ipAddr();
-        } else {
-            ipAddr = "127.0.0.1"; // Do not resolve the host name but just use local address for test.
-        }
-        return toRemoteAddress(endpoint.host(), ipAddr, endpoint.port());
+    /**
+     * Makes sure the cache keys created via different paths are the same.
+     */
+    @Test
+    void hostnameKeyGeneration() throws Exception {
+        final String expectedKey = "foo.com|80";
+        assertThat(SessionProtocolNegotiationCache.key(
+                Endpoint.of("foo.com"), SessionProtocol.H1C))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                Endpoint.of("foo.com", 80), SessionProtocol.H1C))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                Endpoint.of("foo.com").withIpAddr("127.0.0.1"), SessionProtocol.H1C))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                Endpoint.of("foo.com", 80).withIpAddr("127.0.0.1"), SessionProtocol.H1C))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                InetSocketAddress.createUnresolved("foo.com", 80)))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                new InetSocketAddress(InetAddress.getByAddress("foo.com",
+                                                               new byte[] { 127, 0, 0, 1 }), 80)))
+                .isEqualTo(expectedKey);
     }
 
-    private static InetSocketAddress toRemoteAddress(
-            String host, String ipAddr, int port) throws UnknownHostException {
-        final InetAddress inetAddr = InetAddress.getByAddress(
-                host, NetUtil.createByteArrayFromIpAddressString(ipAddr));
-        return new InetSocketAddress(inetAddr, port);
+    @Test
+    void ipV4AddrKeyGeneration() throws Exception {
+        final String expectedKey = "127.0.0.1|8080";
+        assertThat(SessionProtocolNegotiationCache.key(
+                Endpoint.of("127.0.0.1", 8080), SessionProtocol.H1C))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                new InetSocketAddress("127.0.0.1", 8080)))
+                .isEqualTo(expectedKey);
+    }
+
+    @Test
+    void ipV6AddrKeyGeneration() throws Exception {
+        final String expectedKey = "::1|8080";
+        assertThat(SessionProtocolNegotiationCache.key(
+                Endpoint.of("::1", 8080), SessionProtocol.H1C))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                Endpoint.of("0:0:0:0:0:0:0:1", 8080), SessionProtocol.H1C))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                new InetSocketAddress("::1", 8080)))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                new InetSocketAddress("0:0:0:0:0:0:0:1", 8080)))
+                .isEqualTo(expectedKey);
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    void domainSocketKeyGeneration() {
+        final String expectedKey = "unix%3A%2Fvar%2Frun%2Ffoo.sock";
+        assertThat(SessionProtocolNegotiationCache.key(
+                Endpoint.of("unix%3A%2Fvar%2Frun%2Ffoo.sock"), SessionProtocol.H1C))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                DomainSocketAddress.of(Paths.get("/var/run/foo.sock"))))
+                .isEqualTo(expectedKey);
+        assertThat(SessionProtocolNegotiationCache.key(
+                new io.netty.channel.unix.DomainSocketAddress("/var/run/foo.sock")))
+                .isEqualTo(expectedKey);
+    }
+
+    private static InetSocketAddress toRemoteAddress(Endpoint endpoint) throws UnknownHostException {
+        if (!endpoint.hasIpAddr()) {
+            endpoint = endpoint.withIpAddr("127.0.0.1");
+        }
+        return endpoint.toSocketAddress(-1);
     }
 }

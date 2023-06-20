@@ -327,6 +327,30 @@ class LoggingDecoratorBuilderTest {
         assertThat(builder.responseCauseSanitizer()).isEqualTo(CAUSE_SANITIZER);
     }
 
+    @Test
+    void buildLogWriter() {
+        final LogWriter logWriter = LogWriter.of();
+        builder.logWriter(logWriter);
+        assertThat(builder.logWriter()).isEqualTo(logWriter);
+    }
+
+    @Test
+    void buildLogWriterWithoutLogWriter() {
+        builder.responseContentSanitizer(CONTENT_SANITIZER)
+               .requestHeadersSanitizer(HEADER_SANITIZER);
+        final LogWriter logWriter = builder.logWriter();
+        assertThat(logWriter).isNotNull();
+        assertThat(logWriter).isInstanceOf(DefaultLogWriter.class);
+    }
+
+    @Test
+    void buildLogWriterThrowsException() {
+        final LogWriter logWriter = LogWriter.of();
+        builder.logWriter(logWriter);
+        assertThatThrownBy(() -> builder.responseContentSanitizer(CONTENT_SANITIZER))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
     private static final class Builder extends LoggingDecoratorBuilder {
     }
 

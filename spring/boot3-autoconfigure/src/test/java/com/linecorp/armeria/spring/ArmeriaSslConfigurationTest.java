@@ -71,7 +71,7 @@ public class ArmeriaSslConfigurationTest {
     private Server server;
 
     private String newUrl(SessionProtocol protocol) {
-        assert server != null;
+        assertThat(server).isNotNull();
         return protocol.uriText() + "://127.0.0.1:" + server.activeLocalPort(protocol);
     }
 

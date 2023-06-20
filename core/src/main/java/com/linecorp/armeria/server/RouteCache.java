@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 

@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.internal.testing.CountDownEmptyEndpointStrategy;
@@ -54,7 +55,11 @@ class RetryingClientWithEmptyEndpointGroupTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/1", (ctx, req) -> HttpResponse.of(200))
-              .decorator(LoggingService.builder().successfulResponseLogLevel(LogLevel.INFO).newDecorator());
+              .decorator(LoggingService.builder()
+                                       .logWriter(LogWriter.builder()
+                                                           .successfulResponseLogLevel(LogLevel.INFO)
+                                                           .build())
+                                       .newDecorator());
         }
     };
 
@@ -97,7 +102,11 @@ class RetryingClientWithEmptyEndpointGroupTest {
                 .decorator(RetryingClient.builder(RetryRule.onUnprocessed())
                                          .maxTotalAttempts(maxTotalAttempts)
                                          .newDecorator())
-                .decorator(LoggingClient.builder().successfulResponseLogLevel(LogLevel.INFO).newDecorator())
+                .decorator(LoggingClient.builder()
+                                        .logWriter(LogWriter.builder()
+                                                            .successfulResponseLogLevel(LogLevel.INFO)
+                                                            .build())
+                                        .newDecorator())
                 .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
@@ -129,7 +138,11 @@ class RetryingClientWithEmptyEndpointGroupTest {
                 .builder(SessionProtocol.HTTP, endpointGroup)
                 .contextCustomizer(ctx -> ctx.addAdditionalRequestHeader(CUSTOM_HEADER, "asdf"))
                 .responseTimeout(Duration.ZERO) // since retry can depend on responseTimeout
-                .decorator(LoggingClient.builder().requestLogLevel(LogLevel.INFO).newDecorator())
+                .decorator(LoggingClient.builder()
+                                        .logWriter(LogWriter.builder()
+                                                            .requestLogLevel(LogLevel.INFO)
+                                                            .build())
+                                        .newDecorator())
                 .decorator(RetryingClient.builder(RetryRule.onUnprocessed())
                                          .maxTotalAttempts(maxTotalAttempts)
                                          .newDecorator())

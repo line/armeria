@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.brave;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
@@ -97,12 +97,12 @@ public final class ArmeriaHttpClientParser implements HttpRequestParser, HttpRes
             span.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
         }
 
-        final SocketAddress raddr = ctx.remoteAddress();
+        final InetSocketAddress raddr = ctx.remoteAddress();
         if (raddr != null) {
             span.tag(SpanTags.TAG_ADDRESS_REMOTE, raddr.toString());
         }
 
-        final SocketAddress laddr = ctx.localAddress();
+        final InetSocketAddress laddr = ctx.localAddress();
         if (laddr != null) {
             span.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
         }

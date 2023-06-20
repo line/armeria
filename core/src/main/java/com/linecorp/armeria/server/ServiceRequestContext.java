@@ -20,7 +20,7 @@ import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCl
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -181,17 +182,21 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the remote address of this request.
+     *
+     * @return an {@link InetSocketAddress} or a {@link DomainSocketAddress}
      */
     @Nonnull
     @Override
-    <A extends SocketAddress> A remoteAddress();
+    InetSocketAddress remoteAddress();
 
     /**
      * Returns the local address of this request.
+     *
+     * @return an {@link InetSocketAddress} or a {@link DomainSocketAddress}
      */
     @Nonnull
     @Override
-    <A extends SocketAddress> A localAddress();
+    InetSocketAddress localAddress();
 
     /**
      * Returns the address of the client who initiated this request.

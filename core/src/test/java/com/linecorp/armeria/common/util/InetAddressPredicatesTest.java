@@ -245,7 +245,7 @@ class InetAddressPredicatesTest {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 (byte) ip1, (byte) ip2, (byte) ip3, (byte) ip4
         });
-        assert inetAddress instanceof Inet6Address;
+        assertThat(inetAddress).isInstanceOf(Inet6Address.class);
         return inetAddress;
     }
 
@@ -253,7 +253,7 @@ class InetAddressPredicatesTest {
         final InetAddress inetAddress = InetAddress.getByAddress(new byte[] {
                 (byte) ip1, (byte) ip2, (byte) ip3, (byte) ip4
         });
-        assert inetAddress instanceof Inet4Address;
+        assertThat(inetAddress).isInstanceOf(Inet4Address.class);
         return inetAddress;
     }
 }

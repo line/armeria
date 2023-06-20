@@ -16,7 +16,7 @@
 package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
@@ -48,7 +48,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 import com.linecorp.armeria.server.HttpResponseException;
@@ -57,10 +59,6 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class LoggingServiceTest {
-
-    private static final String REQUEST_FORMAT = "{} Request: {}";
-    private static final String RESPONSE_FORMAT = "{} Response: {}";
-    private static final String RESPONSE_FORMAT2 = "{} Response: {}, cause: {}";
 
     private static final HttpService delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
@@ -89,7 +87,7 @@ class LoggingServiceTest {
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
+                              .logWriter(LogWriter.of(logger))
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
@@ -106,16 +104,14 @@ class LoggingServiceTest {
 
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
+                              .logWriter(LogWriter.of(logger))
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
 
         verify(logger).isWarnEnabled();
-        verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
+        verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).warn(matches(".*Response:.*cause=java\\.lang\\.IllegalStateException: Failed.*"),
                             same(cause));
     }
 
@@ -134,19 +130,19 @@ class LoggingServiceTest {
         }
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
+                              .logWriter(LogWriter.of(logger))
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
 
         if (cause == null) {
             // Log a response without an HttpResponseException or HttpStatusException
-            verify(logger).debug(eq(REQUEST_FORMAT), same(ctx), anyString());
-            verify(logger).debug(eq(RESPONSE_FORMAT), same(ctx), anyString());
+            verify(logger).debug(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+            verify(logger).debug(matches(".*Response:.*"));
         } else {
-            verify(logger).warn(eq(REQUEST_FORMAT), same(ctx), anyString());
-            verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                                matches(".*cause=" + cause.getClass().getName() + ".*"), same(cause));
+            verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+            verify(logger).warn(matches(".*Response:.*cause=" + cause.getClass().getName() + ".*"),
+                                same(cause));
         }
     }
 
@@ -158,19 +154,21 @@ class LoggingServiceTest {
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
 
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .build();
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevel(LogLevel.INFO)
-                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .logWriter(logWriter)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
 
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*headers=\\[:status=200].*"));
+        verify(logger).info(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).info(matches(".*Response:.*headers=\\[:status=200].*"));
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -180,32 +178,35 @@ class LoggingServiceTest {
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isWarnEnabled()).thenReturn(true);
 
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevelMapper(log -> {
+                                                 if (log.requestHeaders().contains("x-req")) {
+                                                     return LogLevel.WARN;
+                                                 } else {
+                                                     return LogLevel.INFO;
+                                                 }
+                                             })
+                                             .responseLogLevelMapper(log -> {
+                                                 if (log.requestHeaders().contains("x-res")) {
+                                                     return LogLevel.WARN;
+                                                 } else {
+                                                     return LogLevel.INFO;
+                                                 }
+                                             })
+                                             .build();
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-req")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .responseLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-res")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
+                              .logWriter(logWriter)
                               .newDecorator().apply(delegate);
 
         // Check if logs at WARN level if there are headers we're looking for.
         service.serve(ctx, ctx.request());
         verify(logger, never()).isInfoEnabled();
         verify(logger, times(2)).isWarnEnabled();
-        verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/, x-req=test, x-res=test].*"));
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx), anyString());
+        verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/, x-req=test, x-res=test].*"));
+        verify(logger).warn(matches(".*Response:.*"));
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -214,32 +215,34 @@ class LoggingServiceTest {
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
 
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevelMapper(log -> {
+                                                 if (log.requestHeaders().contains("x-req")) {
+                                                     return LogLevel.WARN;
+                                                 } else {
+                                                     return LogLevel.INFO;
+                                                 }
+                                             })
+                                             .responseLogLevelMapper(log -> {
+                                                 if (log.requestHeaders().contains("x-res")) {
+                                                     return LogLevel.WARN;
+                                                 } else {
+                                                     return LogLevel.INFO;
+                                                 }
+                                             })
+                                             .build();
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-req")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
-                              .responseLogLevelMapper(log -> {
-                                  if (log.requestHeaders().contains("x-res")) {
-                                      return LogLevel.WARN;
-                                  } else {
-                                      return LogLevel.INFO;
-                                  }
-                              })
+                              .logWriter(logWriter)
                               .newDecorator().apply(delegate);
 
         // Check if logs at INFO level if there are no headers we're looking for.
         service.serve(ctx, ctx.request());
         verify(logger, times(2)).isInfoEnabled();
         verify(logger, never()).isWarnEnabled();
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx), anyString());
+        verify(logger).info(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -251,17 +254,17 @@ class LoggingServiceTest {
         final String sanitizedResponseHeaders = "sanitizedResponseHeaders";
         final String sanitizedResponseContent = "sanitizedResponseContent";
         final String sanitizedResponseTrailers = "sanitizedResponseTrailer";
-        final BiFunction<RequestContext, HttpHeaders, ?> requestHeadersSanitizer =
+        final BiFunction<RequestContext, HttpHeaders, String> requestHeadersSanitizer =
                 (ctx, headers) -> sanitizedRequestHeaders;
-        final BiFunction<RequestContext, Object, ?> requestContentSanitizer =
+        final BiFunction<RequestContext, Object, String> requestContentSanitizer =
                 (ctx, content) -> sanitizedRequestContent;
-        final BiFunction<RequestContext, HttpHeaders, ?> requestTrailersSanitizer =
+        final BiFunction<RequestContext, HttpHeaders, String> requestTrailersSanitizer =
                 (ctx, trailers) -> sanitizedRequestTrailers;
-        final BiFunction<RequestContext, HttpHeaders, ?> responseHeadersSanitizer =
+        final BiFunction<RequestContext, HttpHeaders, String> responseHeadersSanitizer =
                 (ctx, headers) -> sanitizedResponseHeaders;
-        final BiFunction<RequestContext, Object, ?> responseContentSanitizer =
+        final BiFunction<RequestContext, Object, String> responseContentSanitizer =
                 (ctx, content) -> sanitizedResponseContent;
-        final BiFunction<RequestContext, HttpHeaders, ?> responseTrailersSanitizer =
+        final BiFunction<RequestContext, HttpHeaders, String> responseTrailersSanitizer =
                 (ctx, trailers) -> sanitizedResponseTrailers;
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -274,87 +277,92 @@ class LoggingServiceTest {
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
 
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .requestHeadersSanitizer(requestHeadersSanitizer)
+                                                      .requestContentSanitizer(requestContentSanitizer)
+                                                      .requestTrailersSanitizer(requestTrailersSanitizer)
+                                                      .requestTrailersSanitizer(requestTrailersSanitizer)
+                                                      .responseHeadersSanitizer(responseHeadersSanitizer)
+                                                      .responseContentSanitizer(responseContentSanitizer)
+                                                      .responseTrailersSanitizer(responseTrailersSanitizer)
+                                                      .build();
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .logFormatter(logFormatter)
+                                             .build();
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevel(LogLevel.INFO)
-                              .successfulResponseLogLevel(LogLevel.INFO)
-                              .requestHeadersSanitizer(requestHeadersSanitizer)
-                              .requestContentSanitizer(requestContentSanitizer)
-                              .requestTrailersSanitizer(requestTrailersSanitizer)
-                              .requestTrailersSanitizer(requestTrailersSanitizer)
-                              .responseHeadersSanitizer(responseHeadersSanitizer)
-                              .responseContentSanitizer(responseContentSanitizer)
-                              .responseTrailersSanitizer(responseTrailersSanitizer)
+                              .logWriter(logWriter)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
 
         verify(logger, times(2)).isInfoEnabled();
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*" + sanitizedRequestHeaders + ".*" + sanitizedRequestContent + ".*" +
-                                    sanitizedRequestTrailers + ".*"));
-        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*" + sanitizedResponseHeaders + ".*" + sanitizedResponseContent + ".*" +
-                                    sanitizedResponseTrailers + ".*"));
+        verify(logger).info(matches(".*Request:.*" + sanitizedRequestHeaders + ".*" + sanitizedRequestContent +
+                                    ".*" + sanitizedRequestTrailers + ".*"));
+        verify(logger).info(matches(".*Response:.*" + sanitizedResponseHeaders + ".*" +
+                                    sanitizedResponseContent + ".*" + sanitizedResponseTrailers + ".*"));
     }
 
     @Test
-    void sanitizeExceptionIntoException() throws Exception {
-        final Exception sanitizedResponseCause = new Exception("sanitized");
-        final BiFunction<RequestContext, Throwable, Throwable> responseCauseSanitizer =
-                (ctx, cause) -> sanitizedResponseCause;
+    void sanitizeByLogFormatter() throws Exception {
+        final String sanitizedRequestHeaders = "sanitizedRequestHeaders";
+        final String sanitizedRequestContent = "sanitizedRequestContent";
+        final String sanitizedRequestTrailers = "sanitizedRequestTrailer";
+        final String sanitizedResponseHeaders = "sanitizedResponseHeaders";
+        final String sanitizedResponseContent = "sanitizedResponseContent";
+        final String sanitizedResponseTrailers = "sanitizedResponseTrailer";
+        final BiFunction<RequestContext, HttpHeaders, String> requestHeadersSanitizer =
+                (ctx, headers) -> sanitizedRequestHeaders;
+        final BiFunction<RequestContext, Object, String> requestContentSanitizer =
+                (ctx, content) -> sanitizedRequestContent;
+        final BiFunction<RequestContext, HttpHeaders, String> requestTrailersSanitizer =
+                (ctx, trailers) -> sanitizedRequestTrailers;
+        final BiFunction<RequestContext, HttpHeaders, String> responseHeadersSanitizer =
+                (ctx, headers) -> sanitizedResponseHeaders;
+        final BiFunction<RequestContext, Object, String> responseContentSanitizer =
+                (ctx, content) -> sanitizedResponseContent;
+        final BiFunction<RequestContext, HttpHeaders, String> responseTrailersSanitizer =
+                (ctx, trailers) -> sanitizedResponseTrailers;
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx.logBuilder().endResponse(new Exception("not sanitized"));
+        ctx.logBuilder().requestContent(new Object(), new Object());
+        ctx.logBuilder().requestTrailers(HttpHeaders.of("foo", "bar"));
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
+        ctx.logBuilder().responseContent(new Object(), new Object());
+        ctx.logBuilder().responseTrailers(HttpHeaders.of("foo", "bar"));
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
-        when(logger.isWarnEnabled()).thenReturn(true);
 
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .requestHeadersSanitizer(requestHeadersSanitizer)
+                                                      .requestContentSanitizer(requestContentSanitizer)
+                                                      .requestTrailersSanitizer(requestTrailersSanitizer)
+                                                      .requestTrailersSanitizer(requestTrailersSanitizer)
+                                                      .responseHeadersSanitizer(responseHeadersSanitizer)
+                                                      .responseContentSanitizer(responseContentSanitizer)
+                                                      .responseTrailersSanitizer(responseTrailersSanitizer)
+                                                      .build();
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevel(LogLevel.INFO)
-                              .successfulResponseLogLevel(LogLevel.INFO)
-                              .responseCauseSanitizer(responseCauseSanitizer)
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .requestLogLevel(LogLevel.INFO)
+                                                  .successfulResponseLogLevel(LogLevel.INFO)
+                                                  .logFormatter(logFormatter)
+                                                  .build())
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
+
         verify(logger, times(2)).isInfoEnabled();
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx), anyString());
-        verify(logger, times(1)).isWarnEnabled();
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx), anyString(),
-                            same(sanitizedResponseCause));
-    }
-
-    @Test
-    void sanitizeExceptionIntoString() throws Exception {
-        final String sanitizedResponseCause = "sanitizedResponseCause";
-        final BiFunction<RequestContext, Throwable, String> responseCauseSanitizer =
-                (ctx, cause) -> sanitizedResponseCause;
-
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        ctx.logBuilder().endResponse(new Exception("not sanitized"));
-
-        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
-        when(logger.isInfoEnabled()).thenReturn(true);
-        when(logger.isWarnEnabled()).thenReturn(true);
-
-        final LoggingService service =
-                LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevel(LogLevel.INFO)
-                              .successfulResponseLogLevel(LogLevel.INFO)
-                              .responseCauseSanitizer(responseCauseSanitizer)
-                              .newDecorator().apply(delegate);
-
-        service.serve(ctx, ctx.request());
-        verify(logger, times(2)).isInfoEnabled();
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx), anyString());
-        verify(logger, times(1)).isWarnEnabled();
-        verify(logger).warn(eq(RESPONSE_FORMAT2), same(ctx), anyString(),
-                            same(sanitizedResponseCause));
+        verify(logger).info(matches(".*Request:.*" + sanitizedRequestHeaders + ".*" + sanitizedRequestContent +
+                                    ".*" + sanitizedRequestTrailers + ".*"));
+        verify(logger).info(matches(".*Response:.*" + sanitizedResponseHeaders + ".*" +
+                                    sanitizedResponseContent + ".*" + sanitizedResponseTrailers + ".*"));
     }
 
     @Test
@@ -373,17 +381,22 @@ class LoggingServiceTest {
         when(logger.isWarnEnabled()).thenReturn(true);
 
         // Before sanitization
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
+        assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
+        assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
 
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestHeadersSanitizer(RegexBasedSanitizer.of(Pattern.compile("trustin"),
+                                                                            Pattern.compile("com")))
+                            .build();
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevel(LogLevel.INFO)
-                              .successfulResponseLogLevel(LogLevel.INFO)
-                              .requestHeadersSanitizer(RegexBasedSanitizer.of(
-                                      Pattern.compile("trustin"),
-                                      Pattern.compile("com")))
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .requestLogLevel(LogLevel.INFO)
+                                                  .successfulResponseLogLevel(LogLevel.INFO)
+                                                  .logFormatter(logFormatter)
+                                                  .build())
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
@@ -394,15 +407,65 @@ class LoggingServiceTest {
 
         // verify request logs
         for (int i = 0; i < 2; i++) {
-            verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                                argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
+            verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                         !(text.contains(":path=/hello/trustin") ||
+                                                           text.contains(":authority=test.com"))));
         }
 
         // verify response log
-        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))),
-                            eq(cause));
+        verify(logger).warn(matches(".*Response:.*"), eq(cause));
+        verifyNoMoreInteractions(logger);
+    }
 
+    @Test
+    void sanitizeRequestHeadersByLogFormatter() throws Exception {
+
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final Exception cause = new Exception("not sanitized");
+        ctx.logBuilder().endResponse(cause);
+
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isInfoEnabled()).thenReturn(true);
+        when(logger.isWarnEnabled()).thenReturn(true);
+
+        // Before sanitization
+        assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
+        assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
+
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestHeadersSanitizer(RegexBasedSanitizer.of(Pattern.compile("trustin"),
+                                                                            Pattern.compile("com")))
+                            .build();
+        final LoggingService service =
+                LoggingService.builder()
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .requestLogLevel(LogLevel.INFO)
+                                                  .successfulResponseLogLevel(LogLevel.INFO)
+                                                  .logFormatter(logFormatter)
+                                                  .build())
+                              .newDecorator().apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        // After the sanitization.
+        verify(logger, times(2)).isInfoEnabled();
+        verify(logger, times(1)).isWarnEnabled();
+
+        // verify request logs
+        for (int i = 0; i < 2; i++) {
+            verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                         !(text.contains(":path=/hello/trustin") ||
+                                                           text.contains(":authority=test.com"))));
+        }
+
+        // verify response log
+        verify(logger).warn(matches(".*Response:.*"), eq(cause));
         verifyNoMoreInteractions(logger);
     }
 
@@ -422,13 +485,20 @@ class LoggingServiceTest {
         // Before sanitization
         assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
 
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestContentSanitizer(RegexBasedSanitizer.of(
+                                    Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                            .build();
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .logFormatter(logFormatter)
+                                             .build();
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevel(LogLevel.INFO)
-                              .successfulResponseLogLevel(LogLevel.INFO)
-                              .requestContentSanitizer(RegexBasedSanitizer.of(
-                                      Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                              .logWriter(logWriter)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
@@ -436,14 +506,49 @@ class LoggingServiceTest {
         // Ensure the request content (the phone number 333-490-4499) is sanitized.
         verify(logger, times(2)).isInfoEnabled();
 
-        // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
+        // verify request and response log
+        verify(logger, times(2)).info(argThat((String text) -> !text.contains("333-490-4499")));
+        verifyNoMoreInteractions(logger);
+    }
 
-        // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
+    @Test
+    void sanitizeRequestContentByLogFormatter() throws Exception {
 
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
+
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isInfoEnabled()).thenReturn(true);
+
+        // Before sanitization
+        assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
+
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestContentSanitizer(RegexBasedSanitizer.of(
+                                    Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                            .build();
+        final LoggingService service =
+                LoggingService.builder()
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .requestLogLevel(LogLevel.INFO)
+                                                  .successfulResponseLogLevel(LogLevel.INFO)
+                                                  .logFormatter(logFormatter)
+                                                  .build())
+                              .newDecorator().apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        // Ensure the request content (the phone number 333-490-4499) is sanitized.
+        verify(logger, times(2)).isInfoEnabled();
+
+        // verify request and response log
+        verify(logger, times(2)).info(argThat((String text) -> !text.contains("333-490-4499")));
         verifyNoMoreInteractions(logger);
     }
 
@@ -451,16 +556,19 @@ class LoggingServiceTest {
     void sample() throws Exception {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .build();
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
-                              .requestLogLevel(LogLevel.INFO)
-                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .logWriter(logWriter)
                               .samplingRate(0.0f)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
-        verifyNoInteractions(logger);
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -474,17 +582,16 @@ class LoggingServiceTest {
 
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
+                              .logWriter(LogWriter.of(logger))
                               .successSamplingRate(0.0f)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
         verify(logger).isWarnEnabled();
-        verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
-                            matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
+        verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).warn(matches(".* Response: .*cause=java\\.lang\\.IllegalStateException: Failed.*"),
                             same(cause));
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -496,11 +603,48 @@ class LoggingServiceTest {
 
         final LoggingService service =
                 LoggingService.builder()
-                              .logger(logger)
+                              .logWriter(LogWriter.of(logger))
                               .samplingRate(0.0f)
                               .newDecorator().apply(delegate);
 
         service.serve(ctx, ctx.request());
         verifyNoInteractions(logger);
+    }
+
+    @Test
+    void responseCauseFilter() throws Exception {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final IllegalStateException cause = new IllegalStateException("Failed");
+        ctx.logBuilder().endResponse(cause);
+        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
+        when(logger.isWarnEnabled()).thenReturn(true);
+
+        final LoggingService service =
+                LoggingService.builder()
+                              .logWriter(LogWriter.builder()
+                                                  .logger(logger)
+                                                  .responseCauseFilter(throwable -> true)
+                                                  .build())
+                              .newDecorator().apply(delegate);
+
+        service.serve(ctx, ctx.request());
+
+        verify(logger).isWarnEnabled();
+        verify(logger).warn(matches(".*Request:.*headers=\\[:method=GET, :path=/].*"));
+        verify(logger).warn(argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")));
+    }
+
+    @Test
+    void sanitizerAndLogWriterCanNotSetTogether() {
+        assertThatThrownBy(() -> LoggingService
+                .builder()
+                .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                        Pattern.compile("trustin"),
+                        Pattern.compile("com")))
+                .logWriter(LogWriter.of())
+                .build(delegate))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "The logWriter and the log properties cannot be set together.");
     }
 }
