@@ -24,12 +24,15 @@ import java.nio.channels.ClosedChannelException;
 import javax.net.ssl.SSLHandshakeException;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@DisabledOnOs(value = OS.WINDOWS, disabledReason = "Windows may be a different order of closing events.")
 class IisServerCompatibilityTest {
 
     @RegisterExtension
