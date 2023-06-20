@@ -69,6 +69,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
+    private Long requestAutoAbortDelayMillis;
+    @Nullable
     private Path multipartUploadsLocation;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
@@ -210,6 +212,17 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigSetters requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    @Override
+    public ServiceConfigSetters requestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
+        return this;
+    }
+
+    @Override
     public ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation) {
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         return this;
@@ -320,6 +333,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (successFunction != null) {
             serviceConfigBuilder.successFunction(successFunction);
+        }
+        if (requestAutoAbortDelayMillis != null) {
+            serviceConfigBuilder.requestAutoAbortDelayMillis(requestAutoAbortDelayMillis);
         }
         if (multipartUploadsLocation != null) {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);

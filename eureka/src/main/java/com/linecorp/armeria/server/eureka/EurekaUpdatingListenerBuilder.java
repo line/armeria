@@ -426,6 +426,16 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     @Override
+    public EurekaUpdatingListenerBuilder requestAutoAbortDelay(Duration delay) {
+        return (EurekaUpdatingListenerBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (EurekaUpdatingListenerBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public EurekaUpdatingListenerBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (EurekaUpdatingListenerBuilder) super.requestIdGenerator(requestIdGenerator);
     }

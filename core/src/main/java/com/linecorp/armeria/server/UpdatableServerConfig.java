@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -35,6 +36,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
@@ -136,6 +138,11 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public Map<ChannelOption<?>, ?> childChannelOptions() {
         return delegate.childChannelOptions();
+    }
+
+    @Override
+    public Consumer<? super ChannelPipeline> childChannelPipelineCustomizer() {
+        return delegate.childChannelPipelineCustomizer();
     }
 
     @Override

@@ -37,6 +37,8 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SuccessFunction;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
@@ -318,6 +320,9 @@ class VirtualHostBuilderTest {
     void precedenceOfDuplicateRoute() {
         final Route routeA = Route.builder().path("/").build();
         final Route routeB = Route.builder().path("/").build();
+        final RequestTarget reqTarget = RequestTarget.forServer("/");
+        assertThat(reqTarget).isNotNull();
+
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), true)
                 .service(routeA, (ctx, req) -> HttpResponse.of(OK))
                 .service(routeB, (ctx, req) -> HttpResponse.of(OK))
@@ -325,8 +330,7 @@ class VirtualHostBuilderTest {
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
                                                                         RequestHeaders.of(HttpMethod.GET, "/"),
-                                                                        "/", null, null,
-                                                                        RoutingStatus.OK);
+                                                                        reqTarget, RoutingStatus.OK);
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
         final Route route = serviceConfig.route();
         assertThat(route).isSameAs(routeA);
@@ -343,5 +347,31 @@ class VirtualHostBuilderTest {
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .build(template, noopDependencyInjector, null);
         assertThat(h2.multipartUploadsLocation()).isEqualTo(template.multipartUploadsLocation());
+    }
+
+    @Test
+    void defaultLogNameCustomization() {
+        final String defaultLogName = "test";
+        final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
+                .defaultLogName(defaultLogName)
+                .build(template, noopDependencyInjector, null);
+        assertThat(h1.defaultLogName()).isEqualTo(defaultLogName);
+
+        final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
+                .build(template, noopDependencyInjector, null);
+        assertThat(h2.defaultLogName()).isEqualTo(template.defaultLogName());
+    }
+
+    @Test
+    void successFunctionCustomization() {
+        final SuccessFunction successFunction = (ctx, log) -> false;
+        final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
+                .successFunction(successFunction)
+                .build(template, noopDependencyInjector, null);
+        assertThat(h1.successFunction()).isEqualTo(successFunction);
+
+        final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
+                .build(template, noopDependencyInjector, null);
+        assertThat(h2.successFunction()).isEqualTo(template.successFunction());
     }
 }

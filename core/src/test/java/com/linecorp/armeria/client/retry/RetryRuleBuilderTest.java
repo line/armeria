@@ -47,6 +47,7 @@ class RetryRuleBuilderTest {
     private static final Backoff unprocessBackOff = Backoff.exponential(4000, 40000);
     private static final Backoff statusBackOff = Backoff.fibonacci(5000, 10000);
     private static final Backoff clientErrorBackOff = Backoff.fixed(3000);
+    private static final Backoff responseTimeoutBackOff = Backoff.fixed(4000);
 
     static ObjectAssert<Backoff> assertBackoff(CompletionStage<RetryDecision> future) {
         return assertThat(future.toCompletableFuture().join().backoff());
@@ -122,6 +123,24 @@ class RetryRuleBuilderTest {
     }
 
     @Test
+    void onGrpcTrailers() {
+        final Backoff backoff = Backoff.fixed(1000);
+        final RetryRule rule =
+                RetryRule.builder()
+                         .onGrpcTrailers((unused, trailers) -> trailers.containsInt("grpc-status", 3))
+                         .thenBackoff(backoff);
+
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK, "grpc-status", 3));
+        ctx1.logBuilder().responseTrailers(HttpHeaders.of());
+        assertBackoff(rule.shouldRetry(ctx1, null)).isSameAs(backoff);
+
+        final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx2.logBuilder().responseTrailers(HttpHeaders.of("grpc-status", 0));
+        assertBackoff(rule.shouldRetry(ctx2, null)).isNull();
+    }
+
+    @Test
     void onException() {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Backoff backoff1 = Backoff.fixed(1000);
@@ -145,6 +164,31 @@ class RetryRuleBuilderTest {
     }
 
     @Test
+    void onTimeoutException() {
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ClientRequestContext timedOutCtx = ClientRequestContext
+                .builder(HttpRequest.of(HttpMethod.GET, "/"))
+                .timedOut(true)
+                .build();
+        final Backoff backoff = Backoff.fixed(1000);
+        final RetryRule rule = RetryRule.of(RetryRule.builder()
+                                                     .onTimeoutException()
+                                                     .thenBackoff(backoff));
+
+        assertBackoff(rule.shouldRetry(ctx, UnprocessedRequestException.of(WriteTimeoutException.get())))
+                .isSameAs(backoff);
+        assertBackoff(rule.shouldRetry(ctx, new CompletionException(
+                UnprocessedRequestException.of(WriteTimeoutException.get()))))
+                .isSameAs(backoff);
+        assertBackoff(rule.shouldRetry(timedOutCtx, ResponseTimeoutException.get())).isSameAs(backoff);
+        assertBackoff(rule.shouldRetry(timedOutCtx, new CompletionException(ResponseTimeoutException.get())))
+                .isSameAs(backoff);
+        assertBackoff(rule.shouldRetry(timedOutCtx, ClosedSessionException.get())).isSameAs(backoff);
+        assertBackoff(rule.shouldRetry(ctx, ClosedSessionException.get())).isNull();
+        assertBackoff(rule.shouldRetry(ctx, null)).isNull();
+    }
+
+    @Test
     void onAnyException() {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Backoff backoff1 = Backoff.fixed(1000);
@@ -162,7 +206,8 @@ class RetryRuleBuilderTest {
     @Test
     void multipleRule() {
         final RetryRule retryRule =
-                RetryRule.builder().onUnprocessed().thenBackoff(unprocessBackOff)
+                RetryRule.onTimeoutException(responseTimeoutBackOff)
+                         .orElse(RetryRule.onUnprocessed(unprocessBackOff))
                          .orElse(RetryRule.onException())
                          .orElse((ctx, cause) -> {
                              if (ctx.log().isAvailable(
@@ -198,6 +243,20 @@ class RetryRuleBuilderTest {
         final ClientRequestContext ctx5 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx5.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.CONFLICT));
         assertBackoff(retryRule.shouldRetry(ctx5, null)).isSameAs(clientErrorBackOff);
+
+        final ClientRequestContext ctx6 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertBackoff(retryRule.shouldRetry(
+                ctx6, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
+                .isSameAs(responseTimeoutBackOff);
+
+        final ClientRequestContext ctx7 = ClientRequestContext
+                .builder(HttpRequest.of(HttpMethod.GET, "/"))
+                .timedOut(true)
+                .build();
+        assertBackoff(retryRule.shouldRetry(ctx7, ResponseTimeoutException.get()))
+                .isSameAs(responseTimeoutBackOff);
+        assertBackoff(retryRule.shouldRetry(ctx7, ClosedSessionException.get()))
+                .isSameAs(responseTimeoutBackOff);
     }
 
     @Test
@@ -263,6 +322,7 @@ class RetryRuleBuilderTest {
                 RetryRule.of(RetryRule.builder(HttpMethod.idempotentMethods())
                                       .onStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                                       .onException(ClosedChannelException.class)
+                                      .onTimeoutException()
                                       .onStatusClass(HttpStatusClass.CLIENT_ERROR)
                                       .thenBackoff(idempotentBackoff),
                              RetryRule.builder()
@@ -281,8 +341,20 @@ class RetryRuleBuilderTest {
         final ClientRequestContext ctx3 = ClientRequestContext.of(HttpRequest.of(HttpMethod.PUT, "/"));
         assertBackoff(retryRule.shouldRetry(ctx3, new ClosedChannelException())).isSameAs(idempotentBackoff);
 
-        final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.PUT, "/"));
-        assertBackoff(retryRule.shouldRetry(ctx4,
+        final ClientRequestContext ctx4 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertBackoff(retryRule.shouldRetry(
+                ctx4, new CompletionException(UnprocessedRequestException.of(WriteTimeoutException.get()))))
+                .isSameAs(idempotentBackoff);
+
+        final ClientRequestContext ctx5 = ClientRequestContext
+                .builder(HttpRequest.of(HttpMethod.GET, "/"))
+                .timedOut(true)
+                .build();
+        assertBackoff(retryRule.shouldRetry(ctx5, ClosedSessionException.get()))
+                .isSameAs(idempotentBackoff);
+
+        final ClientRequestContext ctx6 = ClientRequestContext.of(HttpRequest.of(HttpMethod.PUT, "/"));
+        assertBackoff(retryRule.shouldRetry(ctx6,
                                             UnprocessedRequestException.of(new ClosedChannelException())))
                 .isSameAs(unprocessedBackoff);
     }

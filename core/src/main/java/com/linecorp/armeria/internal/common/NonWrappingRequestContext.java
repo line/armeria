@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -30,10 +29,13 @@ import com.linecorp.armeria.common.ConcurrentAttributes;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -59,13 +61,13 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     private SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
-    private String path;
+    private RequestTarget reqTarget;
     private final ExchangeType exchangeType;
+    private long requestAutoAbortDelayMillis;
 
     @Nullable
     private String decodedPath;
-    @Nullable
-    private String query;
+    private final Request originalRequest;
     @Nullable
     private volatile HttpRequest req;
     @Nullable
@@ -75,17 +77,14 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
 
     /**
      * Creates a new instance.
-     *
-     * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param id the {@link RequestId} associated with this context
-     * @param req the {@link HttpRequest} associated with this context
-     * @param rpcReq the {@link RpcRequest} associated with this context
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, HttpMethod method, String path, @Nullable String query, ExchangeType exchangeType,
+            RequestId id, HttpMethod method, RequestTarget reqTarget, ExchangeType exchangeType,
+            long requestAutoAbortDelayMillis,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             @Nullable AttributesGetters rootAttributeMap) {
+        assert req != null || rpcReq != null;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         if (rootAttributeMap == null) {
@@ -97,9 +96,10 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");
-        this.path = requireNonNull(path, "path");
-        this.query = query;
+        this.reqTarget = requireNonNull(reqTarget, "reqTarget");
         this.exchangeType = requireNonNull(exchangeType, "exchangeType");
+        this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
+        originalRequest = firstNonNull(req, rpcReq);
         this.req = req;
         this.rpcReq = rpcReq;
     }
@@ -115,10 +115,22 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     }
 
     @Override
-    public void updateRequest(HttpRequest req) {
+    public final void updateRequest(HttpRequest req) {
         requireNonNull(req, "req");
-        validateHeaders(req.headers());
-        unsafeUpdateRequest(req);
+        final RequestHeaders headers = req.headers();
+        final RequestTarget reqTarget = validateHeaders(headers);
+
+        if (reqTarget == null) {
+            throw new IllegalArgumentException("invalid path: " + headers.path());
+        }
+        if (reqTarget.form() == RequestTargetForm.ABSOLUTE) {
+            throw new IllegalArgumentException("invalid path: " + headers.path() +
+                                               " (must not contain scheme or authority)");
+        }
+
+        this.req = req;
+        this.reqTarget = reqTarget;
+        decodedPath = null;
     }
 
     @Override
@@ -128,22 +140,11 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     }
 
     /**
-     * Validates the specified {@link RequestHeaders}. By default, this method will raise
-     * an {@link IllegalArgumentException} if it does not have {@code ":scheme"} or {@code ":authority"}
-     * header.
+     * Validates the specified {@link RequestHeaders} and returns the {@link RequestTarget}
+     * returned by {@link RequestTarget#forClient(String)} or {@link RequestTarget#forServer(String)}.
      */
-    protected void validateHeaders(RequestHeaders headers) {
-        checkArgument(headers.scheme() != null && headers.authority() != null,
-                      "must set ':scheme' and ':authority' headers");
-    }
-
-    /**
-     * Replaces the {@link HttpRequest} associated with this context with the specified one
-     * without any validation. Internal use only. Use it at your own risk.
-     */
-    protected void unsafeUpdateRequest(HttpRequest req) {
-        this.req = req;
-    }
+    @Nullable
+    protected abstract RequestTarget validateHeaders(RequestHeaders headers);
 
     @Override
     public final SessionProtocol sessionProtocol() {
@@ -161,22 +162,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Nullable
     protected abstract Channel channel();
 
-    @Nullable
-    @Override
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A remoteAddress() {
-        final Channel ch = channel();
-        return ch != null ? (A) ch.remoteAddress() : null;
-    }
-
-    @Nullable
-    @Override
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A localAddress() {
-        final Channel ch = channel();
-        return ch != null ? (A) ch.localAddress() : null;
-    }
-
     @Override
     public final RequestId id() {
         return id;
@@ -189,11 +174,11 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
 
     @Override
     public final String path() {
-        return path;
+        return reqTarget.path();
     }
 
-    protected void path(String path) {
-        this.path = requireNonNull(path, "path");
+    protected final RequestTarget requestTarget() {
+        return reqTarget;
     }
 
     @Override
@@ -203,16 +188,12 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
             return decodedPath;
         }
 
-        return this.decodedPath = ArmeriaHttpUtil.decodePath(path);
+        return this.decodedPath = ArmeriaHttpUtil.decodePath(path());
     }
 
     @Override
     public final String query() {
-        return query;
-    }
-
-    protected void query(@Nullable String query) {
-        this.query = query;
+        return reqTarget.query();
     }
 
     @Override
@@ -223,6 +204,16 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public final MeterRegistry meterRegistry() {
         return meterRegistry;
+    }
+
+    @Override
+    public long requestAutoAbortDelayMillis() {
+        return requestAutoAbortDelayMillis;
+    }
+
+    @Override
+    public void setRequestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
     }
 
     @Nullable
@@ -260,6 +251,11 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @UnstableApi
     public final AttributesGetters attributes() {
         return attrs;
+    }
+
+    @Override
+    public Request originalRequest() {
+        return originalRequest;
     }
 
     /**

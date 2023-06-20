@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -34,6 +35,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 
 /**
@@ -125,6 +127,12 @@ public interface ServerConfig {
      * Returns the {@link ChannelOption}s and their values of sockets accepted by {@link Server}.
      */
     Map<ChannelOption<?>, ?> childChannelOptions();
+
+    /**
+     * Returns the {@link Consumer} that customizes the Netty child {@link ChannelPipeline}.
+     */
+    @UnstableApi
+    Consumer<? super ChannelPipeline> childChannelPipelineCustomizer();
 
     /**
      * Returns the maximum allowed number of open connections.
@@ -296,7 +304,7 @@ public interface ServerConfig {
     /**
      * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only
-     * supports case sensitive HTTP/1 headers.
+     * supports case-sensitive HTTP/1 headers.
      */
     Http1HeaderNaming http1HeaderNaming();
 

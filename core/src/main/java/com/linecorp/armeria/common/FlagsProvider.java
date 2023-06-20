@@ -462,6 +462,23 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default value of the {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)} option.
+     * If enabled, even when ALPN negotiation fails client will try to attempt upgrade to HTTP/2 when needed.
+     * This will be either HTTP/2 connection preface or HTTP/1-to-2 upgrade request,
+     * depending on {@link ClientFactoryBuilder#useHttp2Preface(boolean)} setting.
+     * If disabled, when ALPN negotiation fails client will also fail in case HTTP/2 was required.
+     * {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2WithoutAlpn=true} JVM option to enable it.
+     */
+    @Nullable
+    @UnstableApi
+    default Boolean defaultUseHttp2WithoutAlpn() {
+        return null;
+    }
+
+    /**
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp1Pipelining(boolean)} option.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#useHttp1Pipelining(boolean)}.
@@ -696,6 +713,19 @@ public interface FlagsProvider {
      */
     @Nullable
     default Integer defaultMaxTotalAttempts() {
+        return null;
+    }
+
+    /**
+     * Returns the amount of time to wait by default before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#requestAutoAbortDelayMillis(long)} or
+     * {@link ClientBuilder#requestAutoAbortDelayMillis(long)}.
+     */
+    @UnstableApi
+    @Nullable
+    default Long defaultRequestAutoAbortDelayMillis() {
         return null;
     }
 

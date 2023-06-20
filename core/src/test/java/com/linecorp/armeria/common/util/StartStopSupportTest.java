@@ -63,7 +63,8 @@ public class StartStopSupportTest {
     private static final String THREAD_NAME_PREFIX = StartStopSupportTest.class.getSimpleName();
 
     @ClassRule
-    public static final EventLoopRule rule = new EventLoopRule(THREAD_NAME_PREFIX);
+    public static final EventLoopRule rule = new EventLoopRule(
+            ThreadFactories.newThreadFactory(THREAD_NAME_PREFIX, false));
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
