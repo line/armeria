@@ -1363,7 +1363,7 @@ public final class VirtualHostBuilder implements TlsSetters {
             final boolean tlsAllowUnsafeCiphers =
                     this.tlsAllowUnsafeCiphers != null ?
                     this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
-            final boolean useOpenSsl = this.useOpenSsl != null ? this.useOpenSsl : true;
+            final boolean useOpenSsl = this.useOpenSsl != null ? this.useOpenSsl : template.useOpenSsl;
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
 

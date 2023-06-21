@@ -22,8 +22,10 @@ import static org.awaitility.Awaitility.await;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
@@ -36,12 +38,17 @@ class HttpClientFactoryTest {
     public static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.http(0);
+            sb.https(0);
+            sb.tlsSelfSigned();
+
             sb.service("/", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     return HttpResponse.streaming();
                 }
             });
+            sb.service("/hello", (ctx, req) -> HttpResponse.of("hello"));
         }
     };
 
@@ -102,5 +109,17 @@ class HttpClientFactoryTest {
                 assertThat(clientFactory.numConnections()).isEqualTo(2);
             });
         }
+    }
+
+    @Test
+    void disableOpenSsl() {
+        final ClientFactory sslDisabledClient = ClientFactory.builder().useOpenSsl(false).tlsNoVerify().build();
+
+        final AggregatedHttpResponse response = WebClient.builder(SessionProtocol.HTTPS,
+                                                                   server.httpsEndpoint())
+                                                          .factory(sslDisabledClient).build()
+                                                          .get("/hello").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("hello");
     }
 }

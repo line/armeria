@@ -239,7 +239,7 @@ public final class ServerBuilder implements TlsSetters {
                 host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
         virtualHostTemplate.tlsAllowUnsafeCiphers(false);
-        virtualHostTemplate.useOpenSsl(true);
+        virtualHostTemplate.useOpenSsl(Flags.useOpenSsl());
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
