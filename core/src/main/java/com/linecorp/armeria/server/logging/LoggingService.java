@@ -64,15 +64,15 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         requireNonNull(failureSampler, "failureSampler");
         sampler = requestLog -> {
             final ServiceRequestContext ctx = (ServiceRequestContext) requestLog.context();
-            if (slowRequestSampler.isSampled(requestLog.totalDurationNanos())) {
-                return true;
-            }
-
+            final boolean isSlow = slowRequestSampler.isSampled(requestLog.totalDurationNanos());
+            final boolean successOrFailure;
             if (ctx.config().successFunction().isSuccess(ctx, requestLog)) {
-                return successSampler.isSampled(ctx);
+                successOrFailure = successSampler.isSampled(ctx);
+            } else {
+                successOrFailure = failureSampler.isSampled(ctx);
             }
-            return failureSampler.isSampled(ctx);
 
+            return successOrFailure || isSlow;
         };
     }
 

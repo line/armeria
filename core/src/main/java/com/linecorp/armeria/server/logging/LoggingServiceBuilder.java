@@ -109,6 +109,9 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return this;
     }
 
+    /**
+     * Sets the {@link Sampler} that determines whether a request is slow enough to be logged.
+     */
     public LoggingServiceBuilder slowRequestSampler(Sampler<Long> slowRequestSampler) {
         this.slowRequestSampler = requireNonNull(slowRequestSampler, "slowRequestSampler");
         return this;
@@ -125,18 +128,48 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return failureSampler(Sampler.random(failureSamplingRate));
     }
 
+    /**
+     * Sets conditions to sample slow requests.
+     *
+     * <p>If {slowRequestPercentile} is 0.99, {windowMilliseconds} is 60000, we will sample requests that are
+     * slower than 99% of the requests within 1-minute time window. This will make sure our sampling adapts the
+     * traffic pattern. For example, traffic can be very low during the night thus our average response time
+     * will be pretty low. Therefore, our p99s should be lower than the midday traffic.
+     * Otherwise, we won't log any p99s during night.</p>
+     *
+     * <p>If we set {slowRequestSamplingLowerBoundMilliseconds} to 100, we won't sample any request that took
+     * less than 1000ms. This is useful to filter out requests that are too fast to be considered
+     * as slow requests. If your endpoint performs pretty healthy, you shouldn't see any slow request logs.</p>
+     *
+     * <p>If we set {slowRequestSamplingUpperBoundMilliseconds} to 1000, we will sample any request that
+     * took more than 1000 milliseconds. This is useful to make sure we log slow requests even if
+     * they are not in the p99 percentile. If your service is unhealthy, this will make sure any slow request
+     * is logged into your system.</p>
+     *
+     * @param slowRequestPercentile percentile of slow requests.
+     * @param windowMilliseconds window size to calculate percentile.
+     * @param slowRequestSamplingLowerBoundMilliseconds lower bound of slow requests.
+     *          Any request that took less than this amount of time won't be sampled.
+     * @param slowRequestSamplingUpperBoundMilliseconds upper bound of slow requests.
+     *          Any request that took more than this amount of time will be sampled regardless
+     *          of their percentile.
+     */
     public LoggingServiceBuilder slowRequestSamplingPercentile(float slowRequestPercentile,
                                                                long windowMilliseconds,
                                                                long slowRequestSamplingLowerBoundMilliseconds,
                                                                long slowRequestSamplingUpperBoundMilliseconds) {
-        checkArgument(0.0 <= slowRequestPercentile && slowRequestPercentile <= 1.0,
-                      "slowRequestPercentile: %s (expected: 0.0 <= slowRequestPercentile <= 1.0)",
-                      slowRequestPercentile);
+        final Sampler<Long> percentileMatches;
+        if (0.0 <= slowRequestPercentile && slowRequestPercentile <= 1.0) {
+            percentileMatches = Sampler.never();
+        } else {
+            percentileMatches = Sampler.percentile(slowRequestPercentile, windowMilliseconds);
+        }
+
+        final Sampler<Long> isSlow = Sampler.greaterThanOrEqual(
+                slowRequestSamplingLowerBoundMilliseconds * 1000);
+        final Sampler<Long> isVerySlow = Sampler.greaterThan(slowRequestSamplingUpperBoundMilliseconds * 1000);
         return slowRequestSampler(
-                Sampler.greaterThanOrEqual(slowRequestSamplingLowerBoundMilliseconds * 1000)
-                       .or(Sampler.percentile(slowRequestPercentile, windowMilliseconds)
-                                  .and(Sampler.greaterThan(
-                                          slowRequestSamplingUpperBoundMilliseconds * 1000)))
+                isVerySlow.or(percentileMatches.and(isSlow))
         );
     }
 

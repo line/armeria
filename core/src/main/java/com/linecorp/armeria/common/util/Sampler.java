@@ -43,34 +43,59 @@ package com.linecorp.armeria.common.util;
 @FunctionalInterface
 public interface Sampler<T> {
 
+    /**
+     * Returns a sampler that applies logical or operator to both samplers decisions.
+     */
     default Sampler<T> or(Sampler<T> other) {
         return new OrSampler<>(this, other);
     }
 
+    /**
+     * Returns a sampler that applies logical and operator to both samplers decisions.
+     */
     default Sampler<T> and(Sampler<T> other) {
         return new AndSampler<>(this, other);
     }
 
+    /**
+     * Returns a sampler that returns {@code true} if the value is greater than the given value.
+     */
     static <T extends Comparable<T>> Sampler<T> greaterThan(T val) {
         return object -> object.compareTo(val) > 0;
     }
 
+    /**
+     * Returns a sampler that returns {@code true} if the value is less than or equal to the given value.
+     */
     static <T extends Comparable<T>> Sampler<T> greaterThanOrEqual(T val) {
         return object -> object.compareTo(val) >= 0;
     }
 
+    /**
+     * Returns a sampler that returns {@code true} if the value is less than the given value.
+     */
     static <T extends Comparable<T>> Sampler<T> lessThan(T val) {
         return object -> object.compareTo(val) < 0;
     }
 
+    /**
+     * Returns a sampler that returns {@code true} if the value is less than or equal to the given value.
+     */
     static <T extends Comparable<T>> Sampler<T> lessThanOrEqual(T val) {
         return object -> object.compareTo(val) <= 0;
     }
 
+    /**
+     * Returns a sampler that returns {@code true} if the value is equal to the given value.
+     */
     static <T extends Comparable<T>> Sampler<T> equal(T val) {
         return object -> object.compareTo(val) == 0;
     }
 
+    /**
+     * Returns a sampler that returns {@code true} if the value is inside the percentile distribution
+     * in the given time window.
+     */
     static Sampler<Long> percentile(float percentile, long windowMilliseconds) {
         return new SlidingWindowPercentileSampler(percentile, windowMilliseconds);
     }

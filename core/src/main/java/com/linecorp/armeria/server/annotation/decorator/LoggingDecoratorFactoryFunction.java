@@ -39,17 +39,16 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
         final float failureSamplingRate =
                 parameter.failureSamplingRate() >= 0.0f ? parameter.failureSamplingRate()
                                                         : parameter.samplingRate();
-        LoggingServiceBuilder builder = LoggingService.builder()
-                                                      .logWriter(LogWriter.builder()
-                                                                          .requestLogLevel(
-                                                                                  parameter.requestLogLevel())
-                                                                          .successfulResponseLogLevel(
-                                                                                  parameter.successfulResponseLogLevel())
-                                                                          .failureResponseLogLevel(
-                                                                                  parameter.failureResponseLogLevel())
-                                                                          .build())
-                                                      .successSamplingRate(successSamplingRate)
-                                                      .failureSamplingRate(failureSamplingRate);
+        final LogWriter logWriter = LogWriter.builder()
+                                             .requestLogLevel(parameter.requestLogLevel())
+                                             .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
+                                             .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                                             .build();
+        final LoggingServiceBuilder builder
+                = LoggingService.builder()
+                                .logWriter(logWriter)
+                                .successSamplingRate(successSamplingRate)
+                                .failureSamplingRate(failureSamplingRate);
 
         if (parameter.slowRequestSamplingPercentile() >= 0.0f) {
             builder.slowRequestSamplingPercentile(parameter.slowRequestSamplingPercentile(),
