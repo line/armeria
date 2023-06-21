@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.kotlin
 
 import com.linecorp.armeria.common.logging.LogFormatter
-import com.linecorp.armeria.common.logging.LogWriter
 import com.linecorp.armeria.server.logging.LoggingService
 import org.junit.jupiter.api.Test
 
