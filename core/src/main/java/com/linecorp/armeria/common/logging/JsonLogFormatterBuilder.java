@@ -35,7 +35,8 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 @UnstableApi
 public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNode> {
 
-    private ObjectMapper objectMapper = JacksonUtil.newDefaultObjectMapper();
+    @Nullable
+    private ObjectMapper objectMapper;
 
     JsonLogFormatterBuilder() {}
 
@@ -103,6 +104,8 @@ public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<J
      * Returns a newly-created JSON {@link LogFormatter} based on the properties of this builder.
      */
     public LogFormatter build() {
+        final ObjectMapper objectMapper = this.objectMapper != null ?
+                                          this.objectMapper : JacksonUtil.newDefaultObjectMapper();
         final BiFunction<? super RequestContext, HttpHeaders, JsonNode> defaultHeadersSanitizer =
                 defaultSanitizer(objectMapper);
         final BiFunction<? super RequestContext, Object, JsonNode> defaultContentSanitizer =
