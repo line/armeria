@@ -61,6 +61,8 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.ChannelOption;
+import io.netty.handler.ssl.JdkSslServerContext;
+import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
 
@@ -471,7 +473,8 @@ class ServerBuilderTest {
         // Did not call `tls()` for both default host and virtual host.
         assertThatThrownBy(() -> Server.builder()
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {})
+                                       .tlsCustomizer(unused -> {
+                                       })
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
@@ -481,7 +484,8 @@ class ServerBuilderTest {
                                        .tls(selfSignedCertificate.certificateFile(),
                                             selfSignedCertificate.privateKeyFile())
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {})
+                                       .tlsCustomizer(unused -> {
+                                       })
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
@@ -493,7 +497,8 @@ class ServerBuilderTest {
         assertThatThrownBy(() -> Server.builder()
                                        .tlsSelfSigned()
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {})
+                                       .tlsCustomizer(unused -> {
+                                       })
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
@@ -523,6 +528,31 @@ class ServerBuilderTest {
               })
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
+    }
+
+    @Test
+    void useOpenSsl() {
+        final Server sb = Server.builder()
+                                .virtualHost("*.example1.com")
+                                .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                .tlsSelfSigned()
+                                .useOpenSsl(true)
+                                .and()
+                                .virtualHost("*.example2.com")
+                                .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                .tlsSelfSigned()
+                                .useOpenSsl(false)
+                                .and()
+                                .virtualHost("*.example3.com")
+                                .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                .and()
+                                .build();
+
+        assertThat(sb.config().findVirtualHost("*.example1.com", 8080).sslContext().getClass())
+                .isEqualTo(OpenSslServerContext.class);
+        assertThat(sb.config().findVirtualHost("*.example2.com", 8080).sslContext().getClass())
+                .isEqualTo(JdkSslServerContext.class);
+        assertThat(sb.config().findVirtualHost("*.example3.com", 8080).sslContext()).isNull();
     }
 
     @Test

@@ -476,6 +476,15 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Allow the use of JNI-based TLS support with OpenSSL.
+     * @param useOpenSsl Whether to allow the use of JNI-based TLS support with OpenSSL
+     */
+    public ClientFactoryBuilder useOpenSsl(boolean useOpenSsl) {
+        option(ClientFactoryOptions.USE_OPEN_SSL, useOpenSsl);
+        return this;
+    }
+
+    /**
      * Sets the factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      *

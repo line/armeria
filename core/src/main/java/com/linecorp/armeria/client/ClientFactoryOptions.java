@@ -98,6 +98,12 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
 
     /**
+     * Whether to allow the use of JNI-based TLS support with OpenSSL.
+     */
+    public static final ClientFactoryOption<Boolean> USE_OPEN_SSL =
+            ClientFactoryOption.define("useOpenSsl", Flags.useOpenSsl());
+
+    /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */
@@ -557,6 +563,13 @@ public final class ClientFactoryOptions
      */
     public boolean tlsAllowUnsafeCiphers() {
         return get(TLS_ALLOW_UNSAFE_CIPHERS);
+    }
+
+    /**
+     * Returns whether to allow the use of JNI-based TLS support with OpenSSL.
+     */
+    public boolean useOpenSsl() {
+        return get(USE_OPEN_SSL);
     }
 
     /**

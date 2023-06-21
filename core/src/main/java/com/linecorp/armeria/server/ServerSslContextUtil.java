@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -61,10 +62,11 @@ final class ServerSslContextUtil {
             serverEngine.setNeedClientAuth(false);
 
             // Create a client-side engine with very permissive settings.
+            final boolean useOpenSsl = serverUsesOpenSsl(sslContext);
             final SslContext sslContextClient =
                     buildSslContext(() -> SslContextBuilder.forClient()
                                                            .trustManager(InsecureTrustManagerFactory.INSTANCE),
-                                    true, ImmutableList.of());
+                                    true, useOpenSsl, ImmutableList.of());
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
             clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
@@ -94,13 +96,18 @@ final class ServerSslContextUtil {
         return sslSession;
     }
 
+    static boolean serverUsesOpenSsl(SslContext sslContext) {
+        return sslContext instanceof OpenSslServerContext;
+    }
+
     static SslContext buildSslContext(
             Supplier<SslContextBuilder> sslContextBuilderSupplier,
             boolean tlsAllowUnsafeCiphers,
+            boolean useOpenSsl,
             Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
         return SslContextUtil
                 .createSslContext(sslContextBuilderSupplier,
-                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers);
+                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, useOpenSsl, tlsCustomizers);
     }
 
     private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {

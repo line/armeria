@@ -34,8 +34,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.Flags;
-
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -93,12 +91,12 @@ public final class SslContextUtil {
      */
     public static SslContext createSslContext(
             Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
-            boolean tlsAllowUnsafeCiphers,
+            boolean tlsAllowUnsafeCiphers, boolean useOpenSsl,
             Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers) {
 
         return MinifiedBouncyCastleProvider.call(() -> {
             final SslContextBuilder builder = builderSupplier.get();
-            final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+            final SslProvider provider = useOpenSsl ? SslProvider.OPENSSL : SslProvider.JDK;
             builder.sslProvider(provider);
 
             final Set<String> supportedProtocols = supportedProtocols(builder);

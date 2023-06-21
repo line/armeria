@@ -130,6 +130,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
     @Nullable
     private Boolean tlsAllowUnsafeCiphers;
+    @Nullable
+    private Boolean useOpenSsl;
     private final LinkedList<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
     @Nullable
     private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
@@ -395,6 +397,15 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Deprecated
     public VirtualHostBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         this.tlsAllowUnsafeCiphers = tlsAllowUnsafeCiphers;
+        return this;
+    }
+
+    /**
+     * Allow the use of JNI-based TLS support with OpenSSL.
+     * @param useOpenSsl Whether to allow the use of JNI-based TLS support with OpenSSL
+     */
+    public VirtualHostBuilder useOpenSsl(Boolean useOpenSsl) {
+        this.useOpenSsl = useOpenSsl;
         return this;
     }
 
@@ -1352,19 +1363,19 @@ public final class VirtualHostBuilder implements TlsSetters {
             final boolean tlsAllowUnsafeCiphers =
                     this.tlsAllowUnsafeCiphers != null ?
                     this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
-
+            final boolean useOpenSsl = this.useOpenSsl != null ? this.useOpenSsl : true;
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(sslContextBuilderSupplier, tlsAllowUnsafeCiphers, tlsCustomizers);
+                sslContext = buildSslContext(sslContextBuilderSupplier, tlsAllowUnsafeCiphers, useOpenSsl,
+                                             tlsCustomizers);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
             } else if (template.sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(template.sslContextBuilderSupplier,
-                                             tlsAllowUnsafeCiphers,
-                                             template.tlsCustomizers);
+                sslContext = buildSslContext(template.sslContextBuilderSupplier, tlsAllowUnsafeCiphers,
+                                             useOpenSsl, template.tlsCustomizers);
                 releaseSslContextOnFailure = true;
             }
 
@@ -1391,8 +1402,7 @@ public final class VirtualHostBuilder implements TlsSetters {
 
                     sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
                                                                                    ssc.privateKey()),
-                                                 tlsAllowUnsafeCiphers,
-                                                 tlsCustomizers);
+                                                 tlsAllowUnsafeCiphers, useOpenSsl, tlsCustomizers);
                     releaseSslContextOnFailure = true;
                 }
             }
