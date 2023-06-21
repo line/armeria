@@ -16,22 +16,11 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SEPARATOR;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SPLITTER;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.convertHeaderValue;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeWebSocketUpgrade;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp2HeadersFilterTE;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toLowercaseMap;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
-import java.util.AbstractMap;
-import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.StringJoiner;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +42,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil.CaseInsensitiveMap;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -192,8 +180,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     assert nettyReq instanceof ArmeriaDefaultHttpRequest;
                     final RequestHeadersBuilder builder =
                             ((ArmeriaDefaultHttpRequest) nettyReq).requestHeadersBuilder();
+                    final ArmeriaHttpHeaders armeriaHttpHeaders = (ArmeriaHttpHeaders) nettyReq.headers();
 
                     builder.scheme(scheme.toString());
+                    builder.path(reqTarget.toString());
 
                     if (!builder.contains(com.linecorp.armeria.common.HttpHeaderNames.HOST)) {
                         // The client violates the spec that the request headers must contain a Host header.
@@ -205,51 +195,52 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                     defaultHostname + ':' + port);
                     }
 
-                    HttpHeaders incomingHeaders = nettyReq.headers();
-                    final Iterator<Entry<CharSequence, CharSequence>> iter = incomingHeaders
-                            .iteratorCharSequence();
-                    final CaseInsensitiveMap connectionDisallowedList =
-                            toLowercaseMap(incomingHeaders.valueCharSequenceIterator(
-                                    com.linecorp.armeria.common.HttpHeaderNames.CONNECTION), 8);
-                    StringJoiner cookieJoiner = null;
-                    while (iter.hasNext()) {
-                        final Entry<CharSequence, CharSequence> entry = iter.next();
-                        final AsciiString asciiName = com.linecorp.armeria.common.HttpHeaderNames.of(entry.getKey()).toLowerCase();
-                        final CharSequence value = entry.getValue();
+//                    HttpHeaders incomingHeaders = nettyReq.headers();
+//                    final Iterator<Entry<CharSequence, CharSequence>> iter = incomingHeaders
+//                            .iteratorCharSequence();
+//                    final CaseInsensitiveMap connectionDisallowedList =
+//                            toLowercaseMap(incomingHeaders.valueCharSequenceIterator(
+//                                    com.linecorp.armeria.common.HttpHeaderNames.CONNECTION), 8);
+//                    StringJoiner cookieJoiner = null;
+//                    while (iter.hasNext()) {
+//                        final Entry<CharSequence, CharSequence> entry = iter.next();
+//                        final AsciiString asciiName = com.linecorp.armeria.common.HttpHeaderNames.of(entry.getKey()).toLowerCase();
+//                        final CharSequence value = entry.getValue();
+//
+//                        if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(asciiName) ||
+//                            connectionDisallowedList.contains(asciiName)) {
+//                            if (!maybeWebSocketUpgrade(asciiName, value)) {
+//                                builder.remove(asciiName);
+//                            }
+//                        }
+//
+//                        final CharSequence charSequenceValue = (CharSequence) value;
+//                        if (asciiName.equals(com.linecorp.armeria.common.HttpHeaderNames.TE)) {
+//                            toHttp2HeadersFilterTE(
+//                                    new AbstractMap.SimpleEntry<>(asciiName, charSequenceValue),
+//                                    builder
+//                            );
+//                        }
+//
+//                        if (asciiName.equals(com.linecorp.armeria.common.HttpHeaderNames.COOKIE)) {
+//                            cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
+//
+//                            final String existingCookies = builder.get(com.linecorp.armeria.common.HttpHeaderNames.COOKIE);
+//                            if (existingCookies != null) {
+//                                COOKIE_SPLITTER.split(existingCookies).forEach(cookieJoiner::add);
+//                            }
+//                            COOKIE_SPLITTER.split(charSequenceValue).forEach(cookieJoiner::add);
+//
+//                            if (cookieJoiner.length() != 0) {
+//                                builder.set(com.linecorp.armeria.common.HttpHeaderNames.COOKIE, cookieJoiner.toString());
+//                            }
+//                        } else {
+//                            builder.add(asciiName, convertHeaderValue(asciiName, charSequenceValue));
+//                        }
+//                    }
+                    headers = armeriaHttpHeaders.buildRequestHeaders();
 
-                        if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(asciiName) ||
-                            connectionDisallowedList.contains(asciiName)) {
-                            if (!maybeWebSocketUpgrade(asciiName, value)) {
-                                builder.remove(asciiName);
-                            }
-                        }
-
-                        final CharSequence charSequenceValue = (CharSequence) value;
-                        if (asciiName.equals(com.linecorp.armeria.common.HttpHeaderNames.TE)) {
-                            toHttp2HeadersFilterTE(
-                                    new AbstractMap.SimpleEntry<>(asciiName, charSequenceValue),
-                                    builder
-                            );
-                        }
-
-                        if (asciiName.equals(com.linecorp.armeria.common.HttpHeaderNames.COOKIE)) {
-                            cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
-
-                            final String existingCookies = builder.get(com.linecorp.armeria.common.HttpHeaderNames.COOKIE);
-                            if (existingCookies != null) {
-                                COOKIE_SPLITTER.split(existingCookies).forEach(cookieJoiner::add);
-                            }
-                            COOKIE_SPLITTER.split(charSequenceValue).forEach(cookieJoiner::add);
-
-                            if (cookieJoiner.length() != 0) {
-                                builder.set(com.linecorp.armeria.common.HttpHeaderNames.COOKIE, cookieJoiner.toString());
-                            }
-                        } else {
-                            builder.add(asciiName, convertHeaderValue(asciiName, charSequenceValue));
-                        }
-                    }
-
-                    headers = builder.build();
+//                    headers = builder.build();
 
                     // Do not accept unsupported methods.
                     final HttpMethod method = headers.method();

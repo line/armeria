@@ -16,16 +16,27 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SEPARATOR;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SPLITTER;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.convertHeaderValue;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeWebSocketUpgrade;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp2HeadersFilterTE;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toLowercaseMap;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil.CaseInsensitiveMap;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.AsciiString;
@@ -54,7 +65,7 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
      */
     public ArmeriaHttpHeaders(RequestHeadersBuilder builder, HttpHeaders headers) {
         this.builder = builder;
-        headers.forEach(e -> this.add(e.getKey(), e.getValue()));
+        headers.forEach(e -> add(e.getKey(), e.getValue()));
     }
 
     @Override
@@ -206,5 +217,57 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
     public HttpHeaders clear() {
         builder.clear();
         return this;
+    }
+
+    public RequestHeaders buildRequestHeaders() {
+        final Iterator<Entry<CharSequence, CharSequence>> iter = iteratorCharSequence();
+        final CaseInsensitiveMap connectionDisallowedList =
+                toLowercaseMap(valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
+        StringJoiner cookieJoiner;
+        final List<Entry<CharSequence, CharSequence>> temporarilyRemovedEntries = new ArrayList<>();
+        while (iter.hasNext()) {
+            final Entry<CharSequence, CharSequence> entry = iter.next();
+            final AsciiString asciiName = HttpHeaderNames.of(entry.getKey()).toLowerCase();
+            final CharSequence value = entry.getValue();
+
+            if ((HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(asciiName) ||
+                connectionDisallowedList.contains(asciiName)) &&
+                !maybeWebSocketUpgrade(asciiName, value)) {
+                temporarilyRemovedEntries.add(entry);
+                builder.remove(asciiName);
+                continue;
+            }
+
+            if (asciiName.equals(HttpHeaderNames.TE)) {
+                toHttp2HeadersFilterTE(
+                        new AbstractMap.SimpleEntry<>(asciiName, value),
+                        builder
+                );
+                continue;
+            }
+
+            if (asciiName.equals(HttpHeaderNames.COOKIE)) {
+                cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
+
+                final String existingCookies = builder.get(HttpHeaderNames.COOKIE);
+                if (existingCookies == value) {
+                    continue;
+                }
+                if (existingCookies != null) {
+                    COOKIE_SPLITTER.split(existingCookies).forEach(cookieJoiner::add);
+                }
+                COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
+
+                if (cookieJoiner.length() != 0) {
+                    builder.set(HttpHeaderNames.COOKIE, cookieJoiner.toString());
+                }
+            }
+        }
+
+        final RequestHeaders requestHeaders = builder.build();
+
+        temporarilyRemovedEntries.forEach(e -> builder.add(e.getKey(), (String) e.getValue()));
+
+        return requestHeaders;
     }
 }
