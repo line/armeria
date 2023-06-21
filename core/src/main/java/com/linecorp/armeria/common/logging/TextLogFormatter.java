@@ -36,7 +36,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 @UnstableApi
 final class TextLogFormatter implements LogFormatter {
 
-    static final TextLogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
+    static final LogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
 
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
             requestHeadersSanitizer;

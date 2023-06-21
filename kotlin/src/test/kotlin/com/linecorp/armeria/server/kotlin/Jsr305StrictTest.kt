@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.kotlin
 
+import com.linecorp.armeria.common.logging.LogFormatter
+import com.linecorp.armeria.common.logging.LogWriter
 import com.linecorp.armeria.server.logging.LoggingService
 import org.junit.jupiter.api.Test
 
@@ -35,5 +37,14 @@ class Jsr305StrictTest {
             .responseContentSanitizer { _, _ -> null }
             .contentSanitizer { _, _ -> null }
             .responseCauseSanitizer { _, _ -> null }
+        LogFormatter.builderForText()
+            .requestHeadersSanitizer { _, _ -> null }
+            .responseHeadersSanitizer { _, _ -> null }
+            .requestTrailersSanitizer { _, _ -> null }
+            .responseTrailersSanitizer { _, _ -> null }
+            .headersSanitizer { _, _ -> null }
+            .requestContentSanitizer { _, _ -> null }
+            .responseContentSanitizer { _, _ -> null }
+            .contentSanitizer { _, _ -> null }
     }
 }

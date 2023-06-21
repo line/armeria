@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
@@ -36,8 +35,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 @UnstableApi
 public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNode> {
 
-    @Nullable
-    private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper = JacksonUtil.newDefaultObjectMapper();
 
     JsonLogFormatterBuilder() {}
 
@@ -102,11 +100,9 @@ public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<J
     }
 
     /**
-     * Returns a newly-created {@link LogFormatter} based on the properties of this builder.
+     * Returns a newly-created JSON {@link LogFormatter} based on the properties of this builder.
      */
-    public JsonLogFormatter build() {
-        final ObjectMapper objectMapper = this.objectMapper != null ?
-                                          this.objectMapper : JacksonUtil.newDefaultObjectMapper();
+    public LogFormatter build() {
         final BiFunction<? super RequestContext, HttpHeaders, JsonNode> defaultHeadersSanitizer =
                 defaultSanitizer(objectMapper);
         final BiFunction<? super RequestContext, Object, JsonNode> defaultContentSanitizer =

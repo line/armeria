@@ -96,9 +96,9 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
     }
 
     /**
-     * Returns a newly-created {@link TextLogFormatter} based on the properties of this builder.
+     * Returns a newly-created text {@link LogFormatter} based on the properties of this builder.
      */
-    public TextLogFormatter build() {
+    public LogFormatter build() {
         return new TextLogFormatter(
                 firstNonNull(requestHeadersSanitizer(), defaultSanitizer()),
                 firstNonNull(responseHeadersSanitizer(), defaultSanitizer()),

@@ -43,7 +43,7 @@ final class JsonLogFormatter implements LogFormatter {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonLogFormatter.class);
 
-    static final JsonLogFormatter DEFAULT_INSTANCE = new JsonLogFormatterBuilder().build();
+    static final LogFormatter DEFAULT_INSTANCE = new JsonLogFormatterBuilder().build();
 
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
             requestHeadersSanitizer;
