@@ -83,6 +83,14 @@ public @interface LoggingDecorator {
      */
     float failureSamplingRate() default -1.0f;
 
+    float slowRequestSamplingPercentile() default -1.0f;
+
+    long slowRequestSamplingWindowMilliseconds() default 60 * 1000;
+
+    long slowRequestSamplingLowerBoundMilliseconds() default 0L;
+
+    long slowRequestSamplingUpperBoundMilliseconds() default Long.MAX_VALUE;
+
     /**
      * The order of decoration, where a {@link Decorator} of lower value will be applied first.
      */

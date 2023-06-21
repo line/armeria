@@ -50,6 +50,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
 
     private Sampler<? super ServiceRequestContext> failureSampler = Sampler.always();
 
+    private Sampler<Long> slowRequestSampler = Sampler.never();
+
     LoggingServiceBuilder() {}
 
     /**
@@ -107,6 +109,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return this;
     }
 
+    public LoggingServiceBuilder slowRequestSampler(Sampler<Long> slowRequestSampler) {
+        this.slowRequestSampler = requireNonNull(slowRequestSampler, "slowRequestSampler");
+        return this;
+    }
+
     /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the failure requests to be logged.
@@ -118,12 +125,27 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return failureSampler(Sampler.random(failureSamplingRate));
     }
 
+    public LoggingServiceBuilder slowRequestSamplingPercentile(float slowRequestPercentile,
+                                                               long windowMilliseconds,
+                                                               long slowRequestSamplingLowerBoundMilliseconds,
+                                                               long slowRequestSamplingUpperBoundMilliseconds) {
+        checkArgument(0.0 <= slowRequestPercentile && slowRequestPercentile <= 1.0,
+                      "slowRequestPercentile: %s (expected: 0.0 <= slowRequestPercentile <= 1.0)",
+                      slowRequestPercentile);
+        return slowRequestSampler(
+                Sampler.greaterThanOrEqual(slowRequestSamplingLowerBoundMilliseconds * 1000)
+                       .or(Sampler.percentile(slowRequestPercentile, windowMilliseconds)
+                                  .and(Sampler.greaterThan(
+                                          slowRequestSamplingUpperBoundMilliseconds * 1000)))
+        );
+    }
+
     /**
      * Returns a newly-created {@link LoggingService} decorating {@link HttpService} based on the properties
      * of this builder.
      */
     public LoggingService build(HttpService delegate) {
-        return new LoggingService(delegate, logWriter(), successSampler, failureSampler);
+        return new LoggingService(delegate, logWriter(), successSampler, failureSampler, slowRequestSampler);
     }
 
     /**

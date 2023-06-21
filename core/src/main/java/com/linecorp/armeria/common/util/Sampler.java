@@ -42,6 +42,39 @@ package com.linecorp.armeria.common.util;
  */
 @FunctionalInterface
 public interface Sampler<T> {
+
+    default Sampler<T> or(Sampler<T> other) {
+        return new OrSampler<>(this, other);
+    }
+
+    default Sampler<T> and(Sampler<T> other) {
+        return new AndSampler<>(this, other);
+    }
+
+    static <T extends Comparable<T>> Sampler<T> greaterThan(T val) {
+        return object -> object.compareTo(val) > 0;
+    }
+
+    static <T extends Comparable<T>> Sampler<T> greaterThanOrEqual(T val) {
+        return object -> object.compareTo(val) >= 0;
+    }
+
+    static <T extends Comparable<T>> Sampler<T> lessThan(T val) {
+        return object -> object.compareTo(val) < 0;
+    }
+
+    static <T extends Comparable<T>> Sampler<T> lessThanOrEqual(T val) {
+        return object -> object.compareTo(val) <= 0;
+    }
+
+    static <T extends Comparable<T>> Sampler<T> equal(T val) {
+        return object -> object.compareTo(val) == 0;
+    }
+
+    static Sampler<Long> percentile(float percentile, long windowMilliseconds) {
+        return new SlidingWindowPercentileSampler(percentile, windowMilliseconds);
+    }
+
     /**
      * Returns a probabilistic sampler which samples at the specified {@code probability}
      * between {@code 0.0} and {@code 1.0}.
