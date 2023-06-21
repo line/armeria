@@ -1,0 +1,18 @@
+dependencies {
+    api (libs.micrometer.core) {
+        exclude group: "org.mockito"
+    }
+
+    testImplementation (libs.micrometer.tracing.integration.test) {
+        exclude group: "org.mockito"
+    }
+
+    if (project.ext.targetJavaVersion >= 11) {
+        testImplementation project(':thrift0.18')
+    } else {
+        testImplementation project(':thrift0.17')
+    }
+
+    testImplementation libs.brave.context.slf4j
+    testImplementation libs.brave.instrumentation.http.tests
+}

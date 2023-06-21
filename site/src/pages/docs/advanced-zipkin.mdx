@@ -47,7 +47,7 @@ Now, you can specify <type://BraveService> using [Decorating a service](/docs/se
 ```java
     import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.server.Server;
-    import com.linecorp.armeria.server.brave.BraveService;
+    import com.linecorp.armeria.server.observation.BraveService;
 
     Tracing tracing = ...
     Server server = Server.builder()
@@ -63,7 +63,7 @@ If the requests come to Armeria server and go to another backend, you can trace 
 ```java
     import com.linecorp.armeria.client.WebClient;
     import com.linecorp.armeria.client.brave.BraveClient;
-    import com.linecorp.armeria.server.brave.BraveService;
+    import com.linecorp.armeria.server.observation.BraveService;
 
     Tracing tracing = ...
     WebClient client = WebClient
