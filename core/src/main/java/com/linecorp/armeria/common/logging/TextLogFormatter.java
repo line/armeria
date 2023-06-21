@@ -26,6 +26,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -38,30 +39,39 @@ final class TextLogFormatter implements LogFormatter {
 
     static final LogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-            requestHeadersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable String> requestHeadersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-            responseHeadersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable String> responseHeadersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-            requestTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable String> requestTrailersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-            responseTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable String> responseTrailersSanitizer;
 
-    private final BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer;
+    private final BiFunction<? super RequestContext, Object,
+            ? extends @Nullable String> requestContentSanitizer;
 
-    private final BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer;
+    private final BiFunction<? super RequestContext, Object,
+            ? extends @Nullable String> responseContentSanitizer;
+
     private final boolean includeContext;
 
     TextLogFormatter(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer,
-            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable String> requestContentSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable String> responseContentSanitizer,
             boolean includeContext) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
         this.responseHeadersSanitizer = responseHeadersSanitizer;
@@ -282,7 +292,7 @@ final class TextLogFormatter implements LogFormatter {
             buf.append('}');
 
             final List<RequestLogAccess> children = log.children();
-            final int numChildren = children != null ? children.size() : 0;
+            final int numChildren = children.size();
             if (numChildren > 1) {
                 // Append only when there were retries which the numChildren is greater than 1.
                 buf.append(", {totalAttempts=");
