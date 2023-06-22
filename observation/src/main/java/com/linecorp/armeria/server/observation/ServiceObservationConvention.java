@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.server.observation;
 
-import com.linecorp.armeria.client.observation.HttpClientContext;
-
 import io.micrometer.observation.Observation.Context;
 import io.micrometer.observation.ObservationConvention;
 
+/**
+ * TODO: Add me.
+ */
 public interface ServiceObservationConvention extends ObservationConvention<HttpServerContext> {
 
     @Override

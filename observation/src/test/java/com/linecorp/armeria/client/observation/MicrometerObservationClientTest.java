@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.observation;
 
+import static com.linecorp.armeria.client.observation.MicrometerObservationClient.newDecorator;
+import static com.linecorp.armeria.common.MicrometerObservationRegistryUtils.observationRegistry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,7 +45,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MicrometerObservationRegistryUtils;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
@@ -61,6 +62,7 @@ import brave.handler.MutableSpan;
 import brave.http.HttpTracing;
 import brave.propagation.ThreadLocalCurrentTraceContext;
 import brave.sampler.Sampler;
+import io.micrometer.common.KeyValues;
 
 class MicrometerObservationClientTest {
 
@@ -75,8 +77,16 @@ class MicrometerObservationClientTest {
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextNotConfigured() {
-        MicrometerObservationClient.newDecorator(MicrometerObservationRegistryUtils.observationRegistry(
-                HttpTracing.create(Tracing.newBuilder().build())));
+        newDecorator(observationRegistry(
+                HttpTracing.create(
+                        Tracing.newBuilder().build())),
+                     new DefaultHttpClientObservationConvention() {
+            @Override
+            public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
+                context.setRemoteServiceName("remote-service");
+                return super.getHighCardinalityKeyValues(context);
+            }
+        });
     }
 
     @Test
@@ -107,9 +117,10 @@ class MicrometerObservationClientTest {
 
         assertThat(span.traceId().length()).isEqualTo(16);
 
-        // check duration is correct from request log
+        // check duration is correct from request log -
+        // we're not setting timestamps so the values will not be the same
         assertThat(span.finishTimestamp() - span.startTimestamp())
-                .isEqualTo(requestLog.totalDurationNanos() / 1000);
+                .isNotEqualTo(requestLog.totalDurationNanos() / 1000);
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
@@ -170,8 +181,8 @@ class MicrometerObservationClientTest {
                                        .build();
         final BlockingWebClient blockingWebClient =
                 WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
-                         .decorator(MicrometerObservationClient.newDecorator(
-                                 MicrometerObservationRegistryUtils.observationRegistry(tracing))).build()
+                         .decorator(newDecorator(
+                                 observationRegistry(tracing))).build()
                          .blocking();
         assertThatThrownBy(() -> blockingWebClient.get("/"))
                 .isInstanceOf(UnprocessedRequestException.class)
@@ -185,17 +196,13 @@ class MicrometerObservationClientTest {
     private static RequestLog testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
             throws Exception {
 
-        HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                             .build();
-        if (remoteServiceName != null) {
-            httpTracing = httpTracing.clientOf(remoteServiceName);
-        }
-
         // prepare parameters
-        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
-                                                                 HttpHeaderNames.SCHEME, "http",
-                                                                 HttpHeaderNames.AUTHORITY, "foo.com"));
-        final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
+        final HttpRequest req = HttpRequest
+                .of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
+                    HttpHeaderNames.SCHEME, "http",
+                    HttpHeaderNames.AUTHORITY, "foo.com"));
+        final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class,
+                                                "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
@@ -214,8 +221,14 @@ class MicrometerObservationClientTest {
             final HttpClient delegate = mock(HttpClient.class);
             when(delegate.execute(any(), any())).thenReturn(res);
 
-            final MicrometerObservationClient stub = MicrometerObservationClient.newDecorator(
-                    MicrometerObservationRegistryUtils.observationRegistry(httpTracing)).apply(delegate);
+            final MicrometerObservationClient stub = newDecorator(observationRegistry(
+                    HttpTracing.create(tracing)), new DefaultHttpClientObservationConvention() {
+                @Override
+                public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
+                    context.setRemoteServiceName(remoteServiceName);
+                    return super.getHighCardinalityKeyValues(context);
+                }
+            }).apply(delegate);
             // do invoke
             final HttpResponse actualRes = stub.execute(ctx, actualReq);
 

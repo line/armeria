@@ -16,32 +16,72 @@
 
 package com.linecorp.armeria.client.observation;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.micrometer.common.lang.NonNull;
 import io.micrometer.observation.transport.RequestReplySenderContext;
 
+/**
+ * TODO: Add me.
+ */
 public final class HttpClientContext extends RequestReplySenderContext<RequestHeadersBuilder, RequestLog> {
 
     private final ClientRequestContext clientRequestContext;
     private final HttpRequest httpRequest;
 
+    /**
+     * TODO: Add me.
+     * @param clientRequestContext add me
+     * @param carrier add me
+     * @param httpRequest add me
+     */
     public HttpClientContext(ClientRequestContext clientRequestContext, @NonNull RequestHeadersBuilder carrier,
                              HttpRequest httpRequest) {
         super(RequestHeadersBuilder::add);
         this.clientRequestContext = clientRequestContext;
         this.httpRequest = httpRequest;
         setCarrier(carrier);
+        updateRemoteEndpoint(this, clientRequestContext);
     }
 
+    private static boolean updateRemoteEndpoint(RequestReplySenderContext<?, ?> senderContext,
+                                                ClientRequestContext ctx) {
+        final InetSocketAddress remoteAddress = ctx.remoteAddress();
+        final URI uri = ctx.uri();
+        if (remoteAddress != null && uri != null) {
+            try {
+                senderContext.setRemoteServiceAddress(uri.getScheme() + "://" +
+                                                      remoteAddress.getAddress().getHostAddress() +
+                                                      ":" + remoteAddress.getPort());
+                return true;
+            } catch (Exception ex) {
+                // Ignore me
+            }
+        } else if (uri != null) {
+            senderContext.setRemoteServiceAddress(
+                    uri.getScheme() + "://" + uri.getHost() + ":" + uri.getPort());
+        }
+        return true;
+    }
+
+    /**
+     * TODO: Add me.
+     * @return add me
+     */
     public ClientRequestContext getClientRequestContext() {
         return clientRequestContext;
     }
 
+    /**
+     * TODO: Add me.
+     * @return add me
+     */
     public HttpRequest getHttpRequest() {
         return httpRequest;
     }

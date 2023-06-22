@@ -18,9 +18,6 @@ package com.linecorp.armeria.client.observation;
 
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -28,6 +25,7 @@ import com.linecorp.armeria.client.observation.HttpClientObservationDocumentatio
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 
@@ -40,33 +38,56 @@ import io.micrometer.observation.ObservationRegistry;
  */
 public final class MicrometerObservationClient extends SimpleDecoratingHttpClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(MicrometerObservationClient.class);
-
     /**
-     * Creates a new tracing {@link HttpClient} decorator using the specified {@link ObservationRegistry} instance.
+     * Creates a new tracing {@link HttpClient} decorator
+     * using the specified {@link ObservationRegistry} instance.
      */
     public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
             ObservationRegistry observationRegistry) {
         return delegate -> new MicrometerObservationClient(delegate, observationRegistry);
     }
 
+    /**
+     * Creates a new tracing {@link HttpClient} decorator
+     * using the specified {@link ObservationRegistry}
+     * and {@link HttpClientObservationConvention} instances.
+     */
+    public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
+            ObservationRegistry observationRegistry,
+            HttpClientObservationConvention httpClientObservationConvention) {
+        return delegate -> new MicrometerObservationClient(delegate, observationRegistry,
+                                                           httpClientObservationConvention);
+    }
+
     private final ObservationRegistry observationRegistry;
 
-    private HttpClientObservationConvention httpClientObservationConvention;
+    @Nullable
+    private final HttpClientObservationConvention httpClientObservationConvention;
 
     /**
      * Creates a new instance.
      */
     private MicrometerObservationClient(HttpClient delegate, ObservationRegistry observationRegistry) {
+        this(delegate, observationRegistry, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    private MicrometerObservationClient(HttpClient delegate,
+                                        ObservationRegistry observationRegistry,
+                                        @Nullable HttpClientObservationConvention
+                                                httpClientObservationConvention) {
         super(delegate);
         this.observationRegistry = observationRegistry;
+        this.httpClientObservationConvention = httpClientObservationConvention;
     }
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         final HttpClientContext httpClientContext = new HttpClientContext(ctx, newHeaders, req);
-        Observation observation = HttpClientObservationDocumentation.OBSERVATION.observation(
+        final Observation observation = HttpClientObservationDocumentation.OBSERVATION.observation(
                 this.httpClientObservationConvention, DefaultHttpClientObservationConvention.INSTANCE,
                 () -> httpClientContext, observationRegistry).start();
         final HttpRequest newReq = req.withHeaders(newHeaders);
@@ -80,7 +101,8 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
 
         enrichObservation(ctx, httpClientContext, observation);
 
-        return observation.scopedChecked(() -> unwrap().execute(ctx, newReq)); // TODO: Maybe we should move the observation stopping here?
+        return observation.scopedChecked(() -> unwrap().execute(ctx, newReq));
+        // TODO: Maybe we should move the observation stopping here?
     }
 
     private void enrichObservation(ClientRequestContext ctx, HttpClientContext httpClientContext,
@@ -100,15 +122,10 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
 
         ctx.log().whenComplete()
            .thenAccept(requestLog -> {
-               ObservationTags.updateRemoteEndpoint(httpClientContext, ctx);
-               // TODO: ClientConnectionTimings - no hook to be there at the moment of those things actually hapening
+               // TODO: ClientConnectionTimings - no hook to be there
+               //  at the moment of those things actually hapening
                httpClientContext.setResponse(requestLog);
                observation.stop();
            });
-    }
-
-    public void setHttpClientObservationConvention(
-            HttpClientObservationConvention httpClientObservationConvention) {
-        this.httpClientObservationConvention = httpClientObservationConvention;
     }
 }

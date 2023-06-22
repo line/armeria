@@ -20,7 +20,6 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.net.InetSocketAddress;
 
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -30,41 +29,60 @@ import com.linecorp.armeria.server.observation.ServiceObservationDocumentation.H
 
 import io.micrometer.common.KeyValues;
 
+/**
+ * TODO: Add me.
+ */
 public final class DefaultServiceObservationConvention implements ServiceObservationConvention {
 
+    /**
+     * TODO: Add me.
+     */
     public static final DefaultServiceObservationConvention INSTANCE =
             new DefaultServiceObservationConvention();
 
     @Override
     public KeyValues getHighCardinalityKeyValues(HttpServerContext context) {
-        ServiceRequestContext ctx = context.getServiceRequestContext();
+        final ServiceRequestContext ctx = context.getServiceRequestContext();
         KeyValues keyValues = KeyValues.of(
-                HighCardinalityKeys.HTTP_HOST.withValue(firstNonNull(context.getHttpRequest().authority(), "UNKNOWN")),
+                HighCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()),
+                HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
+                HighCardinalityKeys.HTTP_HOST.withValue(
+                        firstNonNull(context.getHttpRequest().authority(), "UNKNOWN")),
                 HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString())
         );
         if (context.getResponse() != null) {
-            final ServiceRequestContext serviceRequestContext = context.getServiceRequestContext();
-            final RequestLog log = serviceRequestContext.log().ensureComplete();
-            keyValues = keyValues.and(HighCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
+            final RequestLog log = ctx.log().ensureComplete();
+            keyValues = keyValues.and(
+                    HighCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
 
             final String serFmt = serializationFormat(log);
             if (serFmt != null) {
-                keyValues = keyValues.and(HighCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt));
+                keyValues = keyValues.and(
+                        HighCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt));
             }
 
-            final InetSocketAddress raddr = serviceRequestContext.remoteAddress();
+            final InetSocketAddress raddr = ctx.remoteAddress();
             if (raddr != null) {
-                keyValues = keyValues.and(HighCardinalityKeys.ADDRESS_REMOTE.withValue(raddr.toString()));
+                keyValues = keyValues.and(
+                        HighCardinalityKeys.ADDRESS_REMOTE.withValue(raddr.toString()));
             }
 
-            final InetSocketAddress laddr = serviceRequestContext.localAddress();
+            final InetSocketAddress laddr = ctx.localAddress();
             if (laddr != null) {
-                keyValues = keyValues.and(HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
+                keyValues = keyValues.and(
+                        HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
+            }
+            keyValues = keyValues.and(
+                    HighCardinalityKeys.STATUS_CODE.withValue(log.responseStatus().codeAsText()));
+            if (log.responseStatus().isError()) {
+                keyValues = keyValues.and(
+                        HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText()));
+            } else if (log.responseCause() != null) {
+                keyValues = keyValues.and(HighCardinalityKeys.ERROR.withValue(log.responseCause().toString()));
             }
         }
         return keyValues;
     }
-
 
     /**
      * Returns the {@link SessionProtocol#uriText()} of the {@link RequestLog}.

@@ -43,6 +43,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.ThreadLocalCurrentTraceContext;
 import brave.test.http.ITHttpAsyncClient;
+import io.micrometer.common.KeyValues;
+import io.micrometer.observation.ObservationRegistry;
 import okhttp3.Protocol;
 
 @RunWith(Parameterized.class)
@@ -66,6 +68,10 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
 
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
+
+    private ObservationRegistry observationRegistry;
+
+    private HttpClientObservationConvention clientObservationConvention;
 
     public MicrometerObservationClientIntegrationTest(SessionProtocol sessionProtocol) {
         this.sessionProtocol = sessionProtocol;
@@ -94,8 +100,13 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
         return WebClient.builder(sessionProtocol.uriText() + "://127.0.0.1:" + port)
                         .factory(clientFactoryWithoutUpgradeRequest)
                         .decorator(MicrometerObservationClient.newDecorator(
-                                MicrometerObservationRegistryUtils.observationRegistry(httpTracing)))
+                                observationRegistry(), clientObservationConvention))
                         .build();
+    }
+
+    private ObservationRegistry observationRegistry() {
+        observationRegistry = MicrometerObservationRegistryUtils.observationRegistry(httpTracing);
+        return this.observationRegistry;
     }
 
     @Test
@@ -128,6 +139,38 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
     public void clientTimestampAndDurationEnclosedByParent() {
     }
 
+    @Override
+    @Test
+    public void supportsPortableCustomization() throws IOException {
+        clientObservationConvention = new DefaultHttpClientObservationConvention() {
+
+                    @Override
+                    public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
+                        context.setRemoteServiceName("remote-service"); // TODO: As a side effect
+                        KeyValues values =
+                                super.getHighCardinalityKeyValues(
+                                        context);
+                        values = values.and(
+                                KeyValues.of("http.url",
+                                             context.getClientRequestContext().uri().toString(),
+                                                         "request_customizer.is_span", "false"));
+                        if (context.getResponse() != null) {
+                            values = values.and("response_customizer.is_span", "false");
+                        }
+                        return values;
+                    }
+
+                    @Override
+                    public String getContextualName(HttpClientContext context) {
+                        return context.getHttpRequest().method()
+                                      .toString().toLowerCase() + " " +
+                               context.getHttpRequest().path()
+                                      .substring(0, context.getHttpRequest().path().indexOf("?"));
+                    }
+                };
+        super.supportsPortableCustomization();
+    }
+
     @Test
     @Override
     @Ignore("TODO: somehow propagate the parent context to the client callback")
@@ -136,10 +179,26 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
         //                ITHttpAsyncClient gave us.
     }
 
+    @Override
+    @Ignore
+    public void supportsDeprecatedPortableCustomization() {
+    }
+
+    @Override
+    @Ignore("We're not using HttpTracing at all")
+    public void customSampler() {
+    }
+
     @Test
     @Override
     public void redirect() {
         throw new AssumptionViolatedException("Armeria does not support client redirect.");
+    }
+
+    @Override
+    @Test
+    public void reportsServerAddress() throws IOException {
+        super.reportsServerAddress();
     }
 
     @Override
@@ -154,7 +213,8 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
     @Override
     protected void get(WebClient client, String path, BiConsumer<Integer, Throwable> callback) {
         final HttpResponse res = client.get(path);
-        // Use 'handleAsync' to make sure a callback is invoked without the current trace context
+        // Use 'handleAsync' to make sure a callback
+        // is invoked without the current trace context
         res.aggregate().handleAsync((response, cause) -> {
             if (cause == null) {
                 callback.accept(response.status().code(), null);

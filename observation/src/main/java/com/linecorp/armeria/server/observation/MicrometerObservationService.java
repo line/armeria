@@ -20,6 +20,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.server.HttpService;
@@ -37,7 +38,8 @@ import io.micrometer.observation.ObservationRegistry;
 public final class MicrometerObservationService extends SimpleDecoratingHttpService {
 
     /**
-     * Creates a new tracing {@link HttpService} decorator using the specified {@link ObservationRegistry} instance.
+     * Creates a new tracing {@link HttpService} decorator using the
+     * specified {@link ObservationRegistry} instance.
      */
     public static Function<? super HttpService, MicrometerObservationService>
     newDecorator(ObservationRegistry observationRegistry) {
@@ -46,27 +48,37 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
 
     private final ObservationRegistry observationRegistry;
 
-    private ServiceObservationConvention serviceObservationConvention;
+    @Nullable
+    private final ServiceObservationConvention serviceObservationConvention;
 
     /**
      * Creates a new instance.
      */
     private MicrometerObservationService(HttpService delegate, ObservationRegistry observationRegistry) {
+        this(delegate, observationRegistry, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    private MicrometerObservationService(HttpService delegate, ObservationRegistry observationRegistry,
+                                         @Nullable ServiceObservationConvention serviceObservationConvention) {
         super(delegate);
         this.observationRegistry = observationRegistry;
+        this.serviceObservationConvention = serviceObservationConvention;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         // TODO: What about this?
-        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING)
-            && !ctx.config().transientServiceOptions().contains(
-                TransientServiceOption.WITH_METRIC_COLLECTION)) {
+        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING) &&
+            !ctx.config().transientServiceOptions().contains(
+                    TransientServiceOption.WITH_METRIC_COLLECTION)) {
             return unwrap().serve(ctx, req);
         }
 
-        HttpServerContext httpServerContext = new HttpServerContext(ctx, req);
-        Observation observation = ServiceObservationDocumentation.OBSERVATION.observation(
+        final HttpServerContext httpServerContext = new HttpServerContext(ctx, req);
+        final Observation observation = ServiceObservationDocumentation.OBSERVATION.observation(
                 this.serviceObservationConvention, DefaultServiceObservationConvention.INSTANCE,
                 () -> httpServerContext, observationRegistry).start();
 
@@ -101,12 +113,8 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
            .thenAccept(requestLog -> {
                httpServerContext.setResponse(requestLog);
                observation.stop();
-               // TODO: ClientConnectionTimings - no hook to be there at the moment of those things actually hapenning
+               // TODO: ClientConnectionTimings - no hook to be there at the
+               //  moment of those things actually hapenning
            });
-    }
-
-    public void setServiceObservationConvention(
-            ServiceObservationConvention serviceObservationConvention) {
-        this.serviceObservationConvention = serviceObservationConvention;
     }
 }

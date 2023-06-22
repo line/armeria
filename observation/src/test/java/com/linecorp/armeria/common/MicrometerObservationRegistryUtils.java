@@ -35,30 +35,32 @@ import io.micrometer.tracing.brave.bridge.BraveTracer;
 import io.micrometer.tracing.handler.DefaultTracingObservationHandler;
 import io.micrometer.tracing.handler.PropagatingReceiverTracingObservationHandler;
 import io.micrometer.tracing.handler.PropagatingSenderTracingObservationHandler;
-import io.micrometer.tracing.handler.TracingAwareMeterObservationHandler;
 import io.micrometer.tracing.handler.TracingObservationHandler;
 
 public final class MicrometerObservationRegistryUtils {
+
+    private MicrometerObservationRegistryUtils() {
+        throw new IllegalStateException("Can't instantiate a utility class");
+    }
 
     public static ObservationRegistry observationRegistry(HttpTracing httpTracing) {
         return observationRegistry(httpTracing.tracing());
     }
 
     public static ObservationRegistry observationRegistry(Tracing tracing) {
-        BraveCurrentTraceContext braveCurrentTraceContext = new BraveCurrentTraceContext(
+        final BraveCurrentTraceContext braveCurrentTraceContext = new BraveCurrentTraceContext(
                 tracing.currentTraceContext());
-        BravePropagator bravePropagator = new BravePropagator(tracing);
-        BraveTracer braveTracer = new BraveTracer(tracing.tracer(), braveCurrentTraceContext,
+        final BravePropagator bravePropagator = new BravePropagator(tracing);
+        final BraveTracer braveTracer = new BraveTracer(tracing.tracer(), braveCurrentTraceContext,
                                                   new BraveBaggageManager());
-        List<TracingObservationHandler<?>> tracingHandlers =
+        final List<TracingObservationHandler<?>> tracingHandlers =
                 Arrays.asList(new PropagatingSenderTracingObservationHandler<>(braveTracer, bravePropagator),
                               new PropagatingReceiverTracingObservationHandler<>(braveTracer, bravePropagator),
                               new DefaultTracingObservationHandler(braveTracer));
-        MeterRegistry meterRegistry = new SimpleMeterRegistry();
-        List<MeterObservationHandler<?>> meterHandlers = Collections.singletonList(
-                new TracingAwareMeterObservationHandler<>(new DefaultMeterObservationHandler(meterRegistry),
-                                                          braveTracer));
-        ObservationRegistry observationRegistry = ObservationRegistry.create();
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final List<MeterObservationHandler<?>> meterHandlers = Collections.singletonList(
+                new DefaultMeterObservationHandler(meterRegistry));
+        final ObservationRegistry observationRegistry = ObservationRegistry.create();
         observationRegistry.observationConfig().observationHandler(
                 new ObservationHandler.CompositeObservationHandler.FirstMatchingCompositeObservationHandler(
                         tracingHandlers));

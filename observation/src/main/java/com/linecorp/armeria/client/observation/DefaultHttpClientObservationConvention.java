@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.observation.HttpClientObservationDocumentation.HighCardinalityKeys;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -30,9 +29,16 @@ import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.micrometer.common.KeyValues;
 
-public final class DefaultHttpClientObservationConvention implements HttpClientObservationConvention {
+/**
+ * TODO: Add me.
+ */
+public class DefaultHttpClientObservationConvention implements HttpClientObservationConvention {
 
-    public static final DefaultHttpClientObservationConvention INSTANCE = new DefaultHttpClientObservationConvention();
+    /**
+     * TODO: Add me.
+     */
+    public static final DefaultHttpClientObservationConvention INSTANCE =
+            new DefaultHttpClientObservationConvention();
 
     @Override
     public KeyValues getLowCardinalityKeyValues(HttpClientContext context) {
@@ -42,14 +48,15 @@ public final class DefaultHttpClientObservationConvention implements HttpClientO
 
     @Override
     public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
-        ClientRequestContext ctx = context.getClientRequestContext();
+        final ClientRequestContext ctx = context.getClientRequestContext();
         KeyValues keyValues = KeyValues.of(
+                HighCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()),
+                HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
                 HighCardinalityKeys.HTTP_HOST.withValue(firstNonNull(ctx.authority(), "UNKNOWN")),
                 HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString())
         );
         if (context.getResponse() != null) {
-            final ClientRequestContext clientRequestContext = context.getClientRequestContext();
-            final RequestLog log = clientRequestContext.log().ensureComplete();
+            final RequestLog log = ctx.log().ensureComplete();
             keyValues = keyValues.and(HighCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
 
             final String serFmt = serializationFormat(log);
@@ -57,19 +64,27 @@ public final class DefaultHttpClientObservationConvention implements HttpClientO
                 keyValues = keyValues.and(HighCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt));
             }
 
-            final InetSocketAddress raddr = clientRequestContext.remoteAddress();
+            final InetSocketAddress raddr = ctx.remoteAddress();
             if (raddr != null) {
                 keyValues = keyValues.and(HighCardinalityKeys.ADDRESS_REMOTE.withValue(raddr.toString()));
             }
 
-            final InetSocketAddress laddr = clientRequestContext.localAddress();
+            final InetSocketAddress laddr = ctx.localAddress();
             if (laddr != null) {
                 keyValues = keyValues.and(HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
+            }
+            keyValues = keyValues.and(HighCardinalityKeys.STATUS_CODE
+                                              .withValue(log.responseStatus().codeAsText()));
+            if (log.responseStatus().isError()) {
+                keyValues = keyValues.and(HighCardinalityKeys.ERROR
+                                                  .withValue(log.responseStatus().codeAsText()));
+            } else if (log.responseCause() != null) {
+                keyValues = keyValues.and(HighCardinalityKeys.ERROR
+                                                  .withValue(log.responseCause().toString()));
             }
         }
         return keyValues;
     }
-
 
     /**
      * Returns the {@link SessionProtocol#uriText()} of the {@link RequestLog}.

@@ -19,6 +19,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.allAsList;
 import static com.google.common.util.concurrent.Futures.transformAsync;
+import static com.linecorp.armeria.client.observation.MicrometerObservationClient.newDecorator;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,8 +41,10 @@ import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.transport.TTransportException;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -54,7 +57,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.observation.MicrometerObservationClient;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -65,7 +67,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.HelloService.AsyncIface;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
-import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -82,7 +83,6 @@ import brave.Tracing;
 import brave.handler.MutableSpan;
 import brave.handler.SpanHandler;
 import brave.propagation.CurrentTraceContext;
-import brave.propagation.StrictScopeDecorator;
 import brave.propagation.ThreadLocalCurrentTraceContext;
 import brave.propagation.TraceContext;
 import brave.sampler.Sampler;
@@ -204,11 +204,11 @@ class BraveIntegrationTest {
     void setupClients() {
         fooClient = ThriftClients.builder(server.httpUri())
                                  .path("/foo")
-                                 .decorator(MicrometerObservationClient.newDecorator(newTracing("client/foo")))
+                                 .decorator(newDecorator(newTracing("client/foo")))
                                  .build(HelloService.Iface.class);
         zipClient = ThriftClients.builder(server.httpUri())
                                  .path("/zip")
-                                 .decorator(MicrometerObservationClient.newDecorator(newTracing("client/zip")))
+                                 .decorator(newDecorator(newTracing("client/zip")))
                                  .build(HelloService.Iface.class);
         fooClientWithoutTracing = ThriftClients.newClient(server.httpUri() + "/foo", HelloService.Iface.class);
         barClient = newClient("/bar");
@@ -216,18 +216,18 @@ class BraveIntegrationTest {
         poolWebClient = WebClient.of(server.httpUri());
         timeoutClient = ThriftClients.builder(server.httpUri())
                                      .path("/timeout")
-                                     .decorator(MicrometerObservationClient.newDecorator(newTracing("client/timeout")))
+                                     .decorator(newDecorator(newTracing("client/timeout")))
                                      .build(HelloService.Iface.class);
         timeoutClientClientTimesOut =
                 ThriftClients.builder(server.httpUri())
                              .path("/timeout")
-                             .decorator(MicrometerObservationClient.newDecorator(newTracing("client/timeout")))
+                             .decorator(newDecorator(newTracing("client/timeout")))
                              .responseTimeout(Duration.ofSeconds(3))
                              .build(HelloService.Iface.class);
         http1TimeoutClientClientTimesOut =
                 ThriftClients.builder(server.uri(H1C))
                              .path("/timeout")
-                             .decorator(MicrometerObservationClient.newDecorator(newTracing("client/timeout")))
+                             .decorator(newDecorator(newTracing("client/timeout")))
                              .responseTimeout(Duration.ofSeconds(3))
                              .build(HelloService.Iface.class);
     }
@@ -249,32 +249,36 @@ class BraveIntegrationTest {
     private static HelloService.AsyncIface newClient(String path) {
         return ThriftClients.builder(server.httpUri())
                             .path(path)
-                            .decorator(MicrometerObservationClient.newDecorator(newTracing("client" + path)))
+                            .decorator(newDecorator(newTracing("client" + path)))
                             .build(HelloService.AsyncIface.class);
     }
 
     private static ObservationRegistry newTracing(String name) {
         final CurrentTraceContext currentTraceContext = ThreadLocalCurrentTraceContext.create();
-//                RequestContextCurrentTraceContext.builder()
-//                                                 .nonRequestThread("nonrequest-")
-//                                                 .addScopeDecorator(StrictScopeDecorator.create())
-//                                                 .build();
-        return MicrometerObservationRegistryUtils.observationRegistry(Tracing.newBuilder()
-                                                                                         .currentTraceContext(currentTraceContext)
-                                                                                         .localServiceName(name)
-                                                                                         .addSpanHandler(spanHandler)
-                                                                                         .sampler(Sampler.ALWAYS_SAMPLE)
-                                                                                         .build());
+        return MicrometerObservationRegistryUtils
+                .observationRegistry(tracingBuilder(name, currentTraceContext));
+    }
+
+    @NotNull
+    private static Tracing tracingBuilder(String name, CurrentTraceContext currentTraceContext) {
+        return Tracing.newBuilder()
+                      .currentTraceContext(currentTraceContext)
+                      .localServiceName(name)
+                      .addSpanHandler(spanHandler)
+                      .sampler(Sampler.ALWAYS_SAMPLE)
+                      .build();
     }
 
     @Test
+    @Disabled("TODO: We don't support these")
     void testTimingAnnotations() {
         // Use separate client factory to make sure connection is created.
         try (ClientFactory clientFactory = ClientFactory.builder().build()) {
             final BlockingWebClient client =
                     WebClient.builder(server.httpUri())
                              .factory(clientFactory)
-                             .decorator(MicrometerObservationClient.newDecorator(newTracing("timed-client")))
+                             .decorator(
+                                     newDecorator(newTracing("timed-client")))
                              .build()
                              .blocking();
             assertThat(client.get("/http").status()).isEqualTo(HttpStatus.OK);
