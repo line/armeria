@@ -21,12 +21,10 @@ import java.util.List;
 
 final class TimeoutDebugUtil {
 
-    // disable only if explicitly set to false
-    private static final boolean enableTimeoutOnDebug =
-            !"false".equals(System.getenv("ENABLE_TIMEOUT_ON_DEBUG"));
+    private static final boolean disableTimeout = "true".equals(System.getenv("DISABLE_TIMEOUT"));
 
     static boolean isTimeoutDisabled() {
-        return enableTimeoutOnDebug && isDebugging();
+        return disableTimeout && isDebugging();
     }
 
     private static boolean isDebugging() {

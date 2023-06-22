@@ -22,10 +22,12 @@ public final class TestTimeoutFlagsProvider implements FlagsProvider {
 
     @Override
     public int priority() {
-        if (TimeoutDebugUtil.isTimeoutDisabled()) {
-            return 1;
-        }
-        return Integer.MIN_VALUE;
+        return 0;
+    }
+
+    @Override
+    public boolean enabled() {
+        return TimeoutDebugUtil.isTimeoutDisabled();
     }
 
     @Override
