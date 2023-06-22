@@ -19,9 +19,10 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.MoreObjects;
+import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -42,26 +43,30 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
     private final CircuitBreakerRuleWithContent<O> ruleWithContent;
     private CircuitBreakerClientHandler handler =
             CircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault());
+    @Nullable
+    private BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback;
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
     AbstractCircuitBreakerClientBuilder(CircuitBreakerRule rule) {
-        this(requireNonNull(rule, "rule"), null);
+        this(requireNonNull(rule, "rule"), null, null);
     }
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent}.
      */
     AbstractCircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        this(null, requireNonNull(ruleWithContent, "ruleWithContent"));
+        this(null, requireNonNull(ruleWithContent, "ruleWithContent"), null);
     }
 
     private AbstractCircuitBreakerClientBuilder(
             @Nullable CircuitBreakerRule rule,
-            @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
+            @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent,
+            @Nullable BiFunction<? super ClientRequestContext, I, O> fallback) {
         this.rule = rule;
         this.ruleWithContent = ruleWithContent;
+        this.fallback = fallback;
     }
 
     final CircuitBreakerRule rule() {
@@ -103,12 +108,30 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
         return handler;
     }
 
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("rule", rule)
-                          .add("ruleWithContent", ruleWithContent)
-                          .add("handler", handler)
-                          .toString();
+    @Nullable
+    final BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback() {
+        return fallback;
+    }
+
+    /**
+     * Sets the {@link BiFunction}. This is invoked when adding the fallback strategy.
+     * <p>For example:</p>
+     * <pre>{@code
+     * CircuitBreakerClient
+     *   .builder(...)
+     *   .recover((ctx, req) -> {
+     *       // fallback logic
+     *       return HttpResponse.of(...);
+     *   });
+     * }</pre>
+     *
+     * @return {@code this} to support method chaining.
+     */
+    @UnstableApi
+    public AbstractCircuitBreakerClientBuilder<I, O> recover(
+            BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
+        requireNonNull(fallback, "fallback");
+        this.fallback = fallback;
+        return this;
     }
 }

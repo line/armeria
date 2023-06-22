@@ -39,6 +39,7 @@ import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -77,6 +78,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -579,9 +581,7 @@ public final class ArmeriaHttpUtil {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
         if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
-            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-            builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
+            builder.add(HttpHeaderNames.AUTHORITY, defaultAuthority(ctx, cfg));
         }
         builder.set(HttpHeaderNames.PATH, reqTarget.toString());
         final List<String> cookies = builder.getAll(HttpHeaderNames.COOKIE);
@@ -591,6 +591,20 @@ public final class ArmeriaHttpUtil {
             builder.set(HttpHeaderNames.COOKIE, COOKIE_JOINER.join(cookies));
         }
         return RequestHeaders.of(builder.build());
+    }
+
+    private static String defaultAuthority(ChannelHandlerContext ctx, ServerConfig cfg) {
+        // The client violates the spec that the request headers must contain a Host header.
+        // But we just add Host header to allow the request.
+        // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
+        final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
+        final SocketAddress localAddr = ctx.channel().localAddress();
+        if (localAddr instanceof InetSocketAddress) {
+            return defaultHostname + ':' + ((InetSocketAddress) localAddr).getPort();
+        } else {
+            assert localAddr instanceof DomainSocketAddress : localAddr;
+            return defaultHostname;
+        }
     }
 
     /**
@@ -638,12 +652,7 @@ public final class ArmeriaHttpUtil {
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
         if (!out.contains(HttpHeaderNames.HOST)) {
-            // The client violates the spec that the request headers must contain a Host header.
-            // But we just add Host header to allow the request.
-            // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
-            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-            out.add(HttpHeaderNames.HOST, defaultHostname + ':' + port);
+            out.add(HttpHeaderNames.HOST, defaultAuthority(ctx, cfg));
         }
         return out.build();
     }
@@ -1083,6 +1092,15 @@ public final class ArmeriaHttpUtil {
         CaseInsensitiveMap(int size) {
             super(HTTP2_HEADER_NAME_HASHER, UnsupportedValueConverter.instance(), NameValidator.NOT_NULL, size);
         }
+
+        // This override is merely to add `@Nullable` to it, because `DefaultHeaders.get(..)` is not annotated
+        // with `@Nullable` but it can return `null`.
+        @Nullable
+        @Override
+        @SuppressWarnings("DataFlowIssue")
+        public AsciiString get(AsciiString name) {
+            return super.get(name);
+        }
     }
 
     /**
@@ -1102,7 +1120,7 @@ public final class ArmeriaHttpUtil {
 
     /**
      * A 408 Request Timeout response can be received even without a request.
-     * More details can be found at https://github.com/line/armeria/issues/3055.
+     * More details can be found at <a href="https://github.com/line/armeria/issues/3055">#3055</a>.
      */
     public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
         return httpResponse.status().code() == HttpResponseStatus.REQUEST_TIMEOUT.code() &&

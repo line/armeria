@@ -132,7 +132,7 @@ class PropertiesEndpointGroupTest {
     @Test
     void pathWithDefaultPort() throws Exception {
         final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
-        assert resourceUrl != null;
+        assertThat(resourceUrl).isNotNull();
         final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.builder(
                 resourcePath, "serverA.hosts").defaultPort(80).build();
@@ -145,7 +145,7 @@ class PropertiesEndpointGroupTest {
     @Test
     void pathWithoutDefaultPort() throws URISyntaxException {
         final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
-        assert resourceUrl != null;
+        assertThat(resourceUrl).isNotNull();
         final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
                 resourcePath, "serverA.hosts");

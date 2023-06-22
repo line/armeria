@@ -81,6 +81,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -1094,7 +1095,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     /**
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
-     * It's useful when you want to receive additional data even after closing the response.
+     * This may be useful when you want to receive additional data even after closing the response.
      * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
      * abort the request automatically. There is no delay by default.
      */
@@ -1106,7 +1107,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
-     * It's useful when you want to receive additional data even after closing the response.
+     * This may be useful when you want to receive additional data even after closing the response.
      * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
      * abort the request automatically. There is no delay by default.
      */

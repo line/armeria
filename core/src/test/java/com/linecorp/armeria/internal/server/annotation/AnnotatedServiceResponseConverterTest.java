@@ -508,7 +508,7 @@ public class AnnotatedServiceResponseConverterTest {
                 @Override
                 public void request(long n) {
                     final int size = objects.size();
-                    assert n >= size;
+                    assertThat(n).isGreaterThanOrEqualTo(size);
                     for (int i = 0; i < size; i++) {
                         s.onNext(objects.get(i));
                     }

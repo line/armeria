@@ -117,13 +117,13 @@ class GrpcWebTextTest {
         private static void writeEncodedMessageAcrossFrames(
                 ByteBuf responseMessage, HttpResponseWriter streaming) {
             final ByteBuf buf = serializeMessage(responseMessage, false);
-            assert buf.readableBytes() == 35;
+            assertThat(buf.readableBytes()).isEqualTo(35);
             final ByteBuf first = encode64(buf.slice(0, 19));
             final ByteBuf second = encode64(buf.slice(19, 14));
             final ByteBuf third = encode64(buf.slice(33, 2));
-            assert first.readableBytes() == 28; // == appended.
-            assert second.readableBytes() == 20; // = appended.
-            assert third.readableBytes() == 4; // = appended.
+            assertThat(first.readableBytes()).isEqualTo(28); // == appended.
+            assertThat(second.readableBytes()).isEqualTo(20); // = appended.
+            assertThat(third.readableBytes()).isEqualTo(4); // = appended.
 
             // First HTTP data frame. (AAAAAB4KHBIaYW)
             streaming.write(HttpData.wrap(first.retainedSlice(0, 14)));
@@ -175,7 +175,7 @@ class GrpcWebTextTest {
                 @Override
                 public void onNext(DeframedMessage message) {
                     // Compression not supported.
-                    assert message.buf() != null;
+                    assertThat(message.buf()).isNotNull();
                     deframed.complete(message.buf());
                 }
 

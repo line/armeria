@@ -152,7 +152,7 @@ class ProxyClientIntegrationTest {
     static NettyServerExtension httpsProxyServer = new NettyServerExtension() {
         @Override
         protected void configure(Channel ch) throws Exception {
-            assert sslContext != null;
+            assertThat(sslContext).isNotNull();
             final SslContext sslContext = SslContextBuilder
                     .forServer(ssc.privateKey(), ssc.certificate()).build();
             ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));

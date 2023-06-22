@@ -1,0 +1,134 @@
+---
+type: tutorial
+level: basic
+---
+
+import versions from '/gen-src/versions.json';
+
+# Thrift tutorial introduction
+
+In this tutorial, you'll learn how to build an [Apache Thrift](https://thrift.apache.org/) service with Armeria.
+
+This tutorial is based on a [sample service](#sample-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
+To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using database.
+
+Follow this tutorial to write a service yourself or try [running the sample service](#build-and-run-sample-service) right away.
+
+## Background
+
+Before we start, let's swiftly go over Armeria's Thrift features:
+
+- Transport over HTTP/1.1 or HTTP/2.
+- Support for `TBINARY`, `TCOMPACT`, `TJSON` and `TTEXT` [serialization formats](/docs/server-thrift#serialization-formats).
+- RPC level decorator support for both [client](/docs/client-decorator#implementing-decoratinghttpclientfunction-and-decoratingrpcclientfunction)
+and [server](/docs/server-decorator#implementing-decoratinghttpservicefunction-and-decoratingrpcservicefunction).
+  - Out of the box support for circuit breaker, retries, metric collection and more.
+- Full-fledged [Thrift documentation service](/docs/server-docservice).
+
+## Assumptions
+
+This tutorial assumes that you have:
+
+- Experience in building services in Java
+- Experience in Java frameworks for server-side programming
+- Understanding of Apache Thrift and experience in implementing Thrift services
+
+## Prerequisites
+
+To run and develop the sample service, set your computer with the following requirements:
+
+* JDK 11 or higher
+* Thrift compiler: Install a thrift compiler by either [building from source](https://thrift.apache.org/docs/install/) or using a package manager like `brew` or `apt` depending on your environment.
+
+## Sample service
+
+The sample service provides you implementations of CRUD operations with corresponding service methods.
+
+### Sample service structure
+
+The [sample service code](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) consists of the following folders and files.
+
+```
+thrift-server/
+├─ src/
+│  ├─ main/
+│  │  ├─ java/
+│  │  │  ├─ example.armeria.server.blog.thrift/
+│  │  │  │  ├─ BlogClient.java
+│  │  │  │  ├─ BlogServiceExceptionHandler.java
+│  │  │  │  ├─ BlogServiceImpl.java
+│  │  │  │  └─ Main.java
+│  │  ├─ thrift/
+│  │  │  └─ blog.thrift
+│  └─ test/
+│     └─ java/
+│        └─ example.armeria.server.blog.thrift/
+│           └─ BlogServiceTest.java
+└─ build.gradle
+```
+
+### build.gradle
+
+Here is a part of the `build.gradle` file for the sample service.
+If you are trying the tutorial from scratch, base your gradle file on the sample service's [build.gradle](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/build.gradle).
+
+<Tip>
+
+In this tutorial, we use [Gradle](https://gradle.org/) as the build tool and use [thrift-gradle-plugin](https://plugins.gradle.org/plugin/org.jruyi.thrift) to compile thrift IDL files and generate stubs.
+
+</Tip>
+
+<CodeBlock language="groovy" filename="build.gradle">{`
+plugins {
+  id "org.jruyi.thrift" version "0.4.2"
+  id "application"
+  id "idea"
+  id "eclipse"
+}\n
+repositories {
+  mavenCentral()
+}\n
+dependencies {
+  implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  implementation "com.linecorp.armeria:armeria-thrift0.17:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  // Logging
+  runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"\n
+  testImplementation "org.junit.jupiter:junit-jupiter:${versions['org.junit:junit-bom']}"\n
+  testImplementation "com.linecorp.armeria:armeria-junit5:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  testImplementation "org.assertj:assertj-core:${versions['org.assertj:assertj-core']}"
+}\n
+application {
+  mainClass.set('example.armeria.server.blog.thrift.Main')
+}\n
+tasks.withType(Test) {
+  useJUnitPlatform()
+}
+`}</CodeBlock>
+
+## Build and run sample service
+
+Try running the sample service and see the outcome of this tutorial.
+Using Armeria's [Documentation Service](/docs/server-docservice), you can easily verify a server is running, receiving requests and sending responses.
+
+1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift).
+2. Build the sample service using the Gradle Wrapper.
+  ```bash
+  $ ./gradlew build
+  ```
+3. Run the sample service again, using the Gradle Wrapper.
+  ```bash
+  $ ./gradlew run
+  ```
+4. Open the Documentation service page on your web browser at http://127.0.0.1:8080/docs.
+
+## Try writing blog service yourself
+
+Try writing the blog service yourself by following the guides in the given order:
+
+1. [Create a service](/tutorials/thrift/blog/create-service)
+2. [Run a server](/tutorials/thrift/blog/run-server)
+3. [Define service methods](/tutorials/thrift/blog/define-service-methods)
+4. [Implement CREATE](/tutorials/thrift/blog/implement-create)
+5. [Implement READ](/tutorials/thrift/blog/implement-read)
+6. [Implement UPDATE](/tutorials/thrift/blog/implement-update)
+7. [Implement DELETE](/tutorials/thrift/blog/implement-delete)

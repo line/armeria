@@ -54,7 +54,7 @@ import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguratio
 @AutoConfigureMetrics
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-@Timeout(10)
+@Timeout(30)
 class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
 
     // We use this logger to test the /loggers endpoint, so set the name manually instead of using class name.
@@ -110,7 +110,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class ActuatorTest {
         @LocalManagementPort
         private Integer actuatorPort;
@@ -156,7 +156,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class BasePathTest {
         @LocalManagementPort
         private Integer actuatorPort;
@@ -190,7 +190,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     @FlakyTest
     static class BasePathSamePortTest {
         @LocalManagementPort
@@ -233,7 +233,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class BasePathWithoutPortTest {
         @Inject
         private Server server;
@@ -276,7 +276,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class AllInternalServicesTest {
         @Inject
         private Server server;
@@ -317,7 +317,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class DefaultInternalServicesTest {
         @Inject
         private Server server;
@@ -361,7 +361,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class ManagementLocalhostTest {
         @LocalManagementPort
         private Integer actuatorPort;

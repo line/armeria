@@ -248,6 +248,34 @@ class CircuitBreakerRpcClientTest {
         assertThat(stub.execute(ctxB, reqB).join()).isNull();
     }
 
+    @Test
+    void testRecover() throws Exception {
+        final AtomicLong ticker = new AtomicLong();
+        final Function<String, CircuitBreaker> factory = method -> buildCircuitBreaker(ticker::get);
+
+        final RpcClient delegate = mock(RpcClient.class);
+        // Always return failed future for methodA
+        when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
+
+        final CircuitBreakerRpcClientBuilder builder =
+                CircuitBreakerRpcClient.builder(rule())
+                        .mapping(CircuitBreakerMapping.perMethod(factory))
+                        .recover((ctx, cause) -> RpcResponse.of("recover"));
+        final CircuitBreakerRpcClient stub = builder.build(delegate);
+
+        // CLOSED (methodA)
+        for (int i = 0; i < minimumRequestThreshold + 1; i++) {
+            // Need to call execute() one more to change the state of the circuit breaker.
+
+            assertThatThrownBy(() -> stub.execute(ctxA, reqA).join())
+                    .hasCauseInstanceOf(AnticipatedException.class);
+            ticker.addAndGet(Duration.ofMillis(1).toNanos());
+        }
+
+        // OPEN (methodA)
+        assertThat(stub.execute(ctxA, reqA).join()).isEqualTo("recover");
+    }
+
     private static CircuitBreaker buildCircuitBreaker(Ticker ticker) {
         return CircuitBreaker.builder(remoteServiceName)
                              .minimumRequestThreshold(minimumRequestThreshold)
