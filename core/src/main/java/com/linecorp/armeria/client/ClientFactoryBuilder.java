@@ -622,8 +622,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the idle timeout of a socket connection and whether to reset idle timeout when an HTTP/2 PING
-     * frame is received. If `keepAliveOnPing` is `true`, idle timeout is reset
-     * when an HTTP/2 PING frame is received.
+     * frame or OPTIONS * is received. If `keepAliveOnPing` is `true`, idle timeout is reset
+     * when an HTTP/2 PING frame or OPTIONS * is received.
      */
     @UnstableApi
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
@@ -641,7 +641,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Sets the idle timeout of a socket connection in milliseconds. The connection is closed if there is no
      * request in progress for the given amount of time. If keepAliveOnPing is true, idle timeout is reset
-     * when an HTTP/2 PING frame is received.
+     * when an HTTP/2 PING frame or OPTIONS * is received.
      */
     @UnstableApi
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {

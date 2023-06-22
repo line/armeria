@@ -162,7 +162,7 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
     /**
-     * Whether to reset idle time to keep connection alive when an HTTP/2 PING frame is received.
+     * Whether to reset idle time to keep connection alive when an HTTP/2 PING frame or OPTIONS * is received.
      */
     public static final ClientFactoryOption<Boolean> KEEP_ALIVE_ON_PING =
             ClientFactoryOption.define("KEEP_ALIVE_ON_PING", Flags.defaultClientKeepAliveOnPing());
@@ -471,7 +471,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns whether to keep connection alive when an HTTP/2 PING frame is received.
+     * Returns whether to keep connection alive when an HTTP/2 PING frame or OPTIONS * is received.
      */
     public boolean keepAliveOnPing() {
         return get(KEEP_ALIVE_ON_PING);

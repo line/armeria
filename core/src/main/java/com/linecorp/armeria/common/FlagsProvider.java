@@ -355,8 +355,8 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the default option to whether prevent server staying in idle state when an HTTP/2 PING frame
-     * is received or not. Note that this flag has no effect if server uses HTTP/1 connection.
+     * Returns the default option to whether prevent server staying in idle state when an HTTP/2 PING frame or
+     * OPTIONS * request is received or not. Note that this flag has no effect if server uses HTTP/1 connection.
      *
      * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_SERVER_KEEP_ALIVE_ON_PING}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultServerKeepAliveOnPing=<boolean>} JVM option to
@@ -382,8 +382,8 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the default option to whether prevent client staying in idle state when an HTTP/2 PING frame is
-     * received or not. Note that this flag has no effect if server uses HTTP/1 connection.
+     * Returns the default option to whether prevent client staying in idle state when an HTTP/2 PING frame or
+     * OPTIONS * request is received or not. Note that this flag has no effect if client uses HTTP/1 connection.
      *
      * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_CLIENT_KEEP_ALIVE_ON_PING}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultClientKeepAliveOnPing=<boolean>} JVM option to
