@@ -262,7 +262,7 @@ class FlagsTest {
         final Set<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
                                                               .map(Method::getName)
                                                               .collect(Collectors.toSet());
-        final Set<String> knownIgnoreMethods = ImmutableSet.of("priority", "name");
+        final Set<String> knownIgnoreMethods = ImmutableSet.of("priority", "name", "enabled");
         armeriaOptionsProviderApis.removeAll(knownIgnoreMethods);
 
         assertThat(flagsApis).hasSameElementsAs(armeriaOptionsProviderApis);
