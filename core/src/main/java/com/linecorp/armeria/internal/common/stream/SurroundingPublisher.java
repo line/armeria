@@ -309,6 +309,8 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                 if (requested < Long.MAX_VALUE) {
                     requested--;
                 }
+                subscribed = true;
+                publisher.subscribe(this, executor, options);
             } else {
                 assert upstreamRequested > 0;
                 if (upstreamRequested < Long.MAX_VALUE) {
@@ -349,7 +351,11 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         @Override
         public void onComplete() {
             setState(State.REQUIRE_BODY, State.REQUIRE_TAIL);
-            publish();
+            if (tail != null) {
+                publish();
+            } else {
+                close0(null);
+            }
         }
 
         @Override
