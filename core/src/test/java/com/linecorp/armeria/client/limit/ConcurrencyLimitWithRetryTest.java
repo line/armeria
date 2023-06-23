@@ -21,7 +21,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import java.util.List;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -32,6 +34,7 @@ import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.retry.RetryConfig;
+import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.ExchangeType;
@@ -70,6 +73,18 @@ class ConcurrencyLimitWithRetryTest {
             final RequestLog log = contexts.get(0).log().whenComplete().join();
             assertThat(log.responseCause()).isEqualTo(EXCEPTION);
         }
+    }
+
+    @Test
+    void test() {
+        final RetryConfig<HttpResponse> config =
+                RetryConfig.builder(RetryRule.builder()
+                                             .thenNoRetry())
+                           .build();
+        final CompletionStage<RetryDecision> decision = config.retryRule().shouldRetry(
+                ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/")),
+                new RuntimeException());
+        decision.toCompletableFuture().join();
     }
 
     @ParameterizedTest
