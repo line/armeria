@@ -23,8 +23,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 import java.util.SortedMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.hash.Hashing;
 
@@ -51,14 +51,15 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
         @Nullable
         private volatile WeightedRingEndpoint weightedRingEndpoint;
 
+        private final AtomicInteger sequence = new AtomicInteger();
+
         /**
          * A Ring hash select strategy.
          */
         RingHashSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            endpointGroup.addListener(endpoints ->
-                                              weightedRingEndpoint = new WeightedRingEndpoint(endpoints), true
-            );
+            endpointGroup.addListener(endpoints -> weightedRingEndpoint = new WeightedRingEndpoint(endpoints),
+                                      true);
         }
 
         @Override
@@ -69,19 +70,24 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 return null;
             }
 
-            return weightedRingEndpoint.select(ctx.endpoint());
+            final int currentSequence = sequence.getAndIncrement();
+            return weightedRingEndpoint.select(currentSequence);
         }
 
         private final class WeightedRingEndpoint {
             private final Int2ObjectSortedMap<Endpoint> ring = new Int2ObjectAVLTreeMap<>();
-            private final Iterable<Endpoint> endpoints;
+            private final List<Endpoint> endpoints;
 
-            Endpoint select(Endpoint point) {
-                final Random random = new Random();
-                final String randomString = String.valueOf(random.nextInt());
-                final int key = getXXHash(randomString);
+            @Nullable
+            Endpoint select(int sequence) {
+                if (endpoints.isEmpty()) {
+                    return null;
+                }
+
+                final String sequenceString = String.valueOf(sequence);
+                final int key = getXXHash(sequenceString);
                 final SortedMap<Integer, Endpoint> tailMap = ring.tailMap(key);
-                return tailMap.isEmpty() ? ring.get(ring.firstKey()) : tailMap.get(tailMap.firstKey());
+                return tailMap.isEmpty() ? ring.get(ring.firstIntKey()) : tailMap.get(tailMap.firstKey());
             }
 
             WeightedRingEndpoint(List<Endpoint> endpoints) {
@@ -137,6 +143,13 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                         }
                     }
                 }
+            }
+
+            // Returned int values range from -2,147,483,648 to 2,147,483,647, same as java int type
+            int getXXHash(String input) {
+                final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
+                final long hashBytes = Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
+                return (int) (hashBytes >>> 32);
             }
 
             private int getSize(Iterable<Endpoint> endpoints) {
@@ -203,13 +216,6 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                     a = temp;
                 }
                 return a;
-            }
-
-            // Returned int values range from -2,147,483,648 to 2,147,483,647, same as java int type
-            int getXXHash(String input) {
-                final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
-                final long hashBytes = Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
-                return (int) (hashBytes >>> 32);
             }
         }
     }
