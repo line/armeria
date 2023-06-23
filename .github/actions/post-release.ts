@@ -14,7 +14,7 @@ main();
 async function main(): Promise<void> {
   const tag: string = process.argv.slice(2).shift();
   const releaseVersion = tag.replace("armeria-", "");
-  const owner = 'ikhoon';
+  const owner = 'line';
   const repo = 'armeria';
   const milestoneId = await getMilestoneId(owner, repo, releaseVersion);
 
