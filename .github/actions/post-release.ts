@@ -52,7 +52,7 @@ async function main(): Promise<void> {
       armeria_version: releaseVersion
     },
   })
-  console.log("⛓️ https://github.com/line/centraldogma/actions/workflows/update-armeria-version.yml has been triggered")
+  console.log("⛓️ https://github.com/line/centraldogma/actions/workflows/update-armeria-version.yml has been triggered.")
 }
 
 /**
