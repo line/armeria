@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -53,7 +54,8 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
     static class RingHashSelector extends AbstractEndpointSelector {
 
         @Nullable
-        private volatile WeightedRingEndpoint weightedRingEndpoint;
+        @VisibleForTesting
+        volatile WeightedRingEndpoint weightedRingEndpoint;
 
         private final AtomicInteger sequence = new AtomicInteger();
 
@@ -68,8 +70,8 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
 
         RingHashSelector(EndpointGroup endpointGroup, int size) {
             super(endpointGroup);
-            endpointGroup.addListener(endpoints -> weightedRingEndpoint = new WeightedRingEndpoint(endpoints, size),
-                                      true);
+            endpointGroup.addListener(endpoints -> weightedRingEndpoint =
+                                              new WeightedRingEndpoint(endpoints, size), true);
         }
 
         @Override
@@ -84,8 +86,10 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             return weightedRingEndpoint.select(currentSequence);
         }
 
-        private final class WeightedRingEndpoint {
-            private final Int2ObjectSortedMap<Endpoint> ring = new Int2ObjectAVLTreeMap<>();
+        @VisibleForTesting
+        final class WeightedRingEndpoint {
+            @VisibleForTesting
+            final Int2ObjectSortedMap<Endpoint> ring = new Int2ObjectAVLTreeMap<>();
             private final List<Endpoint> endpoints;
 
             @Nullable
@@ -117,7 +121,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                                                             .thenComparingInt(Endpoint::port))
                                           .collect(toImmutableList());
                 final int sizeOfEndpoints = this.endpoints.size();
-                assert sizeOfEndpoints >= size;
+                assert sizeOfEndpoints <= size;
 
                 final List<Integer> arr = new ArrayList<>();
                 for (Endpoint endpoint : this.endpoints) {
@@ -126,14 +130,15 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 }
                 final int divider = binarySearch(arr, size);
                 for (Endpoint endpoint : this.endpoints) {
-                    final int weight = endpoint.weight();
                     final String host = endpoint.host();
+                    final int port = endpoint.port();
+                    final int weight = endpoint.weight();
                     // If weight is 3 and x is 1, place 3 times in the ring
                     // if weight is 1 and x is 1, place once in the ring
                     // If weight is 3 and x is 3, place 1 times in the ring
                     final int count = weight / divider;
                     for (int i = 0; i < count; i++) {
-                        final String weightedHost = host + weight;
+                        final String weightedHost = host + port + i;
                         final int hash = getXXHash(weightedHost);
                         ring.put(hash, endpoint);
                     }
@@ -143,8 +148,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             // Returned int values range from -2,147,483,648 to 2,147,483,647, same as java int type
             int getXXHash(String input) {
                 final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
-                final long hashBytes = Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
-                return (int) (hashBytes >>> 32);
+                return Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
             }
 
             private int binarySearch(List<Integer> arr, int sz) {
