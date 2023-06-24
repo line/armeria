@@ -135,6 +135,16 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
     this
   }
 
+  override def requestAutoAbortDelay(delay: Duration): ScalaRestClientPreparation = {
+    delegate.requestAutoAbortDelay(delay)
+    this
+  }
+
+  override def requestAutoAbortDelayMillis(delayMillis: Long): ScalaRestClientPreparation = {
+    delegate.requestAutoAbortDelayMillis(delayMillis)
+    this
+  }
+
   override def attr[V](key: AttributeKey[V], value: V): ScalaRestClientPreparation = {
     delegate.attr(key, value)
     this

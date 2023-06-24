@@ -449,6 +449,18 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    public BlockingWebClientRequestPreparation requestAutoAbortDelay(Duration delay) {
+        delegate.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation requestAutoAbortDelayMillis(long delayMillis) {
+        delegate.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    @Override
     public <V> BlockingWebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
         return this;

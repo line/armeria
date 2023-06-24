@@ -7,6 +7,7 @@ configure(projectsWithFlags('kotlin')) {
         def target = project.tasks.findByName('compileJava')?.targetCompatibility ?:
                 project.findProperty('javaTargetCompatibility') ?: '1.8'
         def compilerArgs = ['-java-parameters', '-Xjsr305=strict', '-Xskip-prerelease-check']
+        def copyAlpnAgentTask = tasks.findByName("copyAlpnAgent")
         // A workaround to find all Kotlin compilation tasks.
         // The standard way, `tasks.withType(KotlinCompile)`, does not work here.
         tasks.matching {
@@ -17,10 +18,14 @@ configure(projectsWithFlags('kotlin')) {
             task.kotlinOptions.jvmTarget = target
             task.kotlinOptions.freeCompilerArgs = compilerArgs
 
-            def copyAlpnAgentTask = tasks.findByName("copyAlpnAgent")
             if (copyAlpnAgentTask != null) {
                 task.dependsOn(copyAlpnAgentTask)
             }
+        }
+
+        def kotlinSourcesJar = tasks.findByName('kotlinSourcesJar')
+        if (kotlinSourcesJar != null && copyAlpnAgentTask != null) {
+            kotlinSourcesJar.dependsOn(copyAlpnAgentTask)
         }
     }
 

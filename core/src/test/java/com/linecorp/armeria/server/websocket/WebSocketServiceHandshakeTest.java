@@ -175,7 +175,7 @@ class WebSocketServiceHandshakeTest {
 
     private static Channel channel(ClientRequestContext ctx) {
         final Channel channel = ctx.log().whenAvailable(RequestLogProperty.SESSION).join().channel();
-        assert channel != null;
+        assertThat(channel).isNotNull();
         return channel;
     }
 

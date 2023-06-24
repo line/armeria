@@ -21,6 +21,7 @@ import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
 
@@ -50,30 +51,38 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
 
     @Nullable
     private final CircuitBreakerRuleWithContent<O> ruleWithContent;
+    @Nullable
+    private final BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback;
     private final CircuitBreakerClientHandler handler;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler handler,
-                                 CircuitBreakerRule rule) {
-        this(delegate, handler, requireNonNull(rule, "rule"), null);
+    AbstractCircuitBreakerClient(
+            Client<I, O> delegate, CircuitBreakerClientHandler handler,
+            CircuitBreakerRule rule,
+            @Nullable BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
+        this(delegate, handler, requireNonNull(rule, "rule"), null, fallback);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler handler,
-                                 CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        this(delegate, handler, null, requireNonNull(ruleWithContent, "ruleWithContent"));
+    AbstractCircuitBreakerClient(
+            Client<I, O> delegate, CircuitBreakerClientHandler handler,
+            CircuitBreakerRuleWithContent<O> ruleWithContent,
+            @Nullable BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
+        this(delegate, handler, null, requireNonNull(ruleWithContent, "ruleWithContent"), fallback);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    private AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler handler,
-                                         @Nullable CircuitBreakerRule rule,
-                                         @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
+    private AbstractCircuitBreakerClient(
+            Client<I, O> delegate, CircuitBreakerClientHandler handler,
+            @Nullable CircuitBreakerRule rule,
+            @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent,
+            @Nullable BiFunction<? super ClientRequestContext, ? super I, ? extends O> fallback) {
         super(delegate);
         this.handler = requireNonNull(handler, "handler");
         this.rule = rule;
@@ -83,6 +92,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
         } else {
             fromRuleWithContent = null;
         }
+        this.fallback = fallback;
     }
 
     /**
@@ -115,13 +125,25 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
         return fromRuleWithContent;
     }
 
+    final CircuitBreakerClientHandler handler() {
+        return handler;
+    }
+
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final CircuitBreakerCallback callback = handler.tryRequest(ctx, req);
-        if (callback == null) {
-            return unwrap().execute(ctx, req);
+        try {
+            final CircuitBreakerCallback callback = handler.tryRequest(ctx, req);
+            if (callback == null) {
+                return unwrap().execute(ctx, req);
+            }
+            return doExecute(ctx, req, callback);
+        } catch (Exception ex) {
+            if (fallback != null && handler().isCircuitBreakerException(ex)) {
+                final O res = fallback.apply(ctx, req);
+                return requireNonNull(res, "fallback.apply() returned null.");
+            }
+            throw ex;
         }
-        return doExecute(ctx, req, callback);
     }
 
     /**

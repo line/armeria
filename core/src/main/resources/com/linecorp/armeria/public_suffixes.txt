@@ -312,6 +312,7 @@ ah.cn
 ah.no
 ai
 ai.in
+ai.vn
 aibetsu.hokkaido.jp
 aichi.jp
 aid.pl
@@ -437,6 +438,7 @@ andria-trani-barletta.it
 andriabarlettatrani.it
 andriatranibarletta.it
 android
+angiang.vn
 angry.jp
 anjo.aichi.jp
 ann-arbor.mi.us
@@ -667,8 +669,12 @@ babia-gora.pl
 baby
 babyblue.jp
 babymilk.jp
+bacgiang.vn
+backan.vn
 backdrop.jp
 backplaneapp.io
+baclieu.vn
+bacninh.vn
 badaddja.no
 bahcavuotna.no
 bahccavuotna.no
@@ -705,6 +711,7 @@ bardu.no
 barefoot
 bargains
 bari.it
+baria-vungtau.vn
 barletta-trani-andria.it
 barlettatraniandria.it
 barrel-of-knowledge.info
@@ -779,6 +786,7 @@ belem.br
 belluno.it
 benevento.it
 bentley
+bentre.vn
 beppu.oita.jp
 berg.no
 bergamo.it
@@ -822,6 +830,10 @@ bike
 bindal.no
 bing
 bingo
+binhdinh.vn
+binhduong.vn
+binhphuoc.vn
+binhthuan.vn
 bio
 bio.br
 bip.sh
@@ -1105,6 +1117,7 @@ caltanissetta.it
 calvinklein
 cam
 cam.it
+camau.vn
 camdvr.org
 camera
 camp
@@ -1117,8 +1130,10 @@ campinas.br
 campobasso.it
 candypop.jp
 canon
+cantho.vn
 canva-apps.cn
 canva-apps.com
+caobang.vn
 capetown
 capital
 capitalone
@@ -1651,7 +1666,6 @@ contagem.br
 contractors
 control.aero
 cooking
-cookingchannel
 cool
 coolblog.jp
 coop
@@ -1754,7 +1768,10 @@ daigo.ibaraki.jp
 daisen.akita.jp
 daito.osaka.jp
 daiwa.hiroshima.jp
+daklak.vn
+daknong.vn
 damnserver.com
+danang.vn
 dance
 daplie.me
 data
@@ -1849,6 +1866,7 @@ dhl
 diadem.cloud
 diamonds
 dielddanuorri.no
+dienbien.vn
 diet
 digick.jp
 digital
@@ -1904,6 +1922,8 @@ dog
 dojin.com
 domains
 donetsk.ua
+dongnai.vn
+dongthap.vn
 donna.no
 dontexist.com
 dontexist.net
@@ -2445,7 +2465,6 @@ folkebibl.no
 folldal.no
 foo
 food
-foodnetwork
 fool.jp
 football
 for-better.biz
@@ -2717,6 +2736,7 @@ ggf.br
 gh
 ghost.io
 gi
+gialai.vn
 giehtavuoatna.no
 gift
 gifts
@@ -3083,7 +3103,10 @@ haebaru.okinawa.jp
 haga.tochigi.jp
 hagebostad.no
 hagi.yamaguchi.jp
+hagiang.vn
 haibara.shizuoka.jp
+haiduong.vn
+haiphong.vn
 hair
 hakata.fukuoka.jp
 hakodate.hokkaido.jp
@@ -3106,6 +3129,7 @@ hamburg
 hammarfeasta.no
 hammerfest.no
 hamura.tokyo.jp
+hanam.vn
 hanamaki.iwate.jp
 hanamigawa.chiba.jp
 hanawa.fukushima.jp
@@ -3115,6 +3139,7 @@ hanggliding.aero
 hangout
 hannan.osaka.jp
 hanno.saitama.jp
+hanoi.vn
 hanyu.saitama.jp
 hapmir.no
 happou.akita.jp
@@ -3133,11 +3158,13 @@ hasuda.saitama.jp
 hasura-app.io
 hasura.app
 hasvik.no
+hatinh.vn
 hatogaya.saitama.jp
 hatoyama.saitama.jp
 hatsukaichi.hiroshima.jp
 hattfjelldal.no
 haugesund.no
+haugiang.vn
 haus
 hayakawa.yamanashi.jp
 hayashima.okayama.jp
@@ -3172,7 +3199,6 @@ herokussl.com
 heroy.more-og-romsdal.no
 heroy.nordland.no
 heteml.net
-hgtv
 hi.cn
 hi.us
 hicam.net
@@ -3268,6 +3294,7 @@ hm
 hm.no
 hn
 hn.cn
+hoabinh.vn
 hobby-site.com
 hobby-site.org
 hobol.no
@@ -3359,6 +3386,7 @@ hu.net
 hughes
 huissier-justice.fr
 hungry.jp
+hungyen.vn
 hurdal.no
 hurum.no
 hvaler.no
@@ -3407,6 +3435,7 @@ id.lv
 id.ly
 id.repl.co
 id.us
+id.vn
 ide.kyoto.jp
 idf.il
 idrett.no
@@ -3599,6 +3628,7 @@ inzai.chiba.jp
 io
 io.in
 io.kg
+io.vn
 iobb.net
 iopsys.se
 ip.linodeusercontent.com
@@ -4093,6 +4123,7 @@ kg
 kg.kr
 kh.ua
 khakassia.su
+khanhhoa.vn
 kharkiv.ua
 kharkov.ua
 kherson.ua
@@ -4106,6 +4137,7 @@ kicks-ass.net
 kicks-ass.org
 kids
 kids.us
+kiengiang.vn
 kiev.ua
 kiho.mie.jp
 kihoku.ehime.jp
@@ -4212,6 +4244,7 @@ kongsvinger.no
 konin.pl
 konskowola.pl
 konsulat.gov.pl
+kontum.vn
 konyvelo.hu
 koobin.events
 koori.fukushima.jp
@@ -4354,8 +4387,10 @@ lab.ms
 lacaixa
 ladesk.com
 lahppi.no
+laichau.vn
 lakas.hu
 lamborghini
+lamdong.vn
 lamer
 lanbib.se
 lancaster
@@ -4363,7 +4398,9 @@ land
 land-4-sale.us
 landrover
 langevag.no
+langson.vn
 lanxess
+laocai.vn
 lapy.pl
 laquila.it
 lardal.no
@@ -4556,6 +4593,7 @@ lon.wafaicloud.com
 london
 london.cloudapps.digital
 londrina.br
+longan.vn
 loppa.no
 lorenskog.no
 loseyourip.com
@@ -5254,6 +5292,7 @@ nalchik.ru
 nalchik.su
 namaste.jp
 namdalseid.no
+namdinh.vn
 name
 name.az
 name.eg
@@ -5505,6 +5544,7 @@ nflfan.org
 nfshost.com
 ng
 ng.eu.org
+nghean.vn
 ngo
 ngo.lk
 ngo.ng
@@ -5543,6 +5583,8 @@ nikita.jp
 nikko.tochigi.jp
 nikolaev.ua
 nikon
+ninhbinh.vn
+ninhthuan.vn
 ninja
 ninohe.iwate.jp
 ninomiya.kanagawa.jp
@@ -6233,6 +6275,8 @@ phone
 photo
 photography
 photos
+phutho.vn
+phuyen.vn
 phx.enscaled.us
 physio
 pi.gov.br
@@ -6450,6 +6494,11 @@ qoto.io
 qpon
 qsl.br
 qualifioapp.com
+quangbinh.vn
+quangnam.vn
+quangngai.vn
+quangninh.vn
+quangtri.vn
 quebec
 quest
 quicksytes.com
@@ -7215,6 +7264,7 @@ soc.srcf.net
 soccer
 sochi.su
 social
+soctrang.vn
 sodegaura.chiba.jp
 soeda.fukuoka.jp
 softbank
@@ -7237,6 +7287,7 @@ sondrio.it
 song
 songdalen.no
 soni.nara.jp
+sonla.vn
 sony
 soo.kagoshima.jp
 sopot.pl
@@ -7532,6 +7583,7 @@ tawaramoto.nara.jp
 tax
 taxi
 taxi.br
+tayninh.vn
 tc
 tc.br
 tci
@@ -7578,6 +7630,10 @@ tf
 tg
 tgory.pl
 th
+thaibinh.vn
+thainguyen.vn
+thanhhoa.vn
+thanhphohochiminh.vn
 thd
 the.br
 theater
@@ -7587,10 +7643,12 @@ theworkpc.com
 thick.jp
 thingdustdata.com
 thruhere.net
+thuathienhue.vn
 tiaa
 tickets
 tickets.io
 tienda
+tiengiang.vn
 tiffany
 time.no
 tingvoll.no
@@ -7766,9 +7824,9 @@ travel
 travel.in
 travel.pl
 travel.tt
-travelchannel
 travelers
 travelersinsurance
+travinh.vn
 trd.br
 trentin-sud-tirol.it
 trentin-sudtirol.it
@@ -7861,6 +7919,7 @@ tuscany.it
 tushu
 tuva.su
 tuxfamily.org
+tuyenquang.vn
 tv
 tv.bb
 tv.bo
@@ -8156,6 +8215,8 @@ vikna.no
 villas
 vin
 vindafjord.no
+vinhlong.vn
+vinhphuc.vn
 vinnica.ua
 vinnytsia.ua
 vip
@@ -8933,6 +8994,7 @@ ybo.review
 ybo.science
 ybo.trade
 ye
+yenbai.vn
 yk.ca
 yn.cn
 ynh.fr

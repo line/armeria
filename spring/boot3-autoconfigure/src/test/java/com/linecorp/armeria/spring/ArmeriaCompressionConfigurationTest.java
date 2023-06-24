@@ -86,7 +86,7 @@ public class ArmeriaCompressionConfigurationTest {
     private ArmeriaSettings settings;
 
     private String newUrl() {
-        assert server != null;
+        assertThat(server).isNotNull();
         return "http://127.0.0.1:" + server.activeLocalPort();
     }
 

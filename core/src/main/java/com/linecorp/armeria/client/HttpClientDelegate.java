@@ -134,8 +134,7 @@ final class HttpClientDelegate implements HttpClient {
 
         final Future<InetSocketAddress> resolveFuture =
                 addressResolverGroup.getResolver(ctx.eventLoop().withoutContext())
-                                    .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
-                                                                                endpoint.port()));
+                                    .resolve(endpoint.toSocketAddress(-1));
         if (resolveFuture.isSuccess()) {
             final InetAddress address = resolveFuture.getNow().getAddress();
             onComplete.accept(endpoint.withInetAddress(address), null);

@@ -16,127 +16,69 @@
 
 package com.linecorp.armeria.server;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import java.time.Duration;
+import java.nio.channels.ClosedChannelException;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Spy;
-import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.client.BlockingWebClient;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.server.logging.LoggingService;
-
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
+import org.mockito.Mock;
 
 class ExceptionReportingServiceErrorHandlerTest {
 
-    @Spy
-    final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
-    final Logger errorHandlerLogger =
-            (Logger) LoggerFactory.getLogger(DefaultUnhandledExceptionsReporter.class);
-    private static final long reportIntervalMillis = 1000;
-    private static final long awaitIntervalMillis = 2000;
+    @Mock
+    private ServiceErrorHandler delegate;
+    @Mock
+    private UnhandledExceptionsReporter reporter;
+    @Mock
+    private ServiceRequestContext ctx;
+
+    private ExceptionReportingServiceErrorHandler serviceErrorHandler;
 
     @BeforeEach
-    public void attachAppender() {
-        logAppender.start();
-        errorHandlerLogger.addAppender(logAppender);
-    }
-
-    @AfterEach
-    public void detachAppender() {
-        errorHandlerLogger.detachAppender(logAppender);
-        logAppender.list.clear();
+    void setUp() {
+        reset(reporter);
+        reset(ctx);
+        serviceErrorHandler = new ExceptionReportingServiceErrorHandler(delegate, reporter);
     }
 
     @Test
-    void httpStatusExceptionWithCauseLogged() throws Exception {
-        final Server server = Server.builder()
-                                    .service("/hello", (ctx, req) -> {
-                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST,
-                                                                     new IllegalArgumentException("test"));
-                                    })
-                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
-                                    .build();
-        try {
-            server.start().join();
-            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
-            await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
-                   .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
-
-            assertThat(logAppender.list
-                               .stream()
-                               .filter(event -> event.getFormattedMessage().contains(
-                                       "Observed 1 unhandled exceptions"))
-                               .findAny()
-            ).isNotEmpty();
-        } finally {
-            server.stop();
-        }
+    void onServiceExceptionShouldNotReportWhenShouldReportUnhandledExceptionsIsFalse() {
+        when(ctx.shouldReportUnhandledExceptions()).thenReturn(false);
+        serviceErrorHandler.onServiceException(ctx, new IllegalArgumentException("Test"));
+        verify(reporter, times(0)).report(any());
     }
 
     @Test
-    void httpStatusExceptionWithoutCauseIsIgnored() throws Exception {
-        final Server server = Server.builder()
-                                    .service("/hello", (ctx, req) -> {
-                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
-                                    })
-                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
-                                    .build();
-        try {
-            server.start().join();
-            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-
-            assertThat(logAppender.list).isEmpty();
-        } finally {
-            server.stop();
-        }
+    void onServiceExceptionShouldNotReportWhenCauseIsExpected() {
+        when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
+        serviceErrorHandler.onServiceException(ctx, new ClosedChannelException());
+        verify(reporter, times(0)).report(any());
     }
 
     @Test
-    void exceptionShouldNotBeLoggedWhenDecoratedWithLoggingService() throws Exception {
-        final Server server = Server.builder()
-                                    .service("/hello", (ctx, req) -> {
-                                        throw new IllegalArgumentException("test");
-                                    })
-                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
-                                    .decorator(LoggingService.newDecorator())
-                                    .build();
-
-        try {
-            server.start().join();
-            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
-
-            assertThat(logAppender.list).isEmpty();
-        } finally {
-            server.stop();
-        }
+    void onServiceExceptionShouldReportWhenCauseIsNotExpected() {
+        when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
+        serviceErrorHandler.onServiceException(ctx, new IllegalArgumentException("Test"));
+        verify(reporter, times(1)).report(any());
     }
 
     @Test
-    void exceptionShouldNotBeLoggedWhenNoExceptionIsThrown() throws Exception {
-        final Server server = Server.builder()
-                                    .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                    .decorator(LoggingService.newDecorator())
-                                    .build();
-        try {
-            server.start().join();
-            BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort()).get("/hello");
-            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+    void onServiceExceptionShouldNotReportWhenCauseIsHttpStatusExceptionAndCauseNull() {
+        when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
+        serviceErrorHandler.onServiceException(ctx, HttpStatusException.of(500));
+        verify(reporter, times(0)).report(any());
+    }
 
-            assertThat(logAppender.list).isEmpty();
-        } finally {
-            server.stop();
-        }
+    @Test
+    void onServiceExceptionShouldReportWhenCauseIsHttpStatusExceptionAndCauseNonNull() {
+        when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
+        serviceErrorHandler.onServiceException(
+                ctx, HttpStatusException.of(500, new IllegalArgumentException("test")));
+        verify(reporter, times(1)).report(any());
     }
 }
