@@ -17,9 +17,6 @@
 package com.linecorp.armeria.client.logging;
 
 import java.util.function.Function;
-import java.util.function.Predicate;
-
-import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
@@ -27,11 +24,8 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
-import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -56,22 +50,9 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
         return new LoggingRpcClientBuilder();
     }
 
-    /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}s with the {@link LogFormatter}.
-     * If the logger is null, it means that the default logger is used.
-     */
-    LoggingRpcClient(
-            RpcClient delegate,
-            @Nullable Logger logger,
-            RequestLogLevelMapper requestLogLevelMapper,
-            ResponseLogLevelMapper responseLogLevelMapper,
-            Predicate<Throwable> responseCauseFilter,
-            Sampler<? super ClientRequestContext> successSampler,
-            Sampler<? super ClientRequestContext> failureSampler,
-            LogFormatter logFormatter) {
-
-        super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
-              responseCauseFilter, successSampler, failureSampler, logFormatter);
+    LoggingRpcClient(RpcClient delegate, LogWriter logWriter,
+                     Sampler<? super ClientRequestContext> successSampler,
+                     Sampler<? super ClientRequestContext> failureSampler) {
+        super(delegate, logWriter, successSampler, failureSampler);
     }
 }

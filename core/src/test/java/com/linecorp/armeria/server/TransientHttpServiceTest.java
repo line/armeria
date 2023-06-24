@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -61,11 +62,14 @@ class TransientHttpServiceTest {
                 return HttpResponse.streaming();
             };
             sb.service("/", noResponseService.decorate(TransientHttpService.newDecorator()));
+            final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                          .responseHeadersSanitizer(sanitizer)
+                                                          .build();
             sb.decorator(LoggingService.builder()
-                                       .failureResponseLogLevel(LogLevel.DEBUG)
-                                       .logFormatter(LogFormatter.builderForText()
-                                                                 .responseHeadersSanitizer(sanitizer)
-                                                                 .build())
+                                       .logWriter(LogWriter.builder()
+                                                           .failureResponseLogLevel(LogLevel.DEBUG)
+                                                           .logFormatter(logFormatter)
+                                                           .build())
                                        .newDecorator());
         }
     };

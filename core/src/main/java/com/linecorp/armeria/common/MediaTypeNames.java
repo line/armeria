@@ -394,6 +394,10 @@ public final class MediaTypeNames {
      */
     public static final String JSON_LINES = "application/x-ndjson";
     /**
+     * {@value #JSON}.
+     */
+    public static final String JWT = "application/jwt";
+    /**
      * {@value #MANIFEST_JSON_UTF_8}.
      */
     public static final String MANIFEST_JSON_UTF_8 = "application/manifest+json; charset=utf-8";

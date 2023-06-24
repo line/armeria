@@ -1436,9 +1436,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private static StringBuilder toStringWithoutChildren(StringBuilder buf, String req, String res) {
-        return buf.append("{req=")
+        return buf.append('{')
                   .append(req)
-                  .append(", res=")
+                  .append(", ")
                   .append(res)
                   .append('}');
     }

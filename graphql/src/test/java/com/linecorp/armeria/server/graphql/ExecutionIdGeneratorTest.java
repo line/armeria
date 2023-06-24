@@ -47,7 +47,7 @@ class ExecutionIdGeneratorTest {
     static CaptureIdStrategy idStrategy = new CaptureIdStrategy();
 
     @Nullable
-    static GraphQLContext capturedGraphQLContext;
+    static volatile GraphQLContext capturedGraphQLContext;
 
     static class CaptureIdStrategy extends AsyncExecutionStrategy {
         @Nullable
@@ -65,7 +65,8 @@ class ExecutionIdGeneratorTest {
         @Override
         public ExecutionId generate(ServiceRequestContext requestContext, String query, String operationName,
                                     GraphQLContext graphqlContext) {
-            return ExecutionId.from(requestContext + query + operationName + graphqlContext);
+            return ExecutionId.from(requestContext + query + operationName +
+                                    graphqlContext.get(GraphqlServiceContexts.GRAPHQL_CONTEXT_KEY));
         }
     }
 
@@ -115,6 +116,7 @@ class ExecutionIdGeneratorTest {
     @BeforeEach
     void beforeEach() {
         idStrategy.executionId = null;
+        capturedGraphQLContext = null;
     }
 
     @Test
@@ -144,6 +146,7 @@ class ExecutionIdGeneratorTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
         assertThat(idStrategy.executionId).isEqualTo(
-                ExecutionId.from(ctx + query + operationName + capturedGraphQLContext));
+                ExecutionId.from(ctx + query + operationName +
+                                 capturedGraphQLContext.get(GraphqlServiceContexts.GRAPHQL_CONTEXT_KEY)));
     }
 }

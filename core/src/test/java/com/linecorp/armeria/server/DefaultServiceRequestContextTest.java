@@ -46,7 +46,7 @@ class DefaultServiceRequestContextTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
         final ServiceRequestContext ctx = ServiceRequestContext.builder(request).build();
         assertThat(ctx.isTimedOut()).isFalse();
-        assert ctx instanceof DefaultServiceRequestContext;
+        assertThat(ctx).isInstanceOf(DefaultServiceRequestContext.class);
         final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
         defaultCtx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000);
 

@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
+import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -80,27 +81,27 @@ public final class WebSocketService extends AbstractHttpService {
     private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(false);
 
     /**
-     * Returns a new {@link WebSocketService} with the {@link WebSocketHandler}.
+     * Returns a new {@link WebSocketService} with the {@link WebSocketServiceHandler}.
      */
-    public static WebSocketService of(WebSocketHandler handler) {
+    public static WebSocketService of(WebSocketServiceHandler handler) {
         return new WebSocketServiceBuilder(handler).build();
     }
 
     /**
-     * Returns a new {@link WebSocketServiceBuilder} with the {@link WebSocketHandler}.
+     * Returns a new {@link WebSocketServiceBuilder} with the {@link WebSocketServiceHandler}.
      */
-    public static WebSocketServiceBuilder builder(WebSocketHandler handler) {
+    public static WebSocketServiceBuilder builder(WebSocketServiceHandler handler) {
         return new WebSocketServiceBuilder(handler);
     }
 
-    private final WebSocketHandler handler;
+    private final WebSocketServiceHandler handler;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     private final Set<String> subprotocols;
     private final Set<String> allowedOrigins;
     private final boolean allowAnyOrigin;
 
-    WebSocketService(WebSocketHandler handler, int maxFramePayloadLength, boolean allowMaskMismatch,
+    WebSocketService(WebSocketServiceHandler handler, int maxFramePayloadLength, boolean allowMaskMismatch,
                      Set<String> subprotocols, Set<String> allowedOrigins, boolean allowAnyOrigin) {
         this.handler = handler;
         this.maxFramePayloadLength = maxFramePayloadLength;

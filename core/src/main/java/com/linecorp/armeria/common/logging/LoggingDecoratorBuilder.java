@@ -79,15 +79,19 @@ public abstract class LoggingDecoratorBuilder {
             responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Predicate<Throwable> responseCauseFilter = throwable -> false;
     @Nullable
-    private LogFormatter logFormatter;
+    private LogWriter logWriter;
 
-    private boolean useSanitizers;
+    private boolean buildLogWriter;
 
     /**
      * Sets the {@link Logger} to use when logging.
      * If unset, a default {@link Logger} will be used.
+     *
+     * @deprecated Use {@link LogWriterBuilder#logger(Logger)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder logger(Logger logger) {
+        setBuildLogWriter();
         this.logger = requireNonNull(logger, "logger");
         return this;
     }
@@ -95,8 +99,12 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the name of the {@link Logger} to use when logging.
      * This method is a shortcut for {@code this.logger(LoggerFactory.getLogger(loggerName))}.
+     *
+     * @deprecated Use {@link LogWriterBuilder#logger(String)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder logger(String loggerName) {
+        setBuildLogWriter();
         requireNonNull(loggerName, "loggerName");
         logger = LoggerFactory.getLogger(loggerName);
         return this;
@@ -113,7 +121,10 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#DEBUG}.
+     *
+     * @deprecated Use {@link LogWriterBuilder#requestLogLevel(LogLevel)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder requestLogLevel(LogLevel requestLogLevel) {
         requireNonNull(requestLogLevel, "requestLogLevel");
         return requestLogLevelMapper(RequestLogLevelMapper.of(requestLogLevel));
@@ -121,7 +132,10 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
+     *
+     * @deprecated Use {@link LogWriterBuilder#requestLogLevel(Class, LogLevel)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
         requireNonNull(clazz, "clazz");
         requireNonNull(requestLogLevel, "requestLogLevel");
@@ -142,9 +156,12 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link RequestLogLevelMapper} to use when mapping the log level of request logs.
+     *
+     * @deprecated Use {@link LogWriterBuilder#requestLogLevelMapper(RequestLogLevelMapper)} instead.
      */
-    @UnstableApi
+    @Deprecated
     public LoggingDecoratorBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
+        setBuildLogWriter();
         requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         if (this.requestLogLevelMapper == null) {
             this.requestLogLevelMapper = requestLogLevelMapper;
@@ -167,8 +184,10 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link LogLevel} to use when logging responses whose status is equal to the specified
      * {@link HttpStatus}.
+     *
+     * @deprecated Use {@link LogWriterBuilder#responseLogLevel(HttpStatus, LogLevel)} instead.
      */
-    @UnstableApi
+    @Deprecated
     public LoggingDecoratorBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
         return responseLogLevelMapper(ResponseLogLevelMapper.of(status, logLevel));
     }
@@ -176,16 +195,20 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link LogLevel} to use when logging responses whose status belongs to the specified
      * {@link HttpStatusClass}.
+     *
+     * @deprecated Use {@link LogWriterBuilder#responseLogLevel(HttpStatusClass, LogLevel)} instead.
      */
-    @UnstableApi
+    @Deprecated
     public LoggingDecoratorBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return responseLogLevelMapper(ResponseLogLevelMapper.of(statusClass, logLevel));
     }
 
     /**
      * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
+     *
+     * @deprecated Use {@link LogWriterBuilder#responseLogLevel(Class, LogLevel)} instead.
      */
-    @UnstableApi
+    @Deprecated
     public LoggingDecoratorBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
         requireNonNull(clazz, "clazz");
         requireNonNull(logLevel, "logLevel");
@@ -195,7 +218,10 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      * {@link LogLevel#DEBUG} will be used by default.
+     *
+     * @deprecated Use {@link LogWriterBuilder#successfulResponseLogLevel(LogLevel)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
         return responseLogLevelMapper(log -> log.responseCause() == null ? successfulResponseLogLevel : null);
@@ -204,7 +230,10 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      * {@link LogLevel#WARN} will be used by default.
+     *
+     * @deprecated Use {@link LogWriterBuilder#failureResponseLogLevel(LogLevel)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         return responseLogLevelMapper(log -> log.responseCause() != null ? failedResponseLogLevel : null);
@@ -224,9 +253,12 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link ResponseLogLevelMapper} to use when mapping the log level of response logs.
+     *
+     * @deprecated Use {@link LogWriterBuilder#responseLogLevelMapper(ResponseLogLevelMapper)} instead.
      */
-    @UnstableApi
+    @Deprecated
     public LoggingDecoratorBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
+        setBuildLogWriter();
         requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         if (this.responseLogLevelMapper == null) {
             this.responseLogLevelMapper = responseLogLevelMapper;
@@ -252,18 +284,14 @@ public abstract class LoggingDecoratorBuilder {
      * not sanitize request headers.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
+     * @deprecated Use {@link LogFormatter} to set the sanitizer.
      */
     @Deprecated
     public LoggingDecoratorBuilder requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer) {
+        setBuildLogWriter();
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
-        useSanitizers = true;
-        if (logFormatter != null) {
-            throw new IllegalStateException(
-                    "The log sanitizers and the LogFormatter cannot be used at the same time");
-        }
         return this;
     }
 
@@ -281,18 +309,14 @@ public abstract class LoggingDecoratorBuilder {
      * will not sanitize response headers.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
+     * @deprecated Use {@link LogFormatter} to set the sanitizer.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseHeadersSanitizer) {
+        setBuildLogWriter();
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
-        useSanitizers = true;
-        if (logFormatter != null) {
-            throw new IllegalStateException(
-                    "The log sanitizers and the LogFormatter cannot be used at the same time");
-        }
         return this;
     }
 
@@ -309,18 +333,14 @@ public abstract class LoggingDecoratorBuilder {
      * will not sanitize request trailers.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
+     * @deprecated Use {@link LogFormatter} to set the sanitizer.
      */
     @Deprecated
     public LoggingDecoratorBuilder requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestTrailersSanitizer) {
+        setBuildLogWriter();
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
-        useSanitizers = true;
-        if (logFormatter != null) {
-            throw new IllegalStateException(
-                    "The log sanitizers and the LogFormatter cannot be used at the same time");
-        }
         return this;
     }
 
@@ -337,18 +357,14 @@ public abstract class LoggingDecoratorBuilder {
      * will not sanitize response trailers.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
+     * @deprecated Use {@link LogFormatter} to set the sanitizer.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseTrailersSanitizer) {
+        setBuildLogWriter();
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
-        useSanitizers = true;
-        if (logFormatter != null) {
-            throw new IllegalStateException(
-                    "The log sanitizers and the LogFormatter cannot be used at the same time");
-        }
         return this;
     }
 
@@ -376,13 +392,12 @@ public abstract class LoggingDecoratorBuilder {
      * @see #requestTrailersSanitizer(BiFunction)
      * @see #responseHeadersSanitizer(BiFunction)
      * @see #responseTrailersSanitizer(BiFunction)
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
+     * @deprecated Use {@link LogFormatter} to set the sanitizer.
      */
     @Deprecated
     public LoggingDecoratorBuilder headersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> headersSanitizer) {
-
         requireNonNull(headersSanitizer, "headersSanitizer");
         requestHeadersSanitizer(headersSanitizer);
         requestTrailersSanitizer(headersSanitizer);
@@ -397,18 +412,14 @@ public abstract class LoggingDecoratorBuilder {
      * If unset, will not sanitize request content.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
+     * @deprecated Use {@link LogFormatter} to set the sanitizer.
      */
     @Deprecated
     public LoggingDecoratorBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> requestContentSanitizer) {
+        setBuildLogWriter();
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
-        useSanitizers = true;
-        if (logFormatter != null) {
-            throw new IllegalStateException(
-                    "The log sanitizers and the LogFormatter cannot be used at the same time");
-        }
         return this;
     }
 
@@ -426,18 +437,14 @@ public abstract class LoggingDecoratorBuilder {
      * will not sanitize response content.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
+     * @deprecated Use {@link LogFormatter} to set the sanitizer.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseContentSanitizer(
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> responseContentSanitizer) {
+        setBuildLogWriter();
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
-        useSanitizers = true;
-        if (logFormatter != null) {
-            throw new IllegalStateException(
-                    "The log sanitizers and the LogFormatter cannot be used at the same time");
-        }
         return this;
     }
 
@@ -462,7 +469,7 @@ public abstract class LoggingDecoratorBuilder {
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
      * @see #requestContentSanitizer(BiFunction)
      * @see #responseContentSanitizer(BiFunction)
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead.
+     * @deprecated Use {@link LogFormatter} to set the sanitizer.
      */
     @Deprecated
     public LoggingDecoratorBuilder contentSanitizer(
@@ -480,17 +487,14 @@ public abstract class LoggingDecoratorBuilder {
      * sanitize a response cause.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     * @deprecated Use {@link #responseCauseFilter(Predicate)} instead.
+     * @deprecated Use {@link LogWriterBuilder#responseCauseFilter(Predicate)} instead.
      */
     @Deprecated
     public LoggingDecoratorBuilder responseCauseSanitizer(
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
+        setBuildLogWriter();
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        if (logFormatter != null) {
-            throw new IllegalStateException(
-                    "The log sanitizers and the LogFormatter cannot be used at the same time");
-        }
         return this;
     }
 
@@ -506,57 +510,71 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link Predicate} used for evaluating whether to log the response cause or not.
      * You can prevent logging the response cause by returning {@code true}
      * in the {@link Predicate}. By default, the response cause will always be logged.
+     *
+     * @deprecated Use {@link LogWriterBuilder#responseCauseFilter(Predicate)} instead.
      */
-    @UnstableApi
+    @Deprecated
     public LoggingDecoratorBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
+        setBuildLogWriter();
         this.responseCauseFilter = requireNonNull(responseCauseFilter, "responseCauseFilter");
         return this;
     }
 
     /**
-     * Returns the {@link Predicate} used to evaluate whether to log the response cause.
+     * Sets the {@link LogWriter} which write a {@link RequestOnlyLog} or {@link RequestLog}.
+     * By default {@link LogWriter#of()} will be used.
+     *
+     * @throws IllegalStateException If both the log sanitizers and the {@link LogWriter} are specified.
      */
     @UnstableApi
-    protected final Predicate<Throwable> responseCauseFilter() {
-        return responseCauseFilter;
-    }
-
-    /**
-     * Sets the {@link LogFormatter} which converts a {@link RequestOnlyLog} or {@link RequestLog}
-     * into a log message. By default {@link LogFormatter#ofText()} will be used.
-     *
-     *
-     * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
-     */
-    @UnstableApi
-    public LoggingDecoratorBuilder logFormatter(LogFormatter logFormatter) {
-        this.logFormatter = requireNonNull(logFormatter, "logFormatter");
-        if (useSanitizers) {
+    public LoggingDecoratorBuilder logWriter(LogWriter logWriter) {
+        if (buildLogWriter) {
             throw new IllegalStateException(
-                    "The log sanitizers and the LogFormatter cannot be used at the same time");
+                    "The logWriter and the log properties cannot be set together.");
         }
+        this.logWriter = requireNonNull(logWriter, "logWriter");
         return this;
     }
 
     /**
-     * Returns a {@link LogFormatter} which converts a {@link RequestOnlyLog} or {@link RequestLog}
-     * into a log message. If a {@link LogFormatter} has been set using {@link #logFormatter}, it is returned.
-     * Otherwise, a text based {@link LogFormatter} built using the set sanitizers is returned.
+     * Returns {@link LogWriter} if set.
      */
-    @UnstableApi
-    protected LogFormatter logFormatter() {
-        if (logFormatter != null) {
-            return logFormatter;
-        } else {
-            return LogFormatter.builderForText()
-                               .requestHeadersSanitizer(convertToStringSanitizer(requestHeadersSanitizer))
-                               .responseHeadersSanitizer(convertToStringSanitizer(responseHeadersSanitizer))
-                               .requestTrailersSanitizer(convertToStringSanitizer(requestTrailersSanitizer))
-                               .responseTrailersSanitizer(convertToStringSanitizer(responseTrailersSanitizer))
-                               .requestContentSanitizer(convertToStringSanitizer(requestContentSanitizer))
-                               .responseContentSanitizer(convertToStringSanitizer(responseContentSanitizer))
-                               .build();
+    protected final LogWriter logWriter() {
+        if (logWriter != null) {
+            return logWriter;
         }
+        if (!buildLogWriter) {
+            return LogWriter.of();
+        }
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestHeadersSanitizer(convertToStringSanitizer(requestHeadersSanitizer))
+                            .responseHeadersSanitizer(convertToStringSanitizer(responseHeadersSanitizer))
+                            .requestTrailersSanitizer(convertToStringSanitizer(requestTrailersSanitizer))
+                            .responseTrailersSanitizer(convertToStringSanitizer(responseTrailersSanitizer))
+                            .requestContentSanitizer(convertToStringSanitizer(requestContentSanitizer))
+                            .responseContentSanitizer(convertToStringSanitizer(responseContentSanitizer))
+                            .build();
+        final LogWriterBuilder builder = LogWriter.builder();
+        builder.logFormatter(logFormatter);
+        if (logger != null) {
+            builder.logger(logger);
+        }
+        if (requestLogLevelMapper != null) {
+            builder.requestLogLevelMapper(requestLogLevelMapper);
+        }
+        if (responseLogLevelMapper != null) {
+            builder.responseLogLevelMapper(responseLogLevelMapper);
+        }
+        builder.responseCauseFilter(responseCauseFilter);
+        return builder.build();
+    }
+
+    private void setBuildLogWriter() {
+        if (logWriter != null) {
+            throw new IllegalStateException("The logWriter and the log properties cannot be set together.");
+        }
+        buildLogWriter = true;
     }
 
     @Override
@@ -564,7 +582,7 @@ public abstract class LoggingDecoratorBuilder {
         return toString(this, logger, requestLogLevelMapper(), responseLogLevelMapper(),
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-                        responseCauseSanitizer, logFormatter);
+                        responseCauseSanitizer, logWriter);
     }
 
     private static String toString(
@@ -586,12 +604,12 @@ public abstract class LoggingDecoratorBuilder {
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
-            @Nullable LogFormatter logFormatter) {
+            @Nullable LogWriter logWriter) {
 
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .omitNullValues()
                                                  .add("logger", logger)
-                                                 .add("logFormatter", logFormatter);
+                                                 .add("logWriter", logWriter);
 
         helper.add("requestLogLevelMapper", requestLogLevelMapper);
         helper.add("responseLogLevelMapper", responseLogLevelMapper);
