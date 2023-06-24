@@ -77,7 +77,7 @@ class MultipartCollectIntegrationTest {
                                })
                                .thenApply(aggregated -> aggregated.stream().collect(
                                        Collectors.toMap(Entry::getKey, Entry::getValue)))
-                               .thenApply(aggregated -> {
+                               .thenApplyAsync(aggregated -> {
                                    final StringBuilder responseStringBuilder = new StringBuilder();
                                    responseStringBuilder.append("param1/")
                                                         .append(aggregated.get("param1")).append('\n');
@@ -110,7 +110,7 @@ class MultipartCollectIntegrationTest {
                                    } catch (IOException e) {
                                        throw new UncheckedIOException(e);
                                    }
-                               })))
+                               }, ctx.blockingTaskExecutor())))
               .service("/multipart/large-file", (ctx, req) -> HttpResponse.from(
                       Multipart.from(req).collect(bodyPart -> {
                                    final Path path = tempDir.resolve(bodyPart.name());
@@ -120,7 +120,7 @@ class MultipartCollectIntegrationTest {
                                })
                                .thenApply(aggregated -> aggregated.stream().collect(
                                        Collectors.toMap(Entry::getKey, Entry::getValue)))
-                               .thenApply(aggregated -> {
+                               .thenApplyAsync(aggregated -> {
                                    final StringBuilder responseStringBuilder = new StringBuilder();
                                    try {
                                        final HashCode file1Hash =
@@ -140,7 +140,7 @@ class MultipartCollectIntegrationTest {
                                        throw new RuntimeException(e);
                                    }
                                    return HttpResponse.of(responseStringBuilder.toString());
-                               })))
+                               }, ctx.blockingTaskExecutor())))
               .requestTimeout(Duration.ZERO)
               .maxRequestLength(0);
         }

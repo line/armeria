@@ -1,6 +1,7 @@
 package example.armeria.server.annotated.kotlin
 
 import com.linecorp.armeria.common.logging.LogLevel
+import com.linecorp.armeria.common.logging.LogWriter
 import com.linecorp.armeria.server.AnnotatedServiceBindingBuilder
 import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.ServerBuilder
@@ -54,8 +55,12 @@ private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServ
     return this
         .decorator(
             LoggingService.builder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
+                .logWriter(
+                    LogWriter.builder()
+                        .requestLogLevel(LogLevel.INFO)
+                        .successfulResponseLogLevel(LogLevel.INFO)
+                        .build()
+                )
                 .newDecorator()
         )
 }

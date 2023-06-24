@@ -321,9 +321,9 @@ class HttpClientIntegrationTest {
 
             sb.service("glob:/oneparam/**", (ctx, req) -> {
                 // The client was able to send a request with an escaped path param. Armeria servers always
-                // decode the path so ctx.path == '/oneparam/foo' here (without query string).
-                if ("/oneparam/foo?bar".equals(req.headers().path()) &&
-                    "/oneparam/foo".equals(ctx.path())) {
+                // decode the path so ctx.path == '/oneparam/foo%3Fbar' here.
+                if ("/oneparam/foo%3Fbar".equals(req.headers().path()) &&
+                    "/oneparam/foo%3Fbar".equals(ctx.path())) {
                     return HttpResponse.of("routed");
                 }
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -421,16 +421,20 @@ class HttpClientIntegrationTest {
         testEndpointWithAlternateAuthority(group);
     }
 
-    private static void testEndpointWithAlternateAuthority(EndpointGroup group) {
+    private static void testEndpointWithAlternateAuthority(EndpointGroup group) throws Exception {
+        final String authority = "255.255.255.255.xip.io";
         final BlockingWebClient client = WebClient.builder(SessionProtocol.HTTP, group)
                                                   .setHeader(HttpHeaderNames.AUTHORITY,
-                                                             "255.255.255.255.xip.io")
+                                                             authority)
                                                   .build()
                                                   .blocking();
 
         final AggregatedHttpResponse res = client.get("/hello/world");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("success");
+        assertThat(server.requestContextCaptor().size()).isEqualTo(1);
+        final ServiceRequestContext ctx = server.requestContextCaptor().poll();
+        assertThat(ctx.request().authority()).isEqualTo(authority);
     }
 
     @Test

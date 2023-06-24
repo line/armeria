@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -728,6 +729,16 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Sets whether to use HTTP/2 without ALPN. This is useful if you want to communicate with an HTTP/2
+     * server over TLS but the server does not support ALPN.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder useHttp2WithoutAlpn(boolean useHttp2WithoutAlpn) {
+        option(ClientFactoryOptions.USE_HTTP2_WITHOUT_ALPN, useHttp2WithoutAlpn);
+        return this;
+    }
+
+    /**
      * Sets whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
      * HTTP/1 connections. This does not affect HTTP/2 connections. This option is disabled by default.
      */
@@ -787,7 +798,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
-     * case sensitive HTTP/1 headers.
+     * case-sensitive HTTP/1 headers.
      */
     public ClientFactoryBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(http1HeaderNaming, "http1HeaderNaming");

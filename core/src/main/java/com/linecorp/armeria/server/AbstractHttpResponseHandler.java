@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
@@ -25,12 +26,14 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
@@ -51,6 +54,7 @@ abstract class AbstractHttpResponseHandler {
 
     private final CompletableFuture<Void> completionFuture;
     private boolean isComplete;
+    private boolean needsDisconnection;
 
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
@@ -70,6 +74,11 @@ abstract class AbstractHttpResponseHandler {
         return isComplete;
     }
 
+    void disconnectWhenFinished() {
+        needsDisconnection = true;
+        responseEncoder.keepAliveHandler().disconnectWhenFinished();
+    }
+
     final boolean tryComplete(@Nullable Throwable cause) {
         if (isComplete) {
             return false;
@@ -79,6 +88,12 @@ abstract class AbstractHttpResponseHandler {
             completionFuture.complete(null);
         } else {
             completionFuture.completeExceptionally(cause);
+        }
+
+        // Force shutdown mode: If a user explicitly sets `Connection: close` in the response headers, it is
+        // assumed that the connection should be closed after sending the response.
+        if (needsDisconnection) {
+            ctx.channel().close();
         }
         return true;
     }
@@ -97,7 +112,10 @@ abstract class AbstractHttpResponseHandler {
         // 3. After successfully flushing, the listener requests next data and
         //    the subscriber attempts to write the next data to the stream closed at 2).
         if (!isWritable()) {
-            Throwable cause = CapturedServiceException.get(reqCtx);
+            Throwable cause = null;
+            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                cause = reqCtx.log().ensureAvailable(RequestLogProperty.RESPONSE_CAUSE).responseCause();
+            }
             if (cause == null) {
                 if (reqCtx.sessionProtocol().isMultiplex()) {
                     cause = ClosedStreamException.get();
@@ -128,7 +146,13 @@ abstract class AbstractHttpResponseHandler {
                                                        reqCtx.config().defaultHeaders(),
                                                        config.isServerHeaderEnabled(),
                                                        config.isDateHeaderEnabled());
+        final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
+        if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
+            disconnectWhenFinished();
+        }
+
         final HttpData content = res.content();
+        content.touch(reqCtx);
         // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
         assert !res.status().isContentAlwaysEmpty() || content.isEmpty();
         final boolean contentEmpty;
@@ -182,21 +206,21 @@ abstract class AbstractHttpResponseHandler {
         final HttpStatus status = cause.httpStatus();
         final Throwable cause0 = firstNonNull(cause.getCause(), cause);
         final ServiceConfig serviceConfig = reqCtx.config();
-        final AggregatedHttpResponse response =
-                serviceConfig.server().config().errorHandler()
-                             .renderStatus(serviceConfig, req.headers(), status, null, cause0);
+        final AggregatedHttpResponse response = serviceConfig.errorHandler()
+                                                             .renderStatus(serviceConfig, req.headers(), status,
+                                                                           null, cause0);
         assert response != null;
         return response;
     }
 
-    final void endLogRequestAndResponse(Throwable cause) {
-        logBuilder().endRequest(cause);
-        logBuilder().endResponse(cause);
-    }
-
-    final void endLogRequestAndResponse() {
-        logBuilder().endRequest();
-        logBuilder().endResponse();
+    final void endLogRequestAndResponse(@Nullable Throwable cause) {
+        if (cause != null) {
+            logBuilder().endRequest(cause);
+            logBuilder().endResponse(cause);
+        } else {
+            logBuilder().endRequest();
+            logBuilder().endResponse();
+        }
     }
 
     /**

@@ -72,7 +72,7 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final URI uri = req.uri();
+        final URI uri = ctx.uri();
         final Cookies cookies = cookieJar.get(uri);
         if (!cookies.isEmpty()) {
             final String cookieHeader = Cookie.toCookieHeader(cookies);

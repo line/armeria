@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.client.brave;
 
-import java.net.SocketAddress;
+import static com.google.common.base.MoreObjects.firstNonNull;
+
+import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
@@ -70,8 +72,8 @@ final class ArmeriaHttpClientParser implements HttpRequestParser, HttpResponsePa
             return;
         }
 
-        span.tag(SpanTags.TAG_HTTP_HOST, httpReq.authority())
-            .tag(SpanTags.TAG_HTTP_URL, httpReq.uri().toString());
+        span.tag(SpanTags.TAG_HTTP_HOST, firstNonNull(ctx.authority(), "UNKNOWN"))
+            .tag(SpanTags.TAG_HTTP_URL, ctx.uri().toString());
     }
 
     @Override
@@ -92,12 +94,12 @@ final class ArmeriaHttpClientParser implements HttpRequestParser, HttpResponsePa
             span.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
         }
 
-        final SocketAddress raddr = ctx.remoteAddress();
+        final InetSocketAddress raddr = ctx.remoteAddress();
         if (raddr != null) {
             span.tag(SpanTags.TAG_ADDRESS_REMOTE, raddr.toString());
         }
 
-        final SocketAddress laddr = ctx.localAddress();
+        final InetSocketAddress laddr = ctx.localAddress();
         if (laddr != null) {
             span.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
         }

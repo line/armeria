@@ -119,9 +119,9 @@ class RedirectingClientTest {
                     server.server().activePorts().values()
                           .stream().filter(ServerPort::hasHttp)
                           .filter(port -> port.localAddress().getPort() !=
-                                          ((InetSocketAddress) ctx.localAddress()).getPort())
+                                          ctx.localAddress().getPort())
                           .findFirst();
-            assert serverPort.isPresent();
+            assertThat(serverPort).isPresent();
             return serverPort.get().localAddress().getPort();
         }
     };

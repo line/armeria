@@ -1,0 +1,19 @@
+armeria:
+  ports:
+    - port: 0
+      protocols: HTTP
+    - address: 127.0.0.1
+      port: 0
+      protocols: HTTP
+    - address: 0.0.0.0
+      port: 0
+      protocols: HTTP
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, heapdump, loggers, prometheus, info
+      base-path: /internal/actuator
+      path-mapping:
+        info: custom-info

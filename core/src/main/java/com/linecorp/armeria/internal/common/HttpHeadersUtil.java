@@ -26,13 +26,16 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.internal.client.UserAgentUtil;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AsciiString;
 
 // TODO(minwoox): Replace this class with CompositeHeaders.
 public final class HttpHeadersUtil {
+
+    public static final String CLOSE_STRING = HttpHeaderValues.CLOSE.toString();
 
     /**
      * Merges the given {@link ResponseHeaders}. The headers have priority in the following order.
@@ -83,8 +86,9 @@ public final class HttpHeadersUtil {
      */
     public static RequestHeaders mergeRequestHeaders(RequestHeaders headers,
                                                      HttpHeaders defaultHeaders,
-                                                     HttpHeaders additionalHeaders) {
-        if (defaultHeaders.isEmpty() && additionalHeaders.isEmpty() &&
+                                                     HttpHeaders additionalHeaders,
+                                                     HttpHeaders internalHeaders) {
+        if (defaultHeaders.isEmpty() && additionalHeaders.isEmpty() && internalHeaders.isEmpty() &&
             headers.contains(HttpHeaderNames.USER_AGENT)) {
             return headers;
         }
@@ -128,9 +132,23 @@ public final class HttpHeadersUtil {
             }
         }
 
-        // Framework headers
-        if (!builder.contains(HttpHeaderNames.USER_AGENT)) {
-            builder.add(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT.toString());
+        // Internal headers
+        if (builder.authority() == null) {
+            String authority0 = internalHeaders.get(HttpHeaderNames.AUTHORITY);
+            if (authority0 == null) {
+                authority0 = internalHeaders.get(HttpHeaderNames.HOST);
+            }
+            if (authority0 != null) {
+                builder.authority(authority0);
+            }
+        }
+
+        for (AsciiString name : internalHeaders.names()) {
+            if (name.equals(HttpHeaderNames.AUTHORITY) || name.equals(HttpHeaderNames.HOST)) {
+                continue; // Manually handled above.
+            } else if (!ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST.contains(name) && !builder.contains(name)) {
+                internalHeaders.forEachValue(name, value -> builder.add(name, value));
+            }
         }
 
         return builder.build();
@@ -154,6 +172,17 @@ public final class HttpHeadersUtil {
             }
         }
         return builder.build();
+    }
+
+    public static String getScheme(SessionProtocol sessionProtocol) {
+        if (sessionProtocol.isHttps()) {
+            return "https";
+        } else if (sessionProtocol.isHttp()) {
+            return "http";
+        } else {
+            throw new IllegalArgumentException("sessionProtocol: " + sessionProtocol +
+                                               " (expected: HTTPS, H2, H1, HTTP, H2C or H1C)");
+        }
     }
 
     /**

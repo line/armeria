@@ -16,20 +16,18 @@
 
 package com.linecorp.armeria.internal.server;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
+import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -37,8 +35,8 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
-import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -46,13 +44,16 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -87,8 +88,6 @@ public final class DefaultServiceRequestContext
             additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
 
-    private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
-
     private final Channel ch;
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
@@ -100,13 +99,17 @@ public final class DefaultServiceRequestContext
     private final ProxiedAddresses proxiedAddresses;
 
     private final InetAddress clientAddress;
+    private final InetSocketAddress remoteAddress;
+    private final InetSocketAddress localAddress;
+
+    private boolean shouldReportUnhandledExceptions = true;
 
     private final RequestLogBuilder log;
 
     @Nullable
     private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
-    private ContextAwareScheduledExecutorService blockingTaskExecutor;
+    private ContextAwareBlockingTaskExecutor blockingTaskExecutor;
     private long maxRequestLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
@@ -140,25 +143,27 @@ public final class DefaultServiceRequestContext
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
+            InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
+            long requestStartTimeNanos, long requestStartTimeMicros) {
 
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, exchangeType,
-             req, sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
+             req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
+             null /* requestCancellationScheduler */, requestStartTimeNanos, requestStartTimeMicros,
+             HttpHeaders.of(), HttpHeaders.of());
     }
 
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress,
+            InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
         super(meterRegistry, sessionProtocol, id,
-              requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
-              requireNonNull(routingResult, "routingResult").query(), exchangeType,
+              requireNonNull(routingContext, "routingContext").method(),
+              routingContext.requestTarget(), exchangeType, cfg.requestAutoAbortDelayMillis(),
               requireNonNull(req, "req"), null, null);
 
         this.ch = requireNonNull(ch, "ch");
@@ -174,6 +179,8 @@ public final class DefaultServiceRequestContext
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
+        this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
+        this.localAddress = requireNonNull(localAddress, "localAddress");
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
@@ -188,6 +195,13 @@ public final class DefaultServiceRequestContext
         maxRequestLength = cfg.maxRequestLength();
         this.additionalResponseHeaders = additionalResponseHeaders;
         this.additionalResponseTrailers = additionalResponseTrailers;
+    }
+
+    @Override
+    protected RequestTarget validateHeaders(RequestHeaders headers) {
+        checkArgument(headers.scheme() != null && headers.authority() != null,
+                      "must set ':scheme' and ':authority' headers");
+        return RequestTarget.forServer(headers.path());
     }
 
     @Nullable
@@ -205,18 +219,14 @@ public final class DefaultServiceRequestContext
 
     @Nonnull
     @Override
-    public <A extends SocketAddress> A remoteAddress() {
-        @SuppressWarnings("unchecked")
-        final A addr = (A) firstNonNull(ch.remoteAddress(), UNKNOWN_ADDR);
-        return addr;
+    public InetSocketAddress remoteAddress() {
+        return remoteAddress;
     }
 
     @Nonnull
     @Override
-    public <A extends SocketAddress> A localAddress() {
-        @SuppressWarnings("unchecked")
-        final A addr = (A) firstNonNull(ch.localAddress(), UNKNOWN_ADDR);
-        return addr;
+    public InetSocketAddress localAddress() {
+        return localAddress;
     }
 
     @Override
@@ -250,13 +260,13 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public ContextAwareScheduledExecutorService blockingTaskExecutor() {
+    public ContextAwareBlockingTaskExecutor blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        final ScheduledExecutorService executor = config().blockingTaskExecutor();
-        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(this, executor);
+        final BlockingTaskExecutor executor = config().blockingTaskExecutor();
+        return blockingTaskExecutor = ContextAwareBlockingTaskExecutor.of(this, executor);
     }
 
     @Override
@@ -267,6 +277,13 @@ public final class DefaultServiceRequestContext
     @Override
     public String decodedMappedPath() {
         return routingResult.decodedPath();
+    }
+
+    @Override
+    public URI uri() {
+        final HttpRequest request = request();
+        assert request != null;
+        return request.uri();
     }
 
     @Nullable
@@ -440,6 +457,16 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
+    public boolean shouldReportUnhandledExceptions() {
+        return shouldReportUnhandledExceptions;
+    }
+
+    @Override
+    public void setShouldReportUnhandledExceptions(boolean value) {
+        shouldReportUnhandledExceptions = value;
+    }
+
+    @Override
     public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
         return initiateConnectionShutdown(InitiateConnectionShutdown.of(drainDurationMicros));
     }
@@ -490,8 +517,6 @@ public final class DefaultServiceRequestContext
         // the same StringBuilder. See TemporaryThreadLocals for more information.
         final String sreqId = id().shortText();
         final String chanId = ch.id().asShortText();
-        final InetSocketAddress raddr = remoteAddress();
-        final InetSocketAddress laddr = localAddress();
         final InetAddress caddr = clientAddress();
         final String proto = sessionProtocol().uriText();
         final String authority = config().virtualHost().defaultHostname();
@@ -504,15 +529,16 @@ public final class DefaultServiceRequestContext
             buf.append("[sreqId=").append(sreqId)
                .append(", chanId=").append(chanId);
 
-            if (!Objects.equals(caddr, raddr.getAddress())) {
+            if (!Objects.equals(caddr, remoteAddress.getAddress())) {
                 buf.append(", caddr=");
                 TextFormatter.appendInetAddress(buf, caddr);
             }
-
-            buf.append(", raddr=");
-            TextFormatter.appendSocketAddress(buf, raddr);
+            if (!Objects.equals(remoteAddress, localAddress)) {
+                buf.append(", raddr=");
+                TextFormatter.appendSocketAddress(buf, remoteAddress);
+            }
             buf.append(", laddr=");
-            TextFormatter.appendSocketAddress(buf, laddr);
+            TextFormatter.appendSocketAddress(buf, localAddress);
             buf.append("][")
                .append(proto).append("://").append(authority).append(path).append('#').append(method)
                .append(']');

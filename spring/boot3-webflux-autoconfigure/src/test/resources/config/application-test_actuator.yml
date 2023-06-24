@@ -1,0 +1,11 @@
+armeria:
+  ports:
+    - port: 0
+      protocols: HTTP
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+      base-path: /internal/actuator

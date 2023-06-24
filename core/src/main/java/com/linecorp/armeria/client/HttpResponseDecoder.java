@@ -19,24 +19,29 @@ package com.linecorp.armeria.client;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
+import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -47,6 +52,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.EventExecutor;
 
 abstract class HttpResponseDecoder {
 
@@ -56,8 +62,10 @@ abstract class HttpResponseDecoder {
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
 
+    @Nullable
+    private HttpSession httpSession;
+
     private int unfinishedResponses;
-    private boolean disconnectWhenFinished;
     private boolean closing;
 
     HttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
@@ -74,20 +82,24 @@ abstract class HttpResponseDecoder {
     }
 
     HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
+            int id, DecodedHttpResponse res, ClientRequestContext ctx,
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
                 new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
-
-        keepAliveHandler().increaseNumRequests();
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.increaseNumRequests();
+        }
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
-
+        onResponseAdded(id, eventLoop, newRes);
         return newRes;
     }
+
+    abstract void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper);
 
     @Nullable
     final HttpResponseWrapper getResponse(int id) {
@@ -142,51 +154,39 @@ abstract class HttpResponseDecoder {
         }
     }
 
+    HttpSession session() {
+        if (httpSession != null) {
+            return httpSession;
+        }
+        return httpSession = HttpSession.get(channel);
+    }
+
+    @Nullable
     abstract KeepAliveHandler keepAliveHandler();
 
-    final void disconnectWhenFinished() {
-        disconnectWhenFinished = true;
-    }
-
     final boolean needsToDisconnectNow() {
-        return needsToDisconnectWhenFinished() && !hasUnfinishedResponses();
-    }
-
-    final boolean needsToDisconnectWhenFinished() {
-        return disconnectWhenFinished || keepAliveHandler().needToCloseConnection();
+        return !session().isAcquirable() && !hasUnfinishedResponses();
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
-        enum State {
-            WAIT_NON_INFORMATIONAL,
-            WAIT_DATA_OR_TRAILERS,
-            DONE
-        }
-
         private final DecodedHttpResponse delegate;
-        @Nullable
         private final ClientRequestContext ctx;
-
         private final long maxContentLength;
         private final long responseTimeoutMillis;
 
-        private boolean loggedResponseFirstBytesTransferred;
+        private boolean responseStarted;
+        private long contentLengthHeaderValue = -1;
 
-        private State state = State.WAIT_NON_INFORMATIONAL;
-        @Nullable
-        private ResponseHeaders headers;
+        private boolean done;
+        private boolean closed;
 
-        HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
+        HttpResponseWrapper(DecodedHttpResponse delegate, ClientRequestContext ctx,
                             long responseTimeoutMillis, long maxContentLength) {
             this.delegate = delegate;
             this.ctx = ctx;
             this.maxContentLength = maxContentLength;
             this.responseTimeoutMillis = responseTimeoutMillis;
-        }
-
-        CompletableFuture<Void> whenComplete() {
-            return delegate.whenComplete();
         }
 
         long maxContentLength() {
@@ -197,18 +197,8 @@ abstract class HttpResponseDecoder {
             return delegate.writtenBytes();
         }
 
-        ResponseHeaders headers() {
-            assert headers != null;
-            return headers;
-        }
-
-        void logResponseFirstBytesTransferred() {
-            if (!loggedResponseFirstBytesTransferred) {
-                if (ctx != null) {
-                    ctx.logBuilder().responseFirstBytesTransferred();
-                }
-                loggedResponseFirstBytesTransferred = true;
-            }
+        long contentLengthHeaderValue() {
+            return contentLengthHeaderValue;
         }
 
         @Override
@@ -216,84 +206,88 @@ abstract class HttpResponseDecoder {
             return delegate.isOpen();
         }
 
-        /**
-         * Writes the specified {@link HttpObject} to {@link DecodedHttpResponse}. This method is only called
-         * from {@link Http1ResponseDecoder} and {@link Http2ResponseDecoder}. If this returns {@code false},
-         * it means the response stream has been closed due to disconnection or by the response consumer.
-         * So the caller do not need to handle such cases because it will be notified to the response
-         * consumer anyway.
-         */
+        @Override
+        public boolean isEmpty() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long demand() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public CompletableFuture<Void> whenComplete() {
+            return delegate.whenComplete();
+        }
+
+        @Override
+        public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
+                              SubscriptionOption... options) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void abort() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void abort(Throwable cause) {
+            throw new UnsupportedOperationException();
+        }
+
         @Override
         public boolean tryWrite(HttpObject o) {
-            boolean wrote = false;
-            switch (state) {
-                case WAIT_NON_INFORMATIONAL:
-                    wrote = handleWaitNonInformational(o);
-                    break;
-                case WAIT_DATA_OR_TRAILERS:
-                    wrote = handleWaitDataOrTrailers(o);
-                    break;
-                case DONE:
-                    PooledObjects.close(o);
-                    break;
+            if (done) {
+                PooledObjects.close(o);
+                return false;
             }
-
-            return wrote;
-        }
-
-        @Override
-        public boolean tryWrite(Supplier<? extends HttpObject> o) {
             return delegate.tryWrite(o);
         }
 
-        private boolean handleWaitNonInformational(HttpObject o) {
-            // NB: It's safe to call logBuilder.startResponse() multiple times.
-            if (ctx != null) {
-                ctx.logBuilder().startResponse();
+        void startResponse() {
+            if (responseStarted) {
+                return;
             }
-
-            assert o instanceof HttpHeaders && !(o instanceof RequestHeaders) : o;
-
-            if (o instanceof ResponseHeaders) {
-                final ResponseHeaders headers = (ResponseHeaders) o;
-                final HttpStatus status = headers.status();
-                if (!status.isInformational()) {
-                    this.headers = headers;
-                    state = State.WAIT_DATA_OR_TRAILERS;
-                    if (ctx != null) {
-                        ctx.logBuilder().defer(RequestLogProperty.RESPONSE_HEADERS);
-                        try {
-                            return delegate.tryWrite(headers);
-                        } finally {
-                            ctx.logBuilder().responseHeaders(headers);
-                        }
-                    }
-                }
-            }
-
-            return delegate.tryWrite(o);
+            responseStarted = true;
+            ctx.logBuilder().startResponse();
+            ctx.logBuilder().responseFirstBytesTransferred();
+            initTimeout();
         }
 
-        private boolean handleWaitDataOrTrailers(HttpObject o) {
-            if (o instanceof HttpHeaders) {
-                state = State.DONE;
-                if (ctx != null) {
-                    ctx.logBuilder().defer(RequestLogProperty.RESPONSE_TRAILERS);
-                    try {
-                        return delegate.tryWrite(o);
-                    } finally {
-                        ctx.logBuilder().responseTrailers((HttpHeaders) o);
-                    }
-                }
-            } else {
-                final HttpData data = (HttpData) o;
-                data.touch(ctx);
-                if (ctx != null) {
-                    ctx.logBuilder().increaseResponseLength(data);
-                }
+        boolean tryWriteResponseHeaders(ResponseHeaders responseHeaders) {
+            assert responseHeaders.status().codeClass() != HttpStatusClass.INFORMATIONAL;
+            contentLengthHeaderValue = responseHeaders.contentLength();
+            ctx.logBuilder().defer(RequestLogProperty.RESPONSE_HEADERS);
+            try {
+                return delegate.tryWrite(responseHeaders);
+            } finally {
+                ctx.logBuilder().responseHeaders(responseHeaders);
             }
+        }
 
-            return delegate.tryWrite(o);
+        boolean tryWriteData(HttpData data) {
+            if (done) {
+                PooledObjects.close(data);
+                return false;
+            }
+            data.touch(ctx);
+            ctx.logBuilder().increaseResponseLength(data);
+            return delegate.tryWrite(data);
+        }
+
+        boolean tryWriteTrailers(HttpHeaders trailers) {
+            if (done) {
+                return false;
+            }
+            done = true;
+            ctx.logBuilder().defer(RequestLogProperty.RESPONSE_TRAILERS);
+            try {
+                return delegate.tryWrite(trailers);
+            } finally {
+                ctx.logBuilder().responseTrailers(trailers);
+            }
         }
 
         @Override
@@ -316,51 +310,53 @@ abstract class HttpResponseDecoder {
         }
 
         private void close(@Nullable Throwable cause, boolean cancel) {
-            state = State.DONE;
+            if (closed) {
+                return;
+            }
+            done = true;
+            closed = true;
             cancelTimeoutOrLog(cause, cancel);
-            if (ctx != null) {
-                if (cause == null) {
-                    ctx.request().abort(ResponseCompleteException.get());
-                } else {
-                    ctx.request().abort(cause);
-                }
+            final HttpRequest request = ctx.request();
+            assert request != null;
+            if (cause != null) {
+                request.abort(cause);
+                return;
+            }
+            final long requestAutoAbortDelayMillis = ctx.requestAutoAbortDelayMillis();
+            if (requestAutoAbortDelayMillis == 0) {
+                request.abort(ResponseCompleteException.get());
+                return;
+            }
+            if (requestAutoAbortDelayMillis > 0 &&
+                requestAutoAbortDelayMillis < Long.MAX_VALUE) {
+                ctx.eventLoop().schedule(() -> request.abort(ResponseCompleteException.get()),
+                                         requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
             }
         }
 
         private void closeAction(@Nullable Throwable cause) {
             if (cause != null) {
                 delegate.close(cause);
-                if (ctx != null) {
-                    ctx.logBuilder().endResponse(cause);
-                }
+                ctx.logBuilder().endResponse(cause);
             } else {
                 delegate.close();
-                if (ctx != null) {
-                    ctx.logBuilder().endResponse();
-                }
+                ctx.logBuilder().endResponse();
             }
         }
 
         private void cancelAction(@Nullable Throwable cause) {
             if (cause != null && !(cause instanceof CancelledSubscriptionException)) {
-                if (ctx != null) {
-                    ctx.logBuilder().endResponse(cause);
-                }
+                ctx.logBuilder().endResponse(cause);
             } else {
-                if (ctx != null) {
-                    ctx.logBuilder().endResponse();
-                }
+                ctx.logBuilder().endResponse();
             }
         }
 
         private void cancelTimeoutOrLog(@Nullable Throwable cause, boolean cancel) {
-
             CancellationScheduler responseCancellationScheduler = null;
-            if (ctx != null) {
-                final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
-                if (ctxExtension != null) {
-                    responseCancellationScheduler = ctxExtension.responseCancellationScheduler();
-                }
+            final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
+            if (ctxExtension != null) {
+                responseCancellationScheduler = ctxExtension.responseCancellationScheduler();
             }
 
             if (responseCancellationScheduler == null || !responseCancellationScheduler.isFinished()) {
@@ -375,7 +371,6 @@ abstract class HttpResponseDecoder {
                 }
                 return;
             }
-
             if (delegate.isOpen()) {
                 closeAction(cause);
             }
@@ -391,20 +386,15 @@ abstract class HttpResponseDecoder {
             }
 
             final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing a request");
-            if (ctx != null) {
-                final String authority = ctx.request().authority();
-                if (authority != null) {
-                    logMsg.append(" to ").append(authority);
-                }
+            final String authority = ctx.request().authority();
+            if (authority != null) {
+                logMsg.append(" to ").append(authority);
             }
 
             logger.warn(logMsg.append(':').toString(), cause);
         }
 
         void initTimeout() {
-            if (ctx == null) {
-                return;
-            }
             final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
             if (ctxExtension != null) {
                 final CancellationScheduler responseCancellationScheduler =
@@ -419,13 +409,11 @@ abstract class HttpResponseDecoder {
             return new CancellationTask() {
                 @Override
                 public boolean canSchedule() {
-                    return delegate.isOpen() && state != State.DONE;
+                    return delegate.isOpen() && !done;
                 }
 
                 @Override
                 public void run(Throwable cause) {
-                    assert ctx != null;
-
                     delegate.close(cause);
                     ctx.request().abort(cause);
                     ctx.logBuilder().endResponse(cause);
@@ -437,5 +425,16 @@ abstract class HttpResponseDecoder {
         public String toString() {
             return delegate.toString();
         }
+    }
+
+    static Exception contentTooLargeException(HttpResponseWrapper res, long transferred) {
+        final ContentTooLargeExceptionBuilder builder =
+                ContentTooLargeException.builder()
+                                        .maxContentLength(res.maxContentLength())
+                                        .transferred(transferred);
+        if (res.contentLengthHeaderValue() >= 0) {
+            builder.contentLength(res.contentLengthHeaderValue());
+        }
+        return builder.build();
     }
 }

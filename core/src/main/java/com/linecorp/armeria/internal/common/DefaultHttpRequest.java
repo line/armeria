@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 /**
  * Default {@link HttpRequest} implementation.
  */
+@SuppressWarnings("deprecation")
 public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> implements HttpRequestWriter {
 
     private final RequestHeaders headers;

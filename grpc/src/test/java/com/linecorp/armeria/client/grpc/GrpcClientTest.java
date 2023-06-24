@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -38,6 +40,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
@@ -73,10 +76,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -94,12 +99,14 @@ import com.linecorp.armeria.grpc.testing.UnimplementedServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
+import com.linecorp.armeria.internal.common.util.EventLoopThread;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -134,6 +141,9 @@ class GrpcClientTest {
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
 
     private static final Empty EMPTY = Empty.getDefaultInstance();
+
+    private static final CallOptions.Key<String> MY_CALL_OPTION_KEY =
+            CallOptions.Key.create("my-call-option");
 
     private static final AtomicReference<HttpHeaders> CLIENT_HEADERS_CAPTURE = new AtomicReference<>();
     private static final AtomicReference<HttpHeaders> SERVER_TRAILERS_CAPTURE = new AtomicReference<>();
@@ -236,6 +246,7 @@ class GrpcClientTest {
 
     @BeforeEach
     void setUp() {
+        RequestTargetCache.clearCachedPaths();
         requestLogQueue.clear();
         final DecoratingHttpClientFunction requestLogRecorder = (delegate, ctx, req) -> {
             ctx.log().whenComplete().thenAccept(requestLogQueue::add);
@@ -272,6 +283,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(EMPTY);
             assertThat(rpcRes.get()).isEqualTo(EMPTY);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/EmptyCall"));
     }
 
     @Test
@@ -302,6 +315,73 @@ class GrpcClientTest {
     }
 
     @Test
+    void callOptionsExecutorIsRespected() {
+        final ExecutorService executor = Executors.newSingleThreadExecutor(
+                ThreadFactories.builder("my-calloptions-executor-3")
+                    .daemon(true)
+                    .eventLoop(false)
+                    .build());
+
+        final TestServiceGrpc.TestServiceStub asyncStubWithExecutor = asyncStub.withExecutor(executor);
+        final AtomicReference<String> onMessageThread = new AtomicReference<>();
+        final AtomicReference<String> onCompleteThread = new AtomicReference<>();
+        asyncStubWithExecutor.emptyCall(EMPTY, new StreamObserver<Empty>() {
+            @Override
+            public void onNext(Empty value) {
+                onMessageThread.set(Thread.currentThread().getName());
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onCompleted() {
+                onCompleteThread.set(Thread.currentThread().getName());
+            }
+        });
+
+        await().untilAtomic(onMessageThread, startsWith("my-calloptions-executor-3"));
+        await().untilAtomic(onCompleteThread, startsWith("my-calloptions-executor-3"));
+
+        executor.shutdownNow();
+    }
+
+    @Test
+    void callExecutorIsEventLoopByDefault() {
+        final AtomicReference<Thread> onMessageThread = new AtomicReference<>();
+        final AtomicReference<Thread> onCompleteThread = new AtomicReference<>();
+        asyncStub.emptyCall(EMPTY, new StreamObserver<Empty>() {
+            @Override
+            public void onNext(Empty value) {
+                onMessageThread.set(Thread.currentThread());
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onCompleted() {
+                onCompleteThread.set(Thread.currentThread());
+            }
+        });
+
+        await().untilAtomic(onMessageThread, instanceOf(EventLoopThread.class));
+        await().untilAtomic(onCompleteThread, instanceOf(EventLoopThread.class));
+    }
+
+    void grpcCallOptions() {
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            blockingStub
+                    .withOption(MY_CALL_OPTION_KEY, "foo")
+                    .emptyCall(EMPTY);
+            final ClientRequestContext ctx = ctxCaptor.get();
+            assertThat(GrpcCallOptions.get(ctx).getOption(MY_CALL_OPTION_KEY)).isEqualTo("foo");
+        }
+    }
+
+    @Test
     void largeUnary() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
@@ -322,6 +402,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(request);
             assertThat(rpcRes.get()).isEqualTo(goldenResponse);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/UnaryCall"));
     }
 
     @Test
@@ -473,6 +555,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(request);
             assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/StreamingOutputCall"));
     }
 
     @Test
@@ -552,6 +636,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(requests.get(0));
             assertThat(rpcRes.get()).isEqualTo(goldenResponse);
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/StreamingInputCall"));
     }
 
     @Test
@@ -634,6 +720,8 @@ class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(requests.get(0));
             assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
         });
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedClientPaths())
+                .contains("/armeria.grpc.testing.TestService/FullDuplexCall"));
     }
 
     @Test
@@ -1425,7 +1513,11 @@ class GrpcClientTest {
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(ResponseParameters.newBuilder().setSize(1))
                                           .build();
-        final int size = blockingStub.streamingOutputCall(request).next().getSerializedSize();
+        final Iterator<StreamingOutputCallResponse> response = blockingStub.streamingOutputCall(request);
+        final int size = response.next().getSerializedSize();
+        // Need to drain the inbound stream to ensure request-log is available.
+        assertThat(response.hasNext()).isFalse();
+
         requestLogQueue.take();
 
         final TestServiceBlockingStub stub =

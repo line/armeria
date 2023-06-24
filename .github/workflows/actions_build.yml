@@ -2,11 +2,12 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
   pull_request:
+  merge_group:
 
 concurrency:
   # Cancel the previous builds in the same PR.
@@ -17,6 +18,7 @@ concurrency:
 env:
   LC_ALL: "en_US.UTF-8"
   BUILD_JDK_VERSION: "19"
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
 
 jobs:
   build:
@@ -36,6 +38,12 @@ jobs:
           - java: 17
             on: self-hosted
             leak: true
+          - java: 17
+            on: self-hosted
+            min-java: 11
+          - java: 17
+            on: self-hosted
+            min-java: 17
           - java: 19
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
@@ -44,6 +52,8 @@ jobs:
           - java: 19
             on: self-hosted
             snapshot: true
+            # blockhound makes the build run about 10 minutes slower
+            blockhound: true
 
     steps:
       - uses: actions/checkout@v2
@@ -76,6 +86,7 @@ jobs:
           -PnoLint \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
@@ -85,14 +96,16 @@ jobs:
           ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           ${{ matrix.leak && '-Pleak' || '' }} \
+          ${{ matrix.blockhound && '-Pblockhound' || '' }} \
           -PnoLint \
           -PflakyTests=false \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
-      - if: ${{ matrix.snapshot && github.ref_name == 'master' }}
+      - if: ${{ matrix.snapshot && github.ref_name == 'main' }}
         name: Publish snapshots
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=1 publish
@@ -114,6 +127,7 @@ jobs:
           -PflakyTests=false \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
 
           SUMMARY_FILE="build/failed-tests-result.txt"
@@ -125,24 +139,48 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
 
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v1
 
+      - name: Fail the run if any threads were blocked
+        if: ${{ matrix.blockhound }}
+        run: |
+          blockhound_logs=$(find . -name 'blockhound.log' -size +0); \
+          if [[ -z ${blockhound_logs} ]]; then \
+            exit 0; \
+          else \
+             while IFS= read -r log; do \
+               echo "- Detected file: ${log}"; \
+               head --lines=1000 "${log}"; \
+               echo; \
+             done <<< "${blockhound_logs}"; \
+             exit 1; \
+          fi
+        shell: bash
+
       - name: Collect the test reports
         if: failure()
-        run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+        run: |
+          find . '(' \
+          -name 'java_pid*.hprof' -or \
+          -name 'hs_err_*.log' -or \
+          -path '*/build/reports/tests' -or \
+          -path '*/build/test-results' -or \
+          -path '*/javadoc.options' -or \
+          -name 'blockhound.log' ')' \
+          -exec tar rf "reports-JVM-${{ matrix.on }}-${{ matrix.java }}${{ matrix.min-java && format('-{0}', matrix.min-java) || '' }}.tar" {} ';'
         shell: bash
 
       - name: Upload the artifacts
         if: failure()
         uses: actions/upload-artifact@v2
         with:
-          name: reports-JVM-${{ matrix.java }}
-          path: reports-JVM-${{ matrix.java }}.tar
+          name: reports-JVM-${{ matrix.on }}-${{ matrix.java }}
+          path: reports-JVM-${{ matrix.on }}-${{ matrix.java }}.tar
           retention-days: 3
 
   lint:
@@ -214,7 +252,10 @@ jobs:
 
       - name: Run flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoWeb -PnoLint -PflakyTests=true
+          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoLint -PflakyTests=true \
+          -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
+          -PtestJavaVersion=${{ env.BUILD_JDK_VERSION }} \
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }}
 
       - name: Summarize the failed tests
         if: failure()
@@ -230,5 +271,5 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
