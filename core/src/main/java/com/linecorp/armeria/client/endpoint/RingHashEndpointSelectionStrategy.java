@@ -46,6 +46,10 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
         return new RingHashSelector(endpointGroup);
     }
 
+    public EndpointSelector newSelector(EndpointGroup endpointGroup, int size) {
+        return new RingHashSelector(endpointGroup, size);
+    }
+
     static class RingHashSelector extends AbstractEndpointSelector {
 
         @Nullable
@@ -59,6 +63,12 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
         RingHashSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
             endpointGroup.addListener(endpoints -> weightedRingEndpoint = new WeightedRingEndpoint(endpoints),
+                                      true);
+        }
+
+        RingHashSelector(EndpointGroup endpointGroup, int size) {
+            super(endpointGroup);
+            endpointGroup.addListener(endpoints -> weightedRingEndpoint = new WeightedRingEndpoint(endpoints, size),
                                       true);
         }
 
@@ -91,56 +101,41 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             }
 
             WeightedRingEndpoint(List<Endpoint> endpoints) {
-                // prepare immutable endpoints
+                this(endpoints, endpoints.stream()
+                                         .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
+                                         .sorted(Comparator.comparing(Endpoint::weight)
+                                                           .thenComparing(Endpoint::host)
+                                                           .thenComparingInt(Endpoint::port))
+                                         .collect(toImmutableList()).size());
+            }
+
+            WeightedRingEndpoint(List<Endpoint> endpoints, int size) {
                 this.endpoints = endpoints.stream()
-                                        .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
-                                        .sorted(Comparator.comparing(Endpoint::weight)
-                                                          .thenComparing(Endpoint::host)
-                                                          .thenComparingInt(Endpoint::port))
-                                        .collect(toImmutableList());
+                                          .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
+                                          .sorted(Comparator.comparing(Endpoint::weight)
+                                                            .thenComparing(Endpoint::host)
+                                                            .thenComparingInt(Endpoint::port))
+                                          .collect(toImmutableList());
+                final int sizeOfEndpoints = this.endpoints.size();
+                assert sizeOfEndpoints >= size;
 
-                // The GCD is properly sized so that it does not exceed the size of the ring
-                final int gcd = findGcdInEndpoints(this.endpoints);
-                final int numberOfEndpointInTheRing = calculateNumberOfEndpointInTheRing(this.endpoints, gcd);
-
-                final int sizeOfRing = getSize(endpoints);
-                if (sizeOfRing >= numberOfEndpointInTheRing) {
-                    for (Endpoint endpoint : this.endpoints) {
-                        final int weight = endpoint.weight();
-                        final String host = endpoint.host();
-                        final String port = String.valueOf(endpoint.port());
-                        // If weight is 3 and gcd is 1, place 3 times in the ring
-                        // if weight is 1 and gcd is 1, place once in the ring
-                        // If weight is 3 and gcd is 3, place 1 times in the ring
-                        final int count = weight / gcd;
-                        for (int i = 0; i < count; i++) {
-                            final String weightedHost = host + port + weight;
-                            final int hash = getXXHash(weightedHost);
-                            ring.put(hash, endpoint);
-                        }
-                    }
-                } else {
-                    // When the size of the GCD is too small and exceeds the size of the ring,
-                    // using binary search for find x
-                    // where Σ (w[i] / x) ≤ ring_size, w[i] is endpoint's weight at index i
-                    final List<Integer> arr = new ArrayList<>();
-                    for (Endpoint endpoint : this.endpoints) {
-                        final int weight = endpoint.weight();
-                        arr.add(weight);
-                    }
-                    final int divider = binarySearch(arr, sizeOfRing);
-                    for (Endpoint endpoint : this.endpoints) {
-                        final int weight = endpoint.weight();
-                        final String host = endpoint.host();
-                        // If weight is 3 and x is 1, place 3 times in the ring
-                        // if weight is 1 and x is 1, place once in the ring
-                        // If weight is 3 and x is 3, place 1 times in the ring
-                        final int count = weight / divider;
-                        for (int i = 0; i < count; i++) {
-                            final String weightedHost = host + weight;
-                            final int hash = getXXHash(weightedHost);
-                            ring.put(hash, endpoint);
-                        }
+                final List<Integer> arr = new ArrayList<>();
+                for (Endpoint endpoint : this.endpoints) {
+                    final int weight = endpoint.weight();
+                    arr.add(weight);
+                }
+                final int divider = binarySearch(arr, size);
+                for (Endpoint endpoint : this.endpoints) {
+                    final int weight = endpoint.weight();
+                    final String host = endpoint.host();
+                    // If weight is 3 and x is 1, place 3 times in the ring
+                    // if weight is 1 and x is 1, place once in the ring
+                    // If weight is 3 and x is 3, place 1 times in the ring
+                    final int count = weight / divider;
+                    for (int i = 0; i < count; i++) {
+                        final String weightedHost = host + weight;
+                        final int hash = getXXHash(weightedHost);
+                        ring.put(hash, endpoint);
                     }
                 }
             }
@@ -150,14 +145,6 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
                 final long hashBytes = Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
                 return (int) (hashBytes >>> 32);
-            }
-
-            private int getSize(Iterable<Endpoint> endpoints) {
-                int count = 0;
-                for (Endpoint endpoint : endpoints) {
-                    count++;
-                }
-                return count;
             }
 
             private int binarySearch(List<Integer> arr, int sz) {
@@ -182,40 +169,6 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 }
 
                 return sz >= total;
-            }
-
-            int calculateNumberOfEndpointInTheRing(Iterable<Endpoint> endpoints, int gcd) {
-                int numberOfEndpointInTheRing = 0;
-                for (final Endpoint endpoint : endpoints) {
-                    final int weight = endpoint.weight();
-                    final int count = weight / gcd;
-                    numberOfEndpointInTheRing += count;
-                }
-                return numberOfEndpointInTheRing;
-            }
-
-            int findGcdInEndpoints(Iterable<Endpoint> endpoints) {
-                int gcd = -1;
-                for (Endpoint endpoint : endpoints) {
-                    final int weight = endpoint.weight();
-                    // initialize gcd
-                    if (gcd == -1) {
-                        gcd = weight;
-                        continue;
-                    }
-
-                    gcd = gcd(gcd, weight);
-                }
-                return gcd;
-            }
-
-            int gcd(int a, int b) {
-                while (b != 0) {
-                    final int temp = b;
-                    b = a % b;
-                    a = temp;
-                }
-                return a;
             }
         }
     }
