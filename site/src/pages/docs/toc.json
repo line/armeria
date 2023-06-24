@@ -24,8 +24,7 @@
     "server-sse",
     "server-service-registration",
     "server-multipart",
-    "server-timeouts",
-    "server-flags-provider"
+    "server-timeouts"
   ],
   "Client": [
     "client-http",
@@ -55,6 +54,7 @@
     "advanced-dropwizard-integration",
     "advanced-scala",
     "advanced-scalapb",
-    "advanced-client-interoperability"
+    "advanced-client-interoperability",
+    "advanced-flags-provider"
   ]
 }
