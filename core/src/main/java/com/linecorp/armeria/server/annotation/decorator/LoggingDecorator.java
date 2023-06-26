@@ -92,7 +92,7 @@ public @interface LoggingDecorator {
     /**
      * Slow request percentiles are calculated over the last {@code slowRequestSamplingWindowMilliseconds}.
      */
-    long slowRequestSamplingWindowMilliseconds() default 60 * 1000;
+    long slowRequestSamplingWindowMilliseconds() default 10 * 60 * 1000;
 
     /**
      * Don't sample the requests if they are faster than the {@code slowRequestSamplingLowerBoundMilliseconds}.

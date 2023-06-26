@@ -20,10 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-public class SlidingWindowPercentileSamplerTest {
+public class TimeWindowPercentileSamplerTest {
     @Test
     public void testSamplingMinimumPercentile() {
-        final Sampler<Long> sampler = SlidingWindowPercentileSampler.create(0.0f, 10000L);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(0.0f, 10000L);
 
         // Should sample everything
         assertThat(sampler.isSampled(10L)).isTrue();
@@ -33,7 +33,7 @@ public class SlidingWindowPercentileSamplerTest {
 
     @Test
     public void testSamplingMaximumPercentile() {
-        final Sampler<Long> sampler = SlidingWindowPercentileSampler.create(1.0f, 10000L);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f, 10000L);
 
         // Should only sample the maximum value
         assertThat(sampler.isSampled(10L)).isTrue();
@@ -48,7 +48,7 @@ public class SlidingWindowPercentileSamplerTest {
     @Test
     public void testSamplingWindowExpires() throws InterruptedException {
         final long windowLength = 1000L;
-        final Sampler<Long> sampler = SlidingWindowPercentileSampler.create(1.0f, windowLength);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f, windowLength);
 
         // Should only sample the maximum value
         assertThat(sampler.isSampled(20L)).isTrue();
@@ -61,21 +61,21 @@ public class SlidingWindowPercentileSamplerTest {
 
     @Test
     public void testSampling0_5Percentile() {
-        final Sampler<Long> sampler = SlidingWindowPercentileSampler.create(.5f, 10000L);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(.5f, 10000L);
 
         // Create a uniform distribution of 1000 values from 1 to 1000
         for (long i = 1; i <= 1000; i++) {
             sampler.isSampled(i);
         }
 
-        // 0.5 percentile should be 500
-        assertThat(sampler.isSampled(500L)).isTrue();
+        // 0.5 percentile should be approximately 500
+        assertThat(sampler.isSampled(501L)).isTrue();
         assertThat(sampler.isSampled(499L)).isFalse();
     }
 
     @Test
     public void testSampling0_95Percentile() {
-        final Sampler<Long> sampler = SlidingWindowPercentileSampler.create(.95f, 10000L);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(.95f, 10000L);
 
         // Create a uniform distribution of 1000 values from 1 to 1000
         for (long i = 1; i <= 1000; i++) {

@@ -97,7 +97,7 @@ public interface Sampler<T> {
      * in the given time window.
      */
     static Sampler<Long> percentile(float percentile, long windowMilliseconds) {
-        return new SlidingWindowPercentileSampler(percentile, windowMilliseconds);
+        return new TimeWindowPercentileSampler(percentile, windowMilliseconds);
     }
 
     /**
