@@ -82,6 +82,7 @@ interface OwnProps {
   debugFormIsOpen: boolean;
   setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
   jsonSchemas: any[];
+  serviceRoute: string;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -116,6 +117,19 @@ const copyTextToClipboard = (text: string) => {
   modal.removeChild(textArea);
 };
 
+const parseServerRootPath = (serviceRoute: string) => {
+  const plainRoute = serviceRoute.replace('/*', '');
+  const index = window.location.href.indexOf(plainRoute);
+  console.log({ index, plainRoute, href: window.location.href });
+
+  if (index === -1) {
+    return '';
+  }
+  const rootPath = window.location.href.substring(0, index);
+  console.log({ rootPath });
+  return rootPath;
+};
+
 const toggle = (prev: boolean, override: unknown) => {
   if (typeof override === 'boolean') {
     return override;
@@ -144,6 +158,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   debugFormIsOpen,
   setDebugFormIsOpen,
   jsonSchemas,
+  serviceRoute,
 }) => {
   const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [requestBody, setRequestBody] = useState('');
@@ -193,14 +208,16 @@ const DebugPage: React.FunctionComponent<Props> = ({
       if (exactPathMapping) {
         urlPath = extractUrlPath(method);
       } else {
-        urlPath = urlParams.get('endpoint_path') || '';
+        urlPath =
+          urlParams.get('endpoint_path') || parseServerRootPath(serviceRoute);
       }
     } else {
+      parseServerRootPath(serviceRoute);
       urlPath =
         transport.findDebugMimeTypeEndpoint(
           method,
           urlParams.get('endpoint_path') || undefined,
-        )?.pathMapping || '';
+        )?.pathMapping || parseServerRootPath(serviceRoute);
     }
 
     const urlQueries =
@@ -228,6 +245,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     useRequestBody,
     keepDebugResponse,
     setDebugFormIsOpen,
+    serviceRoute,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */
