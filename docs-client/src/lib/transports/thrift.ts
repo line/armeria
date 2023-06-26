@@ -59,7 +59,7 @@ export default class ThriftTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    return fetch(endpointPath ?? endpoint.pathMapping, {
+    return fetch(endpointPath || endpoint.pathMapping, {
       headers: hdrs,
       method: 'POST',
       body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,
