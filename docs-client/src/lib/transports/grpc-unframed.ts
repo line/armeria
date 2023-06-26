@@ -46,7 +46,7 @@ export default class GrpcUnframedTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    return fetch(endpoint.pathMapping, {
+    return fetch(endpointPath || endpoint.pathMapping, {
       headers: hdrs,
       method: 'POST',
       body: bodyJson,

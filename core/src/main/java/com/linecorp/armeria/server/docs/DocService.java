@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
@@ -198,7 +199,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                       .collect(toImmutableList());
         final ExecutorService executorService = Executors.newSingleThreadExecutor(
                 ThreadFactories.newThreadFactory("docservice-loader", true));
-        vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
+        vfs().specificationLoader.updateServices(services, cfg.route(), executorService).handle((res, e) -> {
             if (e != null) {
                 logger.warn("Failed to load specifications completely: ", e);
             }
@@ -267,11 +268,13 @@ public final class DocService extends SimpleDecoratingHttpService {
         }
 
         CompletableFuture<List<AggregatedHttpFile>> updateServices(List<ServiceConfig> services,
+                                                                   Route docServiceRoute,
                                                                    Executor executor) {
             this.services = services;
 
             final CompletableFuture<ServiceSpecification> serviceSpecificationFuture =
-                    generateServiceSpecification(executor);
+                    generateServiceSpecification(executor)
+                            .thenApply(spec -> spec.withServiceRoute(docServiceRoute));
 
             final List<CompletableFuture<AggregatedHttpFile>> files =
                     TARGET_PATHS.stream()

@@ -33,7 +33,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -121,6 +123,8 @@ public final class ServiceSpecification {
     private final Set<StructInfo> structs;
     private final Set<ExceptionInfo> exceptions;
     private final List<HttpHeaders> exampleHeaders;
+    @Nullable
+    private Route serviceRoute;
 
     /**
      * Creates a new instance.
@@ -140,13 +144,17 @@ public final class ServiceSpecification {
                                 Iterable<StructInfo> structs,
                                 Iterable<ExceptionInfo> exceptions,
                                 Iterable<HttpHeaders> exampleHeaders) {
-
         this.services = Streams.stream(requireNonNull(services, "services"))
                                .collect(toImmutableSortedSet(comparing(ServiceInfo::name)));
         this.enums = collectDescriptiveTypeInfo(enums, "enums");
         this.structs = collectStructInfo(structs);
         this.exceptions = collectDescriptiveTypeInfo(exceptions, "exceptions");
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
+    }
+
+    public ServiceSpecification withServiceRoute(Route serviceRoute) {
+        this.serviceRoute = serviceRoute;
+        return this;
     }
 
     private static <T extends DescriptiveTypeInfo> Set<T> collectDescriptiveTypeInfo(
@@ -211,5 +219,13 @@ public final class ServiceSpecification {
     @JsonProperty
     public List<HttpHeaders> exampleHeaders() {
         return exampleHeaders;
+    }
+
+    @JsonProperty
+    public String serviceRoute() {
+        if (serviceRoute == null) {
+            return "";
+        }
+        return serviceRoute.patternString();
     }
 }

@@ -120,13 +120,11 @@ const copyTextToClipboard = (text: string) => {
 const parseServerRootPath = (serviceRoute: string) => {
   const plainRoute = serviceRoute.replace('/*', '');
   const index = window.location.href.indexOf(plainRoute);
-  console.log({ index, plainRoute, href: window.location.href });
 
   if (index === -1) {
     return '';
   }
   const rootPath = window.location.href.substring(0, index);
-  console.log({ rootPath });
   return rootPath;
 };
 
@@ -208,16 +206,18 @@ const DebugPage: React.FunctionComponent<Props> = ({
       if (exactPathMapping) {
         urlPath = extractUrlPath(method);
       } else {
-        urlPath =
-          urlParams.get('endpoint_path') || parseServerRootPath(serviceRoute);
+        urlPath = urlParams.get('endpoint_path') || '';
       }
     } else {
-      parseServerRootPath(serviceRoute);
       urlPath =
         transport.findDebugMimeTypeEndpoint(
           method,
           urlParams.get('endpoint_path') || undefined,
-        )?.pathMapping || parseServerRootPath(serviceRoute);
+        )?.pathMapping || '';
+    }
+
+    if (urlPath.startsWith('/')) {
+      urlPath = parseServerRootPath(serviceRoute) + urlPath;
     }
 
     const urlQueries =
