@@ -22,12 +22,8 @@ import io.micrometer.observation.Observation.Event;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.docs.ObservationDocumentation;
 
-/**
- * TODO: Add me.
- */
-public enum ServiceObservationDocumentation implements ObservationDocumentation {
+enum ServiceObservationDocumentation implements ObservationDocumentation {
 
-    // TODO: Add me.
     OBSERVATION {
         @Override
         public Class<? extends ObservationConvention<? extends Context>> getDefaultConvention() {

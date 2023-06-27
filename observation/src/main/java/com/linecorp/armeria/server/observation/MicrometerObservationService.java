@@ -21,6 +21,7 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.server.HttpService;
@@ -35,6 +36,7 @@ import io.micrometer.observation.ObservationRegistry;
  * Decorates an {@link HttpService} to trace inbound {@link HttpRequest}s using
  * <a href="https://github.com/micrometer-metrics/micrometer">Micrometer Observation</a>.
  */
+@UnstableApi
 public final class MicrometerObservationService extends SimpleDecoratingHttpService {
 
     /**

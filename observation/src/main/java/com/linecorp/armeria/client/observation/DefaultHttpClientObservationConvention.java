@@ -29,15 +29,9 @@ import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.micrometer.common.KeyValues;
 
-/**
- * TODO: Add me.
- */
-public class DefaultHttpClientObservationConvention implements HttpClientObservationConvention {
+class DefaultHttpClientObservationConvention implements HttpClientObservationConvention {
 
-    /**
-     * TODO: Add me.
-     */
-    public static final DefaultHttpClientObservationConvention INSTANCE =
+    static final DefaultHttpClientObservationConvention INSTANCE =
             new DefaultHttpClientObservationConvention();
 
     @Override

@@ -19,10 +19,7 @@ package com.linecorp.armeria.server.observation;
 import io.micrometer.observation.Observation.Context;
 import io.micrometer.observation.ObservationConvention;
 
-/**
- * TODO: Add me.
- */
-public interface ServiceObservationConvention extends ObservationConvention<HttpServerContext> {
+interface ServiceObservationConvention extends ObservationConvention<HttpServerContext> {
 
     @Override
     default boolean supportsContext(Context context) {

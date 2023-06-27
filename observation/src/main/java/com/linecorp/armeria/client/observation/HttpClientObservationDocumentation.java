@@ -22,12 +22,8 @@ import io.micrometer.observation.Observation.Event;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.docs.ObservationDocumentation;
 
-/**
- * TODO: Add me.
- */
-public enum HttpClientObservationDocumentation implements ObservationDocumentation {
+enum HttpClientObservationDocumentation implements ObservationDocumentation {
 
-    // TODO: Add me.
     OBSERVATION {
         @Override
         public Class<? extends ObservationConvention<? extends Context>> getDefaultConvention() {
@@ -49,9 +45,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
 
     enum HighCardinalityKeys implements KeyName {
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_PATH {
             @Override
             public String asString() {
@@ -59,9 +52,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_METHOD {
             @Override
             public String asString() {
@@ -69,9 +59,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_HOST {
             @Override
             public String asString() {
@@ -79,9 +66,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_URL {
             @Override
             public String asString() {
@@ -89,9 +73,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_PROTOCOL {
             @Override
             public String asString() {
@@ -99,9 +80,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_SERIALIZATION_FORMAT {
             @Override
             public String asString() {
@@ -109,9 +87,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         ADDRESS_REMOTE {
             @Override
             public String asString() {
@@ -119,9 +94,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         ADDRESS_LOCAL {
             @Override
             public String asString() {
@@ -129,9 +101,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         STATUS_CODE {
             @Override
             public String asString() {
@@ -139,9 +108,6 @@ public enum HttpClientObservationDocumentation implements ObservationDocumentati
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         ERROR {
             @Override
             public String asString() {

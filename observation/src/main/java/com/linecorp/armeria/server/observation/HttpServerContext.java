@@ -25,36 +25,23 @@ import io.micrometer.observation.transport.RequestReplyReceiverContext;
 /**
  * TODO: Add me.
  */
-public final class HttpServerContext extends RequestReplyReceiverContext<HttpRequest, RequestLog> {
+final class HttpServerContext extends RequestReplyReceiverContext<HttpRequest, RequestLog> {
 
     private final ServiceRequestContext serviceRequestContext;
     private final HttpRequest httpRequest;
 
-    /**
-     * TODO: Add me.
-     * @param serviceRequestContext add me
-     * @param httpRequest add me
-     */
-    public HttpServerContext(ServiceRequestContext serviceRequestContext, HttpRequest httpRequest) {
+    HttpServerContext(ServiceRequestContext serviceRequestContext, HttpRequest httpRequest) {
         super((c, key) -> c.headers().get(key));
         this.serviceRequestContext = serviceRequestContext;
         this.httpRequest = httpRequest;
         setCarrier(httpRequest);
     }
 
-    /**
-     * TODO: Add me.
-     * @return add me
-     */
-    public ServiceRequestContext getServiceRequestContext() {
+    ServiceRequestContext getServiceRequestContext() {
         return serviceRequestContext;
     }
 
-    /**
-     * TODO: Add me.
-     * @return add me
-     */
-    public HttpRequest getHttpRequest() {
+    HttpRequest getHttpRequest() {
         return httpRequest;
     }
 }

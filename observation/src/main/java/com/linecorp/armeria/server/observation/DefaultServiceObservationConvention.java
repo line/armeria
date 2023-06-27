@@ -29,15 +29,9 @@ import com.linecorp.armeria.server.observation.ServiceObservationDocumentation.H
 
 import io.micrometer.common.KeyValues;
 
-/**
- * TODO: Add me.
- */
-public final class DefaultServiceObservationConvention implements ServiceObservationConvention {
+final class DefaultServiceObservationConvention implements ServiceObservationConvention {
 
-    /**
-     * TODO: Add me.
-     */
-    public static final DefaultServiceObservationConvention INSTANCE =
+    static final DefaultServiceObservationConvention INSTANCE =
             new DefaultServiceObservationConvention();
 
     @Override
