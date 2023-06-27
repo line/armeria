@@ -275,12 +275,12 @@ class BraveIntegrationTest {
             final MutableSpan[] initialConnectSpans = spanHandler.take(1);
             assertThat(initialConnectSpans[0].annotations())
                     .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
-                            "connection-acquire.start",
+                            "connection-acquisition.start",
+                            "connection-acquisition.end",
                             "socket-connect.start",
                             "socket-connect.end",
-                            "connection-existing.start",
-                            "connection-existing.end",
-                            "connection-acquire.end",
+                            "existing-acquisition.start",
+                            "existing-acquisition.end",
                             "ws",
                             "wr");
 
@@ -292,10 +292,10 @@ class BraveIntegrationTest {
                     .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
                             "ws",
                             "wr",
-                            "connection-acquire.start",
-                            "connection-acquire.end",
-                            "connection-existing.start",
-                            "connection-existing.end");
+                            "connection-acquisition.start",
+                            "connection-acquisition.end",
+                            "existing-acquisition.start",
+                            "existing-acquisition.end");
         }
     }
 
@@ -504,7 +504,7 @@ class BraveIntegrationTest {
         // Client timed out, so no response data was ever sent from the server.
         // There is a wire send in the server and no wire receive in the client.
         assertThat(serverAnnotations).containsExactly("wr");
-        assertThat(clientAnnotations).containsExactly("ws");
+        assertThat(clientAnnotations).containsExactly("ws", "existing-acquisition.start", "existing-acquisition.end");
     }
 
     @Test

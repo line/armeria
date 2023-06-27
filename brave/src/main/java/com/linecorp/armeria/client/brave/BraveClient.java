@@ -162,11 +162,11 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
 
             final ClientConnectionTimings timings = log.connectionTimings();
             if (timings != null) {
-                logTiming(span, "connection-acquire.start", "connection-acquire.end",
+                logTiming(span, "connection-acquisition.start", "connection-acquisition.end",
                           timings.connectionAcquisitionStartTimeMicros(),
                           timings.connectionAcquisitionDurationNanos());
                 if (timings.durationNanos(ClientConnectionTimingsType.DNS_RESOLUTION) != -1) {
-                    logTiming(span, "dns-resolve.start", "dns-resolve.end",
+                    logTiming(span, "dns-resolution.start", "dns-resolution.end",
                               timings.startTimeMicros(ClientConnectionTimingsType.DNS_RESOLUTION),
                               timings.durationNanos(ClientConnectionTimingsType.DNS_RESOLUTION));
                 }
@@ -176,12 +176,12 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                               timings.durationNanos(ClientConnectionTimingsType.SOCKET_CONNECT));
                 }
                 if (timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION) != -1) {
-                    logTiming(span, "connection-pending.start", "connection-pending.end",
+                    logTiming(span, "pending-acquisition.start", "pending-acquisition.end",
                               timings.startTimeMicros(ClientConnectionTimingsType.PENDING_ACQUISITION),
                               timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION));
                 }
                 if (timings.durationNanos(ClientConnectionTimingsType.EXISTING_ACQUISITION) != -1) {
-                    logTiming(span, "connection-existing.start", "connection-existing.end",
+                    logTiming(span, "existing-acquisition.start", "existing-acquisition.end",
                               timings.startTimeMicros(ClientConnectionTimingsType.EXISTING_ACQUISITION),
                               timings.durationNanos(ClientConnectionTimingsType.EXISTING_ACQUISITION));
                 }

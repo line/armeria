@@ -211,11 +211,13 @@ public final class RequestMetricSupport {
         Counter actualRequests();
 
         Timer connectionAcquisitionDuration();
+
         Timer deprecatedDnsResolutionDuration();
 
         Timer deprecatedSocketConnectDuration();
 
         Timer deprecatedPendingAcquisitionDuration();
+
         Timer dnsResolutionDuration();
 
         Timer socketConnectDuration();
@@ -329,7 +331,7 @@ public final class RequestMetricSupport {
             this.idPrefix = idPrefix;
 
             connectionAcquisitionDuration = newTimer(
-                    parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags());
+                    parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags("type", "all"));
 
             // deprecated timers
             deprecatedDnsResolutionDuration = newTimer(
@@ -340,16 +342,16 @@ public final class RequestMetricSupport {
                     parent, idPrefix.name("pending.acquisition.duration"), idPrefix.tags());
 
             dnsResolutionDuration = newTimer(
-                    parent, idPrefix.name("connection.acquisition"),
+                    parent, idPrefix.name("connection.acquisition.duration"),
                     idPrefix.tags("type", "dns.resolution"));
             socketConnectDuration = newTimer(
-                    parent, idPrefix.name("connection.acquisition"),
+                    parent, idPrefix.name("connection.acquisition.duration"),
                     idPrefix.tags("type", "socket.connect"));
             pendingAcquisitionDuration = newTimer(
-                    parent, idPrefix.name("connection.acquisition"),
+                    parent, idPrefix.name("connection.acquisition.duration"),
                     idPrefix.tags("type", "pending.acquisition"));
             existingAcquisitionDuration = newTimer(
-                    parent, idPrefix.name("connection.acquisition"),
+                    parent, idPrefix.name("connection.acquisition.duration"),
                     idPrefix.tags("type", "existing.acquisition"));
 
             final String timeouts = idPrefix.name("timeouts");

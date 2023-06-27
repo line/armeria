@@ -76,13 +76,21 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.requests#count{http.status=200,method=POST,result=failure," +
                                "service=FooService}", 0.0)
                 .containsEntry("foo.connection.acquisition.duration#count{http.status=200,method=POST," +
-                               "service=FooService}", 1.0)
+                               "service=FooService,type=all}", 1.0)
                 .containsEntry("foo.dns.resolution.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=200,method=POST," +
+                               "service=FooService,type=dns.resolution}", 1.0)
                 .containsEntry("foo.socket.connect.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=200,method=POST," +
+                               "service=FooService,type=socket.connect}", 1.0)
                 .containsEntry("foo.pending.acquisition.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=200,method=POST," +
+                               "service=FooService,type=pending.acquisition}", 1.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=200,method=POST," +
+                               "service=FooService,type=existing.acquisition}", 1.0)
                 .containsEntry("foo.request.length#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
                 .containsEntry("foo.request.length#total{http.status=200,method=POST," +
@@ -107,6 +115,8 @@ class RequestMetricSupportTest {
                                       .socketConnectEnd()
                                       .pendingAcquisitionStart()
                                       .pendingAcquisitionEnd()
+                                      .existingAcquisitionStart()
+                                      .existingAcquisitionEnd()
                                       .build();
     }
 
@@ -159,13 +169,21 @@ class RequestMetricSupportTest {
                                1.0)
                 .containsEntry("foo.actual.requests#count{http.status=500,method=POST,service=none}", 2.0)
                 .containsEntry("foo.connection.acquisition.duration#count{http.status=500,method=POST," +
-                               "service=none}", 1.0)
+                               "service=none,type=all}", 1.0)
                 .containsEntry("foo.dns.resolution.duration#count{http.status=500,method=POST,service=none}",
                                1.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=500,method=POST," +
+                               "service=none,type=dns.resolution}", 1.0)
                 .containsEntry("foo.socket.connect.duration#count{http.status=500,method=POST,service=none}",
                                1.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=500,method=POST," +
+                               "service=none,type=socket.connect}", 1.0)
                 .containsEntry("foo.pending.acquisition.duration#count{http.status=500,method=POST," +
                                "service=none}", 1.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=500,method=POST," +
+                               "service=none,type=pending.acquisition}", 1.0)
+                .containsEntry("foo.connection.acquisition.duration#count{http.status=500,method=POST," +
+                               "service=none,type=existing.acquisition}", 1.0)
                 .containsEntry("foo.request.length#count{http.status=500,method=POST,service=none}", 1.0)
                 .containsEntry("foo.request.length#total{http.status=500,method=POST,service=none}", 123.0)
                 .containsEntry("foo.response.duration#count{http.status=500,method=POST,service=none}", 1.0)
