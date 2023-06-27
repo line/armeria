@@ -74,10 +74,9 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
     /**
      * Creates a new instance.
      */
-    private MicrometerObservationClient(HttpClient delegate,
-                                        ObservationRegistry observationRegistry,
-                                        @Nullable HttpClientObservationConvention
-                                                httpClientObservationConvention) {
+    private MicrometerObservationClient(
+            HttpClient delegate, ObservationRegistry observationRegistry,
+            @Nullable HttpClientObservationConvention httpClientObservationConvention) {
         super(delegate);
         this.observationRegistry = observationRegistry;
         this.httpClientObservationConvention = httpClientObservationConvention;

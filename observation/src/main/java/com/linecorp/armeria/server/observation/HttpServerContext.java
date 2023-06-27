@@ -22,9 +22,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.observation.transport.RequestReplyReceiverContext;
 
-/**
- * TODO: Add me.
- */
 final class HttpServerContext extends RequestReplyReceiverContext<HttpRequest, RequestLog> {
 
     private final ServiceRequestContext serviceRequestContext;

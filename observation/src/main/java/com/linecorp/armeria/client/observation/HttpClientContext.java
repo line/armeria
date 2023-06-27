@@ -32,7 +32,7 @@ final class HttpClientContext extends RequestReplySenderContext<RequestHeadersBu
     private final HttpRequest httpRequest;
 
     HttpClientContext(ClientRequestContext clientRequestContext, RequestHeadersBuilder carrier,
-                             HttpRequest httpRequest) {
+                      HttpRequest httpRequest) {
         super(RequestHeadersBuilder::add);
         this.clientRequestContext = clientRequestContext;
         this.httpRequest = httpRequest;

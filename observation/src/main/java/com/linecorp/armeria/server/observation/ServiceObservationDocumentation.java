@@ -45,9 +45,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
 
     enum HighCardinalityKeys implements KeyName {
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_PATH {
             @Override
             public String asString() {
@@ -55,9 +52,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_METHOD {
             @Override
             public String asString() {
@@ -65,9 +59,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_HOST {
             @Override
             public String asString() {
@@ -75,9 +66,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_URL {
             @Override
             public String asString() {
@@ -85,9 +73,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_PROTOCOL {
             @Override
             public String asString() {
@@ -95,9 +80,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         HTTP_SERIALIZATION_FORMAT {
             @Override
             public String asString() {
@@ -105,9 +87,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         ADDRESS_REMOTE {
             @Override
             public String asString() {
@@ -115,9 +94,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         ADDRESS_LOCAL {
             @Override
             public String asString() {
@@ -125,9 +101,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         STATUS_CODE {
             @Override
             public String asString() {
@@ -135,9 +108,6 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        /**
-         * TODO: Add me.
-         */
         ERROR {
             @Override
             public String asString() {
