@@ -330,22 +330,18 @@ class BraveIntegrationTest {
 
         // client/foo and service/foo should have no parents.
         assertThat(clientFooSpan.parentId()).isNull();
-        assertThat(serviceFooSpan.parentId()).isNull();
+        assertThat(serviceFooSpan.parentId()).isEqualTo(clientFooSpan.id());
 
         // client/foo and service/foo should have the ID values identical with their traceIds.
         assertThat(clientFooSpan.id()).isEqualTo(traceId);
-        assertThat(serviceFooSpan.id()).isEqualTo(traceId);
-
-        // The spans that do not cross the network boundary should have the same ID.
-        assertThat(clientFooSpan.id()).isEqualTo(serviceFooSpan.id());
-        assertThat(clientBarSpan.id()).isEqualTo(serviceBarSpan.id());
-        assertThat(clientQuxSpan.id()).isEqualTo(serviceQuxSpan.id());
+        assertThat(serviceFooSpan.id()).isEqualTo(serviceFooSpan.localRootId());
 
         // Check the parentIds.
-        assertThat(clientBarSpan.parentId()).isEqualTo(clientFooSpan.id());
-        assertThat(serviceBarSpan.parentId()).isEqualTo(clientFooSpan.id());
-        assertThat(clientQuxSpan.parentId()).isEqualTo(clientBarSpan.id());
-        assertThat(serviceQuxSpan.parentId()).isEqualTo(clientBarSpan.id());
+        assertThat(serviceFooSpan.parentId()).isEqualTo(clientFooSpan.id());
+        assertThat(clientBarSpan.parentId()).isEqualTo(serviceFooSpan.id());
+        assertThat(serviceBarSpan.parentId()).isEqualTo(clientBarSpan.id());
+        assertThat(clientQuxSpan.parentId()).isEqualTo(serviceBarSpan.id());
+        assertThat(serviceQuxSpan.parentId()).isEqualTo(clientQuxSpan.id());
 
         // Check the service names.
         assertThat(clientFooSpan.localServiceName()).isEqualTo("client/foo");
@@ -422,15 +418,11 @@ class BraveIntegrationTest {
         // service/foo should have the ID value identical with its traceId.
         assertThat(serviceFooSpan.id()).isEqualTo(traceId);
 
-        // The spans that do not cross the network boundary should have the same ID.
-        assertThat(clientBarSpan.id()).isEqualTo(serviceBarSpan.id());
-        assertThat(clientQuxSpan.id()).isEqualTo(serviceQuxSpan.id());
-
         // Check the parentIds
         assertThat(clientBarSpan.parentId()).isEqualTo(serviceFooSpan.id());
-        assertThat(serviceBarSpan.parentId()).isEqualTo(serviceFooSpan.id());
+        assertThat(serviceBarSpan.parentId()).isEqualTo(clientBarSpan.id());
         assertThat(clientQuxSpan.parentId()).isEqualTo(serviceBarSpan.id());
-        assertThat(serviceQuxSpan.parentId()).isEqualTo(serviceBarSpan.id());
+        assertThat(serviceQuxSpan.parentId()).isEqualTo(clientQuxSpan.id());
 
         // Check the service names.
         assertThat(serviceFooSpan.localServiceName()).isEqualTo("service/foo");

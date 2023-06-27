@@ -118,7 +118,11 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
 
         ctx.log()
            .whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
-           .thenAccept(requestLog -> observation.event(Events.WIRE_RECEIVE));
+           .thenAccept(requestLog -> {
+               if (requestLog.responseFirstBytesTransferredTimeNanos() != null) {
+                   observation.event(Events.WIRE_RECEIVE);
+               }
+           });
 
         ctx.log().whenComplete()
            .thenAccept(requestLog -> {

@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.MDC;
@@ -44,6 +45,7 @@ import brave.baggage.BaggageFields;
 import brave.context.slf4j.MDCScopeDecorator;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.ThreadLocalCurrentTraceContext;
+import brave.propagation.TraceContext;
 
 class SpanPropagationTest {
 
@@ -54,6 +56,8 @@ class SpanPropagationTest {
     private static final Tracing tracing = Tracing.newBuilder()
                                                   .currentTraceContext(traceCtx)
                                                   .build();
+    private static final AtomicReference<TraceContext> clientTraceCtx = new AtomicReference<>();
+    private static final AtomicReference<TraceContext> serviceTraceCtx = new AtomicReference<>();
 
     private static final AtomicReference<Map<String, String>> serviceMdcContextRef = new AtomicReference<>();
 
@@ -66,6 +70,7 @@ class SpanPropagationTest {
                 ctx.log().whenComplete()
                    .thenAcceptAsync(log -> {
                        serviceMdcContextRef.set(MDC.getCopyOfContextMap());
+                       serviceTraceCtx.set(tracing.currentTraceContext().get());
                    }, ctx.eventLoop());
                 return HttpResponse.from(
                         server.webClient(cb -> cb.decorator(MicrometerObservationClient.newDecorator(
@@ -78,16 +83,25 @@ class SpanPropagationTest {
             sb.service("/bar", (ctx, req) -> {
                 return HttpResponse.of("OK");
             });
-
             sb.decorator(LoggingService.newDecorator());
             sb.decorator(MicrometerObservationService.newDecorator(
                     MicrometerObservationRegistryUtils.observationRegistry(tracing)));
         }
     };
 
+    @BeforeEach
+    void beforeEach() {
+        clientTraceCtx.set(null);
+        serviceTraceCtx.set(null);
+    }
+
     @Test
-    void mdcScopeDecorator() throws InterruptedException {
+    void mdcScopeDecorator() {
         final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(((delegate, ctx, req) -> {
+                                              clientTraceCtx.set(tracing.currentTraceContext().get());
+                                              return delegate.execute(ctx, req);
+                                          }))
                                           .decorator(MicrometerObservationClient.newDecorator(
                                                   MicrometerObservationRegistryUtils.observationRegistry(
                                                           tracing)))
@@ -110,13 +124,15 @@ class SpanPropagationTest {
         final Map<String, String> serviceMdcContext = serviceMdcContextRef.get();
         final String serviceTraceId = serviceMdcContext.get(BaggageFields.TRACE_ID.name());
         final String serviceSpanId = serviceMdcContext.get(BaggageFields.SPAN_ID.name());
-        assertThat(serviceTraceId).isNotNull();
-        assertThat(serviceSpanId).isNotNull();
+        assertThat(serviceTraceId).isEqualTo(serviceTraceCtx.get().traceIdString());
+        assertThat(serviceSpanId).isEqualTo(serviceTraceCtx.get().spanIdString());
 
         final Map<String, String> clientMdcContext = clientMdcContextRef.get();
         final String clientTraceId = clientMdcContext.get(BaggageFields.TRACE_ID.name());
         final String clientSpanId = clientMdcContext.get(BaggageFields.SPAN_ID.name());
-        assertThat(clientTraceId).isEqualTo(serviceTraceId);
-        assertThat(clientSpanId).isEqualTo(serviceSpanId);
+        assertThat(clientTraceId).isEqualTo(clientTraceCtx.get().traceIdString());
+        assertThat(clientSpanId).isEqualTo(clientTraceCtx.get().spanIdString());
+
+        assertThat(serviceTraceCtx.get().parentIdString()).isEqualTo(clientTraceCtx.get().spanIdString());
     }
 }

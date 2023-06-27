@@ -107,7 +107,11 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
 
         ctx.log()
            .whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
-           .thenAccept(requestLog -> observation.event(ServiceObservationDocumentation.Events.WIRE_SEND));
+           .thenAccept(requestLog -> {
+               if (requestLog.responseFirstBytesTransferredTimeNanos() != null) {
+                   observation.event(ServiceObservationDocumentation.Events.WIRE_SEND);
+               }
+           });
 
         ctx.log().whenComplete()
            .thenAccept(requestLog -> {
