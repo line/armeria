@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.ClientConnectionTimingsType;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
@@ -115,7 +116,8 @@ class HttpClientWithRequestLogTest {
         final ClientConnectionTimings timings = ref.get();
         assertThat(timings.connectionAcquisitionStartTimeMicros()).isPositive();
 
-        final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
+        final long dnsResolutionDurationNanos =
+                timings.durationNanos(ClientConnectionTimingsType.DNS_RESOLUTION);
         assertThat(dnsResolutionDurationNanos).isPositive();
         assertThat(timings.connectionAcquisitionDurationNanos())
                 .isGreaterThanOrEqualTo(dnsResolutionDurationNanos);
@@ -147,9 +149,9 @@ class HttpClientWithRequestLogTest {
         await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
         final ClientConnectionTimings timings = ref.get();
         assertThat(timings.connectionAcquisitionStartTimeMicros()).isPositive();
-        assertThat(timings.existingAcquisitionStartTimeMicros()).isPositive();
+        assertThat(timings.startTimeMicros(ClientConnectionTimingsType.EXISTING_ACQUISITION)).isPositive();
 
-        final long connectDurationNanos = timings.socketConnectDurationNanos();
+        final long connectDurationNanos = timings.durationNanos(ClientConnectionTimingsType.SOCKET_CONNECT);
         assertThat(connectDurationNanos).isPositive();
         assertThat(timings.connectionAcquisitionDurationNanos()).isGreaterThanOrEqualTo(connectDurationNanos);
 

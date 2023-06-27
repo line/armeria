@@ -87,8 +87,10 @@ public final class ClientConnectionTimings {
 
     /**
      * Returns the duration which was taken to get a connection, in nanoseconds. This value is greater than or
-     * equal to the sum of {@link #dnsResolutionDurationNanos()}, {@link #socketConnectDurationNanos()} and
-     * {@link #pendingAcquisitionDurationNanos()}.
+     * equal to the sum of {@link ClientConnectionTimingsType#DNS_RESOLUTION},
+     * {@link ClientConnectionTimingsType#SOCKET_CONNECT}
+     * {@link ClientConnectionTimingsType#PENDING_ACQUISITION}
+     * and {@link ClientConnectionTimingsType#EXISTING_ACQUISITION}.
      */
     public long connectionAcquisitionDurationNanos() {
         return connectionAcquisitionDurationNanos;
@@ -98,7 +100,10 @@ public final class ClientConnectionTimings {
      * Returns the time when the client started to resolve a domain name, in microseconds since the epoch.
      *
      * @return the start time, or {@code -1} if there was no action to resolve a domain name.
+     *
+     * @deprecated use {@link #startTimeMicros(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long dnsResolutionStartTimeMicros() {
         return dnsResolutionStartTimeMicros;
     }
@@ -107,7 +112,10 @@ public final class ClientConnectionTimings {
      * Returns the time when the client started to resolve a domain name, in milliseconds since the epoch.
      *
      * @return the start time, or {@code -1} if there was no action to resolve a domain name.
+     *
+     * @deprecated use {@link #startTimeMillis(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long dnsResolutionStartTimeMillis() {
         if (dnsResolutionStartTimeMicros >= 0) {
             return TimeUnit.MICROSECONDS.toMillis(dnsResolutionStartTimeMicros);
@@ -119,7 +127,10 @@ public final class ClientConnectionTimings {
      * Returns the duration which was taken to resolve a domain name, in nanoseconds.
      *
      * @return the duration, or {@code -1} if there was no action to resolve a domain name.
+     *
+     * @deprecated use {@link #durationNanos(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long dnsResolutionDurationNanos() {
         return dnsResolutionDurationNanos;
     }
@@ -128,7 +139,10 @@ public final class ClientConnectionTimings {
      * Returns the time when the client started to connect to a remote peer, in microseconds since the epoch.
      *
      * @return the start time, or {@code -1} if there was no action to connect to a remote peer.
+     *
+     * @deprecated use {@link #startTimeMicros(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long socketConnectStartTimeMicros() {
         return socketConnectStartTimeMicros;
     }
@@ -137,7 +151,10 @@ public final class ClientConnectionTimings {
      * Returns the time when the client started to connect to a remote peer, in milliseconds since the epoch.
      *
      * @return the start time, or {@code -1} if there was no action to connect to a remote peer.
+     *
+     * @deprecated use {@link #startTimeMillis(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long socketConnectStartTimeMillis() {
         if (socketConnectStartTimeMicros >= 0) {
             return TimeUnit.MICROSECONDS.toMillis(socketConnectStartTimeMicros);
@@ -149,7 +166,10 @@ public final class ClientConnectionTimings {
      * Returns the duration which was taken to connect to a remote peer, in nanoseconds.
      *
      * @return the duration, or {@code -1} if there was no action to connect to a remote peer.
+     *
+     * @deprecated use {@link #durationNanos(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long socketConnectDurationNanos() {
         return socketConnectDurationNanos;
     }
@@ -159,7 +179,10 @@ public final class ClientConnectionTimings {
      * in microseconds since the epoch.
      *
      * @return the start time, or {@code -1} if there was no action to get a pending connection.
+     *
+     * @deprecated use {@link #startTimeMicros(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long pendingAcquisitionStartTimeMicros() {
         return pendingAcquisitionStartTimeMicros;
     }
@@ -169,7 +192,10 @@ public final class ClientConnectionTimings {
      * in milliseconds since the epoch.
      *
      * @return the start time, or {@code -1} if there was no action to get a pending connection.
+     *
+     * @deprecated use {@link #startTimeMillis(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long pendingAcquisitionStartTimeMillis() {
         if (pendingAcquisitionStartTimeMicros >= 0) {
             return TimeUnit.MICROSECONDS.toMillis(pendingAcquisitionStartTimeMicros);
@@ -182,45 +208,68 @@ public final class ClientConnectionTimings {
      * in order to use one connection for HTTP/2.
      *
      * @return the duration, or {@code -1} if there was no action to get a pending connection.
+     *
+     * @deprecated use {@link #durationNanos(ClientConnectionTimingsType)} instead.
      */
+    @Deprecated
     public long pendingAcquisitionDurationNanos() {
         return pendingAcquisitionDurationNanos;
     }
 
     /**
-     * Returns the time when the client started checking if an existing connection can be acquired,
-     * in microseconds since the epoch.
+     * Returns the time when the client started the action for the specified
+     * {@link ClientConnectionTimingsType} in microseconds.
      *
-     * @return the start time, or {@code -1} if there was no action to get a pending connection.
+     * @return the start time, or {@code -1} if there was no action.
      */
-    public long existingAcquisitionStartTimeMicros() {
-        return existingAcquisitionStartTimeMicros;
-    }
-
-    /**
-     * Returns the time when the client started checking if an existing connection can be acquired.
-     *
-     * @return the start time, or {@code -1} if there was no action to get an existing connection.
-     */
-    public long existingAcquisitionStartTimeMillis() {
-        if (existingAcquisitionStartTimeMicros >= 0) {
-            return TimeUnit.MICROSECONDS.toMillis(existingAcquisitionStartTimeMicros);
+    public long startTimeMicros(ClientConnectionTimingsType type) {
+        switch (type) {
+            case SOCKET_CONNECT:
+                return socketConnectStartTimeMicros;
+            case DNS_RESOLUTION:
+                return dnsResolutionStartTimeMicros;
+            case PENDING_ACQUISITION:
+                return pendingAcquisitionStartTimeMicros;
+            case EXISTING_ACQUISITION:
+                return existingAcquisitionStartTimeMicros;
+            default:
+                throw new Error("Shouldn't reach here");
         }
-        return -1;
     }
 
     /**
-     * Returns the duration which was taken to check if an existing connection can be acquired.
+     * Returns the time when the client started the action for the specified
+     * {@link ClientConnectionTimingsType} in milliseconds.
      *
-     * @return the duration, or {@code -1} if there was no action to get a pending connection.
+     * @return the start time, or {@code -1} if there was no action.
      */
-    public long existingAcquisitionDurationNanos() {
-        return existingAcquisitionDurationNanos;
+    public long startTimeMillis(ClientConnectionTimingsType type) {
+        return TimeUnit.MICROSECONDS.toMillis(startTimeMicros(type));
+    }
+
+    /**
+     * Returns the duration which was taken to wait for the completion of the action
+     * in nanoseconds.
+     *
+     * @return the duration, or {@code -1} if there was no action.
+     */
+    public long durationNanos(ClientConnectionTimingsType type) {
+        switch (type) {
+            case SOCKET_CONNECT:
+                return socketConnectDurationNanos;
+            case DNS_RESOLUTION:
+                return dnsResolutionDurationNanos;
+            case PENDING_ACQUISITION:
+                return pendingAcquisitionDurationNanos;
+            case EXISTING_ACQUISITION:
+                return existingAcquisitionDurationNanos;
+            default:
+                throw new Error("Shouldn't reach here");
+        }
     }
 
     @Override
     public String toString() {
-        // 33 + 31 + 26 + 23 + 26 + 23 + 31 + 28 + 45 * 4 + 16 * 4 + 1 = 466
         final StringBuilder buf = new StringBuilder(TO_STRING_BUILDER_CAPACITY);
         buf.append("{connectionAcquisitionStartTime=");
         TextFormatter.appendEpochMicros(buf, connectionAcquisitionStartTimeMicros);
@@ -228,28 +277,28 @@ public final class ClientConnectionTimings {
         TextFormatter.appendElapsed(buf, connectionAcquisitionDurationNanos);
 
         if (dnsResolutionDurationNanos >= 0) {
-            buf.append(", dnsResolutionStartTime=");
+            buf.append(", dnsResolution.startTime=");
             TextFormatter.appendEpochMicros(buf, dnsResolutionStartTimeMicros);
-            buf.append(", dnsResolutionDuration=");
+            buf.append(", dnsResolution.duration=");
             TextFormatter.appendElapsed(buf, dnsResolutionDurationNanos);
         }
 
         if (socketConnectDurationNanos >= 0) {
-            buf.append(", socketConnectStartTime=");
+            buf.append(", socketConnect.startTime=");
             TextFormatter.appendEpochMicros(buf, socketConnectStartTimeMicros);
-            buf.append(", socketConnectDuration=");
+            buf.append(", socketConnect.duration=");
             TextFormatter.appendElapsed(buf, socketConnectDurationNanos);
         }
         if (pendingAcquisitionDurationNanos >= 0) {
-            buf.append(", pendingAcquisitionStartTime=");
+            buf.append(", pendingAcquisition.startTime=");
             TextFormatter.appendEpochMicros(buf, pendingAcquisitionStartTimeMicros);
-            buf.append(", pendingAcquisitionDuration=");
+            buf.append(", pendingAcquisition.duration=");
             TextFormatter.appendElapsed(buf, pendingAcquisitionDurationNanos);
         }
         if (existingAcquisitionDurationNanos >= 0) {
-            buf.append(", existingConnectionAcquisitionStartTime=");
+            buf.append(", existingAcquisition.startTime=");
             TextFormatter.appendEpochMicros(buf, existingAcquisitionStartTimeMicros);
-            buf.append(", existingConnectionAcquisitionDuration=");
+            buf.append(", existingAcquisition.duration=");
             TextFormatter.appendElapsed(buf, existingAcquisitionDurationNanos);
         }
         buf.append('}');

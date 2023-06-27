@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.ClientConnectionTimingsType;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -203,7 +204,7 @@ public class HttpClientMaxConcurrentStreamTest {
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(connectionTimings.stream().filter(
-                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                timings -> timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION) > 0))
                 .hasSize(numRequests - 1);
     }
 
@@ -229,7 +230,7 @@ public class HttpClientMaxConcurrentStreamTest {
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
         assertThat(connectionTimings.stream().filter(
-                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                timings -> timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION) > 0))
                 .hasSize(numRequests - 1);
     }
 
@@ -259,7 +260,7 @@ public class HttpClientMaxConcurrentStreamTest {
                                              .count() == numFailedRequests);
         assertThat(opens).hasValue(numExpectedConnections);
         assertThat(connectionTimings.stream().filter(
-                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                timings -> timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION) > 0))
                 .hasSize(numRequests + numFailedRequests - 1);
 
         // Check exception thrown by responses
@@ -331,12 +332,13 @@ public class HttpClientMaxConcurrentStreamTest {
 
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(connectionTimings.stream().filter(
-                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                timings -> timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION) > 0))
                 .hasSize(numRequests - 1);
 
         // There should be at least one request with at least numConnections * pendingAcquisitionsDuration
         final Long maxPendingAcquisitionDurationNanos = connectionTimings.stream().mapToLong(
-                ClientConnectionTimings::pendingAcquisitionDurationNanos).max().orElse(0L);
+                timings -> timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION))
+                                                                         .max().orElse(0L);
         assertThat(maxPendingAcquisitionDurationNanos)
                 .isGreaterThan(TimeUnit.MILLISECONDS.toNanos(sleepMillis * numConnections));
     }
@@ -364,7 +366,7 @@ public class HttpClientMaxConcurrentStreamTest {
         await().untilAsserted(() -> assertThat(responses).hasSize(numRequests));
         assertThat(opens).hasValue(numExpectedConnections);
         assertThat(connectionTimings.stream().filter(
-                timings -> timings.pendingAcquisitionDurationNanos() > 0))
+                timings -> timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION) > 0))
                 .hasSize(numRequests - 1);
     }
 
