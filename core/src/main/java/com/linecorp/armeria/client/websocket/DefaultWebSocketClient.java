@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -44,7 +45,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -54,11 +54,10 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.DeferredStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.websocket.WebSocket;
-import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
@@ -121,15 +120,33 @@ final class DefaultWebSocketClient implements WebSocketClient {
     }
 
     @Override
-    public void connect(RequestHeaders requestHeaders, WebSocketClientHandler handler) {
-        requireNonNull(requestHeaders, "requestHeaders");
-        requireNonNull(handler, "handler");
-        validateHeaders(requestHeaders);
-        final HttpRequestWriter requestWriter = HttpRequest.streaming(requestHeaders);
-        final ClientRequestContext ctx;
+    public CompletableFuture<WebSocketSession> connect(String path) {
+        requireNonNull(path, "path");
+        final RequestHeadersBuilder builder;
+        if (scheme().sessionProtocol().isExplicitHttp2()) {
+            builder = RequestHeaders.builder(HttpMethod.CONNECT, path)
+                                    .set(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString());
+        } else {
+            builder = RequestHeaders.builder(HttpMethod.GET, path)
+                                    .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString())
+                                    .set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString());
+            final String secWebSocketKey = generateSecWebSocketKey();
+            builder.set(HttpHeaderNames.SEC_WEBSOCKET_KEY, secWebSocketKey);
+        }
+
+        builder.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
+        final List<String> protocols = ImmutableList.of();
+        if (!protocols.isEmpty()) {
+            builder.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, Joiner.on(", ").join(protocols));
+        }
+
+        final DeferredStreamMessage<HttpObject> deferred = new DeferredStreamMessage<>();
+        final RequestHeaders requestHeaders = builder.build();
+        final HttpRequest request = HttpRequest.of(requestHeaders, deferred);
         final HttpResponse response;
+        final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            response = webClient.execute(requestWriter);
+            response = webClient.execute(request);
             ctx = captor.get();
         }
         final SplitHttpResponse split =
@@ -142,35 +159,36 @@ final class DefaultWebSocketClient implements WebSocketClient {
                     return !responseHeaders.status().isInformational();
                 });
 
+        final CompletableFuture<WebSocketSession> result = new CompletableFuture<>();
         split.headers().handle((responseHeaders, cause) -> {
             if (cause != null) {
-                fail(ctx, handler, requestWriter, response, cause);
+                fail(deferred, response, result, cause);
                 return null;
             }
             if (actualSessionProtocol(ctx).isExplicitHttp2()) {
                 final HttpStatus status = responseHeaders.status();
                 if (status != HttpStatus.OK) {
-                    fail(ctx, handler, requestWriter, response, new WebSocketClientHandshakeException(
+                    fail(deferred, response, result, new WebSocketClientHandshakeException(
                             "invalid status: " + status + " (expected: " + HttpStatus.OK + ')',
                             responseHeaders));
                     return null;
                 }
             } else {
                 if (!isHttp1WebSocketResponse(responseHeaders)) {
-                    fail(ctx, handler, requestWriter, response, new WebSocketClientHandshakeException(
-                            "invalid headers: " + responseHeaders, responseHeaders));
+                    fail(deferred, response, result, new WebSocketClientHandshakeException(
+                            "invalid response headers: " + responseHeaders, responseHeaders));
                     return null;
                 }
                 final String secWebSocketKey = requestHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
-                assert secWebSocketKey != null; // We already validated the request headers.
+                assert secWebSocketKey != null;
                 final String secWebSocketAccept = responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
                 if (secWebSocketAccept == null) {
-                    fail(ctx, handler, requestWriter, response, new WebSocketClientHandshakeException(
+                    fail(deferred, response, result, new WebSocketClientHandshakeException(
                             HttpHeaderNames.SEC_WEBSOCKET_ACCEPT + " is null.", responseHeaders));
                     return null;
                 }
                 if (!secWebSocketAccept.equals(generateSecWebSocketAccept(secWebSocketKey))) {
-                    fail(ctx, handler, requestWriter, response, new WebSocketClientHandshakeException(
+                    fail(deferred, response, result, new WebSocketClientHandshakeException(
                             "invalid " + HttpHeaderNames.SEC_WEBSOCKET_ACCEPT + " header: " +
                             secWebSocketAccept, responseHeaders));
                     return null;
@@ -178,22 +196,15 @@ final class DefaultWebSocketClient implements WebSocketClient {
             }
             final WebSocketFrameDecoder decoder =
                     new WebSocketFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch, false);
-            final WebSocketWrapper in = new WebSocketWrapper(split.body().decode(decoder));
-            final WebSocket outbound = handler.handle(ctx, in);
-            if (outbound == null) {
-                final NullPointerException exception =
-                        new NullPointerException("handler.handle() returned a null.");
-                in.abort(exception);
-                outbound.abort(exception);
-                requestWriter.abort(exception);
-                response.abort(exception);
-                return null;
-            }
-            final StreamMessage<HttpData> src =
-                    outbound.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame)));
-            writeTo(src, requestWriter, ctx);
+            final WebSocketWrapper inbound = new WebSocketWrapper(split.body().decode(decoder));
+            final CompletableFuture<StreamMessage<HttpData>> outboundFuture = new CompletableFuture<>();
+            result.complete(new WebSocketSession(ctx, responseHeaders, inbound, outboundFuture, encoder));
+
+//            final StreamMessage<HttpData> src =
+//                    outbound.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame)));
             return null;
         });
+        return result;
     }
 
     private static SessionProtocol actualSessionProtocol(ClientRequestContext ctx) {
@@ -251,14 +262,11 @@ final class DefaultWebSocketClient implements WebSocketClient {
         throw new IllegalArgumentException("invalid WebSocket request headers: " + requestHeaders);
     }
 
-    private static void fail(ClientRequestContext ctx, WebSocketClientHandler handler,
-                             HttpRequestWriter requestWriter, HttpResponse response, Throwable cause) {
-        final WebSocketWriter in = WebSocket.streaming();
-        in.abort(cause);
-        final WebSocket out = handler.handle(ctx, in);
-        out.abort(cause);
-        requestWriter.abort(cause);
+    private static void fail(DeferredStreamMessage<HttpObject> deferred, HttpResponse response,
+                             CompletableFuture<WebSocketSession> result, Throwable cause) {
+        deferred.abort(cause);
         response.abort(cause);
+        result.completeExceptionally(cause);
     }
 
     @VisibleForTesting

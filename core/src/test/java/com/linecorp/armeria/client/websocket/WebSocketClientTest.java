@@ -24,6 +24,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -32,6 +33,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.websocket.WebSocketSession.WebSocketCallbackHandler;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -281,4 +283,31 @@ class WebSocketClientTest {
             return writer;
         }
     }
+
+    @Test
+    void foo() {
+        final WebSocketClient client = WebSocketClient.of();
+        final CompletableFuture<WebSocketSession> future = client.connect("/chat");
+        final WebSocketSession session = future.join();
+
+        final WebSocket inboundMessages = session.inbound();
+//        final WebSocketWriter outboundMessages = session.outboundMessages();
+        final String subprotocol = session.subprotocol();
+
+        final WebSocketCallbackHandler handler = new WebSocketCallbackHandler() {};
+        session.start(handler);
+
+        future.handle((webSocketSession, cause) -> {
+            if (cause != null) {
+                // Handshake failure.
+                return null;
+            }
+            final String subprotocol1 = webSocketSession.subprotocol();
+            webSocketSession.start(handler);
+
+            // Handle success.
+            return null;
+        });
+    }
+
 }

@@ -212,4 +212,6 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
 
     @Override
     WebClient unwrap();
+
+    CompletableFuture<WebSocketSession> connect(String path);
 }
