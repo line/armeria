@@ -504,7 +504,8 @@ class BraveIntegrationTest {
         // Client timed out, so no response data was ever sent from the server.
         // There is a wire send in the server and no wire receive in the client.
         assertThat(serverAnnotations).containsExactly("wr");
-        assertThat(clientAnnotations).containsExactly("ws", "existing-acquisition.start", "existing-acquisition.end");
+        assertThat(clientAnnotations).containsExactly("ws", "existing-acquisition.start",
+                                                      "existing-acquisition.end");
     }
 
     @Test
