@@ -206,7 +206,7 @@ Each property records a start time and duration if available.
 +------------------------------------------+-------------------------------------------------------------------+
 
 The connection acquisition duration is the sum of `dnsResolution.durationNanos`, `socketConnect.durationNanos` and
-`pendingAcquisition.ㅇurationNanos`. They may or may not occur depending on circumstances.
+`pendingAcquisition.durationNanos`. They may or may not occur depending on circumstances.
 These are some of the scenarios how the total duration is composed of:
 
 1. A request resolves a domain name, and then checks if there is an existing connection
@@ -215,13 +215,13 @@ that can be used. Afterwards, a socket connection is made to the remote peer.
 ```bob-svg
 
    +-----------------------------------------------------------------------------------------------+                               #1
-   :<------------------------------------connectionAcquisition------------------------------------>|
+   |<----------------------------------- connectionAcquisition ----------------------------------->|
    +-----------------------------------------------------------------------------------------------+
-   :<--------dnsResolution-------->|
+   |<------- dnsResolution ------->|
    +-------------------------------+-------------------------------+
-                                   :<-----existingAcquisition----->|
+                                   |<---- existingAcquisition ---->|
    +-------------------------------+-------------------------------+-------------------------------+
-                                                                   :<--------socketConnect-------->|
+                                                                   |<------- socketConnect ------->|
                                                                    +-------------------------------+
 ```
 
@@ -233,11 +233,11 @@ uses it.)
 
 ```bob-svg
 +-----------------------------+-----------------------------+                                                                 #2
-:<------------------connectionAcquisition------------------>|
+:<----------------- connectionAcquisition ----------------->|
 +-----------------------------+-----------------------------+
-:<----existingAcquisition---->|
+|<--- existingAcquisition --->|
 +-----------------------------+-----------------------------+
-                              :<-----pendingAcquisition---->|
+                              |<---- pendingAcquisition --->|
                               +-----------------------------+
 ```
 
@@ -246,16 +246,16 @@ failed.
 
 ```bob-svg
 +--------------------------------------------------------------------------------------------------------------------------+    #3
-:<-------------------------------------------------connectionAcquisition-------------------------------------------------->|
+|<------------------------------------------------ connectionAcquisition ------------------------------------------------->|
 +--------------------------------------------------------------------------------------------------------------------------+
-:<--------dnsResolution-------->|
+|<------- dnsResolution ------->|
 +-------------------------------+--------------------------+
-                                :<---existingAcquisition-->|
+                                |<-- existingAcquisition ->|
                                 +--------------------------+-------------------------------+
-                                                           :<-----pendingAcquisition------>|
+                                                           |<---- pendingAcquisition ----->|
                                                            +-------------------------------+
                                                                                            +-------------------------------+
-                                                                                           :<--------socketConnect-------->|
+                                                                                           |<------- socketConnect ------->|
                                                                                            +-------------------------------+
 ```
 
