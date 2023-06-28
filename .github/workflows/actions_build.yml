@@ -6,7 +6,7 @@ on:
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
-  pull_request:
+  pull_request_target:
   merge_group:
 
 concurrency:
