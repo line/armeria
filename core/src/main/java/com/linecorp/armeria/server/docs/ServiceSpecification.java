@@ -152,6 +152,10 @@ public final class ServiceSpecification {
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
     }
 
+    /**
+     * Return a {@link ServiceSpecification} that contains the {@link Route} info of
+     * the attached {@link DocService}.
+     */
     public ServiceSpecification withServiceRoute(Route serviceRoute) {
         this.serviceRoute = serviceRoute;
         return this;
@@ -221,6 +225,9 @@ public final class ServiceSpecification {
         return exampleHeaders;
     }
 
+    /**
+     * Returns the path pattern string of the {@link DocService} mount location on server.
+     */
     @JsonProperty
     public String serviceRoute() {
         if (serviceRoute == null) {
