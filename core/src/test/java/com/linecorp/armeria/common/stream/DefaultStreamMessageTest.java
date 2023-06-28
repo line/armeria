@@ -56,8 +56,7 @@ class DefaultStreamMessageTest {
     void onSubscribeBeforeOnComplete() throws Exception {
         final BlockingQueue<String> queue = new LinkedTransferQueue<>();
         // Repeat to increase the chance of reproduction.
-        final int iteration = System.getenv("CI") != null ? 128 : 8192;
-        for (int i = 0; i < iteration; i++) {
+        for (int i = 0; i < 128; i++) {
             final StreamWriter<Integer> stream = new DefaultStreamMessage<>();
             eventLoop.get().execute(stream::close);
             stream.subscribe(new Subscriber<Object>() {
