@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.observation.HttpClientObservationDocumentation.HighCardinalityKeys;
+import com.linecorp.armeria.client.observation.HttpClientObservationDocumentation.LowCardinalityKeys;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -36,39 +37,40 @@ class DefaultHttpClientObservationConvention implements HttpClientObservationCon
 
     @Override
     public KeyValues getLowCardinalityKeyValues(HttpClientContext context) {
-        // TODO: What to move here?
-        return HttpClientObservationConvention.super.getLowCardinalityKeyValues(context);
+        final ClientRequestContext ctx = context.getClientRequestContext();
+        KeyValues keyValues = KeyValues.of(
+                LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
+        if (context.getResponse() != null) {
+            final RequestLog log = ctx.log().ensureComplete();
+            keyValues = keyValues.and(LowCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
+            final String serFmt = serializationFormat(log);
+            if (serFmt != null) {
+                keyValues = keyValues.and(LowCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt));
+            }
+            keyValues = keyValues.and(LowCardinalityKeys.STATUS_CODE
+                                              .withValue(log.responseStatus().codeAsText()));
+        }
+        return keyValues;
     }
 
     @Override
     public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
         final ClientRequestContext ctx = context.getClientRequestContext();
         KeyValues keyValues = KeyValues.of(
-                HighCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()),
                 HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
                 HighCardinalityKeys.HTTP_HOST.withValue(firstNonNull(ctx.authority(), "UNKNOWN")),
                 HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString())
         );
         if (context.getResponse() != null) {
             final RequestLog log = ctx.log().ensureComplete();
-            keyValues = keyValues.and(HighCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
-
-            final String serFmt = serializationFormat(log);
-            if (serFmt != null) {
-                keyValues = keyValues.and(HighCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt));
-            }
-
             final InetSocketAddress raddr = ctx.remoteAddress();
             if (raddr != null) {
                 keyValues = keyValues.and(HighCardinalityKeys.ADDRESS_REMOTE.withValue(raddr.toString()));
             }
-
             final InetSocketAddress laddr = ctx.localAddress();
             if (laddr != null) {
                 keyValues = keyValues.and(HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
             }
-            keyValues = keyValues.and(HighCardinalityKeys.STATUS_CODE
-                                              .withValue(log.responseStatus().codeAsText()));
             if (log.responseStatus().isError()) {
                 keyValues = keyValues.and(HighCardinalityKeys.ERROR
                                                   .withValue(log.responseStatus().codeAsText()));

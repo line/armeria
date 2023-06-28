@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.observation;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -66,14 +68,13 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
     private MicrometerObservationService(HttpService delegate, ObservationRegistry observationRegistry,
                                          @Nullable ServiceObservationConvention serviceObservationConvention) {
         super(delegate);
-        this.observationRegistry = observationRegistry;
+        this.observationRegistry = requireNonNull(observationRegistry, "observationRegistry");
         this.serviceObservationConvention = serviceObservationConvention;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        // TODO: What about this?
-        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING) &&
+        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING) ||
             !ctx.config().transientServiceOptions().contains(
                     TransientServiceOption.WITH_METRIC_COLLECTION)) {
             return unwrap().serve(ctx, req);
@@ -92,8 +93,7 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
 
         enrichObservation(ctx, httpServerContext, observation);
 
-        return observation.scopedChecked(
-                () -> unwrap().serve(ctx, req)); // TODO: Maybe we should observation stopping here
+        return observation.scopedChecked(() -> unwrap().serve(ctx, req));
     }
 
     private void enrichObservation(ServiceRequestContext ctx, HttpServerContext httpServerContext,
@@ -119,8 +119,6 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
            .thenAccept(requestLog -> {
                httpServerContext.setResponse(requestLog);
                observation.stop();
-               // TODO: ClientConnectionTimings - no hook to be there at the
-               //  moment of those things actually hapenning
            });
     }
 }

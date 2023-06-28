@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.observation;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -78,7 +80,7 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
             HttpClient delegate, ObservationRegistry observationRegistry,
             @Nullable HttpClientObservationConvention httpClientObservationConvention) {
         super(delegate);
-        this.observationRegistry = observationRegistry;
+        this.observationRegistry = requireNonNull(observationRegistry, "observationRegistry");
         this.httpClientObservationConvention = httpClientObservationConvention;
     }
 

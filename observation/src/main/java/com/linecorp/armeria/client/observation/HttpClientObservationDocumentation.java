@@ -24,13 +24,19 @@ import io.micrometer.observation.docs.ObservationDocumentation;
 
 enum HttpClientObservationDocumentation implements ObservationDocumentation {
 
+    /**
+     * TODO: Add docs.
+     */
     OBSERVATION {
         @Override
         public Class<? extends ObservationConvention<? extends Context>> getDefaultConvention() {
             return DefaultHttpClientObservationConvention.class;
         }
 
-        // TODO: Figure what should be low and what high cardinality
+        @Override
+        public KeyName[] getLowCardinalityKeyNames() {
+            return LowCardinalityKeys.values();
+        }
 
         @Override
         public KeyName[] getHighCardinalityKeyNames() {
@@ -43,15 +49,11 @@ enum HttpClientObservationDocumentation implements ObservationDocumentation {
         }
     };
 
-    enum HighCardinalityKeys implements KeyName {
+    enum LowCardinalityKeys implements KeyName {
 
-        HTTP_PATH {
-            @Override
-            public String asString() {
-                return "http.path";
-            }
-        },
-
+        /**
+         * TODO: Add docs.
+         */
         HTTP_METHOD {
             @Override
             public String asString() {
@@ -59,48 +61,9 @@ enum HttpClientObservationDocumentation implements ObservationDocumentation {
             }
         },
 
-        HTTP_HOST {
-            @Override
-            public String asString() {
-                return "http.host";
-            }
-        },
-
-        HTTP_URL {
-            @Override
-            public String asString() {
-                return "http.url";
-            }
-        },
-
-        HTTP_PROTOCOL {
-            @Override
-            public String asString() {
-                return "http.protocol";
-            }
-        },
-
-        HTTP_SERIALIZATION_FORMAT {
-            @Override
-            public String asString() {
-                return "http.serfmt";
-            }
-        },
-
-        ADDRESS_REMOTE {
-            @Override
-            public String asString() {
-                return "address.remote";
-            }
-        },
-
-        ADDRESS_LOCAL {
-            @Override
-            public String asString() {
-                return "address.local";
-            }
-        },
-
+        /**
+         * TODO: Add docs.
+         */
         STATUS_CODE {
             @Override
             public String asString() {
@@ -108,6 +71,82 @@ enum HttpClientObservationDocumentation implements ObservationDocumentation {
             }
         },
 
+        /**
+         * TODO: Add docs.
+         */
+        HTTP_PROTOCOL {
+            @Override
+            public String asString() {
+                return "http.protocol";
+            }
+        },
+
+        /**
+         * TODO: Add docs.
+         */
+        HTTP_SERIALIZATION_FORMAT {
+            @Override
+            public String asString() {
+                return "http.serfmt";
+            }
+        }
+    }
+
+    enum HighCardinalityKeys implements KeyName {
+
+        /**
+         * TODO: Add docs.
+         */
+        HTTP_PATH {
+            @Override
+            public String asString() {
+                return "http.path";
+            }
+        },
+
+        /**
+         * TODO: Add docs.
+         */
+        HTTP_HOST {
+            @Override
+            public String asString() {
+                return "http.host";
+            }
+        },
+
+        /**
+         * TODO: Add docs.
+         */
+        HTTP_URL {
+            @Override
+            public String asString() {
+                return "http.url";
+            }
+        },
+
+        /**
+         * TODO: Add docs.
+         */
+        ADDRESS_REMOTE {
+            @Override
+            public String asString() {
+                return "address.remote";
+            }
+        },
+
+        /**
+         * TODO: Add docs.
+         */
+        ADDRESS_LOCAL {
+            @Override
+            public String asString() {
+                return "address.local";
+            }
+        },
+
+        /**
+         * TODO: Add docs.
+         */
         ERROR {
             @Override
             public String asString() {
@@ -126,6 +165,11 @@ enum HttpClientObservationDocumentation implements ObservationDocumentation {
             public String getName() {
                 return "ws";
             }
+
+            @Override
+            public String getContextualName() {
+                return "ws";
+            }
         },
 
         /**
@@ -134,6 +178,11 @@ enum HttpClientObservationDocumentation implements ObservationDocumentation {
         WIRE_RECEIVE {
             @Override
             public String getName() {
+                return "wr";
+            }
+
+            @Override
+            public String getContextualName() {
                 return "wr";
             }
         }

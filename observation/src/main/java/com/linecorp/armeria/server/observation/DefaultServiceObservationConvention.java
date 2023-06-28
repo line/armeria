@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.observation.ServiceObservationDocumentation.HighCardinalityKeys;
+import com.linecorp.armeria.server.observation.ServiceObservationDocumentation.LowCardinalityKeys;
 
 import io.micrometer.common.KeyValues;
 
@@ -35,10 +36,29 @@ final class DefaultServiceObservationConvention implements ServiceObservationCon
             new DefaultServiceObservationConvention();
 
     @Override
+    public KeyValues getLowCardinalityKeyValues(HttpServerContext context) {
+        final ServiceRequestContext ctx = context.getServiceRequestContext();
+        KeyValues keyValues = KeyValues.of(
+                LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
+        if (context.getResponse() != null) {
+            final RequestLog log = ctx.log().ensureComplete();
+            keyValues = keyValues.and(
+                    LowCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
+            final String serFmt = serializationFormat(log);
+            if (serFmt != null) {
+                keyValues = keyValues.and(
+                        LowCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt));
+            }
+            keyValues = keyValues.and(
+                    LowCardinalityKeys.STATUS_CODE.withValue(log.responseStatus().codeAsText()));
+        }
+        return keyValues;
+    }
+
+    @Override
     public KeyValues getHighCardinalityKeyValues(HttpServerContext context) {
         final ServiceRequestContext ctx = context.getServiceRequestContext();
         KeyValues keyValues = KeyValues.of(
-                HighCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()),
                 HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
                 HighCardinalityKeys.HTTP_HOST.withValue(
                         firstNonNull(context.getHttpRequest().authority(), "UNKNOWN")),
@@ -46,14 +66,6 @@ final class DefaultServiceObservationConvention implements ServiceObservationCon
         );
         if (context.getResponse() != null) {
             final RequestLog log = ctx.log().ensureComplete();
-            keyValues = keyValues.and(
-                    HighCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
-
-            final String serFmt = serializationFormat(log);
-            if (serFmt != null) {
-                keyValues = keyValues.and(
-                        HighCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt));
-            }
 
             final InetSocketAddress raddr = ctx.remoteAddress();
             if (raddr != null) {
@@ -66,8 +78,6 @@ final class DefaultServiceObservationConvention implements ServiceObservationCon
                 keyValues = keyValues.and(
                         HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
             }
-            keyValues = keyValues.and(
-                    HighCardinalityKeys.STATUS_CODE.withValue(log.responseStatus().codeAsText()));
             if (log.responseStatus().isError()) {
                 keyValues = keyValues.and(
                         HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText()));

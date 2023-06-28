@@ -16,3 +16,18 @@ dependencies {
     testImplementation libs.brave.context.slf4j
     testImplementation libs.brave.instrumentation.http.tests
 }
+
+configurations {
+    adoc
+}
+
+dependencies {
+    adoc libs.micrometer.docs.generator
+}
+
+task generateObservabilityDocs(type: JavaExec) {
+    mainClass = "io.micrometer.docs.DocsGeneratorCommand"
+    classpath configurations.adoc
+    // input folder, inclusion pattern, output folder
+    args project.projectDir.getAbsolutePath(), ".*", project.buildDir.getAbsolutePath()
+}
