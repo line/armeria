@@ -187,24 +187,6 @@ It is ok to set the port of internal service same as one of `armeria.ports`.
 
 </Tip>
 
-<Tip>
-
-  If you have configured the server as described in the preceding section of the document,
-  it will also serve on the internal service port. If you want to separate port,
-  use <type://ServerBuilder#defaultVirtualHost()> or <type://ServerBuilder#virtualHost(int)>.
-
-```java
-@Bean
-public ArmeriaServerConfigurator armeriaServerConfigurator(TomcatService tomcatService) {
-    return sb -> sb
-            .defaultVirtualHost()  // Add this method.
-            .serviceUnder("/", tomcatService)
-            .and();
-}
-```
-
-</Tip>
-
 ### Documentation Service
 
 Armeria has its own [documentation service](/docs/server-docservice) which provides useful features.
