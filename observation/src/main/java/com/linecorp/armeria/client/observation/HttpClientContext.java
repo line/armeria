@@ -22,11 +22,21 @@ import java.net.URI;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.Observation.Context;
+import io.micrometer.observation.ObservationConvention;
+import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.transport.RequestReplySenderContext;
 
-final class HttpClientContext extends RequestReplySenderContext<RequestHeadersBuilder, RequestLog> {
+/**
+ * A {@link Observation.Context} which may be used in conjunction with {@link MicrometerObservationClient}
+ * to implement custom {@link ObservationConvention}s or {@link ObservationHandler}s.
+ */
+@UnstableApi
+public final class HttpClientContext extends RequestReplySenderContext<RequestHeadersBuilder, RequestLog> {
 
     private final ClientRequestContext clientRequestContext;
     private final HttpRequest httpRequest;
@@ -58,11 +68,17 @@ final class HttpClientContext extends RequestReplySenderContext<RequestHeadersBu
         }
     }
 
-    ClientRequestContext getClientRequestContext() {
+    /**
+     * The {@link ClientRequestContext} associated with this {@link Context}.
+     */
+    public ClientRequestContext clientRequestContext() {
         return clientRequestContext;
     }
 
-    HttpRequest getHttpRequest() {
+    /**
+     * The {@link HttpRequest} associated with this {@link Context}.
+     */
+    public HttpRequest httpRequest() {
         return httpRequest;
     }
 }

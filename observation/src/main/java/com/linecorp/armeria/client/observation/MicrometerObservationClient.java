@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -34,6 +32,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 
 import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.ObservationRegistry;
 
 /**
@@ -43,23 +42,21 @@ import io.micrometer.observation.ObservationRegistry;
 public final class MicrometerObservationClient extends SimpleDecoratingHttpClient {
 
     /**
-     * Creates a new tracing {@link HttpClient} decorator
-     * using the specified {@link ObservationRegistry} instance.
+     * Creates a new micrometer observation integrated {@link HttpClient} decorator
+     * using the specified {@link ObservationRegistry}.
      */
     public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
             ObservationRegistry observationRegistry) {
-        return delegate -> new MicrometerObservationClient(delegate, observationRegistry);
+        return delegate -> new MicrometerObservationClient(delegate, observationRegistry, null);
     }
 
     /**
-     * Creates a new tracing {@link HttpClient} decorator
-     * using the specified {@link ObservationRegistry}
-     * and {@link HttpClientObservationConvention} instances.
+     * Creates a new micrometer observation integrated {@link HttpClient} decorator
+     * using the specified {@link ObservationRegistry} and {@link ObservationConvention}.
      */
-    @VisibleForTesting
-    static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
+    public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
             ObservationRegistry observationRegistry,
-            HttpClientObservationConvention httpClientObservationConvention) {
+            ObservationConvention<HttpClientContext> httpClientObservationConvention) {
         return delegate -> new MicrometerObservationClient(delegate, observationRegistry,
                                                            httpClientObservationConvention);
     }
@@ -67,21 +64,11 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
     private final ObservationRegistry observationRegistry;
 
     @Nullable
-    private final HttpClientObservationConvention httpClientObservationConvention;
+    private final ObservationConvention<HttpClientContext> httpClientObservationConvention;
 
-    /**
-     * Creates a new instance.
-     */
-    private MicrometerObservationClient(HttpClient delegate, ObservationRegistry observationRegistry) {
-        this(delegate, observationRegistry, null);
-    }
-
-    /**
-     * Creates a new instance.
-     */
     private MicrometerObservationClient(
             HttpClient delegate, ObservationRegistry observationRegistry,
-            @Nullable HttpClientObservationConvention httpClientObservationConvention) {
+            @Nullable ObservationConvention<HttpClientContext> httpClientObservationConvention) {
         super(delegate);
         this.observationRegistry = requireNonNull(observationRegistry, "observationRegistry");
         this.httpClientObservationConvention = httpClientObservationConvention;
@@ -130,8 +117,8 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
 
         ctx.log().whenComplete()
            .thenAccept(requestLog -> {
-               // TODO: ClientConnectionTimings - no hook to be there
-               //  at the moment of those things actually hapening
+               // TODO: ClientConnectionTimings - there is no way to record events
+               // with a specific timestamp for an observation
                httpClientContext.setResponse(requestLog);
                observation.stop();
            });

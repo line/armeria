@@ -29,15 +29,17 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.micrometer.common.KeyValues;
+import io.micrometer.observation.Observation.Context;
+import io.micrometer.observation.ObservationConvention;
 
-class DefaultHttpClientObservationConvention implements HttpClientObservationConvention {
+class DefaultHttpClientObservationConvention implements ObservationConvention<HttpClientContext> {
 
     static final DefaultHttpClientObservationConvention INSTANCE =
             new DefaultHttpClientObservationConvention();
 
     @Override
     public KeyValues getLowCardinalityKeyValues(HttpClientContext context) {
-        final ClientRequestContext ctx = context.getClientRequestContext();
+        final ClientRequestContext ctx = context.clientRequestContext();
         KeyValues keyValues = KeyValues.of(
                 LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
         if (context.getResponse() != null) {
@@ -55,7 +57,7 @@ class DefaultHttpClientObservationConvention implements HttpClientObservationCon
 
     @Override
     public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
-        final ClientRequestContext ctx = context.getClientRequestContext();
+        final ClientRequestContext ctx = context.clientRequestContext();
         KeyValues keyValues = KeyValues.of(
                 HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
                 HighCardinalityKeys.HTTP_HOST.withValue(firstNonNull(ctx.authority(), "UNKNOWN")),
@@ -106,9 +108,14 @@ class DefaultHttpClientObservationConvention implements HttpClientObservationCon
 
     @Override
     public String getContextualName(HttpClientContext context) {
-        final ClientRequestContext clientRequestContext = context.getClientRequestContext();
+        final ClientRequestContext clientRequestContext = context.clientRequestContext();
         final RequestLog log = clientRequestContext.log().ensureComplete();
         final String name = log.name();
         return firstNonNull(name, context.getName());
+    }
+
+    @Override
+    public boolean supportsContext(Context context) {
+        return context instanceof HttpClientContext;
     }
 }

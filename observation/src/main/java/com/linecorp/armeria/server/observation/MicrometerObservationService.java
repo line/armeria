@@ -22,6 +22,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -31,6 +32,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.ObservationRegistry;
 
 /**
@@ -41,22 +43,35 @@ import io.micrometer.observation.ObservationRegistry;
 public final class MicrometerObservationService extends SimpleDecoratingHttpService {
 
     /**
-     * Creates a new tracing {@link HttpService} decorator using the
+     * Creates a new micrometer observation integrated {@link HttpService} decorator using the
      * specified {@link ObservationRegistry} instance.
      */
     public static Function<? super HttpService, MicrometerObservationService>
     newDecorator(ObservationRegistry observationRegistry) {
-        return service -> new MicrometerObservationService(service, observationRegistry);
+        return service -> new MicrometerObservationService(service, observationRegistry, null);
+    }
+
+    /**
+     * Creates a new micrometer observation integrated {@link HttpService} decorator using the
+     * specified {@link ObservationRegistry} and {@link ObservationConvention}.
+     */
+    public static Function<? super HttpService, MicrometerObservationService>
+    newDecorator(ObservationRegistry observationRegistry,
+                 ObservationConvention<HttpServerContext> observationConvention) {
+        return service -> new MicrometerObservationService(
+                service, observationRegistry, requireNonNull(observationConvention, "observationConvention"));
     }
 
     private final ObservationRegistry observationRegistry;
+    @Nullable
+    private final ObservationConvention<HttpServerContext> observationConvention;
 
-    /**
-     * Creates a new instance.
-     */
-    private MicrometerObservationService(HttpService delegate, ObservationRegistry observationRegistry) {
+    private MicrometerObservationService(
+            HttpService delegate, ObservationRegistry observationRegistry,
+            @Nullable ObservationConvention<HttpServerContext> observationConvention) {
         super(delegate);
         this.observationRegistry = requireNonNull(observationRegistry, "observationRegistry");
+        this.observationConvention = observationConvention;
     }
 
     @Override
@@ -68,8 +83,8 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
         }
 
         final HttpServerContext httpServerContext = new HttpServerContext(ctx, req);
-        final Observation observation = ServiceObservationDocumentation.OBSERVATION.observation(
-                null, DefaultServiceObservationConvention.INSTANCE,
+        final Observation observation = HttpServerObservationDocumentation.OBSERVATION.observation(
+                observationConvention, DefaultServiceObservationConvention.INSTANCE,
                 () -> httpServerContext, observationRegistry).start();
 
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
@@ -92,13 +107,13 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
 
         ctx.log()
            .whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
-           .thenAccept(requestLog -> observation.event(ServiceObservationDocumentation.Events.WIRE_RECEIVE));
+           .thenAccept(requestLog -> observation.event(HttpServerObservationDocumentation.Events.WIRE_RECEIVE));
 
         ctx.log()
            .whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
            .thenAccept(requestLog -> {
                if (requestLog.responseFirstBytesTransferredTimeNanos() != null) {
-                   observation.event(ServiceObservationDocumentation.Events.WIRE_SEND);
+                   observation.event(HttpServerObservationDocumentation.Events.WIRE_SEND);
                }
            });
 

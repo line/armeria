@@ -17,12 +17,21 @@
 package com.linecorp.armeria.server.observation;
 
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationConvention;
+import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.transport.RequestReplyReceiverContext;
 
-final class HttpServerContext extends RequestReplyReceiverContext<HttpRequest, RequestLog> {
+/**
+ * A {@link Observation.Context} which may be used in conjunction with {@link MicrometerObservationService}
+ * to implement custom {@link ObservationConvention}s or {@link ObservationHandler}s.
+ */
+@UnstableApi
+public final class HttpServerContext extends RequestReplyReceiverContext<HttpRequest, RequestLog> {
 
     private final ServiceRequestContext serviceRequestContext;
     private final HttpRequest httpRequest;
@@ -34,11 +43,11 @@ final class HttpServerContext extends RequestReplyReceiverContext<HttpRequest, R
         setCarrier(httpRequest);
     }
 
-    ServiceRequestContext getServiceRequestContext() {
+    public ServiceRequestContext serviceRequestContext() {
         return serviceRequestContext;
     }
 
-    HttpRequest getHttpRequest() {
+    public HttpRequest httpRequest() {
         return httpRequest;
     }
 }

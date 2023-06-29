@@ -25,19 +25,21 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.observation.ServiceObservationDocumentation.HighCardinalityKeys;
-import com.linecorp.armeria.server.observation.ServiceObservationDocumentation.LowCardinalityKeys;
+import com.linecorp.armeria.server.observation.HttpServerObservationDocumentation.HighCardinalityKeys;
+import com.linecorp.armeria.server.observation.HttpServerObservationDocumentation.LowCardinalityKeys;
 
 import io.micrometer.common.KeyValues;
+import io.micrometer.observation.Observation.Context;
+import io.micrometer.observation.ObservationConvention;
 
-final class DefaultServiceObservationConvention implements ServiceObservationConvention {
+final class DefaultServiceObservationConvention implements ObservationConvention<HttpServerContext> {
 
     static final DefaultServiceObservationConvention INSTANCE =
             new DefaultServiceObservationConvention();
 
     @Override
     public KeyValues getLowCardinalityKeyValues(HttpServerContext context) {
-        final ServiceRequestContext ctx = context.getServiceRequestContext();
+        final ServiceRequestContext ctx = context.serviceRequestContext();
         KeyValues keyValues = KeyValues.of(
                 LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
         if (context.getResponse() != null) {
@@ -57,11 +59,11 @@ final class DefaultServiceObservationConvention implements ServiceObservationCon
 
     @Override
     public KeyValues getHighCardinalityKeyValues(HttpServerContext context) {
-        final ServiceRequestContext ctx = context.getServiceRequestContext();
+        final ServiceRequestContext ctx = context.serviceRequestContext();
         KeyValues keyValues = KeyValues.of(
                 HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
                 HighCardinalityKeys.HTTP_HOST.withValue(
-                        firstNonNull(context.getHttpRequest().authority(), "UNKNOWN")),
+                        firstNonNull(context.httpRequest().authority(), "UNKNOWN")),
                 HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString())
         );
         if (context.getResponse() != null) {
@@ -109,9 +111,14 @@ final class DefaultServiceObservationConvention implements ServiceObservationCon
 
     @Override
     public String getContextualName(HttpServerContext context) {
-        final ServiceRequestContext serviceRequestContext = context.getServiceRequestContext();
+        final ServiceRequestContext serviceRequestContext = context.serviceRequestContext();
         final RequestLog log = serviceRequestContext.log().ensureComplete();
         final String name = log.name();
         return firstNonNull(name, context.getName());
+    }
+
+    @Override
+    public boolean supportsContext(Context context) {
+        return context instanceof HttpServerContext;
     }
 }

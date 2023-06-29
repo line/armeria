@@ -71,7 +71,7 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
 
     private ObservationRegistry observationRegistry;
 
-    private HttpClientObservationConvention clientObservationConvention;
+    private DefaultHttpClientObservationConvention clientObservationConvention;
 
     public MicrometerObservationClientIntegrationTest(SessionProtocol sessionProtocol) {
         this.sessionProtocol = sessionProtocol;
@@ -152,7 +152,7 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
                                         context);
                         values = values.and(
                                 KeyValues.of("http.url",
-                                             context.getClientRequestContext().uri().toString(),
+                                             context.clientRequestContext().uri().toString(),
                                                          "request_customizer.is_span", "false"));
                         if (context.getResponse() != null) {
                             values = values.and("response_customizer.is_span", "false");
@@ -162,10 +162,10 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
 
                     @Override
                     public String getContextualName(HttpClientContext context) {
-                        return context.getHttpRequest().method()
+                        return context.httpRequest().method()
                                       .toString().toLowerCase() + " " +
-                               context.getHttpRequest().path()
-                                      .substring(0, context.getHttpRequest().path().indexOf("?"));
+                               context.httpRequest().path()
+                                      .substring(0, context.httpRequest().path().indexOf("?"));
                     }
                 };
         super.supportsPortableCustomization();
