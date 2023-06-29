@@ -780,7 +780,6 @@ javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-observation/1.10
 [libraries.micrometer-observation-test]
 module = "io.micrometer:micrometer-observation-test"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-observation-test/1.10.8/"
 [libraries.micrometer-prometheus]
 module = "io.micrometer:micrometer-registry-prometheus"
 version.ref = "micrometer"

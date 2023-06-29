@@ -128,7 +128,7 @@ class CustomObservationTest {
     @Test
     void testCustomConvention() throws Exception {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            BlockingWebClient client = server.blockingWebClient(
+            final BlockingWebClient client = server.blockingWebClient(
                     cb -> cb.decorator(customConventionClientDecorator("tracing/foo")));
             assertThat(client.get("/foo").contentUtf8()).isEqualTo("foo");
             await().until(() -> spanHandler.spans().size() == 2);

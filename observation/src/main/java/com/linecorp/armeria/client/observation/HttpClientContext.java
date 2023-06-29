@@ -39,6 +39,7 @@ import io.micrometer.observation.transport.RequestReplySenderContext;
  * WebClient.builder()
  *          .decorator(MicrometerObservationClient.newDecorator(registry, convention))
  * ...
+ * }</pre>
  */
 @UnstableApi
 public final class HttpClientContext extends RequestReplySenderContext<RequestHeadersBuilder, RequestLog> {
