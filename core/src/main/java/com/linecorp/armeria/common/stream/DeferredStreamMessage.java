@@ -143,9 +143,9 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             if (thrown != null) {
                 close(Exceptions.peel(thrown));
             } else if (delegate == null) {
-                close(new NullPointerException("delegate stage produced a null response: " + stage));
+                close(new NullPointerException("delegate stage produced a null stream message: " + stage));
             } else {
-                if (stage instanceof StreamMessage) {
+                if (delegate instanceof StreamMessage) {
                     delegate((StreamMessage<T>) delegate);
                 } else {
                     delegate(new PublisherBasedStreamMessage<>(delegate));
