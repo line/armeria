@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -182,6 +183,81 @@ public interface StreamMessage<T> extends Publisher<T> {
         } else {
             return new PublisherBasedStreamMessage<>(publisher);
         }
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     */
+    static <T> StreamMessage<T> of(CompletionStage<? extends Publisher<? extends T>> stage) {
+        requireNonNull(stage, "stage");
+
+        if (stage instanceof CompletableFuture) {
+            return of((CompletableFuture<? extends Publisher<? extends T>>) stage);
+        } else {
+            final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>();
+            //noinspection unchecked
+            deferred.delegateWhenCompleteStage((CompletionStage<? extends Publisher<T>>) stage);
+            return deferred;
+        }
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param future the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     */
+    static <T> StreamMessage<T> of(CompletableFuture<? extends Publisher<? extends T>> future) {
+        requireNonNull(future, "future");
+
+        if (future.isDone()) {
+            if (!future.isCompletedExceptionally()) {
+                final Publisher<? extends T> publisher = future.getNow(null);
+                if (publisher instanceof StreamMessage) {
+                    //noinspection unchecked
+                    return (StreamMessage<T>) publisher;
+                }
+                return new PublisherBasedStreamMessage<>(publisher);
+            }
+
+            try {
+                future.join();
+                // Should never reach here.
+                throw new Error();
+            } catch (Throwable cause) {
+                return aborted(Exceptions.peel(cause));
+            }
+        }
+
+        final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>();
+        //noinspection unchecked
+        deferred.delegateWhenCompleteStage((CompletionStage<? extends Publisher<T>>) future);
+        return deferred;
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link StreamMessage} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    static <T> StreamMessage<T> of(CompletionStage<? extends StreamMessage<? extends T>> stage,
+                                   EventExecutor subscriberExecutor) {
+        requireNonNull(stage, "stage");
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>(subscriberExecutor);
+        //noinspection unchecked
+        deferred.delegateWhenCompleteStage((CompletionStage<? extends Publisher<T>>) stage);
+        return deferred;
     }
 
     /**

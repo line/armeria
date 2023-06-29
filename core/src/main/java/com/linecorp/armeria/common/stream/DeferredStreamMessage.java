@@ -26,6 +26,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -136,7 +137,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     /**
      * Delegates when the specified {@link CompletionStage} is complete.
      */
-    protected final void delegateWhenCompleteStage(CompletionStage<? extends StreamMessage<T>> stage) {
+    protected final void delegateWhenCompleteStage(CompletionStage<? extends Publisher<T>> stage) {
         requireNonNull(stage, "stage");
         stage.handle((delegate, thrown) -> {
             if (thrown != null) {
@@ -144,7 +145,11 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             } else if (delegate == null) {
                 close(new NullPointerException("delegate stage produced a null response: " + stage));
             } else {
-                delegate(delegate);
+                if (stage instanceof StreamMessage) {
+                    delegate((StreamMessage<T>) delegate);
+                } else {
+                    delegate(new PublisherBasedStreamMessage<>(delegate));
+                }
             }
             return null;
         });

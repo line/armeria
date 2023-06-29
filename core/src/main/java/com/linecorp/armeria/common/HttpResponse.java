@@ -85,6 +85,7 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
      */
+    //TODO(minwoox): Rename this to 'of' for consistency.
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
 
