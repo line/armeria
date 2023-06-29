@@ -64,9 +64,9 @@ final class FallbackService implements HttpService {
         // Use relative path to handle the case where the server is behind a reverse proxy.
         // The reverse proxy might rewrite the path, so we should use the relative path.
         // For example, if the proxy rewrite the path /proxy/path -> /path, then we should send the location
-        // with ./path/ so that the client can send the request to /proxy/path/ again.
+        // with path/ so that the client can send the request to /proxy/path/ again.
         final int index = oldPath.lastIndexOf('/');
-        String location = '.' + oldPath.substring(index) + '/';
+        String location = oldPath.substring(index + 1) + '/';
         if (routingCtx.query() != null) {
             location += '?' + routingCtx.query();
         }

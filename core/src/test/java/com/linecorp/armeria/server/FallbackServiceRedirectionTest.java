@@ -59,14 +59,14 @@ class FallbackServiceRedirectionTest {
     };
 
     @CsvSource({
-            "/service, ./service/",
-            "/service?a=b, ./service/?a=b",
-            "/service%2F, ./service%2F/",
-            "/service%2F?a=b, ./service%2F/?a=b",
-            "/foo/bar, ./bar/",
-            "/foo/bar?a=b, ./bar/?a=b",
-            "/foo/bar%2F, ./bar%2F/",
-            "/foo/bar%2F?a=b, ./bar%2F/?a=b"
+            "/service, service/",
+            "/service?a=b, service/?a=b",
+            "/service%2F, service%2F/",
+            "/service%2F?a=b, service%2F/?a=b",
+            "/foo/bar, bar/",
+            "/foo/bar?a=b, bar/?a=b",
+            "/foo/bar%2F, bar%2F/",
+            "/foo/bar%2F?a=b, bar%2F/?a=b"
     })
     @ParameterizedTest
     void redirection(String path, String redirectLocation) {
