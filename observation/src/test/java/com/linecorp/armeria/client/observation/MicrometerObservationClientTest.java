@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,8 @@ import brave.Span.Kind;
 import brave.Tracing;
 import brave.handler.MutableSpan;
 import brave.http.HttpTracing;
+import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.propagation.ThreadLocalCurrentTraceContext;
 import brave.sampler.Sampler;
 import io.micrometer.common.KeyValues;
@@ -156,6 +159,37 @@ class MicrometerObservationClientTest {
 
         // check remote service name
         assertThat(span.remoteServiceName()).isEqualTo("fooService");
+    }
+
+    @Test
+    void scopeDecorator() throws Exception {
+        final SpanCollector collector = new SpanCollector();
+        final AtomicInteger scopeDecoratorCallingCounter = new AtomicInteger();
+        final ScopeDecorator scopeDecorator = (currentSpan, scope) -> {
+            scopeDecoratorCallingCounter.getAndIncrement();
+            return scope;
+        };
+        final CurrentTraceContext traceContext =
+                ThreadLocalCurrentTraceContext.newBuilder().addScopeDecorator(scopeDecorator).build();
+
+        final Tracing tracing = Tracing.newBuilder()
+                                       .localServiceName(TEST_SERVICE)
+                                       .currentTraceContext(traceContext)
+                                       .addSpanHandler(collector)
+                                       .sampler(Sampler.create(1.0f))
+                                       .build();
+        testRemoteInvocation(tracing, null);
+
+        // check span name
+        final MutableSpan span = collector.spans().poll(10, TimeUnit.SECONDS);
+
+        // check tags
+        assertTags(span);
+
+        // check service name
+        assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
+        // check the client invocation had the current span in scope.
+        assertThat(scopeDecoratorCallingCounter.get()).isOne();
     }
 
     @Test

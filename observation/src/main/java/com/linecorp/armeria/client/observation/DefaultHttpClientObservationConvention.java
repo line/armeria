@@ -76,7 +76,8 @@ class DefaultHttpClientObservationConvention implements HttpClientObservationCon
             if (responseCause != null) {
                 keyValues = keyValues.and(HighCardinalityKeys.ERROR.withValue(responseCause.toString()));
             } else if (log.responseStatus().isError()) {
-                keyValues = keyValues.and(HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText()));
+                keyValues =
+                        keyValues.and(HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText()));
             }
         }
         return keyValues;
