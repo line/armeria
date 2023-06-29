@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -278,6 +280,55 @@ public interface HttpRequest extends Request, HttpMessage {
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
         }
+    }
+
+    /**
+     * Creates a new HTTP request whose {@link Publisher} is produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned request will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual data and trailers
+     */
+    static HttpRequest from(RequestHeaders headers,
+                            CompletionStage<? extends StreamMessage<? extends HttpObject>> stage) {
+        requireNonNull(headers, "headers");
+        requireNonNull(stage, "stage");
+
+        return of(headers, StreamMessage.of(stage));
+    }
+
+    /**
+     * Creates a new HTTP request whose {@link Publisher} is produced by the specified
+     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned request
+     * will be closed with the same cause as well.
+     *
+     * @param future the {@link CompletableFuture} which will produce the actual data and trailers
+     */
+    static HttpRequest from(RequestHeaders headers,
+                            CompletableFuture<? extends StreamMessage<? extends HttpObject>> future) {
+        requireNonNull(headers, "headers");
+        requireNonNull(future, "future");
+
+        return of(headers, StreamMessage.of(future));
+    }
+
+    /**
+     * Creates a new HTTP request whose {@link Publisher} is produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned request will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual data and trailers
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link HttpRequest} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    static HttpRequest from(RequestHeaders headers,
+                            CompletionStage<? extends StreamMessage<? extends HttpObject>> stage,
+                            EventExecutor subscriberExecutor) {
+        requireNonNull(headers, "headers");
+        requireNonNull(stage, "stage");
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        return of(headers, StreamMessage.of(stage, subscriberExecutor));
     }
 
     /**
