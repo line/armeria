@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -36,14 +38,19 @@ final class FallbackService implements HttpService {
 
         if (routingCtx.status() == RoutingStatus.CORS_PREFLIGHT) {
             // '403 Forbidden' is better for a CORS preflight request than other statuses.
-            return newHeadersOnlyResponse(HttpStatus.FORBIDDEN);
+            return newFallbackResponse(ctx, HttpStatus.FORBIDDEN);
         }
 
         final HttpStatusException cause = routingCtx.deferredStatusException();
         if (cause == null || cause.httpStatus() == HttpStatus.NOT_FOUND) {
             return handleNotFound(ctx, routingCtx);
         }
-        return newHeadersOnlyResponse(cause.httpStatus());
+        return newFallbackResponse(ctx, cause.httpStatus());
+    }
+
+    @Override
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        return ExchangeType.REQUEST_STREAMING;
     }
 
     private static HttpResponse handleNotFound(ServiceRequestContext ctx, RoutingContext routingCtx) {
@@ -51,7 +58,7 @@ final class FallbackService implements HttpService {
         final String oldPath = routingCtx.path();
         if (oldPath.charAt(oldPath.length() - 1) == '/') {
             // No need to send a redirect response because the request path already ends with '/'.
-            return newHeadersOnlyResponse(HttpStatus.NOT_FOUND);
+            return newFallbackResponse(ctx, HttpStatus.NOT_FOUND);
         }
 
         // Handle the case where '/path' (or '/path?query') doesn't exist
@@ -59,7 +66,7 @@ final class FallbackService implements HttpService {
         final String newPath = oldPath + '/';
         if (!ctx.config().virtualHost().findServiceConfig(routingCtx.withPath(newPath)).isPresent()) {
             // No need to send a redirect response because '/path/' (or '/path/?query') does not exist.
-            return newHeadersOnlyResponse(HttpStatus.NOT_FOUND);
+            return newFallbackResponse(ctx, HttpStatus.NOT_FOUND);
         }
 
         // '/path/' (or '/path/?query') exists. Send a redirect response.
@@ -77,7 +84,16 @@ final class FallbackService implements HttpService {
                                               .build());
     }
 
-    private static HttpResponse newHeadersOnlyResponse(HttpStatus status) {
+    private static HttpResponse newFallbackResponse(ServiceRequestContext ctx, HttpStatus status) {
+        final ServiceErrorHandler errorHandler = ctx.config().errorHandler();
+        final AggregatedHttpResponse rendered = errorHandler.renderStatus(ctx.config(),
+                                                                          ctx.request().headers(),
+                                                                          status,
+                                                                          null,
+                                                                          null);
+        if (rendered != null) {
+            return rendered.toHttpResponse();
+        }
         // Send a headers-only response as a workaround for the following issue:
         // 1) `FallbackService` returns a response and then the only headers are written to the channel.
         // 2) The client continues to send a payload that exceeds the maximum length.
