@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.observation.Observation;
+import io.micrometer.observation.Observation.Context;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.transport.RequestReplyReceiverContext;
@@ -29,6 +30,12 @@ import io.micrometer.observation.transport.RequestReplyReceiverContext;
 /**
  * A {@link Observation.Context} which may be used in conjunction with {@link MicrometerObservationService}
  * to implement custom {@link ObservationConvention}s or {@link ObservationHandler}s.
+ * <pre>{@code
+ * ObservationConvention<HttpServerContext> convention = ...
+ * Server.builder()
+ *       .decorator(MicrometerObservationService.newDecorator(registry, convention))
+ * ...
+ * }</pre>
  */
 @UnstableApi
 public final class HttpServerContext extends RequestReplyReceiverContext<HttpRequest, RequestLog> {
@@ -43,10 +50,16 @@ public final class HttpServerContext extends RequestReplyReceiverContext<HttpReq
         setCarrier(httpRequest);
     }
 
-    public ServiceRequestContext serviceRequestContext() {
+    /**
+     * The {@link ServiceRequestContext} associated with this {@link Context}.
+     */
+    public ServiceRequestContext requestContext() {
         return serviceRequestContext;
     }
 
+    /**
+     * The {@link HttpRequest} associated with this {@link Context}.
+     */
     public HttpRequest httpRequest() {
         return httpRequest;
     }

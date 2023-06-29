@@ -39,10 +39,6 @@ import io.micrometer.tracing.handler.TracingObservationHandler;
 
 public final class MicrometerObservationRegistryUtils {
 
-    private MicrometerObservationRegistryUtils() {
-        throw new IllegalStateException("Can't instantiate a utility class");
-    }
-
     public static ObservationRegistry observationRegistry(HttpTracing httpTracing) {
         return observationRegistry(httpTracing.tracing());
     }
@@ -52,14 +48,16 @@ public final class MicrometerObservationRegistryUtils {
                 tracing.currentTraceContext());
         final BravePropagator bravePropagator = new BravePropagator(tracing);
         final BraveTracer braveTracer = new BraveTracer(tracing.tracer(), braveCurrentTraceContext,
-                                                  new BraveBaggageManager());
+                                                        new BraveBaggageManager());
         final List<TracingObservationHandler<?>> tracingHandlers =
                 Arrays.asList(new PropagatingSenderTracingObservationHandler<>(braveTracer, bravePropagator),
                               new PropagatingReceiverTracingObservationHandler<>(braveTracer, bravePropagator),
                               new DefaultTracingObservationHandler(braveTracer));
+
         final MeterRegistry meterRegistry = new SimpleMeterRegistry();
         final List<MeterObservationHandler<?>> meterHandlers = Collections.singletonList(
                 new DefaultMeterObservationHandler(meterRegistry));
+
         final ObservationRegistry observationRegistry = ObservationRegistry.create();
         observationRegistry.observationConfig().observationHandler(
                 new ObservationHandler.CompositeObservationHandler.FirstMatchingCompositeObservationHandler(
@@ -69,4 +67,6 @@ public final class MicrometerObservationRegistryUtils {
                         meterHandlers));
         return observationRegistry;
     }
+
+    private MicrometerObservationRegistryUtils() {}
 }

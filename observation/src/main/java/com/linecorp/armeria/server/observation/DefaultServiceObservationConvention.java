@@ -39,7 +39,7 @@ final class DefaultServiceObservationConvention implements ObservationConvention
 
     @Override
     public KeyValues getLowCardinalityKeyValues(HttpServerContext context) {
-        final ServiceRequestContext ctx = context.serviceRequestContext();
+        final ServiceRequestContext ctx = context.requestContext();
         KeyValues keyValues = KeyValues.of(
                 LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
         if (context.getResponse() != null) {
@@ -59,7 +59,7 @@ final class DefaultServiceObservationConvention implements ObservationConvention
 
     @Override
     public KeyValues getHighCardinalityKeyValues(HttpServerContext context) {
-        final ServiceRequestContext ctx = context.serviceRequestContext();
+        final ServiceRequestContext ctx = context.requestContext();
         KeyValues keyValues = KeyValues.of(
                 HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
                 HighCardinalityKeys.HTTP_HOST.withValue(
@@ -111,7 +111,7 @@ final class DefaultServiceObservationConvention implements ObservationConvention
 
     @Override
     public String getContextualName(HttpServerContext context) {
-        final ServiceRequestContext serviceRequestContext = context.serviceRequestContext();
+        final ServiceRequestContext serviceRequestContext = context.requestContext();
         final RequestLog log = serviceRequestContext.log().ensureComplete();
         final String name = log.name();
         return firstNonNull(name, context.getName());

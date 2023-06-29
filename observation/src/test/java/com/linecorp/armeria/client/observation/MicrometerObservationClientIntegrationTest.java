@@ -152,7 +152,7 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
                                         context);
                         values = values.and(
                                 KeyValues.of("http.url",
-                                             context.clientRequestContext().uri().toString(),
+                                             context.requestContext().uri().toString(),
                                                          "request_customizer.is_span", "false"));
                         if (context.getResponse() != null) {
                             values = values.and("response_customizer.is_span", "false");

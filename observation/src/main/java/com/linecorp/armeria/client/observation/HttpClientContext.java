@@ -34,6 +34,11 @@ import io.micrometer.observation.transport.RequestReplySenderContext;
 /**
  * A {@link Observation.Context} which may be used in conjunction with {@link MicrometerObservationClient}
  * to implement custom {@link ObservationConvention}s or {@link ObservationHandler}s.
+ * <pre>{@code
+ * ObservationConvention<HttpClientContext> convention = ...
+ * WebClient.builder()
+ *          .decorator(MicrometerObservationClient.newDecorator(registry, convention))
+ * ...
  */
 @UnstableApi
 public final class HttpClientContext extends RequestReplySenderContext<RequestHeadersBuilder, RequestLog> {
@@ -71,7 +76,7 @@ public final class HttpClientContext extends RequestReplySenderContext<RequestHe
     /**
      * The {@link ClientRequestContext} associated with this {@link Context}.
      */
-    public ClientRequestContext clientRequestContext() {
+    public ClientRequestContext requestContext() {
         return clientRequestContext;
     }
 

@@ -38,6 +38,33 @@ import io.micrometer.observation.ObservationRegistry;
 /**
  * Decorates an {@link HttpClient} to trace outbound {@link HttpRequest}s using
  * <a href="https://github.com/micrometer-metrics/micrometer">Micrometer Observation</a>.
+ * The following may be a typical implementation using a brave implementation:
+ * <pre>{@code
+ * // create a tracer
+ * BraveCurrentTraceContext braveCurrentTraceContext = new BraveCurrentTraceContext(
+ *   tracing.currentTraceContext());
+ * BravePropagator bravePropagator = new BravePropagator(tracing);
+ * BraveTracer braveTracer = new BraveTracer(tracing.tracer(), braveCurrentTraceContext,
+ *                                           new BraveBaggageManager());
+ *
+ * // add tracing handlers
+ * List<TracingObservationHandler<?>> tracingHandlers =
+ *   Arrays.asList(new PropagatingSenderTracingObservationHandler<>(braveTracer, bravePropagator),
+ *                 new PropagatingReceiverTracingObservationHandler<>(braveTracer, bravePropagator),
+ *                 new DefaultTracingObservationHandler(braveTracer));
+ *
+ * // create a registry
+ * ObservationRegistry observationRegistry = ObservationRegistry.create();
+ *
+ * // add the tracing handlers
+ * observationRegistry.observationConfig().observationHandler(
+ *         new FirstMatchingCompositeObservationHandler(tracingHandlers));
+ *
+ * // add the decorator
+ * WebClient.builder()
+ *          .decorator(MicrometerObservationClient.newDecorator(registry))
+ * ...
+ * }</pre>
  */
 public final class MicrometerObservationClient extends SimpleDecoratingHttpClient {
 

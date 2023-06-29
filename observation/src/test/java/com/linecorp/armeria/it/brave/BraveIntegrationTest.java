@@ -41,7 +41,6 @@ import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.transport.TTransportException;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -259,7 +258,6 @@ class BraveIntegrationTest {
                 .observationRegistry(tracingBuilder(name, currentTraceContext));
     }
 
-    @NotNull
     private static Tracing tracingBuilder(String name, CurrentTraceContext currentTraceContext) {
         return Tracing.newBuilder()
                       .currentTraceContext(currentTraceContext)
