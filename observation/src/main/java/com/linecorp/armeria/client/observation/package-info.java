@@ -17,7 +17,9 @@
 /**
  * Observation basing on <a href="https://github.com/micrometer-metrics/micrometer">Micrometer Observation</a>.
  */
+@UnstableApi
 @NonNullByDefault
 package com.linecorp.armeria.client.observation;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

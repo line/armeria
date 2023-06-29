@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 
@@ -66,6 +67,7 @@ import io.micrometer.observation.ObservationRegistry;
  * ...
  * }</pre>
  */
+@UnstableApi
 public final class MicrometerObservationClient extends SimpleDecoratingHttpClient {
 
     /**
