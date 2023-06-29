@@ -89,7 +89,7 @@ class FallbackServiceRedirectionTest {
     void redirectingClient(String path, String changedPath) {
         final BlockingWebClient client =
                 proxy.blockingWebClient(builder -> builder.followRedirects(RedirectConfig.of()));
-        AggregatedHttpResponse response = client.get(path);
+        final AggregatedHttpResponse response = client.get(path);
         assertThat(response.contentUtf8()).isEqualTo(changedPath);
     }
 }
