@@ -66,6 +66,7 @@ final class FallbackService implements HttpService {
         // For example, if the proxy rewrite the path /proxy/path -> /path, then we should send the location
         // with path/ so that the client can send the request to /proxy/path/ again.
         final int index = oldPath.lastIndexOf('/');
+        assert index >= 0;
         String location = oldPath.substring(index + 1) + '/';
         if (routingCtx.query() != null) {
             location += '?' + routingCtx.query();
