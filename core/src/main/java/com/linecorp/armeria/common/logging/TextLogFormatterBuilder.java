@@ -22,6 +22,7 @@ import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -36,52 +37,54 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
 
     @Override
     public TextLogFormatterBuilder requestHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> requestHeadersSanitizer) {
         return (TextLogFormatterBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
     @Override
     public TextLogFormatterBuilder responseHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-                    responseHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> responseHeadersSanitizer) {
         return (TextLogFormatterBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
     @Override
     public TextLogFormatterBuilder requestTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-                    requestTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> requestTrailersSanitizer) {
         return (TextLogFormatterBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
     @Override
     public TextLogFormatterBuilder responseTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-                    responseTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> responseTrailersSanitizer) {
         return (TextLogFormatterBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
     @Override
     public TextLogFormatterBuilder headersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> headersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> headersSanitizer) {
         return (TextLogFormatterBuilder) super.headersSanitizer(headersSanitizer);
     }
 
     @Override
     public TextLogFormatterBuilder requestContentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer) {
+            BiFunction<? super RequestContext, Object, ? extends @Nullable String> requestContentSanitizer) {
         return (TextLogFormatterBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
     @Override
     public TextLogFormatterBuilder responseContentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer) {
+            BiFunction<? super RequestContext, Object, ? extends @Nullable String> responseContentSanitizer) {
         return (TextLogFormatterBuilder) super.responseContentSanitizer(responseContentSanitizer);
     }
 
     @Override
     public TextLogFormatterBuilder contentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends String> contentSanitizer) {
+            BiFunction<? super RequestContext, Object, ? extends @Nullable String> contentSanitizer) {
         return (TextLogFormatterBuilder) super.contentSanitizer(contentSanitizer);
     }
 
@@ -96,9 +99,9 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
     }
 
     /**
-     * Returns a newly-created {@link TextLogFormatter} based on the properties of this builder.
+     * Returns a newly-created text {@link LogFormatter} based on the properties of this builder.
      */
-    public TextLogFormatter build() {
+    public LogFormatter build() {
         return new TextLogFormatter(
                 firstNonNull(requestHeadersSanitizer(), defaultSanitizer()),
                 firstNonNull(responseHeadersSanitizer(), defaultSanitizer()),

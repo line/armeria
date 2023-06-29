@@ -51,60 +51,61 @@ public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<J
 
     @Override
     public JsonLogFormatterBuilder requestHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
                     requestHeadersSanitizer) {
         return (JsonLogFormatterBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
     @Override
     public JsonLogFormatterBuilder responseHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
                     responseHeadersSanitizer) {
         return (JsonLogFormatterBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
     @Override
     public JsonLogFormatterBuilder requestTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
                     requestTrailersSanitizer) {
         return (JsonLogFormatterBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
     @Override
     public JsonLogFormatterBuilder responseTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
                     responseTrailersSanitizer) {
         return (JsonLogFormatterBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
     @Override
     public JsonLogFormatterBuilder headersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> headersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
+                    headersSanitizer) {
         return (JsonLogFormatterBuilder) super.headersSanitizer(headersSanitizer);
     }
 
     @Override
     public JsonLogFormatterBuilder requestContentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends JsonNode> requestContentSanitizer) {
+            BiFunction<? super RequestContext, Object, ? extends @Nullable JsonNode> requestContentSanitizer) {
         return (JsonLogFormatterBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
     @Override
     public JsonLogFormatterBuilder responseContentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends JsonNode> responseContentSanitizer) {
+            BiFunction<? super RequestContext, Object, ? extends @Nullable JsonNode> responseContentSanitizer) {
         return (JsonLogFormatterBuilder) super.responseContentSanitizer(responseContentSanitizer);
     }
 
     @Override
     public JsonLogFormatterBuilder contentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends JsonNode> contentSanitizer) {
+            BiFunction<? super RequestContext, Object, ? extends @Nullable JsonNode> contentSanitizer) {
         return (JsonLogFormatterBuilder) super.contentSanitizer(contentSanitizer);
     }
 
     /**
-     * Returns a newly-created {@link LogFormatter} based on the properties of this builder.
+     * Returns a newly-created JSON {@link LogFormatter} based on the properties of this builder.
      */
-    public JsonLogFormatter build() {
+    public LogFormatter build() {
         final ObjectMapper objectMapper = this.objectMapper != null ?
                                           this.objectMapper : JacksonUtil.newDefaultObjectMapper();
         final BiFunction<? super RequestContext, HttpHeaders, JsonNode> defaultHeadersSanitizer =
