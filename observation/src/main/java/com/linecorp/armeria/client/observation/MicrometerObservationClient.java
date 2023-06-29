@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -54,7 +56,8 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
      * using the specified {@link ObservationRegistry}
      * and {@link HttpClientObservationConvention} instances.
      */
-    public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
+    @VisibleForTesting
+    static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
             ObservationRegistry observationRegistry,
             HttpClientObservationConvention httpClientObservationConvention) {
         return delegate -> new MicrometerObservationClient(delegate, observationRegistry,

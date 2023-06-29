@@ -68,21 +68,19 @@ final class DefaultServiceObservationConvention implements ServiceObservationCon
             final RequestLog log = ctx.log().ensureComplete();
 
             final InetSocketAddress raddr = ctx.remoteAddress();
-            if (raddr != null) {
-                keyValues = keyValues.and(
-                        HighCardinalityKeys.ADDRESS_REMOTE.withValue(raddr.toString()));
-            }
+            keyValues = keyValues.and(
+                    HighCardinalityKeys.ADDRESS_REMOTE.withValue(raddr.toString()));
 
             final InetSocketAddress laddr = ctx.localAddress();
-            if (laddr != null) {
-                keyValues = keyValues.and(
-                        HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
-            }
-            if (log.responseStatus().isError()) {
+            keyValues = keyValues.and(
+                    HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
+
+            final Throwable responseCause = log.responseCause();
+            if (responseCause != null) {
+                keyValues = keyValues.and(HighCardinalityKeys.ERROR.withValue(responseCause.toString()));
+            } else if (log.responseStatus().isError()) {
                 keyValues = keyValues.and(
                         HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText()));
-            } else if (log.responseCause() != null) {
-                keyValues = keyValues.and(HighCardinalityKeys.ERROR.withValue(log.responseCause().toString()));
             }
         }
         return keyValues;

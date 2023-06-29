@@ -71,12 +71,12 @@ class DefaultHttpClientObservationConvention implements HttpClientObservationCon
             if (laddr != null) {
                 keyValues = keyValues.and(HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
             }
-            if (log.responseStatus().isError()) {
-                keyValues = keyValues.and(HighCardinalityKeys.ERROR
-                                                  .withValue(log.responseStatus().codeAsText()));
-            } else if (log.responseCause() != null) {
-                keyValues = keyValues.and(HighCardinalityKeys.ERROR
-                                                  .withValue(log.responseCause().toString()));
+
+            final Throwable responseCause = log.responseCause();
+            if (responseCause != null) {
+                keyValues = keyValues.and(HighCardinalityKeys.ERROR.withValue(responseCause.toString()));
+            } else if (log.responseStatus().isError()) {
+                keyValues = keyValues.and(HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText()));
             }
         }
         return keyValues;

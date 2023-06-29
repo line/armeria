@@ -22,7 +22,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -52,24 +51,12 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
 
     private final ObservationRegistry observationRegistry;
 
-    @Nullable
-    private final ServiceObservationConvention serviceObservationConvention;
-
     /**
      * Creates a new instance.
      */
     private MicrometerObservationService(HttpService delegate, ObservationRegistry observationRegistry) {
-        this(delegate, observationRegistry, null);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    private MicrometerObservationService(HttpService delegate, ObservationRegistry observationRegistry,
-                                         @Nullable ServiceObservationConvention serviceObservationConvention) {
         super(delegate);
         this.observationRegistry = requireNonNull(observationRegistry, "observationRegistry");
-        this.serviceObservationConvention = serviceObservationConvention;
     }
 
     @Override
@@ -82,7 +69,7 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
 
         final HttpServerContext httpServerContext = new HttpServerContext(ctx, req);
         final Observation observation = ServiceObservationDocumentation.OBSERVATION.observation(
-                this.serviceObservationConvention, DefaultServiceObservationConvention.INSTANCE,
+                null, DefaultServiceObservationConvention.INSTANCE,
                 () -> httpServerContext, observationRegistry).start();
 
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);

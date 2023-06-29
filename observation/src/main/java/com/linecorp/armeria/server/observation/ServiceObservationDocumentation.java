@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server.observation;
 
+import java.net.URI;
+
+import com.linecorp.armeria.common.Request;
+
 import io.micrometer.common.docs.KeyName;
 import io.micrometer.observation.Observation.Context;
 import io.micrometer.observation.Observation.Event;
@@ -25,7 +29,7 @@ import io.micrometer.observation.docs.ObservationDocumentation;
 enum ServiceObservationDocumentation implements ObservationDocumentation {
 
     /**
-     * TODO: Add docs.
+     * A span collected by {@link MicrometerObservationService}.
      */
     OBSERVATION {
         @Override
@@ -52,7 +56,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
     enum LowCardinalityKeys implements KeyName {
 
         /**
-         * TODO: Add docs.
+         * The HTTP method of the request.
          */
         HTTP_METHOD {
             @Override
@@ -62,7 +66,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
         },
 
         /**
-         * TODO: Add docs.
+         * The HTTP status code of the response.
          */
         STATUS_CODE {
             @Override
@@ -72,7 +76,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
         },
 
         /**
-         * TODO: Add docs.
+         * The session-level protocol used for the request.
          */
         HTTP_PROTOCOL {
             @Override
@@ -82,7 +86,8 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
         },
 
         /**
-         * TODO: Add docs.
+         * The serialization format used for the HTTP request if exists.
+         * An example can be the `gproto` format when using gRPC.
          */
         HTTP_SERIALIZATION_FORMAT {
             @Override
@@ -95,7 +100,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
     enum HighCardinalityKeys implements KeyName {
 
         /**
-         * TODO: Add docs.
+         * The absolute path part of the current {@link Request} URI, excluding the query part.
          */
         HTTP_PATH {
             @Override
@@ -105,7 +110,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
         },
 
         /**
-         * TODO: Add docs.
+         * The authority of the current {@link Request}.
          */
         HTTP_HOST {
             @Override
@@ -115,7 +120,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
         },
 
         /**
-         * TODO: Add docs.
+         * The {@link URI} associated with the current {@link Request}.
          */
         HTTP_URL {
             @Override
@@ -125,7 +130,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
         },
 
         /**
-         * TODO: Add docs.
+         * The remote address of this request.
          */
         ADDRESS_REMOTE {
             @Override
@@ -135,7 +140,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
         },
 
         /**
-         * TODO: Add docs.
+         * The local address of this request.
          */
         ADDRESS_LOCAL {
             @Override
@@ -145,7 +150,7 @@ enum ServiceObservationDocumentation implements ObservationDocumentation {
         },
 
         /**
-         * TODO: Add docs.
+         * The response cause for why the request has failed.
          */
         ERROR {
             @Override
