@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,32 +20,36 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.util.concurrent.EventExecutor;
 
-/**
- * An {@link HttpResponse} whose stream is published later by another {@link HttpResponse}. It is used when
- * an {@link HttpResponse} will not be instantiated early.
- */
-final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
+final class DeferredHttpRequest extends DeferredStreamMessage<HttpObject> implements HttpRequest {
 
-    DeferredHttpResponse() {}
+    private final RequestHeaders headers;
 
-    DeferredHttpResponse(EventExecutor executor) {
+    DeferredHttpRequest(RequestHeaders headers) {
+        this.headers = headers;
+    }
+
+    DeferredHttpRequest(RequestHeaders headers, EventExecutor executor) {
         super(executor);
+        this.headers = headers;
     }
 
-    void delegate(HttpResponse delegate) {
-        super.delegate(delegate);
+    @Override
+    public RequestHeaders headers() {
+        return headers;
     }
 
-    void delegateWhenComplete(CompletionStage<? extends HttpResponse> stage) {
-        delegateWhenCompleteStage(stage);
+    void delegateWhenComplete(CompletionStage<? extends StreamMessage<? extends HttpObject>> stage) {
+        //noinspection unchecked
+        delegateWhenCompleteStage((CompletionStage<? extends StreamMessage<HttpObject>>) stage);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+    public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
         return super.aggregate(options);
     }
 }

@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -31,6 +32,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -76,6 +78,8 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     private static final CompletableFuture<List<?>> NO_COLLECTING_FUTURE =
             UnmodifiableFuture.completedFuture(null);
     private static final SubscriptionImpl NOOP_SUBSCRIPTION = noopSubscription();
+    @Nullable
+    private final EventExecutor defaultSubscriberExecutor;
 
     @Nullable
     @SuppressWarnings("unused") // Updated only via upstreamUpdater
@@ -106,6 +110,45 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
     @Nullable
     private volatile Throwable abortCause;
+
+    /**
+     * Creates a new instance.
+     */
+    public DeferredStreamMessage() {
+        defaultSubscriberExecutor = null;
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public DeferredStreamMessage(EventExecutor defaultSubscriberExecutor) {
+        this.defaultSubscriberExecutor = requireNonNull(defaultSubscriberExecutor, "defaultSubscriberExecutor");
+    }
+
+    @Override
+    public EventExecutor defaultSubscriberExecutor() {
+        if (defaultSubscriberExecutor != null) {
+            return defaultSubscriberExecutor;
+        }
+        return super.defaultSubscriberExecutor();
+    }
+
+    /**
+     * Delegates when the specified {@link CompletionStage} is complete.
+     */
+    protected final void delegateWhenCompleteStage(CompletionStage<? extends StreamMessage<T>> stage) {
+        requireNonNull(stage, "stage");
+        stage.handle((delegate, thrown) -> {
+            if (thrown != null) {
+                close(Exceptions.peel(thrown));
+            } else if (delegate == null) {
+                close(new NullPointerException("delegate stage produced a null response: " + stage));
+            } else {
+                delegate(delegate);
+            }
+            return null;
+        });
+    }
 
     /**
      * Sets the upstream {@link StreamMessage} which will actually publish the stream.
