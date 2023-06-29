@@ -87,7 +87,7 @@ abstract class HttpResponseDecoder {
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
-                new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
+                new HttpResponseWrapper(res, eventLoop, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();
         if (keepAliveHandler != null) {
@@ -176,6 +176,7 @@ abstract class HttpResponseDecoder {
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
         private final DecodedHttpResponse delegate;
+        private final EventLoop eventLoop;
         private final ClientRequestContext ctx;
         private final long maxContentLength;
         private final long responseTimeoutMillis;
@@ -186,12 +187,17 @@ abstract class HttpResponseDecoder {
         private boolean done;
         private boolean closed;
 
-        HttpResponseWrapper(DecodedHttpResponse delegate, ClientRequestContext ctx,
+        HttpResponseWrapper(DecodedHttpResponse delegate, EventLoop eventLoop, ClientRequestContext ctx,
                             long responseTimeoutMillis, long maxContentLength) {
             this.delegate = delegate;
+            this.eventLoop = eventLoop;
             this.ctx = ctx;
             this.maxContentLength = maxContentLength;
             this.responseTimeoutMillis = responseTimeoutMillis;
+        }
+
+        EventLoop eventLoop() {
+            return eventLoop;
         }
 
         long maxContentLength() {

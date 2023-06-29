@@ -21,13 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -182,36 +179,8 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
     /**
      * Connects to the specified {@code path}.
      */
-    default void connect(String path, WebSocketClientHandler handler) {
-        connect(path, ImmutableList.of(), handler);
-    }
-
-    /**
-     * Connects to the specified {@code path} with the subprotocol.
-     *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1.9">
-     *     Subprotocols Using the WebSocket Protocol</a>
-     */
-    default void connect(String path, String subprotocol, WebSocketClientHandler handler) {
-        requireNonNull(subprotocol, "subprotocol");
-        connect(path, ImmutableList.of(subprotocol), handler);
-    }
-
-    /**
-     * Connects to the specified {@code path} with the subprotocols.
-     *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1.9">
-     *     Subprotocols Using the WebSocket Protocol</a>
-     */
-    void connect(String path, Iterable<String> subprotocols, WebSocketClientHandler handler);
-
-    /**
-     * Connects to the endpoint with the {@link RequestHeaders}.
-     */
-    void connect(RequestHeaders requestHeaders, WebSocketClientHandler handler);
+    CompletableFuture<WebSocketSession> connect(String path);
 
     @Override
     WebClient unwrap();
-
-    CompletableFuture<WebSocketSession> connect(String path);
 }

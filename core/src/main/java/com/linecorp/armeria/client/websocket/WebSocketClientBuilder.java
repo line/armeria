@@ -21,10 +21,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.AbstractWebClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -38,7 +42,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -64,6 +67,7 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
 
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
     private boolean allowMaskMismatch;
+    private List<String> subprotocols = ImmutableList.of();
 
     WebSocketClientBuilder(URI uri) {
         super(uri, true);
@@ -111,12 +115,33 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     }
 
     /**
+     * Sets the subprotocols to use with the WebSocket Protocol.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1.9">
+     *     Subprotocols Using the WebSocket Protocol</a>
+     */
+    public WebSocketClientBuilder subprotocols(String... subprotocols) {
+        return subprotocols(ImmutableSet.copyOf(requireNonNull(subprotocols, "subprotocols")));
+    }
+
+    /**
+     * Sets the subprotocols to use with the WebSocket Protocol.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1.9">
+     *     Subprotocols Using the WebSocket Protocol</a>
+     */
+    public WebSocketClientBuilder subprotocols(Iterable<String> subprotocols) {
+        this.subprotocols = ImmutableList.copyOf(requireNonNull(subprotocols, "subprotocols"));
+        return this;
+    }
+
+    /**
      * Sets whether to add an {@link HttpHeaderNames#ORIGIN} header automatically when sending
      * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
      * It's {@code true} by default.
      */
     public WebSocketClientBuilder addOriginHeader(boolean addOriginHeader) {
-        // Consider promoting this to AbstractClientOptionsBuilder.
+        //TODO(minwoox): Promote this to AbstractClientOptionsBuilder.
         option(ClientOptions.ADD_ORIGIN_HEADER, addOriginHeader);
         return this;
     }
@@ -126,7 +151,7 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
      */
     public WebSocketClient build() {
         final WebClient webClient = buildWebClient();
-        return new DefaultWebSocketClient(webClient, maxFramePayloadLength, allowMaskMismatch);
+        return new DefaultWebSocketClient(webClient, maxFramePayloadLength, allowMaskMismatch, subprotocols);
     }
 
     // Override the return type of the chaining methods in the superclass.

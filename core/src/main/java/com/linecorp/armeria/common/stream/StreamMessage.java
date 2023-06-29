@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -182,6 +183,22 @@ public interface StreamMessage<T> extends Publisher<T> {
         } else {
             return new PublisherBasedStreamMessage<>(publisher);
         }
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     */
+    static <T> StreamMessage<T> of(CompletionStage<? extends Publisher<? extends T>> stage) {
+        requireNonNull(stage, "stage");
+
+        final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>();
+        //noinspection unchecked
+        deferred.delegateWhenCompleteStage((CompletionStage<? extends Publisher<T>>) stage);
+        return deferred;
     }
 
     /**

@@ -18,17 +18,12 @@ package com.linecorp.armeria.client.websocket;
 
 import static com.linecorp.armeria.internal.client.websocket.WebSocketClientUtil.UNDEFINED_WEBSOCKET_URI;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.generateSecWebSocketAccept;
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -43,7 +38,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -54,10 +48,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.stream.DeferredStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.StreamWriter;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
@@ -75,6 +66,8 @@ final class DefaultWebSocketClient implements WebSocketClient {
     private final WebClient webClient;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
+    private final List<String> subprotocols;
+    private final String joinedSubprotocols;
 
     DefaultWebSocketClient() {
         webClient = WebClient.builder(UNDEFINED_WEBSOCKET_URI)
@@ -85,38 +78,21 @@ final class DefaultWebSocketClient implements WebSocketClient {
                              .build();
         maxFramePayloadLength = WebSocketClientBuilder.DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
         allowMaskMismatch = false;
+        subprotocols = ImmutableList.of();
+        joinedSubprotocols = "";
     }
 
-    DefaultWebSocketClient(WebClient webClient, int maxFramePayloadLength, boolean allowMaskMismatch) {
+    DefaultWebSocketClient(WebClient webClient, int maxFramePayloadLength, boolean allowMaskMismatch,
+                           List<String> subprotocols) {
         this.webClient = webClient;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
-    }
-
-    @Override
-    public void connect(String path, Iterable<String> subprotocols, WebSocketClientHandler handler) {
-        requireNonNull(path, "path");
-        requireNonNull(subprotocols, "subprotocols");
-        requireNonNull(handler, "handler");
-        final RequestHeadersBuilder builder;
-        if (scheme().sessionProtocol().isExplicitHttp2()) {
-            builder = RequestHeaders.builder(HttpMethod.CONNECT, path)
-                                    .set(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString());
+        this.subprotocols = subprotocols;
+        if (!subprotocols.isEmpty()) {
+            joinedSubprotocols = Joiner.on(", ").join(subprotocols);
         } else {
-            builder = RequestHeaders.builder(HttpMethod.GET, path)
-                                    .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString())
-                                    .set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString());
-            final String secWebSocketKey = generateSecWebSocketKey();
-            builder.set(HttpHeaderNames.SEC_WEBSOCKET_KEY, secWebSocketKey);
+            joinedSubprotocols = "";
         }
-
-        builder.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
-        final List<String> protocols = ImmutableList.copyOf(subprotocols);
-        if (!protocols.isEmpty()) {
-            builder.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, Joiner.on(", ").join(protocols));
-        }
-
-        connect(builder.build(), handler);
     }
 
     @Override
@@ -137,12 +113,13 @@ final class DefaultWebSocketClient implements WebSocketClient {
         builder.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
         final List<String> protocols = ImmutableList.of();
         if (!protocols.isEmpty()) {
-            builder.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, Joiner.on(", ").join(protocols));
+            builder.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, joinedSubprotocols);
         }
 
-        final DeferredStreamMessage<HttpObject> deferred = new DeferredStreamMessage<>();
         final RequestHeaders requestHeaders = builder.build();
-        final HttpRequest request = HttpRequest.of(requestHeaders, deferred);
+
+        final CompletableFuture<StreamMessage<HttpData>> outboundFuture = new CompletableFuture<>();
+        final HttpRequest request = HttpRequest.of(requestHeaders, StreamMessage.of(outboundFuture));
         final HttpResponse response;
         final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -162,20 +139,20 @@ final class DefaultWebSocketClient implements WebSocketClient {
         final CompletableFuture<WebSocketSession> result = new CompletableFuture<>();
         split.headers().handle((responseHeaders, cause) -> {
             if (cause != null) {
-                fail(deferred, response, result, cause);
+                fail(outboundFuture, response, result, cause);
                 return null;
             }
             if (actualSessionProtocol(ctx).isExplicitHttp2()) {
                 final HttpStatus status = responseHeaders.status();
                 if (status != HttpStatus.OK) {
-                    fail(deferred, response, result, new WebSocketClientHandshakeException(
+                    fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
                             "invalid status: " + status + " (expected: " + HttpStatus.OK + ')',
                             responseHeaders));
                     return null;
                 }
             } else {
                 if (!isHttp1WebSocketResponse(responseHeaders)) {
-                    fail(deferred, response, result, new WebSocketClientHandshakeException(
+                    fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
                             "invalid response headers: " + responseHeaders, responseHeaders));
                     return null;
                 }
@@ -183,25 +160,34 @@ final class DefaultWebSocketClient implements WebSocketClient {
                 assert secWebSocketKey != null;
                 final String secWebSocketAccept = responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
                 if (secWebSocketAccept == null) {
-                    fail(deferred, response, result, new WebSocketClientHandshakeException(
+                    fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
                             HttpHeaderNames.SEC_WEBSOCKET_ACCEPT + " is null.", responseHeaders));
                     return null;
                 }
                 if (!secWebSocketAccept.equals(generateSecWebSocketAccept(secWebSocketKey))) {
-                    fail(deferred, response, result, new WebSocketClientHandshakeException(
+                    fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
                             "invalid " + HttpHeaderNames.SEC_WEBSOCKET_ACCEPT + " header: " +
                             secWebSocketAccept, responseHeaders));
                     return null;
                 }
             }
+
+            if (!subprotocols.isEmpty()) {
+                final String responseSubprotocol = responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
+                if (!subprotocols.contains(responseSubprotocol)) {
+                    fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
+                            "invalid " + HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL + " header: " +
+                            responseSubprotocol + " (expected: one of " + subprotocols + ')',
+                            responseHeaders));
+                    return null;
+                }
+            }
+
             final WebSocketFrameDecoder decoder =
                     new WebSocketFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch, false);
             final WebSocketWrapper inbound = new WebSocketWrapper(split.body().decode(decoder));
-            final CompletableFuture<StreamMessage<HttpData>> outboundFuture = new CompletableFuture<>();
-            result.complete(new WebSocketSession(ctx, responseHeaders, inbound, outboundFuture, encoder));
 
-//            final StreamMessage<HttpData> src =
-//                    outbound.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame)));
+            result.complete(new WebSocketSession(ctx, responseHeaders, inbound, outboundFuture, encoder));
             return null;
         });
         return result;
@@ -213,58 +199,9 @@ final class DefaultWebSocketClient implements WebSocketClient {
         return ctx.log().ensureAvailable(RequestLogProperty.SESSION).sessionProtocol();
     }
 
-    private static void writeTo(StreamMessage<HttpData> src, StreamWriter<HttpObject> dst,
-                                ClientRequestContext ctx) {
-        // TODO(minwoox): Add this API to StreamMessage.
-        src.subscribe(new Subscriber<HttpData>() {
-            private Subscription s;
-
-            @Override
-            public void onSubscribe(Subscription s) {
-                this.s = s;
-                dst.whenConsumed().thenRun(() -> s.request(1));
-            }
-
-            @Override
-            public void onNext(HttpData httpData) {
-                dst.write(httpData);
-                dst.whenConsumed().thenRun(() -> s.request(1));
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                dst.close(t);
-            }
-
-            @Override
-            public void onComplete() {
-                dst.close();
-            }
-        }, ctx.eventLoop(), SubscriptionOption.values());
-    }
-
-    private void validateHeaders(RequestHeaders requestHeaders) {
-        final SessionProtocol sessionProtocol = scheme().sessionProtocol();
-        if (sessionProtocol.isExplicitHttp2()) {
-            if (isHttp2WebSocketUpgradeRequest(requestHeaders)) {
-                return;
-            }
-        } else if (sessionProtocol.isExplicitHttp1()) {
-            if (isHttp1WebSocketUpgradeRequest(requestHeaders)) {
-                return;
-            }
-        } else {
-            if (isHttp2WebSocketUpgradeRequest(requestHeaders) ||
-                isHttp1WebSocketUpgradeRequest(requestHeaders)) {
-                return;
-            }
-        }
-        throw new IllegalArgumentException("invalid WebSocket request headers: " + requestHeaders);
-    }
-
-    private static void fail(DeferredStreamMessage<HttpObject> deferred, HttpResponse response,
+    private static void fail(CompletableFuture<StreamMessage<HttpData>> outboundFuture, HttpResponse response,
                              CompletableFuture<WebSocketSession> result, Throwable cause) {
-        deferred.abort(cause);
+        outboundFuture.completeExceptionally(cause);
         response.abort(cause);
         result.completeExceptionally(cause);
     }

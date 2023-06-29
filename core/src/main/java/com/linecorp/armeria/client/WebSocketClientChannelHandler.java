@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.HttpResponseDecoder.contentTooLargeException;
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 
+import java.util.concurrent.TimeUnit;
+
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
@@ -45,9 +47,13 @@ final class WebSocketClientChannelHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        res.close(ClosedSessionException.get());
         keepAliveHandler.destroy();
-        ctx.fireChannelInactive();
+        // Close the response after 3 seconds with the exception so that we can give a chance to the
+        // WebSocketClient to finish the response normally if it receives the close frame from the server.
+        res.eventLoop().schedule(() -> {
+            res.close(ClosedSessionException.get());
+            ctx.fireChannelInactive();
+        }, 3, TimeUnit.SECONDS);
     }
 
     @Override
