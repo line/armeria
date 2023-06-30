@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.client.observation;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -53,25 +50,6 @@ public final class HttpClientContext extends RequestReplySenderContext<RequestHe
         this.clientRequestContext = clientRequestContext;
         this.httpRequest = httpRequest;
         setCarrier(carrier);
-        updateRemoteEndpoint(this, clientRequestContext);
-    }
-
-    private static void updateRemoteEndpoint(RequestReplySenderContext<?, ?> senderContext,
-                                             ClientRequestContext ctx) {
-        final InetSocketAddress remoteAddress = ctx.remoteAddress();
-        final URI uri = ctx.uri();
-        if (remoteAddress != null && uri != null) {
-            try {
-                senderContext.setRemoteServiceAddress(uri.getScheme() + "://" +
-                                                      remoteAddress.getAddress().getHostAddress() +
-                                                      ":" + remoteAddress.getPort());
-            } catch (Exception ex) {
-                // Ignore me
-            }
-        } else if (uri != null) {
-            senderContext.setRemoteServiceAddress(
-                    uri.getScheme() + "://" + uri.getHost() + ":" + uri.getPort());
-        }
     }
 
     /**

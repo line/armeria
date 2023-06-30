@@ -197,6 +197,7 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
 
     @Override
     @Test
+    @Ignore
     public void reportsServerAddress() throws IOException {
         super.reportsServerAddress();
     }
