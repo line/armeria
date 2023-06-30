@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -124,7 +125,7 @@ public final class ServiceSpecification {
     private final Set<ExceptionInfo> exceptions;
     private final List<HttpHeaders> exampleHeaders;
     @Nullable
-    private Route serviceRoute;
+    private Route docServiceRoute;
 
     /**
      * Creates a new instance.
@@ -156,8 +157,8 @@ public final class ServiceSpecification {
      * Return a {@link ServiceSpecification} that contains the {@link Route} info of
      * the attached {@link DocService}.
      */
-    public ServiceSpecification withServiceRoute(Route serviceRoute) {
-        this.serviceRoute = serviceRoute;
+    public ServiceSpecification withDocServiceRoute(Route docServiceRoute) {
+        this.docServiceRoute = docServiceRoute;
         return this;
     }
 
@@ -229,10 +230,14 @@ public final class ServiceSpecification {
      * Returns the path pattern string of the {@link DocService} mount location on server.
      */
     @JsonProperty
-    public String serviceRoute() {
-        if (serviceRoute == null) {
-            return "";
+    public String docServiceRoute() {
+        if (docServiceRoute != null && (
+                docServiceRoute.pathType() == RoutePathType.PREFIX ||
+                docServiceRoute.pathType() == RoutePathType.EXACT
+        )) {
+            return docServiceRoute.patternString();
         }
-        return serviceRoute.patternString();
+
+        return "";
     }
 }

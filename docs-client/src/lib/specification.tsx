@@ -94,7 +94,7 @@ export interface SpecificationData {
   structs: Struct[];
   exceptions: Struct[];
   exampleHeaders: { [name: string]: string }[];
-  serviceRoute: string;
+  docServiceRoute: string;
 }
 
 export function simpleName(fullName: string): string {
@@ -148,7 +148,7 @@ export class Specification {
 
   private readonly uniqueStructNames: boolean;
 
-  private readonly serviceRoute: string;
+  private readonly docServiceRoute: string;
 
   constructor(data: SpecificationData) {
     this.data = JSON.parse(JSON.stringify(data));
@@ -166,7 +166,7 @@ export class Specification {
     this.uniqueStructNames = hasUniqueNames(this.structsByName);
 
     this.updateDocStrings();
-    this.serviceRoute = this.data.serviceRoute;
+    this.docServiceRoute = this.data.docServiceRoute;
   }
 
   public getServices(): Service[] {
@@ -201,8 +201,8 @@ export class Specification {
     return this.structsByName.get(name);
   }
 
-  public getServiceRoute(): string {
-    return this.serviceRoute;
+  public getDocServiceRoute(): string {
+    return this.docServiceRoute;
   }
 
   public hasUniqueEnumNames(): boolean {

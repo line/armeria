@@ -82,7 +82,7 @@ interface OwnProps {
   debugFormIsOpen: boolean;
   setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
   jsonSchemas: any[];
-  serviceRoute: string;
+  docServiceRoute: string;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -117,8 +117,8 @@ const copyTextToClipboard = (text: string) => {
   modal.removeChild(textArea);
 };
 
-const parseServerRootPath = (serviceRoute: string) => {
-  const plainRoute = serviceRoute.replace('/*', '');
+const parseServerRootPath = (docServiceRoute: string) => {
+  const plainRoute = docServiceRoute.replace('/*', '');
   const index = window.location.href.indexOf(plainRoute);
 
   if (index === -1) {
@@ -156,7 +156,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   debugFormIsOpen,
   setDebugFormIsOpen,
   jsonSchemas,
-  serviceRoute,
+  docServiceRoute,
 }) => {
   const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [requestBody, setRequestBody] = useState('');
@@ -217,7 +217,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     }
 
     if (urlPath.startsWith('/')) {
-      urlPath = parseServerRootPath(serviceRoute) + urlPath;
+      urlPath = parseServerRootPath(docServiceRoute) + urlPath;
     }
 
     const urlQueries =
@@ -245,7 +245,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     useRequestBody,
     keepDebugResponse,
     setDebugFormIsOpen,
-    serviceRoute,
+    docServiceRoute,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */

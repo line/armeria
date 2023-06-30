@@ -274,7 +274,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
             final CompletableFuture<ServiceSpecification> serviceSpecificationFuture =
                     generateServiceSpecification(executor)
-                            .thenApply(spec -> spec.withServiceRoute(docServiceRoute));
+                            .thenApply(spec -> spec.withDocServiceRoute(docServiceRoute));
 
             final List<CompletableFuture<AggregatedHttpFile>> files =
                     TARGET_PATHS.stream()

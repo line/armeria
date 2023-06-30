@@ -25,7 +25,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -48,14 +47,13 @@ class ServiceSpecificationRouteTest {
             sb.serviceUnder("/test2", new AbstractHttpService() {});
         });
 
-        final WebClient client = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        final AggregatedHttpResponse res = server.blockingWebClient().get("/docs/specification.json");
 
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
         final ObjectMapper mapper = new ObjectMapper();
         final JsonNode specificationJson = mapper.readTree(res.contentUtf8());
 
-        assertThatJson(specificationJson).node("serviceRoute").isEqualTo("/docs/*");
+        assertThatJson(specificationJson).node("docServiceRoute").isEqualTo("/docs/*");
     }
 }

@@ -239,7 +239,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           useRequestBody={needsToUseRequestBody(props.match.params.httpMethod)}
           debugFormIsOpen={debugFormIsOpen}
           setDebugFormIsOpen={setDebugFormIsOpen}
-          serviceRoute={props.specification.getServiceRoute()}
+          docServiceRoute={props.specification.getDocServiceRoute()}
         />
       )}
     </>
