@@ -26,10 +26,13 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
+import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 
 /**
- * A WebSocket session.
+ * A WebSocket session that is created after {@link WebSocketClient#connect(String)} succeeds.
+ * You can start sending {@link WebSocketFrame}s via {@link #send(WebSocket)}. You can also subscribe to
+ * {@link #inbound()} to receive {@link WebSocketFrame}s from the server.
  */
 public final class WebSocketSession {
 
