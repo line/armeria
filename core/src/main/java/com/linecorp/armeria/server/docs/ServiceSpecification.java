@@ -231,10 +231,7 @@ public final class ServiceSpecification {
      */
     @JsonProperty
     public String docServiceRoute() {
-        if (docServiceRoute != null && (
-                docServiceRoute.pathType() == RoutePathType.PREFIX ||
-                docServiceRoute.pathType() == RoutePathType.EXACT
-        )) {
+        if (docServiceRoute != null && docServiceRoute.pathType() == RoutePathType.PREFIX) {
             return docServiceRoute.patternString();
         }
 

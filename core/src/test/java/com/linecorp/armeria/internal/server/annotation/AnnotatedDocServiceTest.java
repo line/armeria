@@ -170,7 +170,8 @@ class AnnotatedDocServiceTest {
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
                 .isEqualTo("no-cache, max-age=0, must-revalidate");
         assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER)
-                                         .whenIgnoringPaths("structs").isEqualTo(expectedJson);
+                                         .whenIgnoringPaths("structs", "docServiceRoute")
+                                         .isEqualTo(expectedJson);
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
@@ -456,7 +457,7 @@ class AnnotatedDocServiceTest {
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of());
-        final Route docServiceRoute = Route.builder().path("/docs").build();
+        final Route docServiceRoute = Route.builder().path("/excludeAll/*").build();
         final JsonNode expectedJson = mapper.valueToTree(
                 emptySpecification.withDocServiceRoute(docServiceRoute));
         assertThatJson(actualJson).isEqualTo(expectedJson);

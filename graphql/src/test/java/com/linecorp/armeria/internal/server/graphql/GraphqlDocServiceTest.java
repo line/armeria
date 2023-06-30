@@ -166,7 +166,7 @@ class GraphqlDocServiceTest {
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of());
-        final Route docServiceRoute = Route.builder().path("/docs").build();
+        final Route docServiceRoute = Route.builder().path(path + "/*").build();
         final JsonNode expectedJson = mapper.valueToTree(
                 emptySpecification.withDocServiceRoute(docServiceRoute));
         assertThatJson(actualJson).isEqualTo(expectedJson);
