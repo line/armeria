@@ -435,6 +435,7 @@ abstract class HttpResponseDecoder {
         public String toString() {
             return toStringHelper(this).omitNullValues()
                                        .add("ctx", ctx)
+                                       .add("eventLoop", eventLoop)
                                        .add("responseStarted", responseStarted)
                                        .add("maxContentLength", maxContentLength)
                                        .add("responseTimeoutMillis", responseTimeoutMillis)

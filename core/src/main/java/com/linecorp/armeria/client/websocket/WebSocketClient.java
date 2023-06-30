@@ -32,6 +32,10 @@ import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * A WebSocket client.
+ * This client has a few different default values for {@link ClientOptions} from {@link WebClient}
+ * because of the nature of WebSocket. See {@link WebSocketClientBuilder} for more information.
+ *
+ * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455">The WebSocket Protocol</a>
  */
 public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
 

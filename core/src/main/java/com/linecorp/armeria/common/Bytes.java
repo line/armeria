@@ -55,7 +55,7 @@ public interface Bytes extends SafeCloseable {
      */
     int length();
 
-    /**di
+    /**
      * Returns whether the {@link #length()} of this data is 0.
      */
     default boolean isEmpty() {

@@ -87,10 +87,10 @@ public final class WebSocketSession {
     /**
      * Sets the {@link WebSocket} which is used to send WebSocket frames to the server.
      */
-    public void send(WebSocket outbound) {
+    public boolean send(WebSocket outbound) {
         requireNonNull(outbound, "outbound");
         final StreamMessage<HttpData> streamMessage =
                 outbound.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame)));
-        outboundFuture.complete(streamMessage);
+        return outboundFuture.complete(streamMessage);
     }
 }

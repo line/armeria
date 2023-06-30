@@ -34,7 +34,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
-    static final WebClient DEFAULT = new WebClientBuilder().factory(ClientFactory.insecure()).build();
+    static final WebClient DEFAULT = new WebClientBuilder().build();
 
     static final RequestOptions RESPONSE_STREAMING_REQUEST_OPTIONS =
             RequestOptions.builder()

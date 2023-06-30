@@ -29,9 +29,6 @@
   <appender name="NOP" class="ch.qos.logback.core.helpers.NOPAppender" />
 
   <logger name="com.linecorp.armeria" level="DEBUG" />
-  <logger name="com.linecorp.armeria.server.websocket" level="TRACE" />
-  <logger name="com.linecorp.armeria.client.websocket" level="TRACE" />
-  <logger name="com.linecorp.armeria.common.websocket" level="TRACE" />
   <logger name="com.linecorp.armeria.logging.traffic.server" level="OFF" />
   <logger name="com.linecorp.armeria.logging.traffic.server.http2" level="OFF" />
   <logger name="com.linecorp.armeria.logging.traffic.client" level="OFF" />

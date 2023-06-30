@@ -36,7 +36,7 @@ final class WebSocketHttp1RequestSubscriber extends AbstractHttpRequestSubscribe
     public void onNext(HttpObject o) {
         if (!(o instanceof HttpData)) {
             failAndReset(new IllegalArgumentException(
-                    "published an HttpObject that's not Http2Data: " + o));
+                    "published an HttpObject that's not HttpData: " + o));
             return;
         }
 

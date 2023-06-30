@@ -59,6 +59,13 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
 
 /**
  * Builds a {@link WebSocketClient}.
+ * This client has the different default options from {@link WebClient}. Here are the differences:
+ * <ul>
+ *   <li>{@link ClientOptions#RESPONSE_TIMEOUT_MILLIS} is {@code 0}.</li>
+ *   <li>{@link ClientOptions#MAX_RESPONSE_LENGTH} is {@code 0}.</li>
+ *   <li>{@link ClientOptions#REQUEST_AUTO_ABORT_DELAY_MILLIS} is {@code 5000}.</li>
+ *   <li>{@link ClientOptions#ADD_ORIGIN_HEADER} is {@code true}.</li>
+ * </ul>
  */
 @UnstableApi
 public final class WebSocketClientBuilder extends AbstractWebClientBuilder {

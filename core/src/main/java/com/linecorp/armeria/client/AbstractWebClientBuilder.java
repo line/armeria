@@ -99,7 +99,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
     /**
      * Creates a new instance.
      *
-     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
+     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
     protected AbstractWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
@@ -110,7 +110,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
     /**
      * Creates a new instance.
      *
-     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
+     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
     protected AbstractWebClientBuilder(SerializationFormat serializationFormat, SessionProtocol sessionProtocol,
