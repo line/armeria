@@ -28,9 +28,21 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
+import com.linecorp.armeria.internal.server.websocket.WebSocketServiceUtil;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceConfig;
 
 /**
  * Builds a {@link WebSocketService}.
+ * This service has the different default configs from a normal {@link HttpService}. Here are the differences:
+ * <ul>
+ *   <li>{@link ServiceConfig#requestTimeoutMillis()} is
+ *       {@value WebSocketServiceUtil#DEFAULT_REQUEST_TIMEOUT_MILLIS}.</li>
+ *   <li>{@link ServiceConfig#maxRequestLength()} is
+ *       {@value WebSocketServiceUtil#DEFAULT_MAX_REQUEST_LENGTH}.</li>
+ *   <li>{@link ServiceConfig#requestAutoAbortDelayMillis()} is
+ *       {@value WebSocketServiceUtil#DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS}.</li>
+ * </ul>
  */
 @UnstableApi
 public final class WebSocketServiceBuilder {
