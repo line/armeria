@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.client.kubernetes;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -37,6 +37,10 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroupSetters;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.RequestId;
@@ -48,7 +52,7 @@ import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 
-public final class K8sEndpointGroupBuilder extends AbstractWebClientBuilder
+public final class KubernetesEndpointGroupBuilder extends AbstractWebClientBuilder
         implements DynamicEndpointGroupSetters {
 
     private static final long DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS = 30000;
@@ -62,12 +66,12 @@ public final class K8sEndpointGroupBuilder extends AbstractWebClientBuilder
 
     private long registryFetchIntervalMillis = DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS;
 
-    K8sEndpointGroupBuilder(URI k8sApiUri) {
+    KubernetesEndpointGroupBuilder(URI k8sApiUri) {
         super(requireNonNull(k8sApiUri, "k8sApiUri"));
     }
 
-    K8sEndpointGroupBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
-                            @Nullable String path) {
+    KubernetesEndpointGroupBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
+                                   @Nullable String path) {
         super(sessionProtocol, endpointGroup, path);
     }
 
@@ -75,7 +79,7 @@ public final class K8sEndpointGroupBuilder extends AbstractWebClientBuilder
      * Sets the <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/">namespace</a>
      * of a Kubernetes cluster.
      */
-    public K8sEndpointGroupBuilder namespace(String namespace) {
+    public KubernetesEndpointGroupBuilder namespace(String namespace) {
         this.namespace = requireNonNull(namespace, "namespace");
         return this;
     }
@@ -84,7 +88,7 @@ public final class K8sEndpointGroupBuilder extends AbstractWebClientBuilder
      * Sets the target <a href="https://kubernetes.io/docs/concepts/services-networking/service/">service</a> name
      * from which {@link Endpoint}s should be fetched.
      */
-    public K8sEndpointGroupBuilder serviceName(String serviceName) {
+    public KubernetesEndpointGroupBuilder serviceName(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
         return this;
     }
@@ -95,7 +99,7 @@ public final class K8sEndpointGroupBuilder extends AbstractWebClientBuilder
      * <a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/#referring-to-resources">resources</a>.
      */
     @Override
-    public K8sEndpointGroupBuilder auth(AuthToken accessToken) {
+    public KubernetesEndpointGroupBuilder auth(AuthToken accessToken) {
         requireNonNull(accessToken, "accessToken");
         super.auth(accessToken);
         return this;
@@ -105,7 +109,7 @@ public final class K8sEndpointGroupBuilder extends AbstractWebClientBuilder
      * Sets the interval between fetching registry requests.
      * If not set, {@value #DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS} milliseconds is used by default.
      */
-    public K8sEndpointGroupBuilder registryFetchIntervalMillis(long registryFetchIntervalMillis) {
+    public KubernetesEndpointGroupBuilder registryFetchIntervalMillis(long registryFetchIntervalMillis) {
         checkArgument(registryFetchIntervalMillis > 0, "registryFetchIntervalSeconds: %s (expected: > 0)",
                       registryFetchIntervalMillis);
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
@@ -116,7 +120,7 @@ public final class K8sEndpointGroupBuilder extends AbstractWebClientBuilder
      * Sets the interval between fetching registry requests.
      * If not set, {@value #DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS} milliseconds is used by default.
      */
-    public K8sEndpointGroupBuilder registryFetchInterval(Duration registryFetchInterval) {
+    public KubernetesEndpointGroupBuilder registryFetchInterval(Duration registryFetchInterval) {
         requireNonNull(registryFetchInterval, "registryFetchInterval");
         checkArgument(!registryFetchInterval.isZero() &&
                       !registryFetchInterval.isNegative(),
@@ -126,188 +130,188 @@ public final class K8sEndpointGroupBuilder extends AbstractWebClientBuilder
     }
 
     /**
-     * Sets the {@link EndpointSelectionStrategy} of the {@link K8sEndpointGroupBuilder}.
+     * Sets the {@link EndpointSelectionStrategy} of the {@link KubernetesEndpointGroupBuilder}.
      */
-    public K8sEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+    public KubernetesEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         return this;
     }
 
     @Override
-    public K8sEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+    public KubernetesEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         dynamicEndpointGroupBuilder.allowEmptyEndpoints(allowEmptyEndpoints);
         return this;
     }
 
     @Override
-    public K8sEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+    public KubernetesEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         dynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
         return this;
     }
 
     /**
-     * Returns a newly-created {@link K8sEndpointGroup} based on the properties of this builder.
+     * Returns a newly-created {@link KubernetesEndpointGroup} based on the properties of this builder.
      */
-    public K8sEndpointGroup build() {
+    public KubernetesEndpointGroup build() {
         final WebClient webClient = buildWebClient();
         final boolean allowEmptyEndpoints = dynamicEndpointGroupBuilder.shouldAllowEmptyEndpoints();
         final long selectionTimeoutMillis = dynamicEndpointGroupBuilder.selectionTimeoutMillis();
         checkState(serviceName != null, "serviceName can't be null");
 
-        return new K8sEndpointGroup(webClient, namespace, serviceName, selectionStrategy, allowEmptyEndpoints,
-                                    selectionTimeoutMillis, registryFetchIntervalMillis);
+        return new KubernetesEndpointGroup(webClient, namespace, serviceName, selectionStrategy, allowEmptyEndpoints,
+                                           selectionTimeoutMillis, registryFetchIntervalMillis);
     }
 
     // Override the return type of the following methods in the superclass.
 
     @Override
-    public K8sEndpointGroupBuilder options(ClientOptions options) {
-        return (K8sEndpointGroupBuilder) super.options(options);
+    public KubernetesEndpointGroupBuilder options(ClientOptions options) {
+        return (KubernetesEndpointGroupBuilder) super.options(options);
     }
 
     @Override
-    public K8sEndpointGroupBuilder options(ClientOptionValue<?>... options) {
-        return (K8sEndpointGroupBuilder) super.options(options);
+    public KubernetesEndpointGroupBuilder options(ClientOptionValue<?>... options) {
+        return (KubernetesEndpointGroupBuilder) super.options(options);
     }
 
     @Override
-    public K8sEndpointGroupBuilder options(Iterable<ClientOptionValue<?>> options) {
-        return (K8sEndpointGroupBuilder) super.options(options);
+    public KubernetesEndpointGroupBuilder options(Iterable<ClientOptionValue<?>> options) {
+        return (KubernetesEndpointGroupBuilder) super.options(options);
     }
 
     @Override
-    public <T> K8sEndpointGroupBuilder option(ClientOption<T> option, T value) {
-        return (K8sEndpointGroupBuilder) super.option(option, value);
+    public <T> KubernetesEndpointGroupBuilder option(ClientOption<T> option, T value) {
+        return (KubernetesEndpointGroupBuilder) super.option(option, value);
     }
 
     @Override
-    public <T> K8sEndpointGroupBuilder option(ClientOptionValue<T> optionValue) {
-        return (K8sEndpointGroupBuilder) super.option(optionValue);
+    public <T> KubernetesEndpointGroupBuilder option(ClientOptionValue<T> optionValue) {
+        return (KubernetesEndpointGroupBuilder) super.option(optionValue);
     }
 
     @Override
-    public K8sEndpointGroupBuilder factory(ClientFactory factory) {
-        return (K8sEndpointGroupBuilder) super.factory(factory);
+    public KubernetesEndpointGroupBuilder factory(ClientFactory factory) {
+        return (KubernetesEndpointGroupBuilder) super.factory(factory);
     }
 
     @Override
-    public K8sEndpointGroupBuilder writeTimeout(Duration writeTimeout) {
-        return (K8sEndpointGroupBuilder) super.writeTimeout(writeTimeout);
+    public KubernetesEndpointGroupBuilder writeTimeout(Duration writeTimeout) {
+        return (KubernetesEndpointGroupBuilder) super.writeTimeout(writeTimeout);
     }
 
     @Override
-    public K8sEndpointGroupBuilder writeTimeoutMillis(long writeTimeoutMillis) {
-        return (K8sEndpointGroupBuilder) super.writeTimeoutMillis(writeTimeoutMillis);
+    public KubernetesEndpointGroupBuilder writeTimeoutMillis(long writeTimeoutMillis) {
+        return (KubernetesEndpointGroupBuilder) super.writeTimeoutMillis(writeTimeoutMillis);
     }
 
     @Override
-    public K8sEndpointGroupBuilder responseTimeout(Duration responseTimeout) {
-        return (K8sEndpointGroupBuilder) super.responseTimeout(responseTimeout);
+    public KubernetesEndpointGroupBuilder responseTimeout(Duration responseTimeout) {
+        return (KubernetesEndpointGroupBuilder) super.responseTimeout(responseTimeout);
     }
 
     @Override
-    public K8sEndpointGroupBuilder responseTimeoutMillis(long responseTimeoutMillis) {
-        return (K8sEndpointGroupBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
+    public KubernetesEndpointGroupBuilder responseTimeoutMillis(long responseTimeoutMillis) {
+        return (KubernetesEndpointGroupBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
     }
 
     @Override
-    public K8sEndpointGroupBuilder maxResponseLength(long maxResponseLength) {
-        return (K8sEndpointGroupBuilder) super.maxResponseLength(maxResponseLength);
+    public KubernetesEndpointGroupBuilder maxResponseLength(long maxResponseLength) {
+        return (KubernetesEndpointGroupBuilder) super.maxResponseLength(maxResponseLength);
     }
 
     @Override
-    public K8sEndpointGroupBuilder requestAutoAbortDelay(Duration delay) {
-        return (K8sEndpointGroupBuilder) super.requestAutoAbortDelay(delay);
+    public KubernetesEndpointGroupBuilder requestAutoAbortDelay(Duration delay) {
+        return (KubernetesEndpointGroupBuilder) super.requestAutoAbortDelay(delay);
     }
 
     @Override
-    public K8sEndpointGroupBuilder requestAutoAbortDelayMillis(long delayMillis) {
-        return (K8sEndpointGroupBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    public KubernetesEndpointGroupBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (KubernetesEndpointGroupBuilder) super.requestAutoAbortDelayMillis(delayMillis);
     }
 
     @Override
-    public K8sEndpointGroupBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
-        return (K8sEndpointGroupBuilder) super.requestIdGenerator(requestIdGenerator);
+    public KubernetesEndpointGroupBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
+        return (KubernetesEndpointGroupBuilder) super.requestIdGenerator(requestIdGenerator);
     }
 
     @Override
-    public K8sEndpointGroupBuilder successFunction(SuccessFunction successFunction) {
-        return (K8sEndpointGroupBuilder) super.successFunction(successFunction);
+    public KubernetesEndpointGroupBuilder successFunction(SuccessFunction successFunction) {
+        return (KubernetesEndpointGroupBuilder) super.successFunction(successFunction);
     }
 
     @Override
-    public K8sEndpointGroupBuilder endpointRemapper(
+    public KubernetesEndpointGroupBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
-        return (K8sEndpointGroupBuilder) super.endpointRemapper(endpointRemapper);
+        return (KubernetesEndpointGroupBuilder) super.endpointRemapper(endpointRemapper);
     }
 
     @Override
-    public K8sEndpointGroupBuilder decorator(
+    public KubernetesEndpointGroupBuilder decorator(
             Function<? super HttpClient, ? extends HttpClient> decorator) {
-        return (K8sEndpointGroupBuilder) super.decorator(decorator);
+        return (KubernetesEndpointGroupBuilder) super.decorator(decorator);
     }
 
     @Override
-    public K8sEndpointGroupBuilder decorator(DecoratingHttpClientFunction decorator) {
-        return (K8sEndpointGroupBuilder) super.decorator(decorator);
+    public KubernetesEndpointGroupBuilder decorator(DecoratingHttpClientFunction decorator) {
+        return (KubernetesEndpointGroupBuilder) super.decorator(decorator);
     }
 
     @Override
-    public K8sEndpointGroupBuilder clearDecorators() {
-        return (K8sEndpointGroupBuilder) super.clearDecorators();
+    public KubernetesEndpointGroupBuilder clearDecorators() {
+        return (KubernetesEndpointGroupBuilder) super.clearDecorators();
     }
 
     @Override
-    public K8sEndpointGroupBuilder addHeader(CharSequence name, Object value) {
-        return (K8sEndpointGroupBuilder) super.addHeader(name, value);
+    public KubernetesEndpointGroupBuilder addHeader(CharSequence name, Object value) {
+        return (KubernetesEndpointGroupBuilder) super.addHeader(name, value);
     }
 
     @Override
-    public K8sEndpointGroupBuilder addHeaders(
+    public KubernetesEndpointGroupBuilder addHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        return (K8sEndpointGroupBuilder) super.addHeaders(headers);
+        return (KubernetesEndpointGroupBuilder) super.addHeaders(headers);
     }
 
     @Override
-    public K8sEndpointGroupBuilder setHeader(CharSequence name, Object value) {
-        return (K8sEndpointGroupBuilder) super.setHeader(name, value);
+    public KubernetesEndpointGroupBuilder setHeader(CharSequence name, Object value) {
+        return (KubernetesEndpointGroupBuilder) super.setHeader(name, value);
     }
 
     @Override
-    public K8sEndpointGroupBuilder setHeaders(
+    public KubernetesEndpointGroupBuilder setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        return (K8sEndpointGroupBuilder) super.setHeaders(headers);
+        return (KubernetesEndpointGroupBuilder) super.setHeaders(headers);
     }
 
     @Override
-    public K8sEndpointGroupBuilder auth(BasicToken token) {
-        return (K8sEndpointGroupBuilder) super.auth(token);
+    public KubernetesEndpointGroupBuilder auth(BasicToken token) {
+        return (KubernetesEndpointGroupBuilder) super.auth(token);
     }
 
     @Override
-    public K8sEndpointGroupBuilder auth(OAuth1aToken token) {
-        return (K8sEndpointGroupBuilder) super.auth(token);
+    public KubernetesEndpointGroupBuilder auth(OAuth1aToken token) {
+        return (KubernetesEndpointGroupBuilder) super.auth(token);
     }
 
     @Override
-    public K8sEndpointGroupBuilder auth(OAuth2Token token) {
-        return (K8sEndpointGroupBuilder) super.auth(token);
+    public KubernetesEndpointGroupBuilder auth(OAuth2Token token) {
+        return (KubernetesEndpointGroupBuilder) super.auth(token);
     }
 
     @Override
-    public K8sEndpointGroupBuilder followRedirects() {
-        return (K8sEndpointGroupBuilder) super.followRedirects();
+    public KubernetesEndpointGroupBuilder followRedirects() {
+        return (KubernetesEndpointGroupBuilder) super.followRedirects();
     }
 
     @Override
-    public K8sEndpointGroupBuilder followRedirects(RedirectConfig redirectConfig) {
-        return (K8sEndpointGroupBuilder) super.followRedirects(redirectConfig);
+    public KubernetesEndpointGroupBuilder followRedirects(RedirectConfig redirectConfig) {
+        return (KubernetesEndpointGroupBuilder) super.followRedirects(redirectConfig);
     }
 
     @Override
-    public K8sEndpointGroupBuilder contextCustomizer(
+    public KubernetesEndpointGroupBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
-        return (K8sEndpointGroupBuilder) super.contextCustomizer(contextCustomizer);
+        return (KubernetesEndpointGroupBuilder) super.contextCustomizer(contextCustomizer);
     }
 
     private static class DynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
