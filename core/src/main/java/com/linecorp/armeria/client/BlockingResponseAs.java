@@ -20,6 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Predicate;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -41,7 +44,26 @@ public class BlockingResponseAs implements ResponseAs<HttpResponse, AggregatedHt
         return true;
     }
 
-    <V> BlockingConditionalResponseAs<V> andThenJson(Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
+    public <V> BlockingConditionalResponseAs<V> andThenJson(
+            Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
         return new BlockingConditionalResponseAs<>(this, AggregatedResponseAs.json(clazz), predicate);
+    }
+
+    public <V> BlockingConditionalResponseAs<V> andThenJson(
+            Class<? extends V> clazz, ObjectMapper objectMapper, Predicate<AggregatedHttpResponse> predicate) {
+        return new BlockingConditionalResponseAs<>(
+                this, AggregatedResponseAs.json(clazz, objectMapper), predicate);
+    }
+
+    public <V> BlockingConditionalResponseAs<V> andThenJson(
+            TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
+        return new BlockingConditionalResponseAs<>(this, AggregatedResponseAs.json(typeRef), predicate);
+    }
+
+    public <V> BlockingConditionalResponseAs<V> andThenJson(
+            TypeReference<? extends V> typeRef, ObjectMapper objectMapper,
+            Predicate<AggregatedHttpResponse> predicate) {
+        return new BlockingConditionalResponseAs<>(
+                this, AggregatedResponseAs.json(typeRef, objectMapper), predicate);
     }
 }

@@ -22,23 +22,38 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 
+/**
+ * Adds the mapping of {@link ResponseAs} and {@link Predicate} in order to return {@link ResponseAs} whose
+ * {@link Predicate} is evaluated as true.
+ */
 public class ConditionalResponseAs<T, R, V> {
 
-    private final ResponseAs<T, R> originalResposeAs;
-    ConditionalResponseAs (ResponseAs<T, R> originalResposeAs, ResponseAs<R, V> responseAs, Predicate<R> predicate) {
-        this.originalResposeAs = originalResposeAs;
-        // This is necessary to add predicate into list
+    private final ResponseAs<T, R> originalResponseAs;
+    private final List<Entry<ResponseAs<R, V>, Predicate<R>>> predicateMappingList = new ArrayList<>();
+
+    ConditionalResponseAs(
+            ResponseAs<T, R> originalResponseAs, ResponseAs<R, V> responseAs, Predicate<R> predicate) {
+        this.originalResponseAs = originalResponseAs;
         andThen(responseAs, predicate);
     }
 
-    final List<Entry<ResponseAs<R, V>, Predicate<R>>> list = new ArrayList<>();
+    /**
+     * Adds the mapping of {@link ResponseAs} and {@link Predicate} to the List.
+     */
+    public ConditionalResponseAs<T, R, V> andThen(ResponseAs<R, V> responseAs, Predicate<R> predicate) {
+        predicateMappingList.add(new SimpleEntry<>(responseAs, predicate));
+        return this;
+    }
 
+    /**
+     * Returns {@link ResponseAs} whose {@link Predicate} is evaluated as true.
+     */
     public ResponseAs<T, V> orElse(ResponseAs<R, V> responseAs) {
         return new ResponseAs<T, V>() {
             @Override
             public V as(T response) {
-                final R r = originalResposeAs.as(response);
-                for (Entry<ResponseAs<R, V>, Predicate<R>> entry: list) {
+                final R r = originalResponseAs.as(response);
+                for (Entry<ResponseAs<R, V>, Predicate<R>> entry: predicateMappingList) {
                     if (entry.getValue().test(r)) {
                         return entry.getKey().as(r);
                     }
@@ -46,10 +61,5 @@ public class ConditionalResponseAs<T, R, V> {
                 return responseAs.as(r);
             }
         };
-    }
-
-    public ConditionalResponseAs<T, R, V> andThen(ResponseAs<R, V> responseAs, Predicate<R> predicate) {
-        list.add(new SimpleEntry<>(responseAs, predicate));
-        return this;
     }
 }
