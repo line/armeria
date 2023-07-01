@@ -457,7 +457,7 @@ class AnnotatedDocServiceTest {
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of());
-        final Route docServiceRoute = Route.builder().path("/excludeAll/*").build();
+        final Route docServiceRoute = Route.builder().pathPrefix("/excludeAll").build();
         final JsonNode expectedJson = mapper.valueToTree(
                 emptySpecification.withDocServiceRoute(docServiceRoute));
         assertThatJson(actualJson).isEqualTo(expectedJson);

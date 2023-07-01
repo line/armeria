@@ -209,7 +209,7 @@ class GrpcDocServiceTest {
         removeDescriptionInfos(actualJson);
         removeDescriptionInfos(expectedJson);
 
-        assertThatJson(actualJson).ignoring("docServiceRoute").isEqualTo(expectedJson);
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
 
         final AggregatedHttpResponse injected = client.get("/docs/injected.js").aggregate().join();
 
@@ -230,7 +230,7 @@ class GrpcDocServiceTest {
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of());
-        final Route docServiceRoute = Route.builder().path("/excludeAll/*").build();
+        final Route docServiceRoute = Route.builder().pathPrefix("/excludeAll").build();
         final JsonNode expectedJson = mapper.valueToTree(
                 emptySpecification.withDocServiceRoute(docServiceRoute));
         assertThatJson(actualJson).isEqualTo(expectedJson);
