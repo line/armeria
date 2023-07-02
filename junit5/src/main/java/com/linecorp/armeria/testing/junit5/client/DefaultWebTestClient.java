@@ -48,8 +48,8 @@ final class DefaultWebTestClient implements WebTestClient {
     }
 
     @Override
-    public WebTestClientPreparation prepare() {
-        return new WebTestClientPreparation(delegate.prepare());
+    public WebTestClientRequestPreparation prepare() {
+        return new WebTestClientRequestPreparation(delegate.prepare());
     }
 
     @Override

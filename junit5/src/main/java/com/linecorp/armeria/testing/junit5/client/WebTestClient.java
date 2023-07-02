@@ -346,7 +346,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                               .execute();
      * }</pre>
      */
-    WebTestClientPreparation prepare();
+    WebTestClientRequestPreparation prepare();
 
     /**
      * Sends an HTTP OPTIONS request.

@@ -64,7 +64,7 @@ class WebTestClientTest {
 
     @Test
     void restApi() {
-        final WebTestClientPreparation preparation = server.webTestClient().prepare();
+        final WebTestClientRequestPreparation preparation = server.webTestClient().prepare();
         // HTTP methods used for REST APIs
         // See: https://restfulapi.net/http-methods/
         for (HttpMethod method : ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
