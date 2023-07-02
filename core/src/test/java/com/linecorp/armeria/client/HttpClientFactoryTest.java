@@ -22,10 +22,8 @@ import static org.awaitility.Awaitility.await;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
