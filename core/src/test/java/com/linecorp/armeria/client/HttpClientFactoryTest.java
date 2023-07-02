@@ -110,16 +110,4 @@ class HttpClientFactoryTest {
             });
         }
     }
-
-    @Test
-    void disableOpenSsl() {
-        final ClientFactory sslDisabledClient = ClientFactory.builder().useOpenSsl(false).tlsNoVerify().build();
-
-        final AggregatedHttpResponse response = WebClient.builder(SessionProtocol.HTTPS,
-                                                                   server.httpsEndpoint())
-                                                          .factory(sslDisabledClient).build()
-                                                          .get("/hello").aggregate().join();
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("hello");
-    }
 }

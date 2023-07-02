@@ -84,12 +84,11 @@ class SslContextUtilTest {
 
     @Nullable
     private static String getBadCipher() {
-        final boolean useOpenSsl = Flags.useOpenSsl();
         for (String cipher : BAD_HTTP2_CIPHERS) {
             try {
                 final SslContext sslCtx = MinifiedBouncyCastleProvider.call(() -> {
                     final SslContextBuilder builder = SslContextBuilder.forClient();
-                    final SslProvider provider = useOpenSsl ? SslProvider.OPENSSL : SslProvider.JDK;
+                    final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
                     builder.sslProvider(provider);
                     builder.protocols("TLSv1.2").ciphers(ImmutableList.of(cipher));
 
@@ -108,4 +107,3 @@ class SslContextUtilTest {
         return null;
     }
 }
-
