@@ -42,7 +42,7 @@ public final class LoggingTestUtil {
             if (arguments.length == 0) {
                 return;
             }
-            if (arguments[0] == null) {
+            if (arguments[0] == null || "".equals(arguments[0])) {
                 // Invoked at verification phase
                 return;
             }

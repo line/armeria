@@ -87,8 +87,42 @@ public interface HttpResponse extends Response, HttpMessage {
      */
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
+
+        if (stage instanceof CompletableFuture) {
+            return from((CompletableFuture<? extends HttpResponse>) stage);
+        } else {
+            final DeferredHttpResponse res = new DeferredHttpResponse();
+            res.delegateWhenComplete(stage);
+            return res;
+        }
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned response
+     * will be closed with the same cause as well.
+     *
+     * @param future the {@link CompletableFuture} which will produce the actual {@link HttpResponse}
+     */
+    static HttpResponse from(CompletableFuture<? extends HttpResponse> future) {
+        requireNonNull(future, "future");
+
+        if (future.isDone()) {
+            if (!future.isCompletedExceptionally()) {
+                return future.getNow(null);
+            }
+
+            try {
+                future.join();
+                // Should never reach here.
+                throw new Error();
+            } catch (Throwable cause) {
+                return ofFailure(Exceptions.peel(cause));
+            }
+        }
+
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        res.delegateWhenComplete(stage);
+        res.delegateWhenComplete(future);
         return res;
     }
 

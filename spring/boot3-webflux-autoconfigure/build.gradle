@@ -1,14 +1,14 @@
 configurations {
     // TODO(hyangtack) The followings are not transitive dependencies and they are not in testRuntime
-    //                 dependencies. Need to figure out why they are included in shadedTestRuntime dependencies.
+    //                 dependencies. Need to figure out why they are included in shadedJarTestRuntime dependencies.
     // Exclude jetty from shadedTest.
-    shadedTestRuntime.exclude group: 'org.eclipse.jetty'
-    shadedTestRuntime.exclude group: 'org.eclipse.jetty.http2'
+    shadedJarTestRuntime.exclude group: 'org.eclipse.jetty'
+    shadedJarTestRuntime.exclude group: 'org.eclipse.jetty.http2'
 }
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift0.17')
+    compileOnly project(':thrift0.18')
     implementation project(':logback')
 
     api libs.spring.boot3.starter.webflux
@@ -27,7 +27,7 @@ dependencies {
     annotationProcessor libs.spring.boot3.configuration.processor
 
     testImplementation project(':spring:boot3-actuator-autoconfigure')
-    testImplementation project(':thrift0.17')
+    testImplementation project(':thrift0.18')
     testImplementation libs.spring.boot3.starter.test
     // Added for sharing test suites with boot2
     testImplementation libs.javax.inject

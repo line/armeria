@@ -26,6 +26,15 @@ service FileService {
     void create(1:string path) throws (1:FileServiceException ouch)
 }
 
+// Tests required field.
+struct RequiredName {
+    1: required string first
+}
+
+service HelloRequiredNameService {
+    string hello(1:RequiredName name)
+}
+
 // Tests structs and lists.
 struct Name {
     1: string first

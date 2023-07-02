@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
@@ -40,7 +41,6 @@ import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
-import graphql.execution.ExecutionId;
 
 final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService {
 
@@ -48,16 +48,20 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final GraphQL graphQL;
 
-    private final DataLoaderRegistry dataLoaderRegistry;
+    private final Function<? super ServiceRequestContext,
+                           ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
 
     private final boolean useBlockingTaskExecutor;
 
     private final GraphqlErrorHandler errorHandler;
 
-    DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
-                          boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
+    DefaultGraphqlService(
+            GraphQL graphQL,
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
+            boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
-        this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
+        this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
+                                                         "dataLoaderRegistryFunction");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.errorHandler = errorHandler;
     }
@@ -89,9 +93,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
         final ExecutionInput executionInput =
                 builder.context(ctx)
-                       .executionId(ExecutionId.from(ctx.id().text()))
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                       .dataLoaderRegistry(dataLoaderRegistry)
+                       .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
                        .build();
         return execute(ctx, executionInput, produceType);
     }

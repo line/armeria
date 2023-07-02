@@ -76,9 +76,12 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -135,6 +138,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     private RejectedRouteHandler rejectedRouteHandler;
     @Nullable
     private ServiceNaming defaultServiceNaming;
+    @Nullable
+    private String defaultLogName;
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -958,6 +963,23 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
+     * {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultLogName the default log name.
+     */
+    public VirtualHostBuilder defaultLogName(String defaultLogName) {
+        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
+        return this;
+    }
+
+    @VisibleForTesting
+    @Nullable
+    String defaultLogName() {
+        return defaultLogName;
+    }
+
+    /**
      * Sets the timeout of a request in milliseconds. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
@@ -1064,10 +1086,16 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    @VisibleForTesting
+    @Nullable
+    SuccessFunction successFunction() {
+        return successFunction;
+    }
+
     /**
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
-     * It's useful when you want to receive additional data even after closing the response.
+     * This may be useful when you want to receive additional data even after closing the response.
      * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
      * abort the request automatically. There is no delay by default.
      */
@@ -1079,7 +1107,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
      * its corresponding {@link HttpResponse} is complete.
-     * It's useful when you want to receive additional data even after closing the response.
+     * This may be useful when you want to receive additional data even after closing the response.
      * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
      * abort the request automatically. There is no delay by default.
      */
@@ -1173,6 +1201,9 @@ public final class VirtualHostBuilder implements TlsSetters {
         final ServiceNaming defaultServiceNaming =
                 this.defaultServiceNaming != null ?
                 this.defaultServiceNaming : template.defaultServiceNaming;
+        final String defaultLogName =
+                this.defaultLogName != null ?
+                this.defaultLogName : template.defaultLogName;
         final long requestTimeoutMillis =
                 this.requestTimeoutMillis != null ?
                 this.requestTimeoutMillis : template.requestTimeoutMillis;
@@ -1281,11 +1312,10 @@ public final class VirtualHostBuilder implements TlsSetters {
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
-                                maxRequestLength, verboseResponses, accessLogWriter,
-                                blockingTaskExecutor, requestAutoAbortDelayMillis,
-                                multipartUploadsLocation, builder.build(),
-                                requestIdGenerator);
+                                accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
+                                maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
+                                requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
+                                builder.build(), requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);

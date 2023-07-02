@@ -387,6 +387,18 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     @Override
+    public FutureTransformingRequestPreparation<T> requestAutoAbortDelay(Duration delay) {
+        delegate.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> requestAutoAbortDelayMillis(long delayMillis) {
+        delegate.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    @Override
     public <V> FutureTransformingRequestPreparation<T> attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
         return this;
