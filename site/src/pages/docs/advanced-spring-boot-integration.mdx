@@ -21,11 +21,10 @@ You can achieve these convenient properties through bean configuration.
 We will plug Armeria into the Spring Boot system. Add the following dependency to your application.
 
 <RequiredDependencies
+  boms={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }
+  ]}
   dependencies={[
-    {
-      groupId: 'com.linecorp.armeria',
-      artifactId: 'armeria',
-    },
     {
       groupId: 'com.linecorp.armeria',
       artifactId: 'armeria-spring-boot3-starter',
@@ -37,7 +36,7 @@ We will plug Armeria into the Spring Boot system. Add the following dependency t
   ]}
 />
 
-Serve the embedded tomcat service via Armeria using <type://ArmeriaServiceConfigurator> bean.
+Serve the embedded tomcat service via Armeria using <type://ArmeriaServerConfigurator> bean.
 
 ```java filename=ArmeriaConfiguration.java
 import com.linecorp.armeria.server.tomcat.TomcatService;
