@@ -437,3 +437,18 @@ our [release notes](https://armeria.dev/release-notes/), e.g.
 Server.builder()
       .serviceUnder("/internal/management/", ManagementService.of());
 ```
+
+## Integrating with Gradle Enterprise
+
+You may want to integrate your local development environment with [Gradle Enterprise](https://gradle.com/)
+to take advantage of better build scan caching. By doing so, you may:
+
+1. Visualize and troubleshoot build issues more easily.
+2. Experience faster builds due to build caches.
+
+Let us know at the [Armeria Discord](https://armeria.dev/s/discord) channel, and we'll create an access
+token for you. Afterwards, you may integrate your local environment with the following command:
+
+```shell
+./gradlew provisionGradleEnterpriseAccessKey
+```
