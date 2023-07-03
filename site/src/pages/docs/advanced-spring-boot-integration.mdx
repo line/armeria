@@ -16,9 +16,17 @@ Armeria provides a way to integrate legacy Spring Boot applications with just si
 Additionally, Armeria supports several internal services for monitoring and management purposes.
 You can achieve these convenient properties through bean configuration.
 
-## Integrate Legacy Spring Boot with Armeria
+## Integrating with Spring MVC (with Tomcat)
 
-We will plug Armeria into the Spring Boot system. Add the following dependency to your application.
+<Tip>
+
+  Visit [armeria-examples/spring-boot-tomcat](https://github.com/line/armeria/tree/main/examples/spring-boot-tomcatj) to
+  find a fully working example.
+
+</Tip>
+
+You can integrate your Spring MVC with Armeria using <type://TomcatService>.
+First, Add the following dependency to your application.
 
 <RequiredDependencies
   boms={[
@@ -69,7 +77,7 @@ public class ArmeriaConfiguration {
 
 Add the following properties to your application.yml (or application.properties).
 This configuration will prevent exposing embedded tomcat service rather expose your Armeria service.
-You can check the other configuration options at <type://ArmeriaSettings>
+You can check the other configuration options at <type://ArmeriaSettings>.
 
 ```yaml filename=application.yml
 # Prevent the embedded Tomcat from opening a TCP/IP port.
@@ -83,20 +91,39 @@ armeria:
         - HTTP
 ```
 
+With just this simple configuration, everything is done. Now you can serve the legacy Spring service via Armeria.
+Although, it seems like there hasn't been much of a change compared to before, it is ready for append RPC services
+(such as gRPC or Thrift) or Armeria's annotated service (for RESTful service).
+
+
+## Integrating with Spring Boot
+
 <Tip>
 
-  Refer to the fully working example spring-boot-minimal and spring-boot-tomcat from [armeria-examples
-  repository](https://github.com/line/armeria-examples).
+  Visit [armeria-examples/spring-boot-minimal](https://github.com/line/armeria/tree/main/examples/spring-boot-minimal) to
+  find a fully working example.
 
 </Tip>
 
-With just this simple configuration, everything is done. Now you can serve the legacy spring service via Armeria.
-Although, it seems like there hasn't been much of a change compared to before, it is ready for append RPC services
-(such as gRPC or Thrift) or migrate legacy Spring controller to Armeria's annotated service.
+Even if you don't use Spring MVC based on web servlets like Tomcat, there is still value in using Spring and Armeria together.
+You can leverage Spring Boot's automatic configuration and dependency injection to make the Armeria application.
 
-Furthermore, during the process of creating and adding your own Armeria services,
-you can utilize the convenient dependency injection functionality provided by Spring.
-By writing the Armeria's annotated service code similar to the Spring controller, it enables smooth migration.
+First, you need the `armeria-spring-boot3-starter` dependency:
+
+<RequiredDependencies
+  boms={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }
+  ]}
+  dependencies={[
+    {
+      groupId: 'com.linecorp.armeria',
+      artifactId: 'armeria-spring-boot3-starter',
+    }
+  ]}
+/>
+
+Armeria's annotated service is similar to Spring controller. Spring will inject required dependency of the annotated service.
+You can make the annotated service as a bean and inject it into the server building process.
 For example:
 
 ```java filename=TodoAnnotatedService.java
@@ -109,7 +136,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 
-// You can use both Spring and Armeria annotation.
+// Make this annotated service as bean.
 @Controller
 @PathPrefix("/todos")
 public class TodoAnnotatedService {
@@ -142,18 +169,31 @@ public class TodoAnnotatedService {
 }
 ```
 
-Inject this service to the <type://ArmeriaServerConfigurator> bean.
-You can serve both legacy Spring service and Armeria service at the same port.
+Inject this annotated service to the <type://ArmeriaServerConfigurator> bean.
 
 ```java filename=ArmeriaConfiguration.java
 @Bean
-public ArmeriaServerConfigurator armeriaServerConfigurator(TomcatService tomcatService, TodoAnnotatedService todoAnnotatedService) {
+public ArmeriaServerConfigurator armeriaServerConfigurator(TodoAnnotatedService todoAnnotatedService) {
    return serverBuilder -> {
-       serverBuilder
-               .serviceUnder("/", tomcatService)
-               .annotatedService("/armeria", todoAnnotatedService);
+       serverBuilder.serviceUnder("/docs", new DocService());
+                    .decorator(LoggingService.newDecorator());
+                    .annotatedService("/api", todoAnnotatedService);
    };
 }
+```
+
+The following configuration prevents the execution of Spring's embedded web server and instead runs the Armeria.
+
+```yaml filename=application.yml
+# See https://docs.spring.io/spring-boot/docs/current/reference/html/howto.html#howto.webserver.disable.
+# The application should not run as a web application and should not start an embedded web server.
+spring.main.web-application-type: none
+
+armeria:
+  ports:
+    - port: 8080
+      protocols:
+        - http
 ```
 
 ## Internal Services
