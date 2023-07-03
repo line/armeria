@@ -122,7 +122,6 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
         enrichObservation(ctx, httpClientContext, observation);
 
         return observation.scopedChecked(() -> unwrap().execute(ctx, newReq));
-        // TODO: Maybe we should move the observation stopping here?
     }
 
     private void enrichObservation(ClientRequestContext ctx, HttpClientContext httpClientContext,
