@@ -24,9 +24,11 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 
 /**
@@ -92,5 +94,23 @@ public final class WebSocketSession {
         final StreamMessage<HttpData> streamMessage =
                 outbound.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame)));
         return outboundFuture.complete(streamMessage);
+    }
+
+    /**
+     * Aborts this {@link WebSocketSession}.
+     */
+    public void abort() {
+        abort(AbortedStreamException.get());
+    }
+
+    /**
+     * Aborts this {@link WebSocketSession} with the specified {@link Throwable}.
+     */
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        final WebSocketWriter outbound = WebSocket.streaming();
+        outbound.abort(cause);
+        send(outbound);
+        inbound().abort(cause);
     }
 }
