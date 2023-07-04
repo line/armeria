@@ -82,6 +82,7 @@ final class WebSocketServiceChannelHandler extends ChannelDuplexHandler {
             logger.warn("{} Unexpected msg: {}", ctx.channel(), msg);
             return;
         }
+        encoder.keepAliveHandler().onReadOrWrite();
         try {
             final ByteBuf data = (ByteBuf) msg;
             final int dataLength = data.readableBytes();

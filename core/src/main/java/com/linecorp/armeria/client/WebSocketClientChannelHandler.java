@@ -58,6 +58,7 @@ final class WebSocketClientChannelHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        keepAliveHandler.onReadOrWrite();
         try {
             if (msg instanceof ByteBuf) {
                 final ByteBuf data = (ByteBuf) msg;
@@ -89,6 +90,7 @@ final class WebSocketClientChannelHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        // keepAliveHandler.onReadOrWrite(); is called by Http1ObjectEncoder.
         if (msg instanceof HttpContent) {
             ctx.write(((HttpContent) msg).content(), promise);
             return;

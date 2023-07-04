@@ -58,7 +58,7 @@ public final class WebSocketSession {
     /**
      * Returns the {@link ClientRequestContext}.
      */
-    public ClientRequestContext ctx() {
+    public ClientRequestContext context() {
         return ctx;
     }
 

@@ -39,6 +39,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Serialization format of a remote procedure call and its reply.
@@ -58,6 +59,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     /**
      * Serialization format for WebSocket client.
      */
+    @UnstableApi
     public static final SerializationFormat WS;
 
     /**
@@ -208,6 +210,14 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      */
     public MediaTypeSet mediaTypes() {
         return mediaTypes;
+    }
+
+    /**
+     * Returns whether this {@link SessionProtocol} needs to establish a new connection instead of acquiring it
+     * from the connection pool.
+     */
+    public boolean requiresNewConnection(SessionProtocol protocol) {
+        return "ws".equals(uriText) && !protocol.isMultiplex();
     }
 
     /**

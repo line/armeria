@@ -270,13 +270,13 @@ final class HttpChannelPool implements AsyncCloseable {
         switch (desiredProtocol) {
             case HTTP:
                 ch = acquireNowExact(key, SessionProtocol.H2C);
-                if (ch == null && serializationFormat != SerializationFormat.WS) {
+                if (ch == null && !serializationFormat.requiresNewConnection(SessionProtocol.H1C)) {
                     ch = acquireNowExact(key, SessionProtocol.H1C);
                 }
                 break;
             case HTTPS:
                 ch = acquireNowExact(key, SessionProtocol.H2);
-                if (ch == null && serializationFormat != SerializationFormat.WS) {
+                if (ch == null && !serializationFormat.requiresNewConnection(SessionProtocol.H1)) {
                     ch = acquireNowExact(key, SessionProtocol.H1);
                 }
                 break;
@@ -284,7 +284,7 @@ final class HttpChannelPool implements AsyncCloseable {
             case H1C:
                 // Do not acquire HTTP/1.1 channel from the pool for WebSocket because we do not know
                 // it's pipelining or not.
-                if (serializationFormat == SerializationFormat.WS) {
+                if (serializationFormat.requiresNewConnection(desiredProtocol)) {
                     return null;
                 }
             default:

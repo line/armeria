@@ -204,7 +204,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         assert protocol != null;
         assert responseDecoder != null;
         assert requestEncoder != null;
-        if (!protocol.isMultiplex() && serializationFormat != SerializationFormat.WS) {
+        if (!protocol.isMultiplex() && !serializationFormat.requiresNewConnection(protocol)) {
             // When HTTP/1.1 is used:
             // If pipelining is enabled, return as soon as the request is fully sent.
             // If pipelining is disabled,

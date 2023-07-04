@@ -149,6 +149,9 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             ReferenceCountUtil.release(msg);
             return;
         }
+        if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
+            keepAliveHandler.onReadOrWrite();
+        }
 
         try {
             switch (state) {
