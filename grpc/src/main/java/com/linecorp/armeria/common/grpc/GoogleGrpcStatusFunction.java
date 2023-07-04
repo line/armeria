@@ -70,5 +70,6 @@ public interface GoogleGrpcStatusFunction extends GrpcStatusFunction {
      * by {@link GoogleGrpcStatusFunction#apply(RequestContext, Throwable, Metadata)}.
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
-    com.google.rpc.Status applyStatusProto(RequestContext ctx, Throwable throwable, Metadata metadata);
+    com.google.rpc.@Nullable Status applyStatusProto(RequestContext ctx, Throwable throwable,
+                                                     Metadata metadata);
 }
