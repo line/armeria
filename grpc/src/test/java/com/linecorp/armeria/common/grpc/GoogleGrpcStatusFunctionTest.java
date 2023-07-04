@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.grpc;
 
-import static com.linecorp.armeria.common.grpc.GoogleGrpcStatusFunction.GRPC_STATUS_DETAILS_BIN_KEY;
+import static com.linecorp.armeria.internal.common.grpc.GrpcMetadataKeys.GRPC_STATUS_DETAILS_BIN_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

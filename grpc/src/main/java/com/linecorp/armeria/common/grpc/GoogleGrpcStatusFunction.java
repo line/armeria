@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.grpc;
 
+import static com.linecorp.armeria.internal.common.grpc.GrpcMetadataKeys.GRPC_STATUS_DETAILS_BIN_KEY;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -24,17 +25,15 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Metadata;
-import io.grpc.Metadata.Key;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
-import io.grpc.protobuf.lite.ProtoLiteUtils;
 
 /**
  * A {@link GrpcStatusFunction} that provides a way to include details of a status into a {@link Metadata}.
  * The details are stored in the `grpc-status-details-bin` key in the {@link Metadata}
  * as a {@link com.google.rpc.Status}.
- * You can implement a mapping function to converts {@link Throwable} into a {@link com.google.rpc.Status}
+ * You can implement a mapping function to convert {@link Throwable} into a {@link com.google.rpc.Status}
  * which is stored in the `grpc-status-details-bin` key in the {@link Metadata}.
  * If a given {@link Throwable} is an instance of either {@link StatusRuntimeException} or
  * {@link StatusException}, returns a {@link Status} retrieved from the exception
@@ -42,10 +41,6 @@ import io.grpc.protobuf.lite.ProtoLiteUtils;
  */
 @UnstableApi
 public interface GoogleGrpcStatusFunction extends GrpcStatusFunction {
-
-    Key<com.google.rpc.Status> GRPC_STATUS_DETAILS_BIN_KEY = Key.of(
-            "grpc-status-details-bin",
-            ProtoLiteUtils.metadataMarshaller(com.google.rpc.Status.getDefaultInstance()));
 
     @Nullable
     @Override
