@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHtt
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URISyntaxException;
 
 import org.slf4j.Logger;
@@ -55,6 +56,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpExpectationFailedEvent;
@@ -190,9 +192,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         // But we just add Host header to allow the request.
                         // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
                         final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-                        final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
+                        final SocketAddress localAddr = ctx.channel().localAddress();
+                        final String hostname;
+                        if (localAddr instanceof InetSocketAddress) {
+                            hostname = defaultHostname + ':' + ((InetSocketAddress) localAddr).getPort();
+                        } else {
+                            assert localAddr instanceof DomainSocketAddress : localAddr;
+                            hostname = defaultHostname;
+                        }
                         builder.add(com.linecorp.armeria.common.HttpHeaderNames.HOST,
-                                    defaultHostname + ':' + port);
+                                    hostname);
                     }
 
 //                    HttpHeaders incomingHeaders = nettyReq.headers();
