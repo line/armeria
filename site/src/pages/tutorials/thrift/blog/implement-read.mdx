@@ -1,0 +1,242 @@
+---
+menuTitle: "Implement READ"
+order: 5
+type: step
+category: thrift
+tags:
+  - server
+level: basic
+---
+
+# Implementing READ operation
+
+In the earlier step, we created blog posts.
+In this step, we'll implement a read operation and make a call to read blog posts.
+We'll write two service methods, one for reading a single post and another for multiple posts.
+
+<TutorialSteps current={5} />
+
+## What you need
+
+You need to have the following obtained from previous steps:
+
+- [Generated Java code](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file)
+- `Main.java`
+- `BlogServiceImpl.java`
+- `BlogClient.java`
+- `BlogServiceTest.java`
+
+## 1. Implement server-side
+
+Let's write two methods for retrieving blog posts; one for a single post and another for multiple posts.
+
+<Tabs>
+<TabPane tab="Single post" key="1">
+
+In the `BlogServiceImpl` class, implement the `getBlogPost()` method to retrieve a single post.
+Let's throw an exception in case there is no blog post for the given ID.
+
+```java filename=BlogServiceImpl.java
+import example.armeria.blog.thrift.BlogNotFoundException;
+...
+@Override
+public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+        throws TException {
+  final BlogPost blogPost = blogPosts.get(request.getId());
+  if (blogPost == null) {
+    // throwing an exception will also have the same effect
+    // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+    resultHandler.onError(
+            new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+  } else {
+    resultHandler.onComplete(blogPost);
+  }
+}
+```
+
+</TabPane>
+<TabPane tab="Multiple posts" key="2">
+
+1. Implement the `listBlogPosts()` method in the `BlogServiceImpl` class to retrieve multiple posts.
+  ```java filename=BlogServiceImpl.java
+  import java.util.List;
+  import java.util.stream.Collectors;
+  ...
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request,
+                            AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
+    final List<BlogPost> blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
+    resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
+  }
+  ```
+2. Add an if-else statement by adding line 9-16, to sort the blog posts based on the value of the `descending` parameter.
+  ```java filename=BlogServiceImpl.java showlineno=true
+  import java.util.Collections;
+  import java.util.Comparator;
+  import java.util.Map.Entry;
+  ...
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request,
+                            AsyncMethodCallback<ListBlogPostsResponse> resultHandler) throws TException {
+    final List<BlogPost> blogPosts;
+    if (request.isDescending()) {
+      blogPosts = this.blogPosts.entrySet()
+                                .stream()
+                                .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                                .map(Entry::getValue).collect(Collectors.toList());
+    } else {
+      blogPosts = this.blogPosts.values().stream().collect(Collectors.toList());
+    }
+    resultHandler.onComplete(new ListBlogPostsResponse().setBlogs(blogPosts));
+  }
+  ```
+
+</TabPane>
+</Tabs>
+
+## 2. Implement client-side
+
+This time, we'll implement the client-side for reading blog posts.
+Let's implement client methods for each corresponding server method.
+
+<Tabs>
+<TabPane tab="Single post" key="1">
+
+In the `BlogClient` class, add a method to retrieve a single post.
+
+```java filename=BlogClient.java
+import example.armeria.blog.thrift.GetBlogPostRequest;
+...
+BlogPost getBlogPost(int id) throws TException {
+  final GetBlogPostRequest request =
+              new GetBlogPostRequest().setId(id);
+  return blogService.getBlogPost(request);
+}
+```
+
+</TabPane>
+<TabPane tab="Multiple posts" key="2">
+
+In the `BlogClient` class, add a method to retrieve a list of posts.
+
+```java filename=BlogClient.java
+import example.armeria.blog.thrift.ListBlogPostsRequest;
+import example.armeria.blog.thrift.ListBlogPostsResponse;
+...
+List<BlogPost> listBlogPosts(boolean descending) throws TException {
+  return blogService.listBlogPosts(new ListBlogPostsRequest().setDescending(descending))
+                    .getBlogs();
+}
+```
+
+</TabPane>
+</Tabs>
+
+## 3. Test retrieving a single post
+
+Let's test if we can retrieve a blog post we created.
+
+1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
+  ```java filename=BlogServiceTest.java
+  @Test
+  void getBlogPost() throws TException {
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    final BlogPost blogPost = client.getBlogPost(0);
+
+    assertThat(blogPost.getTitle()).isEqualTo("My first blog");
+    assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
+    System.out.println(blogPost);
+  }
+  ```
+2. Add annotations to configure the order our test methods will be executed.
+  The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve in the `getBlogPost()` method.
+  ```java filename=BlogServiceTest.java
+  import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+  import org.junit.jupiter.api.Order;
+  import org.junit.jupiter.api.TestMethodOrder;
+
+  @TestMethodOrder(OrderAnnotation.class) // Add this
+  class BlogServiceTest {
+    ...
+
+    @Test
+    @Order(1) // Add this
+    void createBlogPost() throws TException {
+      ...
+    }
+
+    @Test
+    @Order(2) // Add this
+    void getBlogPost() throws TException {
+      ...
+    }
+  }
+  ```
+3. Run all the test cases on your IDE or using Gradle.
+
+  Your client retrieved a blog post from the server successfully if the test is passed.
+
+## 4. Test an error case
+
+Let's try retrieving a blog post that does not exist.
+Add a test method to retrieve a blog post with an invalid ID, asserting an exception is thrown.
+
+```java filename=BlogServiceTest.java
+import static org.assertj.core.api.Assertions.catchThrowable;
+import example.armeria.blog.thrift.BlogNotFoundException;
+...
+@Test
+@Order(3)
+void getInvalidBlogPost() {
+  final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+  final Throwable exception = catchThrowable(() -> {
+    client.getBlogPost(Integer.MAX_VALUE);
+  });
+  assertThat(exception)
+    .isInstanceOf(BlogNotFoundException.class)
+    .extracting("reason")
+    .asString()
+    .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
+
+## 5. Test retrieving multiple posts
+
+Finally, let's test if we can retrieve multiple posts.
+Add a test method like the following to create the second blog post and test retrieving the list of blog posts.
+
+```java filename=BlogServiceTest.java
+import java.util.List;
+...
+@Test
+@Order(4)
+void listBlogPosts() throws TException {
+  final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+  client.createBlogPost("My second blog", "Armeria is awesome!");
+
+  final List<BlogPost> blogs = client.listBlogPosts(false);
+  assertThat(blogs).hasSize(2);
+  final BlogPost firstBlog = blogs.get(0);
+  assertThat(firstBlog.getTitle()).isEqualTo("My first blog");
+  assertThat(firstBlog.getContent()).isEqualTo("Hello Armeria!");
+
+  final BlogPost secondBlog = blogs.get(1);
+  assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
+  assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
+  System.out.println(blogs);
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
+
+## What's next
+
+In this step, we've implemented service methods and client methods to retrieve blog posts.
+
+Next, at [Step 6. Implement UPDATE](/tutorials/thrift/blog/implement-update), we'll implement an UPDATE operation to update a blog post.
+
+<TutorialSteps current={5} />
