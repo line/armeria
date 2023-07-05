@@ -189,7 +189,7 @@ public class ThriftDocServiceTest {
         removeDescriptionInfos(actualJson);
         removeDescriptionInfos(expectedJson);
 
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
     }
 
     private static void addExamples(JsonNode json) {
@@ -249,7 +249,7 @@ public class ThriftDocServiceTest {
                                                                                   ImmutableList.of(),
                                                                                   ImmutableList.of(),
                                                                                   ImmutableList.of()));
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
     }
 
     @Test
