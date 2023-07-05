@@ -166,7 +166,7 @@ configure(projectsWithFlags('java')) {
         // Logging
         implementation libs.slf4j.api
         testImplementation libs.slf4j.jul.to.slf4j
-        testImplementation libs.logback
+        testImplementation libs.logback12
         testRuntimeOnly libs.slf4j.jcl.over.slf4j
         testRuntimeOnly libs.slf4j.log4j.over.slf4j
 

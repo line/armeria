@@ -21,9 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.function.BiFunction;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -34,38 +37,49 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 @UnstableApi
 final class TextLogFormatter implements LogFormatter {
 
-    static final TextLogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
+    static final LogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-            requestHeadersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable String> requestHeadersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-            responseHeadersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable String> responseHeadersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-            requestTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable String> requestTrailersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
-            responseTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders,
+            ? extends @Nullable String> responseTrailersSanitizer;
 
-    private final BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer;
+    private final BiFunction<? super RequestContext, Object,
+            ? extends @Nullable String> requestContentSanitizer;
 
-    private final BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer;
+    private final BiFunction<? super RequestContext, Object,
+            ? extends @Nullable String> responseContentSanitizer;
+
+    private final boolean includeContext;
 
     TextLogFormatter(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer,
-            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer
-    ) {
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable String> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable String> requestContentSanitizer,
+            BiFunction<? super RequestContext, Object,
+                    ? extends @Nullable String> responseContentSanitizer,
+            boolean includeContext) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
         this.responseHeadersSanitizer = responseHeadersSanitizer;
         this.requestTrailersSanitizer = requestTrailersSanitizer;
         this.responseTrailersSanitizer = responseTrailersSanitizer;
         this.requestContentSanitizer = requestContentSanitizer;
         this.responseContentSanitizer = responseContentSanitizer;
+        this.includeContext = includeContext;
     }
 
     @Override
@@ -73,8 +87,13 @@ final class TextLogFormatter implements LogFormatter {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
+        final RequestContext ctx = log.context();
         if (!RequestLogProperty.REQUEST_START_TIME.isAvailable(flags)) {
-            return "{}";
+            if (includeContext) {
+                return ctx + " Request: {}";
+            } else {
+                return "Request: {}";
+            }
         }
 
         String requestCauseString = null;
@@ -85,7 +104,6 @@ final class TextLogFormatter implements LogFormatter {
             }
         }
 
-        final RequestContext ctx = log.context();
         final String sanitizedHeaders;
         if (RequestLogProperty.REQUEST_HEADERS.isAvailable(flags)) {
             sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
@@ -99,7 +117,8 @@ final class TextLogFormatter implements LogFormatter {
             if (content != null) {
                 sanitizedContent = requestContentSanitizer.apply(ctx, content);
             }
-        } else if (RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
+        }
+        if (sanitizedContent == null && RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
             final String contentPreview = log.requestContentPreview();
             if (contentPreview != null) {
                 sanitizedContent = requestContentSanitizer.apply(ctx, contentPreview);
@@ -114,9 +133,20 @@ final class TextLogFormatter implements LogFormatter {
             sanitizedTrailers = null;
         }
 
+        final String ctxString;
+        if (includeContext) {
+            // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
+            ctxString = ctx.toString() + ' ';
+        } else {
+            ctxString = null;
+        }
+
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("{startTime=");
+            if (ctxString != null) {
+                buf.append(ctxString);
+            }
+            buf.append("Request: {startTime=");
             TextFormatter.appendEpochMicros(buf, log.requestStartTimeMicros());
 
             if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
@@ -172,8 +202,13 @@ final class TextLogFormatter implements LogFormatter {
         requireNonNull(log, "log");
 
         final int flags = log.availabilityStamp();
+        final RequestContext ctx = log.context();
         if (!RequestLogProperty.RESPONSE_START_TIME.isAvailable(flags)) {
-            return "{}";
+            if (includeContext) {
+                return ctx + " Response: {}";
+            } else {
+                return "Response: {}";
+            }
         }
 
         String responseCauseString = null;
@@ -184,7 +219,6 @@ final class TextLogFormatter implements LogFormatter {
             }
         }
 
-        final RequestContext ctx = log.context();
         final String sanitizedHeaders;
         if (RequestLogProperty.RESPONSE_HEADERS.isAvailable(flags)) {
             sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
@@ -198,7 +232,8 @@ final class TextLogFormatter implements LogFormatter {
             if (content != null) {
                 sanitizedContent = responseContentSanitizer.apply(ctx, content);
             }
-        } else if (RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
+        }
+        if (sanitizedContent == null && RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
             final String contentPreview = log.responseContentPreview();
             if (contentPreview != null) {
                 sanitizedContent = responseContentSanitizer.apply(ctx, contentPreview);
@@ -213,9 +248,20 @@ final class TextLogFormatter implements LogFormatter {
             sanitizedTrailers = null;
         }
 
+        final String ctxString;
+        if (includeContext) {
+            // ctx internally uses TemporaryThreadLocals, so we should call ctx.toString() outside of acquire().
+            ctxString = ctx.toString() + ' ';
+        } else {
+            ctxString = null;
+        }
+
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("{startTime=");
+            if (ctxString != null) {
+                buf.append(ctxString);
+            }
+            buf.append("Response: {startTime=");
             TextFormatter.appendEpochMicros(buf, log.responseStartTimeMicros());
 
             if (RequestLogProperty.RESPONSE_LENGTH.isAvailable(flags)) {
@@ -248,7 +294,7 @@ final class TextLogFormatter implements LogFormatter {
             buf.append('}');
 
             final List<RequestLogAccess> children = log.children();
-            final int numChildren = children != null ? children.size() : 0;
+            final int numChildren = children.size();
             if (numChildren > 1) {
                 // Append only when there were retries which the numChildren is greater than 1.
                 buf.append(", {totalAttempts=");
@@ -258,5 +304,17 @@ final class TextLogFormatter implements LogFormatter {
 
             return buf.toString();
         }
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("requestHeadersSanitizer", requestHeadersSanitizer)
+                          .add("requestContentSanitizer", requestContentSanitizer)
+                          .add("requestTrailersSanitizer", requestTrailersSanitizer)
+                          .add("responseHeadersSanitizer", responseHeadersSanitizer)
+                          .add("responseContentSanitizer", responseContentSanitizer)
+                          .add("responseTrailersSanitizer", responseTrailersSanitizer)
+                          .toString();
     }
 }

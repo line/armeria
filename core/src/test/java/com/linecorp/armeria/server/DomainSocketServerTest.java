@@ -18,14 +18,12 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -33,6 +31,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.testing.EnabledOnOsWithDomainSockets;
+import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.bootstrap.Bootstrap;
@@ -45,8 +44,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 @EnabledOnOsWithDomainSockets
 class DomainSocketServerTest {
 
-    @TempDir
-    static Path tempDir;
+    @RegisterExtension
+    static final TemporaryFolderExtension tempDir = new TemporaryFolderExtension();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -100,6 +99,6 @@ class DomainSocketServerTest {
     }
 
     private static DomainSocketAddress domainSocketAddress() {
-        return DomainSocketAddress.of(tempDir.resolve("test.sock"));
+        return DomainSocketAddress.of(tempDir.getRoot().resolve("test.sock"));
     }
 }

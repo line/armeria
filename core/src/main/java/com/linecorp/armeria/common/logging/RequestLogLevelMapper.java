@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A {@link Function} that determines the {@link LogLevel} of an {@link HttpRequest} from a given
  * {@link RequestOnlyLog}.
  *
- * @see LoggingDecoratorBuilder#requestLogLevelMapper(RequestLogLevelMapper)
+ * @see LogWriterBuilder#requestLogLevelMapper(RequestLogLevelMapper)
  */
 // TODO(trustin): Remove 'extends Function' in the next major release.
 @UnstableApi

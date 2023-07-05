@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,8 +16,8 @@
 package com.linecorp.armeria.server.websocket;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketHandler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -28,11 +28,5 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 @UnstableApi
 @FunctionalInterface
-public interface WebSocketHandler {
-
-    /**
-     * Handles the incoming {@link WebSocket} and returns {@link WebSocket} created via
-     * {@link WebSocket#streaming()} to send {@link WebSocketFrame}s.
-     */
-    WebSocket handle(ServiceRequestContext ctx, WebSocket in);
+public interface WebSocketServiceHandler extends WebSocketHandler<ServiceRequestContext> {
 }

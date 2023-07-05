@@ -28,7 +28,7 @@ $ ARMERIA_PORT=51234 npm run develop
 or with Gradle
 
 ```console
-$ ARMERIA_PORT=51234 ./gradlew :docs-client:npm_run_start --no-daemon
+$ ARMERIA_PORT=51234 ./gradlew :docs-client:npm_run_develop --no-daemon
 ```
 
 Replacing the port of the docs page in the running server with `3000` will use the dev server to render while

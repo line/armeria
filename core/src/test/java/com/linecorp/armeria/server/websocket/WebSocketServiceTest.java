@@ -128,7 +128,7 @@ class WebSocketServiceTest {
         return HttpData.wrap(encoder.encode(ctx, frame));
     }
 
-    static class AbstractWebSocketHandler implements WebSocketHandler {
+    static class AbstractWebSocketHandler implements WebSocketServiceHandler {
 
         @Override
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
@@ -151,7 +151,7 @@ class WebSocketServiceTest {
                                 onBinary(writer, frame.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
                                 break;
                             case CLOSE:
-                                assert frame instanceof CloseWebSocketFrame;
+                                assertThat(frame).isInstanceOf(CloseWebSocketFrame.class);
                                 final CloseWebSocketFrame closeFrame = (CloseWebSocketFrame) frame;
                                 onClose(writer, closeFrame.status(), closeFrame.reasonPhrase());
                                 break;

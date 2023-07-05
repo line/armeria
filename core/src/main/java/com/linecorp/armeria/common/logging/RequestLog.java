@@ -280,7 +280,8 @@ public interface RequestLog extends RequestOnlyLog {
                                }
                                return sanitized.toString();
                            })
+                           .includeContext(false)
                            .build()
-                           .formatRequest(this);
+                           .formatResponse(this);
     }
 }
