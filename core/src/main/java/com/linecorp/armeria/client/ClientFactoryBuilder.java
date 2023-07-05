@@ -617,7 +617,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * prevent connection from closing when an HTTP/2 PING frame is received.
      */
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout) {
-        return idleTimeout(idleTimeout, false);
+        return idleTimeoutMillis(requireNonNull(idleTimeout, "idleTimeout").toMillis());
     }
 
     /**
@@ -635,7 +635,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * request in progress for the given amount of time.
      */
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis) {
-        return idleTimeoutMillis(idleTimeoutMillis, false);
+        return idleTimeoutMillis(idleTimeoutMillis, Flags.defaultClientKeepAliveOnPing());
     }
 
     /**
