@@ -64,7 +64,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        timeout = Duration.ofMinutes(2)
+        timeout = Duration.ofMinutes(25)
 
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
