@@ -2,7 +2,7 @@
 
 ## What flags in Armeria are
 
-You can configure the system properties by implementing your own <type://FlagsProvider>. The flags defined by Armeria mainly servers two purposes:
+Flags are global variables that controls the behavior of Armeria. You can can implement a <type://FlagsProvider> and let Armeria discover it for the following purposes:
 
 1. To override the default system values.
     - Overriding <type://FlagsProvider#defaultRequestTimeoutMillis()> changes the server-side timeout of a request.
