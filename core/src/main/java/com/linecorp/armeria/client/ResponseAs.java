@@ -144,6 +144,39 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper));
     }
 
+    @UnstableApi
+    static <V> BlockingConditionalResponseAs<V> andThenJson(
+            Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
+        requireNonNull(clazz, "clazz");
+        return new BlockingConditionalResponseAs<>(blocking(), AggregatedResponseAs.json(clazz), predicate);
+    }
+
+    @UnstableApi
+    static <V> BlockingConditionalResponseAs<V> andThenJson(
+            Class<? extends V> clazz, ObjectMapper mapper, Predicate<AggregatedHttpResponse> predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        return new BlockingConditionalResponseAs<>(
+                blocking(), AggregatedResponseAs.json(clazz, mapper), predicate);
+    }
+
+    @UnstableApi
+    static <V> BlockingConditionalResponseAs<V> andThenJson(
+            TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
+        requireNonNull(typeRef, "typeRef");
+        return new BlockingConditionalResponseAs<>(blocking(), AggregatedResponseAs.json(typeRef), predicate);
+    }
+
+    @UnstableApi
+    static <V> BlockingConditionalResponseAs<V> andThenJson(
+            TypeReference<? extends V> typeRef, ObjectMapper mapper,
+            Predicate<AggregatedHttpResponse> predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        return new BlockingConditionalResponseAs<>(
+                blocking(), AggregatedResponseAs.json(typeRef, mapper), predicate);
+    }
+
     /**
      * Transforms the response into another.
      */

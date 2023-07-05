@@ -158,8 +158,7 @@ class BlockingConditionalResponseAsTest {
         final MyMessage myServerErrorMessage = new MyMessage("ServerError");
         final ResponseEntity<MyResponse> errorResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_server_error")
-                         .as(ResponseAs.blocking()
-                                       .<MyResponse>andThenJson(MyMessage.class,
+                         .as(ResponseAs.<MyResponse>andThenJson(MyMessage.class,
                                                                 res -> res.status().isServerError())
                                        .andThenJson(MyMessage.class, res -> res.status().isClientError())
                                        .orElseJson(MyMessage.class)).execute();
@@ -168,8 +167,7 @@ class BlockingConditionalResponseAsTest {
         final MyMessage myBadRequestMessage = new MyMessage("BadRequest");
         final ResponseEntity<MyResponse> badRequestResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_bad_request")
-                         .as(ResponseAs.blocking()
-                                       .<MyResponse>andThenJson(MyMessage.class,
+                         .as(ResponseAs.<MyResponse>andThenJson(MyMessage.class,
                                                                 res -> res.status().isServerError())
                                        .andThenJson(MyMessage.class, res -> res.status().isClientError())
                                        .orElseJson(MyMessage.class)).execute();
@@ -178,8 +176,7 @@ class BlockingConditionalResponseAsTest {
         final MyMessage myOkMessage = new MyMessage("OK");
         final ResponseEntity<MyResponse> okResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json")
-                         .as(ResponseAs.blocking()
-                                       .<MyResponse>andThenJson(MyMessage.class,
+                         .as(ResponseAs.<MyResponse>andThenJson(MyMessage.class,
                                                                 res -> res.status().isServerError())
                                        .andThenJson(MyMessage.class, res -> res.status().isClientError())
                                        .orElseJson(MyMessage.class)).execute();
@@ -196,8 +193,7 @@ class BlockingConditionalResponseAsTest {
         myServerErrorObject.setId(500);
         final ResponseEntity<MyResponse> errorResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_mapper_server_error")
-                         .as(ResponseAs.blocking()
-                                       .<MyResponse>andThenJson(MyObject.class, mapper,
+                         .as(ResponseAs.<MyResponse>andThenJson(MyObject.class, mapper,
                                                                 res -> res.status().isServerError())
                                        .andThenJson(MyObject.class, mapper, res -> res.status().isClientError())
                                        .orElseJson(MyObject.class, mapper)).execute();
@@ -207,8 +203,7 @@ class BlockingConditionalResponseAsTest {
         myBadRequestObject.setId(400);
         final ResponseEntity<MyResponse> badRequestResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_mapper_bad_request")
-                         .as(ResponseAs.blocking()
-                                       .<MyResponse>andThenJson(MyObject.class, mapper,
+                         .as(ResponseAs.<MyResponse>andThenJson(MyObject.class, mapper,
                                                                 res -> res.status().isServerError())
                                        .andThenJson(MyObject.class, mapper, res -> res.status().isClientError())
                                        .orElseJson(MyObject.class, mapper)).execute();
@@ -218,8 +213,7 @@ class BlockingConditionalResponseAsTest {
         myOkObject.setId(200);
         final ResponseEntity<MyResponse> okResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_mapper")
-                         .as(ResponseAs.blocking()
-                                       .<MyResponse>andThenJson(MyObject.class, mapper,
+                         .as(ResponseAs.<MyResponse>andThenJson(MyObject.class, mapper,
                                                                 res -> res.status().isServerError())
                                        .andThenJson(MyObject.class, mapper, res -> res.status().isClientError())
                                        .orElseJson(MyObject.class, mapper)).execute();
@@ -236,8 +230,7 @@ class BlockingConditionalResponseAsTest {
         myServerErrorObject.setId(500);
         final ResponseEntity<List<MyObject>> ServerErrorResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_mapper_server_error")
-                         .as(ResponseAs.blocking()
-                                       .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
+                         .as(ResponseAs.andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isServerError())
                                        .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isClientError())
@@ -248,8 +241,7 @@ class BlockingConditionalResponseAsTest {
         myBadRequestObject.setId(400);
         final ResponseEntity<List<MyObject>> BadRequestResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_mapper_bad_request")
-                         .as(ResponseAs.blocking()
-                                       .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
+                         .as(ResponseAs.andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isServerError())
                                        .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isClientError())
@@ -260,8 +252,7 @@ class BlockingConditionalResponseAsTest {
         myOkObject.setId(200);
         final ResponseEntity<List<MyObject>> OkResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_mapper")
-                         .as(ResponseAs.blocking()
-                                       .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
+                         .as(ResponseAs.andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isServerError())
                                        .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isClientError())
@@ -275,8 +266,7 @@ class BlockingConditionalResponseAsTest {
         myServerErrorObject.setId(500);
         final ResponseEntity<List<MyObject>> ServerErrorResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_server_error")
-                         .as(ResponseAs.blocking()
-                                       .andThenJson(new TypeReference<List<MyObject>>() {},
+                         .as(ResponseAs.andThenJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isServerError())
                                        .andThenJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isClientError())
@@ -287,8 +277,7 @@ class BlockingConditionalResponseAsTest {
         myBadRequestObject.setId(400);
         final ResponseEntity<List<MyObject>> BadRequestResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_bad_request")
-                         .as(ResponseAs.blocking()
-                                       .andThenJson(new TypeReference<List<MyObject>>() {},
+                         .as(ResponseAs.andThenJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isServerError())
                                        .andThenJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isClientError())
@@ -299,8 +288,7 @@ class BlockingConditionalResponseAsTest {
         myOkObject.setId(200);
         final ResponseEntity<List<MyObject>> OkResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic")
-                         .as(ResponseAs.blocking()
-                                       .andThenJson(new TypeReference<List<MyObject>>() {},
+                         .as(ResponseAs.andThenJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isServerError())
                                        .andThenJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isClientError())
@@ -312,8 +300,7 @@ class BlockingConditionalResponseAsTest {
     void json_restClient() {
         final ResponseEntity<MyResponse> responseEntity =
                 RestClient.of(server.httpUri()).get("/json_server_error")
-                          .execute(ResponseAs.blocking()
-                                             .<MyResponse>andThenJson(
+                          .execute(ResponseAs.<MyResponse>andThenJson(
                                                      MyMessage.class, res -> res.status().isError())
                                              .andThenJson(
                                                      EmptyMessage.class, res -> res.status().isInformational())
