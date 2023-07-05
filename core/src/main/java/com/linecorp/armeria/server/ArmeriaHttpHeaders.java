@@ -21,7 +21,6 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.COOKIE_SPLITT
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.convertHeaderValue;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeWebSocketUpgrade;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp2HeadersFilterTE;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toLowercaseMap;
 
 import java.util.AbstractMap;
@@ -38,8 +37,10 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil.CaseInsensitiveMap;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.AsciiString;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Custom implementation of {@link HttpHeaders} that delegates to {@link RequestHeadersBuilder}.
@@ -239,10 +240,33 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
             }
 
             if (asciiName.equals(HttpHeaderNames.TE)) {
-                toHttp2HeadersFilterTE(
-                        new AbstractMap.SimpleEntry<>(asciiName, value),
-                        builder
-                );
+//                toHttp2HeadersFilterTE(
+//                        new AbstractMap.SimpleEntry<>(asciiName, value),
+//                        builder
+//                );
+
+                if (AsciiString.indexOf(value, ',', 0) == -1) {
+                    if (AsciiString.contentEqualsIgnoreCase(AsciiString.trim(value),
+                                                            HttpHeaderValues.TRAILERS)) {
+                        builder.set(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString());
+                    } else {
+                        builder.remove(asciiName);
+                    }
+                } else {
+                    final List<CharSequence> teValues = StringUtil.unescapeCsvFields(value);
+                    boolean matched = false;
+                    for (CharSequence teValue : teValues) {
+                        if (AsciiString.contentEqualsIgnoreCase(AsciiString.trim(teValue),
+                                                                HttpHeaderValues.TRAILERS)) {
+                            builder.set(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString());
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched) {
+                        builder.remove(asciiName);
+                    }
+                }
                 continue;
             }
 
