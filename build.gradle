@@ -2,6 +2,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
 
 import static java.lang.Math.min
@@ -63,6 +64,8 @@ allprojects {
     }
 
     tasks.withType(Test) {
+        timeout = Duration.ofMinutes(35)
+
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
 
