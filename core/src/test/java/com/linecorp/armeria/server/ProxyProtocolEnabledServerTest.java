@@ -81,7 +81,7 @@ class ProxyProtocolEnabledServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final ProxiedAddresses proxyAddresses = ctx.proxiedAddresses();
-                    assert proxyAddresses != null;
+                    assertThat(proxyAddresses).isNotNull();
                     final InetSocketAddress src = proxyAddresses.sourceAddress();
                     final List<InetSocketAddress> dst = proxyAddresses.destinationAddresses();
                     return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
@@ -94,7 +94,7 @@ class ProxyProtocolEnabledServerTest {
             sb.service("/null-proxyaddr", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    assert ctx.proxiedAddresses().destinationAddresses().isEmpty();
+                    assertThat(ctx.proxiedAddresses().destinationAddresses()).isEmpty();
                     return HttpResponse.of(HttpStatus.OK);
                 }
             });

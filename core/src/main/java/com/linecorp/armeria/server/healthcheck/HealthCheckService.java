@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RequestTimeoutException;
@@ -137,7 +138,7 @@ public final class HealthCheckService implements TransientHttpService {
     private final long maxLongPollingTimeoutMillis;
     private final double longPollingTimeoutJitterRate;
     private final long pingIntervalMillis;
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     @Nullable
     private final Consumer<HealthChecker> healthCheckerListener;
     @Nullable

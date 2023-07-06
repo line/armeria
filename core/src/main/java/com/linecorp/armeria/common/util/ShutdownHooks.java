@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * A utility class for adding a task with an {@link AutoCloseable} on shutdown.
@@ -46,7 +47,7 @@ public final class ShutdownHooks {
     private static final Map<AutoCloseable, Queue<Runnable>> autoCloseableOnShutdownTasks =
             new LinkedHashMap<>();
 
-    private static final ReentrantLock reentrantLock = new ReentrantLock();
+    private static final ReentrantLock reentrantLock = new ReentrantShortLock();
 
     private static final ThreadFactory THREAD_FACTORY = ThreadFactories
             .builder("armeria-shutdown-hook")
