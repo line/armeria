@@ -52,8 +52,11 @@ final class ArmeriaDefaultHttpRequest extends DefaultHttpMessage implements Http
         super(httpVersion, validateHeaders, false);
         this.method = checkNotNull(method, "method");
         this.uri = checkNotNull(uri, "uri");
-        builder = RequestHeaders.builder(
-                com.linecorp.armeria.common.HttpMethod.valueOf(method.name()), uri);
+        final com.linecorp.armeria.common.HttpMethod armeriaMethod =
+                com.linecorp.armeria.common.HttpMethod.tryParse(method.name());
+        builder = RequestHeaders.builder(armeriaMethod != null ? armeriaMethod
+                                                               : com.linecorp.armeria.common.HttpMethod.UNKNOWN,
+                                         uri);
         headers = new ArmeriaHttpHeaders(builder);
     }
 
