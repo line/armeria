@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.internal.server.websocket.WebSocketServiceUtil;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.websocket.WebSocketServiceTest.AbstractWebSocketHandler;
@@ -34,10 +34,10 @@ class WebSocketServiceConfigTest {
         assertThat(server.config().serviceConfigs()).hasSize(1);
         ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(
-                WebSocketServiceUtil.DEFAULT_REQUEST_TIMEOUT_MILLIS);
-        assertThat(serviceConfig.maxRequestLength()).isEqualTo(WebSocketServiceUtil.DEFAULT_MAX_REQUEST_LENGTH);
+                WebSocketUtil.DEFAULT_REQUEST_TIMEOUT_MILLIS);
+        assertThat(serviceConfig.maxRequestLength()).isEqualTo(WebSocketUtil.DEFAULT_MAX_REQUEST_LENGTH);
         assertThat(serviceConfig.requestAutoAbortDelayMillis()).isEqualTo(
-                WebSocketServiceUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS);
+                WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS);
 
         server.reconfigure(sb -> sb.requestAutoAbortDelayMillis(1000)
                                    .route()
@@ -48,7 +48,7 @@ class WebSocketServiceConfigTest {
         assertThat(server.config().serviceConfigs()).hasSize(1);
         serviceConfig = server.config().serviceConfigs().get(0);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(2000);
-        assertThat(serviceConfig.maxRequestLength()).isEqualTo(WebSocketServiceUtil.DEFAULT_MAX_REQUEST_LENGTH);
+        assertThat(serviceConfig.maxRequestLength()).isEqualTo(WebSocketUtil.DEFAULT_MAX_REQUEST_LENGTH);
         assertThat(serviceConfig.requestAutoAbortDelayMillis()).isEqualTo(1000);
     }
 }

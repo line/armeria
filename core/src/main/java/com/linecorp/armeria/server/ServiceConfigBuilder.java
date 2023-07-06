@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.internal.server.websocket.WebSocketServiceUtil;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 
@@ -312,7 +312,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         } else if (!webSocket || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
             requestTimeoutMillis = defaultRequestTimeoutMillis;
         } else {
-            requestTimeoutMillis = WebSocketServiceUtil.DEFAULT_REQUEST_TIMEOUT_MILLIS;
+            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_TIMEOUT_MILLIS;
         }
 
         final long maxRequestLength;
@@ -321,7 +321,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         } else if (!webSocket || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
             maxRequestLength = defaultMaxRequestLength;
         } else {
-            maxRequestLength = WebSocketServiceUtil.DEFAULT_MAX_REQUEST_LENGTH;
+            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_LENGTH;
         }
 
         final long requestAutoAbortDelayMillis;
@@ -331,7 +331,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                    defaultRequestAutoAbortDelayMillis != Flags.defaultRequestAutoAbortDelayMillis()) {
             requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
         } else {
-            requestAutoAbortDelayMillis = WebSocketServiceUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
+            requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
         }
 
         return new ServiceConfig(
