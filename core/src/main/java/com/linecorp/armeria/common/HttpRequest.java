@@ -289,27 +289,11 @@ public interface HttpRequest extends Request, HttpMessage {
      *
      * @param stage the {@link CompletionStage} which will produce the actual data and trailers
      */
-    static HttpRequest from(RequestHeaders headers,
-                            CompletionStage<? extends StreamMessage<? extends HttpObject>> stage) {
+    static HttpRequest of(RequestHeaders headers,
+                          CompletionStage<? extends StreamMessage<? extends HttpObject>> stage) {
         requireNonNull(headers, "headers");
         requireNonNull(stage, "stage");
-
         return of(headers, StreamMessage.of(stage));
-    }
-
-    /**
-     * Creates a new HTTP request whose {@link Publisher} is produced by the specified
-     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned request
-     * will be closed with the same cause as well.
-     *
-     * @param future the {@link CompletableFuture} which will produce the actual data and trailers
-     */
-    static HttpRequest from(RequestHeaders headers,
-                            CompletableFuture<? extends StreamMessage<? extends HttpObject>> future) {
-        requireNonNull(headers, "headers");
-        requireNonNull(future, "future");
-
-        return of(headers, StreamMessage.of(future));
     }
 
     /**
@@ -322,9 +306,9 @@ public interface HttpRequest extends Request, HttpMessage {
      *                           the returned {@link HttpRequest} using {@link #subscribe(Subscriber)}
      *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
      */
-    static HttpRequest from(RequestHeaders headers,
-                            CompletionStage<? extends StreamMessage<? extends HttpObject>> stage,
-                            EventExecutor subscriberExecutor) {
+    static HttpRequest of(RequestHeaders headers,
+                          CompletionStage<? extends StreamMessage<? extends HttpObject>> stage,
+                          EventExecutor subscriberExecutor) {
         requireNonNull(headers, "headers");
         requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");

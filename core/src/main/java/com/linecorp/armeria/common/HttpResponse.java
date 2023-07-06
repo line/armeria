@@ -141,6 +141,7 @@ public interface HttpResponse extends Response, HttpMessage {
                              EventExecutor subscriberExecutor) {
         requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");
+        // Have to use DeferredHttpResponse to use the subscriberExecutor.
         final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
         res.delegateWhenComplete(stage);
         return res;

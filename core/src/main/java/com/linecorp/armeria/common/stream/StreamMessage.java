@@ -254,6 +254,7 @@ public interface StreamMessage<T> extends Publisher<T> {
                                    EventExecutor subscriberExecutor) {
         requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");
+        // Have to use DeferredStreamMessage to use the subscriberExecutor.
         final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>(subscriberExecutor);
         //noinspection unchecked
         deferred.delegateWhenCompleteStage((CompletionStage<? extends Publisher<T>>) stage);
