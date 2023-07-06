@@ -37,7 +37,7 @@ public final class BlockingConditionalResponseAs<V>
 
     /**
      * Invokes {@link ConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
-     * {@link ResponseAs} and {@link Predicate}
+     * {@link ResponseAs} and {@link Predicate}.
      */
     public BlockingConditionalResponseAs<V> andThenJson(
             Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
@@ -47,7 +47,7 @@ public final class BlockingConditionalResponseAs<V>
 
     /**
      * Invokes {@link ConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
-     * {@link ResponseAs} and {@link Predicate}
+     * {@link ResponseAs} and {@link Predicate}.
      */
     public BlockingConditionalResponseAs<V> andThenJson(
             Class<? extends V> clazz, ObjectMapper objectMapper, Predicate<AggregatedHttpResponse> predicate) {
@@ -57,7 +57,7 @@ public final class BlockingConditionalResponseAs<V>
 
     /**
      * Invokes {@link ConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
-     * {@link ResponseAs} and {@link Predicate}
+     * {@link ResponseAs} and {@link Predicate}.
      */
     public BlockingConditionalResponseAs<V> andThenJson(
             TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
@@ -67,7 +67,7 @@ public final class BlockingConditionalResponseAs<V>
 
     /**
      * Invokes {@link ConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
-     * {@link ResponseAs} and {@link Predicate}
+     * {@link ResponseAs} and {@link Predicate}.
      */
     public BlockingConditionalResponseAs<V> andThenJson(
             TypeReference<? extends V> typeRef, ObjectMapper objectMapper,
