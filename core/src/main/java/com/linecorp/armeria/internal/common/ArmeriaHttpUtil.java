@@ -773,13 +773,13 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    /**
-     * Filter the {@link HttpHeaderNames#TE} header according to the
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2">special rules in the HTTP/2 RFC</a>.
-     *
-     * @param entry the entry whose name is {@link HttpHeaderNames#TE}.
-     * @param out the resulting HTTP/2 headers.
-     */
+     /**
+      * Filter the {@link HttpHeaderNames#TE} header according to the
+      * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2">special rules in the HTTP/2 RFC</a>.
+      *
+      * @param entry the entry whose name is {@link HttpHeaderNames#TE}.
+      * @param out the resulting HTTP/2 headers.
+      */
      public static void toHttp2HeadersFilterTE(Entry<CharSequence, CharSequence> entry,
                                                HttpHeadersBuilder out) {
         if (AsciiString.indexOf(entry.getValue(), ',', 0) == -1) {

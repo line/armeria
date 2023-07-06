@@ -220,6 +220,11 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
         return this;
     }
 
+    /**
+     * Returns the {@link RequestHeaders} built from this instance.
+     * Note that this method modify the headers that are not allowed in the system
+     * while maintaining the original headers.
+     */
     public RequestHeaders buildRequestHeaders() {
         final Iterator<Entry<CharSequence, CharSequence>> iter = iteratorCharSequence();
         final CaseInsensitiveMap connectionDisallowedList =
@@ -240,11 +245,6 @@ public final class ArmeriaHttpHeaders extends HttpHeaders {
             }
 
             if (asciiName.equals(HttpHeaderNames.TE)) {
-//                toHttp2HeadersFilterTE(
-//                        new AbstractMap.SimpleEntry<>(asciiName, value),
-//                        builder
-//                );
-
                 if (AsciiString.indexOf(value, ',', 0) == -1) {
                     if (AsciiString.contentEqualsIgnoreCase(AsciiString.trim(value),
                                                             HttpHeaderValues.TRAILERS)) {

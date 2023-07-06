@@ -41,6 +41,7 @@ import java.util.Queue;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
@@ -52,6 +53,11 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpVersion;
 
+/**
+ * Forked from {@link HttpClientCodec}.
+ * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
+ * which enables easier server side HTTP implementation.
+ */
 public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder>
         implements HttpServerUpgradeHandler.SourceCodec {
 
@@ -80,7 +86,8 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+                           boolean validateHeaders) {
         init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders),
                 new HttpServerResponseEncoder());
     }
@@ -88,8 +95,8 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
-                           int initialBufferSize) {
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+                           boolean validateHeaders, int initialBufferSize) {
         init(
           new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize,
                   validateHeaders, initialBufferSize),
@@ -110,8 +117,9 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     /**
      * Creates a new instance with the specified decoder options.
      */
-    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
-                           int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
+    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
+                           boolean validateHeaders, int initialBufferSize, boolean allowDuplicateContentLengths,
+                           boolean allowPartialChunks) {
         init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders,
                                           initialBufferSize, allowDuplicateContentLengths, allowPartialChunks),
              new HttpServerResponseEncoder());
@@ -144,25 +152,26 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
         }
 
         HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
-                                 boolean validateHeaders, int initialBufferSize, boolean allowDuplicateContentLengths) {
+                                 boolean validateHeaders, int initialBufferSize,
+                                 boolean allowDuplicateContentLengths) {
             super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
                   allowDuplicateContentLengths);
         }
 
         HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
-                                 boolean validateHeaders, int initialBufferSize, boolean allowDuplicateContentLengths,
-                                 boolean allowPartialChunks) {
+                                 boolean validateHeaders, int initialBufferSize,
+                                 boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
             super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
                   allowDuplicateContentLengths, allowPartialChunks);
         }
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
-            int oldSize = out.size();
+            final int oldSize = out.size();
             super.decode(ctx, buffer, out);
-            int size = out.size();
+            final int size = out.size();
             for (int i = oldSize; i < size; i++) {
-                Object obj = out.get(i);
+                final Object obj = out.get(i);
                 if (obj instanceof HttpRequest) {
                     queue.add(((HttpRequest) obj).method());
                 }
@@ -183,10 +192,10 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
 
         @Override
         protected void sanitizeHeadersBeforeEncode(HttpResponse msg, boolean isAlwaysEmpty) {
-            if (!isAlwaysEmpty && HttpMethod.CONNECT.equals(method)
-                    && msg.status().codeClass() == HttpStatusClass.SUCCESS) {
+            if (!isAlwaysEmpty && HttpMethod.CONNECT.equals(method) &&
+                msg.status().codeClass() == HttpStatusClass.SUCCESS) {
                 // Stripping Transfer-Encoding:
-                // See https://tools.ietf.org/html/rfc7230#section-3.3.1
+                // See section 3.3.1 of https://datatracker.ietf.org/doc/rfc7230
                 msg.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
                 return;
             }

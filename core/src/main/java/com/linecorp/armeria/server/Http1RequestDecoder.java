@@ -204,52 +204,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                     hostname);
                     }
 
-//                    HttpHeaders incomingHeaders = nettyReq.headers();
-//                    final Iterator<Entry<CharSequence, CharSequence>> iter = incomingHeaders
-//                            .iteratorCharSequence();
-//                    final CaseInsensitiveMap connectionDisallowedList =
-//                            toLowercaseMap(incomingHeaders.valueCharSequenceIterator(
-//                                    com.linecorp.armeria.common.HttpHeaderNames.CONNECTION), 8);
-//                    StringJoiner cookieJoiner = null;
-//                    while (iter.hasNext()) {
-//                        final Entry<CharSequence, CharSequence> entry = iter.next();
-//                        final AsciiString asciiName = com.linecorp.armeria.common.HttpHeaderNames.of(entry.getKey()).toLowerCase();
-//                        final CharSequence value = entry.getValue();
-//
-//                        if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(asciiName) ||
-//                            connectionDisallowedList.contains(asciiName)) {
-//                            if (!maybeWebSocketUpgrade(asciiName, value)) {
-//                                builder.remove(asciiName);
-//                            }
-//                        }
-//
-//                        final CharSequence charSequenceValue = (CharSequence) value;
-//                        if (asciiName.equals(com.linecorp.armeria.common.HttpHeaderNames.TE)) {
-//                            toHttp2HeadersFilterTE(
-//                                    new AbstractMap.SimpleEntry<>(asciiName, charSequenceValue),
-//                                    builder
-//                            );
-//                        }
-//
-//                        if (asciiName.equals(com.linecorp.armeria.common.HttpHeaderNames.COOKIE)) {
-//                            cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
-//
-//                            final String existingCookies = builder.get(com.linecorp.armeria.common.HttpHeaderNames.COOKIE);
-//                            if (existingCookies != null) {
-//                                COOKIE_SPLITTER.split(existingCookies).forEach(cookieJoiner::add);
-//                            }
-//                            COOKIE_SPLITTER.split(charSequenceValue).forEach(cookieJoiner::add);
-//
-//                            if (cookieJoiner.length() != 0) {
-//                                builder.set(com.linecorp.armeria.common.HttpHeaderNames.COOKIE, cookieJoiner.toString());
-//                            }
-//                        } else {
-//                            builder.add(asciiName, convertHeaderValue(asciiName, charSequenceValue));
-//                        }
-//                    }
                     headers = armeriaHttpHeaders.buildRequestHeaders();
-
-//                    headers = builder.build();
 
                     // Do not accept unsupported methods.
                     final HttpMethod method = headers.method();
