@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 
@@ -54,6 +55,7 @@ public final class BlockingWebClientRequestPreparation
         implements WebRequestPreparationSetters<AggregatedHttpResponse> {
 
     private final WebClientRequestPreparation delegate;
+    private static final Predicate<AggregatedHttpResponse> SUCCESS_PREDICATE = res -> res.status().isSuccess();
 
     BlockingWebClientRequestPreparation(WebClientRequestPreparation delegate) {
         this.delegate = delegate;
@@ -134,7 +136,7 @@ public final class BlockingWebClientRequestPreparation
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             Class<? extends T> clazz) {
         requireNonNull(clazz, "clazz");
-        return as(AggregatedResponseAs.json(clazz));
+        return as(AggregatedResponseAs.json(clazz, SUCCESS_PREDICATE));
     }
 
     /**
@@ -162,7 +164,7 @@ public final class BlockingWebClientRequestPreparation
             Class<? extends T> clazz, ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
-        return as(AggregatedResponseAs.json(clazz, mapper));
+        return as(AggregatedResponseAs.json(clazz, mapper, SUCCESS_PREDICATE));
     }
 
     /**
@@ -188,7 +190,7 @@ public final class BlockingWebClientRequestPreparation
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
-        return as(AggregatedResponseAs.json(typeRef));
+        return as(AggregatedResponseAs.json(typeRef, SUCCESS_PREDICATE));
     }
 
     /**
@@ -214,7 +216,7 @@ public final class BlockingWebClientRequestPreparation
             TypeReference<? extends T> typeRef, ObjectMapper mapper) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
-        return as(AggregatedResponseAs.json(typeRef, mapper));
+        return as(AggregatedResponseAs.json(typeRef, mapper, SUCCESS_PREDICATE));
     }
 
     @Override

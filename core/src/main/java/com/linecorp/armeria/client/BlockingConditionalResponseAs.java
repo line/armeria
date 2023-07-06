@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.ResponseEntity;
 
 public final class BlockingConditionalResponseAs<V>
         extends ConditionalResponseAs<HttpResponse, AggregatedHttpResponse, ResponseEntity<V>> {
+    private static final Predicate<AggregatedHttpResponse> SUCCESS_PREDICATE = res -> res.status().isSuccess();
 
     BlockingConditionalResponseAs(ResponseAs<HttpResponse, AggregatedHttpResponse> originalResponseAs,
                                   ResponseAs<AggregatedHttpResponse, ResponseEntity<V>> responseAs,
@@ -40,7 +41,8 @@ public final class BlockingConditionalResponseAs<V>
      */
     public BlockingConditionalResponseAs<V> andThenJson(
             Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
-        return (BlockingConditionalResponseAs<V>) andThen(AggregatedResponseAs.json(clazz), predicate);
+        return (BlockingConditionalResponseAs<V>) andThen(
+                AggregatedResponseAs.json(clazz, predicate), predicate);
     }
 
     /**
@@ -50,7 +52,7 @@ public final class BlockingConditionalResponseAs<V>
     public BlockingConditionalResponseAs<V> andThenJson(
             Class<? extends V> clazz, ObjectMapper objectMapper, Predicate<AggregatedHttpResponse> predicate) {
         return (BlockingConditionalResponseAs<V>) andThen(
-                AggregatedResponseAs.json(clazz, objectMapper), predicate);
+                AggregatedResponseAs.json(clazz, objectMapper, predicate), predicate);
     }
 
     /**
@@ -59,7 +61,8 @@ public final class BlockingConditionalResponseAs<V>
      */
     public BlockingConditionalResponseAs<V> andThenJson(
             TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
-        return (BlockingConditionalResponseAs<V>) andThen(AggregatedResponseAs.json(typeRef), predicate);
+        return (BlockingConditionalResponseAs<V>) andThen(
+                AggregatedResponseAs.json(typeRef, predicate), predicate);
     }
 
     /**
@@ -70,7 +73,7 @@ public final class BlockingConditionalResponseAs<V>
             TypeReference<? extends V> typeRef, ObjectMapper objectMapper,
             Predicate<AggregatedHttpResponse> predicate) {
         return (BlockingConditionalResponseAs<V>) andThen(
-                AggregatedResponseAs.json(typeRef, objectMapper), predicate);
+                AggregatedResponseAs.json(typeRef, objectMapper, predicate), predicate);
     }
 
     /**
@@ -78,7 +81,7 @@ public final class BlockingConditionalResponseAs<V>
      * {@link Predicate} is evaluated as true.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(Class<? extends V> clazz) {
-        return orElse(AggregatedResponseAs.json(clazz));
+        return orElse(AggregatedResponseAs.json(clazz, SUCCESS_PREDICATE));
     }
 
     /**
@@ -87,7 +90,7 @@ public final class BlockingConditionalResponseAs<V>
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(
             Class<? extends V> clazz, ObjectMapper objectMapper) {
-        return orElse(AggregatedResponseAs.json(clazz, objectMapper));
+        return orElse(AggregatedResponseAs.json(clazz, objectMapper, SUCCESS_PREDICATE));
     }
 
     /**
@@ -95,7 +98,7 @@ public final class BlockingConditionalResponseAs<V>
      * {@link Predicate} is evaluated as true.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(TypeReference<? extends V> typeRef) {
-        return orElse(AggregatedResponseAs.json(typeRef));
+        return orElse(AggregatedResponseAs.json(typeRef, SUCCESS_PREDICATE));
     }
 
     /**
@@ -104,6 +107,6 @@ public final class BlockingConditionalResponseAs<V>
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(
             TypeReference<? extends V> typeRef, ObjectMapper objectMapper) {
-        return orElse(AggregatedResponseAs.json(typeRef, objectMapper));
+        return orElse(AggregatedResponseAs.json(typeRef, objectMapper, SUCCESS_PREDICATE));
     }
 }

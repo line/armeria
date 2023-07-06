@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.stream.StreamMessages;
 @UnstableApi
 @FunctionalInterface
 public interface ResponseAs<T, R> {
+    Predicate<AggregatedHttpResponse> SUCCESS_PREDICATE = res -> res.status().isSuccess();
 
     /**
      * Aggregates an {@link HttpResponse} and waits the result of {@link HttpResponse#aggregate()}.
@@ -103,7 +104,7 @@ public interface ResponseAs<T, R> {
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz) {
         requireNonNull(clazz, "clazz");
-        return aggregateAndConvert(AggregatedResponseAs.json(clazz));
+        return aggregateAndConvert(AggregatedResponseAs.json(clazz, SUCCESS_PREDICATE));
     }
 
     /**
@@ -117,7 +118,7 @@ public interface ResponseAs<T, R> {
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
-        return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper));
+        return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper, SUCCESS_PREDICATE));
     }
 
     /**
@@ -129,7 +130,7 @@ public interface ResponseAs<T, R> {
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
-        return aggregateAndConvert(AggregatedResponseAs.json(typeRef));
+        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, SUCCESS_PREDICATE));
     }
 
     /**
@@ -141,14 +142,16 @@ public interface ResponseAs<T, R> {
                                                         ObjectMapper mapper) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
-        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper));
+        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper, SUCCESS_PREDICATE));
     }
 
     @UnstableApi
     static <V> BlockingConditionalResponseAs<V> andThenJson(
             Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(clazz, "clazz");
-        return new BlockingConditionalResponseAs<>(blocking(), AggregatedResponseAs.json(clazz), predicate);
+        return new BlockingConditionalResponseAs<>(blocking(),
+                                                   AggregatedResponseAs.json(clazz, predicate),
+                                                   predicate);
     }
 
     @UnstableApi
@@ -157,14 +160,16 @@ public interface ResponseAs<T, R> {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
         return new BlockingConditionalResponseAs<>(
-                blocking(), AggregatedResponseAs.json(clazz, mapper), predicate);
+                blocking(), AggregatedResponseAs.json(clazz, mapper, predicate), predicate);
     }
 
     @UnstableApi
     static <V> BlockingConditionalResponseAs<V> andThenJson(
             TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(typeRef, "typeRef");
-        return new BlockingConditionalResponseAs<>(blocking(), AggregatedResponseAs.json(typeRef), predicate);
+        return new BlockingConditionalResponseAs<>(blocking(),
+                                                   AggregatedResponseAs.json(typeRef, predicate),
+                                                   predicate);
     }
 
     @UnstableApi
@@ -174,7 +179,7 @@ public interface ResponseAs<T, R> {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         return new BlockingConditionalResponseAs<>(
-                blocking(), AggregatedResponseAs.json(typeRef, mapper), predicate);
+                blocking(), AggregatedResponseAs.json(typeRef, mapper, predicate), predicate);
     }
 
     /**

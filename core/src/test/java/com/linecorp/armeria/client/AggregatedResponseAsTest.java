@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +40,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 class AggregatedResponseAsTest {
 
     private final ResponseHeaders headers = ResponseHeaders.of(200);
+    private static final Predicate<AggregatedHttpResponse> SUCCESS_PREDICATE = res -> res.status().isSuccess();
 
     @Test
     void bytes() {
@@ -63,7 +65,8 @@ class AggregatedResponseAsTest {
         final byte[] content = JacksonUtil.writeValueAsBytes(myObject);
         final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers, HttpData.wrap(content));
 
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(MyObject.class).as(response);
+        final ResponseEntity<MyObject> entity =
+                AggregatedResponseAs.json(MyObject.class, SUCCESS_PREDICATE).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
@@ -75,9 +78,10 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(ResponseHeaders.of(500), HttpData.wrap(content));
 
-        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class).as(response))
+        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, SUCCESS_PREDICATE).as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
-                .hasMessageContaining("(expect: the success class (2xx)");
+                .hasMessageContaining(
+                        "status: 500 Internal Server Error is not expected by predicate method. response: ");
     }
 
     @Test
@@ -85,7 +89,7 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
 
-        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class).as(response))
+        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, SUCCESS_PREDICATE).as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
                 .hasCauseInstanceOf(JsonProcessingException.class);
     }
@@ -98,7 +102,8 @@ class AggregatedResponseAsTest {
         final JsonMapper mapper = JsonMapper.builder()
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(MyObject.class, mapper).as(response);
+        final ResponseEntity<MyObject> entity =
+                AggregatedResponseAs.json(MyObject.class, mapper, SUCCESS_PREDICATE).as(response);
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
@@ -112,7 +117,8 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers, HttpData.wrap(content));
 
         final ResponseEntity<List<MyObject>> entity =
-                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}).as(response);
+                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, SUCCESS_PREDICATE)
+                                    .as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);
     }
@@ -125,7 +131,8 @@ class AggregatedResponseAsTest {
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
         final ResponseEntity<List<MyObject>> entity =
-                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper).as(response);
+                AggregatedResponseAs.json(
+                        new TypeReference<List<MyObject>>() {}, mapper, SUCCESS_PREDICATE).as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);

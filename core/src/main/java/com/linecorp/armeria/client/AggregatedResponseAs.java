@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import java.io.IOException;
+import java.util.function.Predicate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,32 +38,51 @@ final class AggregatedResponseAs {
         return response -> ResponseEntity.of(response.headers(), response.contentUtf8(), response.trailers());
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz) {
-        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, clazz));
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
+            Class<? extends T> clazz, Predicate<AggregatedHttpResponse> predicate) {
+        return response -> newJsonResponseEntity(
+                response, bytes -> JacksonUtil.readValue(bytes, clazz), predicate);
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                                          ObjectMapper mapper) {
-        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz));
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
+            Class<? extends T> clazz, ObjectMapper mapper, Predicate<AggregatedHttpResponse> predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz), predicate);
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
-        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef));
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
+            TypeReference<? extends T> typeRef, Predicate<AggregatedHttpResponse> predicate) {
+        return response -> newJsonResponseEntity(
+                response, bytes -> JacksonUtil.readValue(bytes, typeRef), predicate);
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                                          ObjectMapper mapper) {
-        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef));
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper,
+            Predicate<AggregatedHttpResponse> predicate) {
+        return response -> newJsonResponseEntity(
+                response, bytes -> mapper.readValue(bytes, typeRef), predicate);
     }
 
     private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
-                                                               JsonDecoder<T> decoder) {
+                                                               JsonDecoder<T> decoder,
+                                                               Predicate<AggregatedHttpResponse> predicate) {
+        if (!predicate.test(response)) {
+            throw newInvalidHttpResponseException(response, predicate);
+        }
+
         try {
             return ResponseEntity.of(response.headers(), decoder.decode(response.content().array()),
                                      response.trailers());
         } catch (IOException e) {
             return Exceptions.throwUnsafely(new InvalidHttpResponseException(response, e));
         }
+    }
+
+    private static InvalidHttpResponseException newInvalidHttpResponseException(
+            AggregatedHttpResponse response, Predicate<AggregatedHttpResponse> predicate) {
+        return new InvalidHttpResponseException(
+                response, "status: " + response.status() +
+                " is not expected by predicate method. response: " + response +
+                ", predicate: " + predicate, null);
     }
 
     @FunctionalInterface
