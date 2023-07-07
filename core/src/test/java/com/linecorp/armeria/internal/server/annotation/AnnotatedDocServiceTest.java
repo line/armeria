@@ -42,6 +42,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -52,11 +54,13 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -461,6 +465,30 @@ class AnnotatedDocServiceTest {
                                                                                  docServiceRoute);
         final JsonNode expectedJson = mapper.valueToTree(emptySpecification);
         assertThatJson(actualJson).isEqualTo(expectedJson);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "/proxy", "/proxy2/nested" })
+    void rightPathBehindProxy(String proxyPath) throws IOException {
+        server.server().reconfigure(sb -> sb.serviceUnder(proxyPath, (ctx, req) -> {
+                                                final String origPath = req.path();
+                                                assertThat(origPath).startsWith(proxyPath);
+                                                final String newPath = req.path().substring(proxyPath.length());
+                                                final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(newPath).build());
+                                                return server.webClient().execute(newReq);
+                                            })
+                                            .serviceUnder("/docs", DocService.builder().build())
+        );
+
+        final String specification = BlockingWebClient.of(server.httpUri())
+                                                      .get(proxyPath + "/docs/specification.json")
+                                                      .contentUtf8();
+        System.out.println("specification");
+        System.out.println(specification);
+
+        final JsonNode specificationJson = mapper.readTree(specification);
+        assertThatJson(specificationJson).node("docServiceRoute.pathType").isEqualTo("PREFIX");
+        assertThatJson(specificationJson).node("docServiceRoute.patternString").isEqualTo("/docs/*");
     }
 
     @Description("My service class")
