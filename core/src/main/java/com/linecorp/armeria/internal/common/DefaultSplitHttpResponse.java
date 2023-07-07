@@ -42,10 +42,18 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
         this(response, upstreamExecutor, headers -> !headers.status().isInformational());
     }
 
+    /**
+     * Creates a new {@link DefaultSplitHttpResponse} from the specified {@link HttpResponse}.
+     * The specified {@link Predicate} is used to determine if the {@link ResponseHeaders} is the final one.
+     * For example, if there are multiple informational {@link ResponseHeaders} and the {@link Predicate}
+     * will be {@code headers -> !headers.status().isInformational()}.
+     * However, if the {@link ResponseHeaders} is only one, and it can be an informational one such as a
+     * WebSocket response, {@link Predicate} will be {@code headers -> true}.
+     */
     public DefaultSplitHttpResponse(HttpResponse response, EventExecutor upstreamExecutor,
-                                    Predicate<ResponseHeaders> responseHeadersPredicate) {
+                                    Predicate<ResponseHeaders> finalResponseHeadersPredicate) {
         this(response, upstreamExecutor,
-             new SplitHttpResponseBodySubscriber(response, upstreamExecutor, responseHeadersPredicate));
+             new SplitHttpResponseBodySubscriber(response, upstreamExecutor, finalResponseHeadersPredicate));
     }
 
     private DefaultSplitHttpResponse(HttpResponse response, EventExecutor upstreamExecutor,
@@ -62,12 +70,12 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
     private static final class SplitHttpResponseBodySubscriber extends SplitHttpMessageSubscriber {
 
         private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
-        private final Predicate<ResponseHeaders> responseHeadersPredicate;
+        private final Predicate<ResponseHeaders> finalResponseHeadersPredicate;
 
         SplitHttpResponseBodySubscriber(HttpResponse response, EventExecutor upstreamExecutor,
-                                        Predicate<ResponseHeaders> responseHeadersPredicate) {
+                                        Predicate<ResponseHeaders> finalResponseHeadersPredicate) {
             super(1, response, upstreamExecutor);
-            this.responseHeadersPredicate = responseHeadersPredicate;
+            this.finalResponseHeadersPredicate = finalResponseHeadersPredicate;
         }
 
         CompletableFuture<ResponseHeaders> headersFuture() {
@@ -78,7 +86,7 @@ public class DefaultSplitHttpResponse extends AbstractSplitHttpMessage implement
         public void onNext(HttpObject httpObject) {
             if (httpObject instanceof ResponseHeaders) {
                 final ResponseHeaders headers = (ResponseHeaders) httpObject;
-                if (responseHeadersPredicate.test(headers)) {
+                if (finalResponseHeadersPredicate.test(headers)) {
                     headersFuture.doComplete(headers);
                 } else {
                     final Subscription upstream = upstream();

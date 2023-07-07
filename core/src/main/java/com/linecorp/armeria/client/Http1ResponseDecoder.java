@@ -208,14 +208,14 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                     } else {
                         failWithUnexpectedMessageType(ctx, msg, HttpResponse.class);
                     }
-                    return;
+                    break;
                 case NEED_INFORMATIONAL_DATA:
                     if (msg instanceof LastHttpContent) {
                         state = State.NEED_HEADERS;
                     } else {
                         failWithUnexpectedMessageType(ctx, msg, LastHttpContent.class);
                     }
-                    return;
+                    break;
                 case NEED_DATA_OR_TRAILERS:
                     if (msg instanceof HttpContent) {
                         final HttpContent content = (HttpContent) msg;

@@ -65,6 +65,9 @@ public enum SessionProtocol {
 
     private static final Set<SessionProtocol> HTTPS_VALUES = Sets.immutableEnumSet(HTTPS, H1, H2);
 
+    private static final Set<SessionProtocol> HTTP_AND_HTTPS_VALUES =
+            Sets.immutableEnumSet(HTTPS, HTTP, H1, H1C, H2, H2C);
+
     private static final Map<String, SessionProtocol> uriTextToProtocols;
 
     static {
@@ -115,6 +118,13 @@ public enum SessionProtocol {
      */
     public static Set<SessionProtocol> httpsValues() {
         return HTTPS_VALUES;
+    }
+
+    /**
+     * Returns an immutable {@link Set} that contains {@link #httpValues()} and {@link #httpsValues()}.
+     */
+    public static Set<SessionProtocol> httpAndHttpsValues() {
+        return HTTP_AND_HTTPS_VALUES;
     }
 
     private final String uriText;

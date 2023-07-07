@@ -15,44 +15,36 @@
  */
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.HttpHeaderValues;
 
-final class WebSocketHttp1RequestSubscriber extends AbstractHttpRequestSubscriber {
+final class WebSocketHttp2RequestSubscriber extends HttpRequestSubscriber {
 
-    WebSocketHttp1RequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder,
+    WebSocketHttp2RequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder,
                                     HttpResponseDecoder responseDecoder,
                                     HttpRequest request, DecodedHttpResponse originalRes,
                                     ClientRequestContext ctx, long timeoutMillis) {
-        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis, true);
+        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis);
     }
 
     @Override
-    public void onNext(HttpObject o) {
-        if (!(o instanceof HttpData)) {
-            failAndReset(new IllegalArgumentException(
-                    "published an HttpObject that's not HttpData: " + o));
-            PooledObjects.close(o);
-            return;
+    RequestHeaders mapHeaders(RequestHeaders headers) {
+        if (headers.method() == HttpMethod.CONNECT) {
+            return headers;
         }
-
-        switch (state()) {
-            case NEEDS_DATA: {
-                writeData((HttpData) o);
-                channel().flush();
-                break;
-            }
-            case DONE:
-                // Cancel the subscription if any message comes here after the state has been changed to DONE.
-                cancel();
-                PooledObjects.close(o);
-                break;
-        }
+        return headers.toBuilder()
+                      .method(HttpMethod.CONNECT)
+                      .removeAndThen(HttpHeaderNames.CONNECTION)
+                      .removeAndThen(HttpHeaderNames.UPGRADE)
+                      .removeAndThen(HttpHeaderNames.SEC_WEBSOCKET_KEY)
+                      .set(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString())
+                      .build();
     }
 }
 

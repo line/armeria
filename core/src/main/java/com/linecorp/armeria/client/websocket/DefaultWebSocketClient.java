@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.websocket;
 
-import static com.linecorp.armeria.internal.client.websocket.WebSocketClientUtil.UNDEFINED_WEBSOCKET_URI;
+import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.generateSecWebSocketAccept;
 import static java.util.Objects.requireNonNull;
 
@@ -45,10 +45,12 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
@@ -70,11 +72,11 @@ final class DefaultWebSocketClient implements WebSocketClient {
     private final String joinedSubprotocols;
 
     DefaultWebSocketClient() {
-        webClient = WebClient.builder(UNDEFINED_WEBSOCKET_URI)
+        webClient = WebClient.builder(UNDEFINED_URI)
                              .responseTimeoutMillis(0)
                              .maxResponseLength(0)
                              .requestAutoAbortDelayMillis(5000)
-                             .option(ClientOptions.ADD_ORIGIN_HEADER, true)
+                             .option(ClientOptions.AUTO_FILL_ORIGIN_HEADER, true)
                              .build();
         maxFramePayloadLength = WebSocketClientBuilder.DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
         allowMaskMismatch = false;
@@ -104,7 +106,9 @@ final class DefaultWebSocketClient implements WebSocketClient {
         final HttpRequest request = HttpRequest.of(requestHeaders, StreamMessage.of(outboundFuture));
         final HttpResponse response;
         final ClientRequestContext ctx;
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor();
+             SafeCloseable ignored = Clients.withContextCustomizer(
+                     cctx -> cctx.logBuilder().serializationFormat(SerializationFormat.WS))) {
             response = webClient.execute(request);
             ctx = captor.get();
         }
@@ -125,7 +129,7 @@ final class DefaultWebSocketClient implements WebSocketClient {
                 return null;
             }
             if (!validateResponseHeaders(ctx, requestHeaders, responseHeaders, outboundFuture,
-                                        response, result)) {
+                                         response, result)) {
                 return null;
             }
 
@@ -233,8 +237,10 @@ final class DefaultWebSocketClient implements WebSocketClient {
 
     private static boolean isHttp1WebSocketResponse(ResponseHeaders responseHeaders) {
         return responseHeaders.status() == HttpStatus.SWITCHING_PROTOCOLS &&
-               HttpHeaderValues.WEBSOCKET.toString().equals(responseHeaders.get(HttpHeaderNames.UPGRADE)) &&
-               HttpHeaderValues.UPGRADE.toString().equals(responseHeaders.get(HttpHeaderNames.CONNECTION));
+               HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(
+                       responseHeaders.get(HttpHeaderNames.UPGRADE)) &&
+               HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(
+                       responseHeaders.get(HttpHeaderNames.CONNECTION));
     }
 
     @Override

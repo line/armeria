@@ -231,9 +231,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             }
 
             final AbstractHttpRequestSubscriber subscriber;
-            if (serializationFormat == SerializationFormat.WS && protocol.isExplicitHttp1()) {
-                subscriber = new WebSocketHttp1RequestSubscriber(
-                        channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+            if (serializationFormat == SerializationFormat.WS) {
+                if (protocol.isExplicitHttp1()) {
+                    subscriber = new WebSocketHttp1RequestSubscriber(
+                            channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+                } else {
+                    assert protocol.isExplicitHttp2();
+                    subscriber = new WebSocketHttp2RequestSubscriber(
+                            channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+                }
             } else {
                 subscriber = new HttpRequestSubscriber(
                         channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);

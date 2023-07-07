@@ -27,6 +27,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.websocket.WebSocket;
+import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -63,6 +65,10 @@ class WebSocketClientHandshakeTest {
             assertThat(session.responseHeaders().get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL))
                     .isEqualTo(selected);
         }
-        session.abort();
+        // Abort the session to close the connection.
+        final WebSocketWriter outbound = WebSocket.streaming();
+        outbound.abort();
+        session.setOutbound(outbound);
+        session.inbound().abort();
     }
 }

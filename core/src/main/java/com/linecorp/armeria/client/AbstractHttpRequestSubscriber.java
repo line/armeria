@@ -20,19 +20,13 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
-import com.linecorp.armeria.internal.client.HttpSession;
 
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.HttpHeaderValues;
 
 abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         implements Subscriber<HttpObject> {
@@ -48,9 +42,8 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     AbstractHttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder,
                                   HttpResponseDecoder responseDecoder,
                                   HttpRequest request, DecodedHttpResponse originalRes,
-                                  ClientRequestContext ctx, long timeoutMillis) {
-        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis,
-              request.isEmpty());
+                                  ClientRequestContext ctx, long timeoutMillis, boolean http1WebSocket) {
+        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty(), http1WebSocket);
         this.request = request;
     }
 
@@ -71,24 +64,12 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         //     class can be called before the member fields (subscription, id, responseWrapper and
         //     timeoutFuture) are initialized.
         //     It is because the successful write of the first headers will trigger subscription.request(1).
-        RequestHeaders headers = request.headers();
-        final HttpSession session = HttpSession.get(channel());
-        final SerializationFormat serializationFormat = session.serializationFormat();
-        if (serializationFormat == SerializationFormat.WS) {
-            final SessionProtocol protocol = session.protocol();
-            assert protocol != null;
-            if (protocol.isExplicitHttp2()) {
-                headers = headers.toBuilder()
-                                 .method(HttpMethod.CONNECT)
-                                 .removeAndThen(HttpHeaderNames.CONNECTION)
-                                 .removeAndThen(HttpHeaderNames.UPGRADE)
-                                 .removeAndThen(HttpHeaderNames.SEC_WEBSOCKET_KEY)
-                                 .set(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString())
-                                 .build();
-            }
-        }
-        writeHeaders(headers);
+        writeHeaders(mapHeaders(request.headers()));
         channel().flush();
+    }
+
+    RequestHeaders mapHeaders(RequestHeaders headers) {
+        return headers;
     }
 
     @Override

@@ -72,6 +72,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     private final RequestLogBuilder logBuilder;
     private final long timeoutMillis;
     private final boolean headersOnly;
+    private final boolean http1WebSocket;
 
     // session, id and responseWrapper are assigned in tryInitialize()
     @Nullable
@@ -87,7 +88,8 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
     AbstractHttpRequestHandler(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                                DecodedHttpResponse originalRes,
-                               ClientRequestContext ctx, long timeoutMillis, boolean headersOnly) {
+                               ClientRequestContext ctx, long timeoutMillis, boolean headersOnly,
+                               boolean http1WebSocket) {
         this.ch = ch;
         this.encoder = encoder;
         this.responseDecoder = responseDecoder;
@@ -96,6 +98,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         logBuilder = ctx.logBuilder();
         this.timeoutMillis = timeoutMillis;
         this.headersOnly = headersOnly;
+        this.http1WebSocket = http1WebSocket;
     }
 
     abstract void onWriteSuccess();
@@ -200,7 +203,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         assert protocol != null;
         if (headersOnly) {
             state = State.DONE;
-        } else if (http1WebSocket()) {
+        } else if (http1WebSocket) {
             state = State.NEEDS_DATA;
         } else {
             state = State.NEEDS_DATA_OR_TRAILERS;
@@ -218,7 +221,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         logBuilder.requestHeaders(merged);
 
         final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
-        if (CLOSE_STRING.equalsIgnoreCase(connectionOption) || http1WebSocket()) {
+        if (CLOSE_STRING.equalsIgnoreCase(connectionOption) || http1WebSocket) {
             // Make the session unhealthy so that subsequent requests do not use it.
             // In HTTP/2 request, the "Connection: close" is just interpreted as a signal to close the
             // connection by sending a GOAWAY frame that will be sent after receiving the corresponding
@@ -232,10 +235,6 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         // before any other callbacks like `onStreamClosed()` are invoked.
         promise.addListener(this);
         encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
-    }
-
-    private boolean http1WebSocket() {
-        return this instanceof WebSocketHttp1RequestSubscriber;
     }
 
     /**

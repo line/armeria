@@ -110,6 +110,7 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
             req.abortResponse(new IllegalArgumentException(
                     "published an HttpObject that's neither HttpHeaders nor HttpData: " + o +
                     " (service: " + service() + ')'), true);
+            PooledObjects.close(o);
             return;
         }
 

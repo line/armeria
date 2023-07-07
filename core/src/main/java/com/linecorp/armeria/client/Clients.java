@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -34,7 +35,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.ClientThreadLocalState;
-import com.linecorp.armeria.internal.client.websocket.WebSocketClientUtil;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -604,8 +604,7 @@ public final class Clients {
      * {@code isUndefinedUri(WebClient.of().uri())} will return {@code true}.
      */
     public static boolean isUndefinedUri(URI uri) {
-        return uri == AbstractWebClientBuilder.UNDEFINED_URI ||
-               uri == WebSocketClientUtil.UNDEFINED_WEBSOCKET_URI;
+        return uri == UNDEFINED_URI;
     }
 
     private Clients() {}

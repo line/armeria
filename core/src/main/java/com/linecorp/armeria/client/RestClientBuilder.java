@@ -57,7 +57,7 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
      *                                  in {@link SessionProtocol}
      */
     RestClientBuilder(URI uri) {
-        super(uri, false);
+        super(uri);
     }
 
     /**

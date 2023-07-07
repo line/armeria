@@ -16,30 +16,22 @@
 
 package com.linecorp.armeria.client;
 
-import org.reactivestreams.Subscription;
-
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
 
-final class HttpRequestSubscriber extends AbstractHttpRequestSubscriber {
-
-    // subscription, id and responseWrapper are assigned in onSubscribe()
-    @Nullable
-    private Subscription subscription;
-    private boolean isSubscriptionCompleted;
+class HttpRequestSubscriber extends AbstractHttpRequestSubscriber {
 
     HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                           HttpRequest request, DecodedHttpResponse originalRes,
                           ClientRequestContext ctx, long timeoutMillis) {
-        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis);
+        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis, false);
     }
 
     @Override
@@ -47,6 +39,7 @@ final class HttpRequestSubscriber extends AbstractHttpRequestSubscriber {
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
             failAndReset(new IllegalArgumentException(
                     "published an HttpObject that's neither Http2Headers nor Http2Data: " + o));
+            PooledObjects.close(o);
             return;
         }
 

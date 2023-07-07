@@ -35,6 +35,19 @@ import com.linecorp.armeria.common.util.Unwrappable;
  * This client has a few different default values for {@link ClientOptions} from {@link WebClient}
  * because of the nature of WebSocket. See {@link WebSocketClientBuilder} for more information.
  *
+ * <p>WebSocket client example:
+ * <pre>{@code
+ * WebSocketClient client =
+ *     WebSocketClient.of("ws://www.example.com");
+ * client.connect("/chat").thenAccept(webSocketSession -> {
+ *
+ *
+ *
+ *    websocket.sendText("Hello, world!");
+ * });
+ *
+ * }</pre>
+ *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455">The WebSocket Protocol</a>
  */
 public interface WebSocketClient extends ClientBuilderParams, Unwrappable {

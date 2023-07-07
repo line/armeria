@@ -269,32 +269,29 @@ final class HttpChannelPool implements AsyncCloseable {
         PooledChannel ch;
         switch (desiredProtocol) {
             case HTTP:
-                ch = acquireNowExact(key, SessionProtocol.H2C);
-                if (ch == null && !serializationFormat.requiresNewConnection(SessionProtocol.H1C)) {
-                    ch = acquireNowExact(key, SessionProtocol.H1C);
+                ch = acquireNowExact(key, SessionProtocol.H2C, serializationFormat);
+                if (ch == null) {
+                    ch = acquireNowExact(key, SessionProtocol.H1C, serializationFormat);
                 }
                 break;
             case HTTPS:
-                ch = acquireNowExact(key, SessionProtocol.H2);
-                if (ch == null && !serializationFormat.requiresNewConnection(SessionProtocol.H1)) {
-                    ch = acquireNowExact(key, SessionProtocol.H1);
+                ch = acquireNowExact(key, SessionProtocol.H2, serializationFormat);
+                if (ch == null) {
+                    ch = acquireNowExact(key, SessionProtocol.H1, serializationFormat);
                 }
                 break;
-            case H1:
-            case H1C:
-                // Do not acquire HTTP/1.1 channel from the pool for WebSocket because we do not know
-                // it's pipelining or not.
-                if (serializationFormat.requiresNewConnection(desiredProtocol)) {
-                    return null;
-                }
             default:
-                ch = acquireNowExact(key, desiredProtocol);
+                ch = acquireNowExact(key, desiredProtocol, serializationFormat);
         }
         return ch;
     }
 
     @Nullable
-    private PooledChannel acquireNowExact(PoolKey key, SessionProtocol protocol) {
+    private PooledChannel acquireNowExact(PoolKey key, SessionProtocol protocol,
+                                          SerializationFormat serializationFormat) {
+        if (serializationFormat.requiresNewConnection(protocol)) {
+            return null;
+        }
         final Deque<PooledChannel> queue = getPool(protocol, key);
         if (queue == null) {
             return null;

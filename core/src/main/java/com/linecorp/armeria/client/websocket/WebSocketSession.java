@@ -19,21 +19,24 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.reactivestreams.Publisher;
+
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
-import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 
 /**
  * A WebSocket session that is created after {@link WebSocketClient#connect(String)} succeeds.
- * You can start sending {@link WebSocketFrame}s via {@link #send(WebSocket)}. You can also subscribe to
+ * You can start sending {@link WebSocketFrame}s via {@link #setOutbound(WebSocket)}. You can also subscribe to
  * {@link #inbound()} to receive {@link WebSocketFrame}s from the server.
  */
 public final class WebSocketSession {
@@ -89,28 +92,28 @@ public final class WebSocketSession {
     /**
      * Sets the {@link WebSocket} which is used to send WebSocket frames to the server.
      */
-    public boolean send(WebSocket outbound) {
+    public boolean setOutbound(Publisher<? extends WebSocketFrame> outbound) {
         requireNonNull(outbound, "outbound");
-        final StreamMessage<HttpData> streamMessage =
-                outbound.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame)));
-        return outboundFuture.complete(streamMessage);
+        final StreamMessage<? extends WebSocketFrame> streamMessage;
+        if (outbound instanceof StreamMessage) {
+            streamMessage = (StreamMessage<? extends WebSocketFrame>) outbound;
+        } else {
+            streamMessage = new PublisherBasedStreamMessage<>(outbound);
+        }
+
+        return outboundFuture.complete(streamMessage.map(
+                webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame))));
     }
 
-    /**
-     * Aborts this {@link WebSocketSession}.
-     */
-    public void abort() {
-        abort(AbortedStreamException.get());
-    }
-
-    /**
-     * Aborts this {@link WebSocketSession} with the specified {@link Throwable}.
-     */
-    public void abort(Throwable cause) {
-        requireNonNull(cause, "cause");
-        final WebSocketWriter outbound = WebSocket.streaming();
-        outbound.abort(cause);
-        send(outbound);
-        inbound().abort(cause);
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("ctx", ctx)
+                          .add("responseHeaders", responseHeaders)
+                          .add("subprotocol", subprotocol)
+                          .add("inbound", inbound)
+                          .add("outboundFuture", outboundFuture)
+                          .add("encoder", encoder)
+                          .toString();
     }
 }

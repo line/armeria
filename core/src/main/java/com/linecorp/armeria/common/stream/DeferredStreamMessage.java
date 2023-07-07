@@ -113,7 +113,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     /**
      * Delegates when the specified {@link CompletionStage} is complete.
      */
-    protected final void delegateWhenCompleteStage(CompletionStage<? extends Publisher<T>> stage) {
+    protected final void delegateOnCompletion(CompletionStage<? extends Publisher<T>> stage) {
         requireNonNull(stage, "stage");
         stage.handle((delegate, thrown) -> {
             if (thrown != null) {

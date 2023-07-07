@@ -610,12 +610,19 @@ version.ref = "jetty11"
 [libraries.jetty11-apache-jstl]
 module = "org.eclipse.jetty:apache-jstl"
 version.ref = "jetty11-jstl"
+[libraries.jetty11-http2-server]
+module = "org.eclipse.jetty.http2:http2-server"
+version.ref = "jetty11"
 [libraries.jetty11-server]
 module = "org.eclipse.jetty:jetty-server"
 version.ref = "jetty11"
 # jetty-webapp for testing interoperability with other servers.
 [libraries.jetty11-webapp]
 module = "org.eclipse.jetty:jetty-webapp"
+version.ref = "jetty11"
+# jetty-websocket for testing WebSocket interoperability.
+[libraries.jetty11-websocket]
+module = "org.eclipse.jetty.websocket:websocket-jakarta-server"
 version.ref = "jetty11"
 
 [libraries.jetty93-annotations]

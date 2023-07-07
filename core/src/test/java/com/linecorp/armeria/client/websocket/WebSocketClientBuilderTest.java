@@ -28,6 +28,14 @@ import com.linecorp.armeria.client.Endpoint;
 class WebSocketClientBuilderTest {
 
     @CsvSource({
+            "http,     ws+http",
+            "https,    ws+https",
+            "h1,       ws+h1",
+            "h1c,      ws+h1c",
+            "h2,       ws+h2",
+            "h2c,      ws+h2c",
+            "http,     ws+http",
+            "https,    ws+https",
             "ws,       ws+http",
             "wss,      ws+https",
             "ws+h1,    ws+h1",
@@ -44,6 +52,14 @@ class WebSocketClientBuilderTest {
     }
 
     @CsvSource({
+            "http,     ws+http",
+            "https,    ws+https",
+            "h1,       ws+h1",
+            "h1c,      ws+h1c",
+            "h2,       ws+h2",
+            "h2c,      ws+h2c",
+            "http,     ws+http",
+            "https,    ws+https",
             "ws,       ws+http",
             "wss,      ws+https",
             "ws+h1,    ws+h1",
@@ -60,6 +76,14 @@ class WebSocketClientBuilderTest {
     }
 
     @CsvSource({
+            "http,     ws+http",
+            "https,    ws+https",
+            "h1,       ws+h1",
+            "h1c,      ws+h1c",
+            "h2,       ws+h2",
+            "h2c,      ws+h2c",
+            "http,     ws+http",
+            "https,    ws+https",
             "ws,       ws+http",
             "wss,      ws+https",
             "ws+h1,    ws+h1",
@@ -82,6 +106,6 @@ class WebSocketClientBuilderTest {
         assertThat(client.options().get(ClientOptions.RESPONSE_TIMEOUT_MILLIS)).isEqualTo(0);
         assertThat(client.options().get(ClientOptions.MAX_RESPONSE_LENGTH)).isEqualTo(0);
         assertThat(client.options().get(ClientOptions.REQUEST_AUTO_ABORT_DELAY_MILLIS)).isEqualTo(5000);
-        assertThat(client.options().get(ClientOptions.ADD_ORIGIN_HEADER)).isTrue();
+        assertThat(client.options().get(ClientOptions.AUTO_FILL_ORIGIN_HEADER)).isTrue();
     }
 }

@@ -16,14 +16,12 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
+import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Set;
 import java.util.function.Function;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
@@ -35,18 +33,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A skeletal builder implementation for {@link WebClient}.
  */
 public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuilder {
-
-    /**
-     * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
-     */
-    static final URI UNDEFINED_URI = URI.create("http://undefined");
-
-    private static final Set<SessionProtocol> SUPPORTED_PROTOCOLS =
-            Sets.immutableEnumSet(
-                    ImmutableList.<SessionProtocol>builder()
-                                 .addAll(SessionProtocol.httpValues())
-                                 .addAll(SessionProtocol.httpsValues())
-                                 .build());
 
     @Nullable
     private final URI uri;
@@ -73,14 +59,13 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    protected AbstractWebClientBuilder(URI uri, boolean webSocket) {
+    protected AbstractWebClientBuilder(URI uri) {
         requireNonNull(uri, "uri");
         if (Clients.isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
             final String givenScheme = requireNonNull(uri, "uri").getScheme();
-            final Scheme scheme = validateScheme(givenScheme, webSocket ? SerializationFormat.WS
-                                                                        : SerializationFormat.NONE);
+            final Scheme scheme = validateScheme(givenScheme);
             if (scheme.uriText().equals(givenScheme)) {
                 // No need to replace the user-specified scheme because it's already in its normalized form.
                 this.uri = uri;
@@ -104,52 +89,42 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      */
     protected AbstractWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                        @Nullable String path) {
-        this(SerializationFormat.NONE, sessionProtocol, endpointGroup, path);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
-     *                                  in {@link SessionProtocol}
-     */
-    protected AbstractWebClientBuilder(SerializationFormat serializationFormat, SessionProtocol sessionProtocol,
-                                       EndpointGroup endpointGroup, @Nullable String path) {
-        validateSerializationFormat(serializationFormat);
-        requireNonNull(sessionProtocol, "sessionProtocol");
-        requireNonNull(endpointGroup, "endpointGroup");
-        validateScheme(serializationFormat.uriText() + '+' + sessionProtocol.uriText(), serializationFormat);
+        validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
         if (path != null) {
             checkArgument(path.startsWith("/"),
                           "path: %s (expected: an absolute path starting with '/')", path);
         }
 
         uri = null;
-        scheme = Scheme.of(serializationFormat, sessionProtocol);
+        scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
         this.path = path;
     }
 
-    private static void validateSerializationFormat(SerializationFormat serializationFormat) {
-        requireNonNull(serializationFormat, "serializationFormat");
-        checkArgument(serializationFormat == SerializationFormat.NONE ||
-                      serializationFormat == SerializationFormat.WS,
-                      "serializationFormat: %s (expected: one of %s and %s)",
-                      serializationFormat, SerializationFormat.NONE, SerializationFormat.WS);
+    /**
+     * Creates a new instance.
+     */
+    protected AbstractWebClientBuilder(@Nullable URI uri, @Nullable Scheme scheme,
+                                       @Nullable EndpointGroup endpointGroup, @Nullable String path) {
+        assert uri != null || (scheme != null && endpointGroup != null);
+        assert path == null || uri == null;
+        this.uri = uri;
+        this.scheme = scheme;
+        this.endpointGroup = endpointGroup;
+        this.path = path;
     }
 
-    private static Scheme validateScheme(String scheme, SerializationFormat serializationFormat) {
+    private static Scheme validateScheme(String scheme) {
         final Scheme parsedScheme = Scheme.tryParse(scheme);
         if (parsedScheme != null) {
-            if ((parsedScheme.serializationFormat() == serializationFormat) &&
-                SUPPORTED_PROTOCOLS.contains(parsedScheme.sessionProtocol())) {
+            if (parsedScheme.serializationFormat() == SerializationFormat.NONE &&
+                httpAndHttpsValues().contains(parsedScheme.sessionProtocol())) {
                 return parsedScheme;
             }
         }
 
-        throw new IllegalArgumentException("scheme : " + scheme +
-                                           " (expected: one of " + SUPPORTED_PROTOCOLS + " with " +
-                                           serializationFormat + ')');
+        throw new IllegalArgumentException("scheme: " + scheme +
+                                           " (expected: one of " + httpAndHttpsValues() + ')');
     }
 
     /**

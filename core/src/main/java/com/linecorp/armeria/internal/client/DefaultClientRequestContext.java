@@ -462,7 +462,7 @@ public final class DefaultClientRequestContext
             final String origin = origin();
             if (origin != null) {
                 headersBuilder.set(HttpHeaderNames.ORIGIN, origin);
-            } else if (options().addOriginHeader()) {
+            } else if (options().autoFillOriginHeader()) {
                 final String uriText = sessionProtocol().isTls() ? SessionProtocol.HTTPS.uriText()
                                                                  : SessionProtocol.HTTP.uriText();
                 headersBuilder.set(HttpHeaderNames.ORIGIN, uriText + "://" + endpointAuthority);

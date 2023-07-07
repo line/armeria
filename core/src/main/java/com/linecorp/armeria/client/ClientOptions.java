@@ -89,8 +89,8 @@ public final class ClientOptions
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6454.html">The Web Origin Concept</a>
      */
     @UnstableApi
-    public static final ClientOption<Boolean> ADD_ORIGIN_HEADER =
-            ClientOption.define("ADD_ORIGIN_HEADER", false); // TODO(minwoox): Add to Flags
+    public static final ClientOption<Boolean> AUTO_FILL_ORIGIN_HEADER =
+            ClientOption.define("AUTO_FILL_ORIGIN_HEADER", false); // TODO(minwoox): Add to Flags
 
     /**
      * The redirect configuration.
@@ -320,8 +320,8 @@ public final class ClientOptions
      * Returns whether to add an {@link HttpHeaderNames#ORIGIN} header automatically when sending
      * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
      */
-    public boolean addOriginHeader() {
-        return get(ADD_ORIGIN_HEADER);
+    public boolean autoFillOriginHeader() {
+        return get(AUTO_FILL_ORIGIN_HEADER);
     }
 
     /**

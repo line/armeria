@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.websocket;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -64,7 +66,7 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
  *   <li>{@link ClientOptions#RESPONSE_TIMEOUT_MILLIS} is {@code 0}.</li>
  *   <li>{@link ClientOptions#MAX_RESPONSE_LENGTH} is {@code 0}.</li>
  *   <li>{@link ClientOptions#REQUEST_AUTO_ABORT_DELAY_MILLIS} is {@code 5000}.</li>
- *   <li>{@link ClientOptions#ADD_ORIGIN_HEADER} is {@code true}.</li>
+ *   <li>{@link ClientOptions#AUTO_FILL_ORIGIN_HEADER} is {@code true}.</li>
  * </ul>
  */
 @UnstableApi
@@ -77,28 +79,64 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     private List<String> subprotocols = ImmutableList.of();
 
     WebSocketClientBuilder(URI uri) {
-        super(uri, true);
+        super(validateUri(requireNonNull(uri, "uri")), null, null, null);
         setWebSocketDefaultOption();
     }
 
     WebSocketClientBuilder(Scheme scheme, EndpointGroup endpointGroup, @Nullable String path) {
-        super(validateSerializationFormat(requireNonNull(scheme, "scheme").serializationFormat()),
-              scheme.sessionProtocol(), endpointGroup, path);
+        super(null, validateScheme(requireNonNull(scheme, "scheme")), endpointGroup, path);
         setWebSocketDefaultOption();
     }
 
-    private static SerializationFormat validateSerializationFormat(SerializationFormat serializationFormat) {
-        requireNonNull(serializationFormat, "serializationFormat");
-        checkArgument(serializationFormat == SerializationFormat.WS,
-                      "serializationFormat: %s (expected: %s)", serializationFormat, SerializationFormat.WS);
-        return serializationFormat;
+    private static URI validateUri(URI uri) {
+        if (Clients.isUndefinedUri(uri)) {
+            return uri;
+        }
+        final String givenScheme = requireNonNull(uri, "uri").getScheme();
+        final Scheme scheme = validateScheme(givenScheme);
+        if (scheme.uriText().equals(givenScheme)) {
+            // No need to replace the user-specified scheme because it's already in its normalized form.
+            return uri;
+        }
+        // Replace the user-specified scheme with the normalized one.
+        // e.g. http://foo.com/ -> ws+http://foo.com/
+        return URI.create(scheme.uriText() + uri.toString().substring(givenScheme.length()));
+    }
+
+    private static Scheme validateScheme(String scheme) {
+        final Scheme parsedScheme = Scheme.tryParse(scheme);
+        if (parsedScheme != null) {
+            return validateScheme(parsedScheme);
+        }
+
+        throw invalidSchemeException(scheme);
+    }
+
+    private static Scheme validateScheme(Scheme scheme) {
+        final SerializationFormat serializationFormat = scheme.serializationFormat();
+        if ((serializationFormat == SerializationFormat.WS ||
+             serializationFormat == SerializationFormat.NONE) &&
+            httpAndHttpsValues().contains(scheme.sessionProtocol())) {
+            if (serializationFormat == SerializationFormat.WS) {
+                return scheme;
+            }
+            return Scheme.of(SerializationFormat.WS, scheme.sessionProtocol());
+        }
+        throw invalidSchemeException(scheme.toString());
+    }
+
+    private static IllegalArgumentException invalidSchemeException(String scheme) {
+        return new IllegalArgumentException(
+                String.format("scheme: %s (expected serialization format: %s or %s," +
+                              " expected session protocol: one of %s)", scheme, SerializationFormat.WS,
+                              SerializationFormat.NONE, httpAndHttpsValues()));
     }
 
     private void setWebSocketDefaultOption() {
         responseTimeoutMillis(0);
         maxResponseLength(0);
         requestAutoAbortDelayMillis(5000);
-        addOriginHeader(true);
+        autoFillOriginHeader(true);
     }
 
     /**
@@ -147,9 +185,9 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
      * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
      * It's {@code true} by default.
      */
-    public WebSocketClientBuilder addOriginHeader(boolean addOriginHeader) {
+    public WebSocketClientBuilder autoFillOriginHeader(boolean autoFillOriginHeader) {
         //TODO(minwoox): Promote this to AbstractClientOptionsBuilder.
-        option(ClientOptions.ADD_ORIGIN_HEADER, addOriginHeader);
+        option(ClientOptions.AUTO_FILL_ORIGIN_HEADER, autoFillOriginHeader);
         return this;
     }
 

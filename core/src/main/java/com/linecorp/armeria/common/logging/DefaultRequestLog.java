@@ -724,11 +724,14 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void maybeSetScheme() {
-        if (sessionProtocol != null && serializationFormat != SerializationFormat.NONE &&
-            !isAvailable(RequestLogProperty.SCHEME)) {
-            scheme = Scheme.of(serializationFormat, sessionProtocol);
-            updateFlags(RequestLogProperty.SCHEME);
+        if (isAvailable(RequestLogProperty.SCHEME) ||
+            serializationFormat == SerializationFormat.NONE) {
+            return;
         }
+
+        assert sessionProtocol != null;
+        scheme = Scheme.of(serializationFormat, sessionProtocol);
+        updateFlags(RequestLogProperty.SCHEME);
     }
 
     @Override

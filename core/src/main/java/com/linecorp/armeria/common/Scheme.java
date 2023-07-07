@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.base.Ascii;
@@ -49,7 +48,7 @@ public final class Scheme implements Comparable<Scheme> {
 
     static {
         // Pre-populate all possible scheme combos.
-        final Map<String, Scheme> schemes = new HashMap<>();
+        final ImmutableMap.Builder<String, Scheme> schemes = ImmutableMap.builder();
         for (SerializationFormat f : SerializationFormat.values()) {
             for (SessionProtocol p : SessionProtocol.values()) {
                 final String ftxt = f.uriText();
@@ -61,19 +60,17 @@ public final class Scheme implements Comparable<Scheme> {
                 final Scheme scheme = new Scheme(f, p);
                 schemes.put(ftxt + '+' + ptxt, scheme);
                 schemes.put(ptxt + '+' + ftxt, scheme);
+                if (SerializationFormat.WS == f) {
+                    if (SessionProtocol.HTTP == p) {
+                        schemes.put("ws", scheme);
+                    } else if (SessionProtocol.HTTPS == p) {
+                        schemes.put("wss", scheme);
+                    }
+                }
             }
         }
 
-        // Add WebSocket schemes.
-        final Scheme wsScheme = schemes.get(SerializationFormat.WS.uriText() + '+' +
-                                            SessionProtocol.HTTP.uriText());
-        assert wsScheme != null;
-        schemes.put("ws", wsScheme);
-        final Scheme wssScheme = schemes.get(SerializationFormat.WS.uriText() + '+' +
-                                             SessionProtocol.HTTPS.uriText());
-        assert wssScheme != null;
-        schemes.put("wss", wssScheme);
-        SCHEMES = ImmutableMap.copyOf(schemes);
+        SCHEMES = schemes.build();
     }
 
     /**

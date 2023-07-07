@@ -93,7 +93,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
      * Creates a new instance.
      */
     EurekaEndpointGroupBuilder(URI eurekaUri) {
-        super(requireNonNull(eurekaUri, "eurekaUri"), false);
+        super(requireNonNull(eurekaUri, "eurekaUri"));
     }
 
     /**
