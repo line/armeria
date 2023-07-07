@@ -48,7 +48,12 @@ import Alert from '@material-ui/lab/Alert';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
-import { Method, ServiceType } from '../../lib/specification';
+import {
+  Method,
+  Route,
+  RoutePathType,
+  ServiceType,
+} from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
 import EndpointPath from './EndpointPath';
@@ -82,7 +87,7 @@ interface OwnProps {
   debugFormIsOpen: boolean;
   setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
   jsonSchemas: any[];
-  docServiceRoute: string;
+  docServiceRoute?: Route;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -117,15 +122,21 @@ const copyTextToClipboard = (text: string) => {
   modal.removeChild(textArea);
 };
 
-const parseServerRootPath = (docServiceRoute: string) => {
-  const plainRoute = docServiceRoute.replace('/*', '');
-  const index = window.location.href.indexOf(plainRoute);
-
-  if (index === -1) {
+const parseServerRootPath = (docServiceRoute: Route | undefined) => {
+  if (
+    docServiceRoute === undefined ||
+    docServiceRoute.pathType !== RoutePathType.PREFIX
+  ) {
     return '';
   }
-  const rootPath = window.location.href.substring(0, index);
-  return rootPath;
+
+  // Remove '/*' from the path
+  const docServicePath = docServiceRoute.patternString.slice(0, -2);
+
+  return window.location.pathname.substring(
+    0,
+    window.location.pathname.indexOf(docServicePath),
+  );
 };
 
 const toggle = (prev: boolean, override: unknown) => {

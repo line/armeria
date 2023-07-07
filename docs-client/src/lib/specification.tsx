@@ -88,13 +88,26 @@ export interface Struct {
   descriptionInfo: DescriptionInfo;
 }
 
+export enum RoutePathType {
+  EXACT = 'EXACT',
+  PREFIX = 'PREFIX',
+  PARAMETERIZED = 'PARAMETERIZED',
+  REGEX = 'REGEX',
+  REGEX_WITH_PREFIX = 'REGEX_WITH_PREFIX',
+}
+
+export interface Route {
+  pathType: RoutePathType;
+  patternString: string;
+}
+
 export interface SpecificationData {
   services: Service[];
   enums: Enum[];
   structs: Struct[];
   exceptions: Struct[];
   exampleHeaders: { [name: string]: string }[];
-  docServiceRoute: string;
+  docServiceRoute?: Route;
 }
 
 export function simpleName(fullName: string): string {
@@ -148,7 +161,7 @@ export class Specification {
 
   private readonly uniqueStructNames: boolean;
 
-  private readonly docServiceRoute: string;
+  private readonly docServiceRoute?: Route;
 
   constructor(data: SpecificationData) {
     this.data = JSON.parse(JSON.stringify(data));
@@ -201,7 +214,7 @@ export class Specification {
     return this.structsByName.get(name);
   }
 
-  public getDocServiceRoute(): string {
+  public getDocServiceRoute(): Route | undefined {
     return this.docServiceRoute;
   }
 
