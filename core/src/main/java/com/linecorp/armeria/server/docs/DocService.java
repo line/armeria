@@ -273,8 +273,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             this.services = services;
 
             final CompletableFuture<ServiceSpecification> serviceSpecificationFuture =
-                    generateServiceSpecification(executor)
-                            .thenApply(spec -> spec.withDocServiceRoute(docServiceRoute));
+                    generateServiceSpecification(executor, docServiceRoute);
 
             final List<CompletableFuture<AggregatedHttpFile>> files =
                     TARGET_PATHS.stream()
@@ -316,12 +315,13 @@ public final class DocService extends SimpleDecoratingHttpService {
             }, executor));
         }
 
-        private CompletableFuture<ServiceSpecification> generateServiceSpecification(Executor executor) {
+        private CompletableFuture<ServiceSpecification> generateServiceSpecification(Executor executor,
+                                                                                     Route docServiceRoute) {
             return CompletableFuture.supplyAsync(() -> {
                 final DocStringSupport docStringSupport = new DocStringSupport(services);
                 ServiceSpecification spec = generate(services);
                 spec = docStringSupport.addDocStrings(spec);
-                spec = exampleSupport.addExamples(spec);
+                spec = exampleSupport.addExamples(spec, docServiceRoute);
                 return spec;
             }, executor);
         }

@@ -161,14 +161,14 @@ class GraphqlDocServiceTest {
         final AggregatedHttpResponse res = client.get(path + "/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
+        final Route docServiceRoute = Route.builder().pathPrefix(path).build();
         final ServiceSpecification emptySpecification = new ServiceSpecification(ImmutableList.of(),
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of(),
                                                                                  ImmutableList.of(),
-                                                                                 ImmutableList.of());
-        final Route docServiceRoute = Route.builder().pathPrefix(path).build();
-        final JsonNode expectedJson = mapper.valueToTree(
-                emptySpecification.withDocServiceRoute(docServiceRoute));
+                                                                                 ImmutableList.of(),
+                                                                                 docServiceRoute);
+        final JsonNode expectedJson = mapper.valueToTree(emptySpecification);
         assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 }
