@@ -31,13 +31,11 @@ import io.grpc.StatusRuntimeException;
 
 /**
  * A {@link GrpcStatusFunction} that provides a way to include details of a status into a {@link Metadata}.
- * The details are stored in the `grpc-status-details-bin` key in the {@link Metadata}
- * as a {@link com.google.rpc.Status}.
  * You can implement a mapping function to convert {@link Throwable} into a {@link com.google.rpc.Status}
  * which is stored in the `grpc-status-details-bin` key in the {@link Metadata}.
  * If a given {@link Throwable} is an instance of either {@link StatusRuntimeException} or
- * {@link StatusException}, returns a {@link Status} retrieved from the exception
- * prior to the mapping function you implemented.
+ * {@link StatusException}, the {@link Status} retrieved from the exception is
+ * returned with higher priority.
  */
 @UnstableApi
 public interface GoogleGrpcStatusFunction extends GrpcStatusFunction {

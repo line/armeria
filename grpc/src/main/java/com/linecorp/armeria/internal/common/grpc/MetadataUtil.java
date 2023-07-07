@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import io.grpc.InternalMetadata;
 import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
-import io.grpc.protobuf.lite.ProtoLiteUtils;
+import io.grpc.protobuf.ProtoUtils;
 import io.netty.util.AsciiString;
 
 /**
@@ -51,7 +51,7 @@ public final class MetadataUtil {
      */
     public static final Key<Status> GRPC_STATUS_DETAILS_BIN_KEY = Key.of(
             GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN.toString(),
-            ProtoLiteUtils.metadataMarshaller(Status.getDefaultInstance()));
+            ProtoUtils.metadataMarshaller(Status.getDefaultInstance()));
 
     private static final Logger logger = LoggerFactory.getLogger(MetadataUtil.class);
 
