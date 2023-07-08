@@ -22,10 +22,13 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Adds the mapping of {@link ResponseAs} and {@link Predicate} in order to return {@link ResponseAs} whose
  * {@link Predicate} is evaluated as true.
  */
+@UnstableApi
 public class ConditionalResponseAs<T, R, V> {
 
     private final ResponseAs<T, R> originalResponseAs;

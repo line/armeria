@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.stream.StreamMessages;
 @FunctionalInterface
 public interface ResponseAs<T, R> {
     Predicate<AggregatedHttpResponse> SUCCESS_PREDICATE = res -> res.status().isSuccess();
+    Predicate<AggregatedHttpResponse> TRUE_PREDICATE = unused -> true;
 
     /**
      * Aggregates an {@link HttpResponse} and waits the result of {@link HttpResponse#aggregate()}.
@@ -150,7 +151,7 @@ public interface ResponseAs<T, R> {
             Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(clazz, "clazz");
         return new BlockingConditionalResponseAs<>(blocking(),
-                                                   AggregatedResponseAs.json(clazz, predicate),
+                                                   AggregatedResponseAs.json(clazz, TRUE_PREDICATE),
                                                    predicate);
     }
 
@@ -160,7 +161,7 @@ public interface ResponseAs<T, R> {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
         return new BlockingConditionalResponseAs<>(
-                blocking(), AggregatedResponseAs.json(clazz, mapper, predicate), predicate);
+                blocking(), AggregatedResponseAs.json(clazz, mapper, TRUE_PREDICATE), predicate);
     }
 
     @UnstableApi
@@ -168,7 +169,7 @@ public interface ResponseAs<T, R> {
             TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(typeRef, "typeRef");
         return new BlockingConditionalResponseAs<>(blocking(),
-                                                   AggregatedResponseAs.json(typeRef, predicate),
+                                                   AggregatedResponseAs.json(typeRef, TRUE_PREDICATE),
                                                    predicate);
     }
 
@@ -179,7 +180,7 @@ public interface ResponseAs<T, R> {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         return new BlockingConditionalResponseAs<>(
-                blocking(), AggregatedResponseAs.json(typeRef, mapper, predicate), predicate);
+                blocking(), AggregatedResponseAs.json(typeRef, mapper, TRUE_PREDICATE), predicate);
     }
 
     /**

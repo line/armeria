@@ -24,10 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseEntity;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
+@UnstableApi
 public final class BlockingConditionalResponseAs<V>
         extends ConditionalResponseAs<HttpResponse, AggregatedHttpResponse, ResponseEntity<V>> {
-    private static final Predicate<AggregatedHttpResponse> SUCCESS_PREDICATE = res -> res.status().isSuccess();
+    private static final Predicate<AggregatedHttpResponse> TRUE_PREDICATE = unused -> true;
 
     BlockingConditionalResponseAs(ResponseAs<HttpResponse, AggregatedHttpResponse> originalResponseAs,
                                   ResponseAs<AggregatedHttpResponse, ResponseEntity<V>> responseAs,
@@ -81,7 +83,7 @@ public final class BlockingConditionalResponseAs<V>
      * {@link Predicate} is evaluated as true.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(Class<? extends V> clazz) {
-        return orElse(AggregatedResponseAs.json(clazz, SUCCESS_PREDICATE));
+        return orElse(AggregatedResponseAs.json(clazz, TRUE_PREDICATE));
     }
 
     /**
@@ -90,7 +92,7 @@ public final class BlockingConditionalResponseAs<V>
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(
             Class<? extends V> clazz, ObjectMapper objectMapper) {
-        return orElse(AggregatedResponseAs.json(clazz, objectMapper, SUCCESS_PREDICATE));
+        return orElse(AggregatedResponseAs.json(clazz, objectMapper, TRUE_PREDICATE));
     }
 
     /**
@@ -98,7 +100,7 @@ public final class BlockingConditionalResponseAs<V>
      * {@link Predicate} is evaluated as true.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(TypeReference<? extends V> typeRef) {
-        return orElse(AggregatedResponseAs.json(typeRef, SUCCESS_PREDICATE));
+        return orElse(AggregatedResponseAs.json(typeRef, TRUE_PREDICATE));
     }
 
     /**
@@ -107,6 +109,6 @@ public final class BlockingConditionalResponseAs<V>
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(
             TypeReference<? extends V> typeRef, ObjectMapper objectMapper) {
-        return orElse(AggregatedResponseAs.json(typeRef, objectMapper, SUCCESS_PREDICATE));
+        return orElse(AggregatedResponseAs.json(typeRef, objectMapper, TRUE_PREDICATE));
     }
 }
