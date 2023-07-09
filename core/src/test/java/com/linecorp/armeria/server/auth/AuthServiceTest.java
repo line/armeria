@@ -242,11 +242,15 @@ class AuthServiceTest {
             }
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpUri() + "/basic"))) {
                 assertThat(res.getCode()).isEqualTo(401);
+                assertThat(res.getHeaders("WWW-Authenticate")).hasSize(1);
+                assertThat(res.getHeaders()[0].getValue()).isEqualTo("Basic");
             }
             try (CloseableHttpResponse res = hc.execute(
                     basicGetRequest("/basic", AuthToken.ofBasic("choco", "pangyo"),
                                     AUTHORIZATION))) {
                 assertThat(res.getCode()).isEqualTo(401);
+                assertThat(res.getHeaders("WWW-Authenticate")).hasSize(1);
+                assertThat(res.getHeaders()[0].getValue()).isEqualTo("Basic");
             }
         }
     }
