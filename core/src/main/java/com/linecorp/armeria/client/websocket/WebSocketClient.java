@@ -37,15 +37,32 @@ import com.linecorp.armeria.common.util.Unwrappable;
  *
  * <p>WebSocket client example:
  * <pre>{@code
- * WebSocketClient client =
- *     WebSocketClient.of("ws://www.example.com");
+ * WebSocketClient client = WebSocketClient.of("ws://www.example.com");
  * client.connect("/chat").thenAccept(webSocketSession -> {
+ *     // Write messages to the server.
+ *     WebSocketWriter writer = WebSocket.streaming();
+ *     webSocketSessions.setOutbound(writer);
+ *     outbound.write("Hello ");
+ *     // You can also use backpressure using whenConsumed().
+ *     outbound.whenConsumed().thenRun(() -> outbound.write("world!"));
  *
- *
- *
- *    websocket.sendText("Hello, world!");
+ *     // Read messages from the server.
+ *     Subscriber<WebSocketFrame> myWebSocketSubscriber = new Subscriber<WebSocketFrame>() {
+ *         @Override
+ *         public void onSubscribe(Subscription s) {
+ *             s.request(Long.MAX_VALUE);
+ *         }
+ *         @Override
+ *         public void onNext(WebSocketFrame webSocketFrame) {
+ *             if (webSocketFrame.type() == WebSocketFrameType.TEXT) {
+ *                 System.out.println(webSocketFrame.text());
+ *             }
+ *             ...
+ *         }
+ *         ...
+ *     };
+ *     webSocketSessions.inbound().subscribe(myWebSocketSubscriber);
  * });
- *
  * }</pre>
  *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455">The WebSocket Protocol</a>

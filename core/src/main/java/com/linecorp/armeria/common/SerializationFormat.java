@@ -77,14 +77,14 @@ public final class SerializationFormat implements Comparable<SerializationFormat
 
         // Register the core formats first.
         NONE = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
-                        new SerializationFormatProvider.Entry("none", create("application", "x-none")), false);
+                        new SerializationFormatProvider.Entry("none", create("application", "x-none")));
         // WebSocket does not use media type but set it with the application/octet-stream which represents
         // for arbitrary binary data.
         WS = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
-                      new SerializationFormatProvider.Entry("ws", OCTET_STREAM), true);
+                      new SerializationFormatProvider.Entry("ws", OCTET_STREAM));
         UNKNOWN = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
                            new SerializationFormatProvider.Entry(
-                                   "unknown", create("application", "x-unknown")), false);
+                                   "unknown", create("application", "x-unknown")));
 
         // Load all serialization formats from the providers.
         final List<SerializationFormatProvider> providers = ImmutableList.copyOf(
@@ -94,8 +94,8 @@ public final class SerializationFormat implements Comparable<SerializationFormat
             logger.debug("Available {}s: {}", SerializationFormatProvider.class.getSimpleName(), providers);
 
             providers.forEach(p -> p.entries().forEach(e -> register(mutableUriTextToFormats,
-                                                                     mutableSimplifiedMediaTypeToFormats, e,
-                                                                     false)));
+                                                                     mutableSimplifiedMediaTypeToFormats, e
+            )));
         }
 
         uriTextToFormats = ImmutableBiMap.copyOf(mutableUriTextToFormats);
@@ -105,13 +105,13 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     private static SerializationFormat register(
             BiMap<String, SerializationFormat> uriTextToFormats,
             Multimap<MediaType, SerializationFormat> simplifiedMediaTypeToFormats,
-            Entry entry, boolean webSocket) {
+            Entry entry) {
 
         checkState(!uriTextToFormats.containsKey(entry.uriText),
                    "serialization format registered already: %s", entry.uriText);
 
         final SerializationFormat value = new SerializationFormat(
-                entry.uriText, entry.primaryMediaType, entry.mediaTypes, webSocket);
+                entry.uriText, entry.primaryMediaType, entry.mediaTypes);
         for (MediaType type : entry.mediaTypes) {
             checkMediaType(simplifiedMediaTypeToFormats, type);
         }
@@ -188,14 +188,11 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     private final String uriText;
     private final MediaType primaryMediaType;
     private final MediaTypeSet mediaTypes;
-    private final boolean webSocket;
 
-    private SerializationFormat(String uriText, MediaType primaryMediaType, MediaTypeSet mediaTypes,
-                                boolean webSocket) {
+    private SerializationFormat(String uriText, MediaType primaryMediaType, MediaTypeSet mediaTypes) {
         this.uriText = uriText;
         this.primaryMediaType = primaryMediaType;
         this.mediaTypes = mediaTypes;
-        this.webSocket = webSocket;
     }
 
     /**
@@ -224,7 +221,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      * from the connection pool.
      */
     public boolean requiresNewConnection(SessionProtocol protocol) {
-        return webSocket && !protocol.isMultiplex();
+        return this == WS && !protocol.isMultiplex();
     }
 
     /**
