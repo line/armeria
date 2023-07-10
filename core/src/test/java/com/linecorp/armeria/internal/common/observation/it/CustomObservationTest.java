@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.it;
+package com.linecorp.armeria.internal.common.observation.it;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -34,8 +34,8 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.observation.HttpClientContext;
 import com.linecorp.armeria.client.observation.MicrometerObservationClient;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MicrometerObservationRegistryUtils;
-import com.linecorp.armeria.common.brave.SpanCollector;
+import com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils;
+import com.linecorp.armeria.internal.common.observation.SpanCollector;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.observation.HttpServerContext;

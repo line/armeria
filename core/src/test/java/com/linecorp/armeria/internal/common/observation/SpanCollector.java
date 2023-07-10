@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.brave;
+package com.linecorp.armeria.internal.common.observation;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;

@@ -22,14 +22,13 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 
-import io.micrometer.observation.Observation;
 import io.micrometer.observation.Observation.Context;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.transport.RequestReplySenderContext;
 
 /**
- * A {@link Observation.Context} which may be used in conjunction with {@link MicrometerObservationClient}
+ * A {@link Context} which may be used in conjunction with {@link MicrometerObservationClient}
  * to implement custom {@link ObservationConvention}s or {@link ObservationHandler}s.
  * <pre>{@code
  * ObservationConvention<HttpClientContext> convention = ...

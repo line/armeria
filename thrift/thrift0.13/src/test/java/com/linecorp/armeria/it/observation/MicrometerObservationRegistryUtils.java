@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.it.observation;
 
 import java.util.Arrays;
 import java.util.Collections;

@@ -21,14 +21,13 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.micrometer.observation.Observation;
 import io.micrometer.observation.Observation.Context;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.transport.RequestReplyReceiverContext;
 
 /**
- * A {@link Observation.Context} which may be used in conjunction with {@link MicrometerObservationService}
+ * A {@link Context} which may be used in conjunction with {@link MicrometerObservationService}
  * to implement custom {@link ObservationConvention}s or {@link ObservationHandler}s.
  * <pre>{@code
  * ObservationConvention<HttpServerContext> convention = ...

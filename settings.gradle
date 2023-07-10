@@ -55,7 +55,6 @@ includeWithFlags ':kotlin',                              'java', 'publish', 'rel
 includeWithFlags ':logback',                             'java', 'publish', 'relocate'
 includeWithFlags ':logback13',                           'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate'
-includeWithFlags ':observation',                         'java', 'publish', 'relocate'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate'
 includeWithFlags ':resilience4j2',                       'java17', 'publish', 'relocate'

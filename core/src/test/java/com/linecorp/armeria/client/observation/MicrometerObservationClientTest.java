@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.observation;
 
 import static com.linecorp.armeria.client.observation.MicrometerObservationClient.newDecorator;
-import static com.linecorp.armeria.common.MicrometerObservationRegistryUtils.observationRegistry;
+import static com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils.observationRegistry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,10 +52,9 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.brave.HelloService;
-import com.linecorp.armeria.common.brave.SpanCollector;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.observation.SpanCollector;
 
 import brave.Span.Kind;
 import brave.Tracing;
@@ -235,7 +234,7 @@ class MicrometerObservationClientTest {
                 .of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
                     HttpHeaderNames.SCHEME, "http",
                     HttpHeaderNames.AUTHORITY, "foo.com"));
-        final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class,
+        final RpcRequest rpcReq = RpcRequest.of(Object.class,
                                                 "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");

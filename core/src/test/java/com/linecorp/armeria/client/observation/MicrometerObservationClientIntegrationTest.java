@@ -35,9 +35,9 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MicrometerObservationRegistryUtils;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.propagation.CurrentTraceContext;

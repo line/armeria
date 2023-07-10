@@ -35,7 +35,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.observation.MicrometerObservationClient;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MicrometerObservationRegistryUtils;
+import com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;

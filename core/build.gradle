@@ -156,6 +156,18 @@ dependencies {
     optionalImplementation libs.brotli4j.osx
     optionalImplementation libs.brotli4j.osx.aarch64
     optionalImplementation libs.brotli4j.windows
+
+    // for testing the observation API with tracing
+    testImplementation (libs.micrometer.tracing.integration.test) {
+        exclude group: "org.mockito"
+    }
+    if (project.ext.targetJavaVersion >= 11) {
+        testImplementation project(':thrift0.18')
+    } else {
+        testImplementation project(':thrift0.17')
+    }
+    testImplementation libs.brave.context.slf4j
+    testImplementation libs.brave.instrumentation.http.tests
 }
 
 if (!rootProject.hasProperty('noWeb')) {
