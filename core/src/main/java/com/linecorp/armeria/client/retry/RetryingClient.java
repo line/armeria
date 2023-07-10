@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -480,11 +481,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
         final RequestLogAccess log = ctx.log();
         final String value;
-        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            value = log.partial().responseHeaders().get(HttpHeaderNames.RETRY_AFTER);
-        } else {
-            value = null;
-        }
+        final RequestLog requestLog = log.getIfAvailable(RequestLogProperty.RESPONSE_HEADERS);
+        value = requestLog != null ? requestLog.responseHeaders().get(HttpHeaderNames.RETRY_AFTER) : null;
 
         if (value != null) {
             try {
