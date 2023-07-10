@@ -32,6 +32,7 @@ findbugs = "3.0.2"
 futures-completable = "0.3.5"
 futures-extra = "4.3.1"
 gax-grpc = "2.29.0"
+test-retry = "1.5.3"
 graphql-java = "20.4"
 graphql-kotlin = "6.5.2"
 groovy = "3.0.17"
@@ -1303,3 +1304,4 @@ ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle-pl
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-gradle-plugin" }
 node-gradle = { id = "com.github.node-gradle.node", version.ref = "node-gradle-plugin" }
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot2" }
+test-retry = { id = 'org.gradle.test-retry', version.ref = "test-retry" }
