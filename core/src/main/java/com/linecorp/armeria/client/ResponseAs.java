@@ -147,7 +147,7 @@ public interface ResponseAs<T, R> {
     }
 
     @UnstableApi
-    static <V> BlockingConditionalResponseAs<V> andThenJson(
+    static <V> BlockingConditionalResponseAs<V> json(
             Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(clazz, "clazz");
         return new BlockingConditionalResponseAs<>(blocking(),
@@ -156,7 +156,7 @@ public interface ResponseAs<T, R> {
     }
 
     @UnstableApi
-    static <V> BlockingConditionalResponseAs<V> andThenJson(
+    static <V> BlockingConditionalResponseAs<V> json(
             Class<? extends V> clazz, ObjectMapper mapper, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
@@ -165,7 +165,7 @@ public interface ResponseAs<T, R> {
     }
 
     @UnstableApi
-    static <V> BlockingConditionalResponseAs<V> andThenJson(
+    static <V> BlockingConditionalResponseAs<V> json(
             TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(typeRef, "typeRef");
         return new BlockingConditionalResponseAs<>(blocking(),
@@ -174,7 +174,7 @@ public interface ResponseAs<T, R> {
     }
 
     @UnstableApi
-    static <V> BlockingConditionalResponseAs<V> andThenJson(
+    static <V> BlockingConditionalResponseAs<V> json(
             TypeReference<? extends V> typeRef, ObjectMapper mapper,
             Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(typeRef, "typeRef");
