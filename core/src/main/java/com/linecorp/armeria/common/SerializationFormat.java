@@ -94,8 +94,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
             logger.debug("Available {}s: {}", SerializationFormatProvider.class.getSimpleName(), providers);
 
             providers.forEach(p -> p.entries().forEach(e -> register(mutableUriTextToFormats,
-                                                                     mutableSimplifiedMediaTypeToFormats, e
-            )));
+                                                                     mutableSimplifiedMediaTypeToFormats, e)));
         }
 
         uriTextToFormats = ImmutableBiMap.copyOf(mutableUriTextToFormats);

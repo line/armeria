@@ -47,10 +47,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      * Creates a new instance.
      */
     protected AbstractWebClientBuilder() {
-        uri = UNDEFINED_URI;
-        scheme = null;
-        endpointGroup = null;
-        path = null;
+        this(UNDEFINED_URI, null, null, null);
     }
 
     /**
@@ -60,25 +57,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      *                                  in {@link SessionProtocol}
      */
     protected AbstractWebClientBuilder(URI uri) {
-        requireNonNull(uri, "uri");
-        if (Clients.isUndefinedUri(uri)) {
-            this.uri = uri;
-        } else {
-            final String givenScheme = requireNonNull(uri, "uri").getScheme();
-            final Scheme scheme = validateScheme(givenScheme);
-            if (scheme.uriText().equals(givenScheme)) {
-                // No need to replace the user-specified scheme because it's already in its normalized form.
-                this.uri = uri;
-            } else {
-                // Replace the user-specified scheme with the normalized one.
-                // e.g. http://foo.com/ -> none+http://foo.com/
-                this.uri = URI.create(scheme.uriText() +
-                                      uri.toString().substring(givenScheme.length()));
-            }
-        }
-        scheme = null;
-        endpointGroup = null;
-        path = null;
+        this(validateUri(uri), null, null, null);
     }
 
     /**
@@ -89,16 +68,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      */
     protected AbstractWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                        @Nullable String path) {
-        validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
-        if (path != null) {
-            checkArgument(path.startsWith("/"),
-                          "path: %s (expected: an absolute path starting with '/')", path);
-        }
-
-        uri = null;
-        scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
-        this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
-        this.path = path;
+        this(null, validateScheme(sessionProtocol), requireNonNull(endpointGroup, "endpointGroup"), path);
     }
 
     /**
@@ -111,7 +81,29 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
         this.uri = uri;
         this.scheme = scheme;
         this.endpointGroup = endpointGroup;
-        this.path = path;
+        this.path = validatePath(path);
+    }
+
+    private static URI validateUri(URI uri) {
+        requireNonNull(uri, "uri");
+        if (Clients.isUndefinedUri(uri)) {
+            return uri;
+        }
+        final String givenScheme = requireNonNull(uri, "uri").getScheme();
+        final Scheme scheme = validateScheme(givenScheme);
+        if (scheme.uriText().equals(givenScheme)) {
+            // No need to replace the user-specified scheme because it's already in its normalized form.
+            return uri;
+        }
+        // Replace the user-specified scheme with the normalized one.
+        // e.g. http://foo.com/ -> none+http://foo.com/
+        return URI.create(scheme.uriText() + uri.toString().substring(givenScheme.length()));
+    }
+
+    private static Scheme validateScheme(SessionProtocol sessionProtocol) {
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        validateScheme(sessionProtocol.uriText());
+        return Scheme.of(SerializationFormat.NONE, sessionProtocol);
     }
 
     private static Scheme validateScheme(String scheme) {
@@ -125,6 +117,15 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
 
         throw new IllegalArgumentException("scheme: " + scheme +
                                            " (expected: one of " + httpAndHttpsValues() + ')');
+    }
+
+    @Nullable
+    private static String validatePath(@Nullable String path) {
+        if (path != null) {
+            checkArgument(path.startsWith("/"),
+                          "path: %s (expected: an absolute path starting with '/')", path);
+        }
+        return path;
     }
 
     /**
