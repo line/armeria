@@ -474,7 +474,9 @@ class AnnotatedDocServiceTest {
                                                 final String origPath = req.path();
                                                 assertThat(origPath).startsWith(proxyPath);
                                                 final String newPath = req.path().substring(proxyPath.length());
-                                                final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(newPath).build());
+                                                final HttpRequest newReq = req.withHeaders(
+                                                        req.headers().toBuilder().path(newPath).build()
+                                                );
                                                 return server.webClient().execute(newReq);
                                             })
                                             .serviceUnder("/docs", DocService.builder().build())

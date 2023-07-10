@@ -54,6 +54,7 @@ class ServiceSpecificationRouteTest {
         final ObjectMapper mapper = new ObjectMapper();
         final JsonNode specificationJson = mapper.readTree(res.contentUtf8());
 
-        assertThatJson(specificationJson).node("docServiceRoute").isEqualTo("/docs/*");
+        assertThatJson(specificationJson).node("docServiceRoute.patternString").isEqualTo("/docs/*");
+        assertThatJson(specificationJson).node("docServiceRoute.pathType").isEqualTo("PREFIX");
     }
 }
