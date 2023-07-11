@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.observation;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -30,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -72,20 +70,6 @@ class MicrometerObservationServiceTest {
     @AfterEach
     public void tearDown() {
         Tracing.current().close();
-    }
-
-    @Test
-    @Disabled("TODO: We do it differently?")
-    void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
-        assertThatThrownBy(() -> MicrometerObservationService.newDecorator(
-                MicrometerObservationRegistryUtils.observationRegistry(
-                        HttpTracing.create(Tracing.newBuilder().build()))))
-                .isInstanceOf(IllegalStateException.class).hasMessage(
-                        "Tracing.currentTraceContext is not a RequestContextCurrentTraceContext " +
-                        "scope. Please " +
-                        "call Tracing.Builder.currentTraceContext(RequestContextCurrentTraceContext" +
-                        ".ofDefault())."
-                );
     }
 
     @Test
