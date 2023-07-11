@@ -1,0 +1,15 @@
+armeria:
+  ports:
+    - port: 0
+  internal-services:
+    include: metrics, health
+    port: 9494
+    protocols: http
+
+management:
+  server:
+    port: 9494
+  endpoints:
+    web:
+      exposure:
+        include: health, loggers, prometheus
