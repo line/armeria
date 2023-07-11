@@ -262,7 +262,9 @@ public final class RequestMetricSupport {
         }
 
         @Override
-        public Timer requestFullyReceivedDuration() { return requestFullyReceivedDuration; }
+        public Timer requestFullyReceivedDuration() {
+            return requestFullyReceivedDuration;
+        }
 
         @Override
         public DistributionSummary requestLength() {

@@ -67,10 +67,31 @@ public interface RequestLogBuilder extends RequestLogAccess {
      */
     void startRequest(long requestStartTimeNanos, long requestStartTimeMicros);
 
-    default void requestFullyReceived() { requestFullyReceived(
-            System.nanoTime(), SystemInfo.currentTimeMicros()
-    ); }
+    /**
+     * Starts the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestFullyReceivedTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestFullyReceivedTimeMicros()}</li>
+     *   <li>{@link RequestLog#requestFullyReceivedTimeNanos()}</li>
+     * </ul>
+     */
+    default void requestFullyReceived() {
+        requestFullyReceived(System.nanoTime(), SystemInfo.currentTimeMicros());
+    }
 
+    /**
+     * Starts the collection of the {@link Request} information. This method sets the following properties:
+     * <ul>
+     *   <li>{@link RequestLog#requestFullyReceivedTimeMillis()}</li>
+     *   <li>{@link RequestLog#requestFullyReceivedTimeMicros()}</li>
+     *   <li>{@link RequestLog#requestFullyReceivedTimeNanos()}</li>
+     * </ul>
+     *
+     * @param requestFullyReceivedTimeNanos {@link System#nanoTime()}
+     *                              value when the request is fully received started.
+     * @param requestFullyReceivedTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     */
     void requestFullyReceived(long requestFullyReceivedTimeNanos, long requestFullyReceivedTimeMicros);
 
     /**
