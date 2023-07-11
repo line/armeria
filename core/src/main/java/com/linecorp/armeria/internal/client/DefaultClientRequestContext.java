@@ -52,7 +52,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -69,7 +68,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -153,7 +151,7 @@ public final class DefaultClientRequestContext
     @Nullable
     private volatile CompletableFuture<Boolean> whenInitialized;
     @Nullable
-    private StreamWriter<HttpObject> originalResponse;
+    private Consumer<@Nullable Throwable> closingResponseTask;
 
     /**
      * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
@@ -815,13 +813,15 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public void setOriginalResponseWriter(StreamWriter<HttpObject> responseWriter) {
-        originalResponse = responseWriter;
+    public void setClosingResponseTask(Consumer<@Nullable Throwable> closingResponseTask) {
+        this.closingResponseTask = closingResponseTask;
     }
 
     @Override
-    public StreamWriter<HttpObject> originalResponseWriter() {
-        return originalResponse;
+    public void closeResponse(@Nullable Throwable cause) {
+        if (closingResponseTask != null) {
+            closingResponseTask.accept(cause);
+        }
     }
 
     @Override

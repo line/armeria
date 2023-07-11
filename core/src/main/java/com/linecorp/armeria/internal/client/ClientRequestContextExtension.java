@@ -17,15 +17,14 @@
 package com.linecorp.armeria.internal.client;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 
@@ -78,13 +77,13 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
     HttpHeaders internalRequestHeaders();
 
     /**
-     * Sets the {@link StreamWriter} which is the original response.
+     * Sets the {@link Consumer} which will be invoked when the response is closed.
      */
-    void setOriginalResponseWriter(StreamWriter<HttpObject> responseWriter);
+    void setClosingResponseTask(Consumer<@Nullable Throwable> closingResponseTask);
 
     /**
-     * Returns the original response that is set via {@link #setOriginalResponseWriter(StreamWriter)}.
+     * Closes the task that is set via {@link #setClosingResponseTask(Consumer)}
+     * with the specified {@link Throwable}.
      */
-    @Nullable
-    StreamWriter<HttpObject> originalResponseWriter();
+    void closeResponse(@Nullable Throwable cause);
 }

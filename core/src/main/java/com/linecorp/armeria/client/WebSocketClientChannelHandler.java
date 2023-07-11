@@ -19,11 +19,8 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.HttpResponseDecoder.contentTooLargeException;
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -37,10 +34,10 @@ import io.netty.util.ReferenceCountUtil;
 
 final class WebSocketClientChannelHandler extends ChannelDuplexHandler {
 
-    private final HttpResponseWrapper res;
+    private final AbstractHttpResponseWrapper res;
     private final KeepAliveHandler keepAliveHandler;
 
-    WebSocketClientChannelHandler(HttpResponseWrapper res, KeepAliveHandler keepAliveHandler) {
+    WebSocketClientChannelHandler(AbstractHttpResponseWrapper res, KeepAliveHandler keepAliveHandler) {
         this.res = res;
         this.keepAliveHandler = keepAliveHandler;
     }
@@ -48,12 +45,7 @@ final class WebSocketClientChannelHandler extends ChannelDuplexHandler {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         keepAliveHandler.destroy();
-        // Close the response after 3 seconds with the exception so that we can give a chance to the
-        // WebSocketClient to finish the response normally if it receives the close frame from the server.
-        res.eventLoop().schedule(() -> {
-            res.close(ClosedSessionException.get());
-            ctx.fireChannelInactive();
-        }, 3, TimeUnit.SECONDS);
+        res.close(ClosedSessionException.get());
     }
 
     @Override

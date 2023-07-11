@@ -34,7 +34,6 @@ package com.linecorp.armeria.internal.common.websocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -42,7 +41,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import com.linecorp.armeria.common.stream.StreamDecoderOutput;
-import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
@@ -387,9 +385,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     private void closeResponse() {
         final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
         assert ctxExtension != null;
-        final StreamWriter<HttpObject> responseWriter = ctxExtension.originalResponseWriter();
-        assert responseWriter != null;
-        responseWriter.close();
+        ctxExtension.closeResponse(null);
     }
 
     @Override

@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -79,7 +78,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     private HttpSession session;
     private int id = -1;
     @Nullable
-    private HttpResponseWrapper responseWrapper;
+    private AbstractHttpResponseWrapper responseWrapper;
 
     @Nullable
     private ScheduledFuture<?> timeoutFuture;
@@ -187,8 +186,8 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     private void addResponseToDecoder() {
         final long responseTimeoutMillis = ctx.responseTimeoutMillis();
         final long maxContentLength = ctx.maxResponseLength();
-        responseWrapper = responseDecoder.addResponse(id, originalRes, ctx,
-                                                      ch.eventLoop(), responseTimeoutMillis, maxContentLength);
+        responseWrapper = responseDecoder.addResponse(id, originalRes, ctx, ch.eventLoop(),
+                                                      responseTimeoutMillis, maxContentLength, http1WebSocket);
     }
 
     /**

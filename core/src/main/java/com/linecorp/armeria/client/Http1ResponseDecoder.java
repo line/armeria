@@ -63,7 +63,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private boolean isWebSocket;
     /** The response being decoded currently. */
     @Nullable
-    private HttpResponseWrapper res;
+    private AbstractHttpResponseWrapper res;
     @Nullable
     private KeepAliveHandler keepAliveHandler;
     private int resId = 1;
@@ -79,7 +79,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     @Override
-    void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper resWrapper) {
+    void onResponseAdded(int id, EventLoop eventLoop, AbstractHttpResponseWrapper resWrapper) {
         resWrapper.whenComplete().handle((unused, cause) -> {
             if (eventLoop.inEventLoop()) {
                 onWrapperCompleted(resWrapper, cause);
@@ -90,7 +90,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         });
     }
 
-    private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
+    private void onWrapperCompleted(AbstractHttpResponseWrapper resWrapper, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
         resWrapper.onSubscriptionCancelled(cause);
 
@@ -168,7 +168,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             session().deactivate();
                         }
 
-                        final HttpResponseWrapper res = getResponse(resId);
+                        final AbstractHttpResponseWrapper res = getResponse(resId);
                         if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
                             close(ctx);
                             return;
@@ -242,7 +242,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         if (msg instanceof LastHttpContent) {
-                            final HttpResponseWrapper res = removeResponse(resId++);
+                            final AbstractHttpResponseWrapper res = removeResponse(resId++);
                             assert res != null;
                             assert this.res == res;
                             this.res = null;
@@ -292,7 +292,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
         state = State.DISCARD;
 
-        final HttpResponseWrapper res = this.res;
+        final AbstractHttpResponseWrapper res = this.res;
         this.res = null;
 
         if (res != null) {
