@@ -40,14 +40,24 @@ public final class AuthServiceBuilder {
         if (cause != null) {
             AuthService.logger.warn("Unexpected exception during authorization.", cause);
         }
-        if (this.isBasicAuth) {
+        if (this.authType.equals(AuthType.OAUTH2)) {
+            return HttpResponse.of(ResponseHeaders.builder(HttpStatus.UNAUTHORIZED)
+                    .add(HttpHeaderNames.WWW_AUTHENTICATE, "Bearer")
+                    .build());
+        }
+        if (this.authType.equals(AuthType.BASIC)) {
             return HttpResponse.of(ResponseHeaders.builder(HttpStatus.UNAUTHORIZED)
                     .add(HttpHeaderNames.WWW_AUTHENTICATE, "Basic")
                     .build());
         }
         return HttpResponse.of(HttpStatus.UNAUTHORIZED);
     };
-    private boolean isBasicAuth = false;
+    private AuthType authType = null;
+    private enum AuthType {
+        BASIC,
+        OAUTH1A,
+        OAUTH2
+    }
 
     /**
      * Creates a new instance.
@@ -83,7 +93,7 @@ public final class AuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer}.
      */
     public AuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer) {
-        this.isBasicAuth = true;
+        this.authType = AuthType.BASIC;
         return addTokenAuthorizer(AuthTokenExtractors.basic(),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -92,7 +102,7 @@ public final class AuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer} for the given {@code header}.
      */
     public AuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer, CharSequence header) {
-        this.isBasicAuth = true;
+        this.authType = AuthType.BASIC;
         return addTokenAuthorizer(new BasicTokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -109,6 +119,7 @@ public final class AuthServiceBuilder {
      * Adds an OAuth1a {@link Authorizer} for the given {@code header}.
      */
     public AuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer, CharSequence header) {
+        this.authType = AuthType.OAUTH1A;
         return addTokenAuthorizer(new OAuth1aTokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -117,6 +128,7 @@ public final class AuthServiceBuilder {
      * Adds an OAuth2 {@link Authorizer}.
      */
     public AuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer) {
+        this.authType = AuthType.OAUTH2;
         return addTokenAuthorizer(AuthTokenExtractors.oAuth2(), requireNonNull(authorizer, "authorizer"));
     }
 
@@ -124,6 +136,7 @@ public final class AuthServiceBuilder {
      * Adds an OAuth2 {@link Authorizer} for the given {@code header}.
      */
     public AuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer, CharSequence header) {
+        this.authType = AuthType.OAUTH2;
         return addTokenAuthorizer(new OAuth2TokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }

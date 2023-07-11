@@ -311,6 +311,8 @@ class AuthServiceTest {
                     oauth2GetRequest("/oauth2", AuthToken.ofOAuth2("DUMMY_oauth2_token"),
                                      AUTHORIZATION))) {
                 assertThat(res.getCode()).isEqualTo(401);
+                assertThat(res.getHeaders("WWW-Authenticate")).hasSize(1);
+                assertThat(res.getHeaders()[0].getValue()).isEqualTo("Bearer");
             }
         }
     }
