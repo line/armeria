@@ -67,6 +67,12 @@ public interface RequestLogBuilder extends RequestLogAccess {
      */
     void startRequest(long requestStartTimeNanos, long requestStartTimeMicros);
 
+    default void requestFullyReceived() { requestFullyReceived(
+            System.nanoTime(), SystemInfo.currentTimeMicros()
+    ); }
+
+    void requestFullyReceived(long requestFullyReceivedTimeNanos, long requestFullyReceivedTimeMicros);
+
     /**
      * Sets the properties related with socket connection. This method sets the following properties:
      * <ul>

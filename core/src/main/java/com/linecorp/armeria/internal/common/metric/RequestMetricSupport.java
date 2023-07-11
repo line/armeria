@@ -149,6 +149,8 @@ public final class RequestMetricSupport {
             boolean isSuccess) {
         metrics.requestDuration().record(log.requestDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.requestLength().record(log.requestLength());
+        metrics.requestFullyReceivedDuration().record(
+                log.requestFullyReceivedTimeNanos(), TimeUnit.NANOSECONDS);
         metrics.responseDuration().record(log.responseDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.responseLength().record(log.responseLength());
         metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
@@ -183,6 +185,8 @@ public final class RequestMetricSupport {
         Timer requestDuration();
 
         DistributionSummary requestLength();
+
+        Timer requestFullyReceivedDuration();
 
         Timer responseDuration();
 
@@ -223,6 +227,7 @@ public final class RequestMetricSupport {
         private final Counter failure;
         private final Timer requestDuration;
         private final DistributionSummary requestLength;
+        private final Timer requestFullyReceivedDuration;
         private final Timer responseDuration;
         private final DistributionSummary responseLength;
         private final Timer totalDuration;
@@ -234,6 +239,8 @@ public final class RequestMetricSupport {
 
             requestDuration = newTimer(parent, idPrefix.name("request.duration"), idPrefix.tags());
             requestLength = newDistributionSummary(parent, idPrefix.name("request.length"), idPrefix.tags());
+            requestFullyReceivedDuration = newTimer(parent, idPrefix.name("request.received.duration"),
+                                                    idPrefix.tags());
             responseDuration = newTimer(parent, idPrefix.name("response.duration"), idPrefix.tags());
             responseLength = newDistributionSummary(parent, idPrefix.name("response.length"), idPrefix.tags());
             totalDuration = newTimer(parent, idPrefix.name("total.duration"), idPrefix.tags());
@@ -253,6 +260,9 @@ public final class RequestMetricSupport {
         public Timer requestDuration() {
             return requestDuration;
         }
+
+        @Override
+        public Timer requestFullyReceivedDuration() { return requestFullyReceivedDuration; }
 
         @Override
         public DistributionSummary requestLength() {

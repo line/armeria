@@ -147,11 +147,17 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         if (obj instanceof HttpData) {
             ((HttpData) obj).touch(routingCtx);
             if (obj.isEndOfStream()) {
+                if (ctx != null) {
+                    ctx.logBuilder().requestFullyReceived();
+                }
                 close();
             }
         }
         if (obj instanceof HttpHeaders) {
             trailers = (HttpHeaders) obj;
+            if (ctx != null) {
+                ctx.logBuilder().requestFullyReceived();
+            }
             close();
         }
         return published;

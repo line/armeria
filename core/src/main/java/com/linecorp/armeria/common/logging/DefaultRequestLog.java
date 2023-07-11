@@ -112,6 +112,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestStartTimeNanos;
     private boolean requestFirstBytesTransferredTimeNanosSet;
     private long requestFirstBytesTransferredTimeNanos;
+    private long requestFullyReceivedTimeMicros;
+    private long requestFullyReceivedTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
     @Nullable
@@ -649,6 +651,17 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void requestFullyReceived(long requestFullyReceivedTimeNanos, long requestFullyReceivedTimeMicros) {
+        if (isAvailable(RequestLogProperty.REQUEST_FULLY_RECEIVED_TIME)) {
+            return;
+        }
+        this.requestFullyReceivedTimeNanos = requestFullyReceivedTimeNanos;
+        this.requestFullyReceivedTimeMicros = requestFullyReceivedTimeMicros;
+
+        updateFlags(RequestLogProperty.REQUEST_FULLY_RECEIVED_TIME);
+    }
+
+    @Override
     public long requestStartTimeMicros() {
         ensureAvailable(RequestLogProperty.REQUEST_START_TIME);
         return requestStartTimeMicros;
@@ -669,6 +682,23 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public Long requestFirstBytesTransferredTimeNanos() {
         ensureAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME);
         return requestFirstBytesTransferredTimeNanosSet ? requestFirstBytesTransferredTimeNanos : null;
+    }
+
+    @Override
+    public long requestFullyReceivedTimeMicros() {
+        ensureAvailable(RequestLogProperty.REQUEST_FULLY_RECEIVED_TIME);
+        return requestFullyReceivedTimeMicros;
+    }
+
+    @Override
+    public long requestFullyReceivedTimeMillis() {
+        return TimeUnit.MICROSECONDS.toMillis(requestFullyReceivedTimeMicros());
+    }
+
+    @Override
+    public long requestFullyReceivedTimeNanos() {
+        ensureAvailable(RequestLogProperty.REQUEST_FULLY_RECEIVED_TIME);
+        return requestFullyReceivedTimeNanos;
     }
 
     @Override
@@ -1622,6 +1652,21 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public Long requestFirstBytesTransferredTimeNanos() {
             return requestFirstBytesTransferredTimeNanosSet ? requestFirstBytesTransferredTimeNanos : null;
+        }
+
+        @Override
+        public long requestFullyReceivedTimeMicros() {
+            return 0;
+        }
+
+        @Override
+        public long requestFullyReceivedTimeMillis() {
+            return 0;
+        }
+
+        @Override
+        public long requestFullyReceivedTimeNanos() {
+            return 0;
         }
 
         @Override

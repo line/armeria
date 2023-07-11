@@ -136,6 +136,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         if (obj instanceof HttpHeaders) { // HTTP trailers.
             published = super.tryWrite(obj);
             ctx.logBuilder().requestTrailers((HttpHeaders) obj);
+            ctx.logBuilder().requestFullyReceived();
             // Close this stream because HTTP trailers is the last element of the request.
             close();
         } else {
@@ -147,6 +148,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                 inboundTrafficController.inc(httpData.length());
             }
             if (obj.isEndOfStream()) {
+                ctx.logBuilder().requestFullyReceived();
                 close();
             }
         }
