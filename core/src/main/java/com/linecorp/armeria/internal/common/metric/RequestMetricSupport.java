@@ -101,7 +101,7 @@ public final class RequestMetricSupport {
                                                                           DefaultServiceRequestMetrics::new);
             updateMetrics(log, metrics, isSuccess);
             metrics.requestFullyReceivedDuration().record(
-                    log.requestFullyReceivedTimeNanos(), TimeUnit.NANOSECONDS);
+                    log.requestReceivedDurationNanos(), TimeUnit.NANOSECONDS);
             if (log.responseCause() instanceof RequestTimeoutException) {
                 metrics.requestTimeouts().increment();
             }

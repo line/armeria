@@ -113,7 +113,7 @@ public enum RequestLogProperty {
 
     /**
      * {@link RequestLog#responseEndTimeNanos()}, {@link RequestLog#responseDurationNanos()},
-     * {@link RequestLog#totalDurationNanos()}.
+     * {@link RequestLog#requestReceivedDurationNanos()},{@link RequestLog#totalDurationNanos()}.
      */
     RESPONSE_END_TIME(false),
 

@@ -327,6 +327,7 @@ class RequestMetricSupportTest {
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
         ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseLength(456);
+        ctx.logBuilder().requestFullyReceived();
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse(RequestTimeoutException.get());
 
@@ -345,6 +346,9 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.response.length#count{hostname.pattern=*,http.status=503,method=POST," +
                                serviceTag + '}', 1.0)
                 .containsEntry("foo.total.duration#count{hostname.pattern=*,http.status=503,method=POST," +
+                               serviceTag + '}', 1.0)
+                .containsEntry("foo.request.received.duration#count" +
+                               "{hostname.pattern=*,http.status=503,method=POST," +
                                serviceTag + '}', 1.0);
     }
 

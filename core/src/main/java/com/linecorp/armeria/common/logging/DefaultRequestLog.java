@@ -1185,6 +1185,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public long requestReceivedDurationNanos() {
+        ensureAvailable(RequestLogProperty.RESPONSE_END_TIME);
+        return responseEndTimeNanos - requestFullyReceivedTimeNanos;
+    }
+
+    @Override
     public long totalDurationNanos() {
         ensureAvailable(RequestLogProperty.RESPONSE_END_TIME);
         return responseEndTimeNanos - requestStartTimeNanos;
