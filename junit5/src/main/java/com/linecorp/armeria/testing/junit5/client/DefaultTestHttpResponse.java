@@ -66,8 +66,8 @@ final class DefaultTestHttpResponse implements TestHttpResponse {
     }
 
     @Override
-    public HttpResponse toHttpResponse() {
-        return delegate.toHttpResponse();
+    public AggregatedHttpResponse unwrap() {
+        return delegate;
     }
 
     @Override

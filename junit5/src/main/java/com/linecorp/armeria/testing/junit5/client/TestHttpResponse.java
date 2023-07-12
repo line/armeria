@@ -55,11 +55,9 @@ public interface TestHttpResponse extends AggregatedHttpMessage {
     HttpStatus status();
 
     /**
-     * Converts this response into a new complete {@link HttpResponse}.
-     *
-     * @return the new {@link HttpResponse} converted from this response.
+     * Returns the original {@link HttpResponse} which is converted to this response.
      */
-    HttpResponse toHttpResponse();
+    AggregatedHttpResponse unwrap();
 
     /**
      * Creates a new instance of {@link HttpStatusAssert} from status of the http response.
