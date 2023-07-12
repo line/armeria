@@ -5,7 +5,7 @@ plugins {
     // If Gradle can’t find a locally available toolchain that matches the requirements of the build, it can
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
-    id 'org.gradle.toolchains.foojay-resolver-convention" version '0.6.0'
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
     id 'com.gradle.enterprise' version '3.13.3'
     // adds additional metadata to build scans
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.11'
