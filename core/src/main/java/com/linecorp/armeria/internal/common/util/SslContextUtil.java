@@ -98,7 +98,7 @@ public final class SslContextUtil {
 
         return MinifiedBouncyCastleProvider.call(() -> {
             final SslContextBuilder builder = builderSupplier.get();
-            final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+            final SslProvider provider = Flags.tlsEngineType().sslProvider();
             builder.sslProvider(provider);
 
             final Set<String> supportedProtocols = supportedProtocols(builder);
@@ -141,7 +141,7 @@ public final class SslContextUtil {
                            "You must specify at least one cipher suite.");
 
                 if (forceHttp1) {
-                   // Skip validation
+                    // Skip validation
                 } else {
                     validateHttp2Ciphers(ciphers, tlsAllowUnsafeCiphers);
                 }

@@ -32,11 +32,6 @@ public final class BaseFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Boolean useOpenSsl() {
-        return false;
-    }
-
-    @Override
     public Integer maxNumConnections() {
         return 20;
     }

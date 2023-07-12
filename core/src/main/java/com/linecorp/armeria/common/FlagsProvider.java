@@ -26,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Predicate;
 
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
@@ -192,19 +191,6 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns whether the JNI-based TLS support with OpenSSL is enabled. When enabled, Armeria uses OpenSSL
-     * for processing TLS connections. When disabled, the current JVM's default {@link SSLEngine} is used
-     * instead.
-     *
-     * <p>This flag is enabled by default for supported platforms. Specify the
-     * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
-     */
-    @Nullable
-    default Boolean useOpenSsl() {
-        return null;
-    }
-
-    /**
      * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
      *
      * <p>The default value of this flag is "openssl", which means the default {@link TlsEngineType} will
@@ -223,8 +209,8 @@ public interface FlagsProvider {
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
      *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
-     * specified the JVM option.
+     * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
+     * {@code false} no matter you specified the JVM option.
      */
     @Nullable
     default Boolean dumpOpenSslInfo() {

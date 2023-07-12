@@ -145,11 +145,6 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Boolean useOpenSsl() {
-        return getBoolean("useOpenSsl");
-    }
-
-    @Override
     public TlsEngineType tlsEngineType() {
         final String strTlsEngineType = getNormalized("tlsEngineType");
         if (strTlsEngineType == null) {

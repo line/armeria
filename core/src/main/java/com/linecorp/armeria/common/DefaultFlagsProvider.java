@@ -152,11 +152,6 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Boolean useOpenSsl() {
-        return true;
-    }
-
-    @Override
     public TlsEngineType tlsEngineType() {
         return TlsEngineType.OPENSSL;
     }
