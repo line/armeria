@@ -27,99 +27,99 @@ import com.linecorp.armeria.common.HttpData;
 /**
  * Assertion methods for HttpData
  */
-public final class HttpDataAssert extends AssertThat<HttpData, TestHttpResponse> {
-    HttpDataAssert(HttpData actual, TestHttpResponse back) {
-        super(actual, back);
+public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
+    HttpDataAssert(HttpData actual, TestHttpResponse response) {
+        super(actual, response);
     }
 
     public TestHttpResponse isEqualTo(HttpData expected) {
         requireNonNull(expected, "expected");
         assertEquals(expected, actual());
-        return back();
+        return response();
     }
 
     public TestHttpResponse isEmpty() {
         assertTrue(actual().isEmpty());
-        return back();
+        return response();
     }
 
     public TestHttpResponse arrayContains(byte... expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContains(actual().array(), expected));
-        return back();
+        return response();
     }
 
     public TestHttpResponse arrayContains(Byte[] expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContains(actual().array(), toPrimitiveByteArray(expected)));
-        return back();
+        return response();
     }
 
     public TestHttpResponse arrayContains(int... expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContains(actual().array(), toByteArray(expected)));
-        return back();
+        return response();
     }
 
     public TestHttpResponse arrayContainsExactly(byte... expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContainsExactly(actual().array(), expected));
-        return back();
+        return response();
     }
 
     public TestHttpResponse arrayContainsExactly(Byte[] expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContainsExactly(actual().array(), toPrimitiveByteArray(expected)));
-        return back();
+        return response();
     }
 
     public TestHttpResponse arrayContainsExactly(int... expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContainsExactly(actual().array(), toByteArray(expected)));
-        return back();
+        return response();
     }
 
     public TestHttpResponse lengthIsEqualTo(int expected) {
         assertEquals(expected, actual().length());
-        return back();
+        return response();
     }
 
     public TestHttpResponse stringIsEqualTo(Charset charset, String expected) {
         requireNonNull(charset, "charset");
         requireNonNull(expected, "expected");
         assertEquals(expected, actual().toString(charset));
-        return back();
+        return response();
     }
 
     public TestHttpResponse stringUtf8IsEqualTo(String expected) {
         requireNonNull(expected, "expected");
         assertEquals(expected, actual().toStringUtf8());
-        return back();
+        return response();
     }
 
     public TestHttpResponse stringAsciiIsEqualTo(String expected) {
         requireNonNull(expected, "expected");
         assertEquals(expected, actual().toStringAscii());
-        return back();
+        return response();
     }
 
     public TestHttpResponse stringContains(Charset charset, String expected) {
         requireNonNull(charset, "charset");
         requireNonNull(expected, "expected");
         assertTrue(actual().toString(charset).contains(expected));
-        return back();
+        return response();
     }
 
     public TestHttpResponse stringUtf8Contains(String expected) {
         requireNonNull(expected, "expected");
         assertTrue(actual().toStringUtf8().contains(expected));
-        return back();
+        return response();
     }
 
     public TestHttpResponse stringAsciiContains(String expected) {
         requireNonNull(expected, "expected");
         assertTrue(actual().toStringAscii().contains(expected));
-        return back();
+        return response();
     }
 
     private boolean bytesContains(byte[] bytes, byte[] expected) {

@@ -18,22 +18,23 @@ package com.linecorp.armeria.testing.junit5.client;
 
 import static java.util.Objects.requireNonNull;
 
-abstract class AssertThat<T, U> {
+abstract class AbstractResponseAssert<T> {
     private final T actual;
-    private final U back;
+    private final TestHttpResponse response;
 
-    AssertThat(T actual, U back) {
+
+    AbstractResponseAssert(T actual, TestHttpResponse response) {
         requireNonNull(actual, "actual");
-        requireNonNull(back, "back");
+        requireNonNull(response, "response");
         this.actual = actual;
-        this.back = back;
+        this.response = response;
     }
 
     T actual() {
         return actual;
     }
 
-    U back() {
-        return back;
+    TestHttpResponse response() {
+        return response;
     }
 }
