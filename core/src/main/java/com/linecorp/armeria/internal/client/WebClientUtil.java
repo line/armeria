@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.testing.junit5.client;
+package com.linecorp.armeria.internal.client;
 
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class WebTestClientUtil {
+public final class WebClientUtil {
 
     /**
      * Appends query params to the current path and returns the modified path.
      */
-    static String addQueryParams(String path, @Nullable QueryParams params) {
+    public static String addQueryParams(String path, @Nullable QueryParams params) {
         requireNonNull(path, "path");
         if (params == null || params.isEmpty()) {
             return path;
@@ -40,5 +40,5 @@ final class WebTestClientUtil {
         return params.appendQueryString(appendedPath).toString();
     }
 
-    private WebTestClientUtil() {}
+    private WebClientUtil() {}
 }

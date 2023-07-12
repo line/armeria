@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.WebClientUtil;
 import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 
 import io.netty.channel.EventLoop;

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

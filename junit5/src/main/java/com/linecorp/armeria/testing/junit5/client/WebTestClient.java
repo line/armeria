@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.WebClientUtil;
 
 public interface WebTestClient extends ClientBuilderParams, Unwrappable {
 
@@ -361,7 +362,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse options(String path, @Nullable QueryParams params) {
-        return execute(RequestHeaders.of(HttpMethod.OPTIONS, WebTestClientUtil.addQueryParams(path, params)));
+        return execute(RequestHeaders.of(HttpMethod.OPTIONS, WebClientUtil.addQueryParams(path, params)));
     }
 
     /**
@@ -377,7 +378,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse get(String path, @Nullable QueryParams params) {
-        return execute(RequestHeaders.of(HttpMethod.GET, WebTestClientUtil.addQueryParams(path, params)));
+        return execute(RequestHeaders.of(HttpMethod.GET, WebClientUtil.addQueryParams(path, params)));
     }
 
     /**
@@ -393,7 +394,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse head(String path, @Nullable QueryParams params) {
-        return execute(RequestHeaders.of(HttpMethod.HEAD, WebTestClientUtil.addQueryParams(path, params)));
+        return execute(RequestHeaders.of(HttpMethod.HEAD, WebClientUtil.addQueryParams(path, params)));
     }
 
     /**
@@ -409,7 +410,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse post(String path, @Nullable QueryParams params, HttpData content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, WebTestClientUtil.addQueryParams(path, params)),
+        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)),
                        content);
     }
 
@@ -426,7 +427,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse post(String path, @Nullable QueryParams params, byte[] content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, WebTestClientUtil.addQueryParams(path, params)),
+        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)),
                        content);
     }
 
@@ -443,7 +444,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse post(String path, @Nullable QueryParams params, String content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, WebTestClientUtil.addQueryParams(path, params)),
+        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)),
                        content);
     }
 
@@ -462,7 +463,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     default TestHttpResponse post(String path, @Nullable QueryParams params, String content,
                                   Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.POST,
-                                         WebTestClientUtil.addQueryParams(path, params)), content, charset);
+                                         WebClientUtil.addQueryParams(path, params)), content, charset);
     }
 
     /**
@@ -479,7 +480,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default TestHttpResponse put(String path, @Nullable QueryParams params, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
-                                         WebTestClientUtil.addQueryParams(path, params)), content);
+                                         WebClientUtil.addQueryParams(path, params)), content);
     }
 
     /**
@@ -496,7 +497,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default TestHttpResponse put(String path, @Nullable QueryParams params, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
-                                         WebTestClientUtil.addQueryParams(path, params)), content);
+                                         WebClientUtil.addQueryParams(path, params)), content);
     }
 
     /**
@@ -513,7 +514,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default TestHttpResponse put(String path, @Nullable QueryParams params, String content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
-                                         WebTestClientUtil.addQueryParams(path, params)), content);
+                                         WebClientUtil.addQueryParams(path, params)), content);
     }
 
     /**
@@ -531,7 +532,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     default TestHttpResponse put(String path, @Nullable QueryParams params, String content,
                                  Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
-                                         WebTestClientUtil.addQueryParams(path, params)), content, charset);
+                                         WebClientUtil.addQueryParams(path, params)), content, charset);
     }
 
     /**
@@ -549,7 +550,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default TestHttpResponse patch(String path, @Nullable QueryParams params, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
-                                         WebTestClientUtil.addQueryParams(path, params)), content);
+                                         WebClientUtil.addQueryParams(path, params)), content);
     }
 
     /**
@@ -566,7 +567,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default TestHttpResponse patch(String path, @Nullable QueryParams params, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
-                                         WebTestClientUtil.addQueryParams(path, params)), content);
+                                         WebClientUtil.addQueryParams(path, params)), content);
     }
 
     /**
@@ -583,7 +584,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     @CheckReturnValue
     default TestHttpResponse patch(String path, @Nullable QueryParams params, String content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
-                                         WebTestClientUtil.addQueryParams(path, params)), content);
+                                         WebClientUtil.addQueryParams(path, params)), content);
     }
 
     /**
@@ -601,7 +602,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     default TestHttpResponse patch(String path, @Nullable QueryParams params, String content,
                                    Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
-                                         WebTestClientUtil.addQueryParams(path, params)), content, charset);
+                                         WebClientUtil.addQueryParams(path, params)), content, charset);
     }
 
     /**
@@ -617,7 +618,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse delete(String path, @Nullable QueryParams params) {
-        return execute(RequestHeaders.of(HttpMethod.DELETE, WebTestClientUtil.addQueryParams(path, params)));
+        return execute(RequestHeaders.of(HttpMethod.DELETE, WebClientUtil.addQueryParams(path, params)));
     }
 
     /**
@@ -633,7 +634,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default TestHttpResponse trace(String path, @Nullable QueryParams params) {
-        return execute(RequestHeaders.of(HttpMethod.TRACE, WebTestClientUtil.addQueryParams(path, params)));
+        return execute(RequestHeaders.of(HttpMethod.TRACE, WebClientUtil.addQueryParams(path, params)));
     }
 
     @Override
