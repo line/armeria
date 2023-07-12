@@ -196,9 +196,8 @@ public final class TransportTypeProvider {
             // TODO(trustin): Remove this block which works around the bug where loading both epoll and
             //                io_uring native libraries may revert the initialization of
             //                io.netty.channel.unix.Socket: https://github.com/netty/netty/issues/10909
-            final String unixSocketClassName = ChannelUtil.channelPackageName() + ".unix.Socket";
             try {
-                final Method initializeMethod = findClass(ChannelUtil.channelPackageName(), unixSocketClassName)
+                final Method initializeMethod = findClass(ChannelUtil.channelPackageName(), ".unix.Socket")
                         .getDeclaredMethod("initialize", boolean.class);
                 initializeMethod.setAccessible(true);
                 initializeMethod.invoke(null, NetUtil.isIpV4StackPreferred());
