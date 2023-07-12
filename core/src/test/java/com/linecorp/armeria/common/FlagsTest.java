@@ -47,6 +47,7 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
@@ -109,6 +110,13 @@ class FlagsTest {
                 lookup.findStatic(flags, "dumpOpenSslInfo", MethodType.methodType(boolean.class));
         // // Call Flags.dumpOpenSslInfo();
         assertThat(dumpOpenSslInfoMethodHandle.invoke()).isSameAs(Boolean.TRUE);
+    }
+
+    @Test
+    void defaultTlsEngineType() {
+        assumeThat(System.getProperty("com.linecorp.armeria.tlsEngineType")).isNull();
+
+        assertThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
     }
 
     @Test
@@ -252,16 +260,16 @@ class FlagsTest {
     void testApiConsistencyBetweenFlagsAndFlagsProvider() {
         //Check method consistency between Flags and FlagsProvider excluding deprecated methods
         final Set<String> flagsApis = Arrays.stream(Flags.class.getMethods())
-                                             .filter(m -> !m.isAnnotationPresent(Deprecated.class))
-                                             .map(Method::getName)
-                                             .collect(Collectors.toSet());
+                                            .filter(m -> !m.isAnnotationPresent(Deprecated.class))
+                                            .map(Method::getName)
+                                            .collect(Collectors.toSet());
         flagsApis.removeAll(Arrays.stream(Object.class.getMethods())
-                                                  .map(Method::getName)
-                                                  .collect(toImmutableSet()));
+                                  .map(Method::getName)
+                                  .collect(toImmutableSet()));
 
         final Set<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
-                                                              .map(Method::getName)
-                                                              .collect(Collectors.toSet());
+                                                             .map(Method::getName)
+                                                             .collect(Collectors.toSet());
         final Set<String> knownIgnoreMethods = ImmutableSet.of("priority", "name");
         armeriaOptionsProviderApis.removeAll(knownIgnoreMethods);
 

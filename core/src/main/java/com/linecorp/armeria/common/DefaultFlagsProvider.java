@@ -27,6 +27,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
@@ -153,6 +154,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean useOpenSsl() {
         return true;
+    }
+
+    @Override
+    public TlsEngineType tlsEngineType() {
+        return TlsEngineType.OPENSSL;
     }
 
     @Override

@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
@@ -188,6 +189,10 @@ public final class Flags {
 
     @Nullable
     private static Boolean useOpenSsl;
+
+    private static final TlsEngineType TLS_ENGINE_TYPE =
+            getValue(FlagsProvider::tlsEngineType, "tlsEngineType", value -> value != null);
+
     @Nullable
     private static Boolean dumpOpenSslInfo;
 
@@ -524,6 +529,17 @@ public final class Flags {
         }
         setUseOpenSslAndDumpOpenSslInfo();
         return useOpenSsl;
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * <p>The default value of this flag is "openssl", which means the default {@link TlsEngineType} will
+     * be used. Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
+     * the default.</p>
+     */
+    public static TlsEngineType tlsEngineType() {
+        return TLS_ENGINE_TYPE;
     }
 
     private static void setUseOpenSslAndDumpOpenSslInfo() {

@@ -38,6 +38,7 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
+import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.micrometer.core.instrument.Metrics;
 
@@ -123,6 +124,14 @@ class FlagsProviderTest {
         final Method method = flags.getDeclaredMethod("requestContextStorageProvider");
         final String actual = method.invoke(flags).getClass().getSimpleName();
         assertThat(actual).isEqualTo(Custom1RequestContextStorageProvider.class.getSimpleName());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.tlsEngineType", value = "jdk")
+    void overrideDefaultTlsEngineType() throws Throwable {
+        final Method method = flags.getDeclaredMethod("tlsEngineType");
+        final String actual = method.invoke(flags).toString();
+        assertThat(actual).isEqualTo(TlsEngineType.JDK.toString());
     }
 
     @Test
