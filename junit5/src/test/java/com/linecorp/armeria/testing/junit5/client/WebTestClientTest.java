@@ -17,6 +17,7 @@
 package com.linecorp.armeria.testing.junit5.client;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.function.Function;
 
@@ -86,7 +87,7 @@ class WebTestClientTest {
                     preparation.delete("/rest/{id}");
                     break;
             }
-            assert preparation != null;
+            assertNotNull(preparation);
             preparation.content("content-value")
                        .header("x-header", "header-value")
                        .pathParam("id", "1")
