@@ -70,29 +70,23 @@ public interface RequestLogBuilder extends RequestLogAccess {
     /**
      * Starts the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
-     *   <li>{@link RequestLog#requestFullyReceivedTimeMillis()}</li>
-     *   <li>{@link RequestLog#requestFullyReceivedTimeMicros()}</li>
      *   <li>{@link RequestLog#requestFullyReceivedTimeNanos()}</li>
      * </ul>
      */
     default void requestFullyReceived() {
-        requestFullyReceived(System.nanoTime(), SystemInfo.currentTimeMicros());
+        requestFullyReceived(System.nanoTime());
     }
 
     /**
      * Starts the collection of the {@link Request} information. This method sets the following properties:
      * <ul>
-     *   <li>{@link RequestLog#requestFullyReceivedTimeMillis()}</li>
-     *   <li>{@link RequestLog#requestFullyReceivedTimeMicros()}</li>
      *   <li>{@link RequestLog#requestFullyReceivedTimeNanos()}</li>
      * </ul>
      *
      * @param requestFullyReceivedTimeNanos {@link System#nanoTime()}
      *                              value when the request is fully received started.
-     * @param requestFullyReceivedTimeMicros the number of microseconds since the epoch,
-     *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
-    void requestFullyReceived(long requestFullyReceivedTimeNanos, long requestFullyReceivedTimeMicros);
+    void requestFullyReceived(long requestFullyReceivedTimeNanos);
 
     /**
      * Sets the properties related with socket connection. This method sets the following properties:

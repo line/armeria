@@ -85,27 +85,11 @@ public interface RequestOnlyLog extends RequestLogAccess {
     Long requestFirstBytesTransferredTimeNanos();
 
     /**
-     * Returns the time when the request is fully received, in microseconds since the epoch.
-     *
-     * @throws RequestLogAvailabilityException if the property is not available yet.
-     * @see RequestLogProperty#REQUEST_FULLY_RECEIVED_TIME
-     */
-    long requestFullyReceivedTimeMicros();
-
-    /**
-     * Returns the time when the request is fully received, in milliseconds since the epoch.
-     *
-     * @throws RequestLogAvailabilityException if the property is not available yet.
-     * @see RequestLogProperty#REQUEST_FULLY_RECEIVED_TIME
-     */
-    long requestFullyReceivedTimeMillis();
-
-    /**
      * Returns the time when the request is fully received, in nanoseconds. This value can only be
      * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.
-     * @see RequestLogProperty#REQUEST_FULLY_RECEIVED_TIME
+     * @see RequestLogProperty#REQUEST_FULLY_RECEIVED
      */
     long requestFullyReceivedTimeNanos();
 

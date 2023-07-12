@@ -112,7 +112,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestStartTimeNanos;
     private boolean requestFirstBytesTransferredTimeNanosSet;
     private long requestFirstBytesTransferredTimeNanos;
-    private long requestFullyReceivedTimeMicros;
     private long requestFullyReceivedTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
@@ -651,14 +650,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void requestFullyReceived(long requestFullyReceivedTimeNanos, long requestFullyReceivedTimeMicros) {
-        if (isAvailable(RequestLogProperty.REQUEST_FULLY_RECEIVED_TIME)) {
+    public void requestFullyReceived(long requestFullyReceivedTimeNanos) {
+        if (isAvailable(RequestLogProperty.REQUEST_FULLY_RECEIVED)) {
             return;
         }
         this.requestFullyReceivedTimeNanos = requestFullyReceivedTimeNanos;
-        this.requestFullyReceivedTimeMicros = requestFullyReceivedTimeMicros;
 
-        updateFlags(RequestLogProperty.REQUEST_FULLY_RECEIVED_TIME);
+        updateFlags(RequestLogProperty.REQUEST_FULLY_RECEIVED);
     }
 
     @Override
@@ -685,19 +683,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public long requestFullyReceivedTimeMicros() {
-        ensureAvailable(RequestLogProperty.REQUEST_FULLY_RECEIVED_TIME);
-        return requestFullyReceivedTimeMicros;
-    }
-
-    @Override
-    public long requestFullyReceivedTimeMillis() {
-        return TimeUnit.MICROSECONDS.toMillis(requestFullyReceivedTimeMicros());
-    }
-
-    @Override
     public long requestFullyReceivedTimeNanos() {
-        ensureAvailable(RequestLogProperty.REQUEST_FULLY_RECEIVED_TIME);
+        ensureAvailable(RequestLogProperty.REQUEST_FULLY_RECEIVED);
         return requestFullyReceivedTimeNanos;
     }
 
@@ -1655,18 +1642,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         @Override
-        public long requestFullyReceivedTimeMicros() {
-            return 0;
-        }
-
-        @Override
-        public long requestFullyReceivedTimeMillis() {
-            return 0;
-        }
-
-        @Override
         public long requestFullyReceivedTimeNanos() {
-            return 0;
+            return requestFullyReceivedTimeNanos;
         }
 
         @Override

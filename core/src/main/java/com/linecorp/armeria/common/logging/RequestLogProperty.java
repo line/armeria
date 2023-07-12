@@ -48,10 +48,9 @@ public enum RequestLogProperty {
     REQUEST_FIRST_BYTES_TRANSFERRED_TIME(true),
 
     /**
-     * {@link RequestLog#requestFullyReceivedTimeMicros()}, {@link RequestLog#requestFullyReceivedTimeMillis()},
      * {@link RequestLog#requestFullyReceivedTimeNanos()}.
      */
-    REQUEST_FULLY_RECEIVED_TIME(true),
+    REQUEST_FULLY_RECEIVED(true),
 
     /**
      * {@link RequestLog#channel()}, {@link RequestLog#sessionProtocol()}, {@link RequestLog#sslSession()},
