@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ self-hosted, macos-12, windows-latest ]
+        on: [ self-hosted, macos-13, windows-latest ]
         java: [ 19 ]
         include:
           - java: 8
