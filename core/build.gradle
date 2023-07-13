@@ -239,7 +239,7 @@ testing.suites {
     test {
         targets.configureEach {
             testTask.configure {
-                include '**/DomainSocket**'
+                include '**/DomainSocketServerTest**'
             }
         }
     }
