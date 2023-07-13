@@ -17,10 +17,7 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.file.Path;
-
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -30,14 +27,15 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.internal.testing.EnabledOnOsWithDomainSockets;
+import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 @EnabledOnOsWithDomainSockets
 class DomainSocketClientTest {
 
-    @TempDir
-    static Path tempDir;
+    @RegisterExtension
+    static final TemporaryFolderExtension tempDir = new TemporaryFolderExtension();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -81,6 +79,6 @@ class DomainSocketClientTest {
     }
 
     private static DomainSocketAddress domainSocketAddress() {
-        return DomainSocketAddress.of(tempDir.resolve("test.sock"));
+        return DomainSocketAddress.of(tempDir.getRoot().resolve("test.sock"));
     }
 }
