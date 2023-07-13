@@ -1436,6 +1436,15 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the default context path.
+     * the default context path will be used when build {@link VirtualHost}.
+     */
+    public ServerBuilder defaultContextPath(String contextPath) {
+        virtualHostTemplate.defaultContextPath(contextPath);
+        return this;
+    }
+
+    /**
      * Configures the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withDefaultVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
@@ -2010,6 +2019,7 @@ public final class ServerBuilder implements TlsSetters {
             unhandledExceptionsReporter = null;
         }
 
+        // template의 contextPath활용
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
                                                 unhandledExceptionsReporter);

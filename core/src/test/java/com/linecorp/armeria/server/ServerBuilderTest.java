@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
@@ -704,5 +705,157 @@ class ServerBuilderTest {
                                SessionProtocol.HTTP, SessionProtocol.HTTPS),
                 new ServerPort(DomainSocketAddress.of("/tmp/bar"),
                                SessionProtocol.HTTP, SessionProtocol.HTTPS));
+    }
+
+    @Test
+    void virtualHostContextPath() {
+        final Server server = Server
+                .builder()
+                // 1
+                .port(8888, SessionProtocol.HTTP)
+                .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .port(4848, SessionProtocol.HTTP)
+                .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                // 2
+                .virtualHost("*.foo.com:8888")
+                .contextPath("/api/v1")
+                .service("/bar", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .service("/good", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .and()
+                .virtualHost("*.bar.com:4848")
+                .contextPath("/api/v2")
+                .service("/world", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .service("/bad", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .and()
+                .virtualHost("*.hostmap.com")
+                .contextPath("/api/v3")
+                .service("/me", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .service("/you", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .and()
+                // To test a duplicated route
+                .service("/api/v1/bar", (ctx, req) -> HttpResponse.of(HttpStatus.ACCEPTED))
+                .build();
+
+        server.start().join();
+
+        try {
+            final WebClient defaultClient = WebClient.builder("http://127.0.0.1:8888")
+                                                     .factory(clientFactory)
+                                                     .build();
+            final WebClient fooClient = WebClient.builder("http://foo.com:8888")
+                                                 .factory(clientFactory)
+                                                 .build();
+            final WebClient barClient = WebClient.builder("http://bar.com:4848")
+                                                 .factory(clientFactory)
+                                                 .build();
+            final WebClient testClient = WebClient
+                    .builder("http://hostmap.com" + ":" + server.activeLocalPort())
+                    .factory(clientFactory)
+                    .build();
+
+            // (1) default virtual host without defaultContextPath
+            assertThat(defaultClient.get("/foo").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(defaultClient.get("/hello").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(defaultClient.get("/api/v1/bar").aggregate().join().status()) // dup
+                    .isEqualTo(HttpStatus.ACCEPTED);
+
+            // (2) port-based virtual host with contextPath /api/v1
+            assertThat(fooClient.get("/api/v1/bar").aggregate().join().status())  // dup
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(fooClient.get("/api/v1/good").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+
+            // (3) port-based virtual host with contextPath /api/v2
+            assertThat(barClient.get("/api/v2/world").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(barClient.get("/api/v2/bad").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+
+            // (4) path-based virtual host with contextPath /api/v3
+            assertThat(testClient.get("/api/v3/me").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(testClient.get("/api/v3/you").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+        } finally {
+            server.stop();
+        }
+    }
+
+    @Test
+    void defaultContextPathWithVirtualHostContextPath() {
+        final Server server = Server
+                .builder()
+                // 1
+                .port(8888, SessionProtocol.HTTP)
+                .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .port(4848, SessionProtocol.HTTP)
+                .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                // 2
+                .virtualHost("*.foo.com:8888")
+                .contextPath("/api/v1")
+                .service("/bar", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .service("/good", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .and()
+                .virtualHost("*.bar.com:4848")
+                .contextPath("/api/v2")
+                .service("/world", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .service("/bad", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .and()
+                .virtualHost("*.hostmap.com")
+                .contextPath("/api/v3")
+                .service("/me", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .service("/you", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                .and()
+                // To test a duplicated route
+                .service("/api/v1/bar", (ctx, req) -> HttpResponse.of(HttpStatus.ACCEPTED))
+                .build();
+
+        server.start().join();
+
+        try {
+            final WebClient defaultClient = WebClient.builder("http://127.0.0.1:8888")
+                                                     .factory(clientFactory)
+                                                     .build();
+            final WebClient fooClient = WebClient.builder("http://foo.com:8888")
+                                                 .factory(clientFactory)
+                                                 .build();
+            final WebClient barClient = WebClient.builder("http://bar.com:4848")
+                                                 .factory(clientFactory)
+                                                 .build();
+            final WebClient testClient = WebClient
+                    .builder("http://hostmap.com" + ":" + server.activeLocalPort())
+                    .factory(clientFactory)
+                    .build();
+
+            // (1) default virtual host with defaultContextPath /ab
+            assertThat(defaultClient.get("/foo").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(defaultClient.get("/hello").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(defaultClient.get("/api/v1/bar").aggregate().join().status()) // dup
+                    .isEqualTo(HttpStatus.ACCEPTED);
+
+            // (2) port-based virtual host with contextPath /api/v1
+            assertThat(fooClient.get("/api/v1/bar").aggregate().join().status()) //dup
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(fooClient.get("/api/v1/good").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+
+            // (3) port-based virtual host with contextPath /api/v2
+            assertThat(barClient.get("/api/v2/world").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(barClient.get("/api/v2/bad").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+
+            // (4) path-based virtual host with contextPath /api/v3
+            assertThat(testClient.get("/api/v3/me").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+            assertThat(testClient.get("/api/v3/you").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
+        } finally {
+            server.stop();
+        }
     }
 }

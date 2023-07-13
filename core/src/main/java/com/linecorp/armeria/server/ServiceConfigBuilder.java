@@ -351,6 +351,10 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler);
     }
 
+    public ServiceConfigBuilder getPrefixedServiceConfigBuilder(String contextPath) {
+        return new ServiceConfigBuilder(route.withPrefix(contextPath), service);
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
