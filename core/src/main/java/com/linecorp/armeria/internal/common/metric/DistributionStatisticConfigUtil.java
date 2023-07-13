@@ -24,12 +24,12 @@ public final class DistributionStatisticConfigUtil {
     public static final DistributionStatisticConfig DEFAULT_DIST_STAT_CFG =
             DistributionStatisticConfig.builder()
                                        .percentilesHistogram(false)
-                                       .sla()
+                                       .serviceLevelObjectives()
                                        .percentiles(
                                                0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
                                        .percentilePrecision(2)
-                                       .minimumExpectedValue(1L)
-                                       .maximumExpectedValue(Long.MAX_VALUE)
+                                       .minimumExpectedValue(1.0)
+                                       .maximumExpectedValue(Double.MAX_VALUE)
                                        .expiry(Duration.ofMinutes(3))
                                        .bufferLength(3)
                                        .build();

@@ -52,7 +52,7 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
     AbstractMetricCollectingClient(
             Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction,
             @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
-            @Nullable DistributionStatisticConfig distributionStatisticConfig) {
+            DistributionStatisticConfig distributionStatisticConfig) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;

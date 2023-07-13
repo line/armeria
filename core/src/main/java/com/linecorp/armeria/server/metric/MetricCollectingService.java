@@ -85,13 +85,12 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
     @Nullable
     private final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
     private final ConcurrentMap<Route, Boolean> routeCache = new ConcurrentHashMap<>();
-    @Nullable
     private final DistributionStatisticConfig distributionStatisticConfig;
 
     MetricCollectingService(HttpService delegate,
                             MeterIdPrefixFunction meterIdPrefixFunction,
                             @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
-                            @Nullable DistributionStatisticConfig distributionStatisticConfig) {
+                            DistributionStatisticConfig distributionStatisticConfig) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;

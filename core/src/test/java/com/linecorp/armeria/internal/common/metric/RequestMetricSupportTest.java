@@ -290,9 +290,8 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        final DistributionStatisticConfig distributionStatisticConfig = DEFAULT_DIST_STAT_CFG;
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault(), distributionStatisticConfig);
+                                   SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
         return ctx;
     }
 
@@ -323,9 +322,8 @@ class RequestMetricSupportTest {
         final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        final DistributionStatisticConfig distributionStatisticConfig = DEFAULT_DIST_STAT_CFG;
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
-                                   SuccessFunction.ofDefault(), distributionStatisticConfig);
+                                   SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
@@ -362,9 +360,8 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
-        final DistributionStatisticConfig distributionStatisticConfig = DEFAULT_DIST_STAT_CFG;
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault(), distributionStatisticConfig);
+                                   SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
 
         ctx.logBuilder().name("BarService", "baz");
 

@@ -93,39 +93,39 @@ public final class MoreMeters {
      * Returns a newly-registered {@link DistributionSummary} configured by
      * given {@link DistributionStatisticConfig}.
      *
-     * @param distStatCfgOverride the {@link DistributionStatisticConfig} to use
+     * @param distStatsConfig the {@link DistributionStatisticConfig} to use
      */
     public static DistributionSummary newDistributionSummary(MeterRegistry registry,
                                                              String name, Iterable<Tag> tags,
-                                                             DistributionStatisticConfig distStatCfgOverride) {
+                                                             DistributionStatisticConfig distStatsConfig) {
         requireNonNull(registry, "registry");
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
-        requireNonNull(distStatCfgOverride, "distributionStatisticConfig");
+        requireNonNull(distStatsConfig, "distStatCfg");
 
         final Builder builder =
                 DistributionSummary.builder(name)
                                    .tags(tags)
-                                   .publishPercentiles(distStatCfgOverride.getPercentiles())
-                                   .publishPercentileHistogram(distStatCfgOverride.isPercentileHistogram())
-                                   .percentilePrecision(distStatCfgOverride.getPercentilePrecision())
-                                   .distributionStatisticBufferLength(distStatCfgOverride.getBufferLength())
-                                   .distributionStatisticExpiry(distStatCfgOverride.getExpiry());
+                                   .publishPercentiles(distStatsConfig.getPercentiles())
+                                   .publishPercentileHistogram(distStatsConfig.isPercentileHistogram())
+                                   .percentilePrecision(distStatsConfig.getPercentilePrecision())
+                                   .distributionStatisticBufferLength(distStatsConfig.getBufferLength())
+                                   .distributionStatisticExpiry(distStatsConfig.getExpiry());
 
         if (MICROMETER_1_5) {
-            builder.maximumExpectedValue(distStatCfgOverride.getMaximumExpectedValueAsDouble())
-                   .minimumExpectedValue(distStatCfgOverride.getMinimumExpectedValueAsDouble())
-                   .serviceLevelObjectives(distStatCfgOverride.getServiceLevelObjectiveBoundaries());
+            builder.maximumExpectedValue(distStatsConfig.getMaximumExpectedValueAsDouble())
+                   .minimumExpectedValue(distStatsConfig.getMinimumExpectedValueAsDouble())
+                   .serviceLevelObjectives(distStatsConfig.getServiceLevelObjectiveBoundaries());
         } else {
-            final Double maxExpectedValueNanos = distStatCfgOverride.getMaximumExpectedValueAsDouble();
-            final Double minExpectedValueNanos = distStatCfgOverride.getMinimumExpectedValueAsDouble();
+            final Double maxExpectedValueNanos = distStatsConfig.getMaximumExpectedValueAsDouble();
+            final Double minExpectedValueNanos = distStatsConfig.getMinimumExpectedValueAsDouble();
             final Long maxExpectedValue =
                     maxExpectedValueNanos != null ? maxExpectedValueNanos.longValue() : null;
             final Long minExpectedValue =
                     minExpectedValueNanos != null ? minExpectedValueNanos.longValue() : null;
             builder.maximumExpectedValue(maxExpectedValue);
             builder.minimumExpectedValue(minExpectedValue);
-            final double[] slas = distStatCfgOverride.getServiceLevelObjectiveBoundaries();
+            final double[] slas = distStatsConfig.getServiceLevelObjectiveBoundaries();
             if (slas != null) {
                 builder.sla(Arrays.stream(slas).mapToLong(sla -> (long) sla).toArray());
             }
@@ -143,17 +143,17 @@ public final class MoreMeters {
     /**
      * Returns a newly-registered {@link Timer} configured by given {@link DistributionStatisticConfig}.
      *
-     * @param distStatCfgOverride the {@link DistributionStatisticConfig} to use
+     * @param distStatsConfig the {@link DistributionStatisticConfig} to use
      */
     public static Timer newTimer(MeterRegistry registry, String name, Iterable<Tag> tags,
-                                 DistributionStatisticConfig distStatCfgOverride) {
+                                 DistributionStatisticConfig distStatsConfig) {
         requireNonNull(registry, "registry");
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
-        requireNonNull(distStatCfgOverride, "distributionStatisticConfig");
+        requireNonNull(distStatsConfig, "distStatCfg");
 
-        final Double maxExpectedValueNanos = distStatCfgOverride.getMaximumExpectedValueAsDouble();
-        final Double minExpectedValueNanos = distStatCfgOverride.getMinimumExpectedValueAsDouble();
+        final Double maxExpectedValueNanos = distStatsConfig.getMaximumExpectedValueAsDouble();
+        final Double minExpectedValueNanos = distStatsConfig.getMinimumExpectedValueAsDouble();
         final Duration maxExpectedValue =
                 maxExpectedValueNanos != null ? Duration.ofNanos(maxExpectedValueNanos.longValue()) : null;
         final Duration minExpectedValue =
@@ -163,11 +163,11 @@ public final class MoreMeters {
                     .tags(tags)
                     .maximumExpectedValue(maxExpectedValue)
                     .minimumExpectedValue(minExpectedValue)
-                    .publishPercentiles(distStatCfgOverride.getPercentiles())
-                    .publishPercentileHistogram(distStatCfgOverride.isPercentileHistogram())
-                    .percentilePrecision(distStatCfgOverride.getPercentilePrecision())
-                    .distributionStatisticBufferLength(distStatCfgOverride.getBufferLength())
-                    .distributionStatisticExpiry(distStatCfgOverride.getExpiry())
+                    .publishPercentiles(distStatsConfig.getPercentiles())
+                    .publishPercentileHistogram(distStatsConfig.isPercentileHistogram())
+                    .percentilePrecision(distStatsConfig.getPercentilePrecision())
+                    .distributionStatisticBufferLength(distStatsConfig.getBufferLength())
+                    .distributionStatisticExpiry(distStatsConfig.getExpiry())
                     .register(registry);
     }
 
