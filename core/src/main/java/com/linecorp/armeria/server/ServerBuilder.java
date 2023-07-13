@@ -2019,7 +2019,6 @@ public final class ServerBuilder implements TlsSetters {
             unhandledExceptionsReporter = null;
         }
 
-        // template의 contextPath활용
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
                                                 unhandledExceptionsReporter);
