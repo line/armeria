@@ -115,7 +115,7 @@ dependencies {
     }
     ['osx-x86_64', 'osx-aarch_64'].each { arch ->
         implementation(variantOf(libs.netty.transport.native.unix.common) { classifier(arch) })
-        implementation(variantOf(libs.netty.transport.native.kqueue) { classifier(arch) })
+//        implementation(variantOf(libs.netty.transport.native.kqueue) { classifier(arch) })
         implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier(arch) })
     }
     ['linux-x86_64', 'linux-aarch_64', 'osx-x86_64', 'osx-aarch_64', 'windows-x86_64'].each { arch ->
