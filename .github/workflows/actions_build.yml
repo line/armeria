@@ -117,7 +117,7 @@ jobs:
           ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
-        evn:
+        env:
           ENABLE_DOMAIN_SOCKET_TEST: ${{ matrix.domainSocket }}
 
       - if: ${{ matrix.snapshot && github.ref_name == 'main' }}
