@@ -26,7 +26,6 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -91,6 +90,11 @@ final class DefaultTestHttpResponse implements TestHttpResponse {
     }
 
     @Override
+    public ThrowableAssert assertCause() {
+        throw new AssertionError("Expecting the response to raise a throwable.");
+    }
+
+    @Override
     public int hashCode() {
         int result = informationals().hashCode();
         result = 59 * result + headers().hashCode();
@@ -98,6 +102,7 @@ final class DefaultTestHttpResponse implements TestHttpResponse {
         result = 59 * result + trailers().hashCode();
         return result;
     }
+
     @Override
     public boolean equals(@Nullable Object obj) {
         if (this == obj) {

@@ -28,7 +28,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
 
-
 final class DefaultWebTestClient implements WebTestClient {
 
     static final WebTestClient DEFAULT = new DefaultWebTestClient(BlockingWebClient.of());
@@ -44,7 +43,11 @@ final class DefaultWebTestClient implements WebTestClient {
     public TestHttpResponse execute(HttpRequest req, RequestOptions requestOptions) {
         requireNonNull(req, "req");
         requireNonNull(requestOptions, "requestOptions");
-        return TestHttpResponse.of(delegate.execute(req, requestOptions));
+        try {
+            return TestHttpResponse.of(delegate.execute(req, requestOptions));
+        } catch (Throwable cause) {
+            return TestHttpResponse.ofFailure(cause);
+        }
     }
 
     @Override

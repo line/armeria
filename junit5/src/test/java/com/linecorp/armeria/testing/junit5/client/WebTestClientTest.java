@@ -18,6 +18,7 @@ package com.linecorp.armeria.testing.junit5.client;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.function.Function;
 
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -142,6 +144,35 @@ class WebTestClientTest {
         server.webTestClient().execute(request)
               .assertStatus().isBadRequest()
               .assertContent().stringUtf8Contains("No closing MIME boundary");
+    }
+
+    @Test
+    void testAbortedResponse() {
+        WebTestClient client = WebTestClient.of();
+        client.get("/error")
+              .assertCause()
+              .isInstanceOf(IllegalArgumentException.class);
+
+        TestHttpResponse response = TestHttpResponse.ofFailure(new ArithmeticException("One plus one is two."));
+        response.assertCause()
+                .isInstanceOf(ArithmeticException.class)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("One plus one is two.")
+                .hasMessageStartingWith("One")
+                .hasMessageContaining("plus")
+                .hasMessageNotContaining("three")
+                .hasMessageEndingWith("two.");
+    }
+
+    @Test
+    void usingIncorrectAssertionMethod() {
+        assertThrows(AssertionError.class, () -> {
+            TestHttpResponse.of(AggregatedHttpResponse.of(200)).assertCause();
+        }, "Expecting the response to raise a throwable.");
+
+        assertThrows(RuntimeException.class, () -> {
+            TestHttpResponse.ofFailure(new RuntimeException("Runtime exception.")).assertStatus().isOk();
+        }, "Runtime exception.");
     }
 
     private static class MyAnnotatedService {

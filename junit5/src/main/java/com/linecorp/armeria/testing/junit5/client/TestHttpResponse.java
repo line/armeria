@@ -33,9 +33,20 @@ import com.linecorp.armeria.common.ResponseHeaders;
  */
 public interface TestHttpResponse extends AggregatedHttpMessage {
 
+    /**
+     * Creates a new HTTP response.
+     */
     static TestHttpResponse of(AggregatedHttpResponse aggregatedHttpResponse) {
         requireNonNull(aggregatedHttpResponse, "aggregatedHttpResponse");
         return new DefaultTestHttpResponse(aggregatedHttpResponse);
+    }
+
+    /**
+     * Creates a new failed HTTP response.
+     */
+    static TestHttpResponse ofFailure(Throwable cause) {
+        requireNonNull(cause, "cause");
+        return new AbortedTestHttpResponse(cause);
     }
 
     /**
@@ -78,4 +89,9 @@ public interface TestHttpResponse extends AggregatedHttpMessage {
      * Creates a new instance of {@link HttpHeadersAssert} from trailers the http response.
      */
     HttpHeadersAssert assertTrailers();
+
+    /**
+     * Creates a new instance of {@link ThrowableAssert} from aborted http response.
+     */
+    ThrowableAssert assertCause();
 }
