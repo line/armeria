@@ -1,0 +1,166 @@
+---
+menuTitle: "Implement CREATE"
+order: 4
+category: thrift
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing CREATE operation
+
+In the previous step, we defined empty service methods.
+In this step, we'll fill in one of the service methods to create a blog post and again, try making a call to a service method.
+Also, we'll use Armeria's <type://ServerExtension> for testing.
+
+<TutorialSteps current={4} />
+
+## What you need
+
+You need to have the following obtained from previous steps:
+
+- [Generated Java code](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file)
+- `Main.java`
+- `BlogServiceImpl.java`
+- `BlogClient.java`
+- `BlogServiceTest.java`
+
+## 1. Implement server-side
+
+Let's implement a service method to create a blog post.
+
+1. In the `BlogServiceImpl` class, create an ID generator to issue temporary blog post IDs and a map to contain blog posts.
+  ```java filename=BlogServiceImpl.java
+  import java.util.Map;
+  import java.util.concurrent.ConcurrentHashMap;
+  import java.util.concurrent.atomic.AtomicInteger;
+
+  public class BlogServiceImpl implements BlogService.AsyncIface {
+    private final AtomicInteger idGenerator = new AtomicInteger();
+    private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+    ...
+  }
+  ```
+2. In the `createBlogPost()` method, create a `BlogPost` object with a generated ID and request parameters.
+  ```java filename=BlogServiceImpl.java
+  import java.time.Instant;
+  ...
+  @Override
+  public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {
+    final int id = idGenerator.getAndIncrement();
+    final Instant now = Instant.now();
+    final BlogPost blogPost = new BlogPost()
+            .setId(id)
+            .setTitle(request.getTitle())
+            .setContent(request.getContent())
+            .setModifiedAt(now.toEpochMilli())
+            .setCreatedAt(now.toEpochMilli());
+  }
+  ```
+2. In the `createBlogPost()` method, save the post information in the `blogPosts` map and return the information of the created blog post to the `resultHandler`.
+  ```java filename=BlogServiceImpl.java
+  @Override
+  public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {
+    ...
+    blogPosts.put(id, blogPost);
+    final BlogPost stored = blogPost;
+    resultHandler.onComplete(stored);
+  }
+  ```
+
+## 2. Implement client-side
+
+In the `BlogClient` class, add a method to send a request to create a blog post.
+
+```java filename=BlogClient.java
+import example.armeria.blog.thrift.BlogPost;
+import example.armeria.blog.thrift.CreateBlogPostRequest;
+...
+BlogPost createBlogPost(String title, String content) throws TException {
+  final CreateBlogPostRequest request =
+          new CreateBlogPostRequest().setTitle(title)
+                                     .setContent(content);
+  return blogService.createBlogPost(request);
+}
+```
+
+## 3. Register a ServerExtension
+
+In the previous test code, we've connected directly to the server.
+This time, let's use Armeria's <type://ServerExtension> instead.
+This approach will automatically set-up and tear-down a server before tests are run.
+Now we don't have to invoke the main method to set up a server before running our tests.
+
+1. In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
+  Note that the service instance is added to the configuration.
+  ```java filename=BlogServiceTest.java
+  import org.junit.jupiter.api.extension.RegisterExtension;
+  import com.linecorp.armeria.server.ServerBuilder;
+  import com.linecorp.armeria.server.thrift.THttpService;
+  import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+  ...
+  @RegisterExtension
+  static final ServerExtension server = new ServerExtension() {
+    @Override
+    protected void configure(ServerBuilder sb) throws Exception {
+      sb.service("/thrift",
+                 THttpService.builder()
+                             // Add the service to the configuration
+                             .addService(new BlogServiceImpl())
+                             .build());
+    }
+  };
+  ```
+  2. Either remove the test method `hello()` or add the `@Disabled` annotation as follows
+  to prevent it from attempting a direct connection to the server.
+  ```java filename=BlogServiceTest.java
+  @Disabled // Add this
+  @Test
+  void hello() throws TException {
+    ...
+  }
+  ```
+
+## 4. Test creating a blog post
+
+Let's test if we can create a blog post.
+
+1. In the `BlogServiceTest` class, add a test method as follows.
+  ```java filename=BlogServiceTest.java
+  import static org.assertj.core.api.Assertions.assertThat;
+
+  import org.apache.thrift.TException;
+  import org.junit.jupiter.api.Order;
+  import org.junit.jupiter.api.Test;
+
+  import example.armeria.blog.thrift.BlogPost;
+
+  ...
+  @Test
+  void createBlogPost() throws TException {
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    final BlogPost response = client.createBlogPost("My first blog", "Hello Armeria!");
+    assertThat(response.getId()).isGreaterThanOrEqualTo(0);
+    assertThat(response.getTitle()).isEqualTo("My first blog");
+    assertThat(response.getContent()).isEqualTo("Hello Armeria!");
+    System.out.println(response);
+  }
+  ```
+2. Run the test case on your IDE or using Gradle.
+  ```bash
+  ./gradlew test
+  ```
+
+  The service worked as expected if you see the test case passed.
+
+## What's next
+
+In this step, we've implemented a method for creating a blog post.
+We've also registered <type://ServerExtension> to our test.
+
+Next, at [Step 5. Implement READ](/tutorials/thrift/blog/implement-read), we'll implement a READ operation to read a single post and also multiple posts.
+
+<TutorialSteps current={4} />

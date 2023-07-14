@@ -546,7 +546,7 @@ public abstract class LoggingDecoratorBuilder {
         if (!buildLogWriter) {
             return LogWriter.of();
         }
-        final TextLogFormatter logFormatter =
+        final LogFormatter logFormatter =
                 LogFormatter.builderForText()
                             .requestHeadersSanitizer(convertToStringSanitizer(requestHeadersSanitizer))
                             .responseHeadersSanitizer(convertToStringSanitizer(responseHeadersSanitizer))
