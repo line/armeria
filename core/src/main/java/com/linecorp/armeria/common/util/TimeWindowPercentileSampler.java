@@ -10,6 +10,9 @@
 package com.linecorp.armeria.common.util;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
@@ -23,13 +26,19 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
 
     private final float percentile;
     private final long windowLengthMillis;
-
     private final TimeWindowPercentileHistogram histogram;
     private static final long SNAPSHOT_UPDATE_MILLIS = 1000L;
-    private long lastSnapshotMillis = 0L;
+    private long lastSnapshotMillis;
     private HistogramSnapshot histogramSnapshot;
 
+    private final AtomicReference<Boolean> isTakingSnapshot = new AtomicReference<>(false);
+
     TimeWindowPercentileSampler(float percentile, long windowLengthMillis) {
+        this(percentile, windowLengthMillis, Clock.SYSTEM);
+    }
+
+    @VisibleForTesting
+    TimeWindowPercentileSampler(float percentile, long windowLengthMillis, Clock clock) {
         this.percentile = percentile;
         this.windowLengthMillis = windowLengthMillis;
 
@@ -42,7 +51,7 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
                                            .expiry(Duration.ofMillis(windowLengthMillis))
                                            .bufferLength(3)
                                            .build();
-        this.histogram = new TimeWindowPercentileHistogram(Clock.SYSTEM, distributionStatisticConfig, true);
+        this.histogram = new TimeWindowPercentileHistogram(clock, distributionStatisticConfig, true);
         this.histogramSnapshot = histogram.takeSnapshot(0, 0, 0);
         this.lastSnapshotMillis = System.currentTimeMillis();
     }
@@ -56,17 +65,20 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
         histogram.recordLong(t);
 
         if (lastSnapshotMillis + SNAPSHOT_UPDATE_MILLIS < System.currentTimeMillis()) {
-            histogramSnapshot = histogram.takeSnapshot(0, 0, 0);
-            lastSnapshotMillis = System.currentTimeMillis();
+            if (isTakingSnapshot.compareAndSet(false, true)) {
+                histogramSnapshot = histogram.takeSnapshot(0, 0, 0);
+                lastSnapshotMillis = System.currentTimeMillis();
+                isTakingSnapshot.set(false);
+            }
         }
 
         final Double percentileValue = histogramSnapshot.percentileValues()[0].value();
-        return percentileValue.longValue() <= t;
+        return t >= percentileValue.longValue();
     }
 
     @Override
     public String toString() {
-        return "SlidingWindowPercentileSampler with " + windowLengthMillis + " ms window and " + percentile +
+        return "TimeWindowPercentileSampler with " + windowLengthMillis + " ms window and " + percentile +
                " percentile";
     }
 }

@@ -32,6 +32,6 @@ final class AndSampler<T> implements Sampler<T> {
 
     @Override
     public String toString() {
-        return left.toString() + " and " + right.toString();
+        return left + " and " + right;
     }
 }

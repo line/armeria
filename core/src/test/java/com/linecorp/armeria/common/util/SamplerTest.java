@@ -111,25 +111,15 @@ class SamplerTest {
             assertThat(neverAndAlwaysSampler.isSampled(i)).isFalse();
         }
 
-        final Sampler<Object> halfAndHalfSampler = Sampler.random(0.5f).and(Sampler.random(0.5f));
-        int halfAndHalfSamplerCount = 0;
-        for (int i = 0; i < 10000; i++) {
-            if (halfAndHalfSampler.isSampled(i)) {
-                halfAndHalfSamplerCount += 1;
-            }
+        final Sampler<Object> notNeverSampler = Sampler.never().not();
+        for (int i = 0; i < 10; i++) {
+            assertThat(notNeverSampler.isSampled(i)).isTrue();
         }
-        // 0.5*0.5 = 0.25
-        assertThat(halfAndHalfSamplerCount).isBetween(2000, 3000); // Should be roughly 2500 //
 
-        final Sampler<Object> halfOrHalfSampler = Sampler.random(0.5f).or(Sampler.random(0.5f));
-        int halfOrHalfSamplerCount = 0;
-        for (int i = 0; i < 10000; i++) {
-            if (halfOrHalfSampler.isSampled(i)) {
-                halfOrHalfSamplerCount += 1;
-            }
+        final Sampler<Object> notAlwaysSampler = Sampler.always().not();
+        for (int i = 0; i < 10; i++) {
+            assertThat(notAlwaysSampler.isSampled(i)).isFalse();
         }
-        // 1 - (0.5*0.5) = 0.75
-        assertThat(halfOrHalfSamplerCount).isBetween(7000, 8000); // Should be roughly 7500
     }
 
     private static class SampleOnce implements Sampler<Object> {

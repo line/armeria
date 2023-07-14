@@ -32,6 +32,6 @@ final class OrSampler<T> implements Sampler<T> {
 
     @Override
     public String toString() {
-        return left.toString() + " or " + right.toString();
+        return left + " or " + right;
     }
 }
