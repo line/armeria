@@ -23,6 +23,7 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -31,7 +32,6 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.testing.EnabledOnOsWithDomainSockets;
 import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -42,7 +42,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-@EnabledOnOsWithDomainSockets
+@EnabledIfEnvironmentVariable(named = "ENABLE_DOMAIN_SOCKET_TEST", matches = "true")
 class DomainSocketServerTest {
 
     static {
