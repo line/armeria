@@ -29,7 +29,7 @@ import io.micrometer.observation.docs.ObservationDocumentation;
 enum HttpClientObservationDocumentation implements ObservationDocumentation {
 
     /**
-     * A span collected by {@link MicrometerObservationClient}.
+     * A span collected by {@link ObservationClient}.
      */
     OBSERVATION {
         @Override

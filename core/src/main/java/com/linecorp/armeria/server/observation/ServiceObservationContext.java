@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.observation;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -27,22 +29,22 @@ import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.transport.RequestReplyReceiverContext;
 
 /**
- * A {@link Context} which may be used in conjunction with {@link MicrometerObservationService}
+ * A {@link Context} which may be used in conjunction with {@link ObservationService}
  * to implement custom {@link ObservationConvention}s or {@link ObservationHandler}s.
  * <pre>{@code
  * ObservationConvention<HttpServerContext> convention = ...
  * Server.builder()
- *       .decorator(MicrometerObservationService.newDecorator(registry, convention))
+ *       .decorator(ObservationService.newDecorator(registry, convention))
  * ...
  * }</pre>
  */
 @UnstableApi
-public final class HttpServerContext extends RequestReplyReceiverContext<HttpRequest, RequestLog> {
+public final class ServiceObservationContext extends RequestReplyReceiverContext<HttpRequest, RequestLog> {
 
     private final ServiceRequestContext serviceRequestContext;
     private final HttpRequest httpRequest;
 
-    HttpServerContext(ServiceRequestContext serviceRequestContext, HttpRequest httpRequest) {
+    ServiceObservationContext(ServiceRequestContext serviceRequestContext, HttpRequest httpRequest) {
         super((c, key) -> c.headers().get(key));
         this.serviceRequestContext = serviceRequestContext;
         this.httpRequest = httpRequest;
@@ -61,5 +63,13 @@ public final class HttpServerContext extends RequestReplyReceiverContext<HttpReq
      */
     public HttpRequest httpRequest() {
         return httpRequest;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("serviceRequestContext", serviceRequestContext)
+                          .add("httpRequest", httpRequest)
+                          .toString();
     }
 }

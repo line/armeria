@@ -31,15 +31,15 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.observation.HttpClientContext;
-import com.linecorp.armeria.client.observation.MicrometerObservationClient;
+import com.linecorp.armeria.client.observation.ClientObservationContext;
+import com.linecorp.armeria.client.observation.ObservationClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils;
 import com.linecorp.armeria.internal.common.observation.SpanCollector;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.observation.HttpServerContext;
-import com.linecorp.armeria.server.observation.MicrometerObservationService;
+import com.linecorp.armeria.server.observation.ServiceObservationContext;
+import com.linecorp.armeria.server.observation.ObservationService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import brave.Tracing;
@@ -65,12 +65,12 @@ class CustomObservationTest {
                       .build();
     }
 
-    private static Function<? super HttpService, MicrometerObservationService>
+    private static Function<? super HttpService, ObservationService>
     customConventionServiceDecorator(String name) {
-        final ObservationConvention<HttpServerContext> convention =
-                new ObservationConvention<HttpServerContext>() {
+        final ObservationConvention<ServiceObservationContext> convention =
+                new ObservationConvention<ServiceObservationContext>() {
                     @Override
-                    public KeyValues getLowCardinalityKeyValues(HttpServerContext context) {
+                    public KeyValues getLowCardinalityKeyValues(ServiceObservationContext context) {
                         return KeyValues.of("ctx.id", context.requestContext().id().shortText());
                     }
 
@@ -81,18 +81,18 @@ class CustomObservationTest {
 
                     @Override
                     public boolean supportsContext(Context context) {
-                        return context instanceof HttpServerContext;
+                        return context instanceof ServiceObservationContext;
                     }
                 };
-        return MicrometerObservationService.newDecorator(newTracing(name), convention);
+        return ObservationService.newDecorator(newTracing(name), convention);
     }
 
-    private static Function<? super HttpClient, MicrometerObservationClient>
+    private static Function<? super HttpClient, ObservationClient>
     customConventionClientDecorator(String name) {
-        final ObservationConvention<HttpClientContext> convention =
-                new ObservationConvention<HttpClientContext>() {
+        final ObservationConvention<ClientObservationContext> convention =
+                new ObservationConvention<ClientObservationContext>() {
                     @Override
-                    public KeyValues getLowCardinalityKeyValues(HttpClientContext context) {
+                    public KeyValues getLowCardinalityKeyValues(ClientObservationContext context) {
                         return KeyValues.of("ctx.id", context.requestContext().id().shortText());
                     }
 
@@ -103,10 +103,10 @@ class CustomObservationTest {
 
                     @Override
                     public boolean supportsContext(Context context) {
-                        return context instanceof HttpClientContext;
+                        return context instanceof ClientObservationContext;
                     }
                 };
-        return MicrometerObservationClient.newDecorator(newTracing(name), convention);
+        return ObservationClient.newDecorator(newTracing(name), convention);
     }
 
     @RegisterExtension

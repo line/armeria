@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.observation;
 
-import static com.linecorp.armeria.client.observation.MicrometerObservationClient.newDecorator;
+import static com.linecorp.armeria.client.observation.ObservationClient.newDecorator;
 import static com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils.observationRegistry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -66,11 +66,11 @@ import brave.propagation.ThreadLocalCurrentTraceContext;
 import brave.sampler.Sampler;
 import io.micrometer.common.KeyValues;
 
-class MicrometerObservationClientTest {
+class ObservationClientTest {
 
     private static final String TEST_SERVICE = "test-service";
 
-    private static final String TEST_SPAN = "hello";
+    private static final String TEST_SPAN = "java.lang.Object/hello";
 
     @AfterEach
     void tearDown() {
@@ -84,7 +84,7 @@ class MicrometerObservationClientTest {
                         Tracing.newBuilder().build())),
                      new DefaultHttpClientObservationConvention() {
             @Override
-            public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
+            public KeyValues getHighCardinalityKeyValues(ClientObservationContext context) {
                 context.setRemoteServiceName("remote-service");
                 return super.getHighCardinalityKeyValues(context);
             }
@@ -254,10 +254,10 @@ class MicrometerObservationClientTest {
             final HttpClient delegate = mock(HttpClient.class);
             when(delegate.execute(any(), any())).thenReturn(res);
 
-            final MicrometerObservationClient stub = newDecorator(observationRegistry(
+            final ObservationClient stub = newDecorator(observationRegistry(
                     HttpTracing.create(tracing)), new DefaultHttpClientObservationConvention() {
                 @Override
-                public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
+                public KeyValues getHighCardinalityKeyValues(ClientObservationContext context) {
                     context.setRemoteServiceName(remoteServiceName);
                     return super.getHighCardinalityKeyValues(context);
                 }

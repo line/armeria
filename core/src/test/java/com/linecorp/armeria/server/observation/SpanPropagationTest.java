@@ -33,7 +33,7 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.observation.MicrometerObservationClient;
+import com.linecorp.armeria.client.observation.ObservationClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -73,7 +73,7 @@ class SpanPropagationTest {
                        serviceTraceCtx.set(tracing.currentTraceContext().get());
                    }, ctx.eventLoop());
                 return HttpResponse.from(
-                        server.webClient(cb -> cb.decorator(MicrometerObservationClient.newDecorator(
+                        server.webClient(cb -> cb.decorator(ObservationClient.newDecorator(
                                       MicrometerObservationRegistryUtils.observationRegistry(tracing))))
                               .get("/bar").aggregate().thenApply(res -> {
                                   return HttpResponse.of("OK");
@@ -84,7 +84,7 @@ class SpanPropagationTest {
                 return HttpResponse.of("OK");
             });
             sb.decorator(LoggingService.newDecorator());
-            sb.decorator(MicrometerObservationService.newDecorator(
+            sb.decorator(ObservationService.newDecorator(
                     MicrometerObservationRegistryUtils.observationRegistry(tracing)));
         }
     };
@@ -102,7 +102,7 @@ class SpanPropagationTest {
                                               clientTraceCtx.set(tracing.currentTraceContext().get());
                                               return delegate.execute(ctx, req);
                                           }))
-                                          .decorator(MicrometerObservationClient.newDecorator(
+                                          .decorator(ObservationClient.newDecorator(
                                                   MicrometerObservationRegistryUtils.observationRegistry(
                                                           tracing)))
                                           .decorator(LoggingClient.newDecorator())

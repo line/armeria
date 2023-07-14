@@ -61,7 +61,7 @@ import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.propagation.ThreadLocalCurrentTraceContext;
 import brave.sampler.Sampler;
 
-class MicrometerObservationServiceTest {
+class ObservationServiceTest {
 
     private static final String TEST_SERVICE = "test-service";
 
@@ -74,7 +74,7 @@ class MicrometerObservationServiceTest {
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
-        MicrometerObservationService.newDecorator(
+        ObservationService.newDecorator(
                 MicrometerObservationRegistryUtils.observationRegistry(HttpTracing.create(
                         Tracing.newBuilder()
                                .currentTraceContext(ThreadLocalCurrentTraceContext.create())
@@ -179,8 +179,8 @@ class MicrometerObservationServiceTest {
         logBuilder.endRequest();
 
         try (SafeCloseable ignored = ctx.push()) {
-            final MicrometerObservationService
-                    service = MicrometerObservationService.newDecorator(
+            final ObservationService
+                    service = ObservationService.newDecorator(
                     MicrometerObservationRegistryUtils.observationRegistry(tracing)).apply(transientService);
 
             // do invoke
@@ -220,8 +220,8 @@ class MicrometerObservationServiceTest {
 
         try (SafeCloseable ignored = ctx.push()) {
             final HttpService delegate = mock(HttpService.class);
-            final MicrometerObservationService
-                    service = MicrometerObservationService.newDecorator(
+            final ObservationService
+                    service = ObservationService.newDecorator(
                     MicrometerObservationRegistryUtils.observationRegistry(httpTracing)).apply(delegate);
             when(delegate.serve(ctx, req)).thenReturn(res);
 

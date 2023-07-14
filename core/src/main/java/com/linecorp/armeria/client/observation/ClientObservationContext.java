@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.observation;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -28,7 +30,7 @@ import io.micrometer.observation.ObservationHandler;
 import io.micrometer.observation.transport.RequestReplySenderContext;
 
 /**
- * A {@link Context} which may be used in conjunction with {@link MicrometerObservationClient}
+ * A {@link Context} which may be used in conjunction with {@link ObservationClient}
  * to implement custom {@link ObservationConvention}s or {@link ObservationHandler}s.
  * <pre>{@code
  * ObservationConvention<HttpClientContext> convention = ...
@@ -38,13 +40,14 @@ import io.micrometer.observation.transport.RequestReplySenderContext;
  * }</pre>
  */
 @UnstableApi
-public final class HttpClientContext extends RequestReplySenderContext<RequestHeadersBuilder, RequestLog> {
+public final class ClientObservationContext
+        extends RequestReplySenderContext<RequestHeadersBuilder, RequestLog> {
 
     private final ClientRequestContext clientRequestContext;
     private final HttpRequest httpRequest;
 
-    HttpClientContext(ClientRequestContext clientRequestContext, RequestHeadersBuilder carrier,
-                      HttpRequest httpRequest) {
+    ClientObservationContext(ClientRequestContext clientRequestContext, RequestHeadersBuilder carrier,
+                             HttpRequest httpRequest) {
         super(RequestHeadersBuilder::add);
         this.clientRequestContext = clientRequestContext;
         this.httpRequest = httpRequest;
@@ -63,5 +66,13 @@ public final class HttpClientContext extends RequestReplySenderContext<RequestHe
      */
     public HttpRequest httpRequest() {
         return httpRequest;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("clientRequestContext", clientRequestContext)
+                          .add("httpRequest", httpRequest)
+                          .toString();
     }
 }

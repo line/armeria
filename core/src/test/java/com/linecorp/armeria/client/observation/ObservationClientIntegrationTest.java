@@ -48,7 +48,7 @@ import io.micrometer.observation.ObservationRegistry;
 import okhttp3.Protocol;
 
 @RunWith(Parameterized.class)
-public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
+public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Parameters
     public static List<SessionProtocol> sessionProtocols() {
@@ -73,7 +73,7 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
 
     private DefaultHttpClientObservationConvention clientObservationConvention;
 
-    public MicrometerObservationClientIntegrationTest(SessionProtocol sessionProtocol) {
+    public ObservationClientIntegrationTest(SessionProtocol sessionProtocol) {
         this.sessionProtocol = sessionProtocol;
 
         if (sessionProtocol == SessionProtocol.H2C) {
@@ -99,7 +99,7 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
     protected WebClient newClient(int port) {
         return WebClient.builder(sessionProtocol.uriText() + "://127.0.0.1:" + port)
                         .factory(clientFactoryWithoutUpgradeRequest)
-                        .decorator(MicrometerObservationClient.newDecorator(
+                        .decorator(ObservationClient.newDecorator(
                                 observationRegistry(), clientObservationConvention))
                         .build();
     }
@@ -145,7 +145,7 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
         clientObservationConvention = new DefaultHttpClientObservationConvention() {
 
                     @Override
-                    public KeyValues getHighCardinalityKeyValues(HttpClientContext context) {
+                    public KeyValues getHighCardinalityKeyValues(ClientObservationContext context) {
                         context.setRemoteServiceName("remote-service"); // TODO: As a side effect
                         KeyValues values =
                                 super.getHighCardinalityKeyValues(
@@ -161,7 +161,7 @@ public class MicrometerObservationClientIntegrationTest extends ITHttpAsyncClien
                     }
 
                     @Override
-                    public String getContextualName(HttpClientContext context) {
+                    public String getContextualName(ClientObservationContext context) {
                         return context.httpRequest().method()
                                       .toString().toLowerCase() + " " +
                                context.httpRequest().path()

@@ -19,7 +19,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.allAsList;
 import static com.google.common.util.concurrent.Futures.transformAsync;
-import static com.linecorp.armeria.client.observation.MicrometerObservationClient.newDecorator;
+import static com.linecorp.armeria.client.observation.ObservationClient.newDecorator;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -68,7 +68,7 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.observation.MicrometerObservationService;
+import com.linecorp.armeria.server.observation.ObservationService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
@@ -240,8 +240,8 @@ class BraveIntegrationTest {
         assertThat(spanHandler.spans).isEmpty();
     }
 
-    private static MicrometerObservationService decorate(String name, HttpService service) {
-        return MicrometerObservationService.newDecorator(newTracing(name)).apply(service);
+    private static ObservationService decorate(String name, HttpService service) {
+        return ObservationService.newDecorator(newTracing(name)).apply(service);
     }
 
     private static HelloService.AsyncIface newClient(String path) {

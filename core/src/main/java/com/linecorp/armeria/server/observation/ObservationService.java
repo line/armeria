@@ -14,30 +14,29 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.observation;
+package com.linecorp.armeria.server.observation;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
-import com.linecorp.armeria.client.observation.HttpClientObservationDocumentation.Events;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.ObservationRegistry;
 
 /**
- * Decorates an {@link HttpClient} to trace outbound {@link HttpRequest}s using
+ * Decorates an {@link HttpService} to trace inbound {@link HttpRequest}s using
  * <a href="https://github.com/micrometer-metrics/micrometer">Micrometer Observation</a>.
  * The following may be a typical implementation using a brave implementation:
  * <pre>{@code
@@ -62,73 +61,79 @@ import io.micrometer.observation.ObservationRegistry;
  *         new FirstMatchingCompositeObservationHandler(tracingHandlers));
  *
  * // add the decorator
- * WebClient.builder()
- *          .decorator(MicrometerObservationClient.newDecorator(registry))
+ * Server.builder()
+ *       .decorator(ObservationService.newDecorator(registry))
  * ...
  * }</pre>
  */
 @UnstableApi
-public final class MicrometerObservationClient extends SimpleDecoratingHttpClient {
+public final class ObservationService extends SimpleDecoratingHttpService {
 
     /**
-     * Creates a new micrometer observation integrated {@link HttpClient} decorator
-     * using the specified {@link ObservationRegistry}.
+     * Creates a new micrometer observation integrated {@link HttpService} decorator using the
+     * specified {@link ObservationRegistry} instance.
      */
-    public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
-            ObservationRegistry observationRegistry) {
+    public static Function<? super HttpService, ObservationService>
+    newDecorator(ObservationRegistry observationRegistry) {
         requireNonNull(observationRegistry, "observationRegistry");
-        return delegate -> new MicrometerObservationClient(delegate, observationRegistry, null);
+        return service -> new ObservationService(service, observationRegistry, null);
     }
 
     /**
-     * Creates a new micrometer observation integrated {@link HttpClient} decorator
-     * using the specified {@link ObservationRegistry} and {@link ObservationConvention}.
+     * Creates a new micrometer observation integrated {@link HttpService} decorator using the
+     * specified {@link ObservationRegistry} and {@link ObservationConvention}.
      */
-    public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
-            ObservationRegistry observationRegistry,
-            ObservationConvention<HttpClientContext> httpClientObservationConvention) {
+    public static Function<? super HttpService, ObservationService>
+    newDecorator(ObservationRegistry observationRegistry,
+                 ObservationConvention<ServiceObservationContext> observationConvention) {
         requireNonNull(observationRegistry, "observationRegistry");
         requireNonNull(observationConvention, "observationConvention");
-
-        return delegate -> new MicrometerObservationClient(delegate, observationRegistry,
-                                                           observationConvention);
+        return service -> new ObservationService(
+                service, observationRegistry, requireNonNull(observationConvention, "observationConvention"));
     }
 
     private final ObservationRegistry observationRegistry;
-
     @Nullable
-    private final ObservationConvention<HttpClientContext> httpClientObservationConvention;
+    private final ObservationConvention<ServiceObservationContext> observationConvention;
 
-    private MicrometerObservationClient(
-            HttpClient delegate, ObservationRegistry observationRegistry,
-            @Nullable ObservationConvention<HttpClientContext> httpClientObservationConvention) {
+    private ObservationService(
+            HttpService delegate, ObservationRegistry observationRegistry,
+            @Nullable ObservationConvention<ServiceObservationContext> observationConvention) {
         super(delegate);
         this.observationRegistry = requireNonNull(observationRegistry, "observationRegistry");
-        this.httpClientObservationConvention = httpClientObservationConvention;
+        this.observationConvention = observationConvention;
     }
 
     @Override
-    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
-        final HttpClientContext httpClientContext = new HttpClientContext(ctx, newHeaders, req);
-        final Observation observation = HttpClientObservationDocumentation.OBSERVATION.observation(
-                httpClientObservationConvention, DefaultHttpClientObservationConvention.INSTANCE,
-                () -> httpClientContext, observationRegistry).start();
-        final HttpRequest newReq = req.withHeaders(newHeaders);
-        ctx.updateRequest(newReq);
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING) ||
+            !ctx.config().transientServiceOptions().contains(
+                    TransientServiceOption.WITH_METRIC_COLLECTION)) {
+            return unwrap().serve(ctx, req);
+        }
+
+        final ServiceObservationContext serviceObservationContext = new ServiceObservationContext(ctx, req);
+        final Observation observation = HttpServiceObservationDocumentation.OBSERVATION.observation(
+                observationConvention, DefaultServiceObservationConvention.INSTANCE,
+                () -> serviceObservationContext, observationRegistry).start();
+
         final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
 
-        if (!observationRegistry.isNoop() && !observation.isNoop() && ctxExtension != null) {
+        if (observationRegistry.isNoop() || observation.isNoop()) {
+            return unwrap().serve(ctx, req);
+        }
+
+        if (ctxExtension != null) {
             // Make the span the current span and run scope decorators when the ctx is pushed.
             ctxExtension.hook(observation::openScope);
         }
 
-        enrichObservation(ctx, httpClientContext, observation);
+        enrichObservation(ctx, serviceObservationContext, observation);
 
-        return observation.scopedChecked(() -> unwrap().execute(ctx, newReq));
+        return observation.scopedChecked(() -> unwrap().serve(ctx, req));
     }
 
-    private static void enrichObservation(ClientRequestContext ctx, HttpClientContext httpClientContext,
+    private void enrichObservation(ServiceRequestContext ctx, ServiceObservationContext serviceObservationContext,
                                    Observation observation) {
         if (observation.isNoop()) {
             // For no-op spans, we only need to inject into headers and don't set any other attributes.
@@ -137,21 +142,19 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
 
         ctx.log()
            .whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
-           .thenAccept(requestLog -> observation.event(Events.WIRE_SEND));
+           .thenAccept(requestLog -> observation.event(HttpServiceObservationDocumentation.Events.WIRE_RECEIVE));
 
         ctx.log()
            .whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
            .thenAccept(requestLog -> {
                if (requestLog.responseFirstBytesTransferredTimeNanos() != null) {
-                   observation.event(Events.WIRE_RECEIVE);
+                   observation.event(HttpServiceObservationDocumentation.Events.WIRE_SEND);
                }
            });
 
         ctx.log().whenComplete()
            .thenAccept(requestLog -> {
-               // TODO: ClientConnectionTimings - there is no way to record events
-               // with a specific timestamp for an observation
-               httpClientContext.setResponse(requestLog);
+               serviceObservationContext.setResponse(requestLog);
                observation.stop();
            });
     }

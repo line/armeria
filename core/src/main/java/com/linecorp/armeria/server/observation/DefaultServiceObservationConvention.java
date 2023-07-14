@@ -20,72 +20,98 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.net.InetSocketAddress;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.observation.HttpServerObservationDocumentation.HighCardinalityKeys;
-import com.linecorp.armeria.server.observation.HttpServerObservationDocumentation.LowCardinalityKeys;
+import com.linecorp.armeria.server.observation.HttpServiceObservationDocumentation.HighCardinalityKeys;
+import com.linecorp.armeria.server.observation.HttpServiceObservationDocumentation.LowCardinalityKeys;
 
+import io.micrometer.common.KeyValue;
 import io.micrometer.common.KeyValues;
 import io.micrometer.observation.Observation.Context;
 import io.micrometer.observation.ObservationConvention;
 
-final class DefaultServiceObservationConvention implements ObservationConvention<HttpServerContext> {
+final class DefaultServiceObservationConvention implements ObservationConvention<ServiceObservationContext> {
 
     static final DefaultServiceObservationConvention INSTANCE =
             new DefaultServiceObservationConvention();
 
     @Override
-    public KeyValues getLowCardinalityKeyValues(HttpServerContext context) {
+    public KeyValues getLowCardinalityKeyValues(ServiceObservationContext context) {
         final ServiceRequestContext ctx = context.requestContext();
-        KeyValues keyValues = KeyValues.of(
-                LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
+        int expectedSize = 1;
+        KeyValue protocol = null;
+        KeyValue serializationFormat = null;
+        KeyValue statusCode = null;
         if (context.getResponse() != null) {
             final RequestLog log = ctx.log().ensureComplete();
-            keyValues = keyValues.and(
-                    LowCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
+            protocol = LowCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log));
+            statusCode = LowCardinalityKeys.STATUS_CODE
+                    .withValue(log.responseStatus().codeAsText());
+            expectedSize = 3;
             final String serFmt = serializationFormat(log);
             if (serFmt != null) {
-                keyValues = keyValues.and(
-                        LowCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt));
+                expectedSize = 4;
+                serializationFormat = LowCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt);
             }
-            keyValues = keyValues.and(
-                    LowCardinalityKeys.STATUS_CODE.withValue(log.responseStatus().codeAsText()));
         }
-        return keyValues;
+        ImmutableList.Builder<KeyValue> builder = ImmutableList.builderWithExpectedSize(expectedSize);
+        builder.add(LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
+        addIfNotNull(protocol, builder);
+        addIfNotNull(statusCode, builder);
+        addIfNotNull(serializationFormat, builder);
+        return KeyValues.of(builder.build());
+    }
+
+    private void addIfNotNull(@Nullable KeyValue keyValue, ImmutableList.Builder<KeyValue> builder) {
+        if (keyValue != null) {
+            builder.add(keyValue);
+        }
     }
 
     @Override
-    public KeyValues getHighCardinalityKeyValues(HttpServerContext context) {
+    public KeyValues getHighCardinalityKeyValues(ServiceObservationContext context) {
         final ServiceRequestContext ctx = context.requestContext();
-        KeyValues keyValues = KeyValues.of(
-                HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
-                HighCardinalityKeys.HTTP_HOST.withValue(
-                        firstNonNull(context.httpRequest().authority(), "UNKNOWN")),
-                HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString())
-        );
-        final RequestLog log = context.getResponse();
-        if (log != null) {
-
+        int expectedSize = 3;
+        KeyValue addressRemote = null;
+        KeyValue addressLocal = null;
+        KeyValue error = null;
+        if (context.getResponse() != null) {
+            final RequestLog log = ctx.log().ensureComplete();
             final InetSocketAddress raddr = ctx.remoteAddress();
-            keyValues = keyValues.and(
-                    HighCardinalityKeys.ADDRESS_REMOTE.withValue(raddr.toString()));
-
+            if (raddr != null) {
+                expectedSize = expectedSize + 1;
+                addressRemote = HighCardinalityKeys.ADDRESS_REMOTE.withValue(raddr.toString());
+            }
             final InetSocketAddress laddr = ctx.localAddress();
-            keyValues = keyValues.and(
-                    HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString()));
+            if (laddr != null) {
+                expectedSize = expectedSize + 1;
+                addressLocal = HighCardinalityKeys.ADDRESS_LOCAL.withValue(laddr.toString());
+            }
 
             final Throwable responseCause = log.responseCause();
             if (responseCause != null) {
-                keyValues = keyValues.and(HighCardinalityKeys.ERROR.withValue(responseCause.toString()));
+                expectedSize = expectedSize + 1;
+                error = HighCardinalityKeys.ERROR.withValue(responseCause.toString());
             } else if (log.responseStatus().isError()) {
-                keyValues = keyValues.and(
-                        HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText()));
+                expectedSize = expectedSize + 1;
+                error = HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText());
             }
         }
-        return keyValues;
+        ImmutableList.Builder<KeyValue> builder = ImmutableList.builderWithExpectedSize(expectedSize);
+        builder.add(HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
+                    HighCardinalityKeys.HTTP_HOST.withValue(firstNonNull(context.httpRequest().authority(), "UNKNOWN")),
+                    HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString()));
+        addIfNotNull(addressRemote, builder);
+        addIfNotNull(addressLocal, builder);
+        addIfNotNull(error, builder);
+        return KeyValues.of(builder.build());
     }
 
     /**
@@ -110,15 +136,18 @@ final class DefaultServiceObservationConvention implements ObservationConvention
     }
 
     @Override
-    public String getContextualName(HttpServerContext context) {
-        final ServiceRequestContext serviceRequestContext = context.requestContext();
-        final RequestLog log = serviceRequestContext.log().ensureComplete();
-        final String name = log.name();
-        return firstNonNull(name, context.getName());
+    public String getContextualName(ServiceObservationContext context) {
+        final RequestLogAccess logAccess = context.requestContext().log();
+        if (logAccess.isAvailable(
+                RequestLogProperty.NAME)) {
+            return logAccess.partial().fullName();
+        } else {
+            return context.getName();
+        }
     }
 
     @Override
     public boolean supportsContext(Context context) {
-        return context instanceof HttpServerContext;
+        return context instanceof ServiceObservationContext;
     }
 }
