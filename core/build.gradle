@@ -239,7 +239,12 @@ testing.suites {
     test {
         targets.configureEach {
             testTask.configure {
-                include '**/DomainSocketClientTest**'
+                include '**/DomainSocketServerTest**'
+                testLogging {
+                    showExceptions true
+                    showCauses true
+                    showStandardStreams true
+                }
             }
         }
     }

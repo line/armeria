@@ -23,6 +23,7 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.CommonPools;
@@ -54,6 +55,20 @@ class DomainSocketServerTest {
             sb.http(domainSocketAddress());
             sb.service("/", (ctx, req) -> HttpResponse.of(200));
         }
+
+        @Override
+        public void before(ExtensionContext context) throws Exception {
+            System.err.println("## [TRACE] Staring Unix domain socket server...");
+            super.before(context);
+            System.err.println("## [TRACE] Unix domain socket server has been started.");
+        }
+
+        @Override
+        public void after(ExtensionContext context) throws Exception {
+            System.err.println("## [TRACE] Stopping Unix domain socket server...");
+            super.after(context);
+            System.err.println("## [TRACE] Unix domain socket server has been stopped.");
+        }
     };
 
     /**
@@ -73,17 +88,23 @@ class DomainSocketServerTest {
                 receivedBuffers.add((ByteBuf) msg);
             }
         });
+        System.err.println("## [TRACE] Connecting to " + domainSocketAddress() + " ...");
         final Channel ch = b.connect(domainSocketAddress().asNettyAddress())
                             .syncUninterruptibly()
                             .channel();
+        System.err.println("## [TRACE] Connected to " + domainSocketAddress());
 
+        System.err.println("## [TRACE] Sending an GET request to " + domainSocketAddress() + " ...");
         ch.writeAndFlush(Unpooled.copiedBuffer(
                   "GET / HTTP/1.1\r\n" +
                   "Connection: close\r\n" +
                   "\r\n", StandardCharsets.US_ASCII))
           .syncUninterruptibly();
+        System.err.println("## [TRACE] Sent an GET request to " + domainSocketAddress());
 
+        System.err.println("## [TRACE] Closing " + ch + " ...");
         ch.closeFuture().syncUninterruptibly();
+        System.err.println("## [TRACE] Channel has been closed.");
 
         final String res = receivedBuffers.stream()
                                           .map(buf -> {
