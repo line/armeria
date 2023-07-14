@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ self-hosted-ikhoon-local ]
+        on: [ self-hosted, macos-12, windows-latest ]
         java: [ 19 ]
         include:
           - java: 8
@@ -47,7 +47,7 @@ jobs:
           - java: 19
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
-            on: self-hosted-ikhoon-local
+            on: macos-11
             coverage: true
           - java: 19
             on: self-hosted
@@ -93,7 +93,7 @@ jobs:
       - name: Build with Gradle
         run: |
           ./gradlew --no-daemon --stacktrace :core:test \
-          ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=1' }} --parallel \
+          ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           ${{ matrix.leak && '-Pleak' || '' }} \
           ${{ matrix.blockhound && '-Pblockhound' || '' }} \

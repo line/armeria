@@ -121,7 +121,6 @@ class DomainSocketServerTest {
         assertThat(res).startsWith("HTTP/1.1 200 OK\r\n")
                        .contains("\r\nconnection: close\r\n")
                        .endsWith("\r\n\r\n200 OK");
-        Thread.sleep(Long.MAX_VALUE);
     }
 
     private static DomainSocketAddress domainSocketAddress() {
