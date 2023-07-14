@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ self-hosted, macos-12, windows-latest ]
+        on: [ self-hosted-ikhoon-local ]
         java: [ 19 ]
         include:
           - java: 8
@@ -47,7 +47,7 @@ jobs:
           - java: 19
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
-            on: macos-12
+            on: self-hosted-ikhoon-local
             coverage: true
           - java: 19
             on: self-hosted
