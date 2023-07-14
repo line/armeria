@@ -614,16 +614,17 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
      * progress for the given amount of time. By default, HTTP/2 PING frames do not prevent connection from
      * closing. Use the method {@link ClientFactoryBuilder#idleTimeout(Duration, boolean)} to set whether to
-     * prevent connection from closing when an HTTP/2 PING frame is received.
+     * prevent connection from closing when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"}
+     * is received.
      */
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout) {
         return idleTimeoutMillis(requireNonNull(idleTimeout, "idleTimeout").toMillis());
     }
 
     /**
-     * Sets the idle timeout of a socket connection and whether to reset idle timeout when an HTTP/2 PING
-     * frame or OPTIONS * is received. If `keepAliveOnPing` is `true`, idle timeout is reset
-     * when an HTTP/2 PING frame or OPTIONS * is received.
+     * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
+     * progress for the given amount of time. If {@code keepAliveOnPing} is true, the idle timeout is reset
+     * when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"} is received.
      */
     @UnstableApi
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
@@ -639,9 +640,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the idle timeout of a socket connection in milliseconds. The connection is closed if there is no
-     * request in progress for the given amount of time. If keepAliveOnPing is true, idle timeout is reset
-     * when an HTTP/2 PING frame or OPTIONS * is received.
+     * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
+     * progress for the given amount of time. If {@code keepAliveOnPing} is true, the idle timeout is reset
+     * when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"} is received.
      */
     @UnstableApi
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {

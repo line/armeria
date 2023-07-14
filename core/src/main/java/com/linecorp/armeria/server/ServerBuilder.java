@@ -564,7 +564,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the idle timeout of a connection in milliseconds for keep-alive and whether to prevent
-     * connection going idle when an HTTP/2 PING frame or OPTIONS * request is received.
+     * connection going idle when an HTTP/2 PING frame or {@code "OPTIONS * HTTP/1.1"} request is received.
      *
      * @param idleTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame, OPTIONS * request or not.
@@ -587,7 +587,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the idle timeout of a connection for keep-alive and whether to prevent connection
-     * connection going idle when an HTTP/2 PING frame or OPTIONS * request is received.
+     * connection going idle when an HTTP/2 PING frame or {@code "OPTIONS * HTTP/1.1"} request is received.
      *
      * @param idleTimeout the timeout. {@code 0} disables the timeout.
      * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame, OPTIONS * request or not.
