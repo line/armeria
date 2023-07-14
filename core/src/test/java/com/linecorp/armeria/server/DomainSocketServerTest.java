@@ -45,6 +45,10 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 @EnabledOnOsWithDomainSockets
 class DomainSocketServerTest {
 
+    static {
+        System.err.println("## [TRACE] Initializing DomainSocketServerTest ...");
+    }
+
     @RegisterExtension
     static final TemporaryFolderExtension tempDir = new TemporaryFolderExtension();
 
@@ -76,7 +80,7 @@ class DomainSocketServerTest {
      * a valid HTTP/1 response.
      */
     @Test
-    void shouldSupportBindingOnDomainSocket() {
+    void shouldSupportBindingOnDomainSocket() throws InterruptedException {
         final BlockingQueue<ByteBuf> receivedBuffers = new LinkedTransferQueue<>();
         final TransportType transportType = Flags.transportType();
         final Bootstrap b = new Bootstrap();
@@ -117,6 +121,7 @@ class DomainSocketServerTest {
         assertThat(res).startsWith("HTTP/1.1 200 OK\r\n")
                        .contains("\r\nconnection: close\r\n")
                        .endsWith("\r\n\r\n200 OK");
+        Thread.sleep(Long.MAX_VALUE);
     }
 
     private static DomainSocketAddress domainSocketAddress() {
