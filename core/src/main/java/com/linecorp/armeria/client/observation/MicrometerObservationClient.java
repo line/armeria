@@ -86,8 +86,11 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
     public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
             ObservationRegistry observationRegistry,
             ObservationConvention<HttpClientContext> httpClientObservationConvention) {
+        requireNonNull(observationRegistry, "observationRegistry");
+        requireNonNull(observationConvention, "observationConvention");
+
         return delegate -> new MicrometerObservationClient(delegate, observationRegistry,
-                                                           httpClientObservationConvention);
+                                                           observationConvention);
     }
 
     private final ObservationRegistry observationRegistry;
