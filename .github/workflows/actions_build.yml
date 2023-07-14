@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ self-hosted, macos-12, windows-latest ]
+        on: [ self-hosted, macos-11, macos-12, windows-latest ]
         java: [ 19 ]
         include:
           - java: 8
@@ -49,6 +49,15 @@ jobs:
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
             on: macos-11
             coverage: true
+          - java: 17
+            on: macos-11
+            coverage: false
+          - java: 11
+            on: macos-12
+            coverage: true
+          - java: 8
+            on: macos-12
+            coverage: false
           - java: 19
             on: self-hosted
             snapshot: true
