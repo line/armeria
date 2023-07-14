@@ -85,6 +85,8 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
     public static Function<? super HttpService, MicrometerObservationService>
     newDecorator(ObservationRegistry observationRegistry,
                  ObservationConvention<HttpServerContext> observationConvention) {
+        requireNonNull(observationRegistry, "observationRegistry");
+        requireNonNull(observationConvention, "observationConvention");
         return service -> new MicrometerObservationService(
                 service, observationRegistry, requireNonNull(observationConvention, "observationConvention"));
     }
