@@ -44,24 +44,11 @@ jobs:
           - java: 17
             on: self-hosted
             min-java: 17
-          - java: 19
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
-            on: macos-12
             coverage: true
-            domainSocket: true
-          - java: 17
-            on: macos-12
-            coverage: true
-            domainSocket: false
           - java: 19
             on: macos-12
-            coverage: false
-            domainSocket: true
-          - java: 17
-            on: macos-12
-            coverage: false
-            domainSocket: false
           - java: 19
             on: self-hosted
             snapshot: true
@@ -117,8 +104,6 @@ jobs:
           ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
-        env:
-          ENABLE_DOMAIN_SOCKET_TEST: ${{ matrix.domainSocket }}
 
       - if: ${{ matrix.snapshot && github.ref_name == 'main' }}
         name: Publish snapshots
@@ -159,7 +144,7 @@ jobs:
 
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
 
       - name: Fail the run if any threads were blocked
         if: ${{ matrix.blockhound }}
