@@ -66,8 +66,8 @@ final class DefaultServiceObservationConvention implements ObservationConvention
                         firstNonNull(context.httpRequest().authority(), "UNKNOWN")),
                 HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString())
         );
-        if (context.getResponse() != null) {
-            final RequestLog log = ctx.log().ensureComplete();
+        final RequestLog log = context.getResponse();
+        if (log != null) {
 
             final InetSocketAddress raddr = ctx.remoteAddress();
             keyValues = keyValues.and(
@@ -92,7 +92,7 @@ final class DefaultServiceObservationConvention implements ObservationConvention
      * Returns the {@link SessionProtocol#uriText()} of the {@link RequestLog}.
      */
     private static String protocol(RequestLog requestLog) {
-        return requestLog.scheme().sessionProtocol().uriText();
+        return requestLog.sessionProtocol().uriText();
     }
 
     /**
@@ -100,7 +100,7 @@ final class DefaultServiceObservationConvention implements ObservationConvention
      */
     @Nullable
     private static String serializationFormat(RequestLog requestLog) {
-        final SerializationFormat serFmt = requestLog.scheme().serializationFormat();
+        final SerializationFormat serFmt = requestLog.serializationFormat();
         return serFmt == SerializationFormat.NONE ? null : serFmt.uriText();
     }
 

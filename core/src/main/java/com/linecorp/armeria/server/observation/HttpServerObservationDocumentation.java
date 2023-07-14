@@ -26,7 +26,7 @@ import io.micrometer.observation.Observation.Event;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.docs.ObservationDocumentation;
 
-enum HttpServerObservationDocumentation implements ObservationDocumentation {
+enum HttpServiceObservationDocumentation implements ObservationDocumentation {
 
     /**
      * A span collected by {@link MicrometerObservationService}.

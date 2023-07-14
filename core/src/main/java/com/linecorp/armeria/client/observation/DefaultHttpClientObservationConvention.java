@@ -42,8 +42,8 @@ class DefaultHttpClientObservationConvention implements ObservationConvention<Ht
         final ClientRequestContext ctx = context.requestContext();
         KeyValues keyValues = KeyValues.of(
                 LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
-        if (context.getResponse() != null) {
-            final RequestLog log = ctx.log().ensureComplete();
+        final RequestLog log = context.getResponse();
+        if (log != null) {
             keyValues = keyValues.and(LowCardinalityKeys.HTTP_PROTOCOL.withValue(protocol(log)));
             final String serFmt = serializationFormat(log);
             if (serFmt != null) {
@@ -89,7 +89,7 @@ class DefaultHttpClientObservationConvention implements ObservationConvention<Ht
      * Returns the {@link SessionProtocol#uriText()} of the {@link RequestLog}.
      */
     private static String protocol(RequestLog requestLog) {
-        return requestLog.scheme().sessionProtocol().uriText();
+        return requestLog.sessionProtocol().uriText();
     }
 
     /**
@@ -97,7 +97,7 @@ class DefaultHttpClientObservationConvention implements ObservationConvention<Ht
      */
     @Nullable
     private static String serializationFormat(RequestLog requestLog) {
-        final SerializationFormat serFmt = requestLog.scheme().serializationFormat();
+        final SerializationFormat serFmt = requestLog.serializationFormat();
         return serFmt == SerializationFormat.NONE ? null : serFmt.uriText();
     }
 

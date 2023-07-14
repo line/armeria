@@ -67,7 +67,7 @@ import io.micrometer.observation.ObservationRegistry;
  * }</pre>
  */
 @UnstableApi
-public final class MicrometerObservationService extends SimpleDecoratingHttpService {
+public final class ObservationService extends SimpleDecoratingHttpService {
 
     /**
      * Creates a new micrometer observation integrated {@link HttpService} decorator using the
@@ -75,6 +75,7 @@ public final class MicrometerObservationService extends SimpleDecoratingHttpServ
      */
     public static Function<? super HttpService, MicrometerObservationService>
     newDecorator(ObservationRegistry observationRegistry) {
+        requireNonNull(observationRegistry, "observationRegistry");
         return service -> new MicrometerObservationService(service, observationRegistry, null);
     }
 

@@ -76,6 +76,7 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
      */
     public static Function<? super HttpClient, MicrometerObservationClient> newDecorator(
             ObservationRegistry observationRegistry) {
+        requireNonNull(observationRegistry, "observationRegistry");
         return delegate -> new MicrometerObservationClient(delegate, observationRegistry, null);
     }
 
@@ -111,7 +112,7 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         final HttpClientContext httpClientContext = new HttpClientContext(ctx, newHeaders, req);
         final Observation observation = HttpClientObservationDocumentation.OBSERVATION.observation(
-                this.httpClientObservationConvention, DefaultHttpClientObservationConvention.INSTANCE,
+                httpClientObservationConvention, DefaultHttpClientObservationConvention.INSTANCE,
                 () -> httpClientContext, observationRegistry).start();
         final HttpRequest newReq = req.withHeaders(newHeaders);
         ctx.updateRequest(newReq);
@@ -127,7 +128,7 @@ public final class MicrometerObservationClient extends SimpleDecoratingHttpClien
         return observation.scopedChecked(() -> unwrap().execute(ctx, newReq));
     }
 
-    private void enrichObservation(ClientRequestContext ctx, HttpClientContext httpClientContext,
+    private static void enrichObservation(ClientRequestContext ctx, HttpClientContext httpClientContext,
                                    Observation observation) {
         if (observation.isNoop()) {
             // For no-op spans, we only need to inject into headers and don't set any other attributes.
