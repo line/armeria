@@ -1125,6 +1125,17 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<ServerBuilder> contextPath(String... contextPaths) {
+        return new ContextPathServicesBuilder<>(this, defaultVirtualHostBuilder, contextPaths);
+    }
+
+    /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {

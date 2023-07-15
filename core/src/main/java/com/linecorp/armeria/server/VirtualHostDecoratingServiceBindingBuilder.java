@@ -197,7 +197,7 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     public VirtualHostBuilder build(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         buildRouteList().forEach(route -> virtualHostBuilder.addRouteDecoratingService(
-                new RouteDecoratingService(route, decorator)));
+                new RouteDecoratingService(route, "/", decorator)));
         return virtualHostBuilder;
     }
 

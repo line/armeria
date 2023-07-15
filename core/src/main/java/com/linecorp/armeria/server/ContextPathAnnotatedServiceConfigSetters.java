@@ -21,11 +21,13 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -34,17 +36,22 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * An {@link AbstractAnnotatedServiceConfigSetters} builder which configures an {@link AnnotatedService}.
+ * An {@link AbstractAnnotatedServiceConfigSetters} builder which configures an {@link AnnotatedService}
+ * under a set of context paths.
  *
  * @param <T> the type of object to be returned once the builder is built
  */
-final class ContextPathAnnotatedServiceConfigSetters<T extends ServiceConfigsBuilder>
+@UnstableApi
+public final class ContextPathAnnotatedServiceConfigSetters<T extends ServiceConfigsBuilder>
         extends AbstractAnnotatedServiceConfigSetters {
 
     private final ContextPathServicesBuilder<T> builder;
+    private final Set<String> contextPaths;
 
-    ContextPathAnnotatedServiceConfigSetters(ContextPathServicesBuilder<T> builder) {
+    ContextPathAnnotatedServiceConfigSetters(ContextPathServicesBuilder<T> builder,
+                                             Set<String> contextPaths) {
         this.builder = builder;
+        this.contextPaths = contextPaths;
     }
 
     /**
@@ -55,9 +62,10 @@ final class ContextPathAnnotatedServiceConfigSetters<T extends ServiceConfigsBui
      *                If path prefix is not set then this service is registered to handle requests matching
      *                {@code /}
      */
-    ContextPathServicesBuilder<T> build(Object service) {
+    public ContextPathServicesBuilder<T> build(Object service) {
         requireNonNull(service, "service");
         service(service);
+        contextPaths(contextPaths);
         builder.addServiceConfigSetters(this);
         return builder;
     }

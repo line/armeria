@@ -212,6 +212,10 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
+        build0(service, "/");
+    }
+
+    final void build0(HttpService service, String contextPath) {
         final ServiceWithRoutes<?, ?> serviceWithRoutes = service.as(ServiceWithRoutes.class);
         final Set<Route> fallbackRoutes =
                 firstNonNull(serviceWithRoutes != null ? serviceWithRoutes.routes() : null,
@@ -221,7 +225,8 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
         for (Route route : routes) {
             final ServiceConfigBuilder serviceConfigBuilder =
-                    defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
+                    defaultServiceConfigSetters.toServiceConfigBuilder(
+                            route, contextPath, decoratedService);
             serviceConfigBuilder(serviceConfigBuilder);
         }
     }
@@ -231,7 +236,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         assert routes.size() == 1; // Only one route is set via addRoute().
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
         final ServiceConfigBuilder serviceConfigBuilder =
-                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), decoratedService);
+                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), "/", decoratedService);
         serviceConfigBuilder.addMappedRoute(mappedRoute);
         serviceConfigBuilder(serviceConfigBuilder);
     }

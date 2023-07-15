@@ -79,8 +79,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
-    ServiceConfigBuilder(Route route, HttpService service) {
-        this.route = requireNonNull(route, "route");
+    ServiceConfigBuilder(Route route, String contextPath, HttpService service) {
+        this.route = requireNonNull(route, "route").withPrefix(contextPath);
         this.service = requireNonNull(service, "service");
     }
 

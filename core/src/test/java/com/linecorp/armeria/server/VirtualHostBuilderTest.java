@@ -317,23 +317,23 @@ class VirtualHostBuilderTest {
     }
 
     @Test
-    void precedenceOfDuplicateRoute() {
+    void precedenceOfDuplicateRoute() throws Exception {
         final Route routeA = Route.builder().path("/").build();
         final Route routeB = Route.builder().path("/").build();
         final RequestTarget reqTarget = RequestTarget.forServer("/");
         assertThat(reqTarget).isNotNull();
 
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), true)
-                .service(routeA, (ctx, req) -> HttpResponse.of(OK))
-                .service(routeB, (ctx, req) -> HttpResponse.of(OK))
+                .service(routeA, (ctx, req) -> HttpResponse.of(200))
+                .service(routeB, (ctx, req) -> HttpResponse.of(201))
                 .build(template, noopDependencyInjector, null);
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
                                                                         RequestHeaders.of(HttpMethod.GET, "/"),
                                                                         reqTarget, RoutingStatus.OK);
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
-        final Route route = serviceConfig.route();
-        assertThat(route).isSameAs(routeA);
+        final HttpResponse res = serviceConfig.value().service().serve(null, null);
+        assertThat(res.aggregate().join().status().code()).isEqualTo(200);
     }
 
     @Test

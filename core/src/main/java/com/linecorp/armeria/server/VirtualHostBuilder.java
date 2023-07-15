@@ -162,7 +162,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Nullable
     private ServiceErrorHandler errorHandler;
     private final ContextPathServicesBuilder<VirtualHostBuilder> servicesBuilder =
-            new ContextPathServicesBuilder<>(this, this);
+            new ContextPathServicesBuilder<>(this, this, "/");
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -397,6 +397,17 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     public VirtualHostBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         this.tlsAllowUnsafeCiphers = tlsAllowUnsafeCiphers;
         return this;
+    }
+
+    /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<VirtualHostBuilder> contextPath(String... contextPaths) {
+        return new ContextPathServicesBuilder<>(this, this, contextPaths);
     }
 
     /**
@@ -1291,7 +1302,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
-                new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
+                new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, "/", FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
                                requestAutoAbortDelayMillis, multipartUploadsLocation,

@@ -196,7 +196,7 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     public ServerBuilder build(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         buildRouteList().forEach(
-                route -> serverBuilder.routingDecorator(new RouteDecoratingService(route, decorator)));
+                route -> serverBuilder.routingDecorator(new RouteDecoratingService(route, "/", decorator)));
         return serverBuilder;
     }
 
