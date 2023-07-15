@@ -17,8 +17,6 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.TimeUnit;
-
 import javax.inject.Inject;
 
 import org.junit.jupiter.api.AfterAll;

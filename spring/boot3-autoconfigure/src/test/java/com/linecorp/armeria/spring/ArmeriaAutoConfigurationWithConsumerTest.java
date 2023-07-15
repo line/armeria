@@ -53,7 +53,6 @@ class ArmeriaAutoConfigurationWithConsumerTest {
         }
     }
 
-
     @Inject
     private Server server;
 
