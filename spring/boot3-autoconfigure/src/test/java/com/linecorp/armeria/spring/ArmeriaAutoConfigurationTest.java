@@ -20,23 +20,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Collection;
-import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
@@ -86,11 +80,11 @@ import io.grpc.stub.StreamObserver;
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-public class ArmeriaAutoConfigurationTest {
+@Timeout(10)
+class ArmeriaAutoConfigurationTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
@@ -240,9 +234,6 @@ public class ArmeriaAutoConfigurationTest {
         }
     }
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
-
     @Inject
     private Server server;
 
@@ -252,7 +243,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testHttpService() throws Exception {
+    void testHttpService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         final HttpResponse response = client.get("/ok");
@@ -263,7 +254,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testAnnotatedService() throws Exception {
+    void testAnnotatedService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/annotated/get");
@@ -301,7 +292,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testThriftService() throws Exception {
+    void testThriftService() throws Exception {
         final HelloService.Iface client = ThriftClients.newClient(newUrl("h1c") + "/thrift",
                                                                   HelloService.Iface.class);
         assertThat(client.hello("world")).isEqualTo("hello world");
@@ -321,7 +312,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testGrpcService() throws Exception {
+    void testGrpcService() throws Exception {
         final HelloServiceBlockingStub client = GrpcClients.newClient(newUrl("h2c") + '/',
                                                                       HelloServiceBlockingStub.class);
         final HelloRequest request = HelloRequest.newBuilder()
@@ -344,7 +335,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testPortConfiguration() {
+    void testPortConfiguration() {
         final Collection<ServerPort> ports = server.activePorts().values();
         assertThat(ports.stream().filter(ServerPort::hasHttp)).hasSize(3);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
@@ -352,7 +343,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testMetrics() {
+    void testMetrics() {
         assertThat(GrpcClients.newClient(newUrl("h2c") + '/', HelloServiceBlockingStub.class)
                               .hello(HelloRequest.getDefaultInstance())
                               .getMessage()).isNotNull();
@@ -367,7 +358,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testCustomSuccessMetrics() throws Exception {
+    void testCustomSuccessMetrics() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
         final HttpResponse response = client.get("/annotated/error");
         final String expectedSuccess =
@@ -392,7 +383,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testHealthCheckService() throws Exception {
+    void testHealthCheckService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/internal/healthcheck");

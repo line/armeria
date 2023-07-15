@@ -21,17 +21,16 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.linecorp.armeria.client.WebClientBuilder;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-public class ArmeriaClientConfiguratorTest {
+@SpringBootTest
+class ArmeriaClientConfiguratorTest {
 
     @Configuration
     static class TestConfiguration {

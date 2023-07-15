@@ -19,10 +19,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -33,7 +32,6 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -54,10 +52,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-@RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test_reactive")
-public class ArmeriaWebClientTest {
+class ArmeriaWebClientTest {
 
     @SpringBootApplication
     @Configuration
@@ -102,7 +99,7 @@ public class ArmeriaWebClientTest {
     static ClientFactory clientFactory;
     static WebClient webClient;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeAll() {
         clientFactory =
                 ClientFactory.builder()
@@ -113,7 +110,7 @@ public class ArmeriaWebClientTest {
                 new ArmeriaClientHttpConnector(builder -> builder.factory(clientFactory))).build();
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterAll() {
         clientFactory.closeAsync();
     }
@@ -123,7 +120,7 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void getHello() {
+    void getHello() {
         final Flux<String> body =
                 webClient.get()
                          .uri(uri("/hello"))
@@ -138,7 +135,7 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void getConflict() {
+    void getConflict() {
         final Mono<ClientResponse> response =
                 webClient.get()
                          .uri(uri("/conflict"))
@@ -150,7 +147,7 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void getConflictUsingBodyToMono() {
+    void getConflictUsingBodyToMono() {
         @SuppressWarnings("Convert2MethodRef")
         final Mono<String> response =
                 webClient.get()
@@ -165,7 +162,7 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void getResource() {
+    void getResource() {
         final Flux<DataBuffer> body =
                 webClient.get()
                          .uri(uri("/resource"))
@@ -180,7 +177,7 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void postPerson() {
+    void postPerson() {
         final Mono<Person> body =
                 webClient.post()
                          .uri(uri("/birthday"))
