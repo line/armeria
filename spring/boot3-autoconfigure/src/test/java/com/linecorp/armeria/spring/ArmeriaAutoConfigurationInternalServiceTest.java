@@ -26,7 +26,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -84,13 +83,10 @@ class ArmeriaAutoConfigurationInternalServiceTest {
     }
 
     private static void assertStatus(int port, String url, int statusCode) {
-        final WebClient client = WebClient.builder(newUrl("http", port))
-                                          .decorator(LoggingClient.newDecorator())
-                                          .build();
+        final WebClient client = WebClient.of(newUrl("http", port));
         final HttpResponse response = client.get(url);
 
         final AggregatedHttpResponse httpResponse = response.aggregate().join();
-        System.out.println(httpResponse.contentUtf8());
         assertThat(httpResponse.status().code()).isEqualTo(statusCode);
     }
 
