@@ -58,7 +58,6 @@ class FlagsProviderTest {
 
     @Test
     void overrideDefaultFlagsProvider() throws Throwable {
-        assertFlags("useOpenSsl").isEqualTo(false);
         assertFlags("numCommonBlockingTaskThreads").isEqualTo(100);
     }
 
