@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -43,7 +44,7 @@ class SslContextUtilTest {
 
     @Test
     void openSsl() {
-        assumeThat(Flags.useOpenSsl()).isTrue();
+        assumeThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
         final Set<String> supportedProtocols = SslContextUtil.supportedProtocols(
                 SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL));
         assertThat(supportedProtocols).contains("TLSv1.2", "TLSv1.3");
@@ -88,7 +89,7 @@ class SslContextUtilTest {
             try {
                 final SslContext sslCtx = MinifiedBouncyCastleProvider.call(() -> {
                     final SslContextBuilder builder = SslContextBuilder.forClient();
-                    final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+                    final SslProvider provider = Flags.tlsEngineType().sslProvider();
                     builder.sslProvider(provider);
                     builder.protocols("TLSv1.2").ciphers(ImmutableList.of(cipher));
 

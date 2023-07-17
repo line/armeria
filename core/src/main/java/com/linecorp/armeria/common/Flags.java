@@ -190,8 +190,8 @@ public final class Flags {
     @Nullable
     private static Boolean useOpenSsl;
 
-    private static final TlsEngineType TLS_ENGINE_TYPE =
-            getValue(FlagsProvider::tlsEngineType, "tlsEngineType", value -> value != null);
+    @Nullable
+    private static TlsEngineType TLS_ENGINE_TYPE;
 
     @Nullable
     private static Boolean dumpOpenSslInfo;
@@ -539,13 +539,12 @@ public final class Flags {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #tlsEngineType()} and {@code -Dcom.linecorp.armeria.tlsEngineType=openssl}.
      */
+    @Deprecated
     public static boolean useOpenSsl() {
-        if (useOpenSsl != null) {
-            return useOpenSsl;
-        }
-        setUseOpenSslAndDumpOpenSslInfo();
-        return useOpenSsl;
+        return tlsEngineType() == TlsEngineType.OPENSSL;
     }
 
     /**
@@ -556,12 +555,16 @@ public final class Flags {
      * the default.</p>
      */
     public static TlsEngineType tlsEngineType() {
+        if (TLS_ENGINE_TYPE != null) {
+            return TLS_ENGINE_TYPE;
+        }
+        setUseOpenSslAndDumpOpenSslInfo();
         return TLS_ENGINE_TYPE;
     }
 
     private static void setUseOpenSslAndDumpOpenSslInfo() {
-        final boolean useOpenSsl = getValue(FlagsProvider::useOpenSsl, "useOpenSsl");
-        if (!useOpenSsl) {
+        TLS_ENGINE_TYPE = getValue(FlagsProvider::tlsEngineType, "tlsEngineType");
+        if (TLS_ENGINE_TYPE != TlsEngineType.OPENSSL) {
             // OpenSSL explicitly disabled
             Flags.useOpenSsl = false;
             dumpOpenSslInfo = false;
@@ -570,6 +573,7 @@ public final class Flags {
         if (!OpenSsl.isAvailable()) {
             final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
             logger.info("OpenSSL not available: {}", cause.toString());
+            TLS_ENGINE_TYPE = TlsEngineType.JDK;
             Flags.useOpenSsl = false;
             dumpOpenSslInfo = false;
             return;
@@ -600,8 +604,8 @@ public final class Flags {
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
      *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
-     * specified the JVM option.
+     * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
+     * {@code false} no matter you specified the JVM option.
      */
     public static boolean dumpOpenSslInfo() {
         if (dumpOpenSslInfo != null) {

@@ -86,9 +86,9 @@ class FlagsTest {
     void openSslAvailable() {
         assumeThat(osName.startsWith("linux") || osName.startsWith("windows") ||
                    osName.startsWith("mac") || osName.startsWith("osx")).isTrue();
-        assumeThat(System.getProperty("com.linecorp.armeria.useOpenSsl")).isNull();
+        assumeThat(System.getProperty("com.linecorp.armeria.tlsEngineType")).isNull();
 
-        assertThat(Flags.useOpenSsl()).isTrue();
+        assertThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
         assertThat(OpenSsl.isAvailable()).isTrue();
     }
 
@@ -268,6 +268,8 @@ class FlagsTest {
                                   .collect(toImmutableSet()));
 
         final Set<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
+                                                             .filter(m -> !m.isAnnotationPresent(
+                                                                     Deprecated.class))
                                                              .map(Method::getName)
                                                              .collect(Collectors.toSet());
         final Set<String> knownIgnoreMethods = ImmutableSet.of("priority", "name");
