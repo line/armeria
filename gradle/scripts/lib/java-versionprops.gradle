@@ -21,6 +21,7 @@ configure(projectsWithFlags('java', 'publish')) {
     task versionProperties {
         def propsFile = project.file("${generatedResourcesDir}/META-INF/${project.group}.versions.properties")
         outputs.file propsFile
+        inputs.property("project.ext.repoStatus", project.ext.repoStatus)
         doLast {
             def artifactId = project.ext.artifactId
 
