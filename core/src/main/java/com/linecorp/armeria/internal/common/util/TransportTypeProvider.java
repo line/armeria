@@ -46,7 +46,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
-import io.netty.channel.unix.Socket;
 import io.netty.util.Version;
 
 /**
@@ -191,10 +190,6 @@ public final class TransportTypeProvider {
         } catch (Throwable cause) {
             return new TransportTypeProvider(name, null, null, null, null, null, null, null, null,
                                              Exceptions.peel(cause));
-        } finally {
-            // TODO(trustin): Remove this block once we confirm the following bug is fixed:
-            //                https://github.com/netty/netty/issues/10909
-            Socket.initialize();
         }
     }
 
