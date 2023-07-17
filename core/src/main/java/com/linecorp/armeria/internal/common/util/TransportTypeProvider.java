@@ -19,7 +19,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
@@ -47,13 +46,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.ServerDomainSocketChannel;
-import io.netty.util.NetUtil;
+import io.netty.channel.unix.Socket;
 import io.netty.util.Version;
 
 /**
  * Provides the properties required by {@link TransportType} by loading /dev/epoll and io_uring transport
  * classes dynamically, so that Armeria does not have hard dependencies on them.
- * See: https://github.com/line/armeria/issues/3243
+ * See: <a href="https://github.com/line/armeria/issues/3243">line/armeria#3243</a>
  */
 public final class TransportTypeProvider {
 
@@ -193,26 +192,9 @@ public final class TransportTypeProvider {
             return new TransportTypeProvider(name, null, null, null, null, null, null, null, null,
                                              Exceptions.peel(cause));
         } finally {
-            // TODO(trustin): Remove this block which works around the bug where loading both epoll and
-            //                io_uring native libraries may revert the initialization of
-            //                io.netty.channel.unix.Socket: https://github.com/netty/netty/issues/10909
-            try {
-                final Method initializeMethod = findClass(ChannelUtil.channelPackageName(), ".unix.Socket")
-                        .getDeclaredMethod("initialize", boolean.class);
-                initializeMethod.setAccessible(true);
-                initializeMethod.invoke(null, NetUtil.isIpV4StackPreferred());
-            } catch (Throwable cause) {
-                final Throwable peeledCause = Exceptions.peel(cause);
-                if (peeledCause instanceof UnsatisfiedLinkError ||
-                    peeledCause instanceof ClassNotFoundException) {
-                    // Failed to load a native library, which is fine.
-                } else if (peeledCause instanceof NoSuchMethodException) {
-                    // There's no initialize(boolean) method, which is fine.
-                } else {
-                    logger.debug("Failed to force-initialize '" + ChannelUtil.channelPackageName() +
-                                 ".unix.Socket':", cause);
-                }
-            }
+            // TODO(trustin): Remove this block once we confirm the following bug is fixed:
+            //                https://github.com/netty/netty/issues/10909
+            Socket.initialize();
         }
     }
 
