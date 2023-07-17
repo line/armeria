@@ -83,7 +83,7 @@ public final class TemporaryFolder {
                     try {
                         file.delete();
                     } catch (Exception e) {
-                        logger.info("Unexpected exception while deleting file: {}", file.getName(), e);
+                        logger.warn("Unexpected exception while deleting file: {}", file.getName(), e);
                     }
                 });
         }
