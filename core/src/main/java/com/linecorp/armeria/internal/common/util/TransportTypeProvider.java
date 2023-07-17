@@ -206,6 +206,8 @@ public final class TransportTypeProvider {
                 if (peeledCause instanceof UnsatisfiedLinkError ||
                     peeledCause instanceof ClassNotFoundException) {
                     // Failed to load a native library, which is fine.
+                } else if (peeledCause instanceof NoSuchMethodException) {
+                    // There's no initialize(boolean) method, which is fine.
                 } else {
                     logger.debug("Failed to force-initialize '" + ChannelUtil.channelPackageName() +
                                  ".unix.Socket':", cause);
