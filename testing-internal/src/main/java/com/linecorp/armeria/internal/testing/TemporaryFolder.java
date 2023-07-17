@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.internal.testing;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.stream.Stream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -29,6 +31,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A helper class to handle temporary folders in JUnit {@code Extension}s.
  */
 public final class TemporaryFolder {
+
+    private static final Logger logger = LoggerFactory.getLogger(TemporaryFolder.class);
 
     // Forked from CentralDogma 0.44.4
     // https://github.com/line/centraldogma/blob/4dbc351addc92b509f77be784605b88c3d1b21f2/testing/common/src/main/java/com/linecorp/centraldogma/testing/internal/TemporaryFolder.java
@@ -75,7 +79,13 @@ public final class TemporaryFolder {
         try (Stream<Path> walk = Files.walk(root)) {
             walk.sorted(Comparator.reverseOrder())
                 .map(Path::toFile)
-                .forEach(File::delete);
+                .forEach(file -> {
+                    try {
+                        file.delete();
+                    } catch (Exception e) {
+                        logger.info("Unexpected exception while deleting file: {}", file.getName(), e);
+                    }
+                });
         }
 
         root = null;
