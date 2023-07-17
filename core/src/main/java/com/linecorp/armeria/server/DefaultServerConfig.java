@@ -33,6 +33,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
@@ -113,6 +114,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Function<String, String> absoluteUriTransformer;
     private final long unhandledExceptionsReportIntervalMillis;
     private final List<ShutdownSupport> shutdownSupports;
+    private final Supplier<? extends AutoCloseable> contextHook;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -143,6 +145,7 @@ final class DefaultServerConfig implements ServerConfig {
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
+            Supplier<? extends AutoCloseable> contextHook,
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
             long unhandledExceptionsReportIntervalMillis,
@@ -263,6 +266,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
         this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
+        this.contextHook = requireNonNull(contextHook, "contextHook");
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -651,6 +655,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public long unhandledExceptionsReportIntervalMillis() {
         return unhandledExceptionsReportIntervalMillis;
+    }
+
+    @Override
+    public Supplier<? extends AutoCloseable> contextHook() {
+        return contextHook;
     }
 
     List<ShutdownSupport> shutdownSupports() {

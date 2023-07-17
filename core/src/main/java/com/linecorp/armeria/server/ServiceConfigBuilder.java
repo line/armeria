@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -71,6 +72,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private Path multipartUploadsLocation;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
+    @Nullable
+    private Supplier<? extends AutoCloseable> contextHook;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
     @Nullable
@@ -257,6 +260,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        this.contextHook = contextHook;
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
@@ -302,6 +312,11 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                                                                      unhandledExceptionsReporter);
         }
 
+        // TODO(miyoshi) contextHookの初期化について、検討の余地あり
+        if (contextHook == null) {
+            contextHook = () -> (AutoCloseable) () -> {};
+        }
+
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
@@ -317,7 +332,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
-                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler);
+                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler,
+                contextHook);
     }
 
     @Override

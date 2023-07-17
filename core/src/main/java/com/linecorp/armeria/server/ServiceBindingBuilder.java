@@ -25,6 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -344,6 +345,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         return (ServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public ServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     /**

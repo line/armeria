@@ -221,6 +221,7 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
+    private Supplier<? extends AutoCloseable> contextHook = () -> (AutoCloseable) () -> {};
     @Nullable
     private DependencyInjector dependencyInjector;
     private Function<? super String, String> absoluteUriTransformer = Function.identity();
@@ -1923,6 +1924,12 @@ public final class ServerBuilder implements TlsSetters {
         return this;
     }
 
+    public ServerBuilder contextHook(Supplier<? extends  AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        this.contextHook = contextHook;
+        return this;
+    }
+
     /**
      * Sets the interval between reporting exceptions which is not handled or logged
      * by any decorators or services such as {@link LoggingService}.
@@ -2090,7 +2097,7 @@ public final class ServerBuilder implements TlsSetters {
                 childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
-                http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
+                http1HeaderNaming, contextHook, dependencyInjector, absoluteUriTransformer,
                 unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
     }
 

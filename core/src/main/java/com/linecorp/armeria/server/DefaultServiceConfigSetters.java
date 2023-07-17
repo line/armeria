@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
@@ -74,6 +75,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Path multipartUploadsLocation;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
+    @Nullable
+    private Supplier<? extends AutoCloseable> contextHook;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
     @Nullable
@@ -278,6 +281,13 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        this.contextHook = contextHook;
+        return this;
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -349,6 +359,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (serviceErrorHandler != null) {
             serviceConfigBuilder.errorHandler(serviceErrorHandler);
+        }
+        if (contextHook != null) {
+            serviceConfigBuilder.contextHook(contextHook);
         }
         return serviceConfigBuilder;
     }

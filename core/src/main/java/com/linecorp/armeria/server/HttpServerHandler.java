@@ -328,8 +328,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
-            final ServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
+            // TODO(miyoshi) Serviceのコンテキスト使用箇所であるが、hookメソッドの使用方法が正しいか検討する
+            final DefaultServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
                     channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx);
+
+            reqCtx.hook(config.contextHook());
 
             // Handle 'OPTIONS * HTTP/1.1'.
             if (routingStatus == RoutingStatus.OPTIONS) {
@@ -349,11 +352,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
 
+        // TODO(miyoshi) Serviceのコンテキスト使用箇所であるが、hookメソッドの使用方法が正しいか検討する
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros());
+
+        reqCtx.hook(serviceCfg.contextHook());
+        reqCtx.hook(config.contextHook());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
@@ -588,7 +595,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
+    private DefaultServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
                                                                    InetSocketAddress remoteAddress,

@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -206,6 +207,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        defaultServiceConfigSetters.contextHook(contextHook);
         return this;
     }
 

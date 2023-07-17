@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -263,4 +264,7 @@ interface ServiceConfigSetters {
      * @param serviceErrorHandler the default {@link ServiceErrorHandler}
      */
     ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler);
+
+    @UnstableApi
+    ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook);
 }
