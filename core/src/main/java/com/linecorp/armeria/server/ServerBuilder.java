@@ -159,7 +159,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * @see VirtualHostBuilder
  */
-public final class ServerBuilder implements TlsSetters {
+public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
@@ -1107,6 +1107,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Returns a {@link ServiceBindingBuilder} which is for binding an {@link HttpService} fluently.
      */
+    @Override
     public ServiceBindingBuilder route() {
         return new ServiceBindingBuilder(this);
     }
@@ -1115,6 +1116,7 @@ public final class ServerBuilder implements TlsSetters {
      * Returns a {@link DecoratingServiceBindingBuilder} which is for binding a {@code decorator} fluently.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
+    @Override
     public DecoratingServiceBindingBuilder routeDecorator() {
         return new DecoratingServiceBindingBuilder(this);
     }
@@ -1142,6 +1144,7 @@ public final class ServerBuilder implements TlsSetters {
      * >       .build();
      * }</pre>
      */
+    @Override
     public ServerBuilder serviceUnder(String pathPrefix, HttpService service) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
@@ -1171,6 +1174,7 @@ public final class ServerBuilder implements TlsSetters {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
+    @Override
     public ServerBuilder service(String pathPattern, HttpService service) {
         requireNonNull(pathPattern, "pathPattern");
         requireNonNull(service, "service");
@@ -1182,6 +1186,7 @@ public final class ServerBuilder implements TlsSetters {
      * Binds the specified {@link HttpService} at the specified {@link Route} of the default
      * {@link VirtualHost}.
      */
+    @Override
     public ServerBuilder service(Route route, HttpService service) {
         requireNonNull(route, "route");
         requireNonNull(service, "service");
@@ -1196,6 +1201,7 @@ public final class ServerBuilder implements TlsSetters {
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
+    @Override
     public ServerBuilder service(
             HttpServiceWithRoutes serviceWithRoutes,
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
@@ -1215,6 +1221,7 @@ public final class ServerBuilder implements TlsSetters {
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
+    @Override
     @SafeVarargs
     public final ServerBuilder service(
             HttpServiceWithRoutes serviceWithRoutes,
@@ -1237,6 +1244,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
+    @Override
     public ServerBuilder annotatedService(Object service) {
         return annotatedService("/", service, Function.identity(), ImmutableList.of());
     }
@@ -1248,6 +1256,7 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(Object service,
                                           Object... exceptionHandlersAndConverters) {
         return annotatedService("/", service, Function.identity(),
@@ -1262,6 +1271,7 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Object... exceptionHandlersAndConverters) {
@@ -1273,6 +1283,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service) {
         return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
     }
@@ -1284,6 +1295,7 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Object... exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, Function.identity(),
@@ -1298,6 +1310,7 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Object... exceptionHandlersAndConverters) {
@@ -1314,6 +1327,7 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Iterable<?> exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, Function.identity(), exceptionHandlersAndConverters);
@@ -1326,6 +1340,7 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction} and/or
      *                                       the {@link ResponseConverterFunction}
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Iterable<?> exceptionHandlersAndConverters) {
@@ -1347,6 +1362,7 @@ public final class ServerBuilder implements TlsSetters {
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(
             String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
@@ -1369,6 +1385,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Returns an {@link AnnotatedServiceBindingBuilder} to build annotated service.
      */
+    @Override
     public AnnotatedServiceBindingBuilder annotatedService() {
         return new AnnotatedServiceBindingBuilder(this);
     }
@@ -1494,6 +1511,7 @@ public final class ServerBuilder implements TlsSetters {
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
+    @Override
     public ServerBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.ofCatchAll(), decorator);
     }
@@ -1505,6 +1523,7 @@ public final class ServerBuilder implements TlsSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
      */
+    @Override
     public ServerBuilder decorator(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         return decorator(Route.ofCatchAll(), decoratingHttpServiceFunction);
@@ -1514,6 +1533,7 @@ public final class ServerBuilder implements TlsSetters {
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
+    @Override
     public ServerBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.builder().path(pathPattern).build(), decorator);
@@ -1526,6 +1546,7 @@ public final class ServerBuilder implements TlsSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}.
      */
+    @Override
     public ServerBuilder decorator(
             String pathPattern, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         return decorator(Route.builder().path(pathPattern).build(), decoratingHttpServiceFunction);
@@ -1539,6 +1560,7 @@ public final class ServerBuilder implements TlsSetters {
      * @param decorator the {@link Function} that decorates {@link HttpService} which matches
      *                  the specified {@link Route}
      */
+    @Override
     public ServerBuilder decorator(
             Route route, Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(route, "route");
@@ -1554,6 +1576,7 @@ public final class ServerBuilder implements TlsSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
      */
+    @Override
     public ServerBuilder decorator(
             Route route, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
@@ -1568,6 +1591,7 @@ public final class ServerBuilder implements TlsSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
      */
+    @Override
     public ServerBuilder decoratorUnder(
             String prefix, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         return decorator(Route.builder().pathPrefix(prefix).build(), decoratingHttpServiceFunction);
@@ -1577,6 +1601,7 @@ public final class ServerBuilder implements TlsSetters {
      * Decorates {@link HttpService}s under the specified directory.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
+    @Override
     public ServerBuilder decoratorUnder(String prefix,
                                         Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.builder().pathPrefix(prefix).build(), decorator);
