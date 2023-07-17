@@ -111,7 +111,7 @@ allprojects {
         }
 
         retry {
-            if (System.getenv().containsKey("CI")) {
+            if (System.getenv().containsKey("CI") || rootProject.hasProperty('retry')) {
                 maxRetries = 3
                 failOnPassedAfterRetry = true
             }
