@@ -1146,17 +1146,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @Override
     public ServerBuilder serviceUnder(String pathPrefix, HttpService service) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
-        if (serviceWithRoutes != null) {
-            serviceWithRoutes.routes()
-                             .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
-                                                      .mappedRoute(route)
-                                                      .build(service));
-            return this;
-        }
-        return route().addRoute(Route.builder().pathPrefix(pathPrefix).build()).build(service);
+        virtualHostTemplate.serviceUnder(pathPrefix, service);
+        return this;
     }
 
     /**
@@ -1179,7 +1170,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         requireNonNull(pathPattern, "pathPattern");
         requireNonNull(service, "service");
         warnIfServiceHasMultipleRoutes(pathPattern, service);
-        return route().path(pathPattern).build(service);
+        virtualHostTemplate.service(pathPattern, service);
+        return this;
     }
 
     /**
@@ -1191,7 +1183,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         requireNonNull(route, "route");
         requireNonNull(service, "service");
         warnIfServiceHasMultipleRoutes(route.patternString(), service);
-        return route().addRoute(route).build(service);
+        virtualHostTemplate.service(route, service);
+        return this;
     }
 
     /**
@@ -1205,12 +1198,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public ServerBuilder service(
             HttpServiceWithRoutes serviceWithRoutes,
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
-        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
-        requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
-        requireNonNull(decorators, "decorators");
-
-        final HttpService decorated = decorate(serviceWithRoutes, decorators);
-        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(decorated));
+        virtualHostTemplate.service(serviceWithRoutes, decorators);
         return this;
     }
 
@@ -1226,7 +1214,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public final ServerBuilder service(
             HttpServiceWithRoutes serviceWithRoutes,
             Function<? super HttpService, ? extends HttpService>... decorators) {
-        return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+        virtualHostTemplate.service(serviceWithRoutes, decorators);
+        return this;
     }
 
     static HttpService decorate(
@@ -1246,7 +1235,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @Override
     public ServerBuilder annotatedService(Object service) {
-        return annotatedService("/", service, Function.identity(), ImmutableList.of());
+        virtualHostTemplate.annotatedService(service);
+        return this;
     }
 
     /**
@@ -1259,9 +1249,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder annotatedService(Object service,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, Function.identity(),
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        virtualHostTemplate.annotatedService(service, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1275,9 +1264,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public ServerBuilder annotatedService(Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, decorator,
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        virtualHostTemplate.annotatedService(service, decorator, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1285,7 +1273,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service) {
-        return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
+        virtualHostTemplate.annotatedService(pathPrefix, service);
+        return this;
     }
 
     /**
@@ -1298,9 +1287,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(),
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        virtualHostTemplate.annotatedService(pathPrefix, service, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1314,10 +1302,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Object... exceptionHandlersAndConverters) {
-
-        return annotatedService(pathPrefix, service, decorator,
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        virtualHostTemplate.annotatedService(pathPrefix, service, decorator, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1330,7 +1316,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Iterable<?> exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(), exceptionHandlersAndConverters);
+        virtualHostTemplate.annotatedService(pathPrefix, service, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1344,15 +1331,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Iterable<?> exceptionHandlersAndConverters) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
-        final AnnotatedServiceExtensions configurator =
-                AnnotatedServiceExtensions
-                        .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
-        return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
-                                configurator.requestConverters(), configurator.responseConverters());
+        virtualHostTemplate.annotatedService(pathPrefix, service, decorator, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1368,18 +1348,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        return annotatedService().pathPrefix(pathPrefix)
-                                 .decorator(decorator)
-                                 .exceptionHandlers(exceptionHandlerFunctions)
-                                 .requestConverters(requestConverterFunctions)
-                                 .responseConverters(responseConverterFunctions)
-                                 .build(service);
+        virtualHostTemplate.annotatedService(pathPrefix, service, decorator, exceptionHandlerFunctions,
+                                             requestConverterFunctions, responseConverterFunctions);
+        return this;
     }
 
     /**
@@ -1513,7 +1484,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @Override
     public ServerBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
-        return decorator(Route.ofCatchAll(), decorator);
+        virtualHostTemplate.decorator(decorator);
+        return this;
     }
 
     /**
@@ -1526,7 +1498,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder decorator(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return decorator(Route.ofCatchAll(), decoratingHttpServiceFunction);
+        virtualHostTemplate.decorator(decoratingHttpServiceFunction);
+        return this;
     }
 
     /**
@@ -1536,7 +1509,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
-        return decorator(Route.builder().path(pathPattern).build(), decorator);
+        virtualHostTemplate.decorator(pathPattern, decorator);
+        return this;
     }
 
     /**
@@ -1549,7 +1523,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder decorator(
             String pathPattern, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return decorator(Route.builder().path(pathPattern).build(), decoratingHttpServiceFunction);
+        virtualHostTemplate.decorator(pathPattern, decoratingHttpServiceFunction);
+        return this;
     }
 
     /**
@@ -1563,9 +1538,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder decorator(
             Route route, Function<? super HttpService, ? extends HttpService> decorator) {
-        requireNonNull(route, "route");
-        requireNonNull(decorator, "decorator");
-        return routingDecorator(new RouteDecoratingService(route, decorator));
+        virtualHostTemplate.decorator(route, decorator);
+        return this;
     }
 
     /**
@@ -1579,9 +1553,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder decorator(
             Route route, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
-        return decorator(route, delegate -> new FunctionalDecoratingHttpService(
-                delegate, decoratingHttpServiceFunction));
+        virtualHostTemplate.decorator(route, decoratingHttpServiceFunction);
+        return this;
     }
 
     /**
@@ -1594,7 +1567,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder decoratorUnder(
             String prefix, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return decorator(Route.builder().pathPrefix(prefix).build(), decoratingHttpServiceFunction);
+        virtualHostTemplate.decoratorUnder(prefix, decoratingHttpServiceFunction);
+        return this;
     }
 
     /**
@@ -1604,7 +1578,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder decoratorUnder(String prefix,
                                         Function<? super HttpService, ? extends HttpService> decorator) {
-        return decorator(Route.builder().pathPrefix(prefix).build(), decorator);
+        virtualHostTemplate.decoratorUnder(prefix, decorator);
+        return this;
     }
 
     /**
