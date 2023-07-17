@@ -143,6 +143,7 @@ class AnnotatedValueResolverTest {
     @Test
     void ofMethods() {
         getAllMethods(Service.class).forEach(method -> {
+            logger.debug("## Service method: {}", method);
             try {
                 final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofServiceMethod(
                         method, pathParams, objectResolvers, false, noopDependencyInjector, null);
