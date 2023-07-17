@@ -207,7 +207,7 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
 
     @Override
     public AbstractAnnotatedServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter,
-                                                          boolean shutdownOnStop) {
+                                                                 boolean shutdownOnStop) {
         defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
     }
@@ -231,15 +231,15 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
     }
 
     @Override
-    public AbstractAnnotatedServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
-                                                               boolean shutdownOnStop) {
+    public AbstractAnnotatedServiceConfigSetters blockingTaskExecutor(
+            ScheduledExecutorService blockingTaskExecutor, boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
         return this;
     }
 
     @Override
     public AbstractAnnotatedServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
-                                                               boolean shutdownOnStop) {
+                                                                      boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
         return this;
     }
