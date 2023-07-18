@@ -179,9 +179,14 @@ const DebugPage: React.FunctionComponent<Props> = ({
     const urlParams = new URLSearchParams(location.search);
 
     let urlRequestBody = '';
+    let urlDebugFormIsOpen = false;
     if (useRequestBody) {
       if (urlParams.has('request_body')) {
         urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
+      }
+
+      if (urlParams.has('debug_form_is_open')) {
+        urlDebugFormIsOpen = urlParams.get('debug_form_is_open') === 'true';
       }
     }
 
@@ -214,9 +219,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
-    setDebugFormIsOpen(
-      (isOpen) => isOpen || urlRequestBody !== '' || urlQueries !== '',
-    );
+
+    if (urlDebugFormIsOpen) {
+      setDebugFormIsOpen(urlDebugFormIsOpen);
+    }
   }, [
     exactPathMapping,
     exampleQueries.length,
