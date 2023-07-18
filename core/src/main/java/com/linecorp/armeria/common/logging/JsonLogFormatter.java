@@ -24,6 +24,7 @@ import java.util.function.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -268,6 +269,19 @@ final class JsonLogFormatter implements LogFormatter {
             return objectMapper.writeValueAsString(objectNode);
         } catch (Exception e) {
             logger.warn("Unexpected exception while formatting a response log: {}", log, e);
+            return "{}";
+        }
+    }
+
+    @Override
+    public String format(RequestLog log) {
+        try {
+            final ObjectNode objectNode = objectMapper.createObjectNode();
+            objectNode.set("request", objectMapper.readTree(formatRequest(log)));
+            objectNode.set("response", objectMapper.readTree(formatResponse(log)));
+            return objectMapper.writeValueAsString(objectNode);
+        } catch (JsonProcessingException e) {
+            logger.warn("Unexpected exception while formatting a log: {}", log, e);
             return "{}";
         }
     }

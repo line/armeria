@@ -295,6 +295,11 @@ final class TextLogFormatter implements LogFormatter {
     }
 
     @Override
+    public String format(RequestLog requestLog) {
+        throw new IllegalStateException("TextLogFormatter#format is not implemented");
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("requestHeadersSanitizer", requestHeadersSanitizer)

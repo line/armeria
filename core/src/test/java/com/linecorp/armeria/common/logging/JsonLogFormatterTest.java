@@ -53,4 +53,20 @@ class JsonLogFormatterTest {
                 .matches("^\\{\"type\":\"response\",\"startTime\":\".+\",\"length\":\".+\"," +
                          "\"duration\":\".+\",\"totalDuration\":\".+\",\"headers\":\\{\".+\"}}$");
     }
+
+    @Test
+    void format() {
+        final LogFormatter logFormatter = LogFormatter.ofJson();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
+        final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
+        log.endRequest();
+        log.endResponse();
+        final String responseLog = logFormatter.format(log);
+        assertThat(responseLog)
+                .matches(
+                        "^\\{\"request\":\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
+                         "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}," +
+                        "\"response\":\\{\"type\":\"response\",\"startTime\":\".+\",\"length\":\".+\"," +
+                        "\"duration\":\".+\",\"totalDuration\":\".+\",\"headers\":\\{\".+\"}}}$");
+    }
 }
