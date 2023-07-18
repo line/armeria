@@ -148,12 +148,13 @@ class WebTestClientTest {
 
     @Test
     void testAbortedResponse() {
-        WebTestClient client = WebTestClient.of();
+        final WebTestClient client = WebTestClient.of();
         client.get("/error")
               .assertCause()
               .isInstanceOf(IllegalArgumentException.class);
 
-        TestHttpResponse response = TestHttpResponse.ofFailure(new ArithmeticException("One plus one is two."));
+        final TestHttpResponse response = TestHttpResponse.ofFailure(
+                new ArithmeticException("One plus one is two."));
         response.assertCause()
                 .isInstanceOf(ArithmeticException.class)
                 .isInstanceOf(RuntimeException.class)
@@ -189,8 +190,8 @@ class WebTestClientTest {
             return HttpResponse.of(
                     ResponseHeaders.of(HttpStatus.OK, "x-header", header),
                     HttpData.ofUtf8(
-                            "{\"id\":\"" + id + "\",\"query\":\"" + query + "\",\"content\":\"" + content
-                            + "\"}"));
+                            "{\"id\":\"" + id + "\",\"query\":\"" + query + "\",\"content\":\"" + content +
+                            "\"}"));
         }
 
         @Post
