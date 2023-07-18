@@ -81,7 +81,7 @@ public class GrpcExceptionHandlerAnnotationOnlyTest {
                 .build();
         assertThatThrownBy(() -> client.staticUnaryCall(globalRequest))
                 .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
-                    assertThat(e.getStatus()).isEqualTo(Status.UNKNOWN);
+                    assertThat(e.getStatus().getCode()).isEqualTo(Status.UNKNOWN.getCode());
                 });
         assertThat(exceptionHandler.poll()).isEqualTo("second");
         assertThat(exceptionHandler.poll()).isEqualTo("first");
