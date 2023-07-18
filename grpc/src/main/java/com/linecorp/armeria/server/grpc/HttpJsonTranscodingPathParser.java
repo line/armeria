@@ -473,9 +473,7 @@ final class HttpJsonTranscodingPathParser {
          */
         static String asParameterizedPath(List<PathSegment> segments, boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            final String path = segments.stream()
-                                        .map(segment -> segment.segmentString(PathMappingType.PARAMETERIZED))
-                                        .collect(Collectors.joining("/"));
+            final String path = toPathString(segments, PathMappingType.PARAMETERIZED)
             return withLeadingSlash ? '/' + path : path;
         }
 
@@ -484,10 +482,24 @@ final class HttpJsonTranscodingPathParser {
          */
         static String asGlobPath(List<PathSegment> segments, boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            final String path = segments.stream()
-                                        .map(segment -> segment.segmentString(PathMappingType.GLOB))
-                                        .collect(Collectors.joining("/"));
+            final String path = toPathString(segments, PathMappingType.GLOB)
             return withLeadingSlash ? '/' + path : path;
+        }
+
+        private static String toPathString(List<PathSegment> segments, PathMappingType type) {
+            final PathSegment lastSegment = segments.get(segments.size() - 1);
+            if (lastSegment instanceof VerbPathSegment) {
+                final String basePath = concatWithSlash(segments.subList(0, segments.size() - 1), type);
+                return basePath + ':' + lastSegment.segmentString(type);
+            } else {
+                return concatWithSlash(segments, type)
+            }
+        }
+
+        private static String concatWithSlash(List<PathSegment> segments, PathMappingType type) {
+            return segments.stream()
+                           .map(segment -> segment.segmentString(type))
+                           .collect(Collectors.joining("/"));
         }
 
         private Stringifier() {}
