@@ -175,8 +175,8 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v2
         with:
-          name: reports-JVM-${{ matrix.on }}-${{ matrix.java }}
-          path: reports-JVM-${{ matrix.on }}-${{ matrix.java }}.tar
+          name: reports-JVM-${{ matrix.on }}-${{ matrix.java }}${{ matrix.min-java && format('-{0}', matrix.min-java) || '' }}
+          path: reports-JVM-${{ matrix.on }}-${{ matrix.java }}${{ matrix.min-java && format('-{0}', matrix.min-java) || '' }}.tar
           retention-days: 3
 
   lint:
