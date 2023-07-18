@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.ClientConnectionTimingsType;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 
@@ -161,23 +162,28 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
 
             final ClientConnectionTimings timings = log.connectionTimings();
             if (timings != null) {
-                logTiming(span, "connection-acquire.start", "connection-acquire.end",
+                logTiming(span, "connection-acquisition.start", "connection-acquisition.end",
                           timings.connectionAcquisitionStartTimeMicros(),
                           timings.connectionAcquisitionDurationNanos());
-                if (timings.dnsResolutionDurationNanos() != -1) {
-                    logTiming(span, "dns-resolve.start", "dns-resolve.end",
-                              timings.dnsResolutionStartTimeMicros(),
-                              timings.dnsResolutionDurationNanos());
+                if (timings.durationNanos(ClientConnectionTimingsType.DNS_RESOLUTION) != -1) {
+                    logTiming(span, "dns-resolution.start", "dns-resolution.end",
+                              timings.startTimeMicros(ClientConnectionTimingsType.DNS_RESOLUTION),
+                              timings.durationNanos(ClientConnectionTimingsType.DNS_RESOLUTION));
                 }
-                if (timings.socketConnectDurationNanos() != -1) {
+                if (timings.durationNanos(ClientConnectionTimingsType.SOCKET_CONNECT) != -1) {
                     logTiming(span, "socket-connect.start", "socket-connect.end",
-                              timings.socketConnectStartTimeMicros(),
-                              timings.socketConnectDurationNanos());
+                              timings.startTimeMicros(ClientConnectionTimingsType.SOCKET_CONNECT),
+                              timings.durationNanos(ClientConnectionTimingsType.SOCKET_CONNECT));
                 }
-                if (timings.pendingAcquisitionDurationNanos() != -1) {
-                    logTiming(span, "connection-reuse.start", "connection-reuse.end",
-                              timings.pendingAcquisitionStartTimeMicros(),
-                              timings.pendingAcquisitionDurationNanos());
+                if (timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION) != -1) {
+                    logTiming(span, "pending-acquisition.start", "pending-acquisition.end",
+                              timings.startTimeMicros(ClientConnectionTimingsType.PENDING_ACQUISITION),
+                              timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION));
+                }
+                if (timings.durationNanos(ClientConnectionTimingsType.EXISTING_ACQUISITION) != -1) {
+                    logTiming(span, "existing-acquisition.start", "existing-acquisition.end",
+                              timings.startTimeMicros(ClientConnectionTimingsType.EXISTING_ACQUISITION),
+                              timings.durationNanos(ClientConnectionTimingsType.EXISTING_ACQUISITION));
                 }
             }
 

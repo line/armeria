@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.ClientConnectionTimingsType;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -114,18 +115,33 @@ public final class RequestMetricSupport {
         if (timings != null) {
             metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
                                                            TimeUnit.NANOSECONDS);
-            final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
+            final long dnsResolutionDurationNanos =
+                    timings.durationNanos(ClientConnectionTimingsType.DNS_RESOLUTION);
             if (dnsResolutionDurationNanos >= 0) {
+                metrics.deprecatedDnsResolutionDuration().record(
+                        dnsResolutionDurationNanos, TimeUnit.NANOSECONDS);
                 metrics.dnsResolutionDuration().record(dnsResolutionDurationNanos, TimeUnit.NANOSECONDS);
             }
-            final long socketConnectDurationNanos = timings.socketConnectDurationNanos();
+            final long socketConnectDurationNanos =
+                    timings.durationNanos(ClientConnectionTimingsType.SOCKET_CONNECT);
             if (socketConnectDurationNanos >= 0) {
+                metrics.deprecatedSocketConnectDuration()
+                       .record(socketConnectDurationNanos, TimeUnit.NANOSECONDS);
                 metrics.socketConnectDuration().record(socketConnectDurationNanos, TimeUnit.NANOSECONDS);
             }
-            final long pendingAcquisitionDurationNanos = timings.pendingAcquisitionDurationNanos();
+            final long pendingAcquisitionDurationNanos =
+                    timings.durationNanos(ClientConnectionTimingsType.PENDING_ACQUISITION);
             if (pendingAcquisitionDurationNanos >= 0) {
+                metrics.deprecatedPendingAcquisitionDuration().record(pendingAcquisitionDurationNanos,
+                                                                      TimeUnit.NANOSECONDS);
                 metrics.pendingAcquisitionDuration().record(pendingAcquisitionDurationNanos,
                                                             TimeUnit.NANOSECONDS);
+            }
+            final long existingAcquisitionDurationNanos =
+                    timings.durationNanos(ClientConnectionTimingsType.EXISTING_ACQUISITION);
+            if (existingAcquisitionDurationNanos >= 0) {
+                metrics.existingAcquisitionDuration().record(existingAcquisitionDurationNanos,
+                                                             TimeUnit.NANOSECONDS);
             }
         }
         if (log.requestCause() != null) {
@@ -196,11 +212,19 @@ public final class RequestMetricSupport {
 
         Timer connectionAcquisitionDuration();
 
+        Timer deprecatedDnsResolutionDuration();
+
+        Timer deprecatedSocketConnectDuration();
+
+        Timer deprecatedPendingAcquisitionDuration();
+
         Timer dnsResolutionDuration();
 
         Timer socketConnectDuration();
 
         Timer pendingAcquisitionDuration();
+
+        Timer existingAcquisitionDuration();
 
         Counter writeTimeouts();
 
@@ -281,9 +305,13 @@ public final class RequestMetricSupport {
         private final MeterIdPrefix idPrefix;
 
         private final Timer connectionAcquisitionDuration;
+        private final Timer deprecatedDnsResolutionDuration;
+        private final Timer deprecatedSocketConnectDuration;
+        private final Timer deprecatedPendingAcquisitionDuration;
         private final Timer dnsResolutionDuration;
         private final Timer socketConnectDuration;
         private final Timer pendingAcquisitionDuration;
+        private final Timer existingAcquisitionDuration;
 
         private final Counter writeTimeouts;
         private final Counter responseTimeouts;
@@ -303,13 +331,28 @@ public final class RequestMetricSupport {
             this.idPrefix = idPrefix;
 
             connectionAcquisitionDuration = newTimer(
-                    parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags());
-            dnsResolutionDuration = newTimer(
+                    parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags("type", "all"));
+
+            // deprecated timers
+            deprecatedDnsResolutionDuration = newTimer(
                     parent, idPrefix.name("dns.resolution.duration"), idPrefix.tags());
-            socketConnectDuration = newTimer(
+            deprecatedSocketConnectDuration = newTimer(
                     parent, idPrefix.name("socket.connect.duration"), idPrefix.tags());
-            pendingAcquisitionDuration = newTimer(
+            deprecatedPendingAcquisitionDuration = newTimer(
                     parent, idPrefix.name("pending.acquisition.duration"), idPrefix.tags());
+
+            dnsResolutionDuration = newTimer(
+                    parent, idPrefix.name("connection.acquisition.duration"),
+                    idPrefix.tags("type", "dns.resolution"));
+            socketConnectDuration = newTimer(
+                    parent, idPrefix.name("connection.acquisition.duration"),
+                    idPrefix.tags("type", "socket.connect"));
+            pendingAcquisitionDuration = newTimer(
+                    parent, idPrefix.name("connection.acquisition.duration"),
+                    idPrefix.tags("type", "pending.acquisition"));
+            existingAcquisitionDuration = newTimer(
+                    parent, idPrefix.name("connection.acquisition.duration"),
+                    idPrefix.tags("type", "existing.acquisition"));
 
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
@@ -330,6 +373,21 @@ public final class RequestMetricSupport {
         }
 
         @Override
+        public Timer deprecatedDnsResolutionDuration() {
+            return deprecatedDnsResolutionDuration;
+        }
+
+        @Override
+        public Timer deprecatedSocketConnectDuration() {
+            return deprecatedSocketConnectDuration;
+        }
+
+        @Override
+        public Timer deprecatedPendingAcquisitionDuration() {
+            return deprecatedPendingAcquisitionDuration;
+        }
+
+        @Override
         public Timer dnsResolutionDuration() {
             return dnsResolutionDuration;
         }
@@ -342,6 +400,11 @@ public final class RequestMetricSupport {
         @Override
         public Timer pendingAcquisitionDuration() {
             return pendingAcquisitionDuration;
+        }
+
+        @Override
+        public Timer existingAcquisitionDuration() {
+            return existingAcquisitionDuration;
         }
 
         @Override
