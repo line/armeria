@@ -51,6 +51,11 @@ public class KafkaLogWriterBuilder<K> extends AbstractLogWriterBuilder {
             requestOnlyLog -> null;
     private Function<? super RequestLog, ? extends @Nullable K> responseLogKeyExtractor =
             requestLog -> null;
+    private boolean loggingAtOnce = true;
+    private KafkaRequestLogOutputPredicate requestLogOutputPredicate =
+            KafkaRequestLogOutputPredicate.always();
+    private KafkaResponseLogOutputPredicate responseLogOutputPredicate =
+            KafkaResponseLogOutputPredicate.always();
 
     @Override
     public KafkaLogWriterBuilder<K> logger(Logger logger) {
@@ -158,21 +163,51 @@ public class KafkaLogWriterBuilder<K> extends AbstractLogWriterBuilder {
     }
 
     /**
+     * Set whether the formatted log message that includes the request log and the response log is sent to
+     * Kafka at once, or not.
+     * If unset, {@code true} is use by default
+     */
+    public KafkaLogWriterBuilder<K> loggingAtOnce(boolean loggingAtOnce) {
+        this.loggingAtOnce = loggingAtOnce;
+        return this;
+    }
+
+    /**
+     * Set the {@link KafkaRequestLogOutputPredicate} to determines whether a response log should
+     * be written or not.
+     * If unset, {@link KafkaRequestLogOutputPredicate#always()} is used by default.
+     */
+    public KafkaLogWriterBuilder<K> requestLogOutputPredicate(
+            KafkaRequestLogOutputPredicate requestLogOutputPredicate) {
+        this.requestLogOutputPredicate = requireNonNull(requestLogOutputPredicate, "requestLogOutputPredicate");
+        return this;
+    }
+
+    /**
+     * Set the {@link KafkaResponseLogOutputPredicate} to determines whether a response log should
+     * be written or not.
+     * If unset, {@link KafkaResponseLogOutputPredicate#always()} is used by default.
+     */
+    public KafkaLogWriterBuilder<K> responseLogOutputPredicate(
+            KafkaResponseLogOutputPredicate responseLogOutputPredicate) {
+        this.responseLogOutputPredicate = requireNonNull(responseLogOutputPredicate,
+                                                         "responseLogOutputPredicate");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link LogWriter} that sends request/response logs to a Kafka backend
      * based on the properties of this builder.
      */
     public LogWriter build() {
         requireNonNull(producer, "producer");
         requireNonNull(topic, "topic");
-        Logger logger = logger();
-        if (logger == null) {
-            logger = KafkaLogWriter.defaultLogger;
-        }
         LogFormatter logFormatter = logFormatter();
         if (logFormatter == null) {
             logFormatter = LogFormatter.ofJson();
         }
-        return new KafkaLogWriter<K>(producer, topic, logger, requestLogKeyExtractor, responseLogKeyExtractor,
-                                     requestLogLevelMapper(), responseLogLevelMapper(), logFormatter);
+        return new KafkaLogWriter<K>(producer, topic, requestLogKeyExtractor, responseLogKeyExtractor,
+                                     logFormatter, loggingAtOnce, requestLogOutputPredicate,
+                                     responseLogOutputPredicate);
     }
 }

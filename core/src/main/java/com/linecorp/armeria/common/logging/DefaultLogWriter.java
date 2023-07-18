@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_REQUEST_LOG_LEVEL;
-import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_REQUEST_LOG_LEVEL_MAPPER;
-import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
+import static com.linecorp.armeria.internal.common.logging.LogWriterDefaults.DEFAULT_REQUEST_LOG_LEVEL;
+import static com.linecorp.armeria.internal.common.logging.LogWriterDefaults.DEFAULT_REQUEST_LOG_LEVEL_MAPPER;
+import static com.linecorp.armeria.internal.common.logging.LogWriterDefaults.DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Predicate;
@@ -115,6 +115,11 @@ final class DefaultLogWriter implements LogWriter {
                 }
             }
         }
+    }
+
+    @Override
+    public void log(RequestLog log) {
+        // noop;
     }
 
     @Override

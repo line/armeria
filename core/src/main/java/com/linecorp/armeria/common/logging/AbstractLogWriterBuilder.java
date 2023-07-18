@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.linecorp.armeria.internal.common.logging.LogWriterDefaults.DEFAULT_REQUEST_LOG_LEVEL_MAPPER;
+import static com.linecorp.armeria.internal.common.logging.LogWriterDefaults.DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
 import static java.util.Objects.requireNonNull;
 
 import org.slf4j.Logger;
@@ -31,14 +33,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public abstract class AbstractLogWriterBuilder {
-
-    public static final LogLevel DEFAULT_REQUEST_LOG_LEVEL = LogLevel.DEBUG;
-
-    public static final RequestLogLevelMapper DEFAULT_REQUEST_LOG_LEVEL_MAPPER =
-            RequestLogLevelMapper.of(DEFAULT_REQUEST_LOG_LEVEL);
-
-    public static final ResponseLogLevelMapper DEFAULT_RESPONSE_LOG_LEVEL_MAPPER =
-            ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN);
 
     @Nullable
     private Logger logger;
@@ -62,7 +56,7 @@ public abstract class AbstractLogWriterBuilder {
      * Returns a {@link Logger}.
      */
     @Nullable
-    protected Logger logger() {
+    protected final Logger logger() {
         return logger;
     }
 
@@ -111,7 +105,7 @@ public abstract class AbstractLogWriterBuilder {
      * Returns a {@link RequestLogLevelMapper}.
      * If unset, returns a default {@link RequestLogLevelMapper}.
      */
-    protected RequestLogLevelMapper requestLogLevelMapper() {
+    protected final RequestLogLevelMapper requestLogLevelMapper() {
         if (requestLogLevelMapper == null) {
             return DEFAULT_REQUEST_LOG_LEVEL_MAPPER;
         }
@@ -178,7 +172,7 @@ public abstract class AbstractLogWriterBuilder {
      * Returns a {@link ResponseLogLevelMapper}.
      * If unset, returns a default {@link ResponseLogLevelMapper}.
      */
-    protected ResponseLogLevelMapper responseLogLevelMapper() {
+    protected final ResponseLogLevelMapper responseLogLevelMapper() {
         if (responseLogLevelMapper == null) {
             return DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
         }
@@ -198,7 +192,7 @@ public abstract class AbstractLogWriterBuilder {
      * Returns a {@link LogFormatter}.
      */
     @Nullable
-    protected LogFormatter logFormatter() {
+    protected final LogFormatter logFormatter() {
         return logFormatter;
     }
 }

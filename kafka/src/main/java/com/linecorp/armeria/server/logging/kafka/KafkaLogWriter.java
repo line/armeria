@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.logging.kafka;
 
-import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_REQUEST_LOG_LEVEL;
-import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -30,12 +28,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.LogFormatter;
-import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
-import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 
@@ -44,6 +39,8 @@ import com.linecorp.armeria.common.util.ShutdownHooks;
  */
 @UnstableApi
 public final class KafkaLogWriter<K> implements LogWriter {
+
+    private static final Logger logger = LoggerFactory.getLogger(KafkaLogWriter.class);
 
     /**
      * Returns a newly-created {@link KafkaLogWriterBuilder}.
@@ -55,33 +52,27 @@ public final class KafkaLogWriter<K> implements LogWriter {
     /**
      * Returns a newly-created {@link LogWriter} created from the specified {@link Producer} and the topic.
      */
-    public static <K> LogWriter of(Producer<K, String> producer,String topic) {
+    public static <K> LogWriter of(Producer<K, String> producer, String topic) {
         return KafkaLogWriter.<K>builder()
                              .producer(producer)
                              .topic(topic)
                              .build();
     }
 
-    static final Logger defaultLogger = LoggerFactory.getLogger(KafkaLogWriter.class);
-
-    private static boolean warnedNullRequestLogLevelMapper;
-    private static boolean warnedNullResponseLogLevelMapper;
-
     private final Producer<K, String> producer;
     private final String topic;
-    private final Logger logger;
-    private final RequestLogLevelMapper requestLogLevelMapper;
-    private final ResponseLogLevelMapper responseLogLevelMapper;
     private final Function<? super RequestOnlyLog, ? extends @Nullable K> requestLogKeyExtractor;
     private final Function<? super RequestLog, ? extends @Nullable K> responseLogKeyExtractor;
     private final LogFormatter logFormatter;
+    private final boolean loggingAtOnce;
+    private final KafkaRequestLogOutputPredicate requestLogOutputPredicate;
+    private final KafkaResponseLogOutputPredicate responseLogOutputPredicate;
 
     /**
      * Creates a new instance.
      *
      * @param producer a Kafka {@link Producer} which is used to send logs to Kafka
      * @param topic the name of topic which is used to send logs
-     * @param logger the {@link Logger} to use when logging
      * @param requestLogKeyExtractor a {@link Function} that extracts a {@code K}-typed record key from
      *                               a {@link RequestLog} when writing request log.
      *                               The {@link Function} is allowed to return {@code null}
@@ -90,41 +81,38 @@ public final class KafkaLogWriter<K> implements LogWriter {
      *                                a {@link RequestLog} when writing response log.
      *                                The {@link Function} is allowed to return {@code null}
      *                                to skip logging for the given {@link RequestLog}.
-     * @param requestLogLevelMapper a {@link RequestLogLevelMapper} to use when mapping the log level
-     *                              of request logs.
-     * @param responseLogLevelMapper a {@link ResponseLogLevelMapper} to use when mapping the log level
-     *                               of response logs.
      * @param logFormatter a {@link LogFormatter} which converts a {@link RequestOnlyLog} or {@link RequestLog}
      *                     into a log message
+     * @param loggingAtOnce If true, the formatted log message that includes the request log and
+     *                      the response log is sent to Kafka at once.
+     * @param requestLogOutputPredicate A predicate that determines whether a request log should
+     *                                  be written or not.
+     * @param responseLogOutputPredicate A predicate that determines whether a response log should
+     *                                   be written or not.
      */
-    KafkaLogWriter(Producer<K, String> producer, String topic, Logger logger,
+    KafkaLogWriter(Producer<K, String> producer, String topic,
                    Function<? super RequestOnlyLog, ? extends @Nullable K> requestLogKeyExtractor,
                    Function<? super RequestLog, ? extends @Nullable K> responseLogKeyExtractor,
-                   RequestLogLevelMapper requestLogLevelMapper, ResponseLogLevelMapper responseLogLevelMapper,
-                   LogFormatter logFormatter) {
+                   LogFormatter logFormatter, boolean loggingAtOnce,
+                   KafkaRequestLogOutputPredicate requestLogOutputPredicate,
+                   KafkaResponseLogOutputPredicate responseLogOutputPredicate) {
         this.producer = requireNonNull(producer, "producer");
         this.topic = requireNonNull(topic, "topic");
-        this.logger = requireNonNull(logger, "logger");
         this.requestLogKeyExtractor = requireNonNull(requestLogKeyExtractor, "requestLogKeyExtractor");
         this.responseLogKeyExtractor = requireNonNull(responseLogKeyExtractor, "responseLogKeyExtractor");
-        this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
-        this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         this.logFormatter = requireNonNull(logFormatter, "logFormatter");
+        this.loggingAtOnce = loggingAtOnce;
+        this.requestLogOutputPredicate = requireNonNull(requestLogOutputPredicate,
+                                                        "requestLogOutputPredicate");
+        this.responseLogOutputPredicate = requireNonNull(responseLogOutputPredicate,
+                                                         "responseLogOutputPredicate");
         ShutdownHooks.addClosingTask(producer, "producer for KafkaLogWriter");
     }
 
     @Override
     public void logRequest(RequestOnlyLog log) {
         requireNonNull(log, "log");
-        LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
-        if (requestLogLevel == null) {
-            if (!warnedNullRequestLogLevelMapper) {
-                warnedNullRequestLogLevelMapper = true;
-                logger.warn("requestLogLevelMapper.apply() returned null; using default log level");
-            }
-            requestLogLevel = DEFAULT_REQUEST_LOG_LEVEL;
-        }
-        if (requestLogLevel.isEnabled(logger)) {
+        if (!loggingAtOnce && requestLogOutputPredicate.test(log)) {
             try (SafeCloseable ignored = log.context().push()) {
                 final K key = requestLogKeyExtractor.apply(log);
                 final ProducerRecord<K, String> producerRecord =
@@ -141,16 +129,7 @@ public final class KafkaLogWriter<K> implements LogWriter {
     @Override
     public void logResponse(RequestLog log) {
         requireNonNull(log, "log");
-        LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
-        if (responseLogLevel == null) {
-            if (!warnedNullResponseLogLevelMapper) {
-                warnedNullResponseLogLevelMapper = true;
-                logger.warn("responseLogLevelMapper.apply() returned null; using default log level mapper");
-            }
-            responseLogLevel = DEFAULT_RESPONSE_LOG_LEVEL_MAPPER.apply(log);
-            assert responseLogLevel != null;
-        }
-        if (responseLogLevel.isEnabled(logger)) {
+        if (!loggingAtOnce && responseLogOutputPredicate.test(log)) {
             try (SafeCloseable ignored = log.context().push()) {
                 final K key = responseLogKeyExtractor.apply(log);
                 final ProducerRecord<K, String> producerRecord =
@@ -161,6 +140,36 @@ public final class KafkaLogWriter<K> implements LogWriter {
                     }
                 });
             }
+        }
+    }
+
+    @Override
+    public void log(RequestLog log) {
+        if (!loggingAtOnce) {
+            return;
+        }
+        final boolean shouldLogRequest = requestLogOutputPredicate.test(log);
+        final boolean shouldLogResponse = responseLogOutputPredicate.test(log);
+
+        final String message;
+        if (log.responseCause() != null || (shouldLogRequest && shouldLogResponse)) {
+            message = logFormatter.format(log);
+        } else if (shouldLogRequest) {
+            message = logFormatter.formatRequest(log);
+        } else if (shouldLogResponse) {
+            message = logFormatter.formatResponse(log);
+        } else {
+            return;
+        }
+        try (SafeCloseable ignored = log.context().push()) {
+            final K key = responseLogKeyExtractor.apply(log);
+            final ProducerRecord<K, String> producerRecord =
+                    new ProducerRecord<>(topic, key, message);
+            producer.send(producerRecord, (metadata, exception) -> {
+                if (exception != null) {
+                    logger.warn("Failed to send a record to Kafka: {}", producerRecord, exception);
+                }
+            });
         }
     }
 }

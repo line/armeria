@@ -52,6 +52,11 @@ public final class LoggingUtils {
                 logException(ctx, "response", t);
             }
         }
+        try {
+            logWriter.log(requestLog);
+        } catch (Throwable t) {
+            logException(ctx, "request and response", t);
+        }
     }
 
     private static void logException(RequestContext ctx,

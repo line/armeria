@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.logging.kafka;
 
-import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_REQUEST_LOG_LEVEL_MAPPER;
-import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -49,6 +47,12 @@ class KafkaLogWriterTest {
             "^\\{\"type\":\"response\",\"startTime\":\".+\",\"length\":\".+\"," +
             "\"duration\":\".+\",\"totalDuration\":\".+\",\"headers\":\\{\".+\"}}$";
 
+    private static final String REQUEST_AND_RESPONSE_REGEX =
+            "^\\{\"request\":\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
+            "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}," +
+            "\"response\":\\{\"type\":\"response\",\"startTime\":\".+\",\"length\":\".+\"," +
+            "\"duration\":\".+\",\"totalDuration\":\".+\",\"headers\":\\{\".+\"}}}$";
+
     @Mock
     private Producer<String, String> producer;
 
@@ -62,9 +66,7 @@ class KafkaLogWriterTest {
                                                        .topic(TOPIC_NAME)
                                                        .requestLogKeyExtractor(requestOnlyLog -> "request")
                                                        .responseLogKeyExtractor(requestLog -> "response")
-                                                       .requestLogLevelMapper(DEFAULT_REQUEST_LOG_LEVEL_MAPPER)
-                                                       .responseLogLevelMapper(
-                                                               DEFAULT_RESPONSE_LOG_LEVEL_MAPPER)
+                                                       .loggingAtOnce(false)
                                                        .logFormatter(LogFormatter.ofJson())
                                                        .build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/kafka"));
@@ -86,9 +88,7 @@ class KafkaLogWriterTest {
                                                        .topic(TOPIC_NAME)
                                                        .requestLogKeyExtractor(requestOnlyLog -> "request")
                                                        .responseLogKeyExtractor(requestLog -> "response")
-                                                       .requestLogLevelMapper(DEFAULT_REQUEST_LOG_LEVEL_MAPPER)
-                                                       .responseLogLevelMapper(
-                                                               DEFAULT_RESPONSE_LOG_LEVEL_MAPPER)
+                                                       .loggingAtOnce(false)
                                                        .logFormatter(LogFormatter.ofJson())
                                                        .build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/kafka"));
@@ -101,5 +101,26 @@ class KafkaLogWriterTest {
         final ProducerRecord<String, String> record = captor.getValue();
         assertThat(record.key()).isEqualTo("response");
         assertThat(record.value()).matches(RESPONSE_REGEX);
+    }
+
+    @Test
+    void log() {
+        final LogWriter kafkaLogWriter = KafkaLogWriter.<String>builder()
+                                                       .producer(producer)
+                                                       .topic(TOPIC_NAME)
+                                                       .requestLogKeyExtractor(requestOnlyLog -> "request")
+                                                       .responseLogKeyExtractor(requestLog -> "response")
+                                                       .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/kafka"));
+        ctx.logBuilder().endRequest();
+        ctx.logBuilder().endResponse();
+        final RequestLog log = (RequestLog) ctx.log();
+
+        kafkaLogWriter.log(log);
+
+        verify(producer, times(1)).send(captor.capture(), any(Callback.class));
+        final ProducerRecord<String, String> record = captor.getValue();
+        assertThat(record.key()).isEqualTo("response");
+        assertThat(record.value()).matches(REQUEST_AND_RESPONSE_REGEX);
     }
 }
