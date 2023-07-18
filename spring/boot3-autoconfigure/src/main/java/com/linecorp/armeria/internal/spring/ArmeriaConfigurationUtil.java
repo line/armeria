@@ -118,8 +118,9 @@ public final class ArmeriaConfigurationUtil {
         final Port managementServerPort = internalServices.managementServerPort();
 
         if (internalServicePort != null && managementServerPort != null &&
-                internalServicePort.getPort() == managementServerPort.getPort()) {
-            throw new IllegalStateException("Internal service port cannot be equal to the management server port.");
+            internalServicePort.getPort() == managementServerPort.getPort()) {
+            throw new IllegalStateException(
+                    "Internal service port cannot be equal to the management server port.");
         }
 
         final ImmutableList.Builder<Port> internalPortsBuilder = ImmutableList.builder();
