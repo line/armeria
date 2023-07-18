@@ -77,7 +77,7 @@ public interface LogFormatter {
 
     /**
      * Returns the formatted request and response log message as a single text message that is constructed
-     * by {@link RequestLog}
+     * by {@link RequestLog}.
      */
     String format(RequestLog log);
 }
