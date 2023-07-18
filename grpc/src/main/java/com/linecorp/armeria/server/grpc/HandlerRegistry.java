@@ -69,6 +69,8 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
@@ -98,6 +100,7 @@ final class HandlerRegistry {
     private final Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
             ? extends HttpService>>> additionalDecorators;
     private final Set<ServerMethodDefinition<?, ?>> blockingMethods;
+    private final Map<ServerMethodDefinition<?, ?>, GrpcStatusFunction> grpcStatusFunctions;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods,
@@ -106,7 +109,8 @@ final class HandlerRegistry {
                             Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators,
                             Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
                                     ? extends HttpService>>> additionalDecorators,
-                            Set<ServerMethodDefinition<?, ?>> blockingMethods) {
+                            Set<ServerMethodDefinition<?, ?>> blockingMethods,
+                            Map<ServerMethodDefinition<?, ?>, GrpcStatusFunction> grpcStatusFunctions) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
@@ -114,6 +118,7 @@ final class HandlerRegistry {
         this.annotationDecorators = requireNonNull(annotationDecorators, "annotationDecorators");
         this.additionalDecorators = requireNonNull(additionalDecorators, "additionalDecorators");
         this.blockingMethods = requireNonNull(blockingMethods, "blockingMethods");
+        this.grpcStatusFunctions = requireNonNull(grpcStatusFunctions, "grpcStatusFunctions");
     }
 
     @Nullable
@@ -148,6 +153,15 @@ final class HandlerRegistry {
 
     boolean needToUseBlockingTaskExecutor(ServerMethodDefinition<?, ?> methodDef) {
         return blockingMethods.contains(methodDef);
+    }
+
+    @Nullable
+    GrpcStatusFunction wrapGrpcStatusFunction(ServerMethodDefinition<?, ?> methodDef,
+                                              @Nullable GrpcStatusFunction after) {
+        if (!grpcStatusFunctions.containsKey(methodDef)) {
+            return after;
+        }
+        return grpcStatusFunctions.get(methodDef).next(after);
     }
 
     Map<ServerMethodDefinition<?, ?>, HttpService> applyDecorators(
@@ -236,6 +250,16 @@ final class HandlerRegistry {
                    AnnotationUtil.findFirst(clazz, Blocking.class) != null;
         }
 
+        private static Optional<GrpcStatusFunction> findGrpcStatusFunction(
+                Class<?> clazz, Method method, DependencyInjector dependencyInjector) {
+            final List<GrpcStatusFunction> grpcStatusFunctions =
+                    AnnotationUtil.getAnnotatedInstances(method, clazz,
+                                                         GrpcExceptionHandler.class,
+                                                         GrpcStatusFunction.class,
+                                                         dependencyInjector).build();
+                    return grpcStatusFunctions.stream().reduce(GrpcStatusFunction::next);
+        }
+
         List<Entry> entries() {
             return entries;
         }
@@ -254,7 +278,9 @@ final class HandlerRegistry {
                     additionalDecoratorsBuilder = ImmutableMap.builder();
             final ImmutableSet.Builder<ServerMethodDefinition<?, ?>> blockingMethods =
                     ImmutableSet.builder();
-
+            final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcStatusFunction>
+                    grpcStatusFunctionsBuilder = ImmutableMap.builder();
+            final DependencyInjector dependencyInjector = new ReflectiveDependencyInjector();
             for (Entry entry : entries) {
                 final ServerServiceDefinition service = entry.service();
                 final String path = entry.path();
@@ -299,6 +325,11 @@ final class HandlerRegistry {
                             if (needToUseBlockingTaskExecutor(type, method)) {
                                 blockingMethods.add(methodDefinition);
                             }
+                            final Optional<GrpcStatusFunction> grpcStatusFunction =
+                                    findGrpcStatusFunction(type, method, dependencyInjector);
+                            if (grpcStatusFunction.isPresent()) {
+                                grpcStatusFunctionsBuilder.put(methodDefinition, grpcStatusFunction.get());
+                            }
                         }
                     }
                 } else {
@@ -333,6 +364,11 @@ final class HandlerRegistry {
                             if (needToUseBlockingTaskExecutor(type, method0)) {
                                 blockingMethods.add(methodDefinition);
                             }
+                            final Optional<GrpcStatusFunction> grpcStatusFunction =
+                                    findGrpcStatusFunction(type, method0, dependencyInjector);
+                            if (grpcStatusFunction.isPresent()) {
+                                grpcStatusFunctionsBuilder.put(methodDefinition, grpcStatusFunction.get());
+                            }
                         }
                     }
                 }
@@ -344,7 +380,8 @@ final class HandlerRegistry {
                                        bareMethodNames.buildKeepingLast(),
                                        annotationDecorators.build(),
                                        additionalDecoratorsBuilder.build(),
-                                       blockingMethods.build());
+                                       blockingMethods.build(),
+                                       grpcStatusFunctionsBuilder.build());
         }
     }
 

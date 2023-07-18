@@ -37,4 +37,23 @@ public interface GrpcStatusFunction {
      */
     @Nullable
     Status apply(RequestContext ctx, Throwable throwable, Metadata metadata);
+
+    /**
+     * Returns a {@link GrpcStatusFunction} that returns the result of this function when this function returns
+     * non {@code null} result, in which case the specified function isn't executed.
+     * when this function returns {@code null}, returns a {@link GrpcStatusFunction} that the result of
+     * the specified {@link GrpcStatusFunction}.
+     */
+    default GrpcStatusFunction next(@Nullable GrpcStatusFunction next) {
+        return (ctx, throwable, metadata) -> {
+            final Status status = apply(ctx, throwable, metadata);
+            if (status != null) {
+                return status;
+            }
+            if (next == null) {
+                return null;
+            }
+            return next.apply(ctx, throwable, metadata);
+        };
+    }
 }

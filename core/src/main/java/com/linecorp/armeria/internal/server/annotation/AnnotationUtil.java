@@ -35,6 +35,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -105,6 +107,21 @@ public final class AnnotationUtil {
     public static <T extends Annotation> T findFirst(AnnotatedElement element, Class<T> annotationType) {
         final List<T> found = findAll(element, annotationType);
         return found.isEmpty() ? null : found.get(0);
+    }
+
+    /**
+     * Returns a {@link Builder} which has the instances specified by the annotations of the
+     * {@code annotationType}. The annotations of the specified {@code method} and {@code clazz} will be
+     * collected respectively.
+     */
+    public static <T extends Annotation, R> Builder<R> getAnnotatedInstances(
+            AnnotatedElement method, AnnotatedElement clazz, Class<T> annotationType, Class<R> resultType,
+            DependencyInjector dependencyInjector) {
+        final Builder<R> builder = new Builder<>();
+        Stream.concat(findAll(method, annotationType).stream(), findAll(clazz, annotationType).stream())
+              .forEach(annotation -> builder.add(
+                      AnnotatedObjectFactory.getInstance(annotation, resultType, dependencyInjector)));
+        return builder;
     }
 
     /**
