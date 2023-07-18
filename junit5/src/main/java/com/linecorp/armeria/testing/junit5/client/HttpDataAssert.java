@@ -25,65 +25,105 @@ import java.nio.charset.Charset;
 import com.linecorp.armeria.common.HttpData;
 
 /**
- * Assertion methods for HttpData
+ * Assertion methods for HttpData.
  */
 public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     HttpDataAssert(HttpData actual, TestHttpResponse response) {
         super(actual, response);
     }
 
+    /**
+     * Verifies that the actual {@link HttpData} is equal to the given one.
+     * The {@code expected} cannot be null.
+     */
     public TestHttpResponse isEqualTo(HttpData expected) {
         requireNonNull(expected, "expected");
         assertEquals(expected, actual());
         return response();
     }
 
+    /**
+     * Verifies that the actual {@link HttpData} is empty.
+     */
     public TestHttpResponse isEmpty() {
         assertTrue(actual().isEmpty());
         return response();
     }
 
+    /**
+     * Verifies that the actual byte array of {@link HttpData} contains the given values, in any order.
+     * The {@code expected} cannot be null.
+     */
     public TestHttpResponse arrayContains(byte... expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContains(actual().array(), expected));
         return response();
     }
 
+    /**
+     * Verifies that the actual byte array of {@link HttpData} contains the given values, in any order.
+     * The {@code expected} cannot be null.
+     */
     public TestHttpResponse arrayContains(Byte[] expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContains(actual().array(), toPrimitiveByteArray(expected)));
         return response();
     }
 
+    /**
+     * Verifies that the actual byte array of {@link HttpData} contains the given values, in any order.
+     * The {@code expected} cannot be null.
+     */
     public TestHttpResponse arrayContains(int... expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContains(actual().array(), toByteArray(expected)));
         return response();
     }
 
+    /**
+     * Verifies that the actual byte array of {@link HttpData} contains only the given values and nothing else,
+     * in order.
+     * The {@code expected} cannot be null.
+     */
     public TestHttpResponse arrayContainsExactly(byte... expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContainsExactly(actual().array(), expected));
         return response();
     }
 
+    /**
+     * Verifies that the actual byte array of {@link HttpData} contains only the given values and nothing else,
+     * in order.
+     * The {@code expected} cannot be null.
+     */
     public TestHttpResponse arrayContainsExactly(Byte[] expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContainsExactly(actual().array(), toPrimitiveByteArray(expected)));
         return response();
     }
 
+    /**
+     * Verifies that the actual byte array of {@link HttpData} contains only the given values and nothing else,
+     * in order.
+     * The {@code expected} cannot be null.
+     */
     public TestHttpResponse arrayContainsExactly(int... expected) {
         requireNonNull(expected, "expected");
         assertTrue(bytesContainsExactly(actual().array(), toByteArray(expected)));
         return response();
     }
 
+    /**
+     * Verifies that the length of actual {@link HttpData} is equal to the given one.
+     */
     public TestHttpResponse lengthIsEqualTo(int expected) {
         assertEquals(expected, actual().length());
         return response();
     }
 
+    /**
+     * Verifies that the {@link String} representation of actual {@link HttpData} is equal to the given one.
+     */
     public TestHttpResponse stringIsEqualTo(Charset charset, String expected) {
         requireNonNull(charset, "charset");
         requireNonNull(expected, "expected");
@@ -91,18 +131,29 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
         return response();
     }
 
+    /**
+     * Verifies that the UTF-8 {@link String} representation of actual {@link HttpData} is equal to the given
+     * one.
+     */
     public TestHttpResponse stringUtf8IsEqualTo(String expected) {
         requireNonNull(expected, "expected");
         assertEquals(expected, actual().toStringUtf8());
         return response();
     }
 
+    /**
+     * Verifies that the ascii {@link String} representation of actual {@link HttpData} is equal to the given
+     * one.
+     */
     public TestHttpResponse stringAsciiIsEqualTo(String expected) {
         requireNonNull(expected, "expected");
         assertEquals(expected, actual().toStringAscii());
         return response();
     }
 
+    /**
+     * Verifies that the {@link String} representation of actual {@link HttpData} contains the given value.
+     */
     public TestHttpResponse stringContains(Charset charset, String expected) {
         requireNonNull(charset, "charset");
         requireNonNull(expected, "expected");
@@ -110,12 +161,20 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
         return response();
     }
 
+    /**
+     * Verifies that the UTF-8 {@link String} representation of actual {@link HttpData} contains the given
+     * value.
+     */
     public TestHttpResponse stringUtf8Contains(String expected) {
         requireNonNull(expected, "expected");
         assertTrue(actual().toStringUtf8().contains(expected));
         return response();
     }
 
+    /**
+     * Verifies that the ascii {@link String} representation of actual {@link HttpData} contains the given
+     * value.
+     */
     public TestHttpResponse stringAsciiContains(String expected) {
         requireNonNull(expected, "expected");
         assertTrue(actual().toStringAscii().contains(expected));

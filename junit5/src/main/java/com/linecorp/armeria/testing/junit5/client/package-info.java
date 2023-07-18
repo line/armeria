@@ -14,26 +14,10 @@
  * under the License.
  */
 
+/**
+ * Client-side testing utilities.
+ */
+@NonNullByDefault
 package com.linecorp.armeria.testing.junit5.client;
 
-import static java.util.Objects.requireNonNull;
-
-abstract class AbstractResponseAssert<T> {
-    private final T actual;
-    private final TestHttpResponse response;
-
-    AbstractResponseAssert(T actual, TestHttpResponse response) {
-        requireNonNull(actual, "actual");
-        requireNonNull(response, "response");
-        this.actual = actual;
-        this.response = response;
-    }
-
-    T actual() {
-        return actual;
-    }
-
-    TestHttpResponse response() {
-        return response;
-    }
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

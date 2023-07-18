@@ -35,13 +35,42 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.WebClientUtil;
 
+import io.netty.channel.EventLoop;
+
+/**
+ * This is a web client created for testing purposes. It uses an internal {@link BlockingWebClient},
+ * so the {@link HttpResponse} that comes in response is fully aggregated.
+ * The return type, {@link TestHttpResponse}, supports method chaining for assertions,
+ * allowing for a fluent syntax.
+ *
+ * <pre>{@code
+ * @RegisterExtension
+ * static ServerExtension server = ...;
+ *
+ * @Test
+ * void usingWebTestClient() {
+ *     final WebTestClient client = server.webTestClient();
+ *
+ *     client.get("/rest/1")
+ *           .assertStatus().isOk()
+ *           .assertHeaders().contains(...)
+ *           .assertContent().stringUtf8IsEqualTo(...)
+ *           .assertTrailers().isEmpty();
+ * }
+ * }</pre>
+ *
+ * <p>Note that you should never use this client in an {@link EventLoop} thread.
+ * Use it from a non-{@link EventLoop} thread such as {@link BlockingTaskExecutor}.
+ */
 public interface WebTestClient extends ClientBuilderParams, Unwrappable {
 
     /**
@@ -89,7 +118,6 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
         return builder(uri).build();
     }
 
-
     /**
      * Returns a new {@link WebTestClient} that connects to the specified {@link URI} using the default options.
      *
@@ -102,7 +130,6 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     static WebTestClient of(URI uri) {
         return builder(uri).build();
     }
-
 
     /**
      * Returns a new {@link WebTestClient} that connects to the specified {@link EndpointGroup} with

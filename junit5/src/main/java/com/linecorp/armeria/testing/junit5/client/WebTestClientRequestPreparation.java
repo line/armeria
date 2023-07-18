@@ -179,7 +179,8 @@ public final class WebTestClientRequestPreparation implements RequestPreparation
     }
 
     @Override
-    public WebTestClientRequestPreparation content(MediaType contentType, Publisher<? extends HttpData> content) {
+    public WebTestClientRequestPreparation content(MediaType contentType,
+                                                   Publisher<? extends HttpData> content) {
         delegate.content(contentType, content);
         return this;
     }
@@ -197,7 +198,8 @@ public final class WebTestClientRequestPreparation implements RequestPreparation
     }
 
     @Override
-    public WebTestClientRequestPreparation headers(Iterable<? extends Entry<? extends CharSequence, String>> headers) {
+    public WebTestClientRequestPreparation headers(
+            Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         delegate.headers(headers);
         return this;
     }
@@ -209,7 +211,8 @@ public final class WebTestClientRequestPreparation implements RequestPreparation
     }
 
     @Override
-    public WebTestClientRequestPreparation trailers(Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
+    public WebTestClientRequestPreparation trailers(
+            Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
         delegate.trailers(trailers);
         return this;
     }

@@ -29,7 +29,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
- * A complete HTTP response includes fluent test methods. whose content is readily available as a single {@link HttpData}.
+ * A complete HTTP response includes fluent test methods.
+ * whose content is readily available as a single {@link HttpData}.
  */
 public interface TestHttpResponse extends AggregatedHttpMessage {
 

@@ -24,26 +24,38 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Assertion methods for Throwable
+ * Assertion methods for Throwable.
  */
 public final class ThrowableAssert {
     private final Throwable cause;
 
-    public ThrowableAssert(Throwable cause) {
+    ThrowableAssert(Throwable cause) {
         this.cause = cause;
     }
 
+    /**
+     * Verifies that the actual {@link Throwable} value is an instance of the given type.
+     * The {@code expectedType} cannot be null.
+     */
     public ThrowableAssert isInstanceOf(Class<? extends Throwable> expectedType) {
         requireNonNull(expectedType);
         assertInstanceOf(expectedType, cause);
         return this;
     }
 
+    /**
+     * Verifies that the message of the actual {@link Throwable} is equal to the given message.
+     * The {@code message} cannot be null.
+     */
     public ThrowableAssert hasMessage(String message) {
         assertEquals(message, cause.getMessage());
         return this;
     }
 
+    /**
+     * Verifies that the message of the actual {@link Throwable} starts with the given message.
+     * The {@code message} cannot be null.
+     */
     public ThrowableAssert hasMessageStartingWith(String message) {
         requireNonNull(message, "message");
         assertNotNull(cause.getMessage());
@@ -51,6 +63,10 @@ public final class ThrowableAssert {
         return this;
     }
 
+    /**
+     * Verifies that the message of the actual {@link Throwable} contains the given message.
+     * The {@code message} cannot be null.
+     */
     public ThrowableAssert hasMessageContaining(String message) {
         requireNonNull(message, "message");
         assertNotNull(cause.getMessage());
@@ -58,13 +74,23 @@ public final class ThrowableAssert {
         return this;
     }
 
+    /**
+     * Verifies that the message of the actual {@link Throwable} does not contain the given message or is null.
+     * The {@code message} cannot be null.
+     */
     public ThrowableAssert hasMessageNotContaining(String message) {
         requireNonNull(message, "message");
-        assertNotNull(cause.getMessage());
+        if (cause.getMessage() == null) {
+            return this;
+        }
         assertFalse(cause.getMessage().contains(message));
         return this;
     }
 
+    /**
+     * Verifies that the message of the actual {@link Throwable} ends with the given message.
+     * The {@code message} cannot be null.
+     */
     public ThrowableAssert hasMessageEndingWith(String message) {
         requireNonNull(message, "message");
         assertNotNull(cause.getMessage());
