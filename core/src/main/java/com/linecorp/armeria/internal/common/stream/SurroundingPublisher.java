@@ -108,7 +108,14 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
             subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onError(new IllegalStateException("Only single subscriber is allowed!"));
+            if (completionFuture.isCompletedExceptionally()) {
+                completionFuture.exceptionally(cause -> {
+                    subscriber.onError(cause);
+                    return null;
+                });
+            } else {
+                subscriber.onError(new IllegalStateException("Only single subscriber is allowed!"));
+            }
             return;
         }
 
@@ -150,6 +157,17 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         // SurroundingSubscriber is set in `subscriber0()`.
         completionFuture.completeExceptionally(cause);
 
+        if (subscribedUpdater.compareAndSet(this, 0, 1)) {
+            publisher.abort(cause);
+            if (head != null) {
+                StreamMessageUtil.closeOrAbort(head, cause);
+            }
+            if (tail != null) {
+                StreamMessageUtil.closeOrAbort(tail, cause);
+            }
+            return;
+        }
+
         final SurroundingSubscriber<T> surroundingSubscriber = this.surroundingSubscriber;
         if (surroundingSubscriber != null) {
             surroundingSubscriber.close(cause);
@@ -168,10 +186,10 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         private State state;
 
         @Nullable
-        private final T head;
+        private T head;
         private final StreamMessage<T> publisher;
         @Nullable
-        private final T tail;
+        private T tail;
 
         private Subscriber<? super T> downstream;
         private final EventExecutor executor;
@@ -274,12 +292,16 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         private void sendHead() {
             setState(State.REQUIRE_HEAD, State.REQUIRE_BODY);
             assert head != null;
+            final T head = this.head;
+            this.head = null;
             publishDownstream(head, true);
         }
 
         private void sendTail() {
             assert state == State.REQUIRE_TAIL;
             if (tail != null) {
+                final T tail = this.tail;
+                this.tail = null;
                 downstream.onNext(tail);
             }
             close0(null);
@@ -383,7 +405,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             }
             downstream = NoopSubscriber.get();
             completionFuture.completeExceptionally(cause);
-            release();
+            release(null);
         }
 
         private void close(@Nullable Throwable cause) {
@@ -411,15 +433,15 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                 downstream.onError(cause);
                 completionFuture.completeExceptionally(cause);
             }
-            release();
+            release(cause);
         }
 
-        private void release() {
+        private void release(@Nullable Throwable cause) {
             if (head != null) {
-                PooledObjects.close(head);
+                StreamMessageUtil.closeOrAbort(head, cause);
             }
             if (tail != null) {
-                PooledObjects.close(tail);
+                StreamMessageUtil.closeOrAbort(tail, cause);
             }
         }
 
