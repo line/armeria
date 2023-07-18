@@ -117,7 +117,8 @@ final class TextLogFormatter implements LogFormatter {
             if (content != null) {
                 sanitizedContent = requestContentSanitizer.apply(ctx, content);
             }
-        } else if (RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
+        }
+        if (sanitizedContent == null && RequestLogProperty.REQUEST_CONTENT_PREVIEW.isAvailable(flags)) {
             final String contentPreview = log.requestContentPreview();
             if (contentPreview != null) {
                 sanitizedContent = requestContentSanitizer.apply(ctx, contentPreview);
@@ -231,7 +232,8 @@ final class TextLogFormatter implements LogFormatter {
             if (content != null) {
                 sanitizedContent = responseContentSanitizer.apply(ctx, content);
             }
-        } else if (RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
+        }
+        if (sanitizedContent == null && RequestLogProperty.RESPONSE_CONTENT_PREVIEW.isAvailable(flags)) {
             final String contentPreview = log.responseContentPreview();
             if (contentPreview != null) {
                 sanitizedContent = responseContentSanitizer.apply(ctx, contentPreview);
