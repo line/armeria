@@ -19,6 +19,8 @@ package com.linecorp.armeria.client.logging;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import org.slf4j.Logger;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
@@ -32,6 +34,10 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
     private Sampler<? super ClientRequestContext> successSampler = Sampler.always();
 
     private Sampler<? super ClientRequestContext> failureSampler = Sampler.always();
+
+    AbstractLoggingClientBuilder(Logger defaultLogger) {
+        super(defaultLogger);
+    }
 
     /**
      * Sets the {@link Sampler} that determines which request needs logging.

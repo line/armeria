@@ -50,7 +50,9 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
 
     private Sampler<? super ServiceRequestContext> failureSampler = Sampler.always();
 
-    LoggingServiceBuilder() {}
+    LoggingServiceBuilder(Logger defaultLogger) {
+        super(defaultLogger);
+    }
 
     /**
      * Sets the {@link Sampler} that determines which request needs logging.
@@ -60,8 +62,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
         requireNonNull(sampler, "sampler");
-        this.successSampler = sampler;
-        this.failureSampler = sampler;
+        successSampler = sampler;
+        failureSampler = sampler;
         return this;
     }
 

@@ -56,6 +56,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     @Nullable
+    private final Logger defaultLogger;
+
+    @Nullable
     private Logger logger;
     @Nullable
     private RequestLogLevelMapper requestLogLevelMapper;
@@ -82,6 +85,21 @@ public abstract class LoggingDecoratorBuilder {
     private LogWriter logWriter;
 
     private boolean buildLogWriter;
+
+    /**
+     * Creates a new instance.
+     */
+    protected LoggingDecoratorBuilder() {
+        defaultLogger = null;
+    }
+
+    /**
+     * Creates a new instance with the default logger. The default logger is used when neither
+     * {@link #logWriter(LogWriter)} nor {@link #logger(Logger)} is set.
+     */
+    protected LoggingDecoratorBuilder(Logger defaultLogger) {
+        this.defaultLogger = defaultLogger;
+    }
 
     /**
      * Sets the {@link Logger} to use when logging.
@@ -544,7 +562,11 @@ public abstract class LoggingDecoratorBuilder {
             return logWriter;
         }
         if (!buildLogWriter) {
-            return LogWriter.of();
+            if (defaultLogger != null) {
+                return LogWriter.of(defaultLogger);
+            } else {
+                return LogWriter.of();
+            }
         }
         final LogFormatter logFormatter =
                 LogFormatter.builderForText()
@@ -559,7 +581,10 @@ public abstract class LoggingDecoratorBuilder {
         builder.logFormatter(logFormatter);
         if (logger != null) {
             builder.logger(logger);
+        } else if (defaultLogger != null) {
+            builder.logger(defaultLogger);
         }
+
         if (requestLogLevelMapper != null) {
             builder.requestLogLevelMapper(requestLogLevelMapper);
         }

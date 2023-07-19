@@ -41,7 +41,9 @@ import com.linecorp.armeria.common.util.Sampler;
  */
 public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
 
-    LoggingClientBuilder() {}
+    LoggingClientBuilder(Logger defaultLogger) {
+        super(defaultLogger);
+    }
 
     /**
      * Returns a newly-created {@link LoggingClient} decorating {@code delegate} based on the properties of

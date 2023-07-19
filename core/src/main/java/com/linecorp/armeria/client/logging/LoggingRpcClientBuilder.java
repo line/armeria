@@ -44,7 +44,9 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     /**
      * Creates a new instance.
      */
-    LoggingRpcClientBuilder() {}
+    LoggingRpcClientBuilder(Logger defaultLogger) {
+        super(defaultLogger);
+    }
 
     /**
      * Returns a newly-created {@link LoggingRpcClient} decorating {@code delegate} based on the properties of
