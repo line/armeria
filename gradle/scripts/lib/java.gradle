@@ -13,8 +13,7 @@ logger.info("Using JDK ${buildJdkVersion} for build")
 rootProject.ext.set("buildJdkVersion", buildJdkVersion)
 
 // Enable checkstyle if the rule file exists.
-def checkstyleConfigDir =
-        project.rootProject.layout.projectDirectory.dir("settings/checkstyle").asFile.getPath()
+def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
 def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle') &&
         !rootProject.hasProperty('noLint') &&
         new File(checkstyleConfigDir).isDirectory() &&
