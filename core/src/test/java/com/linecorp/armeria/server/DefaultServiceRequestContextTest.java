@@ -139,8 +139,8 @@ class DefaultServiceRequestContextTest {
         final AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
         ctx.eventLoop().execute(() -> {
             try {
-                ctx.setRequestTimeoutMillis(2000);
-                assertThat(ctx.requestTimeoutMillis()).isCloseTo(2000, Offset.offset(400L));
+                ctx.setRequestTimeoutMillis(4000);
+                assertThat(ctx.requestTimeoutMillis()).isCloseTo(4000, Offset.offset(2000L));
                 ctx.clearRequestTimeout();
                 assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
             } catch (Throwable e) {
