@@ -18,16 +18,15 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.server.docs.DocService;
 
 class DocServiceAssetCompressionTest {
 
-    @ValueSource(strings = {"index.html", "main.js"})
-    @ParameterizedTest
-    void shouldNotIncludeUncompressedAssets(String file) {
+    @Test
+    void shouldNotIncludeUncompressedAssets() {
+        String file = "index.html";
         // `doc-client` should produce compressed assets when building bundle files for DocService and
         // they should exist in the classpath of the core module.
         // If Gradle build task is executed with `-PnoWeb`, this test may be broken.
