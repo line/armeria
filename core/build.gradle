@@ -234,22 +234,6 @@ if (tasks.findByName('trimShadedJar')) {
     }
 }
 
-// TODO(ikhoon): Revert after testing CI build failures.
-testing.suites {
-    test {
-        targets.configureEach {
-            testTask.configure {
-                include '**/AnnotatedValueResolverTest*'
-                testLogging {
-                    showExceptions true
-                    showCauses true
-                    showStandardStreams true
-                }
-            }
-        }
-    }
-}
-
 class PublicSuffixesTask extends DefaultTask {
     // Rebuild up to once in 7 days, unless cleaned.
     @Input
