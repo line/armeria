@@ -68,8 +68,9 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.Processor;
+
+import testing.thrift.main.HelloService;
+import testing.thrift.main.HelloService.Processor;
 
 /**
  * Test to verify interaction between armeria client and official thrift
