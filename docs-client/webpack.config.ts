@@ -30,7 +30,7 @@ const config: Configuration = {
     path: path.resolve(process.cwd(), './build/web'),
     // We don't mount to '/' for production build since we want the code to be relocatable.
     publicPath: isDev ? '/' : '',
-    filename: '[name].[contenthash].js'
+    filename: isDev ? '[name].js' : '[name].[contenthash].js'
   },
   module: {
     rules: [
