@@ -116,13 +116,6 @@ public final class ArmeriaConfigurationUtil {
 
         final Port internalServicePort = internalServices.internalServicePort();
         final Port managementServerPort = internalServices.managementServerPort();
-
-        if (internalServicePort != null && managementServerPort != null &&
-            internalServicePort.getPort() == managementServerPort.getPort()) {
-            throw new IllegalStateException(
-                    "Internal service port cannot be equal to the management server port.");
-        }
-
         final ImmutableList.Builder<Port> internalPortsBuilder = ImmutableList.builder();
         if (internalServicePort != null) {
             internalPortsBuilder.add(internalServicePort);
@@ -131,7 +124,8 @@ public final class ArmeriaConfigurationUtil {
         final boolean needsManagementPort =
                 findBean(beanFactory, "actuatorServerConfigurator", ArmeriaServerConfigurator.class) != null;
 
-        if (needsManagementPort && managementServerPort != null) {
+        if (needsManagementPort && managementServerPort != null &&
+            (internalServicePort == null || internalServicePort.getPort() != managementServerPort.getPort())) {
             internalPortsBuilder.add(managementServerPort);
         }
         final List<Port> internalPorts = internalPortsBuilder.build();
