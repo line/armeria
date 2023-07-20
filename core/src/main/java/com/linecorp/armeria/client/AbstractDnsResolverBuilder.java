@@ -523,11 +523,11 @@ public abstract class AbstractDnsResolverBuilder {
                    .searchDomains(ImmutableList.of())
                    .decodeIdn(decodeIdn);
 
-            if (queryTimeoutMillisForEachAttempt > 0) {
+            if (queryTimeoutMillisForEachAttempt > 0 && queryTimeoutMillisForEachAttempt < Long.MAX_VALUE) {
                 builder.queryTimeoutMillis(queryTimeoutMillisForEachAttempt);
             } else {
-                if (queryTimeoutMillis == 0) {
-                    builder.queryTimeoutMillis(Long.MAX_VALUE);
+                if (queryTimeoutMillis == 0 || queryTimeoutMillis == Long.MAX_VALUE) {
+                    builder.queryTimeoutMillis(-1);
                 } else {
                     builder.queryTimeoutMillis(queryTimeoutMillis);
                 }

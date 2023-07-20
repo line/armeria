@@ -24,7 +24,7 @@ jobs:
   build:
     if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
-    timeout-minutes: 150
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:

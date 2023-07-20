@@ -26,7 +26,7 @@ import org.junit.jupiter.api.condition.OS;
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 @EnabledOnOs(
-        value = { OS.LINUX },
+        value = { OS.LINUX, OS.MAC },
         disabledReason = "The current platform doesn't support Unix domain sockets."
 )
 public @interface EnabledOnOsWithDomainSockets {
