@@ -223,7 +223,7 @@ public interface ResponseAs<T, R> {
         };
     }
 
-    default <V> ConditionalResponseAs<T, R, V> andThen(ResponseAs<R, V> responseAs, Predicate<R> predicate) {
-        return new ConditionalResponseAs<>(this, responseAs, predicate);
+    default <V> DefaultConditionalResponseAs<T, R, V> andThen(ResponseAs<R, V> responseAs, Predicate<R> predicate) {
+        return new DefaultConditionalResponseAs<>(this, responseAs, predicate);
     }
 }

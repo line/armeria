@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 @UnstableApi
 public final class BlockingConditionalResponseAs<V>
-        extends ConditionalResponseAs<HttpResponse, AggregatedHttpResponse, ResponseEntity<V>> {
+        extends DefaultConditionalResponseAs<HttpResponse, AggregatedHttpResponse, ResponseEntity<V>> {
     private static final Predicate<AggregatedHttpResponse> TRUE_PREDICATE = unused -> true;
 
     BlockingConditionalResponseAs(ResponseAs<HttpResponse, AggregatedHttpResponse> originalResponseAs,
@@ -38,7 +38,7 @@ public final class BlockingConditionalResponseAs<V>
     }
 
     /**
-     * Invokes {@link ConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
+     * Invokes {@link DefaultConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
      * {@link ResponseAs} and {@link Predicate}.
      */
     public BlockingConditionalResponseAs<V> andThenJson(
@@ -48,7 +48,7 @@ public final class BlockingConditionalResponseAs<V>
     }
 
     /**
-     * Invokes {@link ConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
+     * Invokes {@link DefaultConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
      * {@link ResponseAs} and {@link Predicate}.
      */
     public BlockingConditionalResponseAs<V> andThenJson(
@@ -58,7 +58,7 @@ public final class BlockingConditionalResponseAs<V>
     }
 
     /**
-     * Invokes {@link ConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
+     * Invokes {@link DefaultConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
      * {@link ResponseAs} and {@link Predicate}.
      */
     public BlockingConditionalResponseAs<V> andThenJson(
@@ -68,7 +68,7 @@ public final class BlockingConditionalResponseAs<V>
     }
 
     /**
-     * Invokes {@link ConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
+     * Invokes {@link DefaultConditionalResponseAs#andThen(ResponseAs, Predicate)} to add the mapping of
      * {@link ResponseAs} and {@link Predicate}.
      */
     public BlockingConditionalResponseAs<V> andThenJson(
@@ -79,7 +79,7 @@ public final class BlockingConditionalResponseAs<V>
     }
 
     /**
-     * Invokes {@link ConditionalResponseAs#orElse(ResponseAs)} and returns {@link ResponseAs} whose
+     * Invokes {@link DefaultConditionalResponseAs#orElse(ResponseAs)} and returns {@link ResponseAs} whose
      * {@link Predicate} is evaluated as true.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(Class<? extends V> clazz) {
@@ -87,7 +87,7 @@ public final class BlockingConditionalResponseAs<V>
     }
 
     /**
-     * Invokes {@link ConditionalResponseAs#orElse(ResponseAs)} and returns {@link ResponseAs} whose
+     * Invokes {@link DefaultConditionalResponseAs#orElse(ResponseAs)} and returns {@link ResponseAs} whose
      * {@link Predicate} is evaluated as true.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(
@@ -96,7 +96,7 @@ public final class BlockingConditionalResponseAs<V>
     }
 
     /**
-     * Invokes {@link ConditionalResponseAs#orElse(ResponseAs)} and returns {@link ResponseAs} whose
+     * Invokes {@link DefaultConditionalResponseAs#orElse(ResponseAs)} and returns {@link ResponseAs} whose
      * {@link Predicate} is evaluated as true.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(TypeReference<? extends V> typeRef) {
@@ -104,7 +104,7 @@ public final class BlockingConditionalResponseAs<V>
     }
 
     /**
-     * Invokes {@link ConditionalResponseAs#orElse(ResponseAs)} and returns {@link ResponseAs} whose
+     * Invokes {@link DefaultConditionalResponseAs#orElse(ResponseAs)} and returns {@link ResponseAs} whose
      * {@link Predicate} is evaluated as true.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(
