@@ -16,14 +16,13 @@
 
 package com.linecorp.armeria.server.thrift;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -42,19 +41,22 @@ class ThriftCallServiceBuilderTest {
                 ThriftCallService.builder().addService(null)
         );
         assertThrows(NullPointerException.class, () ->
-                ThriftCallService.builder().addService("", (Object) null)
+                ThriftCallService.builder().addService("", null)
         );
         assertThrows(NullPointerException.class, () ->
-                ThriftCallService.builder().addService("", null, null)
+                ThriftCallService.builder().addServices("", (Object) null)
         );
         assertThrows(NullPointerException.class, () ->
-                ThriftCallService.builder().addService("", null, null, null)
+                ThriftCallService.builder().addServices("", null, null)
         );
         assertThrows(NullPointerException.class, () ->
-                ThriftCallService.builder().addService("", (Iterable<?>) null)
+                ThriftCallService.builder().addServices("", null, null, null)
+        );
+        assertThrows(NullPointerException.class, () ->
+                ThriftCallService.builder().addServices("", (Iterable<?>) null)
         );
         assertThrows(IllegalArgumentException.class, () ->
-                ThriftCallService.builder().addService("", new ArrayList<>())
+                ThriftCallService.builder().addServices("", new ArrayList<>())
         );
     }
 
@@ -69,55 +71,28 @@ class ThriftCallServiceBuilderTest {
                 .addService("foo", fooServiceImpl)
                 .addService("foobar", fooServiceImpl)
                 .addService("foobar", barServiceImpl)
-                .addService("foobarOnce", fooServiceImpl, barServiceImpl)
-                .addService("foobarList", ImmutableList.of(fooServiceImpl, barServiceImpl))
+                .addServices("foobarOnce", fooServiceImpl, barServiceImpl)
+                .addServices("foobarList", ImmutableList.of(fooServiceImpl, barServiceImpl))
                 .addServices(ImmutableMap.of("fooMap", fooServiceImpl, "barMap", barServiceImpl))
                 .addServices(ImmutableMap.of("fooIterableMap",
                                              ImmutableList.of(fooServiceImpl, barServiceImpl)))
                 .build();
-        assertTrue(service.entries().containsKey(""));
-        final Iterator<?> defaultIterator = service.entries().get("").implementations.iterator();
-        assertEquals(defaultServiceImpl, defaultIterator.next());
-        assertFalse(defaultIterator.hasNext());
+        final Map<String, List<Object>> actualEntries =
+                service.entries().entrySet().stream()
+                       .collect(ImmutableMap.toImmutableMap(
+                               Map.Entry::getKey,
+                               e -> ImmutableList.copyOf(e.getValue().implementations)));
 
-        assertTrue(service.entries().containsKey("foo"));
-        final Iterator<?> fooIterator = service.entries().get("foo").implementations.iterator();
-        assertEquals(fooServiceImpl, fooIterator.next());
-        assertFalse(fooIterator.hasNext());
+        final Map<String, List<Object>> expectedEntries = ImmutableMap.of(
+                "", ImmutableList.of(defaultServiceImpl),
+                "foo", ImmutableList.of(fooServiceImpl),
+                "foobar", ImmutableList.of(fooServiceImpl, barServiceImpl),
+                "foobarOnce", ImmutableList.of(fooServiceImpl, barServiceImpl),
+                "foobarList", ImmutableList.of(fooServiceImpl, barServiceImpl),
+                "fooMap", ImmutableList.of(fooServiceImpl),
+                "barMap", ImmutableList.of(barServiceImpl),
+                "fooIterableMap", ImmutableList.of(fooServiceImpl, barServiceImpl));
 
-        assertTrue(service.entries().containsKey("foobar"));
-        final Iterator<?> foobarIterator = service.entries().get("foobar").implementations.iterator();
-        assertEquals(fooServiceImpl, foobarIterator.next());
-        assertEquals(barServiceImpl, foobarIterator.next());
-        assertFalse(foobarIterator.hasNext());
-
-        assertTrue(service.entries().containsKey("foobarOnce"));
-        final Iterator<?> foobarOnceIterator = service.entries().get("foobarOnce").implementations.iterator();
-        assertEquals(fooServiceImpl, foobarOnceIterator.next());
-        assertEquals(barServiceImpl, foobarOnceIterator.next());
-        assertFalse(foobarOnceIterator.hasNext());
-
-        assertTrue(service.entries().containsKey("foobarList"));
-        final Iterator<?> foobarListIterator = service.entries().get("foobarList").implementations.iterator();
-        assertEquals(fooServiceImpl, foobarListIterator.next());
-        assertEquals(barServiceImpl, foobarListIterator.next());
-        assertFalse(foobarListIterator.hasNext());
-
-        assertTrue(service.entries().containsKey("fooMap"));
-        final Iterator<?> fooMapIterator = service.entries().get("fooMap").implementations.iterator();
-        assertEquals(fooServiceImpl, fooMapIterator.next());
-        assertFalse(fooMapIterator.hasNext());
-
-        assertTrue(service.entries().containsKey("barMap"));
-        final Iterator<?> barMapIterator = service.entries().get("barMap").implementations.iterator();
-        assertEquals(barServiceImpl, barMapIterator.next());
-        assertFalse(barMapIterator.hasNext());
-
-        assertTrue(service.entries().containsKey("fooIterableMap"));
-        final Iterator<?> fooIterableMapIterator =
-                service.entries().get("fooIterableMap").implementations.iterator();
-        assertEquals(fooServiceImpl, fooIterableMapIterator.next());
-        assertEquals(barServiceImpl, fooIterableMapIterator.next());
-        assertFalse(fooIterableMapIterator.hasNext());
+        assertThat(actualEntries).isEqualTo(expectedEntries);
     }
 }

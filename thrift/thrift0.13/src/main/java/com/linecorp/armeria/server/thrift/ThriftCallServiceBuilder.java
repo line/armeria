@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
@@ -37,9 +38,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *                 .addService("foo", fooServiceImpl) // Adds a service with a key
  *                 .addService("foobar", fooServiceImpl)  // Adds multiple services to the same key
  *                 .addService("foobar", barServiceImpl)
- *                 .addService("foobarOnce", fooServiceImpl, barServiceImpl) // Adds multiple services at once
+ *                  // Adds multiple services at once
+ *                 .addServices("foobarOnce", fooServiceImpl, barServiceImpl)
  *                  // Adds multiple services by list
- *                 .addService("foobarList", ImmutableList.of(fooServiceImpl, barServiceImpl))
+ *                 .addServices("foobarList", ImmutableList.of(fooServiceImpl, barServiceImpl))
  *                  // Adds multiple services by map
  *                 .addServices(ImmutableMap.of("fooMap", fooServiceImpl, "barMap", barServiceImpl))
  *                  // Adds multiple services by map
@@ -60,13 +62,63 @@ public final class ThriftCallServiceBuilder {
     ThriftCallServiceBuilder() {}
 
     /**
+     * Adds a service for {@link ThriftServiceEntry}.
+     */
+    public ThriftCallServiceBuilder addService(Object service) {
+        requireNonNull(service, "service");
+        servicesBuilder.put("", service);
+        return this;
+    }
+
+    /**
+     * Adds a service with a key for {@link ThriftServiceEntry}.
+     */
+    public ThriftCallServiceBuilder addService(String key, Object service) {
+        requireNonNull(key, "key");
+        requireNonNull(service, "service");
+        servicesBuilder.put(key, service);
+        return this;
+    }
+
+    /**
+     * Adds a service for {@link ThriftServiceEntry}.
+     */
+    public ThriftCallServiceBuilder addServices(Object... services) {
+        requireNonNull(services, "services");
+        checkArgument(services.length != 0, "service should not be empty");
+        servicesBuilder.putAll("", services);
+        return this;
+    }
+
+    /**
+     * Adds a service with a key for {@link ThriftServiceEntry}.
+     */
+    public ThriftCallServiceBuilder addServices(String key, Object... services) {
+        requireNonNull(key, "key");
+        requireNonNull(services, "service");
+        checkArgument(services.length != 0, "service should not be empty");
+        servicesBuilder.putAll(key, services);
+        return this;
+    }
+
+    /**
+     * Adds services with key by iterable for {@link ThriftServiceEntry}.
+     */
+    public ThriftCallServiceBuilder addServices(String key, Iterable<?> services) {
+        requireNonNull(key, "key");
+        requireNonNull(services, "services");
+        checkArgument(services.iterator().hasNext(), "service should not be empty");
+        servicesBuilder.putAll(key, services);
+        return this;
+    }
+
+    /**
      * Adds multiple services by map for {@link ThriftServiceEntry}.
      */
     public ThriftCallServiceBuilder addServices(Map<String, ?> services) {
         requireNonNull(services, "services");
-        if (services.isEmpty()) {
-            throw new IllegalArgumentException("empty services");
-        }
+        checkArgument(!services.isEmpty(), "service should not be empty");
+
         services.forEach((k, v) -> {
             if (v instanceof Iterable<?>) {
                 servicesBuilder.putAll(k, (Iterable<?>) v);
@@ -74,37 +126,6 @@ public final class ThriftCallServiceBuilder {
                 servicesBuilder.put(k, v);
             }
         });
-        return this;
-    }
-
-    /**
-     * Adds a service for {@link ThriftServiceEntry}.
-     */
-    public ThriftCallServiceBuilder addService(Object... service) {
-        requireNonNull(service, "service");
-        return addService("", service);
-    }
-
-    /**
-     * Adds a service with a key for {@link ThriftServiceEntry}.
-     */
-    public ThriftCallServiceBuilder addService(String key, Object... service) {
-        requireNonNull(key, "key");
-        requireNonNull(service, "service");
-        servicesBuilder.putAll(key, service);
-        return this;
-    }
-
-    /**
-     * Adds services with key by iterable for {@link ThriftServiceEntry}.
-     */
-    public ThriftCallServiceBuilder addService(String key, Iterable<?> service) {
-        requireNonNull(key, "key");
-        requireNonNull(service, "service");
-        if (!service.iterator().hasNext()) {
-            throw new IllegalArgumentException("service should not be empty");
-        }
-        servicesBuilder.putAll(key, service);
         return this;
     }
 
