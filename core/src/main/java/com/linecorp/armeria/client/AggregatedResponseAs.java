@@ -66,7 +66,7 @@ final class AggregatedResponseAs {
                                                                JsonDecoder<T> decoder,
                                                                Predicate<AggregatedHttpResponse> predicate) {
         if (!predicate.test(response)) {
-            throw newInvalidHttpResponseException(response, predicate);
+            throw newInvalidHttpResponseException(response);
         }
 
         try {
@@ -78,11 +78,10 @@ final class AggregatedResponseAs {
     }
 
     private static InvalidHttpResponseException newInvalidHttpResponseException(
-            AggregatedHttpResponse response, Predicate<AggregatedHttpResponse> predicate) {
+            AggregatedHttpResponse response) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
-                " is not expected by predicate method. response: " + response +
-                ", predicate: " + predicate, null);
+                          " (expect: the success class (2xx). response: " + response, null);
     }
 
     @FunctionalInterface
