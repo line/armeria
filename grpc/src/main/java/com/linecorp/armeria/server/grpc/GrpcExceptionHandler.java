@@ -25,8 +25,8 @@ import java.lang.annotation.Target;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 
 /**
- * Specifies an {@link GrpcStatusFunction} class which handles exceptions throwing from an
- * annotated gRPC service or its methods.
+ * Specifies a {@link GrpcStatusFunction} class which handles exceptions throwing from a gRPC service
+ * or its methods.
  */
 @Repeatable(GrpcExceptionHandlers.class)
 @Retention(RetentionPolicy.RUNTIME)
@@ -34,8 +34,7 @@ import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 public @interface GrpcExceptionHandler {
 
     /**
-     * {@link GrpcStatusFunction} implementation type. The specified class must have an accessible
-     * default constructor.
+     * {@link GrpcStatusFunction} implementation type.
      */
     Class<? extends GrpcStatusFunction> value();
 }

@@ -51,7 +51,7 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
-public class GrpcExceptionHandlerTest {
+class GrpcExceptionHandlerTest {
 
     private static final BlockingDeque<String> exceptionHandler = new LinkedBlockingDeque<>();
 
