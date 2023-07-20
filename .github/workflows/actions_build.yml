@@ -163,7 +163,7 @@ jobs:
         shell: bash
 
       - name: Collect the test reports
-        if: always()
+        if: failure()
         run: |
           find . '(' \
           -name 'java_pid*.hprof' -or \
@@ -176,7 +176,7 @@ jobs:
         shell: bash
 
       - name: Upload the artifacts
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v2
         with:
           name: reports-JVM-${{ matrix.on }}-${{ matrix.java }}
