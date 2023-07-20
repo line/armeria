@@ -67,6 +67,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.CompositeBean;
 import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -114,6 +115,8 @@ class AnnotatedDocServiceTest {
                 sb.http(8080);
             }
             sb.annotatedService("/service", new MyService());
+            sb.serviceUnder("/proxy", new ProxyService("/proxy"));
+            sb.serviceUnder("/proxy2/nested", new ProxyService("/proxy2/nested"));
             sb.serviceUnder("/docs",
                             DocService.builder()
                                       .exampleHeaders(EXAMPLE_HEADERS_ALL)
@@ -470,27 +473,32 @@ class AnnotatedDocServiceTest {
     @ParameterizedTest
     @CsvSource({ "/proxy", "/proxy2/nested" })
     void rightPathBehindProxy(String proxyPath) throws IOException {
-        server.server().reconfigure(sb -> sb.serviceUnder(proxyPath, (ctx, req) -> {
-                                                final String origPath = req.path();
-                                                assertThat(origPath).startsWith(proxyPath);
-                                                final String newPath = req.path().substring(proxyPath.length());
-                                                final HttpRequest newReq = req.withHeaders(
-                                                        req.headers().toBuilder().path(newPath).build()
-                                                );
-                                                return server.webClient().execute(newReq);
-                                            })
-                                            .serviceUnder("/docs", DocService.builder().build())
-        );
-
         final String specification = BlockingWebClient.of(server.httpUri())
                                                       .get(proxyPath + "/docs/specification.json")
                                                       .contentUtf8();
-        System.out.println("specification");
-        System.out.println(specification);
-
         final JsonNode specificationJson = mapper.readTree(specification);
         assertThatJson(specificationJson).node("docServiceRoute.pathType").isEqualTo("PREFIX");
         assertThatJson(specificationJson).node("docServiceRoute.patternString").isEqualTo("/docs/*");
+    }
+
+    private static final class ProxyService implements HttpService {
+        private final String proxyPath;
+
+        private ProxyService(String proxyPath) {
+            super();
+            this.proxyPath = proxyPath;
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+            final String origPath = req.path();
+            assertThat(origPath).startsWith(proxyPath);
+            final String newPath = req.path().substring(proxyPath.length());
+            final HttpRequest newReq = req.withHeaders(
+                    req.headers().toBuilder().path(newPath).build()
+            );
+            return server.webClient().execute(newReq);
+        }
     }
 
     @Description("My service class")
