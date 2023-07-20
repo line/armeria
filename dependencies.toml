@@ -62,7 +62,6 @@ jetty11-jstl = "11.0.0"
 jetty93 = "9.3.30.v20211001"
 jetty94 = "9.4.51.v20230217"
 jetty-alpn-api = "1.1.3.v20160715"
-jetty-alpn-agent = "2.0.10"
 jmh-core = "1.36"
 jmh-extras = "0.3.7"
 jmh-gradle-plugin = "0.7.1"
@@ -662,9 +661,6 @@ version.ref = "jetty94"
 [libraries.jetty-alpn-api]
 module = "org.eclipse.jetty.alpn:alpn-api"
 version.ref = "jetty-alpn-api"
-[libraries.jetty-alpn-agent]
-module = "org.mortbay.jetty.alpn:jetty-alpn-agent"
-version.ref = "jetty-alpn-agent"
 
 [libraries.jmh-extras]
 module = "pl.project13.scala:sbt-jmh-extras"
