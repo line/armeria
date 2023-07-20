@@ -27,13 +27,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.grpc.java.Hello.HelloReply;
-import com.linecorp.armeria.grpc.java.Hello.HelloRequest;
-import com.linecorp.armeria.grpc.java.HelloServiceGrpc.HelloServiceFutureStub;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Hello;
+import testing.grpc.Hello.HelloReply;
+import testing.grpc.Hello.HelloRequest;
+import testing.grpc.TestServiceGrpc.TestServiceFutureStub;
 
 class ClientHttp2GracefulShutdownTimeoutOverridingTest {
 
@@ -41,7 +42,7 @@ class ClientHttp2GracefulShutdownTimeoutOverridingTest {
     void idleTimeoutIsUsedForHttp2GracefulShutdownTimeout() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final Server server = ServerBuilder.forPort(0)
-                                           .addService(new HelloSleepService(latch))
+                                           .addService(new TestSleepService(latch))
                                            .build()
                                            .start();
 
@@ -49,11 +50,11 @@ class ClientHttp2GracefulShutdownTimeoutOverridingTest {
                                                   // Set greater than 40 seconds for HTTP/2 graceful shutdown.
                                                   .idleTimeout(Duration.ofSeconds(50))
                                                   .build()) {
-            final HelloServiceFutureStub client =
+            final TestServiceFutureStub client =
                     GrpcClients.builder("http://127.0.0.1:" + server.getPort())
                                .responseTimeout(Duration.ofSeconds(120))
                                .factory(factory)
-                               .build(HelloServiceFutureStub.class);
+                               .build(TestServiceFutureStub.class);
 
             final ListenableFuture<HelloReply> responseFuture = client.hello(
                     HelloRequest.newBuilder().setName("hello").build());
@@ -65,11 +66,11 @@ class ClientHttp2GracefulShutdownTimeoutOverridingTest {
         }
     }
 
-    private static class HelloSleepService extends HelloServiceImpl {
+    private static class TestSleepService extends TestServiceImpl {
 
         private final CountDownLatch latch;
 
-        HelloSleepService(CountDownLatch latch) {
+        TestSleepService(CountDownLatch latch) {
             this.latch = latch;
         }
 

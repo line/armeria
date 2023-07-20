@@ -61,8 +61,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.brave.HelloService;
-import com.linecorp.armeria.common.brave.HelloService.AsyncIface;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -85,19 +83,21 @@ import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.propagation.TraceContext;
 import brave.sampler.Sampler;
+import testing.brave.TestService;
+import testing.brave.TestService.AsyncIface;
 
 class BraveIntegrationTest {
 
     private static final SpanHandlerImpl spanHandler = new SpanHandlerImpl();
 
-    private static HelloService.Iface fooClient;
-    private static HelloService.Iface fooClientWithoutTracing;
-    private static HelloService.Iface timeoutClient;
-    private static HelloService.Iface timeoutClientClientTimesOut;
-    private static HelloService.Iface http1TimeoutClientClientTimesOut;
-    private static HelloService.AsyncIface barClient;
-    private static HelloService.AsyncIface quxClient;
-    private static HelloService.Iface zipClient;
+    private static TestService.Iface fooClient;
+    private static TestService.Iface fooClientWithoutTracing;
+    private static TestService.Iface timeoutClient;
+    private static TestService.Iface timeoutClientClientTimesOut;
+    private static TestService.Iface http1TimeoutClientClientTimesOut;
+    private static TestService.AsyncIface barClient;
+    private static TestService.AsyncIface quxClient;
+    private static TestService.Iface zipClient;
     private static WebClient poolWebClient;
 
     @RegisterExtension
@@ -203,31 +203,31 @@ class BraveIntegrationTest {
         fooClient = ThriftClients.builder(server.httpUri())
                                  .path("/foo")
                                  .decorator(BraveClient.newDecorator(newTracing("client/foo")))
-                                 .build(HelloService.Iface.class);
+                                 .build(TestService.Iface.class);
         zipClient = ThriftClients.builder(server.httpUri())
                                  .path("/zip")
                                  .decorator(BraveClient.newDecorator(newTracing("client/zip")))
-                                 .build(HelloService.Iface.class);
-        fooClientWithoutTracing = ThriftClients.newClient(server.httpUri() + "/foo", HelloService.Iface.class);
+                                 .build(TestService.Iface.class);
+        fooClientWithoutTracing = ThriftClients.newClient(server.httpUri() + "/foo", TestService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
         poolWebClient = WebClient.of(server.httpUri());
         timeoutClient = ThriftClients.builder(server.httpUri())
                                      .path("/timeout")
                                      .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                                     .build(HelloService.Iface.class);
+                                     .build(TestService.Iface.class);
         timeoutClientClientTimesOut =
                 ThriftClients.builder(server.httpUri())
                              .path("/timeout")
                              .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                              .responseTimeout(Duration.ofSeconds(3))
-                             .build(HelloService.Iface.class);
+                             .build(TestService.Iface.class);
         http1TimeoutClientClientTimesOut =
                 ThriftClients.builder(server.uri(H1C))
                              .path("/timeout")
                              .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                              .responseTimeout(Duration.ofSeconds(3))
-                             .build(HelloService.Iface.class);
+                             .build(TestService.Iface.class);
     }
 
     @AfterEach
@@ -244,11 +244,11 @@ class BraveIntegrationTest {
         return BraveService.newDecorator(newTracing(name)).apply(service);
     }
 
-    private static HelloService.AsyncIface newClient(String path) {
+    private static TestService.AsyncIface newClient(String path) {
         return ThriftClients.builder(server.httpUri())
                             .path(path)
                             .decorator(BraveClient.newDecorator(newTracing("client" + path)))
-                            .build(HelloService.AsyncIface.class);
+                            .build(TestService.AsyncIface.class);
     }
 
     private static Tracing newTracing(String name) {
@@ -473,7 +473,7 @@ class BraveIntegrationTest {
         testClientTimesOut(http1TimeoutClientClientTimesOut);
     }
 
-    private static void testClientTimesOut(HelloService.Iface client) {
+    private static void testClientTimesOut(TestService.Iface client) {
         assertThatThrownBy(() -> client.hello("name"))
                 .isInstanceOf(TTransportException.class)
                 .hasCauseInstanceOf(ResponseTimeoutException.class);

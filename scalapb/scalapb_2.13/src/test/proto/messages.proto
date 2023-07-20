@@ -14,9 +14,7 @@
 
 syntax = "proto3";
 
-package armeria.protobuf.testing;
-
-option java_package = "com.linecorp.armeria.scalapb.testing";
+package testing.scalapb;
 
 message SimpleRequest {
   string payload = 1;
