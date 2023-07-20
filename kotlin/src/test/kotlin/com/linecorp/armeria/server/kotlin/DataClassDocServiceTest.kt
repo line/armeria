@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.kotlin
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.linecorp.armeria.client.WebClient
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.Default
 import com.linecorp.armeria.server.annotation.Get
@@ -29,6 +30,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 
+@GenerateNativeImageTrace
 class DataClassDocServiceTest {
 
     @Test
@@ -41,18 +43,18 @@ class DataClassDocServiceTest {
             .content()
 
         assertThat(jsonNode.get("services")[0]["methods"][0]["parameters"][0]["typeSignature"].asText())
-            .isEqualTo("com.linecorp.armeria.server.kotlin.ExampleQueries1")
+            .isEqualTo("com.linecorp.armeria.server.kotlin.DataClassDocServiceTest\$ExampleQueries1")
         assertThat(jsonNode.get("structs")[0]["name"].asText())
-            .isEqualTo("com.linecorp.armeria.server.kotlin.ExampleQueries1")
+            .isEqualTo("com.linecorp.armeria.server.kotlin.DataClassDocServiceTest\$ExampleQueries1")
         val fields1 = jsonNode.get("structs")[0]["fields"] as ArrayNode
         assertThat(fields1).hasSize(2)
         assertThat(fields1[0]["name"].asText()).isEqualTo("name")
         assertThat(fields1[1]["name"].asText()).isEqualTo("limit")
 
         assertThat(jsonNode.get("services")[0]["methods"][1]["parameters"][0]["typeSignature"].asText())
-            .isEqualTo("com.linecorp.armeria.server.kotlin.ExampleQueries2")
+            .isEqualTo("com.linecorp.armeria.server.kotlin.DataClassDocServiceTest\$ExampleQueries2")
         assertThat(jsonNode.get("structs")[1]["name"].asText())
-            .isEqualTo("com.linecorp.armeria.server.kotlin.ExampleQueries2")
+            .isEqualTo("com.linecorp.armeria.server.kotlin.DataClassDocServiceTest\$ExampleQueries2")
         val fields2 = jsonNode.get("structs")[1]["fields"] as ArrayNode
         assertThat(fields2).hasSize(3)
         assertThat(fields2[0]["name"].asText()).isEqualTo("application")
@@ -72,35 +74,32 @@ class DataClassDocServiceTest {
             }
         }
     }
-}
 
-class MyKotlinService {
-    @Get("/example1")
-    fun getIdV1(@Suppress("UNUSED_PARAMETER") queries: ExampleQueries1): String {
-        return "example"
+    class MyKotlinService {
+        @Get("/example1")
+        fun getIdV1(@Suppress("UNUSED_PARAMETER") queries: ExampleQueries1): String {
+            return "example"
+        }
+
+        @Get("/example2")
+        fun getIdV2(@Suppress("UNUSED_PARAMETER") queries: ExampleQueries2): String {
+            return "example"
+        }
     }
 
-    @Get("/example2")
-    fun getIdV2(@Suppress("UNUSED_PARAMETER") queries: ExampleQueries2): String {
-        return "example"
-    }
+    data class ExampleQueries1(
+        @Param
+        val name: String,
+        @Param @Default
+        val limit: Int?
+    )
+
+    data class ExampleQueries2(
+        @Param
+        val application: String,
+        @Param
+        val topic: String,
+        @Param
+        val group: String
+    )
 }
-
-data class ExampleQueries1(
-    @Param
-    val name: String,
-
-    @Param @Default
-    val limit: Int?
-)
-
-data class ExampleQueries2(
-    @Param
-    val application: String,
-    @Param
-    val topic: String,
-    @Param
-    val group: String
-)
-
-data class ExampleBody(val name: String, val limit: Int?)

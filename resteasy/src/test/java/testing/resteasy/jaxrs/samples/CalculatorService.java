@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.jaxrs.samples;
+package testing.resteasy.jaxrs.samples;
 
 import java.util.Optional;
 
@@ -37,6 +37,8 @@ import javax.ws.rs.core.UriInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import testing.resteasy.CustomRequestContext;
+
 @Path("/calc")
 public class CalculatorService {
 
@@ -50,7 +52,7 @@ public class CalculatorService {
                             @Context HttpHeaders headers,
                             @Context SecurityContext securityContext,
                             @Context Application application,
-                            @Context com.linecorp.armeria.server.resteasy.CustomRequestContext customContext,
+                            @Context CustomRequestContext customContext,
                             @CookieParam("param1") Optional<Integer> param1,
                             @CookieParam("param2") Optional<String> param2,
                             @CookieParam("param3") @DefaultValue("bar") String param3,

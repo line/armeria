@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logback;
 
-import java.util.function.Function;
+package com.linecorp.armeria.server.kotlin
 
-public final class CustomObjectValueStringifier implements Function<CustomObject, String> {
-    @Override
-    public String apply(CustomObject o) {
-        return o.value;
-    }
+class TestService {
+    fun normal(): Int = 1
+
+    suspend fun suspendingUnit() {}
+
+    suspend fun suspendingInt(): Int = 1
 }

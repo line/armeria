@@ -21,16 +21,16 @@
     <export>remote.host</export>
     <export>req.headers.user-agent</export>
     <export>res.headers.set-cookie</export>
-    <export>attrs.foo:com.linecorp.armeria.common.logback.CustomObject#FOO</export>
+    <export>attrs.foo:testing.logback.CustomObject#FOO</export>
     <export>
-      attrs.bar:com.linecorp.armeria.common.logback.CustomObject#ATTR:com.linecorp.armeria.common.logback.CustomObjectNameStringifier
+      attrs.bar:testing.logback.CustomObject#ATTR:testing.logback.CustomObjectNameStringifier
     </export>
     <exports>
       foo.remote.host=remote.host,
       remote.*,
       local.*,
       req.headers.content-type,
-      baz=attr:com.linecorp.armeria.common.logback.CustomObject#ATTR:com.linecorp.armeria.common.logback.CustomObjectValueStringifier
+      baz=attr:testing.logback.CustomObject#ATTR:testing.logback.CustomObjectValueStringifier
     </exports>
   </appender>
 

@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logback;
+package testing.logback;
 
 import java.util.function.Function;
 
-public final class CustomObjectNameStringifier implements Function<CustomObject, String> {
+public final class CustomObjectValueStringifier implements Function<CustomObject, String> {
     @Override
     public String apply(CustomObject o) {
-        return o.name;
+        return o.value;
     }
 }
