@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.grpc.testing.Messages;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
@@ -35,6 +34,8 @@ import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.grpc.Messages;
 
 class DuplicateStructInfoSpecificationTest {
 
@@ -63,7 +64,7 @@ class DuplicateStructInfoSpecificationTest {
             if ("armeria.grpc.testing.SimpleRequest".equals(struct.get("name").asText())) {
                 found = true;
                 assertThat(struct.get("alias").asText())
-                        .isEqualTo("com.linecorp.armeria.grpc.testing.Messages$SimpleRequest");
+                        .isEqualTo("testing.grpc.Messages$SimpleRequest");
             }
         }
         assertThat(found)
