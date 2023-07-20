@@ -260,6 +260,11 @@ public class AbstractClientOptionsBuilder {
         return option(ClientOptions.ENDPOINT_REMAPPER, endpointRemapper);
     }
 
+    public AbstractClientOptionsBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        return option(ClientOptions.CONTEXT_HOOK, contextHook);
+    }
+
     /**
      * Adds the specified HTTP-level {@code decorator}.
      *

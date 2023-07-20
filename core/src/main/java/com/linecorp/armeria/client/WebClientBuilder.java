@@ -173,6 +173,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (WebClientBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
     public WebClientBuilder decorator(
             Function<? super HttpClient, ? extends HttpClient> decorator) {
         return (WebClientBuilder) super.decorator(decorator);

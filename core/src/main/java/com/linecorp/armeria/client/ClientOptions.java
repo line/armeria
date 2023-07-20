@@ -139,6 +139,9 @@ public final class ClientOptions
     public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
+    public static final ClientOption<Supplier<? extends AutoCloseable>> CONTEXT_HOOK =
+            ClientOption.define("CONTEXT_HOOK", () -> () -> {});
+
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
