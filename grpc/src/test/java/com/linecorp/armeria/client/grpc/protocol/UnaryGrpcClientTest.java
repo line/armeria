@@ -42,12 +42,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -57,6 +51,12 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.Messages.StreamingOutputCallRequest;
+import testing.grpc.Messages.StreamingOutputCallResponse;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class UnaryGrpcClientTest {
 

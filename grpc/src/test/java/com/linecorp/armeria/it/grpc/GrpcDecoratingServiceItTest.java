@@ -28,10 +28,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -42,6 +38,10 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcDecoratingServiceItTest {
 
