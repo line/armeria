@@ -51,16 +51,17 @@ public class KeyStoreCredentialResolverBuilderTest {
 
     @Test
     public void expectSuccessWithResource() throws Exception {
-        new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(), "keystore/test.jks").build();
+        new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(), "testing/saml/test.jks").build();
     }
 
     @Test
     public void expectNotFound() throws Exception {
         assertThatThrownBy(
-                () -> new KeyStoreCredentialResolverBuilder(new File("/not_exist")).build())
+                () -> new KeyStoreCredentialResolverBuilder(new File("/testing/saml/not_exist")).build())
                 .isInstanceOf(FileNotFoundException.class);
         assertThatThrownBy(
-                () -> new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(), "not_exist").build())
+                () -> new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(),
+                                                            "testing/saml/not_exist").build())
                 .isInstanceOf(FileNotFoundException.class)
                 .hasMessageContaining("Resource not found");
     }

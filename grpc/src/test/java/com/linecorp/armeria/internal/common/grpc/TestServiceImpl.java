@@ -34,18 +34,6 @@ import com.google.protobuf.StringValue;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.grpc.testing.Messages;
-import com.linecorp.armeria.grpc.testing.Messages.PayloadType;
-import com.linecorp.armeria.grpc.testing.Messages.ResponseParameters;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.protobuf.EmptyProtos;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -59,6 +47,18 @@ import io.grpc.protobuf.ProtoUtils;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.netty.util.AsciiString;
+import testing.grpc.EmptyProtos;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages;
+import testing.grpc.Messages.PayloadType;
+import testing.grpc.Messages.ResponseParameters;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.Messages.StreamingInputCallRequest;
+import testing.grpc.Messages.StreamingInputCallResponse;
+import testing.grpc.Messages.StreamingOutputCallRequest;
+import testing.grpc.Messages.StreamingOutputCallResponse;
+import testing.grpc.TestServiceGrpc;
 
 public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
 
@@ -71,7 +71,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
             ProtoUtils.keyForProto(StringValue.getDefaultInstance());
 
     private static final String UNCOMPRESSABLE_FILE =
-            "/io/grpc/testing/integration/testdata/uncompressable.bin";
+            "/testing/grpc/uncompressable.bin";
     private final Random random = new Random();
 
     private final ScheduledExecutorService executor;

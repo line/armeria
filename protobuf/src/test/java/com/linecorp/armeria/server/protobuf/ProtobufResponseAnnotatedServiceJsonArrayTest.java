@@ -26,11 +26,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.util.JsonFormat;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.protobuf.testing.Messages;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.protobuf.Messages;
 
 /**
  * Given a ProtobufResponseConverterFunction with a custom JsonPrinter configured via the service builder,
