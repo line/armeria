@@ -26,6 +26,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
+/**
+ * Transforms a response into another by given conditions.
+ */
 @UnstableApi
 public final class BlockingConditionalResponseAs<V>
         extends DefaultConditionalResponseAs<HttpResponse, AggregatedHttpResponse, ResponseEntity<V>> {

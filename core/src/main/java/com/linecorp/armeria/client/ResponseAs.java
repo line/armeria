@@ -146,6 +146,16 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper, SUCCESS_PREDICATE));
     }
 
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the default {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
+     * {@link Map}. Use {@link #json(TypeReference)} for the container type.
+     *
+     * @see JacksonObjectMapperProvider
+     */
     @UnstableApi
     static <V> BlockingConditionalResponseAs<V> json(
             Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
@@ -155,6 +165,14 @@ public interface ResponseAs<T, R> {
                                                    predicate);
     }
 
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the specified {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
+     * {@link Map}. Use {@link #json(TypeReference, ObjectMapper)} for the container type.
+     */
     @UnstableApi
     static <V> BlockingConditionalResponseAs<V> json(
             Class<? extends V> clazz, ObjectMapper mapper, Predicate<AggregatedHttpResponse> predicate) {
@@ -164,6 +182,13 @@ public interface ResponseAs<T, R> {
                 blocking(), AggregatedResponseAs.json(clazz, mapper, TRUE_PREDICATE), predicate);
     }
 
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the default {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
     @UnstableApi
     static <V> BlockingConditionalResponseAs<V> json(
             TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
@@ -173,6 +198,11 @@ public interface ResponseAs<T, R> {
                                                    predicate);
     }
 
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the specified {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     */
     @UnstableApi
     static <V> BlockingConditionalResponseAs<V> json(
             TypeReference<? extends V> typeRef, ObjectMapper mapper,
@@ -223,7 +253,12 @@ public interface ResponseAs<T, R> {
         };
     }
 
-    default <V> DefaultConditionalResponseAs<T, R, V> andThen(ResponseAs<R, V> responseAs, Predicate<R> predicate) {
+    /**
+     * Returns a {@link DefaultConditionalResponseAs} which is used to return {@link ResponseAs} whose
+     * {@link Predicate} is evaluated as true.
+     */
+    default <V> DefaultConditionalResponseAs<T, R, V> andThen(
+            ResponseAs<R, V> responseAs, Predicate<R> predicate) {
         return new DefaultConditionalResponseAs<>(this, responseAs, predicate);
     }
 }
