@@ -26,7 +26,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
@@ -57,7 +56,6 @@ import reactor.test.StepVerifier;
 class ArmeriaWebClientTest {
 
     @SpringBootApplication
-    @Configuration
     @ActiveProfiles("test_reactive")
     static class TestConfiguration {
         @RestController
