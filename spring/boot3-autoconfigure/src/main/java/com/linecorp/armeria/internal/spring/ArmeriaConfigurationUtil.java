@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.spring;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationSettingsUtil.configureSettings;
 import static java.util.Objects.requireNonNull;
@@ -27,14 +26,18 @@ import java.io.IOException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -57,6 +60,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -130,7 +134,7 @@ public final class ArmeriaConfigurationUtil {
             internalPortsBuilder.add(managementServerPort);
         }
         final List<Port> internalPorts = dedupPorts(internalPortsBuilder.build());
-        configurePorts(server, settings.getPorts());
+        configurePorts(server, dedupPorts(settings.getPorts()));
         configurePorts(server, internalPorts);
 
         configureSettings(server, settings);
@@ -468,15 +472,33 @@ public final class ArmeriaConfigurationUtil {
     /**
      * Remove duplicate {@link Port} entries within the list.
      * If there are duplicates, keep the preceding {@link Port}.
-     * The criteria for duplication are based on {@link Port#port}, {@link Port#address}, and {@link Port#ip}.
+     * The criteria for duplication are based on {@link Port#getPort()}, {@link Port#getAddress()},and
+     * {@link Port#getIp()}.
      */
     private static List<Port> dedupPorts(List<Port> ports) {
-        return ports.stream()
-                    .collect(toImmutableMap(
-                            port -> Objects.hashCode(port.getPort(), port.getAddress(), port.getIp()),
-                            Function.identity(),
-                            (port1, port2) -> port1))
-                    .values().asList();
+        final List<Port> dedupedList = new ArrayList<>();
+        for (Port port : ports) {
+            boolean found = false;
+            for (Port deduped : dedupedList) {
+                if (port.getPort() == deduped.getPort() &&
+                    Objects.equal(port.getAddress(), deduped.getAddress()) &&
+                    Objects.equal(port.getIp(), deduped.getIp())) {
+                    found = true;
+                    if (port.getProtocols() != null) {
+                        Set<SessionProtocol> merged = EnumSet.copyOf(port.getProtocols());
+                        if (deduped.getProtocols() != null) {
+                            merged.addAll(deduped.getProtocols());
+                        }
+                        deduped.setProtocols(ImmutableList.copyOf(merged));
+                    }
+                    break;
+                }
+            }
+            if (!found) {
+                dedupedList.add(port);
+            }
+        }
+        return ImmutableList.copyOf(dedupedList);
     }
 
     private ArmeriaConfigurationUtil() {}
