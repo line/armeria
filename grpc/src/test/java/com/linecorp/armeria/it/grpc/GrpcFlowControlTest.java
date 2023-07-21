@@ -37,11 +37,6 @@ import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.grpc.testing.FlowControlTestServiceGrpc.FlowControlTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.FlowControlTestServiceGrpc.FlowControlTestServiceStub;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -50,6 +45,11 @@ import io.grpc.stub.ClientCallStreamObserver;
 import io.grpc.stub.ClientResponseObserver;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.FlowControlTestServiceGrpc.FlowControlTestServiceImplBase;
+import testing.grpc.FlowControlTestServiceGrpc.FlowControlTestServiceStub;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
 
 public class GrpcFlowControlTest {
 

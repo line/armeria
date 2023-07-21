@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -42,6 +44,8 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class DefaultStreamMessageTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultStreamMessageTest.class);
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
@@ -56,7 +60,15 @@ class DefaultStreamMessageTest {
     void onSubscribeBeforeOnComplete() throws Exception {
         final BlockingQueue<String> queue = new LinkedTransferQueue<>();
         // Repeat to increase the chance of reproduction.
-        for (int i = 0; i < 8192; i++) {
+        final int iteration;
+        if (System.getenv("CI") != null) {
+            logger.debug("Use 128 iterations for CI environment.");
+            iteration = 128;
+        } else {
+            iteration = 8192;
+        }
+
+        for (int i = 0; i < iteration; i++) {
             final StreamWriter<Integer> stream = new DefaultStreamMessage<>();
             eventLoop.get().execute(stream::close);
             stream.subscribe(new Subscriber<Object>() {

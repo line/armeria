@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import public "testing/grpc/proto2.proto";
+
+package example.grpc.protoversion;
+option java_package = "testing.grpc";
+
+service Proto3WithProto2Service {
+  rpc echo (Proto2Message) returns (Proto2Message) {}
+}

@@ -44,12 +44,13 @@ import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.FooEnum;
-import com.linecorp.armeria.service.test.thrift.main.FooService;
-import com.linecorp.armeria.service.test.thrift.main.FooStruct;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
-import com.linecorp.armeria.service.test.thrift.main.TypeDefService;
+
+import testing.thrift.main.FooEnum;
+import testing.thrift.main.FooService;
+import testing.thrift.main.FooStruct;
+import testing.thrift.main.HelloService;
+import testing.thrift.main.HelloService.AsyncIface;
+import testing.thrift.main.TypeDefService;
 
 class ThriftDocServicePluginTest {
 
