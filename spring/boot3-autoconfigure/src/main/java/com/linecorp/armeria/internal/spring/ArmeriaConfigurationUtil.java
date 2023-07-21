@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.spring;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationSettingsUtil.configureSettings;
 import static java.util.Objects.requireNonNull;
@@ -46,6 +47,7 @@ import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.util.ResourceUtils;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
@@ -124,11 +126,10 @@ public final class ArmeriaConfigurationUtil {
         final boolean needsManagementPort =
                 findBean(beanFactory, "actuatorServerConfigurator", ArmeriaServerConfigurator.class) != null;
 
-        if (needsManagementPort && managementServerPort != null &&
-            (internalServicePort == null || internalServicePort.getPort() != managementServerPort.getPort())) {
+        if (needsManagementPort && managementServerPort != null) {
             internalPortsBuilder.add(managementServerPort);
         }
-        final List<Port> internalPorts = internalPortsBuilder.build();
+        final List<Port> internalPorts = dedupPorts(internalPortsBuilder.build());
         configurePorts(server, settings.getPorts());
         configurePorts(server, internalPorts);
 
@@ -462,6 +463,20 @@ public final class ArmeriaConfigurationUtil {
             throw new IllegalArgumentException("Invalid data size text: " + dataSizeText +
                                                " (expected: " + DATA_SIZE_PATTERN + ')', e);
         }
+    }
+
+    /**
+     * Remove duplicate {@link Port} entries within the list.
+     * If there are duplicates, keep the preceding {@link Port}.
+     * The criteria for duplication are based on {@link Port#port}, {@link Port#address}, and {@link Port#ip}.
+     */
+    private static List<Port> dedupPorts(List<Port> ports) {
+        return ports.stream()
+                    .collect(toImmutableMap(
+                            port -> Objects.hashCode(port.getPort(), port.getAddress(), port.getIp()),
+                            Function.identity(),
+                            (port1, port2) -> port1))
+                    .values().asList();
     }
 
     private ArmeriaConfigurationUtil() {}
