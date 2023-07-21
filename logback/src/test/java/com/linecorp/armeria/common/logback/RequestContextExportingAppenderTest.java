@@ -58,8 +58,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logback.HelloService.hello_args;
-import com.linecorp.armeria.common.logback.HelloService.hello_result;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;
@@ -81,6 +79,8 @@ import ch.qos.logback.core.status.Status;
 import ch.qos.logback.core.status.StatusManager;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import testing.logback.TestService.hello_args;
+import testing.logback.TestService.hello_result;
 
 class RequestContextExportingAppenderTest {
 
@@ -179,7 +179,7 @@ class RequestContextExportingAppenderTest {
             final JoranConfigurator configurator = new JoranConfigurator();
             configurator.setContext(context);
             context.reset();
-            configurator.doConfigure(getClass().getResource("testXmlConfig.xml"));
+            configurator.doConfigure(getClass().getResource("/testing/logback/testXmlConfig.xml"));
         }
 
         @AfterEach

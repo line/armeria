@@ -66,15 +66,15 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
-import com.linecorp.armeria.spring.test.grpc.main.Hello.HelloReply;
-import com.linecorp.armeria.spring.test.grpc.main.Hello.HelloRequest;
-import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc;
-import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc.HelloServiceBlockingStub;
-import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc.HelloServiceImplBase;
-import com.linecorp.armeria.spring.test.thrift.main.HelloService;
-import com.linecorp.armeria.spring.test.thrift.main.HelloService.hello_args;
 
 import io.grpc.stub.StreamObserver;
+import testing.spring.grpc.Hello.HelloReply;
+import testing.spring.grpc.Hello.HelloRequest;
+import testing.spring.grpc.TestServiceGrpc;
+import testing.spring.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.spring.grpc.TestServiceGrpc.TestServiceImplBase;
+import testing.spring.thrift.TestService;
+import testing.spring.thrift.TestService.hello_args;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
@@ -118,15 +118,15 @@ class ArmeriaAutoConfigurationTest {
                            .path("/thrift")
                            .defaultServiceName("helloThriftService")
                            .decorators(LoggingService.newDecorator())
-                           .build(THttpService.of((HelloService.Iface) name -> "hello " + name));
+                           .build(THttpService.of((TestService.Iface) name -> "hello " + name));
         }
 
         @Bean
         public DocServiceConfigurator helloThriftServiceExamples() {
             return dsb -> dsb.exampleRequests(ImmutableList.of(new hello_args("nameVal")))
-                             .exampleHeaders(HelloService.class,
+                             .exampleHeaders(TestService.class,
                                              HttpHeaders.of("x-additional-header", "headerVal"))
-                             .exampleHeaders(HelloService.class, "hello",
+                             .exampleHeaders(TestService.class, "hello",
                                              HttpHeaders.of("x-additional-header", "headerVal"));
         }
 
@@ -144,11 +144,11 @@ class ArmeriaAutoConfigurationTest {
 
         @Bean
         public DocServiceConfigurator helloGrpcServiceExamples() {
-            return dsb -> dsb.exampleRequests(HelloServiceGrpc.SERVICE_NAME, "Hello",
+            return dsb -> dsb.exampleRequests(TestServiceGrpc.SERVICE_NAME, "Hello",
                                               HelloRequest.newBuilder().setName("Armeria").build())
-                             .exampleHeaders(HelloServiceGrpc.SERVICE_NAME,
+                             .exampleHeaders(TestServiceGrpc.SERVICE_NAME,
                                              HttpHeaders.of("x-additional-header", "headerVal"))
-                             .exampleHeaders(HelloServiceGrpc.SERVICE_NAME, "Hello",
+                             .exampleHeaders(TestServiceGrpc.SERVICE_NAME, "Hello",
                                              HttpHeaders.of("x-additional-header", "headerVal"));
         }
 
@@ -223,7 +223,7 @@ class ArmeriaAutoConfigurationTest {
         }
     }
 
-    public static class HelloGrpcService extends HelloServiceImplBase {
+    public static class HelloGrpcService extends TestServiceImplBase {
         @Override
         public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
             final HelloReply reply = HelloReply.newBuilder()
@@ -293,8 +293,8 @@ class ArmeriaAutoConfigurationTest {
 
     @Test
     void testThriftService() throws Exception {
-        final HelloService.Iface client = ThriftClients.newClient(newUrl("h1c") + "/thrift",
-                                                                  HelloService.Iface.class);
+        final TestService.Iface client = ThriftClients.newClient(newUrl("h1c") + "/thrift",
+                                                                  TestService.Iface.class);
         assertThat(client.hello("world")).isEqualTo("hello world");
 
         final WebClient webClient = WebClient.of(newUrl("h1c"));
@@ -303,7 +303,7 @@ class ArmeriaAutoConfigurationTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(res.contentUtf8()).node("services[2].name").isStringEqualTo(
-                "com.linecorp.armeria.spring.test.thrift.main.HelloService");
+                "testing.spring.thrift.TestService");
         assertThatJson(res.contentUtf8())
                 .node("services[2].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
@@ -313,8 +313,8 @@ class ArmeriaAutoConfigurationTest {
 
     @Test
     void testGrpcService() throws Exception {
-        final HelloServiceBlockingStub client = GrpcClients.newClient(newUrl("h2c") + '/',
-                                                                      HelloServiceBlockingStub.class);
+        final TestServiceBlockingStub client = GrpcClients.newClient(newUrl("h2c") + '/',
+                                                                      TestServiceBlockingStub.class);
         final HelloRequest request = HelloRequest.newBuilder()
                                                  .setName("world")
                                                  .build();
@@ -326,7 +326,7 @@ class ArmeriaAutoConfigurationTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
-                "com.linecorp.armeria.spring.test.grpc.main.HelloService");
+                "testing.spring.grpc.TestService");
         assertThatJson(res.contentUtf8())
                 .node("services[1].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
@@ -344,7 +344,7 @@ class ArmeriaAutoConfigurationTest {
 
     @Test
     void testMetrics() {
-        assertThat(GrpcClients.newClient(newUrl("h2c") + '/', HelloServiceBlockingStub.class)
+        assertThat(GrpcClients.newClient(newUrl("h2c") + '/', TestServiceBlockingStub.class)
                               .hello(HelloRequest.getDefaultInstance())
                               .getMessage()).isNotNull();
 

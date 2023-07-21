@@ -66,6 +66,9 @@ import reactor.core.scheduler.Schedulers;
 
 class ServerBuilderTest {
 
+    private static final String RESOURCE_PATH_PREFIX =
+            "/testing/core/" + ServerBuilderTest.class.getSimpleName() + '/';
+
     private static ClientFactory clientFactory;
 
     @RegisterExtension
@@ -500,26 +503,26 @@ class ServerBuilderTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
-    void tlsPkcsPrivateKeys(String privateKeyPath) {
+    @CsvSource({ "pkcs5.pem", "pkcs8.pem" })
+    void tlsPkcsPrivateKeys(String privateKeyFileName) {
         final String resourceRoot =
                 '/' + MinifiedBouncyCastleProvider.class.getPackage().getName().replace('.', '/') + '/';
         Server.builder()
-              .tls(getClass().getResourceAsStream("/cert.pem"),
-                   getClass().getResourceAsStream(privateKeyPath))
+              .tls(getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "cert.pem"),
+                   getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + privateKeyFileName))
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
     }
 
     @ParameterizedTest
-    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
-    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyPath) {
+    @CsvSource({ "pkcs5.pem", "pkcs8.pem" })
+    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyFileName) {
         Server.builder()
               .tlsSelfSigned()
               .tlsCustomizer(sslCtxBuilder -> {
                   sslCtxBuilder.keyManager(
-                          getClass().getResourceAsStream("/cert.pem"),
-                          getClass().getResourceAsStream(privateKeyPath));
+                          getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "cert.pem"),
+                          getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + privateKeyFileName));
               })
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();

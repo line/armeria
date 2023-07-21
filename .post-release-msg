@@ -5,15 +5,7 @@
    - Maven Central: https://repo.maven.apache.org/maven2/com/linecorp/armeria/armeria-bom/${releaseVersion}/
    - Site job: https://github.com/line/armeria/actions/workflows/publish-site.yml
 
-2. Close the milestone and set its due date with the date of the release at:
-
-   https://github.com/line/armeria/milestones
-
-3. Update the release note at:
-
-   https://github.com/line/armeria/releases/tag/${tag}
-
-4. Copy the examples to armeria-examples using the script:
+2. Copy the examples to armeria-examples using the script:
 
    cd ../armeria-examples && \
    ./update-examples.sh ${releaseVersion} ../upstream-armeria && \
@@ -21,7 +13,7 @@
    git commit -m 'Update Armeria to ${releaseVersion}' && \
    git push
 
-5. Announce the release via Twitter.
+3. Announce the release via Twitter.
 
-6. Send an update pull request to https://github.com/TechEmpower/FrameworkBenchmarks
+4. Send an update pull request to https://github.com/TechEmpower/FrameworkBenchmarks
    if we made performance improvements.

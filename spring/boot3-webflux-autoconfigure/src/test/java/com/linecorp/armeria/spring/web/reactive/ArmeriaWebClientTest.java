@@ -78,7 +78,7 @@ class ArmeriaWebClientTest {
             @GetMapping("/resource")
             ClassPathResource resource() {
                 ensureInContextAwareEventLoop();
-                return new ClassPathResource("largeTextFile.txt", getClass());
+                return new ClassPathResource("/testing/webflux/largeTextFile.txt", getClass());
             }
 
             @PostMapping("/birthday")
