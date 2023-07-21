@@ -32,16 +32,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest.NestedRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.UnitTestBarServiceGrpc.UnitTestBarServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.UnitTestBarServiceGrpc.UnitTestBarServiceImplBase;
-import com.linecorp.armeria.grpc.testing.UnitTestFooServiceGrpc.UnitTestFooServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.UnitTestFooServiceGrpc.UnitTestFooServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -50,6 +40,16 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleRequest.NestedRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
+import testing.grpc.UnitTestBarServiceGrpc.UnitTestBarServiceBlockingStub;
+import testing.grpc.UnitTestBarServiceGrpc.UnitTestBarServiceImplBase;
+import testing.grpc.UnitTestFooServiceGrpc.UnitTestFooServiceBlockingStub;
+import testing.grpc.UnitTestFooServiceGrpc.UnitTestFooServiceImplBase;
 
 class GrpcExceptionHandlerTest {
 
