@@ -139,17 +139,13 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
      */
     protected final void delegateWhenCompleteStage(CompletionStage<? extends Publisher<T>> stage) {
         requireNonNull(stage, "stage");
-        stage.handle((delegate, thrown) -> {
+        stage.handle((upstream, thrown) -> {
             if (thrown != null) {
                 close(Exceptions.peel(thrown));
-            } else if (delegate == null) {
-                close(new NullPointerException("delegate stage produced a null stream message: " + stage));
+            } else if (upstream == null) {
+                close(new NullPointerException("upstream stage produced a null stream message: " + stage));
             } else {
-                if (delegate instanceof StreamMessage) {
-                    delegate((StreamMessage<T>) delegate);
-                } else {
-                    delegate(new PublisherBasedStreamMessage<>(delegate));
-                }
+                delegate(StreamMessage.of(upstream));
             }
             return null;
         });

@@ -43,11 +43,7 @@ final class StreamMessageUtil {
         if (future.isDone()) {
             if (!future.isCompletedExceptionally()) {
                 final Publisher<? extends T> publisher = future.getNow(null);
-                if (publisher instanceof StreamMessage) {
-                    //noinspection unchecked
-                    return (StreamMessage<T>) publisher;
-                }
-                return new PublisherBasedStreamMessage<>(publisher);
+                return StreamMessage.of(publisher);
             }
 
             try {
