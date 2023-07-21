@@ -88,7 +88,10 @@ public abstract class LoggingDecoratorBuilder {
      * is set.
      */
     protected LoggingDecoratorBuilder defaultLogger(Logger logger) {
-        this.logger = requireNonNull(logger, "logger");
+        requireNonNull(logger, "logger");
+        if (this.logger == null) {
+            this.logger = logger;
+        }
         return this;
     }
 

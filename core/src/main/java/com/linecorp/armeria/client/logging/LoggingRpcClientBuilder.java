@@ -42,6 +42,11 @@ import com.linecorp.armeria.common.util.Sampler;
 public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder {
 
     /**
+     * Creates a new instance.
+     */
+    LoggingRpcClientBuilder() {}
+
+    /**
      * Returns a newly-created {@link LoggingRpcClient} decorating {@code delegate} based on the properties of
      * this builder.
      */

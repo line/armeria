@@ -50,6 +50,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
 
     private Sampler<? super ServiceRequestContext> failureSampler = Sampler.always();
 
+    LoggingServiceBuilder() {}
+
     /**
      * Sets the {@link Sampler} that determines which request needs logging.
      * This method sets both success and failure sampler.
