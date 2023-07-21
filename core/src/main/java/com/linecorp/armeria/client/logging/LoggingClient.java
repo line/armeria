@@ -44,14 +44,14 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
      * for more information on the default settings.
      */
     public static Function<? super HttpClient, LoggingClient> newDecorator() {
-        return new LoggingClientBuilder(logger).newDecorator();
+        return new LoggingClientBuilder().defaultLogger(logger).newDecorator();
     }
 
     /**
      * Returns a newly created {@link LoggingClientBuilder}.
      */
     public static LoggingClientBuilder builder() {
-        return new LoggingClientBuilder(logger);
+        return new LoggingClientBuilder().defaultLogger(logger);
     }
 
     LoggingClient(HttpClient delegate, LogWriter logWriter,

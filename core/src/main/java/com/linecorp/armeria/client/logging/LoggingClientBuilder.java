@@ -41,10 +41,6 @@ import com.linecorp.armeria.common.util.Sampler;
  */
 public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
 
-    LoggingClientBuilder(Logger defaultLogger) {
-        super(defaultLogger);
-    }
-
     /**
      * Returns a newly-created {@link LoggingClient} decorating {@code delegate} based on the properties of
      * this builder.
@@ -61,6 +57,11 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     }
 
     // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    protected LoggingClientBuilder defaultLogger(Logger logger) {
+        return (LoggingClientBuilder) super.defaultLogger(logger);
+    }
 
     @Override
     public LoggingClientBuilder samplingRate(float samplingRate) {

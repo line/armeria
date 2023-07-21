@@ -42,13 +42,6 @@ import com.linecorp.armeria.common.util.Sampler;
 public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder {
 
     /**
-     * Creates a new instance.
-     */
-    LoggingRpcClientBuilder(Logger defaultLogger) {
-        super(defaultLogger);
-    }
-
-    /**
      * Returns a newly-created {@link LoggingRpcClient} decorating {@code delegate} based on the properties of
      * this builder.
      */
@@ -64,6 +57,11 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    protected LoggingRpcClientBuilder defaultLogger(Logger logger) {
+        return (LoggingRpcClientBuilder) super.defaultLogger(logger);
+    }
 
     @Override
     public LoggingRpcClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {

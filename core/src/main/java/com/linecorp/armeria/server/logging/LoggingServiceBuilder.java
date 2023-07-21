@@ -50,10 +50,6 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
 
     private Sampler<? super ServiceRequestContext> failureSampler = Sampler.always();
 
-    LoggingServiceBuilder(Logger defaultLogger) {
-        super(defaultLogger);
-    }
-
     /**
      * Sets the {@link Sampler} that determines which request needs logging.
      * This method sets both success and failure sampler.
@@ -136,6 +132,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    protected LoggingServiceBuilder defaultLogger(Logger logger) {
+        return (LoggingServiceBuilder) super.defaultLogger(logger);
+    }
 
     @Override
     public LoggingServiceBuilder logger(Logger logger) {
