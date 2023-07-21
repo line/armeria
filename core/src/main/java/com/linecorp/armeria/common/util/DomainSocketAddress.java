@@ -41,7 +41,7 @@ import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
  *       Discard Prefix</a></li>
  * </ul>
  *
- * <h3>Pitfalls</h3>
+ * <h2>Pitfalls</h2>
  * <p>Comparing two {@link DomainSocketAddress}es using {@link #equals(Object)} will always return {@code true}
  * because there's no way to override {@link InetSocketAddress#equals(Object)}, which compares only the IP
  * addresses for resolved addresses. You should never use {@link DomainSocketAddress} as a key of a {@link Map},
