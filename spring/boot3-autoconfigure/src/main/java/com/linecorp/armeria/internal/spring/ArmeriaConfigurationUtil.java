@@ -37,7 +37,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -485,7 +484,7 @@ public final class ArmeriaConfigurationUtil {
                     Objects.equal(port.getIp(), deduped.getIp())) {
                     found = true;
                     if (port.getProtocols() != null) {
-                        Set<SessionProtocol> merged = EnumSet.copyOf(port.getProtocols());
+                        final Set<SessionProtocol> merged = EnumSet.copyOf(port.getProtocols());
                         if (deduped.getProtocols() != null) {
                             merged.addAll(deduped.getProtocols());
                         }
