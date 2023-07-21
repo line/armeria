@@ -871,7 +871,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             }
 
             assert decodedHost.startsWith("unix:") : decodedHost;
-            return DomainSocketAddress.of(Paths.get(decodedHost.substring(5))); // Strip "unix:"
+            return DomainSocketAddress.of(decodedHost.substring(5)); // Strip "unix:"
         }
 
         final int port = hasPort() ? this.port : defaultPort;

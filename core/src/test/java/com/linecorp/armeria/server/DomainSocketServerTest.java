@@ -20,15 +20,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.testing.EnabledOnOsWithDomainSockets;
 import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
@@ -44,6 +48,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 @EnabledOnOsWithDomainSockets
 class DomainSocketServerTest {
 
+    private static final String ABSTRACT_PATH = "\0" + ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
+
     @RegisterExtension
     static final TemporaryFolderExtension tempDir = new TemporaryFolderExtension();
 
@@ -51,7 +57,10 @@ class DomainSocketServerTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.http(domainSocketAddress());
+            if (SystemInfo.isLinux()) {
+                sb.http(domainSocketAddress(true));
+            }
+            sb.http(domainSocketAddress(false));
             sb.service("/", (ctx, req) -> HttpResponse.of(200));
         }
     };
@@ -60,8 +69,14 @@ class DomainSocketServerTest {
      * Sends an HTTP/1 request via Unix domain socket using Netty and ensures the server responds with
      * a valid HTTP/1 response.
      */
-    @Test
-    void shouldSupportBindingOnDomainSocket() {
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void shouldSupportBindingOnDomainSocket(boolean useAbstractNamespace) {
+        if (useAbstractNamespace && !SystemInfo.isLinux()) {
+            // Abstract namespace is not supported on macOS.
+            return;
+        }
+
         final BlockingQueue<ByteBuf> receivedBuffers = new LinkedTransferQueue<>();
         final TransportType transportType = Flags.transportType();
         final Bootstrap b = new Bootstrap();
@@ -73,7 +88,7 @@ class DomainSocketServerTest {
                 receivedBuffers.add((ByteBuf) msg);
             }
         });
-        final Channel ch = b.connect(domainSocketAddress().asNettyAddress())
+        final Channel ch = b.connect(domainSocketAddress(useAbstractNamespace).asNettyAddress())
                             .syncUninterruptibly()
                             .channel();
 
@@ -98,7 +113,8 @@ class DomainSocketServerTest {
                        .endsWith("\r\n\r\n200 OK");
     }
 
-    private static DomainSocketAddress domainSocketAddress() {
-        return DomainSocketAddress.of(tempDir.getRoot().resolve("test.sock"));
+    private static DomainSocketAddress domainSocketAddress(boolean useAbstractNamespace) {
+        return DomainSocketAddress.of(
+                useAbstractNamespace ? ABSTRACT_PATH : tempDir.getRoot().resolve("test.sock").toString());
     }
 }

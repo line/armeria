@@ -592,7 +592,7 @@ class EndpointTest {
         });
 
         // DomainSocketAddress (Armeria)
-        assertThat(Endpoint.of(DomainSocketAddress.of(Paths.get("/foo.sock")))).satisfies(e -> {
+        assertThat(Endpoint.of(DomainSocketAddress.of("/foo.sock"))).satisfies(e -> {
             if (SystemInfo.osType() == OsType.WINDOWS) {
                 assertThat(e.host()).isEqualTo("unix%3A%5Cfoo.sock");
             } else {
