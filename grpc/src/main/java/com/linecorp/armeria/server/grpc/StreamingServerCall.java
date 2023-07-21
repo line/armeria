@@ -31,9 +31,9 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -83,11 +83,12 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                         HttpResponseWriter res, int maxRequestMessageLength, int maxResponseMessageLength,
                         ServiceRequestContext ctx, SerializationFormat serializationFormat,
                         @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
-                        ResponseHeaders defaultHeaders, @Nullable GrpcStatusFunction statusFunction,
+                        ResponseHeaders defaultHeaders,
+                        @Nullable GrpcExceptionHandlerFunction grpcExceptionHandlerFunction,
                         @Nullable Executor blockingExecutor, boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              defaultHeaders, statusFunction, blockingExecutor, autoCompress);
+              defaultHeaders, grpcExceptionHandlerFunction, blockingExecutor, autoCompress);
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -97,7 +98,8 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         final RequestHeaders clientHeaders = req.headers();
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
-                new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
+                new HttpStreamDeframer(decompressorRegistry, ctx, this,
+                                       grpcExceptionHandlerFunction,
                                        maxRequestMessageLength, grpcWebText, true)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(requestDeframer, alloc);

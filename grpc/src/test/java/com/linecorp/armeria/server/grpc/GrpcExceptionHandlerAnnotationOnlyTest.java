@@ -30,7 +30,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest.NestedRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -130,7 +130,7 @@ class GrpcExceptionHandlerAnnotationOnlyTest {
         assertThat(exceptionHandler).isEmpty();
     }
 
-    private static class FirstGrpcStatusFunction implements GrpcStatusFunction {
+    private static class FirstGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
 
         @Override
         public @Nullable Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
@@ -142,7 +142,7 @@ class GrpcExceptionHandlerAnnotationOnlyTest {
         }
     }
 
-    private static class SecondGrpcStatusFunction implements GrpcStatusFunction {
+    private static class SecondGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
 
         @Override
         public @Nullable Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
@@ -154,25 +154,25 @@ class GrpcExceptionHandlerAnnotationOnlyTest {
         }
     }
 
-    private static void checkArgument(SimpleRequest request) {
-        final String message = request.getNestedRequest().getNestedPayload();
-        switch (message) {
-            case "first":
-            case "second":
-            case "global":
-                throw new RuntimeException(message);
-        }
-    }
-
-    @GrpcExceptionHandler(FirstGrpcStatusFunction.class)
+    @GrpcExceptionHandler(FirstGrpcExceptionHandlerFunction.class)
     private static class UnitTestFooServiceImpl extends UnitTestFooServiceImplBase {
 
-        @GrpcExceptionHandler(SecondGrpcStatusFunction.class)
+        @GrpcExceptionHandler(SecondGrpcExceptionHandlerFunction.class)
         @Override
         public void staticUnaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             checkArgument(request);
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
             responseObserver.onCompleted();
+        }
+
+        private static void checkArgument(SimpleRequest request) {
+            final String message = request.getNestedRequest().getNestedPayload();
+            switch (message) {
+                case "first":
+                case "second":
+                case "global":
+                    throw new RuntimeException(message);
+            }
         }
     }
 }

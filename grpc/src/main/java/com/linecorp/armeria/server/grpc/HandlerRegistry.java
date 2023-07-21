@@ -69,7 +69,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
@@ -100,7 +100,7 @@ final class HandlerRegistry {
     private final Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
             ? extends HttpService>>> additionalDecorators;
     private final Set<ServerMethodDefinition<?, ?>> blockingMethods;
-    private final Map<ServerMethodDefinition<?, ?>, GrpcStatusFunction> grpcStatusFunctions;
+    private final Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction> grpcExceptionHandlers;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods,
@@ -110,7 +110,8 @@ final class HandlerRegistry {
                             Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
                                     ? extends HttpService>>> additionalDecorators,
                             Set<ServerMethodDefinition<?, ?>> blockingMethods,
-                            Map<ServerMethodDefinition<?, ?>, GrpcStatusFunction> grpcStatusFunctions) {
+                            Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
+                                    grpcExceptionHandlers) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
@@ -118,7 +119,7 @@ final class HandlerRegistry {
         this.annotationDecorators = requireNonNull(annotationDecorators, "annotationDecorators");
         this.additionalDecorators = requireNonNull(additionalDecorators, "additionalDecorators");
         this.blockingMethods = requireNonNull(blockingMethods, "blockingMethods");
-        this.grpcStatusFunctions = requireNonNull(grpcStatusFunctions, "grpcStatusFunctions");
+        this.grpcExceptionHandlers = requireNonNull(grpcExceptionHandlers, "grpcExceptionHandlers");
     }
 
     @Nullable
@@ -156,12 +157,12 @@ final class HandlerRegistry {
     }
 
     @Nullable
-    GrpcStatusFunction wrapGrpcStatusFunction(ServerMethodDefinition<?, ?> methodDef,
-                                              @Nullable GrpcStatusFunction after) {
-        if (!grpcStatusFunctions.containsKey(methodDef)) {
+    GrpcExceptionHandlerFunction wrapGrpcExceptionHandler(ServerMethodDefinition<?, ?> methodDef,
+                                                          @Nullable GrpcExceptionHandlerFunction after) {
+        if (!grpcExceptionHandlers.containsKey(methodDef)) {
             return after;
         }
-        return grpcStatusFunctions.get(methodDef).next(after);
+        return grpcExceptionHandlers.get(methodDef).next(after);
     }
 
     Map<ServerMethodDefinition<?, ?>, HttpService> applyDecorators(
@@ -250,14 +251,14 @@ final class HandlerRegistry {
                    AnnotationUtil.findFirst(clazz, Blocking.class) != null;
         }
 
-        private static Optional<GrpcStatusFunction> findGrpcStatusFunction(
+        private static Optional<GrpcExceptionHandlerFunction> findGrpcExceptionHandler(
                 Class<?> clazz, Method method, DependencyInjector dependencyInjector) {
-            final List<GrpcStatusFunction> grpcStatusFunctions =
+            final List<GrpcExceptionHandlerFunction> grpcExceptionHandlerFunctions =
                     AnnotationUtil.getAnnotatedInstances(method, clazz,
                                                          GrpcExceptionHandler.class,
-                                                         GrpcStatusFunction.class,
+                                                         GrpcExceptionHandlerFunction.class,
                                                          dependencyInjector).build();
-                    return grpcStatusFunctions.stream().reduce(GrpcStatusFunction::next);
+                    return grpcExceptionHandlerFunctions.stream().reduce(GrpcExceptionHandlerFunction::next);
         }
 
         List<Entry> entries() {
@@ -278,8 +279,8 @@ final class HandlerRegistry {
                     additionalDecoratorsBuilder = ImmutableMap.builder();
             final ImmutableSet.Builder<ServerMethodDefinition<?, ?>> blockingMethods =
                     ImmutableSet.builder();
-            final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcStatusFunction>
-                    grpcStatusFunctionsBuilder = ImmutableMap.builder();
+            final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
+                    grpcExceptionHandlersBuilder = ImmutableMap.builder();
             final DependencyInjector dependencyInjector = new ReflectiveDependencyInjector();
             for (Entry entry : entries) {
                 final ServerServiceDefinition service = entry.service();
@@ -325,10 +326,10 @@ final class HandlerRegistry {
                             if (needToUseBlockingTaskExecutor(type, method)) {
                                 blockingMethods.add(methodDefinition);
                             }
-                            final Optional<GrpcStatusFunction> grpcStatusFunction =
-                                    findGrpcStatusFunction(type, method, dependencyInjector);
-                            if (grpcStatusFunction.isPresent()) {
-                                grpcStatusFunctionsBuilder.put(methodDefinition, grpcStatusFunction.get());
+                            final Optional<GrpcExceptionHandlerFunction> grpcExceptionHandler =
+                                    findGrpcExceptionHandler(type, method, dependencyInjector);
+                            if (grpcExceptionHandler.isPresent()) {
+                                grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler.get());
                             }
                         }
                     }
@@ -364,10 +365,10 @@ final class HandlerRegistry {
                             if (needToUseBlockingTaskExecutor(type, method0)) {
                                 blockingMethods.add(methodDefinition);
                             }
-                            final Optional<GrpcStatusFunction> grpcStatusFunction =
-                                    findGrpcStatusFunction(type, method0, dependencyInjector);
-                            if (grpcStatusFunction.isPresent()) {
-                                grpcStatusFunctionsBuilder.put(methodDefinition, grpcStatusFunction.get());
+                            final Optional<GrpcExceptionHandlerFunction> grpcExceptionHandler =
+                                    findGrpcExceptionHandler(type, method0, dependencyInjector);
+                            if (grpcExceptionHandler.isPresent()) {
+                                grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler.get());
                             }
                         }
                     }
@@ -381,7 +382,7 @@ final class HandlerRegistry {
                                        annotationDecorators.build(),
                                        additionalDecoratorsBuilder.build(),
                                        blockingMethods.build(),
-                                       grpcStatusFunctionsBuilder.build());
+                                       grpcExceptionHandlersBuilder.build());
         }
     }
 

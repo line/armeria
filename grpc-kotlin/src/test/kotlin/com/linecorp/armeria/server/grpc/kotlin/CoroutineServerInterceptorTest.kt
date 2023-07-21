@@ -21,7 +21,7 @@ import com.google.protobuf.ByteString
 import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.auth.AuthToken
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction
 import com.linecorp.armeria.grpc.testing.Messages.Payload
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse
@@ -218,9 +218,9 @@ internal class CoroutineServerInterceptorTest {
         val server: ServerExtension = object : ServerExtension() {
             override fun configure(sb: ServerBuilder) {
                 val statusFunction =
-                    GrpcStatusFunction { _: RequestContext, throwable: Throwable, _: Metadata ->
+                        GrpcExceptionHandlerFunction { _: RequestContext, throwable: Throwable, _: Metadata ->
                         if (throwable is AnticipatedException && throwable.message == "Invalid access") {
-                            return@GrpcStatusFunction Status.UNAUTHENTICATED
+                            return@GrpcExceptionHandlerFunction Status.UNAUTHENTICATED
                         }
                         // Fallback to the default.
                         null

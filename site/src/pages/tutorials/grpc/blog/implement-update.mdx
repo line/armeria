@@ -75,12 +75,12 @@ You need to have the files obtained from previous steps:
 
   import com.linecorp.armeria.common.RequestContext;
   import com.linecorp.armeria.common.annotation.Nullable;
-  import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+  import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
   
   import io.grpc.Metadata;
   import io.grpc.Status;
   
-  public class GrpcExceptionHandler implements GrpcStatusFunction {
+  public class GrpcExceptionHandler implements GrpcExceptionHandlerFunction {
   
     @Nullable
     @Override

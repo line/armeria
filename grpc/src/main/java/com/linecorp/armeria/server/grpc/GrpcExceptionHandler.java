@@ -22,10 +22,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 
 /**
- * Specifies a {@link GrpcStatusFunction} class which handles exceptions throwing from a gRPC service
+ * Specifies a {@link GrpcExceptionHandlerFunction} class which handles exceptions throwing from a gRPC service
  * or its methods.
  */
 @Repeatable(GrpcExceptionHandlers.class)
@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 public @interface GrpcExceptionHandler {
 
     /**
-     * {@link GrpcStatusFunction} implementation type.
+     * {@link GrpcExceptionHandlerFunction} implementation type.
      */
-    Class<? extends GrpcStatusFunction> value();
+    Class<? extends GrpcExceptionHandlerFunction> value();
 }

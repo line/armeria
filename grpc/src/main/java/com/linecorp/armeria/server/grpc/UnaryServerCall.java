@@ -34,9 +34,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
@@ -70,11 +70,12 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                     ServiceRequestContext ctx, SerializationFormat serializationFormat,
                     @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
                     ResponseHeaders defaultHeaders,
-                    @Nullable GrpcStatusFunction statusFunction, @Nullable Executor blockingExecutor,
+                    @Nullable GrpcExceptionHandlerFunction grpcExceptionHandlerFunction,
+                    @Nullable Executor blockingExecutor,
                     boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              defaultHeaders, statusFunction, blockingExecutor, autoCompress);
+              defaultHeaders, grpcExceptionHandlerFunction, blockingExecutor, autoCompress);
         requireNonNull(req, "req");
         this.ctx = requireNonNull(ctx, "ctx");
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);

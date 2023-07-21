@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest.NestedRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -430,7 +430,7 @@ class GrpcExceptionHandlerTest {
         assertThat(client.unaryCall(fifthRequest)).isNotNull();
     }
 
-    private static class FirstGrpcStatusFunction implements GrpcStatusFunction {
+    private static class FirstGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
 
         @Override
         public @Nullable Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
@@ -442,7 +442,7 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    private static class SecondGrpcStatusFunction implements GrpcStatusFunction {
+    private static class SecondGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
 
         @Override
         public @Nullable Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
@@ -454,7 +454,7 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    private static class ThirdGrpcStatusFunction implements GrpcStatusFunction {
+    private static class ThirdGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
 
         @Override
         public @Nullable Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
@@ -466,7 +466,7 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    private static class ForthGrpcStatusFunction implements GrpcStatusFunction {
+    private static class ForthGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
 
         @Override
         public @Nullable Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
@@ -490,12 +490,12 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    @GrpcExceptionHandler(SecondGrpcStatusFunction.class)
-    @GrpcExceptionHandler(FirstGrpcStatusFunction.class)
+    @GrpcExceptionHandler(SecondGrpcExceptionHandlerFunction.class)
+    @GrpcExceptionHandler(FirstGrpcExceptionHandlerFunction.class)
     private static class TestServiceImpl extends TestServiceImplBase {
 
-        @GrpcExceptionHandler(ForthGrpcStatusFunction.class)
-        @GrpcExceptionHandler(ThirdGrpcStatusFunction.class)
+        @GrpcExceptionHandler(ForthGrpcExceptionHandlerFunction.class)
+        @GrpcExceptionHandler(ThirdGrpcExceptionHandlerFunction.class)
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             checkArgument(request);
@@ -506,7 +506,7 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    @GrpcExceptionHandler(FirstGrpcStatusFunction.class)
+    @GrpcExceptionHandler(FirstGrpcExceptionHandlerFunction.class)
     private static class UnitTestFooServiceImpl extends UnitTestFooServiceImplBase {
 
         @Override
@@ -519,7 +519,7 @@ class GrpcExceptionHandlerTest {
 
     private static class UnitTestBarServiceImpl extends UnitTestBarServiceImplBase {
 
-        @GrpcExceptionHandler(FirstGrpcStatusFunction.class)
+        @GrpcExceptionHandler(FirstGrpcExceptionHandlerFunction.class)
         @Override
         public void staticUnaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             checkArgument(request);
@@ -535,10 +535,10 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    @GrpcExceptionHandler(FirstGrpcStatusFunction.class)
+    @GrpcExceptionHandler(FirstGrpcExceptionHandlerFunction.class)
     private static class FooTestServiceImpl extends TestServiceImplBase {
 
-        @GrpcExceptionHandler(SecondGrpcStatusFunction.class)
+        @GrpcExceptionHandler(SecondGrpcExceptionHandlerFunction.class)
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             checkArgument(request);
@@ -549,10 +549,10 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    @GrpcExceptionHandler(FirstGrpcStatusFunction.class)
+    @GrpcExceptionHandler(FirstGrpcExceptionHandlerFunction.class)
     private static class BarTestServiceImpl extends TestServiceImplBase {
 
-        @GrpcExceptionHandler(SecondGrpcStatusFunction.class)
+        @GrpcExceptionHandler(SecondGrpcExceptionHandlerFunction.class)
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             checkArgument(request);

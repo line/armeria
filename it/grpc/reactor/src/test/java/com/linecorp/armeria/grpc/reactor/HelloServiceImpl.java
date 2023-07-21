@@ -18,7 +18,7 @@ package com.linecorp.armeria.grpc.reactor;
 
 import java.time.Duration;
 
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.grpc.reactor.Hello.HelloReply;
 import com.linecorp.armeria.grpc.reactor.Hello.HelloRequest;
 import com.linecorp.armeria.grpc.reactor.ReactorHelloServiceGrpc.HelloServiceImplBase;
@@ -45,7 +45,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
     }
 
     /**
-     * Throws an {@link AuthError}, and the exception will be handled by {@link GrpcStatusFunction}.
+     * Throws an {@link AuthError}, and the exception will be handled by {@link GrpcExceptionHandlerFunction}.
      */
     @Override
     public Mono<HelloReply> helloError(Mono<HelloRequest> request) {

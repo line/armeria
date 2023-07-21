@@ -52,9 +52,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -129,7 +129,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     @Nullable
     private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
     @Nullable
-    private final GrpcStatusFunction statusFunction;
+    private final GrpcExceptionHandlerFunction grpcExceptionHandlerFunction;
     private final int maxResponseMessageLength;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
@@ -149,7 +149,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       Set<SerializationFormat> supportedSerializationFormats,
                       Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory,
                       @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
-                      @Nullable GrpcStatusFunction statusFunction,
+                      @Nullable GrpcExceptionHandlerFunction grpcExceptionHandlerFunction,
                       int maxRequestMessageLength, int maxResponseMessageLength,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
@@ -169,7 +169,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.useClientTimeoutHeader = useClientTimeoutHeader;
         jsonMarshallers = getJsonMarshallers(registry, supportedSerializationFormats, jsonMarshallerFactory);
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
-        this.statusFunction = statusFunction;
+        this.grpcExceptionHandlerFunction = grpcExceptionHandlerFunction;
         this.maxRequestMessageLength = maxRequestMessageLength;
         this.maxResponseMessageLength = maxResponseMessageLength;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -238,12 +238,13 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     }
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
-                    final GrpcStatusFunction grpcStatusFunction = registry.wrapGrpcStatusFunction(
-                            method, statusFunction);
+                    final GrpcExceptionHandlerFunction grpcExceptionHandler = registry.wrapGrpcExceptionHandler(
+                            method, grpcExceptionHandlerFunction);
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(grpcStatusFunction, ctx, e, metadata), metadata));
+                                    GrpcStatus.fromThrowable(grpcExceptionHandler, ctx, e, metadata),
+                                    metadata));
                 }
             }
         }
@@ -329,8 +330,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             HttpResponse res, @Nullable CompletableFuture<HttpResponse> resFuture,
             SerializationFormat serializationFormat, @Nullable Executor blockingExecutor) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
-        final GrpcStatusFunction grpcStatusFunction = registry.wrapGrpcStatusFunction(
-                methodDef, statusFunction);
+        final GrpcExceptionHandlerFunction grpcExceptionHandler = registry.wrapGrpcExceptionHandler(
+                methodDef, grpcExceptionHandlerFunction);
         if (methodDescriptor.getType() == MethodType.UNARY) {
             assert resFuture != null;
             return new UnaryServerCall<>(
@@ -348,7 +349,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     jsonMarshallers.get(methodDescriptor.getServiceName()),
                     unsafeWrapRequestBuffers,
                     defaultHeaders.get(serializationFormat),
-                    grpcStatusFunction,
+                    grpcExceptionHandler,
                     blockingExecutor,
                     autoCompression);
         } else {
@@ -366,7 +367,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     jsonMarshallers.get(methodDescriptor.getServiceName()),
                     unsafeWrapRequestBuffers,
                     defaultHeaders.get(serializationFormat),
-                    grpcStatusFunction,
+                    grpcExceptionHandler,
                     blockingExecutor,
                     autoCompression);
         }

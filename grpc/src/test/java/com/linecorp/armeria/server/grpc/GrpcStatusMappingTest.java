@@ -96,7 +96,7 @@ class GrpcStatusMappingTest {
     };
 
     @RegisterExtension
-    static ServerExtension serverWithGrpcStatusFunction = new ServerExtension() {
+    static ServerExtension serverWithGrpcExceptionHandlerFunction = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(
@@ -153,10 +153,12 @@ class GrpcStatusMappingTest {
 
     @ArgumentsSource(ExceptionMappingsProvider.class)
     @ParameterizedTest
-    void serverExceptionWithGrpcStatusFunction(RuntimeException exception, Status status, String description,
-                                               Map<Metadata.Key<?>, String> meta) {
+    void serverExceptionWithGrpcExceptionHandlerFunction(RuntimeException exception, Status status,
+                                                         String description,
+                                                         Map<Metadata.Key<?>, String> meta) {
         exceptionRef.set(exception);
-        final TestServiceBlockingStub client = GrpcClients.newClient(serverWithGrpcStatusFunction.httpUri(),
+        final TestServiceBlockingStub client = GrpcClients.newClient(serverWithGrpcExceptionHandlerFunction
+                                                                             .httpUri(),
                                                                      TestServiceBlockingStub.class);
         assertThatThrownBy(() -> client.emptyCall(Empty.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, status, description))

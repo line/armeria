@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,14 +24,11 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
- * A mapping function that converts a {@link Throwable} into a gRPC {@link Status}.
- *
- * @deprecated Use {@link GrpcExceptionHandlerFunction} instead.
+ * An interface that converts a {@link Throwable} into a gRPC {@link Status} for gRPC exception handler.
  */
 @UnstableApi
-@Deprecated
 @FunctionalInterface
-public interface GrpcStatusFunction {
+public interface GrpcExceptionHandlerFunction {
 
     /**
      * Maps the specified {@link Throwable} to a gRPC {@link Status},
@@ -40,4 +37,23 @@ public interface GrpcStatusFunction {
      */
     @Nullable
     Status apply(RequestContext ctx, Throwable throwable, Metadata metadata);
+
+    /**
+     * Returns a {@link GrpcExceptionHandlerFunction} that returns the result of this function
+     * when this function returns non {@code null} result, in which case the specified function isn't executed.
+     * when this function returns {@code null}, returns a {@link GrpcExceptionHandlerFunction} that the result
+     * of the specified {@link GrpcExceptionHandlerFunction}.
+     */
+    default GrpcExceptionHandlerFunction next(@Nullable GrpcExceptionHandlerFunction next) {
+        return (ctx, throwable, metadata) -> {
+            final Status status = apply(ctx, throwable, metadata);
+            if (status != null) {
+                return status;
+            }
+            if (next == null) {
+                return null;
+            }
+            return next.apply(ctx, throwable, metadata);
+        };
+    }
 }

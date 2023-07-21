@@ -93,7 +93,7 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
 
     /**
      * Throws an [AuthError], and the exception will be handled
-     * by [com.linecorp.armeria.common.grpc.GrpcStatusFunction].
+     * by [com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction].
      */
     override suspend fun helloError(request: HelloRequest): HelloReply {
         throw AuthError("${request.name} is unauthenticated")
