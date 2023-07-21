@@ -289,6 +289,7 @@ public interface HttpRequest extends Request, HttpMessage {
      *
      * @param stage the {@link CompletionStage} which will produce the actual data and trailers
      */
+    @UnstableApi
     static HttpRequest of(RequestHeaders headers,
                           CompletionStage<? extends StreamMessage<? extends HttpObject>> stage) {
         requireNonNull(headers, "headers");
@@ -306,6 +307,7 @@ public interface HttpRequest extends Request, HttpMessage {
      *                           the returned {@link HttpRequest} using {@link #subscribe(Subscriber)}
      *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
      */
+    @UnstableApi
     static HttpRequest of(RequestHeaders headers,
                           CompletionStage<? extends StreamMessage<? extends HttpObject>> stage,
                           EventExecutor subscriberExecutor) {
