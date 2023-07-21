@@ -227,10 +227,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
         )?.pathMapping || '';
     }
 
-    if (urlPath.startsWith('/')) {
-      urlPath = parseServerRootPath(docServiceRoute) + urlPath;
-    }
-
     const urlQueries =
       serviceType === ServiceType.HTTP ? urlParams.get('queries') ?? '' : '';
 
@@ -357,7 +353,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         `${window.location.port ? `:${window.location.port}` : ''}`;
 
       const httpMethod = method.httpMethod;
-      let uri;
+      let baseUri;
       let endpoint;
 
       if (
@@ -367,24 +363,26 @@ const DebugPage: React.FunctionComponent<Props> = ({
         const queries = additionalQueries;
         if (exactPathMapping) {
           endpoint = transport.getDebugMimeTypeEndpoint(method);
-          uri =
-            `'${host}${escapeSingleQuote(
+          baseUri =
+            `'${escapeSingleQuote(
               endpoint.pathMapping.substring('exact:'.length),
             )}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
           endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-          uri =
-            `'${host}${escapeSingleQuote(additionalPath)}` +
+          baseUri =
+            `'${escapeSingleQuote(additionalPath)}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         }
       } else if (additionalPath.length > 0) {
         endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-        uri = `'${host}${escapeSingleQuote(additionalPath)}'`;
+        baseUri = `'${escapeSingleQuote(additionalPath)}'`;
       } else {
         endpoint = transport.getDebugMimeTypeEndpoint(method);
-        uri = `'${host}${escapeSingleQuote(endpoint.pathMapping)}'`;
+        baseUri = `'${escapeSingleQuote(endpoint.pathMapping)}'`;
       }
+
+      const uri = host + parseServerRootPath(docServiceRoute) + baseUri;
 
       const body = transport.getCurlBody(
         endpoint,
@@ -430,6 +428,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     additionalQueries,
     exactPathMapping,
     additionalPath,
+    docServiceRoute,
   ]);
 
   const onCopy = useCallback(() => {
@@ -476,6 +475,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
           executedRequestBody,
           executedEndpointPath,
           queries,
+          parseServerRootPath(docServiceRoute),
         );
       } catch (e) {
         if (e instanceof Object) {
@@ -486,7 +486,14 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
       setDebugResponse(executedDebugResponse);
     },
-    [useRequestBody, serviceType, exactPathMapping, method, transport],
+    [
+      useRequestBody,
+      serviceType,
+      exactPathMapping,
+      method,
+      transport,
+      docServiceRoute,
+    ],
   );
 
   const onSubmit = useCallback(async () => {

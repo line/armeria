@@ -45,6 +45,7 @@ export default class ThriftTransport extends Transport {
     headers: { [name: string]: string },
     bodyJson?: string,
     endpointPath?: string,
+    pathPrefix?: string,
   ): Promise<Response> {
     if (!bodyJson) {
       throw new Error('A Thrift request must have body.');
@@ -59,7 +60,9 @@ export default class ThriftTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    return fetch(endpointPath || endpoint.pathMapping, {
+    const newPath = pathPrefix + (endpointPath ?? endpoint.pathMapping);
+
+    return fetch(newPath, {
       headers: hdrs,
       method: 'POST',
       body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,

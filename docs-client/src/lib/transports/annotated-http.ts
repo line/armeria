@@ -86,6 +86,7 @@ export default class AnnotatedHttpTransport extends Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
+    pathPrefix?: string,
   ): Promise<Response> {
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
@@ -103,6 +104,7 @@ export default class AnnotatedHttpTransport extends Transport {
           ? `${newPath}&${queries}`
           : `${newPath}?${queries}`;
     }
+    newPath = pathPrefix + newPath;
 
     return fetch(encodeURI(newPath), {
       headers: hdrs,

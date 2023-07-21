@@ -30,6 +30,7 @@ export default abstract class Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
+    pathPrefix?: string,
   ): Promise<string> {
     const providedHeaders = await Promise.all(
       providers.map((provider) => provider()),
@@ -56,6 +57,7 @@ export default abstract class Transport {
       bodyJson,
       endpointPath,
       queries,
+      pathPrefix,
     );
     const responseText = await httpResponse.text();
     const applicationType = httpResponse.headers.get('content-type') || '';
@@ -158,5 +160,6 @@ export default abstract class Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
+    pathPrefix?: string,
   ): Promise<Response>;
 }
