@@ -205,7 +205,7 @@ public final class CircuitBreakerBuilder {
     }
 
     @VisibleForTesting
-    CircuitBreakerBuilder ticker(Ticker ticker) {
+    public CircuitBreakerBuilder ticker(Ticker ticker) {
         this.ticker = requireNonNull(ticker, "ticker");
         return this;
     }
