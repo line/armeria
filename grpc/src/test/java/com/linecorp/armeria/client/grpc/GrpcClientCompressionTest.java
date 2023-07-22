@@ -29,14 +29,6 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -49,6 +41,14 @@ import io.grpc.Codec.Gzip;
 import io.grpc.Codec.Identity;
 import io.grpc.DecompressorRegistry;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.StreamingInputCallRequest;
+import testing.grpc.Messages.StreamingInputCallResponse;
+import testing.grpc.Messages.StreamingOutputCallRequest;
+import testing.grpc.Messages.StreamingOutputCallResponse;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpc.TestServiceGrpc.TestServiceStub;
 
 class GrpcClientCompressionTest {
 

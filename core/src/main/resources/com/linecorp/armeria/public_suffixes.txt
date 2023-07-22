@@ -1359,7 +1359,6 @@ clerk.app
 clerkstage.app
 cleverapps.io
 click
-clicketcloud.com
 clickrising.net
 clinic
 clinique
@@ -3213,7 +3212,6 @@ hidaka.hokkaido.jp
 hidaka.kochi.jp
 hidaka.saitama.jp
 hidaka.wakayama.jp
-hidora.com
 higashi.fukuoka.jp
 higashi.fukushima.jp
 higashi.okinawa.jp
@@ -3367,7 +3365,6 @@ hot
 hotel.hu
 hotel.lk
 hotel.tz
-hoteles
 hotels
 hotelwithflight.com
 hotmail
@@ -6226,7 +6223,6 @@ parti.se
 partners
 parts
 party
-passagens
 passenger-association.aero
 patria.bo
 pavia.it
@@ -7388,6 +7384,7 @@ store.st
 store.ve
 storebase.store
 storfjord.no
+storipress.app
 storj.farm
 strand.no
 stranda.no
@@ -8074,7 +8071,6 @@ user.party.eus
 user.srcf.net
 user.webaccel.jp
 usercontent.jp
-users.scale.virtualcloud.com.br
 ushiku.ibaraki.jp
 usr.cloud.muni.cz
 ustka.pl
@@ -8272,7 +8268,6 @@ vs.mythic-beasts.com
 vt.it
 vt.us
 vu
-vuelos
 vv.it
 vxl.sh
 w.bg
