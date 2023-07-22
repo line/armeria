@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package armeria.protobuf.testing;
 
-option java_package = "com.linecorp.armeria.protobuf.testing";
+option java_package = "testing.protobuf";
 
 message SimpleRequest {
   string payload = 1;

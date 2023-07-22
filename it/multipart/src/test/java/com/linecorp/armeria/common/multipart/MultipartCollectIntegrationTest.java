@@ -151,7 +151,7 @@ class MultipartCollectIntegrationTest {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-        final ClassPathResource file = new ClassPathResource("test.txt");
+        final ClassPathResource file = new ClassPathResource("testing/multipart/test.txt");
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file1", file);
         body.add("file2", file);

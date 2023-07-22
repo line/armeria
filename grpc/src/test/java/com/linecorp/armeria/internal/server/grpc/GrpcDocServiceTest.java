@@ -48,12 +48,6 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -69,15 +63,21 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcDocServiceTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
-            com.linecorp.armeria.grpc.testing.Test.getDescriptor()
+            testing.grpc.Test.getDescriptor()
                                                   .findServiceByName("TestService");
 
     private static final ServiceDescriptor RECONNECT_SERVICE_DESCRIPTOR =
-            com.linecorp.armeria.grpc.testing.Test.getDescriptor()
+            testing.grpc.Test.getDescriptor()
                                                   .findServiceByName("ReconnectService");
 
     private static final String INJECTED_HEADER_PROVIDER1 =
