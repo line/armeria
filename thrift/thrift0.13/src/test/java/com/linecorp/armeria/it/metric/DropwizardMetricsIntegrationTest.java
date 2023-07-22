@@ -38,10 +38,10 @@ import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
+import testing.thrift.main.HelloService.Iface;
 
 class DropwizardMetricsIntegrationTest {
 

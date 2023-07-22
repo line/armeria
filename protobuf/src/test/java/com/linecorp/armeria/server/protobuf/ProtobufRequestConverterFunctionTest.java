@@ -50,14 +50,15 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.protobuf.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.ResultType;
+
+import testing.protobuf.Messages.SimpleRequest;
+import testing.protobuf.Messages.SimpleResponse;
 
 class ProtobufRequestConverterFunctionTest {
 

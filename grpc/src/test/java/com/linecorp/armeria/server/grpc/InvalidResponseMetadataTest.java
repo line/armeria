@@ -22,9 +22,6 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -40,6 +37,9 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class InvalidResponseMetadataTest {
     private static final ExceptionalService testService = new ExceptionalService();
