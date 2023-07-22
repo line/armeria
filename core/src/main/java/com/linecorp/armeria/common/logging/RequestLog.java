@@ -125,7 +125,7 @@ public interface RequestLog extends RequestOnlyLog {
     /**
      * Returns the amount of time taken since the {@link Request} processing started and until the
      * {@link Response} processing ended. This property is available only when both
-     * {@link RequestLogProperty#RESPONSE_END_TIME} and {@link RequestLogProperty#RESPONSE_START_TIME} are
+     * {@link RequestLogProperty#REQUEST_START_TIME} and {@link RequestLogProperty#RESPONSE_END_TIME} are
      * available.
      *
      * @throws RequestLogAvailabilityException if the property is not available yet.
