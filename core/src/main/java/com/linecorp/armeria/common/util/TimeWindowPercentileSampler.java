@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.metric.MoreMeters;
+
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.micrometer.core.instrument.distribution.HistogramSnapshot;
@@ -27,10 +29,12 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
     private final float percentile;
     private final long windowLengthMillis;
     private final TimeWindowPercentileHistogram histogram;
-    private static final long SNAPSHOT_UPDATE_MILLIS = 1000L;
+    @VisibleForTesting
+    static long SNAPSHOT_UPDATE_MILLIS = 1000L;
     private long lastSnapshotMillis;
     private HistogramSnapshot histogramSnapshot;
 
+    private final Clock clock;
     private final AtomicReference<Boolean> isTakingSnapshot = new AtomicReference<>(false);
 
     TimeWindowPercentileSampler(float percentile, long windowLengthMillis) {
@@ -44,16 +48,15 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
 
         final DistributionStatisticConfig distributionStatisticConfig =
                 DistributionStatisticConfig.builder()
+                                           .percentilesHistogram(false)
                                            .percentiles(percentile)
-                                           .percentilePrecision(2)
-                                           .minimumExpectedValue(1.0)
-                                           .maximumExpectedValue(Double.POSITIVE_INFINITY)
                                            .expiry(Duration.ofMillis(windowLengthMillis))
-                                           .bufferLength(3)
-                                           .build();
+                                           .build()
+                                           .merge(MoreMeters.distributionStatisticConfig());
         this.histogram = new TimeWindowPercentileHistogram(clock, distributionStatisticConfig, true);
         this.histogramSnapshot = histogram.takeSnapshot(0, 0, 0);
-        this.lastSnapshotMillis = System.currentTimeMillis();
+        this.clock = clock;
+        this.lastSnapshotMillis = clock.wallTime();
     }
 
     static TimeWindowPercentileSampler create(float percentile, long windowLengthMillis) {
@@ -64,10 +67,10 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
     public boolean isSampled(Long t) {
         histogram.recordLong(t);
 
-        if (lastSnapshotMillis + SNAPSHOT_UPDATE_MILLIS < System.currentTimeMillis()) {
+        if (lastSnapshotMillis + SNAPSHOT_UPDATE_MILLIS <= clock.wallTime()) {
             if (isTakingSnapshot.compareAndSet(false, true)) {
                 histogramSnapshot = histogram.takeSnapshot(0, 0, 0);
-                lastSnapshotMillis = System.currentTimeMillis();
+                lastSnapshotMillis = clock.wallTime();
                 isTakingSnapshot.set(false);
             }
         }

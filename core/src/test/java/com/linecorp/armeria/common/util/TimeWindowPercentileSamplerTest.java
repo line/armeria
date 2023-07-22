@@ -23,7 +23,8 @@ import org.junit.jupiter.api.Test;
 public class TimeWindowPercentileSamplerTest {
     @Test
     public void testSamplingMinimumPercentile() {
-        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(0.0f, 10000L);
+        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(0.0f, 10000000L);
 
         // Should sample everything
         assertThat(sampler.isSampled(10L)).isTrue();
@@ -33,7 +34,8 @@ public class TimeWindowPercentileSamplerTest {
 
     @Test
     public void testSamplingMaximumPercentile() {
-        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f, 10000L);
+        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f, 10000000L);
 
         // Should only sample the maximum value
         assertThat(sampler.isSampled(10L)).isTrue();
@@ -48,6 +50,7 @@ public class TimeWindowPercentileSamplerTest {
     @Test
     public void testSamplingWindowExpires() throws InterruptedException {
         final long windowLength = 1000L;
+        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
         final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f, windowLength);
 
         // Should only sample the maximum value
@@ -61,6 +64,7 @@ public class TimeWindowPercentileSamplerTest {
 
     @Test
     public void testSampling0_5Percentile() {
+        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
         final Sampler<Long> sampler = TimeWindowPercentileSampler.create(.5f, 10000L);
 
         // Create a uniform distribution of 1000 values from 1 to 1000
@@ -75,6 +79,7 @@ public class TimeWindowPercentileSamplerTest {
 
     @Test
     public void testSampling0_95Percentile() {
+        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
         final Sampler<Long> sampler = TimeWindowPercentileSampler.create(.95f, 10000L);
 
         // Create a uniform distribution of 1000 values from 1 to 1000
