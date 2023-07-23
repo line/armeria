@@ -15,55 +15,41 @@
  */
 package com.linecorp.armeria.server.circuitbreaker;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Decorates an RPC {@link Service} to circuit break incoming requests.
  */
 public final class CircuitBreakerRpcService extends AbstractCircuitBreakerService<RpcRequest, RpcResponse>
         implements RpcService {
-    /**
-     * Creates a new decorator using the specified {@link CircuitBreaker} and
-     * {@link CircuitBreakerRejectHandler}.
-     *
-     * @param circuitBreaker The {@link CircuitBreaker} instance to define circuit breaker
-     * @param rejectHandler The {@link CircuitBreakerRejectHandler} instance to define request rejection behaviour
-     */
-    public static Function<? super RpcService, CircuitBreakerRpcService>
-    newDecorator(CircuitBreaker circuitBreaker,
-                 CircuitBreakerRejectHandler<RpcRequest, RpcResponse> rejectHandler) {
-        return builder(circuitBreaker).onRejectedRequest(rejectHandler).newDecorator();
-    }
-
-    /**
-     * Creates a new decorator using the specified {@link CircuitBreaker}.
-     *
-     * @param circuitBreaker The {@link CircuitBreaker} instance to define circuit breaker
-     */
-    public static Function<? super RpcService, CircuitBreakerRpcService>
-    newDecorator(CircuitBreaker circuitBreaker) {
-        return builder(circuitBreaker).newDecorator();
-    }
 
     /**
      * Returns a new {@link CircuitBreakerRpcServiceBuilder}.
      */
-    public static CircuitBreakerRpcServiceBuilder builder(CircuitBreaker circuitBreaker) {
-        return new CircuitBreakerRpcServiceBuilder(circuitBreaker);
+    public static CircuitBreakerRpcServiceBuilder builder() {
+        return new CircuitBreakerRpcServiceBuilder();
     }
 
     /**
      * Creates a new instance that decorates the specified {@link RpcService}.
      */
-    CircuitBreakerRpcService(RpcService delegate, CircuitBreaker circuitBreaker,
-                             CircuitBreakerAcceptHandler<RpcRequest, RpcResponse> acceptHandler,
-                             CircuitBreakerRejectHandler<RpcRequest, RpcResponse> rejectHandler) {
-        super(delegate, circuitBreaker, RpcResponse::from, acceptHandler, rejectHandler);
+    CircuitBreakerRpcService(
+            RpcService delegate, CircuitBreakerRule rule, CircuitBreakerServiceHandler handler,
+            BiFunction<? super ServiceRequestContext, ? super RpcRequest, ? extends RpcResponse> fallback) {
+        super(delegate, rule, handler, fallback);
+    }
+
+    @Override
+    protected RpcResponse doServe(ServiceRequestContext ctx, RpcRequest req, CircuitBreakerCallback callback)
+            throws Exception {
+        return unwrap().serve(ctx, req);
     }
 }

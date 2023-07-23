@@ -17,14 +17,16 @@ package com.linecorp.armeria.server.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Builds a new {@link CircuitBreakerService}.
@@ -32,35 +34,8 @@ import com.linecorp.armeria.server.Service;
 public final class CircuitBreakerServiceBuilder
         extends
         AbstractCircuitBreakerServiceBuilder<HttpRequest, HttpResponse> {
-
-    /**
-     * Provides default circuit breaking behaviour for {@link HttpRequest}.
-     * Returns an {@link HttpResponse} with {@link HttpStatus#SERVICE_UNAVAILABLE}.
-     */
-    private static final CircuitBreakerRejectHandler<HttpRequest, HttpResponse>
-            DEFAULT_REJECT_HANDLER =
-            (delegate, ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
-
-    CircuitBreakerServiceBuilder(CircuitBreaker circuitBreaker) {
-        super(circuitBreaker, DEFAULT_REJECT_HANDLER);
-    }
-
-    /**
-     * Sets {@link CircuitBreakerAcceptHandler}.
-     */
-    public CircuitBreakerServiceBuilder onAcceptedRequest(
-            CircuitBreakerAcceptHandler<HttpRequest, HttpResponse> acceptHandler) {
-        setAcceptHandler(acceptHandler);
-        return this;
-    }
-
-    /**
-     * Sets {@link CircuitBreakerRejectHandler}.
-     */
-    public CircuitBreakerServiceBuilder onRejectedRequest(
-            CircuitBreakerRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
-        setRejectHandler(rejectHandler);
-        return this;
+    CircuitBreakerServiceBuilder() {
+        super(null, null, null);
     }
 
     /**
@@ -68,8 +43,8 @@ public final class CircuitBreakerServiceBuilder
      * this builder.
      */
     public CircuitBreakerService build(HttpService delegate) {
-        return new CircuitBreakerService(requireNonNull(delegate, "delegate"), getCircuitBreaker(),
-                                         getAcceptHandler(), getRejectHandler());
+        return new CircuitBreakerService(requireNonNull(delegate, "delegate"), getRule(), getHandler(),
+                                         getFallback());
     }
 
     /**
@@ -77,10 +52,23 @@ public final class CircuitBreakerServiceBuilder
      * {@link CircuitBreakerService} based on the {@link CircuitBreaker} added to this builder.
      */
     public Function<? super HttpService, CircuitBreakerService> newDecorator() {
-        final CircuitBreaker circuitBreaker = getCircuitBreaker();
-        final CircuitBreakerAcceptHandler<HttpRequest, HttpResponse> acceptHandler = getAcceptHandler();
-        final CircuitBreakerRejectHandler<HttpRequest, HttpResponse> rejectHandler = getRejectHandler();
-        return service ->
-                new CircuitBreakerService(service, circuitBreaker, acceptHandler, rejectHandler);
+        return service -> new CircuitBreakerService(service, getRule(), getHandler(), getFallback());
+    }
+
+    @Override
+    public CircuitBreakerServiceBuilder rule(CircuitBreakerRule rule) {
+        return (CircuitBreakerServiceBuilder) super.rule(rule);
+    }
+
+    @Override
+    public CircuitBreakerServiceBuilder handler(
+            CircuitBreakerServiceHandler handler) {
+        return (CircuitBreakerServiceBuilder) super.handler(handler);
+    }
+
+    @Override
+    public CircuitBreakerServiceBuilder fallback(
+            BiFunction<? super ServiceRequestContext, ? super HttpRequest, ? extends HttpResponse> fallback) {
+        return (CircuitBreakerServiceBuilder) super.fallback(fallback);
     }
 }

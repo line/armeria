@@ -15,54 +15,50 @@
  */
 package com.linecorp.armeria.server.circuitbreaker;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Decorates an {@link HttpService} to circuit break the incoming requests.
  */
 public final class CircuitBreakerService extends AbstractCircuitBreakerService<HttpRequest, HttpResponse>
         implements HttpService {
-    /**
-     * Creates a new decorator using the specified {@link CircuitBreaker} and
-     * {@link CircuitBreakerRejectHandler}.
-     *
-     * @param circuitBreaker The {@link CircuitBreaker} instance to define the circuit breaker to be used.
-     * @param rejectHandler The {@link CircuitBreakerRejectHandler} instance to define request rejection behaviour
-     */
-    public static Function<? super HttpService, CircuitBreakerService>
-    newDecorator(CircuitBreaker circuitBreaker,
-                 CircuitBreakerRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
-        return builder(circuitBreaker).onRejectedRequest(rejectHandler).newDecorator();
-    }
-
-    /**
-     * Creates a new decorator using the specified {@link CircuitBreaker}.
-     *
-     * @param circuitBreaker The {@link CircuitBreaker} instance to define the circuit breaker to be used.
-     */
-    public static Function<? super HttpService, CircuitBreakerService>
-    newDecorator(CircuitBreaker circuitBreaker) {
-        return builder(circuitBreaker).newDecorator();
-    }
 
     /**
      * Returns a new {@link CircuitBreakerServiceBuilder}.
      */
-    public static CircuitBreakerServiceBuilder builder(CircuitBreaker circuitBreaker) {
-        return new CircuitBreakerServiceBuilder(circuitBreaker);
+    public static CircuitBreakerServiceBuilder builder() {
+        return new CircuitBreakerServiceBuilder();
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    CircuitBreakerService(HttpService delegate, CircuitBreaker circuitBreaker,
-                          CircuitBreakerAcceptHandler<HttpRequest, HttpResponse> acceptHandler,
-                          CircuitBreakerRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
-        super(delegate, circuitBreaker, HttpResponse::from, acceptHandler, rejectHandler);
+    CircuitBreakerService(
+            HttpService delegate, CircuitBreakerRule rule, CircuitBreakerServiceHandler handler,
+            BiFunction<? super ServiceRequestContext, ? super HttpRequest, ? extends HttpResponse> fallback) {
+        super(delegate, rule, handler, fallback);
+    }
+
+    @Override
+    protected HttpResponse doServe(ServiceRequestContext ctx, HttpRequest req, CircuitBreakerCallback callback)
+            throws Exception {
+
+        final HttpResponse response;
+
+        try {
+            response = unwrap().serve(ctx, req);
+        } catch (Throwable cause) {
+            // reportSuccessOrFailure(callback, rule.shouldReportAsSuccess(ctx, cause), ctx, cause);
+            throw cause;
+        }
+
+        return response;
     }
 }

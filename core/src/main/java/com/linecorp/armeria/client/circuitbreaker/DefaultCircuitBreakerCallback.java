@@ -22,11 +22,18 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
-final class DefaultCircuitBreakerCallback implements CircuitBreakerCallback {
+/**
+ * The default implementation of {@link CircuitBreakerCallback}.
+ */
+public final class DefaultCircuitBreakerCallback implements CircuitBreakerCallback {
 
     private final CircuitBreaker circuitBreaker;
 
-    DefaultCircuitBreakerCallback(CircuitBreaker circuitBreaker) {
+    /**
+     * Creates a new instance with a default circuit breaker.
+     * @param circuitBreaker circuit breaker to return for every request.
+     */
+    public DefaultCircuitBreakerCallback(CircuitBreaker circuitBreaker) {
         this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
     }
 

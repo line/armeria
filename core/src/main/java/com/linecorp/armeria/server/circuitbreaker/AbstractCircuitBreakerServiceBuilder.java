@@ -15,12 +15,16 @@
  */
 package com.linecorp.armeria.server.circuitbreaker;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import java.util.function.BiFunction;
+
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Builds a new {@link AbstractCircuitBreakerService}.
@@ -29,42 +33,60 @@ import com.linecorp.armeria.server.Service;
  */
 abstract class AbstractCircuitBreakerServiceBuilder<I extends Request, O extends Response> {
 
-    private final CircuitBreaker circuitBreaker;
-    private CircuitBreakerAcceptHandler<I, O> acceptHandler;
-    private CircuitBreakerRejectHandler<I, O> rejectHandler;
+    @Nullable
+    private CircuitBreakerRule rule;
+    @Nullable
+    private CircuitBreakerServiceHandler handler;
+    @Nullable
+    private BiFunction<? super ServiceRequestContext, ? super I, ? extends O> fallback;
 
-    AbstractCircuitBreakerServiceBuilder(CircuitBreaker circuitBreaker,
-                                         CircuitBreakerRejectHandler<I, O> defaultRejectHandler) {
-        this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
-        acceptHandler = Service::serve;
-        rejectHandler = requireNonNull(defaultRejectHandler, "defaultRejectHandler");
-    }
-
-    final CircuitBreaker getCircuitBreaker() {
-        return circuitBreaker;
-    }
-
-    /**
-     * Sets {@link CircuitBreakerAcceptHandler}.
-     */
-    final void setAcceptHandler(
-            CircuitBreakerAcceptHandler<I, O> acceptHandler) {
-        this.acceptHandler = requireNonNull(acceptHandler, "acceptHandler");
-    }
-
-    final CircuitBreakerAcceptHandler<I, O> getAcceptHandler() {
-        return acceptHandler;
+    AbstractCircuitBreakerServiceBuilder(
+            @Nullable CircuitBreakerRule rule,
+            @Nullable CircuitBreakerServiceHandler handler,
+            @Nullable BiFunction<? super ServiceRequestContext, ? super I, ? extends O> fallback) {
+        this.rule = rule;
+        this.handler = handler;
+        this.fallback = fallback;
     }
 
     /**
-     * Sets {@link CircuitBreakerRejectHandler}.
+     * Sets the {@link CircuitBreakerRule} to use.
      */
-    final void setRejectHandler(
-            CircuitBreakerRejectHandler<I, O> rejectHandler) {
-        this.rejectHandler = requireNonNull(rejectHandler, "rejectHandler");
+    public AbstractCircuitBreakerServiceBuilder<I, O> rule(CircuitBreakerRule rule) {
+        this.handler = null;
+        this.rule = requireNonNull(rule, "rule");
+        return this;
     }
 
-    final CircuitBreakerRejectHandler<I, O> getRejectHandler() {
-        return rejectHandler;
+    /**
+     * Sets the {@link CircuitBreakerServiceHandler} to handle the circuit breaker events.
+     */
+    public AbstractCircuitBreakerServiceBuilder<I, O> handler(CircuitBreakerServiceHandler handler) {
+        this.handler = requireNonNull(handler, "handler");
+        return this;
+    }
+
+    /**
+     * Sets the {@link BiFunction} to handle the fallback.
+     */
+    public AbstractCircuitBreakerServiceBuilder<I, O> fallback(
+            BiFunction<? super ServiceRequestContext, ? super I, ? extends O> fallback) {
+        this.fallback = requireNonNull(fallback, "fallback");
+        return this;
+    }
+
+    public CircuitBreakerRule getRule() {
+        checkState(rule != null, "rule is not set.");
+        return rule;
+    }
+
+    public CircuitBreakerServiceHandler getHandler() {
+        checkState(handler != null, "handler is not set.");
+        return handler;
+    }
+
+    public BiFunction<? super ServiceRequestContext, ? super I, ? extends O> getFallback() {
+        checkState(fallback != null, "fallback is not set.");
+        return fallback;
     }
 }

@@ -204,6 +204,9 @@ public final class CircuitBreakerBuilder {
         return this;
     }
 
+    /**
+     * Adds a {@link CircuitBreakerListener} with a ticker for testing.
+     */
     @VisibleForTesting
     public CircuitBreakerBuilder ticker(Ticker ticker) {
         this.ticker = requireNonNull(ticker, "ticker");

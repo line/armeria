@@ -17,14 +17,14 @@ package com.linecorp.armeria.server.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -35,42 +35,48 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
 public abstract class AbstractCircuitBreakerService<I extends Request, O extends Response>
         extends SimpleDecoratingService<I, O> {
 
-    private final CircuitBreaker circuitBreaker;
-    private final Function<CompletionStage<? extends O>, O> responseConverter;
-    private final CircuitBreakerAcceptHandler<I, O> acceptHandler;
-    private final CircuitBreakerRejectHandler<I, O> rejectHandler;
+    @Nullable
+    private final CircuitBreakerRule rule;
+
+    private final CircuitBreakerServiceHandler handler;
+
+    @Nullable
+    private final BiFunction<? super ServiceRequestContext, ? super I, ? extends O> fallback;
 
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected AbstractCircuitBreakerService(Service<I, O> delegate, CircuitBreaker circuitBreaker,
-                                            Function<CompletionStage<? extends O>, O> responseConverter,
-                                            CircuitBreakerAcceptHandler<I, O> acceptHandler,
-                                            CircuitBreakerRejectHandler<I, O> rejectHandler) {
+    protected AbstractCircuitBreakerService(
+            Service<I, O> delegate, CircuitBreakerRule rule,
+            CircuitBreakerServiceHandler handler,
+            @Nullable BiFunction<? super ServiceRequestContext, ? super I, ? extends O> fallback) {
         super(delegate);
-        this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
-        this.responseConverter = requireNonNull(responseConverter, "responseConverter");
-        this.acceptHandler = requireNonNull(acceptHandler, "acceptHandler");
-        this.rejectHandler = requireNonNull(rejectHandler, "rejectHandler");
+        this.rule = rule;
+        this.handler = requireNonNull(handler, "handler");
+        this.fallback = fallback;
     }
+
+    /**
+     * Invoked when the {@link CircuitBreaker} is in closed state.
+     */
+    protected abstract O doServe(ServiceRequestContext ctx, I req, CircuitBreakerCallback callback)
+            throws Exception;
 
     @Override
     public final O serve(ServiceRequestContext ctx, I req) throws Exception {
-        return responseConverter.apply(
-                CompletableFuture.supplyAsync(
-                        () -> {
-                            try {
-                                if (circuitBreaker.tryRequest()) {
-                                    return acceptHandler.handleAccepted(unwrap(), ctx, req);
-                                } else {
-                                    return rejectHandler.handleRejected(unwrap(), ctx, req);
-                                }
-                            } catch (Exception e) {
-                                return Exceptions.throwUnsafely(e);
-                            }
-                        },
-                        ctx.eventLoop()
-                )
-        );
+        System.out.println("Hello!");
+        try {
+            final CircuitBreakerCallback callback = handler.tryRequest(ctx, req);
+            if (callback == null) {
+                return unwrap().serve(ctx, req);
+            }
+            return doServe(ctx, req, callback);
+        } catch (Exception ex) {
+            if (fallback != null && handler.isCircuitBreakerException(ex)) {
+                final O res = fallback.apply(ctx, req);
+                return requireNonNull(res, "fallback.apply() returned null.");
+            }
+            throw ex;
+        }
     }
 }

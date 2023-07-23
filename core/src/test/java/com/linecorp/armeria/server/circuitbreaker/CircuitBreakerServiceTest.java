@@ -17,14 +17,17 @@ package com.linecorp.armeria.server.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Duration;
+import java.util.function.BiFunction;
 
 import org.junit.Rule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerListener;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.circuitbreaker.CircuitState;
+import com.linecorp.armeria.client.circuitbreaker.EventCount;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -39,22 +42,20 @@ public class CircuitBreakerServiceTest {
 
     static final HttpService OK_SERVICE = new AbstractHttpService() {
         @Override
-        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                throws Exception {
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             return HttpResponse.of(HttpStatus.OK);
         }
     };
 
     static final HttpService BAD_SERVICE = new AbstractHttpService() {
         @Override
-        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                throws Exception {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST);
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     };
 
     static final class MockTicker implements Ticker {
-        private long value = 0;
+        private long value;
 
         @Override
         public long read() {
@@ -68,21 +69,54 @@ public class CircuitBreakerServiceTest {
 
     final MockTicker ticker = new MockTicker();
 
+    private final CircuitBreakerListener listener = new CircuitBreakerListener() {
+        @Override
+        public void onStateChanged(String circuitBreakerName, CircuitState state) throws Exception {
+            System.out.println("onStateChanged: " + state);
+        }
+
+        @Override
+        public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) throws Exception {
+            System.out.println("onEventCountUpdated: " + eventCount);
+        }
+
+        @Override
+        public void onRequestRejected(String circuitBreakerName) throws Exception {
+            System.out.println("onRequestRejected");
+        }
+    };
+
     private final CircuitBreaker defaultCircuitBreaker =
             CircuitBreaker
                     .builder()
                     .minimumRequestThreshold(10)
-                    .counterUpdateInterval(Duration.ofMillis(10))
-                    .ticker(ticker).build();
+                    .counterUpdateIntervalMillis(10)
+                    .listener(listener)
+                    .ticker(Ticker.systemTicker()).build();
+
+    private final CircuitBreakerRule defaultRule = CircuitBreakerRule.onServerErrorStatus();
+    private final CircuitBreakerServiceHandler defaultHandler =
+            new DefaultCircuitBreakerServiceHandler((ctx, req) -> defaultCircuitBreaker);
+
+    private final BiFunction<? super ServiceRequestContext, ? super HttpRequest, ? extends HttpResponse>
+            defaultFallback = (ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
     @Rule
     public ServerRule serverRule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/http-always",
-                       OK_SERVICE.decorate(CircuitBreakerService.newDecorator(defaultCircuitBreaker)));
+                       OK_SERVICE.decorate(CircuitBreakerService.builder()
+                                                                .rule(defaultRule)
+                                                                .handler(defaultHandler)
+                                                                .fallback(defaultFallback)
+                                                                .newDecorator()));
             sb.service("/http-never",
-                       BAD_SERVICE.decorate(CircuitBreakerService.newDecorator(defaultCircuitBreaker)));
+                       BAD_SERVICE.decorate(CircuitBreakerService.builder()
+                                                                 .rule(defaultRule)
+                                                                 .handler(defaultHandler)
+                                                                 .fallback(defaultFallback)
+                                                                 .newDecorator()));
         }
     };
 
@@ -105,12 +139,12 @@ public class CircuitBreakerServiceTest {
 
         defaultCircuitBreaker.enterState(CircuitState.CLOSED);
         assertThat(client.get("/http-never").aggregate().get().status())
-                .isEqualTo(HttpStatus.BAD_REQUEST);
+                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         for (int i = 0; i < 100; i++) {
             assertThat(client.get("/http-never").aggregate().get().status())
-                    .isEqualTo(HttpStatus.BAD_REQUEST);
-            ticker.set(ticker.value + 10L);
+                    .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+            Thread.sleep(250);
         }
 
         assertThat(client.get("/http-never").aggregate().get().status())
