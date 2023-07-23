@@ -372,6 +372,9 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
         @Override
         public void onComplete() {
+            if (state == State.DONE) {
+                return;
+            }
             setState(State.REQUIRE_BODY, State.REQUIRE_TAIL);
             if (tail != null) {
                 publish();
