@@ -53,11 +53,12 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
 
     /**
      * A weighted Ring hash select strategy.
+     *
      * <p>For example, with node a, b and c:
-     *      * <ul>
-     *      *   <li>if endpoint weights are 1, 2 with ring size 3, then the ring would be placed as a, b, b</li>
-     *      *   <li>if endpoint weights are 3, 2, 6 with ring size 4, then the ring would be placed as a, b, c, c </li>
-     *      * </ul>
+     *<ul>
+     *  <li>if endpoint weights are 1, 2 with ring size 3, then the ring would be placed as a, b, b</li>
+     *  <li>if endpoint weights are 3, 2, 6 with ring size 4, then the ring would be placed as a, b, c, c </li>
+     *</ul>
      */
     static final class RingHashSelector extends AbstractEndpointSelector {
 
@@ -152,8 +153,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                             ring.put(hash, endpoint);
                         }
                     }
-                }
-                else {
+                } else {
                     final List<Integer> weights = new ArrayList<>();
                     for (final Endpoint endpoint : this.endpoints) {
                         final int weight = endpoint.weight();
