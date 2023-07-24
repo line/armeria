@@ -25,6 +25,8 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.RingHashEndpointSelectionStrategy.RingHashSelector;
@@ -35,7 +37,7 @@ import com.linecorp.armeria.common.HttpRequest;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 
-public class RingHashEndpointSelectionStrategyTest {
+class RingHashEndpointSelectionStrategyTest {
 
     private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
@@ -45,10 +47,11 @@ public class RingHashEndpointSelectionStrategyTest {
         final Endpoint bar = Endpoint.of("127.0.0.1", 2345);
         final EndpointGroup group = EndpointGroup.of(ringHash(), foo, bar);
 
+        assertThat(group.selectionStrategy()).isSameAs(ringHash());
         final List<Endpoint> selected = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             final Endpoint endpoint = group.selectNow(ctx);
-            assert endpoint != null;
+            assertThat(endpoint).isNotNull();
             selected.add(endpoint);
         }
 
@@ -66,7 +69,7 @@ public class RingHashEndpointSelectionStrategyTest {
         final List<Endpoint> selected = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             final Endpoint endpoint = group.selectNow(ctx);
-            assert endpoint != null;
+            assertThat(endpoint).isNotNull();
             selected.add(endpoint);
         }
 
@@ -84,18 +87,80 @@ public class RingHashEndpointSelectionStrategyTest {
         final EndpointSelector endpointSelector = instance.newSelector(group, 3);
         final RingHashSelector ringHashSelector = (RingHashSelector) endpointSelector;
         final WeightedRingEndpoint weightedRingEndpoint = ringHashSelector.weightedRingEndpoint;
-        assert weightedRingEndpoint != null;
+
+        assertThat(weightedRingEndpoint).isNotNull();
+
         final Int2ObjectSortedMap<Endpoint> ring = weightedRingEndpoint.ring;
         Assertions.assertEquals(3, ring.size());
         final List<Endpoint> selected = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             final Endpoint endpoint = endpointSelector.selectNow(ctx);
-            assert endpoint != null;
+            assertThat(endpoint).isNotNull();
             selected.add(endpoint);
         }
 
         assertThat(selected).usingElementComparator(EndpointComparator.INSTANCE).containsAnyOf(
                 foo, bar
         );
+    }
+
+    @Test
+    void testWeightRingHashSelectBinarySearch() {
+        // If the ring has a size of 5 and each item have weights of 3, 2, and 6,
+        // then each item on the ring should be placed 1, 1, and 2 times
+        // as many times as the remainder divided by 3.
+        final RingHashEndpointSelectionStrategy instance = RingHashEndpointSelectionStrategy.INSTANCE;
+        final Endpoint foo = Endpoint.of("127.0.0.1", 1234).withWeight(3); // 1
+        final Endpoint bar = Endpoint.of("127.0.0.1", 2345).withWeight(2); // 1
+        final Endpoint baz = Endpoint.of("127.0.0.1", 3456).withWeight(6); // 2
+        final EndpointGroup group = EndpointGroup.of(foo, bar, baz);
+        final EndpointSelector endpointSelector = instance.newSelector(group, 4);
+        final RingHashSelector ringHashSelector = (RingHashSelector) endpointSelector;
+        final WeightedRingEndpoint weightedRingEndpoint = ringHashSelector.weightedRingEndpoint;
+
+        assertThat(weightedRingEndpoint).isNotNull();
+
+        final Int2ObjectSortedMap<Endpoint> ring = weightedRingEndpoint.ring;
+        Assertions.assertEquals(4, ring.size());
+        final List<Endpoint> selected = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final Endpoint endpoint = endpointSelector.selectNow(ctx);
+            assertThat(endpoint).isNotNull();
+            selected.add(endpoint);
+        }
+
+        assertThat(selected).usingElementComparator(EndpointComparator.INSTANCE).containsAnyOf(
+                foo, bar, baz
+        );
+    }
+
+    @Test
+    void selectFromDynamicEndpointGroup() {
+        final TestDynamicEndpointGroup group = new TestDynamicEndpointGroup();
+        group.updateEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1000)));
+        assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1000));
+
+        final Endpoint foo = Endpoint.of("127.0.0.1", 1111).withWeight(1);
+        final Endpoint bar = Endpoint.of("127.0.0.1", 2222).withWeight(2);
+        group.updateEndpoints(ImmutableList.of(foo, bar));
+
+        final RingHashEndpointSelectionStrategy instance = RingHashEndpointSelectionStrategy.INSTANCE;
+        final EndpointSelector endpointSelector = instance.newSelector(group, 3);
+        final List<Endpoint> selected = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final Endpoint endpoint = endpointSelector.selectNow(ctx);
+            assertThat(endpoint).isNotNull();
+            selected.add(endpoint);
+        }
+
+        assertThat(selected).usingElementComparator(EndpointComparator.INSTANCE).containsAnyOf(
+                foo, bar
+        );
+    }
+
+    private static final class TestDynamicEndpointGroup extends DynamicEndpointGroup {
+        void updateEndpoints(final List<Endpoint> endpoints) {
+            setEndpoints(endpoints);
+        }
     }
 }

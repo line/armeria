@@ -51,7 +51,15 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
         return new RingHashSelector(endpointGroup, size);
     }
 
-    static class RingHashSelector extends AbstractEndpointSelector {
+    /**
+     * A weighted Ring hash select strategy.
+     * <p>For example, with node a, b and c:
+     *      * <ul>
+     *      *   <li>if endpoint weights are 1, 2 with ring size 3, then the ring would be placed as a, b, b</li>
+     *      *   <li>if endpoint weights are 3, 2, 6 with ring size 4, then the ring would be placed as a, b, c, c </li>
+     *      * </ul>
+     */
+    static final class RingHashSelector extends AbstractEndpointSelector {
 
         @Nullable
         @VisibleForTesting
@@ -76,18 +84,22 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
 
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
-            final WeightedRingEndpoint weightedRingEndpoint = this.weightedRingEndpoint;
-            if (weightedRingEndpoint == null) {
+            final WeightedRingEndpoint weightedringendpoint = weightedRingEndpoint;
+            if (weightedringendpoint == null) {
                 // 'endpointGroup' has not been initialized yet.
                 return null;
             }
 
             final int currentSequence = sequence.getAndIncrement();
-            return weightedRingEndpoint.select(currentSequence);
+            return weightedringendpoint.select(currentSequence);
         }
 
+        // Using the maximum value of the weights,
+        // we can find the optimal number of nodes to place each within a given ring size
+        // For example, if the size of the ring is 4 and the weights of nodes A, B, and C are 2, 3, and 6,
+        // they can be placed over rings 1, 1, and 2, respectively.
         @VisibleForTesting
-        final class WeightedRingEndpoint {
+        static final class WeightedRingEndpoint {
             @VisibleForTesting
             final Int2ObjectSortedMap<Endpoint> ring = new Int2ObjectAVLTreeMap<>();
             private final List<Endpoint> endpoints;
@@ -123,56 +135,75 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 final int sizeOfEndpoints = this.endpoints.size();
                 assert sizeOfEndpoints <= size;
 
-                final List<Integer> arr = new ArrayList<>();
-                for (Endpoint endpoint : this.endpoints) {
-                    final int weight = endpoint.weight();
-                    arr.add(weight);
+                int totalWeight = 0;
+                for (final Endpoint endpoint : this.endpoints) {
+                    totalWeight += endpoint.weight();
                 }
-                final int divider = binarySearch(arr, size);
-                for (Endpoint endpoint : this.endpoints) {
-                    final String host = endpoint.host();
-                    final int port = endpoint.port();
-                    final int weight = endpoint.weight();
-                    // If weight is 3 and x is 1, place 3 times in the ring
-                    // if weight is 1 and x is 1, place once in the ring
-                    // If weight is 3 and x is 3, place 1 times in the ring
-                    final int count = weight / divider;
-                    for (int i = 0; i < count; i++) {
-                        final String weightedHost = host + port + i;
-                        final int hash = getXXHash(weightedHost);
-                        ring.put(hash, endpoint);
+
+                // If all endpoints can be placed on a ring of a given size, we should respect that.
+                if (totalWeight <= size) {
+                    for (final Endpoint endpoint : this.endpoints) {
+                        final String host = endpoint.host();
+                        final int port = endpoint.port();
+                        final int weight = endpoint.weight();
+                        for (int i = 0; i < weight; i++) {
+                            final String weightedHost = host + port + i;
+                            final int hash = getXXHash(weightedHost);
+                            ring.put(hash, endpoint);
+                        }
+                    }
+                }
+                else {
+                    final List<Integer> weights = new ArrayList<>();
+                    for (final Endpoint endpoint : this.endpoints) {
+                        final int weight = endpoint.weight();
+                        weights.add(weight);
+                    }
+                    final int divider = binarySearch(weights, size);
+                    for (final Endpoint endpoint : this.endpoints) {
+                        final String host = endpoint.host();
+                        final int port = endpoint.port();
+                        final int weight = endpoint.weight();
+                        // If weight is 3 and x is 1, place 3 times in the ring
+                        // if weight is 1 and x is 1, place once in the ring
+                        // If weight is 3 and x is 3, place 1 times in the ring
+                        final int count = (weight + divider - 1) / divider;
+                        for (int i = 0; i < count; i++) {
+                            final String weightedHost = host + port + i;
+                            final int hash = getXXHash(weightedHost);
+                            ring.put(hash, endpoint);
+                        }
                     }
                 }
             }
 
             // Returned int values range from -2,147,483,648 to 2,147,483,647, same as java int type
-            int getXXHash(String input) {
+            private int getXXHash(String input) {
                 final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
                 return Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
             }
 
-            private int binarySearch(List<Integer> arr, int sz) {
-                Collections.sort(arr);
-                int lt = arr.get(0);
-                int rt = arr.get(arr.size() - 1);
+            private int binarySearch(List<Integer> weights, int sz) {
+                Collections.sort(weights);
+                int lt = 1;
+                int rt = weights.get(weights.size() - 1);
                 while (rt > lt + 1) {
                     final int mid = (lt + rt) / 2;
-                    if (isPossible(mid, arr, sz)) {
+                    if (isPossible(mid, weights, sz)) {
                         rt = mid;
                     } else {
                         lt = mid + 1;
                     }
                 }
-                return lt;
+                return rt;
             }
 
-            private boolean isPossible(int x, List<Integer> arr, int sz) {
-                int total = 0;
-                for (int w : arr) {
-                    total += w / x;
+            private boolean isPossible(int partitionSize, List<Integer> weights, int totalSize) {
+                int totalWeights = 0;
+                for (int weight : weights) {
+                    totalWeights += (weight + partitionSize - 1) / partitionSize;
                 }
-
-                return sz >= total;
+                return totalSize >= totalWeights;
             }
         }
     }
