@@ -50,9 +50,8 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.brave.SpanCollector;
+import com.linecorp.armeria.common.brave.TestSpanCollector;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -63,6 +62,7 @@ import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
+import testing.brave.TestService;
 
 class BraveClientTest {
 
@@ -90,7 +90,7 @@ class BraveClientTest {
 
     @Test
     void shouldSubmitSpanWhenSampled() throws Exception {
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
 
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
@@ -129,7 +129,7 @@ class BraveClientTest {
 
     @Test
     void shouldSubmitSpanWithCustomRemoteName() throws Exception {
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
 
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
@@ -158,7 +158,7 @@ class BraveClientTest {
 
     @Test
     void scopeDecorator() throws Exception {
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
         final AtomicInteger scopeDecoratorCallingCounter = new AtomicInteger();
         final ScopeDecorator scopeDecorator = (currentSpan, scope) -> {
             scopeDecoratorCallingCounter.getAndIncrement();
@@ -191,7 +191,7 @@ class BraveClientTest {
 
     @Test
     void shouldNotSubmitSpanWhenNotSampled() throws Exception {
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
                                        .addSpanHandler(collector)
@@ -204,7 +204,7 @@ class BraveClientTest {
 
     @Test
     void testEmptyEndpointTags() {
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
         final Tracing tracing = Tracing.newBuilder()
                                        .addSpanHandler(collector)
                                        .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
@@ -238,7 +238,7 @@ class BraveClientTest {
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
-        final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
+        final RpcRequest rpcReq = RpcRequest.of(TestService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = ClientRequestContext.builder(req).build();

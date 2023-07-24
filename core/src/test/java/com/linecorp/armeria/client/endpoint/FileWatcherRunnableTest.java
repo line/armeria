@@ -23,14 +23,14 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.WatchService;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileSystemWatchContext;
 
-public class FileWatcherRunnableTest {
+class FileWatcherRunnableTest {
 
     @Test
-    public void testPropertyFileWatcherRunnableExitsOnInterrupt() throws InterruptedException {
+    void testPropertyFileWatcherRunnableExitsOnInterrupt() throws InterruptedException {
         final WatchService watchService = mock(WatchService.class);
         final FileWatcherRunnable fileWatcherRunnable = new FileWatcherRunnable(watchService, mock(
                 FileSystemWatchContext.class));

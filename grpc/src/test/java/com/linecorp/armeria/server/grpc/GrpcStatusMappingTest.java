@@ -36,11 +36,6 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -58,6 +53,11 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.netty.util.AttributeKey;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcStatusMappingTest {
 

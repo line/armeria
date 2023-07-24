@@ -29,11 +29,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.example.helloworld.GreeterServiceGrpc.GreeterServiceBlockingStub;
-import com.example.helloworld.GreeterServiceHandlerFactory;
-import com.example.helloworld.GreeterServiceImpl;
-import com.example.helloworld.HelloReply;
-import com.example.helloworld.HelloRequest;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
@@ -55,6 +50,11 @@ import akka.http.javadsl.model.HttpResponse;
 import akka.japi.Function;
 import akka.stream.Materializer;
 import akka.stream.SystemMaterializer;
+import testing.grpcweb.HelloReply;
+import testing.grpcweb.HelloRequest;
+import testing.grpcweb.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpcweb.TestServiceHandlerFactory;
+import testing.grpcweb.TestServiceImpl;
 
 class GrpcWebServiceTest {
 
@@ -65,7 +65,7 @@ class GrpcWebServiceTest {
         final ActorSystem<Object> system = ActorSystem.create(Behaviors.empty(), "GreeterServer");
         final Materializer materializer = SystemMaterializer.get(system).materializer();
         final Function<HttpRequest, CompletionStage<HttpResponse>> handler =
-                GreeterServiceHandlerFactory.create(new GreeterServiceImpl(system), system);
+                TestServiceHandlerFactory.create(new TestServiceImpl(system), system);
         final Function<HttpRequest, CompletionStage<HttpResponse>> grpcWebServiceHandlers =
                 WebHandler.grpcWebHandler(ImmutableList.of(handler), system, materializer);
 
@@ -86,8 +86,8 @@ class GrpcWebServiceTest {
     void grpcProtoWebClient(SerializationFormat serializationFormat) {
         final String serverUri = serializationFormat.uriText() + "+http://127.0.0.1:" +
                                  serverBinding.localAddress().getPort();
-        final GreeterServiceBlockingStub blockingStub =
-                GrpcClients.newClient(serverUri, GreeterServiceBlockingStub.class);
+        final TestServiceBlockingStub blockingStub =
+                GrpcClients.newClient(serverUri, TestServiceBlockingStub.class);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final HelloReply armeria =
                     blockingStub.sayHello(HelloRequest.newBuilder().setName("Armeria").build());

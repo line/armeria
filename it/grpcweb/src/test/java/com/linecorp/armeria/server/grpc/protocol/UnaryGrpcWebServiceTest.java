@@ -27,10 +27,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.example.helloworld.GreeterServiceHandlerFactory;
-import com.example.helloworld.GreeterServiceImpl;
-import com.example.helloworld.HelloReply;
-import com.example.helloworld.HelloRequest;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.WebClient;
@@ -50,6 +46,10 @@ import akka.http.javadsl.model.HttpResponse;
 import akka.japi.Function;
 import akka.stream.Materializer;
 import akka.stream.SystemMaterializer;
+import testing.grpcweb.HelloReply;
+import testing.grpcweb.HelloRequest;
+import testing.grpcweb.TestServiceHandlerFactory;
+import testing.grpcweb.TestServiceImpl;
 
 class UnaryGrpcWebServiceTest {
 
@@ -57,10 +57,10 @@ class UnaryGrpcWebServiceTest {
 
     @BeforeAll
     static void setUp() {
-        final ActorSystem<Object> system = ActorSystem.create(Behaviors.empty(), "GreeterServer");
+        final ActorSystem<Object> system = ActorSystem.create(Behaviors.empty(), "TestServer");
         final Materializer materializer = SystemMaterializer.get(system).materializer();
         final Function<HttpRequest, CompletionStage<HttpResponse>> handler =
-                GreeterServiceHandlerFactory.create(new GreeterServiceImpl(system), system);
+                TestServiceHandlerFactory.create(new TestServiceImpl(system), system);
         final Function<HttpRequest, CompletionStage<HttpResponse>> grpcWebServiceHandlers =
                 WebHandler.grpcWebHandler(ImmutableList.of(handler), system, materializer);
 
@@ -77,7 +77,7 @@ class UnaryGrpcWebServiceTest {
         final String serverUri = String.format("http://127.0.0.1:%d", serverBinding.localAddress().getPort());
         final UnaryGrpcClient client = new UnaryGrpcClient(WebClient.of(serverUri), serializationFormat);
         final HelloRequest request = HelloRequest.newBuilder().setName("Armeria").build();
-        final byte[] responseBytes = client.execute("/GreeterService/SayHello",
+        final byte[] responseBytes = client.execute("/TestService/SayHello",
                                                     request.toByteArray()).join();
         final HelloReply response = HelloReply.parseFrom(responseBytes);
         assertThat(response.getMessage()).isEqualTo("Hello, Armeria");
