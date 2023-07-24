@@ -527,7 +527,8 @@ public abstract class AbstractDnsResolverBuilder {
                 builder.queryTimeoutMillis(queryTimeoutMillisForEachAttempt);
             } else {
                 if (queryTimeoutMillis == 0 || queryTimeoutMillis == Long.MAX_VALUE) {
-                    builder.queryTimeoutMillis(-1);
+                    // Use 0 to disable the timeout once https://github.com/netty/netty/pull/13505 is merged.
+                    builder.queryTimeoutMillis(3600000); // 1 hour
                 } else {
                     builder.queryTimeoutMillis(queryTimeoutMillis);
                 }
