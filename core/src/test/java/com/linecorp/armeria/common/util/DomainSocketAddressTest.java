@@ -59,14 +59,14 @@ class DomainSocketAddressTest {
 
     @Test
     void abstractNamespace() {
-        final DomainSocketAddress addr = DomainSocketAddress.of("\0foo");
-        assertThat(addr.path()).isEqualTo("\0foo");
+        final DomainSocketAddress addr = DomainSocketAddress.of("\0f\0o");
+        assertThat(addr.path()).isEqualTo("\0f\0o");
         assertThat(addr.isAbstract()).isTrue();
-        assertThat(addr.authority()).isEqualTo("unix%3A%00foo");
-        assertThat(addr).hasToString("@foo");
+        assertThat(addr.authority()).isEqualTo("unix%3A%00f%00o");
+        assertThat(addr).hasToString("@f@o");
         assertThat(addr.asEndpoint()).satisfies(e -> {
             assertThat(e.isDomainSocket()).isTrue();
-            assertThat(e.authority()).isEqualTo("unix%3A%00foo");
+            assertThat(e.authority()).isEqualTo("unix%3A%00f%00o");
             assertThat(e.toSocketAddress(0)).isEqualTo(addr);
         });
     }

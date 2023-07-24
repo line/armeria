@@ -174,7 +174,7 @@ public final class DomainSocketAddress extends InetSocketAddress {
     @Override
     public String toString() {
         if (isAbstract()) {
-            return '@' + path.substring(1);
+            return path.replace('\0', '@');
         } else {
             return path;
         }
