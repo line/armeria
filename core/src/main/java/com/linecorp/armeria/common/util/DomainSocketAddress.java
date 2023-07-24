@@ -22,7 +22,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,6 +59,10 @@ public final class DomainSocketAddress extends InetSocketAddress {
         return of(requireNonNull(path, "path").toString());
     }
 
+    /**
+     * Returns a newly created {@link DomainSocketAddress} with the specified {@code path} to the Unix domain
+     * socket.
+     */
     public static DomainSocketAddress of(String path) {
         requireNonNull(path, "path");
         checkArgument(!path.isEmpty(), "path must not be empty.");
@@ -71,7 +74,9 @@ public final class DomainSocketAddress extends InetSocketAddress {
      * Netty address.
      */
     public static DomainSocketAddress of(io.netty.channel.unix.DomainSocketAddress nettyAddr) {
-        return new DomainSocketAddress(requireNonNull(nettyAddr, "nettyAddr").path());
+        final String path = requireNonNull(nettyAddr, "nettyAddr").path();
+        checkArgument(!path.isEmpty(), "nettyAddr.path must not be empty.");
+        return new DomainSocketAddress(path);
     }
 
     /**
