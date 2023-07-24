@@ -24,11 +24,11 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class InvalidGrpcResponseTest {
 

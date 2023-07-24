@@ -17,13 +17,12 @@
 package com.linecorp.armeria.server.scalapb
 
 import com.linecorp.armeria.common.{MediaType, MediaTypeNames}
-import com.linecorp.armeria.scalapb.testing.messages.SimpleResponse
 import com.linecorp.armeria.server.annotation.Produces
-
-import java.lang.reflect.Type
 import munit.FunSuite
 import org.reactivestreams.Publisher
+import testing.scalapb.messages.SimpleResponse
 
+import java.lang.reflect.Type
 import scala.concurrent.Future
 
 class ScalaPbResponseConverterFunctionTest extends FunSuite {

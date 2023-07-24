@@ -44,7 +44,11 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker.State;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.Builder;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
-import resilience4j.thrift.HelloService.Iface;
+import testing.resilience4j.HelloReply;
+import testing.resilience4j.HelloRequest;
+import testing.resilience4j.NoHelloException;
+import testing.resilience4j.TestService;
+import testing.resilience4j.TestService.Iface;
 
 class Resilience4jWithThriftTest {
 
@@ -54,13 +58,13 @@ class Resilience4jWithThriftTest {
         protected void configure(ServerBuilder sb) throws Exception {
             final THttpService thriftService =
                     THttpService.builder()
-                                .addService(new HelloServiceImpl())
+                                .addService(new TestServiceImpl())
                                 .build();
             sb.service("/thrift", thriftService);
         }
     };
 
-    static class HelloServiceImpl implements HelloService.Iface {
+    static class TestServiceImpl implements TestService.Iface {
         @Override
         public HelloReply hello(HelloRequest request) throws TException {
             throw new NoHelloException();
@@ -85,13 +89,13 @@ class Resilience4jWithThriftTest {
         final Function<? super RpcClient, CircuitBreakerRpcClient> decorator =
                 CircuitBreakerRpcClient.newDecorator(
                         Resilience4JCircuitBreakerClientHandler.of(mapping), rule);
-        final Iface helloService = ThriftClients.builder(server.httpUri())
+        final Iface TestService = ThriftClients.builder(server.httpUri())
                                                 .path("/thrift")
                                                 .rpcDecorator(decorator)
                                                 .build(Iface.class);
 
         for (int i = 0; i < minimumNumberOfCalls; i++) {
-            assertThatThrownBy(() -> helloService.hello(new HelloRequest("hello")))
+            assertThatThrownBy(() -> TestService.hello(new HelloRequest("hello")))
                     .isInstanceOf(NoHelloException.class);
         }
 
@@ -100,7 +104,7 @@ class Resilience4jWithThriftTest {
         final CircuitBreaker cb = registry.getAllCircuitBreakers().stream().findFirst().orElseThrow();
         await().untilAsserted(() -> assertThat(cb.getState()).isEqualTo(State.OPEN));
 
-        assertThatThrownBy(() -> helloService.hello(new HelloRequest("hello")))
+        assertThatThrownBy(() -> TestService.hello(new HelloRequest("hello")))
                 .isInstanceOf(UnprocessedRequestException.class)
                 .hasCauseInstanceOf(CallNotPermittedException.class);
     }
