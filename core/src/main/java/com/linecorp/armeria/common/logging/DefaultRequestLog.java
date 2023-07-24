@@ -1006,6 +1006,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void endRequest() {
+        if (requestFullyReceivedTimeNanos == 0L) {
+            requestFullyReceived();
+        }
         endRequest0(null);
     }
 

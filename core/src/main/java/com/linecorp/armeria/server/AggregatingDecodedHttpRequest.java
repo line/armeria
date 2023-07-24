@@ -147,17 +147,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         if (obj instanceof HttpData) {
             ((HttpData) obj).touch(routingCtx);
             if (obj.isEndOfStream()) {
-                if (ctx != null) {
-                    ctx.logBuilder().requestFullyReceived();
-                }
                 close();
             }
         }
         if (obj instanceof HttpHeaders) {
             trailers = (HttpHeaders) obj;
-            if (ctx != null) {
-                ctx.logBuilder().requestFullyReceived();
-            }
             close();
         }
         return published;
@@ -214,5 +208,23 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public void close() {
+        logRequestFullyReceivedTiming();
+        super.close();
+    }
+
+    @Override
+    public void close(Throwable cause) {
+        logRequestFullyReceivedTiming();
+        super.close(cause);
+    }
+
+    private void logRequestFullyReceivedTiming() {
+        if (ctx != null) {
+            ctx.logBuilder().requestFullyReceived();
+        }
     }
 }
