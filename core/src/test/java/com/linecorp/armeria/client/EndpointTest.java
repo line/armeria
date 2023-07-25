@@ -38,8 +38,6 @@ import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
-import com.linecorp.armeria.common.util.OsType;
-import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
 
 import io.netty.util.AttributeKey;
@@ -593,11 +591,7 @@ class EndpointTest {
 
         // DomainSocketAddress (Armeria)
         assertThat(Endpoint.of(DomainSocketAddress.of("/foo.sock"))).satisfies(e -> {
-            if (SystemInfo.osType() == OsType.WINDOWS) {
-                assertThat(e.host()).isEqualTo("unix%3A%5Cfoo.sock");
-            } else {
-                assertThat(e.host()).isEqualTo("unix%3A%2Ffoo.sock");
-            }
+            assertThat(e.host()).isEqualTo("unix%3A%2Ffoo.sock");
             assertThat(e.isDomainSocket()).isTrue();
             assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
             assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
@@ -605,11 +599,7 @@ class EndpointTest {
 
         // DomainSocketAddress (Netty)
         assertThat(Endpoint.of(new io.netty.channel.unix.DomainSocketAddress("/bar.sock"))).satisfies(e -> {
-            if (SystemInfo.osType() == OsType.WINDOWS) {
-                assertThat(e.host()).isEqualTo("unix%3A%5Cbar.sock");
-            } else {
-                assertThat(e.host()).isEqualTo("unix%3A%2Fbar.sock");
-            }
+            assertThat(e.host()).isEqualTo("unix%3A%2Fbar.sock");
             assertThat(e.isDomainSocket()).isTrue();
             assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
             assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
