@@ -70,8 +70,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.observation.ObservationService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import brave.ScopedSpan;
@@ -85,6 +83,8 @@ import brave.propagation.ThreadLocalCurrentTraceContext;
 import brave.propagation.TraceContext;
 import brave.sampler.Sampler;
 import io.micrometer.observation.ObservationRegistry;
+import testing.thrift.main.HelloService;
+import testing.thrift.main.HelloService.AsyncIface;
 
 class BraveIntegrationTest {
 
@@ -353,7 +353,9 @@ class BraveIntegrationTest {
         assertThat(clientFooSpan.tags().get("http.host")).startsWith("127.0.0.1");
 
         // Check the span names.
-        assertThat(spans).allMatch(s -> "hello".equals(s.name()));
+        assertThat(spans).allMatch(
+                s -> "testing.thrift.main.HelloService$AsyncIface/hello".equals(s.name()) ||
+                     "testing.thrift.main.HelloService$Iface/hello".equals(s.name()));
 
         // Check wire times
         final long clientStartTime = clientFooSpan.startTimestamp();
@@ -429,7 +431,8 @@ class BraveIntegrationTest {
         assertThat(serviceQuxSpan.localServiceName()).isEqualTo("service/qux");
 
         // Check the span names.
-        assertThat(spans).allMatch(s -> "hello".equals(s.name()));
+        assertThat(spans).allMatch(
+                s -> "testing.thrift.main.HelloService$AsyncIface/hello".equals(s.name()));
     }
 
     @Test

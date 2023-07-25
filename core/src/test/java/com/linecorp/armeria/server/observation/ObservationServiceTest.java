@@ -65,8 +65,6 @@ class ObservationServiceTest {
 
     private static final String TEST_SERVICE = "test-service";
 
-    private static final String TEST_METHOD = "hello";
-
     @AfterEach
     public void tearDown() {
         Tracing.current().close();
@@ -90,7 +88,7 @@ class ObservationServiceTest {
 
         // check span name
         final MutableSpan span = collector.spans().take();
-        assertThat(span.name()).isEqualTo(TEST_METHOD);
+        assertThat(span.name()).isEqualTo(requestLog.fullName());
 
         // check kind
         assertThat(span.kind()).isSameAs(Kind.SERVER);
@@ -211,7 +209,7 @@ class ObservationServiceTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
         final ServiceRequestContext ctx = ServiceRequestContext.builder(req).build();
-        final RpcRequest rpcReq = RpcRequest.of(Object.class, "hello", "trustin");
+        final RpcRequest rpcReq = RpcRequest.of(ObservationServiceTest.class, "hello", "trustin");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, trustin!");
         final RequestLogBuilder logBuilder = ctx.logBuilder();
