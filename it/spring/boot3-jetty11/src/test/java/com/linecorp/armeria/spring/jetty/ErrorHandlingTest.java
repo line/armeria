@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.tomcat;
+package com.linecorp.armeria.spring.jetty;
 
-import static com.linecorp.armeria.spring.tomcat.MatrixVariablesTest.TOMCAT_BASE_PATH;
+import static com.linecorp.armeria.spring.jetty.MatrixVariablesTest.JETTY_BASE_PATH;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,20 +41,21 @@ class ErrorHandlingTest {
     @Inject
     private TestRestTemplate restTemplate;
 
-    private static String tomcatBaseUrlPath(int port) {
-        return "http://localhost:" + port + TOMCAT_BASE_PATH;
+    private static String jettyBaseUrlPath(int port) {
+        return "http://localhost:" + port + JETTY_BASE_PATH;
     }
 
     @ParameterizedTest
     @CsvSource({
-            "/error-handling/runtime-exception, 500, runtime exception",
+            "/error-handling/runtime-exception, 500, jakarta.servlet.ServletException: " +
+            "Request processing failed: java.lang.RuntimeException: runtime exception",
             "/error-handling/custom-exception, 404, custom not found",
             "/error-handling/exception-handler, 500, exception handler",
             "/error-handling/global-exception-handler, 500, global exception handler"
     })
     void shouldReturnFormattedMessage(String path, int status, String message) throws Exception {
         final ResponseEntity<String> response =
-                restTemplate.getForEntity(tomcatBaseUrlPath(port) + path, String.class);
+                restTemplate.getForEntity(jettyBaseUrlPath(port) + path, String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.valueOf(status));
         assertThatJson(response.getBody()).node("status").isEqualTo(status);
         assertThatJson(response.getBody()).node("message").isEqualTo(message);

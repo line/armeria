@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 
@@ -25,6 +26,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class ExactPathMapping extends AbstractPathMapping {
@@ -38,6 +40,10 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     private ExactPathMapping(String prefix, String exactPath) {
+        if (!Flags.allowSemicolonInPathComponent()) {
+            checkArgument(prefix.indexOf(';') < 0, "prefix: %s (expected not to have a ';')", prefix);
+            checkArgument(exactPath.indexOf(';') < 0, "exactPath: %s (expected not to have a ';')", exactPath);
+        }
         this.prefix = prefix;
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         paths = ImmutableList.of(exactPath, exactPath);

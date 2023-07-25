@@ -1,0 +1,23 @@
+armeria:
+  ports:
+    - port: 0
+      protocols: HTTP
+
+management:
+  server:
+    port: 0
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+      base-path: /internal/actuator
+  endpoint:
+    health:
+      group:
+        foo:
+          include: ping
+          additional-path: "management:/foohealth"
+        bar:
+          include: ping
+          additional-path: "server:/barhealth"
+
