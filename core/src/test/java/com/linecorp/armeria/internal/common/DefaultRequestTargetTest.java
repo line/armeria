@@ -349,7 +349,7 @@ class DefaultRequestTargetTest {
         // Not allowed
         assertAccepted(forServer("/foo;a=b?c=d;e=f"), "/foo", "c=d;e=f");
         // Allowed.
-        assertAccepted(forServer("/foo;a=b?c=d;e=f", true), "/foo;a=b", "c=d;e=f");
+        assertAccepted(forServer("/;a=b?c=d;e=f", true), "/;a=b", "c=d;e=f");
         // '%3B' should never be decoded into ';'.
         assertAccepted(forServer("/%3B?a=b%3Bc=d"), "/%3B", "a=b%3Bc=d");
     }
@@ -639,7 +639,20 @@ class DefaultRequestTargetTest {
                 "/foo%2f..", "/foo%2f../", "/foo/..%2f", "/foo%2F..%2F",
 
                 // Dots and slashes escaped
-                ".%2E%2F"
+                ".%2E%2F",
+
+                // With matrix variables
+                "..;a=b", "/..;a=b",
+                "..;a=b/foo", "/..;a=b/foo",
+                "foo/..;a=b", "/foo/..;a=b",
+                "foo/..;a=b/", "/foo/..;a=b/",
+                "foo/..;a=b/bar", "/foo/..;a=b/bar",
+                ".%2e;a=b", "/.%2e;a=b", "%2E.;a=b/", "/%2E.;a=b/", ".%2E;a=b/", "/.%2E;a=b/",
+                "foo/.%2e;a=b", "/foo/.%2e;a=b",
+                "foo/%2E.;a=b/", "/foo/%2E.;a=b/",
+                "foo/%2E.;a=b/bar", "/foo/%2E.;a=b/bar",
+                "%2f..;a=b", "..;a=b%2F", "/..;a=b%2F", "%2F..;a=b/", "%2f..;a=b%2f",
+                "/foo%2f..;a=b", "/foo%2f..;a=b/", "/foo/..;a=b%2f", "/foo%2F..;a=b%2F"
         );
     }
 
