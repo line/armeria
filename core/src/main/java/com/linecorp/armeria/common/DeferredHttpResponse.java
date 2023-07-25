@@ -16,14 +16,10 @@
 
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -33,15 +29,10 @@ import io.netty.util.concurrent.EventExecutor;
  */
 final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
 
-    @Nullable
-    private final EventExecutor executor;
-
-    DeferredHttpResponse() {
-        executor = null;
-    }
+    DeferredHttpResponse() {}
 
     DeferredHttpResponse(EventExecutor executor) {
-        this.executor = executor;
+        super(executor);
     }
 
     void delegate(HttpResponse delegate) {
@@ -49,25 +40,7 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
     }
 
     void delegateWhenComplete(CompletionStage<? extends HttpResponse> stage) {
-        requireNonNull(stage, "stage");
-        stage.handle((delegate, thrown) -> {
-            if (thrown != null) {
-                close(Exceptions.peel(thrown));
-            } else if (delegate == null) {
-                close(new NullPointerException("delegate stage produced a null response: " + stage));
-            } else {
-                delegate(delegate);
-            }
-            return null;
-        });
-    }
-
-    @Override
-    public EventExecutor defaultSubscriberExecutor() {
-        if (executor != null) {
-            return executor;
-        }
-        return super.defaultSubscriberExecutor();
+        delegateOnCompletion(stage);
     }
 
     @SuppressWarnings("unchecked")

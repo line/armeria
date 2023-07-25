@@ -35,7 +35,8 @@ class WebSocketServiceConfigTest {
         ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(
                 WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS);
-        assertThat(serviceConfig.maxRequestLength()).isEqualTo(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH);
+        assertThat(serviceConfig.maxRequestLength()).isEqualTo(
+                WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH);
         assertThat(serviceConfig.requestAutoAbortDelayMillis()).isEqualTo(
                 WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS);
 
@@ -48,7 +49,8 @@ class WebSocketServiceConfigTest {
         assertThat(server.config().serviceConfigs()).hasSize(1);
         serviceConfig = server.config().serviceConfigs().get(0);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(2000);
-        assertThat(serviceConfig.maxRequestLength()).isEqualTo(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH);
+        assertThat(serviceConfig.maxRequestLength()).isEqualTo(
+                WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH);
         assertThat(serviceConfig.requestAutoAbortDelayMillis()).isEqualTo(1000);
     }
 }
