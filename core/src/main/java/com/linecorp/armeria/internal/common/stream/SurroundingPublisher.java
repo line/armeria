@@ -322,7 +322,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         private void publishDownstream(T item, boolean head) {
             requireNonNull(item, "item");
             if (state == State.DONE) {
-                PooledObjects.close(item);
+                StreamMessageUtil.closeOrAbort(item);
                 return;
             }
             downstream.onNext(item);
