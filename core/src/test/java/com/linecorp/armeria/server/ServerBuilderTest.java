@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
@@ -683,5 +684,22 @@ class ServerBuilderTest {
                       .unhandledExceptionsReportIntervalMillis(-1000)
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
+    }
+
+    @Test
+    void multipleDomainSocketAddresses() {
+        final Server server = Server.builder()
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .http(DomainSocketAddress.of("/tmp/foo"))
+                                    .http(DomainSocketAddress.of("/tmp/bar"))
+                                    .https(DomainSocketAddress.of("/tmp/foo"))
+                                    .https(DomainSocketAddress.of("/tmp/bar"))
+                                    .tlsSelfSigned()
+                                    .build();
+        assertThat(server.config().ports()).containsExactly(
+                new ServerPort(DomainSocketAddress.of("/tmp/foo"),
+                               SessionProtocol.HTTP, SessionProtocol.HTTPS),
+                new ServerPort(DomainSocketAddress.of("/tmp/bar"),
+                               SessionProtocol.HTTP, SessionProtocol.HTTPS));
     }
 }
