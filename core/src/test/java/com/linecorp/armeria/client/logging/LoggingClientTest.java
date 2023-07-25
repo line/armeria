@@ -50,7 +50,7 @@ import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
 
 class LoggingClientTest {
-    private static final HttpClient delegate = (ctx, req) -> {
+    static final HttpClient delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
         return HttpResponse.of(HttpStatus.NO_CONTENT);
