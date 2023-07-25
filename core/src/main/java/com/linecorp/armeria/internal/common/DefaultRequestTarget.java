@@ -349,7 +349,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         }
 
         // Reject the prohibited patterns.
-        if (pathContainsDoubleDots(path)) {
+        if (pathContainsDoubleDots(path, allowSemicolonInPathComponent)) {
             return null;
         }
         if (!allowDoubleDotsInQueryString && queryContainsDoubleDots(query)) {
@@ -759,7 +759,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         return true;
     }
 
-    private static boolean pathContainsDoubleDots(Bytes path) {
+    private static boolean pathContainsDoubleDots(Bytes path, boolean allowSemicolonInPathComponent) {
         final int length = path.length;
         byte b0 = 0;
         byte b1 = 0;
@@ -767,7 +767,8 @@ public final class DefaultRequestTarget implements RequestTarget {
         for (int i = 1; i < length; i++) {
             final byte b3 = path.data[i];
             // Flag if the last four bytes are `/../`.
-            if (b1 == '.' && b2 == '.' && isSlash(b0) && isSlash(b3)) {
+            if (b1 == '.' && b2 == '.' && isSlash(b0) &&
+                (isSlash(b3) || (!allowSemicolonInPathComponent && b3 == ';'))) {
                 return true;
             }
             b0 = b1;
