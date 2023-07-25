@@ -61,7 +61,7 @@ final class DefaultServiceObservationConvention implements ObservationConvention
                 serializationFormat = LowCardinalityKeys.HTTP_SERIALIZATION_FORMAT.withValue(serFmt);
             }
         }
-        ImmutableList.Builder<KeyValue> builder = ImmutableList.builderWithExpectedSize(expectedSize);
+        final ImmutableList.Builder<KeyValue> builder = ImmutableList.builderWithExpectedSize(expectedSize);
         builder.add(LowCardinalityKeys.HTTP_METHOD.withValue(ctx.method().name()));
         addIfNotNull(protocol, builder);
         addIfNotNull(statusCode, builder);
@@ -104,9 +104,10 @@ final class DefaultServiceObservationConvention implements ObservationConvention
                 error = HighCardinalityKeys.ERROR.withValue(log.responseStatus().codeAsText());
             }
         }
-        ImmutableList.Builder<KeyValue> builder = ImmutableList.builderWithExpectedSize(expectedSize);
+        final ImmutableList.Builder<KeyValue> builder = ImmutableList.builderWithExpectedSize(expectedSize);
         builder.add(HighCardinalityKeys.HTTP_PATH.withValue(ctx.path()),
-                    HighCardinalityKeys.HTTP_HOST.withValue(firstNonNull(context.httpRequest().authority(), "UNKNOWN")),
+                    HighCardinalityKeys.HTTP_HOST.withValue(firstNonNull(context.httpRequest().authority(),
+                                                                         "UNKNOWN")),
                     HighCardinalityKeys.HTTP_URL.withValue(ctx.uri().toString()));
         addIfNotNull(addressRemote, builder);
         addIfNotNull(addressLocal, builder);

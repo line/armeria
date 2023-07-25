@@ -131,8 +131,9 @@ public final class ObservationClient extends SimpleDecoratingHttpClient {
         return observation.scopedChecked(() -> unwrap().execute(ctx, newReq));
     }
 
-    private static void enrichObservation(ClientRequestContext ctx, ClientObservationContext clientObservationContext,
-                                   Observation observation) {
+    private static void enrichObservation(ClientRequestContext ctx,
+                                          ClientObservationContext clientObservationContext,
+                                          Observation observation) {
         if (observation.isNoop()) {
             // For no-op spans, we only need to inject into headers and don't set any other attributes.
             return;

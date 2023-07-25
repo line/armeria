@@ -133,7 +133,8 @@ public final class ObservationService extends SimpleDecoratingHttpService {
         return observation.scopedChecked(() -> unwrap().serve(ctx, req));
     }
 
-    private void enrichObservation(ServiceRequestContext ctx, ServiceObservationContext serviceObservationContext,
+    private void enrichObservation(ServiceRequestContext ctx,
+                                   ServiceObservationContext serviceObservationContext,
                                    Observation observation) {
         if (observation.isNoop()) {
             // For no-op spans, we only need to inject into headers and don't set any other attributes.
@@ -142,7 +143,8 @@ public final class ObservationService extends SimpleDecoratingHttpService {
 
         ctx.log()
            .whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
-           .thenAccept(requestLog -> observation.event(HttpServiceObservationDocumentation.Events.WIRE_RECEIVE));
+           .thenAccept(requestLog -> observation.event(
+                   HttpServiceObservationDocumentation.Events.WIRE_RECEIVE));
 
         ctx.log()
            .whenAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME)
