@@ -50,6 +50,8 @@ jobs:
       - name: Perform post-release process
         working-directory: .github/actions
         run: |
+          export NVM_DIR=~/.nvm
+          source ~/.nvm/nvm.sh
           npm install
           npm run post-release ${{ github.ref_name }}
         env:
