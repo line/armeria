@@ -38,8 +38,8 @@ import com.linecorp.armeria.internal.common.observation.MicrometerObservationReg
 import com.linecorp.armeria.internal.common.observation.SpanCollector;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.observation.ServiceObservationContext;
 import com.linecorp.armeria.server.observation.ObservationService;
+import com.linecorp.armeria.server.observation.ServiceObservationContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import brave.Tracing;

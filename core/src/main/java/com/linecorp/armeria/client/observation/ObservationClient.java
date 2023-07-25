@@ -109,7 +109,8 @@ public final class ObservationClient extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
-        final ClientObservationContext clientObservationContext = new ClientObservationContext(ctx, newHeaders, req);
+        final ClientObservationContext clientObservationContext =
+                new ClientObservationContext(ctx, newHeaders, req);
         final Observation observation = HttpClientObservationDocumentation.OBSERVATION.observation(
                 httpClientObservationConvention, DefaultHttpClientObservationConvention.INSTANCE,
                 () -> clientObservationContext, observationRegistry).start();
