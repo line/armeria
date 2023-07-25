@@ -153,6 +153,7 @@ includeWithFlags ':it:nio',                                    'java', 'relocate
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
+includeWithFlags ':it:spring:boot3-jetty11',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-mixed-tomcat10',            'java17', 'relocate'
