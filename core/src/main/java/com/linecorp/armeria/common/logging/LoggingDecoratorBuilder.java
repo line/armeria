@@ -84,6 +84,18 @@ public abstract class LoggingDecoratorBuilder {
     private boolean buildLogWriter;
 
     /**
+     * Sets the logger that is used when neither {@link #logWriter(LogWriter)} nor {@link #logger(Logger)}
+     * is set.
+     */
+    protected LoggingDecoratorBuilder defaultLogger(Logger logger) {
+        requireNonNull(logger, "logger");
+        if (this.logger == null) {
+            this.logger = logger;
+        }
+        return this;
+    }
+
+    /**
      * Sets the {@link Logger} to use when logging.
      * If unset, a default {@link Logger} will be used.
      *
@@ -544,7 +556,11 @@ public abstract class LoggingDecoratorBuilder {
             return logWriter;
         }
         if (!buildLogWriter) {
-            return LogWriter.of();
+            if (logger != null) {
+                return LogWriter.of(logger);
+            } else {
+                return LogWriter.of();
+            }
         }
         final LogFormatter logFormatter =
                 LogFormatter.builderForText()
@@ -560,6 +576,7 @@ public abstract class LoggingDecoratorBuilder {
         if (logger != null) {
             builder.logger(logger);
         }
+
         if (requestLogLevelMapper != null) {
             builder.requestLogLevelMapper(requestLogLevelMapper);
         }
