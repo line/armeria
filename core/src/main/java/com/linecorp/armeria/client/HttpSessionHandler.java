@@ -65,8 +65,7 @@ import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWritte
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyConnectionEvent;
-import io.netty.handler.ssl.SslCloseCompletionEvent;
-import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.ssl.SslCompletionEvent;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
@@ -433,9 +432,26 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
+        if (evt instanceof SslCompletionEvent) {
+            final SslCompletionEvent sslCompletionEvent = (SslCompletionEvent) evt;
+            if (sslCompletionEvent.isSuccess()) {
+                // Expected event
+            } else {
+                Throwable handshakeException = sslCompletionEvent.cause();
+                final Throwable pendingException = getPendingException(ctx);
+                if (pendingException != null && handshakeException != pendingException) {
+                    // Use pendingException as the primary cause.
+                    pendingException.addSuppressed(handshakeException);
+                    handshakeException = pendingException;
+                }
+                sessionTimeoutFuture.cancel(false);
+                sessionPromise.tryFailure(handshakeException);
+                ctx.close();
+            }
+            return;
+        }
+
         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent ||
-            evt instanceof SslHandshakeCompletionEvent ||
-            evt instanceof SslCloseCompletionEvent ||
             evt instanceof ChannelInputShutdownReadComplete) {
             // Expected events
             return;
@@ -479,7 +495,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final HttpResponseDecoder responseDecoder = this.responseDecoder;
             final Throwable pendingException;
             if (responseDecoder != null && responseDecoder.hasUnfinishedResponses()) {
-                pendingException = getPendingException(ctx);
+                pendingException = maybeGetPendingException(ctx);
                 responseDecoder.failUnfinishedResponses(pendingException);
             } else {
                 pendingException = null;
@@ -490,7 +506,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             sessionTimeoutFuture.cancel(false);
             if (!sessionPromise.isDone()) {
                 sessionPromise.tryFailure(pendingException != null ? pendingException
-                                                                   : getPendingException(ctx));
+                                                                   : maybeGetPendingException(ctx));
             }
         }
     }
@@ -512,12 +528,21 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
     }
 
+    private static Throwable maybeGetPendingException(ChannelHandlerContext ctx) {
+        final Throwable pendingException = getPendingException(ctx);
+        if (pendingException != null) {
+            return pendingException;
+        }
+        return ClosedSessionException.get();
+    }
+
+    @Nullable
     private static Throwable getPendingException(ChannelHandlerContext ctx) {
         if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
             return ctx.channel().attr(PENDING_EXCEPTION).get();
         }
 
-        return ClosedSessionException.get();
+        return null;
     }
 
     static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {

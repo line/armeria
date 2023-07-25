@@ -18,6 +18,9 @@ package com.linecorp.armeria.client.websocket;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -133,10 +136,11 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     }
 
     private void setWebSocketDefaultOption() {
-        responseTimeoutMillis(0);
-        maxResponseLength(0);
-        requestAutoAbortDelayMillis(5000);
+        responseTimeoutMillis(DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS);
+        maxResponseLength(DEFAULT_MAX_REQUEST_RESPONSE_LENGTH);
+        requestAutoAbortDelayMillis(DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS);
         autoFillOriginHeader(true);
+        contextCustomizer(ctx -> ctx.logBuilder().serializationFormat(SerializationFormat.WS));
     }
 
     /**

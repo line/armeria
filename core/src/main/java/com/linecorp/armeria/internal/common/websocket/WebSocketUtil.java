@@ -35,6 +35,9 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 public final class WebSocketUtil {
 
     private static final String MAGIC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    public static final long DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS = 0;
+    public static final long DEFAULT_MAX_REQUEST_RESPONSE_LENGTH = 0;
+    public static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS = 5000;
 
     public static boolean isHttp1WebSocketUpgradeRequest(RequestHeaders headers) {
         requireNonNull(headers, "headers");

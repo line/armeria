@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -45,12 +44,10 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
@@ -61,7 +58,7 @@ import io.netty.util.internal.PlatformDependent;
 
 final class DefaultWebSocketClient implements WebSocketClient {
 
-    static final WebSocketClient DEFAULT = new DefaultWebSocketClient();
+    static final WebSocketClient DEFAULT = WebSocketClient.of(UNDEFINED_URI);
 
     private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
 
@@ -70,19 +67,6 @@ final class DefaultWebSocketClient implements WebSocketClient {
     private final boolean allowMaskMismatch;
     private final List<String> subprotocols;
     private final String joinedSubprotocols;
-
-    DefaultWebSocketClient() {
-        webClient = WebClient.builder(UNDEFINED_URI)
-                             .responseTimeoutMillis(0)
-                             .maxResponseLength(0)
-                             .requestAutoAbortDelayMillis(5000)
-                             .option(ClientOptions.AUTO_FILL_ORIGIN_HEADER, true)
-                             .build();
-        maxFramePayloadLength = WebSocketClientBuilder.DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
-        allowMaskMismatch = false;
-        subprotocols = ImmutableList.of();
-        joinedSubprotocols = "";
-    }
 
     DefaultWebSocketClient(WebClient webClient, int maxFramePayloadLength, boolean allowMaskMismatch,
                            List<String> subprotocols) {
@@ -106,9 +90,7 @@ final class DefaultWebSocketClient implements WebSocketClient {
         final HttpRequest request = HttpRequest.of(requestHeaders, StreamMessage.of(outboundFuture));
         final HttpResponse response;
         final ClientRequestContext ctx;
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor();
-             SafeCloseable ignored = Clients.withContextCustomizer(
-                     cctx -> cctx.logBuilder().serializationFormat(SerializationFormat.WS))) {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             response = webClient.execute(request);
             ctx = captor.get();
         }
@@ -200,7 +182,7 @@ final class DefaultWebSocketClient implements WebSocketClient {
 
         if (!subprotocols.isEmpty()) {
             final String responseSubprotocol = responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
-            // null is allowd if the server does not agree to any of the client's requested
+            // null is allowed if the server does not agree to any of the client's requested
             // subprotocols.
             // https://datatracker.ietf.org/doc/html/rfc6455#section-4.2.2
 

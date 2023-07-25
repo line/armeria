@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_result;
+import testing.thrift.main.HelloService.hello_args;
+import testing.thrift.main.HelloService.hello_result;
 
 class ThriftJacksonTest {
     private static final ObjectMapper defaultMapper = new ObjectMapper();

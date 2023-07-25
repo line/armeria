@@ -222,7 +222,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
-            private boolean handshakeFailed;
+            @Nullable
+            private Boolean handshakeFailed;
 
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -232,9 +233,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 }
 
                 final SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
-                if (!handshakeEvent.isSuccess()) {
+                handshakeFailed = !handshakeEvent.isSuccess();
+                if (handshakeFailed) {
                     // The connection will be closed automatically by SslHandler.
-                    handshakeFailed = true;
                     return;
                 }
 
@@ -281,6 +282,19 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                if (handshakeFailed == null) {
+                    // An exception was raised before the handshake event was completed.
+                    // A legacy HTTPS server such as Microsoft-IIS/8.5 may reset the connection
+                    // if no cipher suites in common.
+                    final String tlsVersion = sslHandler.engine().getSession().getProtocol();
+                    final IllegalStateException maybeHandshakeException = new IllegalStateException(
+                            "An unexpected exception during TLS handshake. " +
+                            "Possible reasons: no cipher suites in common, unsupported TLS version, etc. " +
+                            "(TLS version: " + tlsVersion + ", cipher suites: " + sslCtx.cipherSuites() + ')',
+                            cause);
+                    HttpSessionHandler.setPendingException(ctx, maybeHandshakeException);
+                    return;
+                }
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
