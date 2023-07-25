@@ -16,14 +16,18 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.google.common.collect.ImmutableList;
 
 import reactor.test.StepVerifier;
 
@@ -40,6 +44,35 @@ class HttpRequestTest {
                     .expectNext(HttpData.ofUtf8("c"))
                     .expectComplete()
                     .verify();
+    }
+
+    @Test
+    void createWithObject() {
+        final RequestContent requestContent = new RequestContent(1, "name", ImmutableList.of("a", "b", "c"));
+        final HttpRequest request = HttpRequest.ofJson(HttpMethod.POST, "/receiveContent", requestContent);
+        final String jsonText = "{\"id\":1,\"name\":\"name\",\"list\":[\"a\",\"b\",\"c\"]}";
+
+        assertThat(request.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        StepVerifier.create(request)
+                    .expectNext(HttpData.ofUtf8(jsonText))
+                    .expectComplete()
+                    .verify();
+
+        final RequestHeaders headersWithEmptyContentType = RequestHeaders.of(HttpMethod.POST, "/receiveContent")
+                                                                         .toBuilder().build();
+        final HttpRequest requestWithHeader = HttpRequest.ofJson(headersWithEmptyContentType, requestContent);
+        assertThat(requestWithHeader.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        StepVerifier.create(requestWithHeader)
+                    .expectNext(HttpData.ofUtf8(jsonText))
+                    .expectComplete()
+                    .verify();
+
+        final RequestHeaders headersWithInvalidContentType = RequestHeaders.of(HttpMethod.POST,
+                                                                               "/receiveContent")
+                                                                           .toBuilder().contentType(
+                        MediaType.PLAIN_TEXT_UTF_8).build();
+
+        assertThatThrownBy(() -> HttpRequest.ofJson(headersWithInvalidContentType, requestContent));
     }
 
     @Test
@@ -105,5 +138,32 @@ class HttpRequestTest {
                        data,
                        HttpHeaders.of("some-trailer", "value"));
         assertThat(data.refCnt()).isZero();
+    }
+
+    static class RequestContent {
+        private Integer id;
+        private String name;
+        private List<String> list;
+
+        RequestContent() {
+        }
+
+        RequestContent(Integer id, String name, List<String> list) {
+            this.id = id;
+            this.name = name;
+            this.list = list;
+        }
+
+        public Integer getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public List<String> getList() {
+            return list;
+        }
     }
 }
