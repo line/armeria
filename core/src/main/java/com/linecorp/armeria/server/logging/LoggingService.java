@@ -20,6 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.LogLevel;
@@ -35,6 +38,8 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  */
 public final class LoggingService extends SimpleDecoratingHttpService {
 
+    private static final Logger logger = LoggerFactory.getLogger(LoggingService.class);
+
     /**
      * Returns a new {@link HttpService} decorator that logs {@link HttpRequest}s and {@link HttpResponse}s at
      * {@link LogLevel#DEBUG} for success, {@link LogLevel#WARN} for failure. See {@link LoggingServiceBuilder}
@@ -48,7 +53,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
      * Returns a newly created {@link LoggingServiceBuilder}.
      */
     public static LoggingServiceBuilder builder() {
-        return new LoggingServiceBuilder();
+        return new LoggingServiceBuilder().defaultLogger(logger);
     }
 
     private final LogWriter logWriter;
