@@ -4,10 +4,14 @@ date: 2023-07-25
 
 ## 🛠️ Bug fixes
 
-- One more to be added.
+- The decorators work correctly even when the request path for a Spring controller contains
+  [matrix varialbes](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/matrix-variables.html). #xxx [CVE-2023-38493](https://github.com/line/armeria/security/advisories/GHSA-wvp2-9ppw-337j)
+  - Previously, when an Armeria decorator is used to decorate a Spring controller, the request bypassed the
+    decorator if the request path contains matrix variables.
 - As in versions prior to 1.24.0, the default logger for `LoggingService` is now
   `com.linecorp.armeria.server.logging.LoggingService`. #5056
   - The default logger for `LoggingClient` is also `com.linecorp.armeria.client.logging.LoggingClient`.
+- You can now specify a Unix domain socket path in abstract namespace. #5014 #5036
 
 ## 🙇 Thank you
 
