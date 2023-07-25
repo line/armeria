@@ -9,7 +9,7 @@ date: 2023-07-25
   - Previously, when an Armeria decorator is used to decorate a Spring controller, the request bypassed the
     decorator if the request path contains matrix variables.
   - You can use a regex for the decorator as a workaround before you upgrade Armeria.
-    - For example, `sb.serviceUnder("regex:^/prefix.*", decorator)` instead of `sb.serviceUnder("/prefix", decorator)`.
+    - For example, `sb.decoratorUnder("regex:^/prefix.*", decorator)` instead of `sb.decoratorUnder("/prefix", decorator)`.
 - Fixed a regression where the logger names of <type://LoggingService> and <type://LoggingClient> have
   changed since [1.24.0](/release-notes/1.24.0). #5056
 - You can now specify a Unix domain socket path in abstract namespace. #5014 #5036
