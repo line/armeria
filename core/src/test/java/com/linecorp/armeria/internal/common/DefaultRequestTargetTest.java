@@ -347,9 +347,9 @@ class DefaultRequestTargetTest {
     @Test
     void serverShouldRemoveMatrixVariablesWhenNotAllowed() {
         // Not allowed
-        assertAccepted(forServer("/;a=b?c=d;e=f"), "/", "c=d;e=f");
+        assertAccepted(forServer("/foo;a=b?c=d;e=f"), "/foo", "c=d;e=f");
         // Allowed.
-        assertAccepted(forServer("/;a=b?c=d;e=f", true), "/;a=b", "c=d;e=f");
+        assertAccepted(forServer("/foo;a=b?c=d;e=f", true), "/foo;a=b", "c=d;e=f");
         // '%3B' should never be decoded into ';'.
         assertAccepted(forServer("/%3B?a=b%3Bc=d"), "/%3B", "a=b%3Bc=d");
     }
