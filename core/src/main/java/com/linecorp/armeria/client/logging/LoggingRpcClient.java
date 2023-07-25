@@ -45,7 +45,7 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
      * See {@link LoggingRpcClientBuilder} for more information on the default settings.
      */
     public static Function<? super RpcClient, LoggingRpcClient> newDecorator() {
-        return new LoggingRpcClientBuilder().defaultLogger(logger).newDecorator();
+        return builder().newDecorator();
     }
 
     /**

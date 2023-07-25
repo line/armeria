@@ -46,7 +46,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
      * for more information on the default settings.
      */
     public static Function<? super HttpService, LoggingService> newDecorator() {
-        return new LoggingServiceBuilder().defaultLogger(logger).newDecorator();
+        return builder().newDecorator();
     }
 
     /**
