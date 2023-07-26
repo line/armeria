@@ -1,4 +1,4 @@
-namespace java com.linecorp.armeria.service.test.thrift.main
+namespace java testing.thrift.main
 
 // Tests a non-oneway method with a return value.
 service HelloService {
@@ -24,6 +24,15 @@ service TimeService {
 exception FileServiceException {}
 service FileService {
     void create(1:string path) throws (1:FileServiceException ouch)
+}
+
+// Tests required field.
+struct RequiredName {
+    1: required string first
+}
+
+service HelloRequiredNameService {
+    string hello(1:RequiredName name)
 }
 
 // Tests structs and lists.

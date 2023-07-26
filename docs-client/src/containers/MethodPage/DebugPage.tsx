@@ -106,11 +106,14 @@ const copyTextToClipboard = (text: string) => {
   const textArea = document.createElement('textarea');
   textArea.style.opacity = '0.0';
   textArea.value = text;
-  document.body.appendChild(textArea);
+
+  const modal = document.getElementById('debug-form')!;
+  modal.appendChild(textArea);
+
   textArea.focus();
   textArea.select();
   document.execCommand('copy');
-  document.body.removeChild(textArea);
+  modal.removeChild(textArea);
 };
 
 const toggle = (prev: boolean, override: unknown) => {
@@ -343,7 +346,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         } else {
           endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
           uri =
-            `'${host}${escapeSingleQuote(additionalPath)}'` +
+            `'${host}${escapeSingleQuote(additionalPath)}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         }
       } else if (additionalPath.length > 0) {

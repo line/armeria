@@ -32,6 +32,7 @@ import static com.linecorp.armeria.client.ClientFactoryOptions.METER_REGISTRY;
 import static com.linecorp.armeria.client.ClientFactoryOptions.SHUTDOWN_WORKER_GROUP_ON_CLOSE;
 import static com.linecorp.armeria.client.ClientFactoryOptions.USE_HTTP1_PIPELINING;
 import static com.linecorp.armeria.client.ClientFactoryOptions.USE_HTTP2_PREFACE;
+import static com.linecorp.armeria.client.ClientFactoryOptions.USE_HTTP2_WITHOUT_ALPN;
 import static com.linecorp.armeria.client.ClientFactoryOptions.WORKER_GROUP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -117,6 +118,7 @@ class ClientFactoryOptionsTest {
                     arguments(HTTP1_MAX_CHUNK_SIZE, 7),
                     arguments(IDLE_TIMEOUT_MILLIS, 8),
                     arguments(USE_HTTP2_PREFACE, true),
+                    arguments(USE_HTTP2_WITHOUT_ALPN, false),
                     arguments(USE_HTTP1_PIPELINING, false),
                     arguments(CONNECTION_POOL_LISTENER, ConnectionPoolListener.noop()),
                     arguments(METER_REGISTRY, Metrics.globalRegistry));

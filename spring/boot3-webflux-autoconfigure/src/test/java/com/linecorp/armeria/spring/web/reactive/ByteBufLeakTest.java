@@ -120,7 +120,7 @@ public class ByteBufLeakTest {
 
     @Test
     public void confirmNoBufferLeak() throws Exception {
-        assert allocatedBuffers.isEmpty();
+        assertThat(allocatedBuffers).isEmpty();
         final WebClient client = WebClient.of("http://127.0.0.1:" + port);
         for (int i = 0; i < 2; i++) {
             assertThat(client.get("/mono").aggregate().join().contentUtf8())
@@ -139,7 +139,7 @@ public class ByteBufLeakTest {
     @Test
     public void confirmNoBufferLeak_resetConnection() throws Exception {
         completed.set(0);
-        assert allocatedBuffers.isEmpty();
+        assertThat(allocatedBuffers).isEmpty();
 
         for (int i = 0; i < 2 * 3; i++) {
             try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {

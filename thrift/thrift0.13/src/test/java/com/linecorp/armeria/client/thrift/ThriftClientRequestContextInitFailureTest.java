@@ -35,7 +35,8 @@ import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
+
+import testing.thrift.main.HelloService;
 
 class ThriftClientRequestContextInitFailureTest {
     @Test

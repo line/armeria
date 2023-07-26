@@ -61,7 +61,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         final RequestTarget reqTarget = RequestTarget.forClient(originalPath, prefix);
         if (reqTarget == null) {
             return abortRequestAndReturnFailureResponse(
-                    req, new IllegalArgumentException("Invalid path: " + originalPath));
+                    req, new IllegalArgumentException("Invalid request target: " + originalPath));
         }
 
         final EndpointGroup endpointGroup;

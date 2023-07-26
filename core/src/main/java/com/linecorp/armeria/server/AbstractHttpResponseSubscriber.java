@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -329,12 +330,11 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
 
     private void succeed() {
         if (tryComplete(null)) {
-            final Throwable capturedException = CapturedServiceException.get(reqCtx);
-            if (capturedException != null) {
-                endLogRequestAndResponse(capturedException);
-            } else {
-                endLogRequestAndResponse();
+            Throwable cause = null;
+            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                cause = reqCtx.log().ensureAvailable(RequestLogProperty.RESPONSE_CAUSE).responseCause();
             }
+            endLogRequestAndResponse(cause);
             maybeWriteAccessLog();
         }
     }

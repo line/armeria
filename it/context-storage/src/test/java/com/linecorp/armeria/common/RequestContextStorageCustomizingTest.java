@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.common.CustomRequestContextStorageProvider.CustomRequestContextStorage;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
@@ -35,7 +36,8 @@ import io.netty.channel.EventLoop;
 class RequestContextStorageCustomizingTest {
 
     @RegisterExtension
-    static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
+    static final EventLoopExtension eventLoopExtension = new EventLoopExtension(
+            ThreadFactories.newThreadFactory("armeria-testing-eventloop", false));
 
     @Test
     void requestContextStorageDoesNotAffectOtherThread() throws InterruptedException {

@@ -109,6 +109,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerPipelineConfigurator.class);
 
     private static final int SSL_RECORD_HEADER_LENGTH = 5;
+    private static final int MAX_CLIENT_HELLO_LENGTH = 4096; // 4KiB should be more than enough.
 
     private static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
     private static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
@@ -157,6 +158,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingHandler.INSTANCE);
         configurePipeline(p, port.protocols(), null);
+        config.childChannelPipelineCustomizer().accept(p);
     }
 
     private void configurePipeline(ChannelPipeline p, Set<SessionProtocol> protocols,
@@ -230,7 +232,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final Mapping<String, SslContext> sslContexts =
                 requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
-        p.addLast(new SniHandler(sslContexts));
+        p.addLast(new SniHandler(sslContexts, MAX_CLIENT_HELLO_LENGTH, config.idleTimeoutMillis()));
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
     }

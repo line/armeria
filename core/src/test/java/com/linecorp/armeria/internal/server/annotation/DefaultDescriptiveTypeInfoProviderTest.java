@@ -69,6 +69,9 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class DefaultDescriptiveTypeInfoProviderTest {
 
+    private static final String RESOURCE_PATH_PREFIX =
+            "/testing/core/" + DefaultDescriptiveTypeInfoProviderTest.class.getSimpleName() + '/';
+
     private static final JsonMapper json5Mapper =
             JsonMapper.builder()
                       .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature())
@@ -250,7 +253,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
                                         .content();
 
         final InputStream resourceAsStream = DefaultDescriptiveTypeInfoProviderTest.class.getResourceAsStream(
-                "ReflectiveDescriptiveTypeInfoProviderTest_specification.json5");
+                RESOURCE_PATH_PREFIX + "ReflectiveDescriptiveTypeInfoProviderTest_specification.json5");
         final JsonNode expected = json5Mapper.readTree(resourceAsStream);
 
         assertThat(response.get("services").get(0).get("name").textValue())
@@ -270,7 +273,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
                                         .execute()
                                         .content();
         final InputStream resourceAsStream = DefaultDescriptiveTypeInfoProviderTest.class.getResourceAsStream(
-                "JsonDescriptiveTypeInfoProviderTest_specification.json5");
+                RESOURCE_PATH_PREFIX + "JsonDescriptiveTypeInfoProviderTest_specification.json5");
         final JsonNode expected = json5Mapper.readTree(resourceAsStream);
 
         assertThat(response.get("services").get(0).get("name").textValue())

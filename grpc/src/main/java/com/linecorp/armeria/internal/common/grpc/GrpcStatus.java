@@ -45,6 +45,7 @@ import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -122,7 +123,9 @@ public final class GrpcStatus {
         if (t instanceof ClosedStreamException || t instanceof RequestTimeoutException) {
             return Status.CANCELLED.withCause(t);
         }
-        if (t instanceof UnprocessedRequestException || t instanceof IOException) {
+        if (t instanceof UnprocessedRequestException ||
+            t instanceof IOException ||
+            t instanceof FailFastException) {
             return Status.UNAVAILABLE.withCause(t);
         }
         if (t instanceof Http2Exception) {

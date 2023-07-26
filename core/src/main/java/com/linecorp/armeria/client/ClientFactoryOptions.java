@@ -204,6 +204,14 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("USE_HTTP2_PREFACE", Flags.defaultUseHttp2Preface());
 
     /**
+     * Whether to use HTTP/2 without ALPN. This is useful if you want to communicate with an HTTP/2
+     * server over TLS but the server does not support ALPN.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Boolean> USE_HTTP2_WITHOUT_ALPN =
+            ClientFactoryOption.define("USE_HTTP2_WITHOUT_ALPN", Flags.defaultUseHttp2WithoutAlpn());
+
+    /**
      * Whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
      * HTTP/1 connections.
      */
@@ -489,6 +497,14 @@ public final class ClientFactoryOptions
      */
     public boolean useHttp2Preface() {
         return get(USE_HTTP2_PREFACE);
+    }
+
+    /**
+     * Returns whether to use HTTP/2 over TLS without ALPN.
+     */
+    @UnstableApi
+    public boolean useHttp2WithoutAlpn() {
+        return get(USE_HTTP2_WITHOUT_ALPN);
     }
 
     /**

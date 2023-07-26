@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -60,7 +61,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
     ArmeriaServerHttpRequest(ServiceRequestContext ctx,
                              HttpRequest req,
                              DataBufferFactoryWrapper<?> factoryWrapper) {
-        super(uri(req), null, springHeaders(req.headers()));
+        super(uri(ctx, req), null, springHeaders(req.headers()));
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = req;
 
@@ -76,13 +77,18 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
         return springHeaders;
     }
 
-    private static URI uri(HttpRequest req) {
+    private static URI uri(ServiceRequestContext ctx, HttpRequest req) {
         final String scheme = req.scheme();
         final String authority = req.authority();
         // Server side Armeria HTTP request always has the scheme and authority.
         assert scheme != null;
         assert authority != null;
-        return URI.create(scheme + "://" + authority + req.path());
+        final RequestTarget requestTarget = ctx.routingContext().requestTarget();
+        String path = requestTarget.maybePathWithMatrixVariables();
+        if (requestTarget.query() != null) {
+            path = path + '?' + requestTarget.query();
+        }
+        return URI.create(scheme + "://" + authority + path);
     }
 
     @Override

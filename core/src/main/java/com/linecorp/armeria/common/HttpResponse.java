@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.HttpResponseUtil.createHttpResponseFrom;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
@@ -85,11 +86,31 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
      */
+    //TODO(minwoox): Rename this to 'of' for consistency.
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        res.delegateWhenComplete(stage);
-        return res;
+
+        if (stage instanceof CompletableFuture) {
+            return createHttpResponseFrom((CompletableFuture<? extends HttpResponse>) stage);
+        } else {
+            final DeferredHttpResponse res = new DeferredHttpResponse();
+            res.delegateWhenComplete(stage);
+            return res;
+        }
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned response
+     * will be closed with the same cause as well.
+     *
+     * @param future the {@link CompletableFuture} which will produce the actual {@link HttpResponse}
+     *
+     * @deprecated Use {@link #from(CompletionStage, EventExecutor)}.
+     */
+    @Deprecated
+    static HttpResponse from(CompletableFuture<? extends HttpResponse> future) {
+        return createHttpResponseFrom(future);
     }
 
     /**
@@ -106,6 +127,7 @@ public interface HttpResponse extends Response, HttpMessage {
                              EventExecutor subscriberExecutor) {
         requireNonNull(stage, "stage");
         requireNonNull(subscriberExecutor, "subscriberExecutor");
+        // Have to use DeferredHttpResponse to use the subscriberExecutor.
         final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
         res.delegateWhenComplete(stage);
         return res;

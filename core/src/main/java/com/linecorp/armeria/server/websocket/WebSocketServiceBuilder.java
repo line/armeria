@@ -28,9 +28,21 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceConfig;
 
 /**
  * Builds a {@link WebSocketService}.
+ * This service has the different default configs from a normal {@link HttpService}. Here are the differences:
+ * <ul>
+ *   <li>{@link ServiceConfig#requestTimeoutMillis()} is
+ *       {@value WebSocketUtil#DEFAULT_REQUEST_TIMEOUT_MILLIS}.</li>
+ *   <li>{@link ServiceConfig#maxRequestLength()} is
+ *       {@value WebSocketUtil#DEFAULT_MAX_REQUEST_LENGTH}.</li>
+ *   <li>{@link ServiceConfig#requestAutoAbortDelayMillis()} is
+ *       {@value WebSocketUtil#DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS}.</li>
+ * </ul>
  */
 @UnstableApi
 public final class WebSocketServiceBuilder {
@@ -41,14 +53,14 @@ public final class WebSocketServiceBuilder {
 
     static final int DEFAULT_MAX_FRAME_PAYLOAD_LENGTH = 65535; // 64 * 1024 -1
 
-    private final WebSocketHandler handler;
+    private final WebSocketServiceHandler handler;
 
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
 
-    WebSocketServiceBuilder(WebSocketHandler handler) {
+    WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
     }
 

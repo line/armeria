@@ -229,6 +229,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultUseHttp2WithoutAlpn() {
+        return getBoolean("defaultUseHttp2WithoutAlpn");
+    }
+
+    @Override
     public Boolean defaultUseHttp1Pipelining() {
         return getBoolean("defaultUseHttp1Pipelining");
     }
@@ -296,6 +301,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Integer defaultMaxTotalAttempts() {
         return getInt("defaultMaxTotalAttempts");
+    }
+
+    @Override
+    public @Nullable Long defaultRequestAutoAbortDelayMillis() {
+        return getLong("defaultRequestAutoAbortDelayMillis");
     }
 
     @Override
@@ -423,6 +433,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Boolean allowDoubleDotsInQueryString() {
         return getBoolean("allowDoubleDotsInQueryString");
+    }
+
+    @Override
+    public Boolean allowSemicolonInPathComponent() {
+        return getBoolean("allowSemicolonInPathComponent");
     }
 
     @Override

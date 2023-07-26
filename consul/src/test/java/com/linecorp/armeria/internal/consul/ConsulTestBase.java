@@ -64,7 +64,7 @@ public abstract class ConsulTestBase {
 
     private static final String ENV_CONSUL_VERSION = "CONSUL_VERSION";
     private static final String ENV_CONSUL_BINARY_DOWNLOAD_DIR = "CONSUL_BINARY_DOWNLOAD_DIR";
-    private static final String FALLBACK_CONSUL_VERSION = "1.9.3";
+    private static final String FALLBACK_CONSUL_VERSION = "1.15.3";
 
     protected static final String CONSUL_TOKEN = UUID.randomUUID().toString();
     protected static final String serviceName = "testService";

@@ -119,4 +119,10 @@ public final class Resilience4JCircuitBreakerClientHandler implements CircuitBre
         final long startTimestamp = circuitBreaker.getCurrentTimestamp();
         return new Resilience4JCircuitBreakerCallback(circuitBreaker, startTimestamp);
     }
+
+    @Override
+    public boolean isCircuitBreakerException(Exception ex) {
+        return ex instanceof UnprocessedRequestException &&
+               ex.getCause() instanceof CallNotPermittedException;
+    }
 }

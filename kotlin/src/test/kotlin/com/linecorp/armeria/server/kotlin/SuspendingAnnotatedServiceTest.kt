@@ -287,7 +287,8 @@ class SuspendingAnnotatedServiceTest {
 
                             @Get("/bar-in-http-result")
                             suspend fun barInHttpResult() = HttpResult.of(
-                                ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"), Bar()
+                                ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"),
+                                Bar()
                             )
                         }
                     )
@@ -314,7 +315,8 @@ class SuspendingAnnotatedServiceTest {
         private fun exceptionHandlerFunction() = ExceptionHandlerFunction { _, _, cause ->
             log.info(cause.message, cause)
             HttpResponse.of(
-                HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                MediaType.PLAIN_TEXT_UTF_8,
                 cause.javaClass.simpleName
             )
         }
