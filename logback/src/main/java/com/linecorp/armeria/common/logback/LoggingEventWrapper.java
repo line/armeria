@@ -30,6 +30,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.LoggerContextVO;
 import ch.qos.logback.classic.spi.LoggingEvent;
+import org.slf4j.event.KeyValuePair;
 
 // TODO(ikhoon): Use `ILoggingEvent` instead of `LoggingEvent` once https://github.com/qos-ch/logback/pull/614 is merged.
 final class LoggingEventWrapper extends LoggingEvent {
@@ -102,6 +103,13 @@ final class LoggingEventWrapper extends LoggingEvent {
         return Instant.ofEpochMilli(event.getTimeStamp());
     }
 
+    // This method was introduced in logback 1.3.x
+    // This implementation assumes that there is logback 1.3.x or higher in dependencies
+    @Override
+    public long getSequenceNumber() {
+        return event.getSequenceNumber();
+    }
+
     @Override
     public StackTraceElement[] getCallerData() {
         return event.getCallerData();
@@ -146,6 +154,13 @@ final class LoggingEventWrapper extends LoggingEvent {
     @Deprecated
     public Map<String, String> getMdc() {
         return event.getMDCPropertyMap();
+    }
+
+    // This method was introduced in logback 1.3.x
+    // This implementation assumes that there is logback 1.3.x or higher in dependencies
+    @Override
+    public List<KeyValuePair> getKeyValuePairs() {
+        return event.getKeyValuePairs();
     }
 
     @Override
