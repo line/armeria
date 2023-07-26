@@ -16,6 +16,9 @@
 package com.linecorp.armeria.common.logback;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Marker;
@@ -112,6 +115,17 @@ final class LoggingEventWrapper extends LoggingEvent {
     @Override
     public Marker getMarker() {
         return event.getMarker();
+    }
+
+    // This method was introduced in logback 1.3.x
+    @Override
+    public List<Marker> getMarkerList() {
+        // This line calls deprecated API in logback 1.3.x, ILoggingEvent#getMarker() to keep compatibility with logback 1.2.x
+        Marker marker = event.getMarker();
+        if (marker == null) {
+            return Collections.emptyList();
+        }
+        return Arrays.asList(marker);
     }
 
     @Override
