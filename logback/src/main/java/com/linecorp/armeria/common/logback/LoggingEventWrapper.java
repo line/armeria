@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Marker;
+import org.slf4j.event.KeyValuePair;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -30,7 +31,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.LoggerContextVO;
 import ch.qos.logback.classic.spi.LoggingEvent;
-import org.slf4j.event.KeyValuePair;
 
 // TODO(ikhoon): Use `ILoggingEvent` instead of `LoggingEvent` once https://github.com/qos-ch/logback/pull/614 is merged.
 final class LoggingEventWrapper extends LoggingEvent {
@@ -128,8 +128,8 @@ final class LoggingEventWrapper extends LoggingEvent {
     // This method was introduced in logback 1.3.x
     @Override
     public List<Marker> getMarkerList() {
-        // This line calls deprecated API in logback 1.3.x, ILoggingEvent#getMarker() to keep compatibility with logback 1.2.x
-        Marker marker = event.getMarker();
+        // This line calls deprecated API in logback 1.3.x to keep compatibility with logback 1.2.x
+        final Marker marker = event.getMarker();
         if (marker == null) {
             return Collections.emptyList();
         }
