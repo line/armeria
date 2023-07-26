@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setResponseContentPreviewer;
 import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpRequestContentPreviewer;
-import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpResponseContentPreviewer;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.logging.ResponseContentPreviewer;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -158,6 +159,9 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
 
         ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         final HttpResponse res = unwrap().serve(ctx, req);
-        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+        final ResponseContentPreviewer previewer =
+                ResponseContentPreviewer.of(contentPreviewerFactory, ctx, responsePreviewSanitizer);
+        setResponseContentPreviewer(ctx, previewer);
+        return previewer.setUp(res);
     }
 }

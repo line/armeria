@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
+import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.responseContentPreviewer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -65,6 +66,7 @@ import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.logging.ResponseContentPreviewer;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
@@ -373,7 +375,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             serviceResponse = serviceResponse.recover(cause -> {
                 reqCtx.logBuilder().responseCause(cause);
                 // Recover the failed response with the error handler.
-                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+                final HttpResponse recovered = serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+                if (recovered == null) {
+                    return null;
+                }
+                final ResponseContentPreviewer previewer = responseContentPreviewer(reqCtx);
+                if (previewer == null) {
+                    return recovered;
+                }
+                return previewer.setUp(recovered);
             });
             final HttpResponse res = serviceResponse;
             final EventLoop eventLoop = channel.eventLoop();

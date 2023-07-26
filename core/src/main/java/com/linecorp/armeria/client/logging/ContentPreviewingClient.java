@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.logging;
 
 import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpRequestContentPreviewer;
-import static com.linecorp.armeria.internal.logging.ContentPreviewingUtil.setUpResponseContentPreviewer;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.logging.ResponseContentPreviewer;
 
 import io.netty.util.AttributeKey;
 
@@ -159,6 +159,6 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
 
         ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         final HttpResponse res = unwrap().execute(ctx, req);
-        return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
+        return ResponseContentPreviewer.of(contentPreviewerFactory, ctx, responsePreviewSanitizer).setUp(res);
     }
 }
