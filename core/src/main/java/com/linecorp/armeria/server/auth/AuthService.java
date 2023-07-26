@@ -28,10 +28,15 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 
 /**
  * Decorates an {@link HttpService} to provide HTTP authorization functionality.
@@ -75,17 +80,23 @@ public final class AuthService extends SimpleDecoratingHttpService {
     private final Authorizer<HttpRequest> authorizer;
     private final AuthSuccessHandler defaultSuccessHandler;
     private final AuthFailureHandler defaultFailureHandler;
+    private final MeterRegistry meterRegistry;
 
     AuthService(HttpService delegate, Authorizer<HttpRequest> authorizer,
-                AuthSuccessHandler defaultSuccessHandler, AuthFailureHandler defaultFailureHandler) {
+                AuthSuccessHandler defaultSuccessHandler, AuthFailureHandler defaultFailureHandler,
+                MeterRegistry meterRegistry) {
         super(delegate);
         this.authorizer = authorizer;
         this.defaultSuccessHandler = defaultSuccessHandler;
         this.defaultFailureHandler = defaultFailureHandler;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final Timer timer = MoreMeters.newTimer(meterRegistry, "authorization", Tags.empty());
+        final Timer.Sample sample = Timer.start();
+
         return HttpResponse.of(AuthorizerUtil.authorizeAndSupplyHandlers(authorizer, ctx, req)
                                              .handleAsync((result, cause) -> {
             try {
@@ -104,7 +115,10 @@ public final class AuthService extends SimpleDecoratingHttpService {
                                      ctx, req, cause);
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(e);
-            }
+            } finally {
+            // Record the time taken to authorize the request
+            sample.stop(timer);
+        }
         }, ctx.eventLoop()));
     }
 

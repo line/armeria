@@ -61,6 +61,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AsciiString;
 
 class AuthServiceTest {
@@ -88,6 +90,7 @@ class AuthServiceTest {
                     return HttpResponse.of(HttpStatus.OK);
                 }
             };
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
             // Auth with arbitrary authorizer
             final Authorizer<HttpRequest> authorizer = (ctx, req) ->
@@ -95,7 +98,10 @@ class AuthServiceTest {
                             () -> "unit test".equals(req.headers().get(AUTHORIZATION)));
             sb.service(
                     "/",
-                    ok.decorate(AuthService.newDecorator(authorizer))
+                    ok.decorate(AuthService.builder()
+                                           .add(authorizer)
+                                           .meterRegistry(meterRegistry)
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with HTTP basic
@@ -107,12 +113,16 @@ class AuthServiceTest {
             };
             sb.service(
                     "/basic",
-                    ok.decorate(AuthService.builder().addBasicAuth(httpBasicAuthorizer).newDecorator())
+                    ok.decorate(AuthService.builder()
+                                           .addBasicAuth(httpBasicAuthorizer)
+                                           .meterRegistry(meterRegistry)
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
             sb.service(
                     "/basic-custom",
                     ok.decorate(AuthService.builder()
                                            .addBasicAuth(httpBasicAuthorizer, CUSTOM_TOKEN_HEADER)
+                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -122,11 +132,16 @@ class AuthServiceTest {
                                     "dummy_consumer_key@#$!".equals(token.consumerKey()));
             sb.service(
                     "/oauth1a",
-                    ok.decorate(AuthService.builder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
+                    ok.decorate(AuthService.builder()
+                                           .addOAuth1a(oAuth1aAuthorizer)
+                                           .meterRegistry(meterRegistry)
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
             sb.service(
                     "/oauth1a-custom",
-                    ok.decorate(AuthService.builder().addOAuth1a(oAuth1aAuthorizer, CUSTOM_TOKEN_HEADER)
+                    ok.decorate(AuthService.builder()
+                                           .addOAuth1a(oAuth1aAuthorizer, CUSTOM_TOKEN_HEADER)
+                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -135,7 +150,10 @@ class AuthServiceTest {
                     completedFuture("dummy_oauth2_token".equals(token.accessToken()));
             sb.service(
                     "/oauth2",
-                    ok.decorate(AuthService.builder().addOAuth2(oAuth2Authorizer).newDecorator())
+                    ok.decorate(AuthService.builder()
+                                           .addOAuth2(oAuth2Authorizer)
+                                           .meterRegistry(meterRegistry)
+                                           .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth2 on custom header
@@ -143,6 +161,7 @@ class AuthServiceTest {
                     "/oauth2-custom",
                     ok.decorate(AuthService.builder()
                                            .addOAuth2(oAuth2Authorizer, CUSTOM_TOKEN_HEADER)
+                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -153,6 +172,7 @@ class AuthServiceTest {
                        ok.decorate(AuthService.builder()
                                               .addTokenAuthorizer(INSECURE_TOKEN_EXTRACTOR,
                                                                   insecureTokenAuthorizer)
+                                              .meterRegistry(meterRegistry)
                                               .newDecorator())
                          .decorate(LoggingService.newDecorator()));
 
@@ -163,21 +183,28 @@ class AuthServiceTest {
                                .addBasicAuth(httpBasicAuthorizer)
                                .addOAuth1a(oAuth1aAuthorizer)
                                .addOAuth2(oAuth2Authorizer)
+                               .meterRegistry(meterRegistry)
                                .build(ok)
                                .decorate(LoggingService.newDecorator()));
 
             // Authorizer fails with an exception.
             sb.service(
                     "/authorizer_exception",
-                    ok.decorate(AuthService.builder().add((ctx, data) -> {
-                          throw new AnticipatedException("bug!");
-                      }).newDecorator())
+                    ok.decorate(AuthService.builder()
+                                           .add((ctx, data) -> {
+                                               throw new AnticipatedException("bug!");
+                                           })
+                                           .meterRegistry(meterRegistry)
+                                           .newDecorator()
+                      )
                       .decorate(LoggingService.newDecorator()));
 
             // Authorizer returns a future that resolves to null.
             sb.service(
                     "/authorizer_resolve_null",
-                    ok.decorate(AuthService.builder().add((ctx, data) -> completedFuture(null))
+                    ok.decorate(AuthService.builder()
+                                           .add((ctx, data) -> completedFuture(null))
+                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -185,6 +212,7 @@ class AuthServiceTest {
             sb.service(
                     "/authorizer_null",
                     ok.decorate(AuthService.builder().add((ctx, data) -> null)
+                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -195,6 +223,7 @@ class AuthServiceTest {
                                            .onSuccess((delegate, ctx, req) -> {
                                                throw new AnticipatedException("bug!");
                                            })
+                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -205,6 +234,7 @@ class AuthServiceTest {
                                            .onFailure((delegate, ctx, req, cause) -> {
                                                throw new AnticipatedException("bug!");
                                            })
+                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
         }
@@ -419,6 +449,7 @@ class AuthServiceTest {
 
     @Test
     void shouldPeelRedundantAuthorizerExceptions() throws Exception {
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final AuthService service =
                 AuthService.builder()
@@ -429,7 +460,9 @@ class AuthServiceTest {
                            .onFailure((delegate, ctx, req, cause) -> {
                                causeRef.set(cause);
                                return HttpResponse.of(HttpStatus.FORBIDDEN);
-                           }).build((ctx, req) -> HttpResponse.of("OK"));
+                           })
+                           .meterRegistry(meterRegistry)
+                           .build((ctx, req) -> HttpResponse.of("OK"));
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse response = service.serve(ctx, ctx.request());
         assertThat(response.aggregate().join().status()).isEqualTo(HttpStatus.FORBIDDEN);
