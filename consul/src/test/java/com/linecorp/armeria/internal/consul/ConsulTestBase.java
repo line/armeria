@@ -194,16 +194,16 @@ public abstract class ConsulTestBase {
 
         @Override
         protected final HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(req.aggregate()
-                                        .thenApply(aReq -> HttpResponse.of(HttpStatus.OK))
-                                        .exceptionally(CompletionActions::log));
+            return HttpResponse.of(req.aggregate()
+                                      .thenApply(aReq -> HttpResponse.of(HttpStatus.OK))
+                                      .exceptionally(CompletionActions::log));
         }
 
         @Override
         protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(req.aggregate()
-                                        .thenApply(this::echo)
-                                        .exceptionally(CompletionActions::log));
+            return HttpResponse.of(req.aggregate()
+                                      .thenApply(this::echo)
+                                      .exceptionally(CompletionActions::log));
         }
 
         protected HttpResponse echo(AggregatedHttpRequest aReq) {
