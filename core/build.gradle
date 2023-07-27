@@ -94,7 +94,7 @@ dependencies {
     api libs.jackson.datatype.jdk8
     api libs.jackson.datatype.jsr310
 
-    // Logback
+    // Logback is only used for RequestScopedMdc integration.
     compileOnly libs.logback14
 
     // Micrometer and other metric-related stuff

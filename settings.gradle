@@ -138,7 +138,7 @@ includeWithFlags ':it:grpc:reactor',                           'java', 'relocate
 includeWithFlags ':it:flags-provider',                         'java', 'relocate'
 includeWithFlags ':it:jackson-provider',                       'java', 'relocate'
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
-includeWithFlags ':it:logback1.4',                              'java', 'relocate'
+includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
 includeWithFlags ':it:micrometer1.3',                          'java', 'relocate'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
