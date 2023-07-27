@@ -100,13 +100,6 @@ final class LoggingEventWrapper extends LoggingEvent {
         return Instant.ofEpochMilli(event.getTimeStamp());
     }
 
-    // This method was introduced in logback 1.3.x
-    // This implementation assumes that there is logback 1.3.x or higher in dependencies
-    @Override
-    public long getSequenceNumber() {
-        return event.getSequenceNumber();
-    }
-
     @Override
     public StackTraceElement[] getCallerData() {
         return event.getCallerData();
@@ -140,13 +133,6 @@ final class LoggingEventWrapper extends LoggingEvent {
     @Deprecated
     public Map<String, String> getMdc() {
         return event.getMDCPropertyMap();
-    }
-
-    // This method was introduced in logback 1.3.x
-    // This implementation assumes that there is logback 1.3.x or higher in dependencies
-    @Override
-    public List<KeyValuePair> getKeyValuePairs() {
-        return event.getKeyValuePairs();
     }
 
     @Override
