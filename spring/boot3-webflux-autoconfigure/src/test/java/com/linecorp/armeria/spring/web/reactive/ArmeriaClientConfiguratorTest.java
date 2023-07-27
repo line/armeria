@@ -22,14 +22,15 @@ import java.util.List;
 import javax.inject.Inject;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.linecorp.armeria.client.WebClientBuilder;
 
-@SpringBootTest
+@ExtendWith(SpringExtension.class)
 class ArmeriaClientConfiguratorTest {
 
     @Configuration
