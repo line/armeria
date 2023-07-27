@@ -4,5 +4,6 @@ dependencies {
     } else {
         testImplementation project(':thrift0.17')
     }
+    // Logback
     api libs.logback12
 }
