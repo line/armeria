@@ -4,8 +4,5 @@ dependencies {
     } else {
         testImplementation project(':thrift0.17')
     }
-    // Logback
-    compileOnly libs.logback14
-    testCompileOnly libs.logback14
     api libs.logback12
 }

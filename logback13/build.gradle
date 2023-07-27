@@ -1,0 +1,19 @@
+dependencies {
+    if (project.ext.targetJavaVersion >= 11) {
+        testImplementation project(':thrift0.18')
+    } else {
+        testImplementation project(':thrift0.17')
+    }
+    api libs.logback13
+}
+
+
+// Copy common files from logback.
+task generateSources(type: Copy) {
+    from "${rootProject.projectDir}/logback/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+    exclude "**/LoggingEventWrapper.java"
+    exclude "**/package-info.java"
+}
+
+tasks.compileJava.dependsOn(generateSources)
