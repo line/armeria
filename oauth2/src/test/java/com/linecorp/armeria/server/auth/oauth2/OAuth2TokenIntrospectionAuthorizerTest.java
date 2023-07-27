@@ -44,6 +44,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 public class OAuth2TokenIntrospectionAuthorizerTest {
 
     static final String CLIENT_CREDENTIALS = "dGVzdF9jbGllbnQ6Y2xpZW50X3NlY3JldA=="; //test_client:client_secret
@@ -76,6 +79,7 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final WebClient introspectClient = WebClient.of(authServer.httpUri());
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
             sb.service("/resource-read-write/",
                        AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
                                introspectClient,
@@ -85,7 +89,7 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
                                .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
                                .permittedScope("read", "write")
                                .build()
-                       ).build(SERVICE));
+                       ).meterRegistry(meterRegistry).build(SERVICE));
             sb.service("/resource-read/",
                        AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
                                introspectClient,
@@ -95,7 +99,7 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
                                .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
                                .permittedScope("read")
                                .build()
-                       ).build(SERVICE));
+                       ).meterRegistry(meterRegistry).build(SERVICE));
             sb.service("/resource-read-write-update/",
                        AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
                                introspectClient,
@@ -105,7 +109,7 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
                                .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
                                .permittedScope("read", "write", "update")
                                .build()
-                       ).build(SERVICE));
+                       ).meterRegistry(meterRegistry).build(SERVICE));
         }
     };
 

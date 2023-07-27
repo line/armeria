@@ -55,6 +55,8 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import testing.grpc.Transcoding;
@@ -138,7 +140,11 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
         @Override
         public Function<? super HttpService, ? extends HttpService>
         newDecorator(Authenticate parameter) {
-            return AuthService.newDecorator(new TestAuthorizer());
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+            return AuthService.builder()
+                    .add(new TestAuthorizer())
+                    .meterRegistry(meterRegistry)
+                    .newDecorator();
         }
     }
 

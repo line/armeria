@@ -70,6 +70,8 @@ import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.EventLoopGroup;
 
 class HealthCheckedEndpointGroupTest {
@@ -433,9 +435,13 @@ class HealthCheckedEndpointGroupTest {
                     final String password = token.password();
                     return completedFuture(password.equals(usernameToPassword.get(username)));
                 };
+                final MeterRegistry meterRegistry = new SimpleMeterRegistry();
                 sb.service(
                         "/basic",
-                        ok.decorate(AuthService.builder().addBasicAuth(httpBasicAuthorizer).newDecorator())
+                        ok.decorate(AuthService.builder()
+                                               .addBasicAuth(httpBasicAuthorizer)
+                                               .meterRegistry(meterRegistry)
+                                               .newDecorator())
                           .decorate(LoggingService.newDecorator()));
 
                 // Auth with OAuth1a
@@ -444,7 +450,10 @@ class HealthCheckedEndpointGroupTest {
                                         "dummy_consumer_key@#$!".equals(token.consumerKey()));
                 sb.service(
                         "/oauth1a",
-                        ok.decorate(AuthService.builder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
+                        ok.decorate(AuthService.builder()
+                                               .addOAuth1a(oAuth1aAuthorizer)
+                                               .meterRegistry(meterRegistry)
+                                               .newDecorator())
                           .decorate(LoggingService.newDecorator()));
 
                 // Auth with OAuth2
@@ -452,7 +461,10 @@ class HealthCheckedEndpointGroupTest {
                         completedFuture("dummy_oauth2_token".equals(token.accessToken()));
                 sb.service(
                         "/oauth2",
-                        ok.decorate(AuthService.builder().addOAuth2(oAuth2Authorizer).newDecorator())
+                        ok.decorate(AuthService.builder()
+                                               .addOAuth2(oAuth2Authorizer)
+                                               .meterRegistry(meterRegistry)
+                                               .newDecorator())
                           .decorate(LoggingService.newDecorator()));
             }
         };
