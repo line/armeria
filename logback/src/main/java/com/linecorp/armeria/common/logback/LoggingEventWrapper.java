@@ -27,7 +27,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.LoggerContextVO;
 import ch.qos.logback.classic.spi.LoggingEvent;
-import org.slf4j.event.KeyValuePair;
 
 // TODO(ikhoon): Use `ILoggingEvent` instead of `LoggingEvent` once https://github.com/qos-ch/logback/pull/614 is merged.
 final class LoggingEventWrapper extends LoggingEvent {
