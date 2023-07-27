@@ -15,13 +15,15 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Map;
+import java.util.Set;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -29,7 +31,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
 
 /**
- * An {@link InetSocketAddress} that refers to the {@link Path} of a Unix domain socket.
+ * An {@link InetSocketAddress} that refers to a Unix domain socket path.
  * This class extends {@link InetSocketAddress} to ensure the backward compatibility with existing
  * Armeria API that uses {@link InetSocketAddress} in its API. This address will have the following properties:
  * <ul>
@@ -37,6 +39,12 @@ import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
  *   <li>address - an IPv6 address that falls into <a href="https://datatracker.ietf.org/doc/rfc6666/">IPv6
  *       Discard Prefix</a></li>
  * </ul>
+ *
+ * <h2>Pitfalls</h2>
+ * <p>Comparing two {@link DomainSocketAddress}es using {@link #equals(Object)} will always return {@code true}
+ * because there's no way to override {@link InetSocketAddress#equals(Object)}, which compares only the IP
+ * addresses for resolved addresses. You should never use {@link DomainSocketAddress} as a key of a {@link Map},
+ * or as an element of a {@link Set}; consider using {@link Endpoint} instead.</p>
  */
 @UnstableApi
 public final class DomainSocketAddress extends InetSocketAddress {
@@ -48,15 +56,27 @@ public final class DomainSocketAddress extends InetSocketAddress {
      * socket.
      */
     public static DomainSocketAddress of(Path path) {
-        return new DomainSocketAddress(requireNonNull(path, "path"));
+        return of(requireNonNull(path, "path").toString());
     }
 
     /**
-     * Returns a newly created {@link DomainSocketAddress} with the {@link Path} to the Unix domain socket
-     * that the specified Netty address refers to.
+     * Returns a newly created {@link DomainSocketAddress} with the specified {@code path} to the Unix domain
+     * socket.
+     */
+    public static DomainSocketAddress of(String path) {
+        requireNonNull(path, "path");
+        checkArgument(!path.isEmpty(), "path must not be empty.");
+        return new DomainSocketAddress(path);
+    }
+
+    /**
+     * Returns a newly created {@link DomainSocketAddress} with the Unix domain socket path of the specified
+     * Netty address.
      */
     public static DomainSocketAddress of(io.netty.channel.unix.DomainSocketAddress nettyAddr) {
-        return new DomainSocketAddress(Paths.get(requireNonNull(nettyAddr, "nettyAddr").path()));
+        final String path = requireNonNull(nettyAddr, "nettyAddr").path();
+        checkArgument(!path.isEmpty(), "nettyAddr.path must not be empty.");
+        return new DomainSocketAddress(path);
     }
 
     /**
@@ -73,7 +93,7 @@ public final class DomainSocketAddress extends InetSocketAddress {
         return DomainSocketUtil.isDomainSocketAddress(addr);
     }
 
-    private final Path path;
+    private final String path;
     @Nullable
     private String authority;
     @Nullable
@@ -82,17 +102,24 @@ public final class DomainSocketAddress extends InetSocketAddress {
     @SuppressWarnings("NullableOnContainingClass") // ErrorProne false positive
     private io.netty.channel.unix.DomainSocketAddress nettyAddress;
 
-    private DomainSocketAddress(Path path) {
-        super(DomainSocketUtil.toInetAddress(requireNonNull(path, "path").toString()),
+    private DomainSocketAddress(String path) {
+        super(DomainSocketUtil.toInetAddress(requireNonNull(path, "path")),
               DomainSocketUtil.DOMAIN_SOCKET_PORT);
         this.path = path;
     }
 
     /**
-     * Returns the {@link Path} to the Unix domain socket.
+     * Returns the path to the Unix domain socket.
      */
-    public Path path() {
+    public String path() {
         return path;
+    }
+
+    /**
+     * Returns {@code true} if this address is in the abstract namespace.
+     */
+    public boolean isAbstract() {
+        return path.charAt(0) == 0;
     }
 
     /**
@@ -104,7 +131,7 @@ public final class DomainSocketAddress extends InetSocketAddress {
             return authority;
         }
 
-        final String newAuthority = DomainSocketUtil.toAuthority(path.toString());
+        final String newAuthority = DomainSocketUtil.toAuthority(path);
         this.authority = newAuthority;
         return newAuthority;
     }
@@ -121,7 +148,7 @@ public final class DomainSocketAddress extends InetSocketAddress {
         }
 
         final io.netty.channel.unix.DomainSocketAddress newNettyAddress =
-                new io.netty.channel.unix.DomainSocketAddress(path.toFile());
+                new io.netty.channel.unix.DomainSocketAddress(path);
         this.nettyAddress = newNettyAddress;
         return newNettyAddress;
     }
@@ -141,10 +168,15 @@ public final class DomainSocketAddress extends InetSocketAddress {
     }
 
     /**
-     * Returns a string representation of this address, such as {@code "/path/to/sock"}.
+     * Returns a string representation of this address, such as {@code "/path/to/sock"} or {@code "@sock"}
+     * (abstract namespace).
      */
     @Override
     public String toString() {
-        return path.toString();
+        if (isAbstract()) {
+            return path.replace('\0', '@');
+        } else {
+            return path;
+        }
     }
 }
