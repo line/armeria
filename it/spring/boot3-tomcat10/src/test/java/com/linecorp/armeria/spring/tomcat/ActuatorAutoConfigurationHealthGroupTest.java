@@ -46,8 +46,7 @@ import com.linecorp.armeria.spring.LocalArmeriaPort;
 class ActuatorAutoConfigurationHealthGroupTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final TypeReference<Map<String, Object>> JSON_MAP =
-            new TypeReference<Map<String, Object>>() {};
+    private static final TypeReference<Map<String, Object>> JSON_MAP = new TypeReference<>() {};
 
     @LocalManagementPort
     private int managementPort;

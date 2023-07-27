@@ -414,6 +414,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean allowSemicolonInPathComponent() {
+        return false;
+    }
+
+    @Override
     public Path defaultMultipartUploadsLocation() {
         return Paths.get(System.getProperty("java.io.tmpdir") +
                          File.separatorChar + "armeria" +
