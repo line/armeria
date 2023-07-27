@@ -24,7 +24,7 @@ jobs:
   build:
     if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
-    timeout-minutes: 100
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -44,10 +44,6 @@ jobs:
           - java: 17
             on: self-hosted
             min-java: 17
-          - java: 19
-            # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
-            #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
-            on: macos-12
             coverage: true
           - java: 19
             on: self-hosted
@@ -145,7 +141,7 @@ jobs:
 
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
 
       - name: Fail the run if any threads were blocked
         if: ${{ matrix.blockhound }}
@@ -180,8 +176,8 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v2
         with:
-          name: reports-JVM-${{ matrix.on }}-${{ matrix.java }}
-          path: reports-JVM-${{ matrix.on }}-${{ matrix.java }}.tar
+          name: reports-JVM-${{ matrix.on }}-${{ matrix.java }}${{ matrix.min-java && format('-{0}', matrix.min-java) || '' }}
+          path: reports-JVM-${{ matrix.on }}-${{ matrix.java }}${{ matrix.min-java && format('-{0}', matrix.min-java) || '' }}.tar
           retention-days: 3
 
   lint:
