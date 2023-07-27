@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 

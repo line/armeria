@@ -14,12 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
-import static com.linecorp.armeria.client.circuitbreaker.CircuitState.CLOSED;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitState.FORCED_OPEN;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitState.HALF_OPEN;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitState.OPEN;
+import static com.linecorp.armeria.common.circuitbreaker.CircuitState.CLOSED;
+import static com.linecorp.armeria.common.circuitbreaker.CircuitState.FORCED_OPEN;
+import static com.linecorp.armeria.common.circuitbreaker.CircuitState.HALF_OPEN;
+import static com.linecorp.armeria.common.circuitbreaker.CircuitState.OPEN;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,11 +33,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * Provides {@link CircuitBreaker} stats.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerMetrics} instead.
  */
-@Deprecated
-final class CircuitBreakerMetrics {
+final public class CircuitBreakerMetrics {
 
     private final AtomicReference<EventCount> latestEventCount = new AtomicReference<>(EventCount.ZERO);
     private final AtomicDouble state = new AtomicDouble(1);

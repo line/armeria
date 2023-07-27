@@ -14,16 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
-
-import com.linecorp.armeria.common.circuitbreaker.AbstractCircuitBreakerMappingBuilder;
+package com.linecorp.armeria.common.circuitbreaker;
 
 /**
  * Builder class for building a {@link CircuitBreakerMapping} based on a combination of host, method and path.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerMappingBuilder} instead.
  */
-@Deprecated
 public final class CircuitBreakerMappingBuilder extends AbstractCircuitBreakerMappingBuilder {
 
     @Override

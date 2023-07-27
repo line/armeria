@@ -14,17 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * The listener interface for receiving {@link CircuitBreaker} events.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerListener} instead.
  */
-@Deprecated
 public interface CircuitBreakerListener {
 
     /**
@@ -38,45 +35,45 @@ public interface CircuitBreakerListener {
      * </tr>
      * <tr>
      *   <td>
-     *     {@code armeria.client.circuit.breaker.requests{name="<circuit breaker name>",result="success"}}
+     *     {@code armeria.circuit.breaker.requests{name="<circuit breaker name>",result="success"}}
      *   </td>
      *   <td>The number of successful requests in the counter time window.</td></tr>
      * <tr>
      *   <td>
-     *     {@code armeria.client.circuit.breaker.requests{name="<circuit breaker name>",result="failure"}}
+     *     {@code armeria.circuit.breaker.requests{name="<circuit breaker name>",result="failure"}}
      *   </td>
      *   <td>The number of failed requests in the counter time window.</td></tr>
      * <tr>
      *   <td>
-     *     {@code armeria.client.circuit.breaker.transitions{name="<circuit breaker name>",state="CLOSED"}}
+     *     {@code armeria.circuit.breaker.transitions{name="<circuit breaker name>",state="CLOSED"}}
      *   </td>
      *   <td>The number of circuit breaker state transitions to {@link CircuitState#CLOSED}.</td></tr>
      * <tr>
      *   <td>
-     *     {@code armeria.client.circuit.breaker.transitions{name="<circuit breaker name>",state="OPEN"}}
+     *     {@code armeria.circuit.breaker.transitions{name="<circuit breaker name>",state="OPEN"}}
      *   </td>
      *   <td>The number of circuit breaker state transitions to {@link CircuitState#OPEN}.</td>
      * </tr>
      * <tr>
      *   <td>
-     *     {@code armeria.client.circuit.breaker.transitions{name="<circuit breaker name>",state="HALF_OPEN"}}
+     *     {@code armeria.circuit.breaker.transitions{name="<circuit breaker name>",state="HALF_OPEN"}}
      *   </td>
      *   <td>The number of circuit breaker state transitions to {@link CircuitState#HALF_OPEN}.</td>
      * </tr>
      * <tr>
      *   <td>
-     *     {@code armeria.client.circuit.breaker.transitions{name="<circuit breaker name>",state="FORCED_OPEN"}}
+     *     {@code armeria.circuit.breaker.transitions{name="<circuit breaker name>",state="FORCED_OPEN"}}
      *   </td>
      *   <td>The number of circuit breaker state transitions to {@link CircuitState#FORCED_OPEN}.</td>
      * </tr>
      * <tr>
-     *   <td>{@code armeria.client.circuit.breaker.rejected.requests{name="<circuit breaker name>"}}</td>
+     *   <td>{@code armeria.circuit.breaker.rejected.requests{name="<circuit breaker name>"}}</td>
      *   <td>The number of requests rejected by the circuit breaker.</td>
      * </tr>
      * </table>
      */
     static CircuitBreakerListener metricCollecting(MeterRegistry registry) {
-        return metricCollecting(registry, "armeria.client.circuit.breaker");
+        return metricCollecting(registry, "armeria.circuit.breaker");
     }
 
     /**

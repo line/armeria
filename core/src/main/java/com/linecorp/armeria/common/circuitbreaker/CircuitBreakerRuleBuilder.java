@@ -14,12 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.FAILURE_DECISION;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.IGNORE_DECISION;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.SUCCESS_DECISION;
+import static com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleUtil.FAILURE_DECISION;
+import static com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleUtil.IGNORE_DECISION;
+import static com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
+import static com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleUtil.SUCCESS_DECISION;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -27,11 +27,11 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.AbstractRuleBuilder;
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -41,14 +41,11 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
  * A builder for creating a new {@link CircuitBreakerRule}.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleBuilder} instead.
  */
-@Deprecated
 public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
 
     CircuitBreakerRuleBuilder(
-            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
+            BiPredicate<? super RequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
@@ -76,7 +73,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
-        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
+        final BiFunction<? super RequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
                                                     exceptionFilter(), false);
@@ -84,7 +81,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     static CircuitBreakerRule build(
-            BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
+            BiFunction<? super RequestContext, ? super Throwable, Boolean> ruleFilter,
             CircuitBreakerDecision decision, boolean requiresResponseTrailers) {
         final CompletableFuture<CircuitBreakerDecision> decisionFuture;
         if (decision == CircuitBreakerDecision.success()) {
@@ -99,7 +96,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
 
         return new CircuitBreakerRule() {
             @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                                  @Nullable Throwable cause) {
                 return ruleFilter.apply(ctx, cause) ? decisionFuture : NEXT_DECISION;
             }
@@ -112,7 +109,6 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     // Override the return type and Javadoc of chaining methods in superclass.
-
     /**
      * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRule}.
      * If the specified {@code responseHeadersFilter} returns {@code true},
@@ -121,7 +117,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public CircuitBreakerRuleBuilder onResponseHeaders(
-            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
+            BiPredicate<? super RequestContext, ? super ResponseHeaders> responseHeadersFilter) {
         return (CircuitBreakerRuleBuilder) super.onResponseHeaders(responseHeadersFilter);
     }
 
@@ -133,7 +129,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public CircuitBreakerRuleBuilder onResponseTrailers(
-            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
+            BiPredicate<? super RequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (CircuitBreakerRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
     }
 
@@ -145,7 +141,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public CircuitBreakerRuleBuilder onGrpcTrailers(
-            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+            BiPredicate<? super RequestContext, ? super HttpHeaders> grpcTrailersFilter) {
         return (CircuitBreakerRuleBuilder) super.onGrpcTrailers(grpcTrailersFilter);
     }
 
@@ -212,7 +208,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public CircuitBreakerRuleBuilder onStatus(
-            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
+            BiPredicate<? super RequestContext, ? super HttpStatus> statusFilter) {
         return (CircuitBreakerRuleBuilder) super.onStatus(statusFilter);
     }
 
@@ -235,7 +231,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
      */
     @Override
     public CircuitBreakerRuleBuilder onException(
-            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
+            BiPredicate<? super RequestContext, ? super Throwable> exceptionFilter) {
         return (CircuitBreakerRuleBuilder) super.onException(exceptionFilter);
     }
 

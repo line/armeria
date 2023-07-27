@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.host;
 import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.method;
@@ -29,18 +29,16 @@ import java.util.stream.Stream;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 
 /**
  * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to a combination of host, method and/or
  * path. If there is no circuit breaker bound to the key, a new one is created by using the given circuit
  * breaker factory.
- *
- * @deprecated use {@link com.linecorp.armeria.common.circuitbreaker.KeyedCircuitBreakerMapping} instead.
  */
-@Deprecated
-final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
+public final class KeyedCircuitBreakerMapping implements
+                                       CircuitBreakerMapping {
 
     static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(
             true, false, false, (host, method, path) -> CircuitBreaker.of(host));
@@ -65,7 +63,7 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
     }
 
     @Override
-    public CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception {
+    public CircuitBreaker get(RequestContext ctx, Request req) throws Exception {
         final String host = isPerHost ? host(ctx) : null;
         final String method = isPerMethod ? method(ctx) : null;
         final String path = isPerPath ? path(ctx) : null;

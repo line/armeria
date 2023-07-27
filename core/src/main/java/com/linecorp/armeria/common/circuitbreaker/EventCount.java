@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -22,10 +22,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An immutable object that stores the count of events.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.EventCount} instead.
  */
-@Deprecated
 public final class EventCount {
 
     /**

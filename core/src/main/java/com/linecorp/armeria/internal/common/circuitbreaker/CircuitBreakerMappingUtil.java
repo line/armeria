@@ -19,7 +19,9 @@ package com.linecorp.armeria.internal.common.circuitbreaker;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 public final class CircuitBreakerMappingUtil {
 

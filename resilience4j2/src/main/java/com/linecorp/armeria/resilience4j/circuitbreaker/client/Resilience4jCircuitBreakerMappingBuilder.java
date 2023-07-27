@@ -18,7 +18,7 @@ package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.client.circuitbreaker.AbstractCircuitBreakerMappingBuilder;
+import com.linecorp.armeria.common.circuitbreaker.AbstractCircuitBreakerMappingBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.resilience4j.circuitbreaker.Resilience4jCircuitBreakerFactory;
 

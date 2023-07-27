@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
@@ -30,16 +30,12 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * A non-blocking implementation of circuit breaker pattern.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.NonBlockingCircuitBreaker} instead.
  */
-@Deprecated
-final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerCallback {
+final public class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerCallback {
 
     private static final Logger logger = LoggerFactory.getLogger(NonBlockingCircuitBreaker.class);
 

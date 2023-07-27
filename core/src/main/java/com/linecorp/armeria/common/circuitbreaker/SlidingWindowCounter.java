@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
@@ -30,10 +30,7 @@ import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * An {@link EventCounter} that accumulates the count of events within a time window.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.SlidingWindowCounter} instead.
  */
-@Deprecated
 final class SlidingWindowCounter implements EventCounter {
 
     private final Ticker ticker;
@@ -50,7 +47,8 @@ final class SlidingWindowCounter implements EventCounter {
     /**
      * The reference to the latest accumulated {@link EventCount}.
      */
-    private final AtomicReference<EventCount> snapshot = new AtomicReference<>(EventCount.ZERO);
+    private final AtomicReference<EventCount> snapshot = new AtomicReference<>(
+            EventCount.ZERO);
 
     /**
      * The queue that stores {@link Bucket}s within the time window.

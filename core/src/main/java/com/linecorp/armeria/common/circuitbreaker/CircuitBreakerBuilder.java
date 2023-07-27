@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
@@ -30,10 +30,7 @@ import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * Builds a {@link CircuitBreaker} instance using builder pattern.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreaker} instead.
  */
-@Deprecated
 public final class CircuitBreakerBuilder {
 
     private static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5;
@@ -198,7 +195,8 @@ public final class CircuitBreakerBuilder {
     /**
      * Adds a {@link CircuitBreakerListener}.
      */
-    public CircuitBreakerBuilder listener(CircuitBreakerListener listener) {
+    public CircuitBreakerBuilder listener(
+            CircuitBreakerListener listener) {
         requireNonNull(listener, "listener");
         if (listeners.isEmpty()) {
             listeners = new ArrayList<>(3);

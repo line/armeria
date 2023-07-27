@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import java.time.Duration;
 import java.util.List;
@@ -25,11 +25,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Stores configurations of circuit breaker.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerConfig} instead.
  */
-@Deprecated
-final class CircuitBreakerConfig {
+final public class CircuitBreakerConfig {
 
     @Nullable
     private final String name;

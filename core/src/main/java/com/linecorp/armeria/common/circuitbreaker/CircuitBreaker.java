@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,17 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import java.time.Duration;
 
 /**
  * A <a href="https://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker</a>, which tracks the number of
  * success/failure requests and detects a remote service failure.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreaker} instead.
  */
-@Deprecated
 public interface CircuitBreaker {
 
     /**

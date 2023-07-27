@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
@@ -30,11 +30,8 @@ import io.micrometer.core.instrument.MeterRegistry;
  *
  * @see CircuitBreakerListener#metricCollecting(MeterRegistry)
  * @see CircuitBreakerListener#metricCollecting(MeterRegistry, String)
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.MetricCollectingCircuitBreakerListener} instead.
  */
-@Deprecated
-final class MetricCollectingCircuitBreakerListener implements CircuitBreakerListener {
+public final class MetricCollectingCircuitBreakerListener implements CircuitBreakerListener {
 
     private final MeterRegistry registry;
     private final String name;

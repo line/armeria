@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -28,10 +28,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -64,13 +64,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *                           .onStatusClass(HttpStatusClass.SUCCESS)
  *                           .thenSuccess(),
  *         // Everything else is reported as a failure
- *         ClientBreakerRule.builder().thenFailure());
+ *         CircuitBreakerRule.builder().thenFailure());
  * }</pre>
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRule} instead.
  */
 @FunctionalInterface
-@Deprecated
 public interface CircuitBreakerRule {
 
     /**
@@ -118,7 +115,7 @@ public interface CircuitBreakerRule {
      * if the specified {@code statusFilter} returns {@code true}.
      */
     static CircuitBreakerRule onStatus(
-            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
+            BiPredicate<? super RequestContext, ? super HttpStatus> statusFilter) {
         return builder().onStatus(statusFilter).thenFailure();
     }
 
@@ -135,7 +132,7 @@ public interface CircuitBreakerRule {
      * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
      */
     static CircuitBreakerRule onException(
-            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
+            BiPredicate<? super RequestContext, ? super Throwable> exceptionFilter) {
         return builder().onException(exceptionFilter).thenFailure();
     }
 
@@ -186,7 +183,7 @@ public interface CircuitBreakerRule {
      * {@code requestHeadersFilter}.
      */
     static CircuitBreakerRuleBuilder builder(
-            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
+            BiPredicate<? super RequestContext, ? super RequestHeaders> requestHeadersFilter) {
         return new CircuitBreakerRuleBuilder(requireNonNull(requestHeadersFilter, "requestHeadersFilter"));
     }
 
@@ -241,9 +238,9 @@ public interface CircuitBreakerRule {
      * or a {@link Response} is not matched with the given {@link CircuitBreakerRule}s,
      * then the {@link Response} is reported as a success.
      *
-     * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
+     * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link RequestContext}:
      * <pre>{@code
-     * > CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+     * > CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
      * >                                                               @Nullable Throwable cause) {
      * >     if (cause != null) {
      * >         return UnmodifiableFuture.completedFuture(CircuitBreakerDecision.failure());
@@ -258,11 +255,11 @@ public interface CircuitBreakerRule {
      * > }
      * }</pre>
      *
-     * @param ctx the {@link ClientRequestContext} of this request
+     * @param ctx the {@link RequestContext} of this request
      * @param cause the {@link Throwable} which is raised while sending a request. {@code null} if there's no
      *              exception.
      */
-    CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+    CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                   @Nullable Throwable cause);
 
     /**

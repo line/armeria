@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -29,8 +29,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -41,10 +41,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * to make a decision, use {@link CircuitBreakerRule} for efficiency.
  *
  * @param <T> the response type
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleWithContent} instead.
  */
-@Deprecated
 @FunctionalInterface
 public interface CircuitBreakerRuleWithContent<T extends Response> {
 
@@ -53,7 +50,7 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * a failure if the specified {@code responseFilter} completes with {@code true}.
      */
     static <T extends Response> CircuitBreakerRuleWithContent<T> onResponse(
-            BiFunction<? super ClientRequestContext, ? super T,
+            BiFunction<? super RequestContext, ? super T,
                     ? extends CompletionStage<Boolean>> responseFilter) {
         return CircuitBreakerRuleWithContent.<T>builder().onResponse(responseFilter).thenFailure();
     }
@@ -89,7 +86,7 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * {@code requestHeadersFilter}.
      */
     static <T extends Response> CircuitBreakerRuleWithContentBuilder<T> builder(
-            BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
+            BiPredicate<? super RequestContext, ? super RequestHeaders> requestHeadersFilter) {
         requireNonNull(requestHeadersFilter, "requestHeadersFilter");
         return new CircuitBreakerRuleWithContentBuilder<>(requestHeadersFilter);
     }
@@ -134,7 +131,8 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * If this {@link CircuitBreakerRuleWithContent} completes with {@link CircuitBreakerDecision#next()},
      * then other {@link CircuitBreakerRule} is evaluated.
      */
-    default CircuitBreakerRuleWithContent<T> orElse(CircuitBreakerRule other) {
+    default CircuitBreakerRuleWithContent<T> orElse(
+            CircuitBreakerRule other) {
         requireNonNull(other, "other");
         return CircuitBreakerRuleUtil.orElse(this, other);
     }
@@ -164,13 +162,13 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
      * a {@link Response} did not match the given {@link CircuitBreakerRule}s, the {@link Response} will be
      * reported as a success.
      *
-     * @param ctx the {@link ClientRequestContext} of this request.
+     * @param ctx the {@link RequestContext} of this request.
      * @param response the {@link Response} from the server. {@code null} if a {@link Throwable} is raised
      *                 before receiving the content of the {@link Response}.
      * @param cause the {@link Throwable} which is raised while sending a request and before receiving
      *              the content of the {@link Response}. {@code null} if there's no exception.
      */
-    CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+    CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                   @Nullable T response,
                                                                   @Nullable Throwable cause);
 

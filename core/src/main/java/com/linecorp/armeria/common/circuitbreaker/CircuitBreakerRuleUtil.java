@@ -14,40 +14,38 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
-/**
- * A utility class that provides common {@link CircuitBreakerRule} implementations.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleUtil} instead.
- */
-@Deprecated
-final class CircuitBreakerRuleUtil {
+final public class CircuitBreakerRuleUtil {
 
     static final CompletableFuture<CircuitBreakerDecision> SUCCESS_DECISION =
-            UnmodifiableFuture.completedFuture(CircuitBreakerDecision.success());
+            UnmodifiableFuture.completedFuture(
+                    CircuitBreakerDecision.success());
     static final CompletableFuture<CircuitBreakerDecision> FAILURE_DECISION =
-            UnmodifiableFuture.completedFuture(CircuitBreakerDecision.failure());
+            UnmodifiableFuture.completedFuture(
+                    CircuitBreakerDecision.failure());
     static final CompletableFuture<CircuitBreakerDecision> IGNORE_DECISION =
-            UnmodifiableFuture.completedFuture(CircuitBreakerDecision.ignore());
+            UnmodifiableFuture.completedFuture(
+                    CircuitBreakerDecision.ignore());
     static final CompletableFuture<CircuitBreakerDecision> NEXT_DECISION =
-            UnmodifiableFuture.completedFuture(CircuitBreakerDecision.next());
+            UnmodifiableFuture.completedFuture(
+                    CircuitBreakerDecision.next());
 
     static <T extends Response> CircuitBreakerRuleWithContent<T> fromCircuitBreakerRule(
             CircuitBreakerRule circuitBreakerRule) {
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                                  @Nullable T response,
                                                                                  @Nullable Throwable cause) {
                 return circuitBreakerRule.shouldReportAsSuccess(ctx, cause);
@@ -64,7 +62,7 @@ final class CircuitBreakerRuleUtil {
             CircuitBreakerRuleWithContent<T> circuitBreakerRuleWithContent) {
         return new CircuitBreakerRule() {
             @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                                  @Nullable Throwable cause) {
                 return circuitBreakerRuleWithContent.shouldReportAsSuccess(ctx, null, cause);
             }
@@ -76,14 +74,15 @@ final class CircuitBreakerRuleUtil {
         };
     }
 
-    static CircuitBreakerRule orElse(CircuitBreakerRule first, CircuitBreakerRule second) {
+    static CircuitBreakerRule orElse(
+            CircuitBreakerRule first, CircuitBreakerRule second) {
 
         final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
                                                  second.requiresResponseTrailers();
 
         return new CircuitBreakerRule() {
             @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                                  @Nullable Throwable cause) {
                 final CompletionStage<CircuitBreakerDecision> decisionFuture =
                         first.shouldReportAsSuccess(ctx, cause);
@@ -119,13 +118,14 @@ final class CircuitBreakerRuleUtil {
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                                  @Nullable T response,
                                                                                  @Nullable Throwable cause) {
                 if (response instanceof HttpResponse) {
                     try (HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator()) {
                         @SuppressWarnings("unchecked")
-                        final CircuitBreakerRuleWithContent<T> duplicatedSecond =
+                        final CircuitBreakerRuleWithContent<T>
+                                duplicatedSecond =
                                 (CircuitBreakerRuleWithContent<T>) withDuplicator(
                                         (CircuitBreakerRuleWithContent<HttpResponse>) second, duplicator);
                         return handle(ctx, response, cause, fromCircuitBreakerRule(first), duplicatedSecond);
@@ -142,21 +142,23 @@ final class CircuitBreakerRuleUtil {
         };
     }
 
-    static <T extends Response> CircuitBreakerRuleWithContent<T> orElse(CircuitBreakerRuleWithContent<T> first,
-                                                                        CircuitBreakerRule second) {
+    static <T extends Response> CircuitBreakerRuleWithContent<T> orElse(
+            CircuitBreakerRuleWithContent<T> first,
+            CircuitBreakerRule second) {
 
         final boolean requiresResponseTrailers = first.requiresResponseTrailers() ||
                                                  second.requiresResponseTrailers();
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                                  @Nullable T response,
                                                                                  @Nullable Throwable cause) {
                 if (response instanceof HttpResponse) {
                     try (HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator()) {
                         @SuppressWarnings("unchecked")
-                        final CircuitBreakerRuleWithContent<T> duplicatedFirst =
+                        final CircuitBreakerRuleWithContent<T>
+                                duplicatedFirst =
                                 (CircuitBreakerRuleWithContent<T>) withDuplicator(
                                         (CircuitBreakerRuleWithContent<HttpResponse>) first, duplicator);
                         return handle(ctx, response, cause, duplicatedFirst, fromCircuitBreakerRule(second));
@@ -182,15 +184,17 @@ final class CircuitBreakerRuleUtil {
 
         return new CircuitBreakerRuleWithContent<T>() {
             @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
+            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(RequestContext ctx,
                                                                                  @Nullable T response,
                                                                                  @Nullable Throwable cause) {
                 if (response instanceof HttpResponse) {
                     try (HttpResponseDuplicator duplicator = ((HttpResponse) response).toDuplicator()) {
-                        final CircuitBreakerRuleWithContent<T> duplicatedFirst =
+                        final CircuitBreakerRuleWithContent<T>
+                                duplicatedFirst =
                                 (CircuitBreakerRuleWithContent<T>) withDuplicator(
                                         (CircuitBreakerRuleWithContent<HttpResponse>) first, duplicator);
-                        final CircuitBreakerRuleWithContent<T> duplicatedSecond =
+                        final CircuitBreakerRuleWithContent<T>
+                                duplicatedSecond =
                                 (CircuitBreakerRuleWithContent<T>) withDuplicator(
                                         (CircuitBreakerRuleWithContent<HttpResponse>) second, duplicator);
                         return handle(ctx, response, cause, duplicatedFirst, duplicatedSecond);
@@ -208,7 +212,7 @@ final class CircuitBreakerRuleUtil {
     }
 
     private static <T extends Response> CompletionStage<CircuitBreakerDecision> handle(
-            ClientRequestContext ctx, @Nullable T response, @Nullable Throwable cause,
+            RequestContext ctx, @Nullable T response, @Nullable Throwable cause,
             CircuitBreakerRuleWithContent<T> first, CircuitBreakerRuleWithContent<T> second) {
 
         final CompletionStage<CircuitBreakerDecision> decisionFuture =
@@ -231,13 +235,14 @@ final class CircuitBreakerRuleUtil {
     }
 
     private static CircuitBreakerRuleWithContent<HttpResponse>
-    withDuplicator(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
-                   HttpResponseDuplicator duplicator) {
+    withDuplicator(
+            CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+            HttpResponseDuplicator duplicator) {
 
         return new CircuitBreakerRuleWithContent<HttpResponse>() {
             @Override
             public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(
-                    ClientRequestContext ctx, @Nullable HttpResponse response, @Nullable Throwable cause) {
+                    RequestContext ctx, @Nullable HttpResponse response, @Nullable Throwable cause) {
 
                 return ruleWithContent.shouldReportAsSuccess(ctx, duplicator.duplicate(), cause);
             }

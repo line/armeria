@@ -14,20 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 /**
  * The default implementation of {@link CircuitBreakerCallback}.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.DefaultCircuitBreakerCallback} instead.
  */
-@Deprecated
 public final class DefaultCircuitBreakerCallback implements CircuitBreakerCallback {
 
     private final CircuitBreaker circuitBreaker;

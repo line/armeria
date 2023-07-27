@@ -14,24 +14,21 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 
 /**
  * Returns a {@link CircuitBreaker} instance from remote invocation parameters.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerMapping} instead.
  */
 @FunctionalInterface
-@Deprecated
-public interface CircuitBreakerMapping extends ClientCircuitBreakerGenerator<CircuitBreaker> {
+public interface CircuitBreakerMapping extends CircuitBreakerGenerator<CircuitBreaker> {
 
     /**
      * Returns the default {@link CircuitBreakerMapping}.
@@ -94,5 +91,5 @@ public interface CircuitBreakerMapping extends ClientCircuitBreakerGenerator<Cir
      * Returns the {@link CircuitBreaker} mapped to the given parameters.
      */
     @Override
-    CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception;
+    CircuitBreaker get(RequestContext ctx, Request req) throws Exception;
 }

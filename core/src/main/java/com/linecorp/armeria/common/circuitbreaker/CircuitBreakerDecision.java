@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import com.linecorp.armeria.common.Response;
 
@@ -23,10 +23,7 @@ import com.linecorp.armeria.common.Response;
  * a {@link #success()} or {@link #failure()}, or {@link #ignore()}s a {@link Response}.
  * {@link #next()} skips a {@link CircuitBreakerRule} and will lookup
  * next {@link CircuitBreakerRule}s.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerDecision} instead.
  */
-@Deprecated
 public final class CircuitBreakerDecision {
 
     private static final CircuitBreakerDecision SUCCESS = new CircuitBreakerDecision();
