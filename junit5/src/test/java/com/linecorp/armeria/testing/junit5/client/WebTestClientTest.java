@@ -171,9 +171,14 @@ class WebTestClientTest {
             TestHttpResponse.of(AggregatedHttpResponse.of(200)).assertCause();
         }, "Expecting the response to raise a throwable.");
 
-        assertThrows(RuntimeException.class, () -> {
-            TestHttpResponse.ofFailure(new RuntimeException("Runtime exception.")).assertStatus().isOk();
-        }, "Runtime exception.");
+        TestHttpResponse aborted = TestHttpResponse.ofFailure(new RuntimeException("Runtime exception."));
+        assertThrows(AssertionError.class, () -> {
+            aborted.assertStatus().isOk();
+        });
+        aborted.assertCause()
+               .isInstanceOf(RuntimeException.class)
+               .hasMessage("Runtime exception.")
+               .hasNoCause();
     }
 
     private static class MyAnnotatedService {
