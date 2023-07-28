@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
 import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Base64.Encoder;
@@ -52,6 +53,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -62,6 +64,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AsciiString;
 
@@ -90,7 +93,6 @@ class AuthServiceTest {
                     return HttpResponse.of(HttpStatus.OK);
                 }
             };
-            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
             // Auth with arbitrary authorizer
             final Authorizer<HttpRequest> authorizer = (ctx, req) ->
@@ -98,10 +100,7 @@ class AuthServiceTest {
                             () -> "unit test".equals(req.headers().get(AUTHORIZATION)));
             sb.service(
                     "/",
-                    ok.decorate(AuthService.builder()
-                                           .add(authorizer)
-                                           .meterRegistry(meterRegistry)
-                                           .newDecorator())
+                    ok.decorate(AuthService.builder().add(authorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with HTTP basic
@@ -113,16 +112,12 @@ class AuthServiceTest {
             };
             sb.service(
                     "/basic",
-                    ok.decorate(AuthService.builder()
-                                           .addBasicAuth(httpBasicAuthorizer)
-                                           .meterRegistry(meterRegistry)
-                                           .newDecorator())
+                    ok.decorate(AuthService.builder().addBasicAuth(httpBasicAuthorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
             sb.service(
                     "/basic-custom",
                     ok.decorate(AuthService.builder()
                                            .addBasicAuth(httpBasicAuthorizer, CUSTOM_TOKEN_HEADER)
-                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -132,16 +127,11 @@ class AuthServiceTest {
                                     "dummy_consumer_key@#$!".equals(token.consumerKey()));
             sb.service(
                     "/oauth1a",
-                    ok.decorate(AuthService.builder()
-                                           .addOAuth1a(oAuth1aAuthorizer)
-                                           .meterRegistry(meterRegistry)
-                                           .newDecorator())
+                    ok.decorate(AuthService.builder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
             sb.service(
                     "/oauth1a-custom",
-                    ok.decorate(AuthService.builder()
-                                           .addOAuth1a(oAuth1aAuthorizer, CUSTOM_TOKEN_HEADER)
-                                           .meterRegistry(meterRegistry)
+                    ok.decorate(AuthService.builder().addOAuth1a(oAuth1aAuthorizer, CUSTOM_TOKEN_HEADER)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -150,10 +140,7 @@ class AuthServiceTest {
                     completedFuture("dummy_oauth2_token".equals(token.accessToken()));
             sb.service(
                     "/oauth2",
-                    ok.decorate(AuthService.builder()
-                                           .addOAuth2(oAuth2Authorizer)
-                                           .meterRegistry(meterRegistry)
-                                           .newDecorator())
+                    ok.decorate(AuthService.builder().addOAuth2(oAuth2Authorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth2 on custom header
@@ -161,7 +148,6 @@ class AuthServiceTest {
                     "/oauth2-custom",
                     ok.decorate(AuthService.builder()
                                            .addOAuth2(oAuth2Authorizer, CUSTOM_TOKEN_HEADER)
-                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -172,7 +158,6 @@ class AuthServiceTest {
                        ok.decorate(AuthService.builder()
                                               .addTokenAuthorizer(INSECURE_TOKEN_EXTRACTOR,
                                                                   insecureTokenAuthorizer)
-                                              .meterRegistry(meterRegistry)
                                               .newDecorator())
                          .decorate(LoggingService.newDecorator()));
 
@@ -183,28 +168,21 @@ class AuthServiceTest {
                                .addBasicAuth(httpBasicAuthorizer)
                                .addOAuth1a(oAuth1aAuthorizer)
                                .addOAuth2(oAuth2Authorizer)
-                               .meterRegistry(meterRegistry)
                                .build(ok)
                                .decorate(LoggingService.newDecorator()));
 
             // Authorizer fails with an exception.
             sb.service(
                     "/authorizer_exception",
-                    ok.decorate(AuthService.builder()
-                                           .add((ctx, data) -> {
-                                               throw new AnticipatedException("bug!");
-                                           })
-                                           .meterRegistry(meterRegistry)
-                                           .newDecorator()
-                      )
+                    ok.decorate(AuthService.builder().add((ctx, data) -> {
+                        throw new AnticipatedException("bug!");
+                    }).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Authorizer returns a future that resolves to null.
             sb.service(
                     "/authorizer_resolve_null",
-                    ok.decorate(AuthService.builder()
-                                           .add((ctx, data) -> completedFuture(null))
-                                           .meterRegistry(meterRegistry)
+                    ok.decorate(AuthService.builder().add((ctx, data) -> completedFuture(null))
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -212,7 +190,6 @@ class AuthServiceTest {
             sb.service(
                     "/authorizer_null",
                     ok.decorate(AuthService.builder().add((ctx, data) -> null)
-                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -223,7 +200,6 @@ class AuthServiceTest {
                                            .onSuccess((delegate, ctx, req) -> {
                                                throw new AnticipatedException("bug!");
                                            })
-                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -234,7 +210,6 @@ class AuthServiceTest {
                                            .onFailure((delegate, ctx, req, cause) -> {
                                                throw new AnticipatedException("bug!");
                                            })
-                                           .meterRegistry(meterRegistry)
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
         }
@@ -449,7 +424,6 @@ class AuthServiceTest {
 
     @Test
     void shouldPeelRedundantAuthorizerExceptions() throws Exception {
-        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final AuthService service =
                 AuthService.builder()
@@ -461,10 +435,19 @@ class AuthServiceTest {
                                causeRef.set(cause);
                                return HttpResponse.of(HttpStatus.FORBIDDEN);
                            })
-                           .meterRegistry(meterRegistry)
                            .build((ctx, req) -> HttpResponse.of("OK"));
+
+        // Create a meter registry and set a timer to the service.
+        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        final Field timerField = AuthService.class.getDeclaredField("timer");
+        timerField.setAccessible(true);
+        final Timer timer = Timer.builder("armeria.server.auth").register(meterRegistry);
+        timerField.set(service, timer);
+        assertThat(MoreMeters.measureAll(meterRegistry)).containsEntry("armeria.server.auth#count", 0.0);
+
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse response = service.serve(ctx, ctx.request());
+
         assertThat(response.aggregate().join().status()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(causeRef.get()).isInstanceOf(AnticipatedException.class);
     }

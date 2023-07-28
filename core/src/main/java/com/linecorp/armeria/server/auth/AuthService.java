@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.auth;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -28,14 +29,13 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 
 /**
@@ -80,22 +80,27 @@ public final class AuthService extends SimpleDecoratingHttpService {
     private final Authorizer<HttpRequest> authorizer;
     private final AuthSuccessHandler defaultSuccessHandler;
     private final AuthFailureHandler defaultFailureHandler;
-    private final MeterRegistry meterRegistry;
+    private Timer timer;
 
     AuthService(HttpService delegate, Authorizer<HttpRequest> authorizer,
-                AuthSuccessHandler defaultSuccessHandler, AuthFailureHandler defaultFailureHandler,
-                MeterRegistry meterRegistry) {
+                AuthSuccessHandler defaultSuccessHandler, AuthFailureHandler defaultFailureHandler) {
         super(delegate);
         this.authorizer = authorizer;
         this.defaultSuccessHandler = defaultSuccessHandler;
         this.defaultFailureHandler = defaultFailureHandler;
-        this.meterRegistry = meterRegistry;
+    }
+
+    @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        super.serviceAdded(cfg);
+        final MeterRegistry meterRegistry = cfg.server().meterRegistry();
+        timer = Timer.builder("armeria.server.auth")
+                     .register(meterRegistry);
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Timer timer = MoreMeters.newTimer(meterRegistry, "authorization", Tags.empty());
-        final Timer.Sample sample = Timer.start();
+        final long startNanos = System.nanoTime();
 
         return HttpResponse.of(AuthorizerUtil.authorizeAndSupplyHandlers(authorizer, ctx, req)
                                              .handleAsync((result, cause) -> {
@@ -116,9 +121,10 @@ public final class AuthService extends SimpleDecoratingHttpService {
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(e);
             } finally {
-            // Record the time taken to authorize the request
-            sample.stop(timer);
-        }
+                // Record the time taken to authorize the request
+                final long endNanos = System.nanoTime();
+                timer.record(endNanos - startNanos, TimeUnit.NANOSECONDS);
+            }
         }, ctx.eventLoop()));
     }
 

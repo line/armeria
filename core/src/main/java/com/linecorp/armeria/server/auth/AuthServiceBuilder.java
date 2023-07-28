@@ -31,8 +31,6 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 
-import io.micrometer.core.instrument.MeterRegistry;
-
 /**
  * Builds a new {@link AuthService}.
  */
@@ -47,7 +45,6 @@ public final class AuthServiceBuilder {
         }
         return HttpResponse.of(HttpStatus.UNAUTHORIZED);
     };
-    private MeterRegistry meterRegistry;
 
     /**
      * Creates a new instance.
@@ -157,25 +154,16 @@ public final class AuthServiceBuilder {
     }
 
     /**
-     * Sets the {@link MeterRegistry} that collects stats.
-     * If unspecified, a default one is used.
-     */
-    public AuthServiceBuilder meterRegistry(MeterRegistry meterRegistry) {
-        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        return this;
-    }
-
-    /**
      * Returns a newly-created {@link AuthService} based on the {@link Authorizer}s added to this builder.
      */
     public AuthService build(HttpService delegate) {
         return new AuthService(requireNonNull(delegate, "delegate"), authorizer(),
-                               successHandler, failureHandler, meterRegistry);
+                               successHandler, failureHandler);
     }
 
     private AuthService build(HttpService delegate, Authorizer<HttpRequest> authorizer) {
         return new AuthService(requireNonNull(delegate, "delegate"), authorizer,
-                               successHandler, failureHandler, meterRegistry);
+                               successHandler, failureHandler);
     }
 
     /**
