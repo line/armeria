@@ -16,10 +16,11 @@ configure(projectsWithFlags('java')) {
         def scope = sourceSet.name
         // Create the task assuming the source directory exists
         // so that subprojects can refer to the task.
-        def task = project.tasks.create([
+        CompileThriftTask task = project.tasks.create([
                 name: sourceSet.getTaskName('compile', 'thrift'),
                 group: 'Build',
-                description: "Compiles the ${sourceSet.name} .thrift files."
+                description: "Compiles the ${sourceSet.name} .thrift files.",
+                type: CompileThriftTask.class,
         ])
 
         def sourcesJarTask = project.tasks.findByName(sourceSet.getTaskName('sources', 'jar'))
@@ -51,14 +52,14 @@ configure(projectsWithFlags('java')) {
             def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
             task.configure {
                 // configure caching
-                srcDirs.each { inputs.dir projectDir.relativePath(new File(it.toString())) }
-                includeDirs.each { inputs.dir projectDir.relativePath(new File(it.toString())) }
+                srcDirs.each { task.thriftDirs.add(it) }
+                includeDirs.each { task.thriftDirs.add(it) }
                 inputs.property("thriftVersion", project.ext.thriftVersion ?: "null")
                 inputs.property("thriftPath", project.ext.thriftPath ?: "null")
                 inputs.property("thriftJsonEnabled", thriftJsonEnabled)
                 inputs.property("fullCamel", fullCamel)
-                outputs.dir projectDir.relativePath(new File(javaOutputDir))
-                outputs.dir projectDir.relativePath(new File(jsonOutputDir))
+                outputs.dir javaOutputDir
+                outputs.dir jsonOutputDir
 
                 outputs.cacheIf { true }
 
@@ -121,5 +122,17 @@ configure(projectsWithFlags('java')) {
 
             project.ext.getGenerateSourcesTask().dependsOn(task)
         }
+    }
+}
+
+class CompileThriftTask extends DefaultTask {
+
+    @Internal
+    def thriftDirs = []
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    Iterable<File> getInputFiles() {
+        return project.files(thriftDirs)
     }
 }
