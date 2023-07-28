@@ -50,10 +50,18 @@ configure(projectsWithFlags('java')) {
             def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
             def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
             task.configure {
+
+                // configure caching
                 srcDirs.each { inputs.dir it }
                 includeDirs.each { inputs.dir it }
+                inputs.property("thriftVersion", project.ext.thriftVersion ?: "null")
+                inputs.property("thriftPath", project.ext.thriftPath ?: "null")
+                inputs.property("thriftJsonEnabled", thriftJsonEnabled)
+                inputs.property("fullCamel", fullCamel)
                 outputs.dir javaOutputDir
                 outputs.dir jsonOutputDir
+
+                outputs.cacheIf { true }
 
                 doFirst {
                     def actualThriftPath
@@ -62,7 +70,7 @@ configure(projectsWithFlags('java')) {
                     } else {
                         actualThriftPath =
                                 "${libDir}/thrift" +
-                                "/${project.findProperty('thriftVersion')?: '0.16'}" +
+                                "/${project.findProperty('thriftVersion')?: '0.18'}" +
                                 "/thrift.${rootProject.osdetector.classifier}"
                     }
 
