@@ -50,10 +50,9 @@ configure(projectsWithFlags('java')) {
             def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
             def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
             task.configure {
-
                 // configure caching
-                srcDirs.each { inputs.dir it }
-                includeDirs.each { inputs.dir it }
+                srcDirs.each { inputs.dir projectDir.relativePath(new File(it.toString())) }
+                includeDirs.each { inputs.dir projectDir.relativePath(new File(it.toString())) }
                 inputs.property("thriftVersion", project.ext.thriftVersion ?: "null")
                 inputs.property("thriftPath", project.ext.thriftPath ?: "null")
                 inputs.property("thriftJsonEnabled", thriftJsonEnabled)
