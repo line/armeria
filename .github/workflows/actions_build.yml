@@ -24,7 +24,7 @@ env:
 
 jobs:
   build:
-    if: github.repository == 'line/armeria'
+    if: github.repository == 'jrhee17/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
     strategy:
