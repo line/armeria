@@ -150,6 +150,7 @@ class CompileThriftTask extends DefaultTask {
     }
 
     @InputFile
+    @PathSensitive(PathSensitivity.RELATIVE)
     @Optional
     File getThriftBinary() {
         return thriftBinaryPath != null ? project.file(thriftBinaryPath) : null
