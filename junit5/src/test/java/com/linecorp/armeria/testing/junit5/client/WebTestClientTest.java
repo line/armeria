@@ -171,7 +171,7 @@ class WebTestClientTest {
             TestHttpResponse.of(AggregatedHttpResponse.of(200)).assertCause();
         }, "Expecting the response to raise a throwable.");
 
-        TestHttpResponse aborted = TestHttpResponse.ofFailure(new RuntimeException("Runtime exception."));
+        final TestHttpResponse aborted = TestHttpResponse.ofFailure(new RuntimeException("Runtime exception."));
         assertThrows(AssertionError.class, () -> {
             aborted.assertStatus().isOk();
         });
