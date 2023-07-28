@@ -84,6 +84,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -2102,25 +2103,43 @@ public final class ServerBuilder implements TlsSetters {
      */
     private static List<ServerPort> resolveDistinctPorts(List<ServerPort> ports) {
         final List<ServerPort> distinctPorts = new ArrayList<>();
-        for (final ServerPort p : ports) {
+        for (final ServerPort port : ports) {
             boolean found = false;
             // Do not check the port number 0 because a user may want his or her server to be bound
             // on multiple arbitrary ports.
-            if (p.localAddress().getPort() > 0) {
+            final InetSocketAddress portAddress = port.localAddress();
+            if (portAddress.getPort() > 0) {
                 for (int i = 0; i < distinctPorts.size(); i++) {
-                    final ServerPort port = distinctPorts.get(i);
-                    if (port.localAddress().equals(p.localAddress())) {
+                    final ServerPort distinctPort = distinctPorts.get(i);
+                    final InetSocketAddress distinctPortAddress = distinctPort.localAddress();
+
+                    // Compare the addresses taking `DomainSocketAddress` into account.
+                    final boolean hasSameAddress;
+                    if (portAddress instanceof DomainSocketAddress) {
+                        if (distinctPortAddress instanceof DomainSocketAddress) {
+                            hasSameAddress = ((DomainSocketAddress) portAddress).path().equals(
+                                    ((DomainSocketAddress) distinctPortAddress).path());
+                        } else {
+                            hasSameAddress = false;
+                        }
+                    } else {
+                        hasSameAddress = portAddress.equals(distinctPortAddress);
+                    }
+
+                    // Merge two `ServerPort`s into one if their addresses are equal.
+                    if (hasSameAddress) {
                         final ServerPort merged =
-                                new ServerPort(port.localAddress(),
-                                               Sets.union(port.protocols(), p.protocols()));
+                                new ServerPort(distinctPort.localAddress(),
+                                               Sets.union(distinctPort.protocols(), port.protocols()));
                         distinctPorts.set(i, merged);
                         found = true;
                         break;
                     }
                 }
             }
+
             if (!found) {
-                distinctPorts.add(p);
+                distinctPorts.add(port);
             }
         }
         return Collections.unmodifiableList(distinctPorts);

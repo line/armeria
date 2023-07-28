@@ -33,13 +33,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.protobuf.EmptyProtos;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.grpc.BindableService;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.EmptyProtos;
+import testing.grpc.TestServiceGrpc;
 
 public class UnframedGrpcServiceResponseMediaTypeTest {
 

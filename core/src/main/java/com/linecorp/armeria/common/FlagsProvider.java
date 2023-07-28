@@ -985,6 +985,28 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns whether to allow a semicolon ({@code ;}) in a request path component on the server-side.
+     * If disabled, the substring from the semicolon to before the next slash, commonly referred to as
+     * matrix variables, is removed. For example, {@code /foo;a=b/bar} will be converted to {@code /foo/bar}.
+     * Also, an exception is raised if a semicolon is used for binding a service. For example, the following
+     * code raises an exception:
+     * <pre>{@code
+     * Server server =
+     *    Server.builder()
+     *      .service("/foo;bar", ...)
+     *      .build();
+     * }</pre>
+     * Note that this flag has no effect on the client-side.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowSemicolonInPathComponent=true} JVM option to enable it.
+     */
+    @Nullable
+    default Boolean allowSemicolonInPathComponent() {
+        return null;
+    }
+
+    /**
      * Returns the {@link Path} that is used to store the files uploaded from {@code multipart/form-data}
      * requests.
      */

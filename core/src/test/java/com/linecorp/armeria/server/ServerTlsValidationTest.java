@@ -31,6 +31,9 @@ import com.linecorp.armeria.common.HttpStatus;
 
 class ServerTlsValidationTest {
 
+    private static final String RESOURCE_PATH_PREFIX =
+            "/testing/core/" + ServerTlsValidationTest.class.getSimpleName() + '/';
+
     // TODO: Re-enable this test once we figure out why it does not raise an exception. When key store password
     //       is not given to key store, it is expected that this test raise an exception. For reference, in case
     //       of PKCS12 key store, an exception is raised when key store password is not given.
@@ -44,7 +47,7 @@ class ServerTlsValidationTest {
          * key password = keypassword
          */
         final KeyStore keyStore = KeyStore.getInstance("JKS");
-        keyStore.load(getClass().getResource("keystore.jks").openStream(), null);
+        keyStore.load(getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "keystore.jks"), null);
 
         final KeyManagerFactory kmf =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
@@ -67,7 +70,7 @@ class ServerTlsValidationTest {
          * keypassword = keystorepassword = password
          */
         final KeyStore keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(getClass().getResource("keystore.p12").openStream(), null);
+        keyStore.load(getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "keystore.p12"), null);
 
         final KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, "password".toCharArray());
@@ -89,7 +92,8 @@ class ServerTlsValidationTest {
          * keypassword = keystorepassword = password
          */
         final KeyStore keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(getClass().getResource("keystore.p12").openStream(), "password".toCharArray());
+        keyStore.load(getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "keystore.p12"),
+                      "password".toCharArray());
 
         final KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, "password".toCharArray());
