@@ -57,8 +57,8 @@ configure(projectsWithFlags('java')) {
                 inputs.property("thriftPath", project.ext.thriftPath ?: "null")
                 inputs.property("thriftJsonEnabled", thriftJsonEnabled)
                 inputs.property("fullCamel", fullCamel)
-                outputs.dir javaOutputDir
-                outputs.dir jsonOutputDir
+                outputs.dir projectDir.relativePath(new File(javaOutputDir))
+                outputs.dir projectDir.relativePath(new File(jsonOutputDir))
 
                 outputs.cacheIf { true }
 
