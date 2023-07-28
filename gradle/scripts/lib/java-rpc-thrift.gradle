@@ -54,10 +54,10 @@ configure(projectsWithFlags('java')) {
                 // configure caching
                 srcDirs.each { task.thriftDirs.add(it) }
                 includeDirs.each { task.thriftDirs.add(it) }
-                inputs.property("thriftVersion", project.ext.thriftVersion ?: "null")
-                inputs.property("thriftPath", project.ext.thriftPath ?: "null")
-                inputs.property("thriftJsonEnabled", thriftJsonEnabled)
-                inputs.property("fullCamel", fullCamel)
+                task.thriftVersion = project.ext.thriftVersion
+                task.thriftBinaryPath = project.ext.thriftPath
+                task.thriftJsonEnabled = thriftJsonEnabled
+                task.fullCamel = fullCamel
                 outputs.dir javaOutputDir
                 outputs.dir jsonOutputDir
 
@@ -130,9 +130,28 @@ class CompileThriftTask extends DefaultTask {
     @Internal
     def thriftDirs = []
 
+    @Input
+    @Optional
+    def thriftVersion
+
+    @Internal
+    def thriftBinaryPath
+
+    @Input
+    def thriftJsonEnabled
+
+    @Input
+    def fullCamel
+
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     Iterable<File> getInputFiles() {
         return project.files(thriftDirs)
+    }
+
+    @InputFile
+    @Optional
+    File getThriftBinary() {
+        return thriftBinaryPath != null ? project.file(thriftBinaryPath) : null
     }
 }
