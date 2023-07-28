@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.testing.junit5.client;
 
-import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.linecorp.armeria.common.HttpStatus;
@@ -25,23 +24,12 @@ import com.linecorp.armeria.common.HttpStatus;
  * Assertion methods for HttpStatus.
  */
 public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
-
     HttpStatusAssert(HttpStatus actual, TestHttpResponse response) {
         super(actual, response);
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the given one.
-     * The {@code expected} cannot be null.
-     */
-    public TestHttpResponse isEqualTo(HttpStatus expected) {
-        requireNonNull(expected, "expected");
-        assertEquals(expected, actual());
-        return response();
-    }
-
-    /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#CONTINUE}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#CONTINUE}.
      */
     public TestHttpResponse isContinue() {
         assertEquals(HttpStatus.CONTINUE, actual());
@@ -49,7 +37,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#SWITCHING_PROTOCOLS}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#SWITCHING_PROTOCOLS}.
      */
     public TestHttpResponse isSwitchingProtocols() {
         assertEquals(HttpStatus.SWITCHING_PROTOCOLS, actual());
@@ -57,7 +45,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PROCESSING}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PROCESSING}.
      */
     public TestHttpResponse isProcessing() {
         assertEquals(HttpStatus.PROCESSING, actual());
@@ -65,7 +53,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#OK}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#OK}.
      */
     public TestHttpResponse isOk() {
         assertEquals(HttpStatus.OK, actual());
@@ -73,7 +61,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#CREATED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#CREATED}.
      */
     public TestHttpResponse isCreated() {
         assertEquals(HttpStatus.CREATED, actual());
@@ -81,7 +69,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#ACCEPTED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#ACCEPTED}.
      */
     public TestHttpResponse isAccepted() {
         assertEquals(HttpStatus.ACCEPTED, actual());
@@ -89,7 +77,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the
+     * Asserts that the actual {@link HttpStatus} is equal to the
      * {@link HttpStatus#NON_AUTHORITATIVE_INFORMATION}.
      */
     public TestHttpResponse isNonAuthoritativeInformation() {
@@ -98,7 +86,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NO_CONTENT}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NO_CONTENT}.
      */
     public TestHttpResponse isNoContent() {
         assertEquals(HttpStatus.NO_CONTENT, actual());
@@ -106,7 +94,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#RESET_CONTENT}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#RESET_CONTENT}.
      */
     public TestHttpResponse isResetContent() {
         assertEquals(HttpStatus.RESET_CONTENT, actual());
@@ -114,7 +102,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PARTIAL_CONTENT}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PARTIAL_CONTENT}.
      */
     public TestHttpResponse isPartialContent() {
         assertEquals(HttpStatus.PARTIAL_CONTENT, actual());
@@ -122,7 +110,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#MULTI_STATUS}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#MULTI_STATUS}.
      */
     public TestHttpResponse isMultiStatus() {
         assertEquals(HttpStatus.MULTI_STATUS, actual());
@@ -130,7 +118,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#MULTIPLE_CHOICES}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#MULTIPLE_CHOICES}.
      */
     public TestHttpResponse isMultipleChoices() {
         assertEquals(HttpStatus.MULTIPLE_CHOICES, actual());
@@ -138,7 +126,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#MOVED_PERMANENTLY}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#MOVED_PERMANENTLY}.
      */
     public TestHttpResponse isMovedPermanently() {
         assertEquals(HttpStatus.MOVED_PERMANENTLY, actual());
@@ -146,7 +134,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#FOUND}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#FOUND}.
      */
     public TestHttpResponse isFound() {
         assertEquals(HttpStatus.FOUND, actual());
@@ -154,7 +142,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#SEE_OTHER}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#SEE_OTHER}.
      */
     public TestHttpResponse isSeeOther() {
         assertEquals(HttpStatus.SEE_OTHER, actual());
@@ -162,7 +150,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_MODIFIED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_MODIFIED}.
      */
     public TestHttpResponse isNotModified() {
         assertEquals(HttpStatus.NOT_MODIFIED, actual());
@@ -170,7 +158,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#USE_PROXY}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#USE_PROXY}.
      */
     public TestHttpResponse isUseProxy() {
         assertEquals(HttpStatus.USE_PROXY, actual());
@@ -178,7 +166,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#TEMPORARY_REDIRECT}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#TEMPORARY_REDIRECT}.
      */
     public TestHttpResponse isTemporaryRedirect() {
         assertEquals(HttpStatus.TEMPORARY_REDIRECT, actual());
@@ -186,7 +174,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#BAD_REQUEST}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#BAD_REQUEST}.
      */
     public TestHttpResponse isBadRequest() {
         assertEquals(HttpStatus.BAD_REQUEST, actual());
@@ -194,7 +182,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNAUTHORIZED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNAUTHORIZED}.
      */
     public TestHttpResponse isUnauthorized() {
         assertEquals(HttpStatus.UNAUTHORIZED, actual());
@@ -202,7 +190,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PAYMENT_REQUIRED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PAYMENT_REQUIRED}.
      */
     public TestHttpResponse isPaymentRequired() {
         assertEquals(HttpStatus.PAYMENT_REQUIRED, actual());
@@ -210,7 +198,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#FORBIDDEN}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#FORBIDDEN}.
      */
     public TestHttpResponse isForbidden() {
         assertEquals(HttpStatus.FORBIDDEN, actual());
@@ -218,7 +206,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_FOUND}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_FOUND}.
      */
     public TestHttpResponse isNotFound() {
         assertEquals(HttpStatus.NOT_FOUND, actual());
@@ -226,7 +214,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#METHOD_NOT_ALLOWED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#METHOD_NOT_ALLOWED}.
      */
     public TestHttpResponse isMethodNotAllowed() {
         assertEquals(HttpStatus.METHOD_NOT_ALLOWED, actual());
@@ -234,7 +222,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_ACCEPTABLE}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_ACCEPTABLE}.
      */
     public TestHttpResponse isNotAcceptable() {
         assertEquals(HttpStatus.NOT_ACCEPTABLE, actual());
@@ -242,7 +230,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the
+     * Asserts that the actual {@link HttpStatus} is equal to the
      * {@link HttpStatus#PROXY_AUTHENTICATION_REQUIRED}.
      */
     public TestHttpResponse isProxyAuthenticationRequired() {
@@ -251,7 +239,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#REQUEST_TIMEOUT}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#REQUEST_TIMEOUT}.
      */
     public TestHttpResponse isRequestTimeout() {
         assertEquals(HttpStatus.REQUEST_TIMEOUT, actual());
@@ -259,7 +247,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#CONFLICT}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#CONFLICT}.
      */
     public TestHttpResponse isConflict() {
         assertEquals(HttpStatus.CONFLICT, actual());
@@ -267,7 +255,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#GONE}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#GONE}.
      */
     public TestHttpResponse isGone() {
         assertEquals(HttpStatus.GONE, actual());
@@ -275,7 +263,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#LENGTH_REQUIRED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#LENGTH_REQUIRED}.
      */
     public TestHttpResponse isLengthRequired() {
         assertEquals(HttpStatus.LENGTH_REQUIRED, actual());
@@ -283,7 +271,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PRECONDITION_FAILED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PRECONDITION_FAILED}.
      */
     public TestHttpResponse isPreconditionFailed() {
         assertEquals(HttpStatus.PRECONDITION_FAILED, actual());
@@ -291,7 +279,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#REQUEST_ENTITY_TOO_LARGE}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#REQUEST_ENTITY_TOO_LARGE}.
      */
     public TestHttpResponse isRequestEntityTooLarge() {
         assertEquals(HttpStatus.REQUEST_ENTITY_TOO_LARGE, actual());
@@ -299,7 +287,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#REQUEST_URI_TOO_LONG}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#REQUEST_URI_TOO_LONG}.
      */
     public TestHttpResponse isRequestUriTooLong() {
         assertEquals(HttpStatus.REQUEST_URI_TOO_LONG, actual());
@@ -307,7 +295,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNSUPPORTED_MEDIA_TYPE}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNSUPPORTED_MEDIA_TYPE}.
      */
     public TestHttpResponse isUnsupportedMediaType() {
         assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE, actual());
@@ -315,7 +303,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the
+     * Asserts that the actual {@link HttpStatus} is equal to the
      * {@link HttpStatus#REQUESTED_RANGE_NOT_SATISFIABLE}.
      */
     public TestHttpResponse isRequestedRangeNotSatisfiable() {
@@ -324,7 +312,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#EXPECTATION_FAILED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#EXPECTATION_FAILED}.
      */
     public TestHttpResponse isExpectationFailed() {
         assertEquals(HttpStatus.EXPECTATION_FAILED, actual());
@@ -332,7 +320,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#MISDIRECTED_REQUEST}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#MISDIRECTED_REQUEST}.
      */
     public TestHttpResponse isMisdirectedRequest() {
         assertEquals(HttpStatus.MISDIRECTED_REQUEST, actual());
@@ -340,7 +328,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNPROCESSABLE_ENTITY}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNPROCESSABLE_ENTITY}.
      */
     public TestHttpResponse isUnprocessableEntity() {
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, actual());
@@ -348,7 +336,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#LOCKED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#LOCKED}.
      */
     public TestHttpResponse isLocked() {
         assertEquals(HttpStatus.LOCKED, actual());
@@ -356,7 +344,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#FAILED_DEPENDENCY}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#FAILED_DEPENDENCY}.
      */
     public TestHttpResponse isFailedDependency() {
         assertEquals(HttpStatus.FAILED_DEPENDENCY, actual());
@@ -364,7 +352,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNORDERED_COLLECTION}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNORDERED_COLLECTION}.
      */
     public TestHttpResponse isUnorderedCollection() {
         assertEquals(HttpStatus.UNORDERED_COLLECTION, actual());
@@ -372,7 +360,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UPGRADE_REQUIRED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UPGRADE_REQUIRED}.
      */
     public TestHttpResponse isUpgradeRequired() {
         assertEquals(HttpStatus.UPGRADE_REQUIRED, actual());
@@ -380,7 +368,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PRECONDITION_REQUIRED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#PRECONDITION_REQUIRED}.
      */
     public TestHttpResponse isPreconditionRequired() {
         assertEquals(HttpStatus.PRECONDITION_REQUIRED, actual());
@@ -388,7 +376,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#TOO_MANY_REQUESTS}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#TOO_MANY_REQUESTS}.
      */
     public TestHttpResponse isTooManyRequests() {
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, actual());
@@ -396,7 +384,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the
+     * Asserts that the actual {@link HttpStatus} is equal to the
      * {@link HttpStatus#REQUEST_HEADER_FIELDS_TOO_LARGE}.
      */
     public TestHttpResponse isRequestHeaderFieldsTooLarge() {
@@ -405,7 +393,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#CLIENT_CLOSED_REQUEST}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#CLIENT_CLOSED_REQUEST}.
      */
     public TestHttpResponse isClientClosedRequest() {
         assertEquals(HttpStatus.CLIENT_CLOSED_REQUEST, actual());
@@ -413,7 +401,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#INTERNAL_SERVER_ERROR}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#INTERNAL_SERVER_ERROR}.
      */
     public TestHttpResponse isInternalServerError() {
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, actual());
@@ -421,7 +409,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_IMPLEMENTED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_IMPLEMENTED}.
      */
     public TestHttpResponse isNotImplemented() {
         assertEquals(HttpStatus.NOT_IMPLEMENTED, actual());
@@ -429,7 +417,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#BAD_GATEWAY}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#BAD_GATEWAY}.
      */
     public TestHttpResponse isBadGateway() {
         assertEquals(HttpStatus.BAD_GATEWAY, actual());
@@ -437,7 +425,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#SERVICE_UNAVAILABLE}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#SERVICE_UNAVAILABLE}.
      */
     public TestHttpResponse isServiceUnavailable() {
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, actual());
@@ -445,7 +433,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#GATEWAY_TIMEOUT}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#GATEWAY_TIMEOUT}.
      */
     public TestHttpResponse isGatewayTimeout() {
         assertEquals(HttpStatus.GATEWAY_TIMEOUT, actual());
@@ -453,7 +441,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the
+     * Asserts that the actual {@link HttpStatus} is equal to the
      * {@link HttpStatus#HTTP_VERSION_NOT_SUPPORTED}.
      */
     public TestHttpResponse isHttpVersionNotSupported() {
@@ -462,7 +450,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#VARIANT_ALSO_NEGOTIATES}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#VARIANT_ALSO_NEGOTIATES}.
      */
     public TestHttpResponse isVariantAlsoNegotiates() {
         assertEquals(HttpStatus.VARIANT_ALSO_NEGOTIATES, actual());
@@ -470,7 +458,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#INSUFFICIENT_STORAGE}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#INSUFFICIENT_STORAGE}.
      */
     public TestHttpResponse isInsufficientStorage() {
         assertEquals(HttpStatus.INSUFFICIENT_STORAGE, actual());
@@ -478,7 +466,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_EXTENDED}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#NOT_EXTENDED}.
      */
     public TestHttpResponse isNotExtended() {
         assertEquals(HttpStatus.NOT_EXTENDED, actual());
@@ -486,7 +474,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the
+     * Asserts that the actual {@link HttpStatus} is equal to the
      * {@link HttpStatus#NETWORK_AUTHENTICATION_REQUIRED}.
      */
     public TestHttpResponse isNetworkAuthenticationRequired() {
@@ -495,7 +483,7 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Verifies that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNKNOWN}.
+     * Asserts that the actual {@link HttpStatus} is equal to the {@link HttpStatus#UNKNOWN}.
      */
     public TestHttpResponse isUnknown() {
         assertEquals(HttpStatus.UNKNOWN, actual());

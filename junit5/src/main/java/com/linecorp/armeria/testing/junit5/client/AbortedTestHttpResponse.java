@@ -37,52 +37,52 @@ final class AbortedTestHttpResponse implements TestHttpResponse {
 
     @Override
     public List<ResponseHeaders> informationals() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public HttpHeaders trailers() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public HttpData content() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public ResponseHeaders headers() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public HttpStatus status() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public AggregatedHttpResponse unwrap() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public HttpStatusAssert assertStatus() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public HttpHeadersAssert assertHeaders() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public HttpDataAssert assertContent() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override
     public HttpHeadersAssert assertTrailers() {
-        throw new RuntimeException(cause);
+        throw new AssertionError("The response completed exceptionally", cause);
     }
 
     @Override

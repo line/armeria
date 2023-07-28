@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -30,30 +31,69 @@ public final class ThrowableAssert {
     private final Throwable cause;
 
     ThrowableAssert(Throwable cause) {
+        requireNonNull(cause, "cause");
         this.cause = cause;
     }
 
     /**
-     * Verifies that the actual {@link Throwable} value is an instance of the given type.
+     * Asserts that the actual {@link Throwable} is an instance of the given type.
      * The {@code expectedType} cannot be null.
      */
     public ThrowableAssert isInstanceOf(Class<? extends Throwable> expectedType) {
-        requireNonNull(expectedType);
+        requireNonNull(expectedType, "expectedType");
         assertInstanceOf(expectedType, cause);
         return this;
     }
 
     /**
-     * Verifies that the message of the actual {@link Throwable} is equal to the given message.
+     * Returns a new assertion object that uses the cause of the current Throwable as the actual Throwable.
+     */
+    public ThrowableAssert cause() {
+        final Throwable cause0 = cause.getCause();
+        assertNotNull(cause0);
+        return new ThrowableAssert(cause0);
+    }
+
+    /**
+     * Returns a new assertion object that uses the root cause of the current Throwable as the actual Throwable.
+     */
+    public ThrowableAssert rootCause() {
+        Throwable root = cause.getCause();
+        assertNotNull(root);
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        return new ThrowableAssert(root);
+    }
+
+    /**
+     * Asserts that the actual {@link Throwable} does not have a cause.
+     */
+    public ThrowableAssert hasNoCause() {
+        assertNull(cause.getCause());
+        return this;
+    }
+
+    /**
+     * Asserts that the message of the actual {@link Throwable} is equal to the given message.
      * The {@code message} cannot be null.
      */
     public ThrowableAssert hasMessage(String message) {
+        requireNonNull(message, "message");
         assertEquals(message, cause.getMessage());
         return this;
     }
 
     /**
-     * Verifies that the message of the actual {@link Throwable} starts with the given message.
+     * Asserts that the actual {@link Throwable} does not have a message.
+     */
+    public ThrowableAssert hasNoMessage() {
+        assertNull(cause.getMessage());
+        return this;
+    }
+
+    /**
+     * Asserts that the message of the actual {@link Throwable} starts with the given message.
      * The {@code message} cannot be null.
      */
     public ThrowableAssert hasMessageStartingWith(String message) {
@@ -64,7 +104,7 @@ public final class ThrowableAssert {
     }
 
     /**
-     * Verifies that the message of the actual {@link Throwable} contains the given message.
+     * Asserts that the message of the actual {@link Throwable} contains the given message.
      * The {@code message} cannot be null.
      */
     public ThrowableAssert hasMessageContaining(String message) {
@@ -75,7 +115,7 @@ public final class ThrowableAssert {
     }
 
     /**
-     * Verifies that the message of the actual {@link Throwable} does not contain the given message or is null.
+     * Asserts that the message of the actual {@link Throwable} does not contain the given message or is null.
      * The {@code message} cannot be null.
      */
     public ThrowableAssert hasMessageNotContaining(String message) {
@@ -88,7 +128,7 @@ public final class ThrowableAssert {
     }
 
     /**
-     * Verifies that the message of the actual {@link Throwable} ends with the given message.
+     * Asserts that the message of the actual {@link Throwable} ends with the given message.
      * The {@code message} cannot be null.
      */
     public ThrowableAssert hasMessageEndingWith(String message) {

@@ -20,9 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -96,11 +93,7 @@ final class DefaultTestHttpResponse implements TestHttpResponse {
 
     @Override
     public int hashCode() {
-        int result = informationals().hashCode();
-        result = 59 * result + headers().hashCode();
-        result = 59 * result + content().hashCode();
-        result = 59 * result + trailers().hashCode();
-        return result;
+        return delegate.hashCode();
     }
 
     @Override
@@ -115,27 +108,11 @@ final class DefaultTestHttpResponse implements TestHttpResponse {
 
         final TestHttpResponse that = (TestHttpResponse) obj;
 
-        return informationals().equals(that.informationals()) &&
-               headers().equals(that.headers()) &&
-               content().equals(that.content()) &&
-               trailers().equals(that.trailers());
+        return delegate.equals(that.unwrap());
     }
 
     @Override
     public String toString() {
-        final ToStringHelper helper = MoreObjects.toStringHelper(this);
-
-        if (!informationals().isEmpty()) {
-            helper.add("informationals", informationals());
-        }
-
-        helper.add("headers", headers())
-              .add("content", content());
-
-        if (!trailers().isEmpty()) {
-            helper.add("trailers", trailers());
-        }
-
-        return helper.toString();
+        return delegate.toString();
     }
 }

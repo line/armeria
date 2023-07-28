@@ -33,17 +33,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the actual {@link HttpData} is equal to the given one.
-     * The {@code expected} cannot be null.
-     */
-    public TestHttpResponse isEqualTo(HttpData expected) {
-        requireNonNull(expected, "expected");
-        assertEquals(expected, actual());
-        return response();
-    }
-
-    /**
-     * Verifies that the actual {@link HttpData} is empty.
+     * Asserts that the actual {@link HttpData} is empty.
      */
     public TestHttpResponse isEmpty() {
         assertTrue(actual().isEmpty());
@@ -51,7 +41,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the actual byte array of {@link HttpData} contains the given values, in any order.
+     * Asserts that the actual byte array of {@link HttpData} contains the given values, in any order.
      * The {@code expected} cannot be null.
      */
     public TestHttpResponse arrayContains(byte... expected) {
@@ -61,7 +51,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the actual byte array of {@link HttpData} contains the given values, in any order.
+     * Asserts that the actual byte array of {@link HttpData} contains the given values, in any order.
      * The {@code expected} cannot be null.
      */
     public TestHttpResponse arrayContains(Byte[] expected) {
@@ -71,7 +61,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the actual byte array of {@link HttpData} contains the given values, in any order.
+     * Asserts that the actual byte array of {@link HttpData} contains the given values, in any order.
      * The {@code expected} cannot be null.
      */
     public TestHttpResponse arrayContains(int... expected) {
@@ -81,7 +71,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the actual byte array of {@link HttpData} contains only the given values and nothing else,
+     * Asserts that the actual byte array of {@link HttpData} contains only the given values and nothing else,
      * in order.
      * The {@code expected} cannot be null.
      */
@@ -92,7 +82,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the actual byte array of {@link HttpData} contains only the given values and nothing else,
+     * Asserts that the actual byte array of {@link HttpData} contains only the given values and nothing else,
      * in order.
      * The {@code expected} cannot be null.
      */
@@ -103,7 +93,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the actual byte array of {@link HttpData} contains only the given values and nothing else,
+     * Asserts that the actual byte array of {@link HttpData} contains only the given values and nothing else,
      * in order.
      * The {@code expected} cannot be null.
      */
@@ -114,7 +104,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the length of actual {@link HttpData} is equal to the given one.
+     * Asserts that the length of actual {@link HttpData} is equal to the given one.
      */
     public TestHttpResponse lengthIsEqualTo(int expected) {
         assertEquals(expected, actual().length());
@@ -122,7 +112,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the {@link String} representation of actual {@link HttpData} is equal to the given one.
+     * Asserts that the {@link String} representation of actual {@link HttpData} is equal to the given one.
      */
     public TestHttpResponse stringIsEqualTo(Charset charset, String expected) {
         requireNonNull(charset, "charset");
@@ -132,7 +122,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the UTF-8 {@link String} representation of actual {@link HttpData} is equal to the given
+     * Asserts that the UTF-8 {@link String} representation of actual {@link HttpData} is equal to the given
      * one.
      */
     public TestHttpResponse stringUtf8IsEqualTo(String expected) {
@@ -142,7 +132,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the ascii {@link String} representation of actual {@link HttpData} is equal to the given
+     * Asserts that the ascii {@link String} representation of actual {@link HttpData} is equal to the given
      * one.
      */
     public TestHttpResponse stringAsciiIsEqualTo(String expected) {
@@ -152,7 +142,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the {@link String} representation of actual {@link HttpData} contains the given value.
+     * Asserts that the {@link String} representation of actual {@link HttpData} contains the given value.
      */
     public TestHttpResponse stringContains(Charset charset, String expected) {
         requireNonNull(charset, "charset");
@@ -162,7 +152,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the UTF-8 {@link String} representation of actual {@link HttpData} contains the given
+     * Asserts that the UTF-8 {@link String} representation of actual {@link HttpData} contains the given
      * value.
      */
     public TestHttpResponse stringUtf8Contains(String expected) {
@@ -172,7 +162,7 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Verifies that the ascii {@link String} representation of actual {@link HttpData} contains the given
+     * Asserts that the ascii {@link String} representation of actual {@link HttpData} contains the given
      * value.
      */
     public TestHttpResponse stringAsciiContains(String expected) {

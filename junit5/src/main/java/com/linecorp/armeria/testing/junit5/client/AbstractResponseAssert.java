@@ -17,6 +17,7 @@
 package com.linecorp.armeria.testing.junit5.client;
 
 import static java.util.Objects.requireNonNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 abstract class AbstractResponseAssert<T> {
     private final T actual;
@@ -35,5 +36,15 @@ abstract class AbstractResponseAssert<T> {
 
     TestHttpResponse response() {
         return response;
+    }
+
+    /**
+     * Asserts that the actual {@code actual} is equal to the given one.
+     * The {@code expected} cannot be null.
+     */
+    public TestHttpResponse isEqualTo(T expected) {
+        requireNonNull(expected, "expected");
+        assertEquals(expected, actual());
+        return response();
     }
 }
