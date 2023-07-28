@@ -97,7 +97,7 @@ final class LoggingEventWrapper extends LoggingEvent {
 
     @Override
     public Instant getInstant() {
-        return Instant.ofEpochMilli(event.getTimeStamp());
+        return event.getInstant();
     }
 
     @Override
