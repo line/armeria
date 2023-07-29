@@ -378,10 +378,9 @@ class RequestMetricSupportTest {
                                      .build();
         final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
-        final DistributionStatisticConfig distributionStatisticConfig = DEFAULT_DIST_STAT_CFG;
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET,
                                    MeterIdPrefixFunction.ofDefault("foo"), true,
-                                   SuccessFunction.ofDefault(), distributionStatisticConfig);
+                                   SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -391,7 +390,7 @@ class RequestMetricSupportTest {
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
                                        MeterIdPrefixFunction.ofDefault("bar"), false,
-                                       SuccessFunction.ofDefault(), distributionStatisticConfig);
+                                       SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();
@@ -442,15 +441,14 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        final DistributionStatisticConfig distributionStatisticConfig = DEFAULT_DIST_STAT_CFG;
         final SuccessFunction successFunction = (context, log) -> {
             final int statusCode = log.responseHeaders().status().code();
             return (statusCode >= 200 && statusCode < 400) || statusCode == 409;
         };
         RequestMetricSupport.setup(ctx1, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction,
-                                   distributionStatisticConfig);
+                                   DEFAULT_DIST_STAT_CFG);
         RequestMetricSupport.setup(ctx2, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction,
-                                   distributionStatisticConfig);
+                                   DEFAULT_DIST_STAT_CFG);
 
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(409));
         ctx1.logBuilder().endRequest();

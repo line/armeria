@@ -94,7 +94,8 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;
-        this.distributionStatisticConfig = distributionStatisticConfig;
+        this.distributionStatisticConfig =
+                requireNonNull(distributionStatisticConfig, "distributionStatisticConfig");
     }
 
     @Override

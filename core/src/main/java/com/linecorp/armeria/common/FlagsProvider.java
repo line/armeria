@@ -1042,11 +1042,11 @@ public interface FlagsProvider {
      * <pre>{@code
      * DistributionStatisticConfig.builder()
      *     .percentilesHistogram(false)
-     *     .sla()
+     *     .serviceLevelObjectives()
      *     .percentiles(PERCENTILES)
      *     .percentilePrecision(2)
-     *     .minimumExpectedValue(1L)
-     *     .maximumExpectedValue(Long.MAX_VALUE)
+     *     .minimumExpectedValue(1.0)
+     *     .maximumExpectedValue(Double.MAX_VALUE)
      *     .expiry(Duration.ofMinutes(3))
      *     .bufferLength(3)
      *     .build();
