@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
+import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -537,6 +538,25 @@ public interface RequestContext extends Unwrappable {
      */
     @MustBeClosed
     SafeCloseable push();
+
+    /**
+     * Adds a hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link AutoCloseable} returned by {@code contextHook} will be called
+     * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
+     *
+     * <p>Note that this operation is highly performance-sensitive operation, and thus
+     * it's not a good idea to run a time-consuming task.
+     */
+    void hook(Supplier<? extends AutoCloseable> contextHook);
+
+    /**
+     * Returns the hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by the {@link Supplier} will be
+     * called whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     */
+    @Nullable
+    Supplier<AutoCloseable> hook();
 
     @Override
     default RequestContext unwrap() {

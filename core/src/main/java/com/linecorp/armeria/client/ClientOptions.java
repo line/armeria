@@ -362,6 +362,10 @@ public final class ClientOptions
         return get(CONTEXT_CUSTOMIZER);
     }
 
+    public Supplier<? extends AutoCloseable> contextHook() {
+        return get(CONTEXT_HOOK);
+    }
+
     /**
      * Returns a new {@link ClientOptionsBuilder} created from this {@link ClientOptions}.
      */
