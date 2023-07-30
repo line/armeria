@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.function.Supplier;
+
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +52,16 @@ class RequestContextWrapperTest {
         @MustBeClosed
         public SafeCloseable push() {
             return unwrap().push();
+        }
+
+        @Override
+        public void hook(Supplier<? extends AutoCloseable> contextHook) {
+            unwrap().hook(contextHook);
+        }
+
+        @Override
+        public Supplier<AutoCloseable> hook() {
+            return unwrap().hook();
         }
     }
 

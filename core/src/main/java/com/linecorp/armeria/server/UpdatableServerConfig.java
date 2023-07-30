@@ -27,6 +27,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
@@ -298,6 +299,11 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public long unhandledExceptionsReportIntervalMillis() {
         return delegate.unhandledExceptionsReportIntervalMillis();
+    }
+
+    @Override
+    public Supplier<? extends AutoCloseable> contextHook() {
+        return delegate.contextHook();
     }
 
     @Override

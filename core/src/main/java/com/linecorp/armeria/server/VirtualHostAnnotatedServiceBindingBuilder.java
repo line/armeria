@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -331,6 +332,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        defaultServiceConfigSetters.contextHook(contextHook);
         return this;
     }
 

@@ -66,7 +66,7 @@ public class ServiceTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   ctx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler());
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }
