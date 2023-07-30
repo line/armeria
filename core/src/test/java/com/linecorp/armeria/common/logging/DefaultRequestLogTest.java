@@ -493,4 +493,19 @@ class DefaultRequestLogTest {
         assertThat(lines[2]).matches("^\\t\\{Request: \\{.*}, Response: \\{.*}}$");
         assertThat(lines[3]).matches("^\\t\\{Request: \\{.*}, Response: \\{.*}}$");
     }
+
+    @Test
+    void testGetIfAvailable() {
+        // Given
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final RequestLogAccess log = ctx.log();
+
+        // When
+        assertThat(log.isAvailable(RequestLogProperty.REQUEST_HEADERS)).isTrue();
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+
+        // Then
+        assertThat(log.getIfAvailable(RequestLogProperty.REQUEST_HEADERS)).isEqualTo(log);
+        assertThat(log.getIfAvailable(RequestLogProperty.NAME)).isNull();
+    }
 }
