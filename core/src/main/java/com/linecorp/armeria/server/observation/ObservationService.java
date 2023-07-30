@@ -136,11 +136,6 @@ public final class ObservationService extends SimpleDecoratingHttpService {
     private void enrichObservation(ServiceRequestContext ctx,
                                    ServiceObservationContext serviceObservationContext,
                                    Observation observation) {
-        if (observation.isNoop()) {
-            // For no-op spans, we only need to inject into headers and don't set any other attributes.
-            return;
-        }
-
         ctx.log()
            .whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
            .thenAccept(requestLog -> observation.event(
