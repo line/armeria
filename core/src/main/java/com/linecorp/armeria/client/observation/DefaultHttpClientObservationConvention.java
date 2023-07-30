@@ -138,8 +138,7 @@ class DefaultHttpClientObservationConvention implements ObservationConvention<Cl
     @Override
     public String getContextualName(ClientObservationContext context) {
         final RequestLogAccess logAccess = context.requestContext().log();
-        if (logAccess.isAvailable(
-                RequestLogProperty.NAME)) {
+        if (logAccess.isAvailable(RequestLogProperty.NAME)) {
             return logAccess.partial().fullName();
         } else {
             return context.getName();
