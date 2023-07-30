@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.server.auth;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.*;
@@ -34,35 +36,37 @@ import com.linecorp.armeria.server.Service;
 public final class AuthServiceBuilder {
 
     @Nullable
-    private Authorizer<HttpRequest> authorizer;
+    private Authorizer<HttpRequest> authorizer ;
     private AuthSuccessHandler successHandler = Service::serve;
     private AuthFailureHandler failureHandler = (delegate, ctx, req, cause) -> {
         if (cause != null) {
             AuthService.logger.warn("Unexpected exception during authorization.", cause);
         }
-        if (this.authType.equals(AuthType.OAUTH2)) {
-            return HttpResponse.of(ResponseHeaders.builder(HttpStatus.UNAUTHORIZED)
-                    .add(HttpHeaderNames.WWW_AUTHENTICATE, "Bearer")
-                    .build());
-        }
-        if (this.authType.equals(AuthType.BASIC)) {
-            return HttpResponse.of(ResponseHeaders.builder(HttpStatus.UNAUTHORIZED)
-                    .add(HttpHeaderNames.WWW_AUTHENTICATE, "Basic")
-                    .build());
-        }
-        return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+        return HttpResponse.of(ResponseHeaders.of(
+                HttpStatus.UNAUTHORIZED, HttpHeaderNames.WWW_AUTHENTICATE, this.authorizer.authenticationScheme()
+        ));
     };
-    private AuthType authType = null;
-    private enum AuthType {
-        BASIC,
-        OAUTH1A,
-        OAUTH2
-    }
+    @Nullable
+    private String authenticationScheme;
+    private boolean authenticationSchemeSet;
 
     /**
      * Creates a new instance.
      */
     AuthServiceBuilder() {}
+
+    /**
+     * authenticationScheme setter
+     */
+    public AuthServiceBuilder authenticationScheme(String authenticationScheme) {
+        this.authenticationScheme = requireNonNull(authenticationScheme, "authenticationScheme");
+
+        requireNonNull(this.authorizer, "authorizer");
+        checkState(this.failureHandler == null, "authenticationScheme() and onFailure() are mutually exclusive.");
+        this.authorizer.setAuthenticationScheme(authenticationScheme);
+        authenticationSchemeSet = true;
+        return this;
+    }
 
     /**
      * Adds an {@link Authorizer}.
@@ -93,7 +97,7 @@ public final class AuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer}.
      */
     public AuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer) {
-        this.authType = AuthType.BASIC;
+        authorizer.setAuthenticationScheme("Basic");
         return addTokenAuthorizer(AuthTokenExtractors.basic(),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -102,7 +106,7 @@ public final class AuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer} for the given {@code header}.
      */
     public AuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer, CharSequence header) {
-        this.authType = AuthType.BASIC;
+        authorizer.setAuthenticationScheme("Basic");
         return addTokenAuthorizer(new BasicTokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -119,7 +123,6 @@ public final class AuthServiceBuilder {
      * Adds an OAuth1a {@link Authorizer} for the given {@code header}.
      */
     public AuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer, CharSequence header) {
-        this.authType = AuthType.OAUTH1A;
         return addTokenAuthorizer(new OAuth1aTokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -128,7 +131,7 @@ public final class AuthServiceBuilder {
      * Adds an OAuth2 {@link Authorizer}.
      */
     public AuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer) {
-        this.authType = AuthType.OAUTH2;
+        authorizer.setAuthenticationScheme("Bearer");
         return addTokenAuthorizer(AuthTokenExtractors.oAuth2(), requireNonNull(authorizer, "authorizer"));
     }
 
@@ -136,7 +139,7 @@ public final class AuthServiceBuilder {
      * Adds an OAuth2 {@link Authorizer} for the given {@code header}.
      */
     public AuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer, CharSequence header) {
-        this.authType = AuthType.OAUTH2;
+        authorizer.setAuthenticationScheme("Bearer");
         return addTokenAuthorizer(new OAuth2TokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -167,6 +170,7 @@ public final class AuthServiceBuilder {
      * {@code 401 Unauthorized} response will be sent.
      */
     public AuthServiceBuilder onFailure(AuthFailureHandler failureHandler) {
+        checkState(!authenticationSchemeSet, "authenticationScheme() and onFailure() are mutually exclusive.");
         this.failureHandler = requireNonNull(failureHandler, "failureHandler");
         return this;
     }
@@ -174,9 +178,30 @@ public final class AuthServiceBuilder {
     /**
      * Returns a newly-created {@link AuthService} based on the {@link Authorizer}s added to this builder.
      */
+//    public AuthService build(HttpService delegate) {
+//        return new AuthService(requireNonNull(delegate, "delegate"), authorizer(),
+//                successHandler, failureHandler);
+//    }
+
     public AuthService build(HttpService delegate) {
+        final AuthFailureHandler failureHandler;
+        if (this.failureHandler != null) {
+            failureHandler = this.failureHandler;
+        } else {
+            final String authenticationScheme = this.authenticationScheme;
+            failureHandler = (unused, ctx, req, cause) -> {
+                if (cause != null) {
+                    AuthService.logger.warn("Unexpected exception during authorization.", cause);
+                }
+                if (authenticationScheme == null) {
+                    return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+                }
+                return HttpResponse.of(ResponseHeaders.of(
+                        HttpStatus.UNAUTHORIZED, HttpHeaderNames.WWW_AUTHENTICATE, authenticationScheme));
+            };
+        }
         return new AuthService(requireNonNull(delegate, "delegate"), authorizer(),
-                               successHandler, failureHandler);
+                successHandler, failureHandler);
     }
 
     private AuthService build(HttpService delegate, Authorizer<HttpRequest> authorizer) {

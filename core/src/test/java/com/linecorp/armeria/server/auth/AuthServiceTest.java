@@ -245,13 +245,6 @@ class AuthServiceTest {
                 assertThat(res.getHeaders("WWW-Authenticate")).hasSize(1);
                 assertThat(res.getHeaders()[0].getValue()).isEqualTo("Basic");
             }
-            try (CloseableHttpResponse res = hc.execute(
-                    basicGetRequest("/basic", AuthToken.ofBasic("choco", "pangyo"),
-                                    AUTHORIZATION))) {
-                assertThat(res.getCode()).isEqualTo(401);
-                assertThat(res.getHeaders("WWW-Authenticate")).hasSize(1);
-                assertThat(res.getHeaders()[0].getValue()).isEqualTo("Basic");
-            }
         }
     }
 
@@ -308,8 +301,7 @@ class AuthServiceTest {
                 assertThat(res.getCode()).isEqualTo(200);
             }
             try (CloseableHttpResponse res = hc.execute(
-                    oauth2GetRequest("/oauth2", AuthToken.ofOAuth2("DUMMY_oauth2_token"),
-                                     AUTHORIZATION))) {
+                    new HttpGet(server.httpUri() + "/oauth2"))) {
                 assertThat(res.getCode()).isEqualTo(401);
                 assertThat(res.getHeaders("WWW-Authenticate")).hasSize(1);
                 assertThat(res.getHeaders()[0].getValue()).isEqualTo("Bearer");

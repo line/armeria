@@ -16,14 +16,22 @@
 
 package com.linecorp.armeria.server.auth;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 
+import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.multipart.AggregatedBodyPart;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthorizerChain.AuthorizerSelectionStrategy;
+
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Determines whether a given {@code data} is authorized for the service registered in.
@@ -33,6 +41,17 @@ import com.linecorp.armeria.server.auth.AuthorizerChain.AuthorizerSelectionStrat
  */
 @FunctionalInterface
 public interface Authorizer<T> {
+    HashSet<String> authenticationSchemes = new HashSet<>();
+
+    default Authorizer<T> setAuthenticationScheme(String scheme) {
+        requireNonNull(scheme, "scheme");
+        this.authenticationSchemes.add(scheme);
+        return this;
+    }
+
+    default String authenticationScheme() {
+        return requireNonNull(this.authenticationSchemes.stream().findFirst().get().toString());
+    }
 
     /**
      * Authorizes the given {@code data}.
