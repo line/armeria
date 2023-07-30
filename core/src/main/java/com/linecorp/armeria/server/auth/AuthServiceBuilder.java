@@ -46,8 +46,6 @@ public final class AuthServiceBuilder {
                 HttpStatus.UNAUTHORIZED, HttpHeaderNames.WWW_AUTHENTICATE, this.authorizer.authenticationScheme()
         ));
     };
-    @Nullable
-    private String authenticationScheme;
     private boolean authenticationSchemeSet;
 
     /**
@@ -59,8 +57,6 @@ public final class AuthServiceBuilder {
      * authenticationScheme setter
      */
     public AuthServiceBuilder authenticationScheme(String authenticationScheme) {
-        this.authenticationScheme = requireNonNull(authenticationScheme, "authenticationScheme");
-
         requireNonNull(this.authorizer, "authorizer");
         checkState(this.failureHandler == null, "authenticationScheme() and onFailure() are mutually exclusive.");
         this.authorizer.setAuthenticationScheme(authenticationScheme);
@@ -178,28 +174,7 @@ public final class AuthServiceBuilder {
     /**
      * Returns a newly-created {@link AuthService} based on the {@link Authorizer}s added to this builder.
      */
-//    public AuthService build(HttpService delegate) {
-//        return new AuthService(requireNonNull(delegate, "delegate"), authorizer(),
-//                successHandler, failureHandler);
-//    }
-
     public AuthService build(HttpService delegate) {
-        final AuthFailureHandler failureHandler;
-        if (this.failureHandler != null) {
-            failureHandler = this.failureHandler;
-        } else {
-            final String authenticationScheme = this.authenticationScheme;
-            failureHandler = (unused, ctx, req, cause) -> {
-                if (cause != null) {
-                    AuthService.logger.warn("Unexpected exception during authorization.", cause);
-                }
-                if (authenticationScheme == null) {
-                    return HttpResponse.of(HttpStatus.UNAUTHORIZED);
-                }
-                return HttpResponse.of(ResponseHeaders.of(
-                        HttpStatus.UNAUTHORIZED, HttpHeaderNames.WWW_AUTHENTICATE, authenticationScheme));
-            };
-        }
         return new AuthService(requireNonNull(delegate, "delegate"), authorizer(),
                 successHandler, failureHandler);
     }
