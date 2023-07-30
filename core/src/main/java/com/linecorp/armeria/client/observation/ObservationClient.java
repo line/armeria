@@ -63,7 +63,7 @@ import io.micrometer.observation.ObservationRegistry;
  *
  * // add the decorator
  * WebClient.builder()
- *          .decorator(MicrometerObservationClient.newDecorator(registry))
+ *          .decorator(MicrometerObservationClient.newDecorator(observationRegistry))
  * ...
  * }</pre>
  */
