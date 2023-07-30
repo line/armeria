@@ -1,7 +1,7 @@
 [versions]
-akka = "2.8.3"
-akka-http-cors = "1.2.0"
-akka-grpc-runtime = "2.3.2"
+akka = "2.6.20"
+akka-http-cors = "1.0.0"
+akka-grpc-runtime = "1.0.3"
 apache-httpclient5 = "5.2.1"
 apache-httpclient4 = "4.5.14"
 asm = "9.5"
