@@ -62,7 +62,7 @@ import io.micrometer.observation.ObservationRegistry;
  *
  * // add the decorator
  * Server.builder()
- *       .decorator(ObservationService.newDecorator(registry))
+ *       .decorator(ObservationService.newDecorator(observationRegistry))
  * ...
  * }</pre>
  */
