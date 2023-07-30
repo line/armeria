@@ -35,7 +35,7 @@ import io.micrometer.observation.transport.RequestReplySenderContext;
  * <pre>{@code
  * ObservationConvention<HttpClientContext> convention = ...
  * WebClient.builder()
- *          .decorator(MicrometerObservationClient.newDecorator(registry, convention))
+ *          .decorator(ObservationClient.newDecorator(registry, convention))
  * ...
  * }</pre>
  */
