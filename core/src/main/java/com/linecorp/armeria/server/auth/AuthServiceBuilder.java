@@ -38,14 +38,8 @@ public final class AuthServiceBuilder {
     @Nullable
     private Authorizer<HttpRequest> authorizer ;
     private AuthSuccessHandler successHandler = Service::serve;
-    private AuthFailureHandler failureHandler = (delegate, ctx, req, cause) -> {
-        if (cause != null) {
-            AuthService.logger.warn("Unexpected exception during authorization.", cause);
-        }
-        return HttpResponse.of(ResponseHeaders.of(
-                HttpStatus.UNAUTHORIZED, HttpHeaderNames.WWW_AUTHENTICATE, this.authorizer.authenticationScheme()
-        ));
-    };
+    @Nullable
+    private AuthFailureHandler failureHandler;
     private boolean authenticationSchemeSet;
 
     /**
@@ -180,8 +174,22 @@ public final class AuthServiceBuilder {
     }
 
     private AuthService build(HttpService delegate, Authorizer<HttpRequest> authorizer) {
-        return new AuthService(requireNonNull(delegate, "delegate"), authorizer,
-                               successHandler, failureHandler);
+        final AuthFailureHandler failureHandler;
+        if (this.failureHandler != null) {
+            failureHandler = this.failureHandler;
+        } else {
+            final String authenticationScheme = this.authorizer.authenticationScheme();
+            failureHandler = (unused, ctx, req, cause) -> {
+                if (cause != null) {
+                    AuthService.logger.warn("Unexpected exception during authorization.", cause);
+                }
+                return HttpResponse.of(ResponseHeaders.of(
+                        HttpStatus.UNAUTHORIZED, HttpHeaderNames.WWW_AUTHENTICATE, authenticationScheme
+                ));
+            };
+        }
+        return new AuthService(requireNonNull(delegate, "delegate"), authorizer(),
+                successHandler, failureHandler);
     }
 
     /**
