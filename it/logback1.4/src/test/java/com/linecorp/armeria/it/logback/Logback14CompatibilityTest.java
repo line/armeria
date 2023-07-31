@@ -44,7 +44,7 @@ class Logback14CompatibilityTest {
     private static final Logger logger = (Logger) LoggerFactory.getLogger(Logback14CompatibilityTest.class);
 
     @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.decorator((delegate, ctx, req) -> {
