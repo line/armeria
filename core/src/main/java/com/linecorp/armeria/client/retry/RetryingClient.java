@@ -241,7 +241,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
+        final HttpResponse res = HttpResponse.of(responseFuture, ctx.eventLoop());
         if (ctx.exchangeType().isRequestStreaming()) {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             doExecute0(ctx, reqDuplicator, req, res, responseFuture);
@@ -319,7 +319,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
             response = initContextAndExecuteWithFallback(
-                    unwrap(), ctxExtension, endpointGroup, HttpResponse::from,
+                    unwrap(), ctxExtension, endpointGroup, HttpResponse::of,
                     (context, cause) -> HttpResponse.ofFailure(cause));
         } else {
             response = executeWithFallback(unwrap(), derivedCtx,

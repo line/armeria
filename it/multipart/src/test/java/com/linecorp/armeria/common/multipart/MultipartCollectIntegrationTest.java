@@ -62,7 +62,7 @@ class MultipartCollectIntegrationTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/multipart/file", (ctx, req) -> HttpResponse.from(
+            sb.service("/multipart/file", (ctx, req) -> HttpResponse.of(
                       Multipart.from(req)
                                .collect(bodyPart -> {
                                    if (bodyPart.filename() != null) {
@@ -111,7 +111,7 @@ class MultipartCollectIntegrationTest {
                                        throw new UncheckedIOException(e);
                                    }
                                }, ctx.blockingTaskExecutor())))
-              .service("/multipart/large-file", (ctx, req) -> HttpResponse.from(
+              .service("/multipart/large-file", (ctx, req) -> HttpResponse.of(
                       Multipart.from(req).collect(bodyPart -> {
                                    final Path path = tempDir.resolve(bodyPart.name());
                                    return bodyPart.writeTo(path)
