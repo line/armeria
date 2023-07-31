@@ -51,9 +51,7 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
 
     /**
      * Returns whether the content length is unknown.
-     * If {@code true}, {@code content-length} header is not set, but {@code "Transfer-Encoding: chunked"} can
-     * be set for HTTP/1.
-     * If {@code false}, the {@code "content-length"} is automatically set for non-streaming responses.
+     * If {@code true}, {@code content-length} header is not automatically updated.
      */
     @UnstableApi
     boolean isContentLengthUnknown();
