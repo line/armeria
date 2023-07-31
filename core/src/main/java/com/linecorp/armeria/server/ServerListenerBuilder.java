@@ -18,9 +18,12 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
@@ -259,6 +262,62 @@ public final class ServerListenerBuilder {
         for (Consumer<? super Server> consumer : consumers) {
             serverStoppedCallbacks.add(requireNonNull(consumer, "consumer"));
         }
+        return this;
+    }
+
+    /**
+     * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
+     * is stopping. It will wait indefinitely for the {@link ExecutorService} to terminate during shutdown.
+     */
+    public ServerListenerBuilder stoppingWithExecutor(ExecutorService executorService) {
+        requireNonNull(executorService, "executorService");
+        serverStoppingCallbacks.add(s -> ShutdownSupport.of(executorService).shutdown());
+        return this;
+    }
+
+    /**
+     * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
+     * is stopping. It allows a maximum duration of {@code terminationTimeout} for the {@link ExecutorService}
+     * to terminate gracefully before it is forcefully terminated.
+     */
+    public ServerListenerBuilder stoppingWithExecutor(ExecutorService executorService,
+                                                      Duration terminationTimeout) {
+        requireNonNull(executorService, "executorService");
+        requireNonNull(terminationTimeout, "terminationTimeout");
+        long nanoSeconds;
+        try {
+            nanoSeconds = terminationTimeout.toNanos();
+        } catch (ArithmeticException ignore) {
+            nanoSeconds = terminationTimeout.isNegative() ? Long.MIN_VALUE : Long.MAX_VALUE;
+        }
+        stoppingWithExecutor(executorService, nanoSeconds, TimeUnit.NANOSECONDS);
+        return this;
+    }
+
+    /**
+     * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
+     * is stopping. It allows a maximum duration of {@code terminationTimeout} in the specified
+     * {@code timeUnit} for the {@link ExecutorService} to terminate gracefully before it is forcefully
+     * terminated.
+     */
+    public ServerListenerBuilder stoppingWithExecutor(ExecutorService executorService, long terminationTimeout,
+                                                      TimeUnit timeUnit) {
+        requireNonNull(executorService, "executorService");
+        requireNonNull(timeUnit, "timeUnit");
+        serverStoppingCallbacks.add(
+                s -> ShutdownSupport.of(executorService, terminationTimeout, timeUnit).shutdown());
+        return this;
+    }
+
+    /**
+     * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
+     * is stopping. It uses the specified {@code shutdownStrategy} to control the shutdown behavior.
+     */
+    public ServerListenerBuilder stoppingWithExecutor(ExecutorService executorService,
+                                                      Consumer<ExecutorService> shutdownStrategy) {
+        requireNonNull(executorService, "executorService");
+        requireNonNull(shutdownStrategy, "shutdownStrategy");
+        serverStoppingCallbacks.add(s -> ShutdownSupport.of(executorService, shutdownStrategy).shutdown());
         return this;
     }
 
