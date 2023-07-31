@@ -38,6 +38,7 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
+import com.linecorp.armeria.internal.common.metric.DistributionStatisticConfigUtil;
 
 import io.micrometer.core.instrument.Metrics;
 
@@ -144,6 +145,12 @@ class FlagsProviderTest {
     @Test
     void testMeterRegistry() {
         assertThat(Flags.meterRegistry()).isNotSameAs(Metrics.globalRegistry);
+    }
+
+    @Test
+    void testDistributionStatisticConfig() {
+        assertThat(Flags.distributionStatisticConfig()).
+                isEqualTo(DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG);
     }
 
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
