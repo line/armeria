@@ -19,6 +19,11 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -44,22 +49,17 @@ class ServerListenerTest {
             final ServerListener sl =
                     ServerListener.builder()
                                   // add a callback.
-                                  .whenStarting((Server server) ->
-                                                        STARTING_AT = System.currentTimeMillis())
+                                  .whenStarting((Server server) -> STARTING_AT = System.currentTimeMillis())
                                   // add multiple callbacks, one by one.
-                                  .whenStarted((Server server) ->
-                                                       STARTED_AT = -1)
-                                  .whenStarted((Server server) ->
-                                                       STARTED_AT = System.currentTimeMillis())
+                                  .whenStarted((Server server) -> STARTED_AT = -1)
+                                  .whenStarted((Server server) -> STARTED_AT = System.currentTimeMillis())
                                   // add multiple callbacks at once, with vargs api.
-                                  .whenStopping((Server server) ->
-                                                        STOPPING_AT = System.currentTimeMillis(),
+                                  .whenStopping((Server server) -> STOPPING_AT = System.currentTimeMillis(),
                                                 (Server server) -> STARTING_AT = 0L)
                                   // add multiple callbacks at once, with iterable api.
-                                  .whenStopped(
-                                          Lists.newArrayList((Server server) ->
-                                                                     STOPPED_AT = System.currentTimeMillis(),
-                                                             (Server server) -> STARTED_AT = 0L))
+                                  .whenStopped(Lists.newArrayList(
+                                          (Server server) -> STOPPED_AT = System.currentTimeMillis(),
+                                          (Server server) -> STARTED_AT = 0L))
                                   .build();
             sb.serverListener(sl);
         }
@@ -99,5 +99,147 @@ class ServerListenerTest {
         assertThatThrownBy(() -> server.start().join())
                 .hasCauseInstanceOf(IllegalStateException.class)
                 .hasRootCause(ex);
+    }
+
+    @Test
+    void testGracefulShutdownPeriodicExecutorWaitIndefinitelyOnServerStopping() throws Exception {
+        final ExecutorService executor = periodicExecutor();
+        final ServerListener sl = ServerListener.builder()
+                                                .stoppingWithExecutor(executor)
+                                                .build();
+
+        final Server server = Server.builder()
+                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                    .serverListener(sl)
+                                    .build();
+        server.start().get();
+        server.stop();
+        Thread.sleep(3000);
+
+        assertThat(executor.isTerminated()).isEqualTo(true);
+    }
+
+    @Test
+    void testGracefulShutdownInterruptibleExecutorWaitIndefinitelyOnServerStopping() throws Exception {
+        final ExecutorService executor = interruptibleExecutor();
+        final ServerListener sl = ServerListener.builder()
+                                                .stoppingWithExecutor(executor)
+                                                .build();
+
+        final Server server = Server.builder()
+                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                    .serverListener(sl)
+                                    .build();
+        server.start().get();
+        server.stop();
+        Thread.sleep(3000);
+
+        assertThat(executor.isTerminated()).isEqualTo(false);
+    }
+
+    @Test
+    void testGracefulShutdownUnstoppableExecutorWaitIndefinitelyOnServerStopping() throws Exception {
+        final ExecutorService executor = unstoppableExecutor();
+        final ServerListener sl = ServerListener.builder()
+                                                .stoppingWithExecutor(executor)
+                                                .build();
+
+        final Server server = Server.builder()
+                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                    .serverListener(sl)
+                                    .build();
+        server.start().get();
+        server.stop();
+        Thread.sleep(3000);
+
+        assertThat(executor.isTerminated()).isEqualTo(false);
+    }
+
+    @Test
+    void testGracefulShutdownPeriodicExecutorWaitWithTimeoutOnServerStopping() throws Exception {
+        final ExecutorService executor = periodicExecutor();
+        final ServerListener sl = ServerListener.builder()
+                                                .stoppingWithExecutor(executor, 1, TimeUnit.SECONDS)
+                                                .build();
+
+        final Server server = Server.builder()
+                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                    .serverListener(sl)
+                                    .build();
+        server.start().get();
+        server.stop();
+        Thread.sleep(3000);
+
+        assertThat(executor.isTerminated()).isEqualTo(true);
+    }
+
+    @Test
+    void testGracefulShutdownInterruptibleExecutorWaitWithTimeoutOnServerStopping() throws Exception {
+        final ExecutorService executor = interruptibleExecutor();
+        final ServerListener sl = ServerListener.builder()
+                                                .stoppingWithExecutor(executor, 1, TimeUnit.SECONDS)
+                                                .build();
+
+        final Server server = Server.builder()
+                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                    .serverListener(sl)
+                                    .build();
+        server.start().get();
+        server.stop();
+        Thread.sleep(3000);
+
+        assertThat(executor.isTerminated()).isEqualTo(true);
+    }
+
+    @Test
+    void testGracefulShutdownUnstoppableExecutorWaitWithTimeoutOnServerStopping() throws Exception {
+        final ExecutorService executor = unstoppableExecutor();
+        final ServerListener sl = ServerListener.builder()
+                                                .stoppingWithExecutor(executor, 1, TimeUnit.SECONDS)
+                                                .build();
+
+        final Server server = Server.builder()
+                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                    .serverListener(sl)
+                                    .build();
+        server.start().get();
+        server.stop();
+        Thread.sleep(3000);
+
+        assertThat(executor.isTerminated()).isEqualTo(false);
+    }
+
+    private static ExecutorService periodicExecutor() {
+        final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
+        periodic.scheduleAtFixedRate(() -> {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, 0, 1000, TimeUnit.MILLISECONDS);
+        return periodic;
+    }
+
+    private static ExecutorService interruptibleExecutor() {
+        // It will be terminated by calling `shutdownNow()`.
+        final ExecutorService interruptible = Executors.newSingleThreadExecutor();
+        interruptible.submit(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                final int foo = 42;
+            }
+        });
+        return interruptible;
+    }
+
+    private static ExecutorService unstoppableExecutor() {
+        // It cannot be terminated.
+        final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
+        unstoppable.submit(() -> {
+            while (true) {
+                final int foo = 42;
+            }
+        });
+        return unstoppable;
     }
 }
