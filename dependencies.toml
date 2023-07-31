@@ -32,7 +32,7 @@ findbugs = "3.0.2"
 futures-completable = "0.3.5"
 futures-extra = "4.3.1"
 gax-grpc = "2.31.1"
-graphql-java = "21.0"
+graphql-java = "20.3"
 graphql-kotlin = "6.5.3"
 groovy = "3.0.18"
 grpc-java = "1.56.1"
@@ -407,6 +407,7 @@ version.ref = "futures-extra"
 module = "com.google.api:gax-grpc"
 version.ref = "gax-grpc"
 
+# graphql-java requires java11 from 21.0
 [libraries.graphql-java]
 module = "com.graphql-java:graphql-java"
 version.ref = "graphql-java"
