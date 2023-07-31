@@ -61,7 +61,8 @@ public final class MoreMeters {
      *       (i.e. rotate every 40 seconds) does not make much sense.</li>
      * </ul>
      */
-    private static volatile DistributionStatisticConfig distStatCfg = Flags.distributionStatisticConfig();
+    private static volatile DistributionStatisticConfig defaultDistStatCfg =
+            Flags.distributionStatisticConfig();
 
     /**
      * Sets the {@link DistributionStatisticConfig} to use when the factory methods in {@link MoreMeters} create
@@ -69,7 +70,7 @@ public final class MoreMeters {
      */
     public static void setDistributionStatisticConfig(DistributionStatisticConfig config) {
         requireNonNull(config, "config");
-        distStatCfg = config;
+        defaultDistStatCfg = config;
     }
 
     /**
@@ -77,7 +78,7 @@ public final class MoreMeters {
      * create a {@link Timer} or a {@link DistributionSummary}.
      */
     public static DistributionStatisticConfig distributionStatisticConfig() {
-        return distStatCfg;
+        return defaultDistStatCfg;
     }
 
     /**
@@ -86,7 +87,7 @@ public final class MoreMeters {
      */
     public static DistributionSummary newDistributionSummary(MeterRegistry registry,
                                                              String name, Iterable<Tag> tags) {
-        return newDistributionSummary(registry, name, tags, distStatCfg);
+        return newDistributionSummary(registry, name, tags, defaultDistStatCfg);
     }
 
     /**
@@ -137,7 +138,7 @@ public final class MoreMeters {
      * Returns a newly-registered {@link Timer} configured by {@link #distributionStatisticConfig()}.
      */
     public static Timer newTimer(MeterRegistry registry, String name, Iterable<Tag> tags) {
-        return newTimer(registry, name, tags, distStatCfg);
+        return newTimer(registry, name, tags, defaultDistStatCfg);
     }
 
     /**

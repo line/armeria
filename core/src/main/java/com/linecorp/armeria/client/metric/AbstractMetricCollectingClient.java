@@ -57,7 +57,7 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;
         this.distributionStatisticConfig =
-                requireNonNull(distributionStatisticConfig, "distributionStatisticConfig") ;
+                requireNonNull(distributionStatisticConfig, "distributionStatisticConfig");
     }
 
     @Override

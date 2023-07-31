@@ -39,7 +39,6 @@ import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.util.AttributeKey;
 
 class RequestMetricSupportTest {
