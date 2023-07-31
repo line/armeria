@@ -62,6 +62,7 @@ import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
@@ -79,22 +80,23 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.BinaryService;
-import com.linecorp.armeria.service.test.thrift.main.DevNullService;
-import com.linecorp.armeria.service.test.thrift.main.FileService;
-import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
-import com.linecorp.armeria.service.test.thrift.main.HeaderService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
-import com.linecorp.armeria.service.test.thrift.main.TimeService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.AsciiString;
+import testing.thrift.main.BinaryService;
+import testing.thrift.main.DevNullService;
+import testing.thrift.main.FileService;
+import testing.thrift.main.FileServiceException;
+import testing.thrift.main.HeaderService;
+import testing.thrift.main.HelloService;
+import testing.thrift.main.OnewayHelloService;
+import testing.thrift.main.TimeService;
 
 @SuppressWarnings("unchecked")
 public class ThriftOverHttpClientTest {
@@ -257,7 +259,7 @@ public class ThriftOverHttpClientTest {
         final ClientDecorationBuilder decoBuilder = ClientDecoration.builder();
         decoBuilder.addRpc((delegate, ctx, req) -> {
             if (recordMessageLogs) {
-                ctx.log().whenComplete().thenAccept(requestLogs::add);
+                ctx.log().whenComplete().thenAcceptAsync(requestLogs::add, CommonPools.blockingTaskExecutor());
             }
             return delegate.execute(ctx, req);
         });
@@ -318,12 +320,14 @@ public class ThriftOverHttpClientTest {
             client.hello("kukuman" + num, new AsyncMethodCallback<String>() {
                 @Override
                 public void onComplete(String response) {
-                    assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, response))).isTrue();
+                    BlockingUtils.blockingRun(() -> assertThat(resultQueue.add(
+                            new AbstractMap.SimpleEntry<>(num, response))).isTrue());
                 }
 
                 @Override
                 public void onError(Exception exception) {
-                    assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, exception))).isTrue();
+                    BlockingUtils.blockingRun(() -> assertThat(resultQueue.add(
+                            new AbstractMap.SimpleEntry<>(num, exception))).isTrue());
                 }
             });
         }
@@ -831,12 +835,13 @@ public class ThriftOverHttpClientTest {
 
         @Override
         public void onComplete(Object response) {
-            assertThat(resQueue.add(response == null ? "null" : response)).isTrue();
+            BlockingUtils.blockingRun(
+                    () -> assertThat(resQueue.add(response == null ? "null" : response)).isTrue());
         }
 
         @Override
         public void onError(Exception exception) {
-            assertThat(resQueue.add(exception)).isTrue();
+            BlockingUtils.blockingRun(() -> assertThat(resQueue.add(exception)).isTrue());
         }
     }
 }

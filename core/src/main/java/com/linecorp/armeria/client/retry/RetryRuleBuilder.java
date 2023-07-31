@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
@@ -70,13 +71,15 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
 
     private RetryRule build(RetryDecision decision) {
         if (decision != RetryDecision.noRetry() &&
-            exceptionFilter() == null && responseHeadersFilter() == null && responseTrailersFilter() == null) {
+            exceptionFilter() == null && responseHeadersFilter() == null &&
+            responseTrailersFilter() == null && grpcTrailersFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), exceptionFilter(), false);
-        return build(ruleFilter, decision, responseTrailersFilter() != null);
+                                                    responseTrailersFilter(), grpcTrailersFilter(),
+                                                    exceptionFilter(), false);
+        return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
     static RetryRule build(BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,
@@ -123,6 +126,17 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     public RetryRuleBuilder onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (RetryRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code grpcTrailersFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code grpcTrailersFilter} returns {@code true}. Note that using this method makes the entire
+     * response buffered, which may lead to excessive memory usage.
+     */
+    @Override
+    public RetryRuleBuilder onGrpcTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+        return (RetryRuleBuilder) super.onGrpcTrailers(grpcTrailersFilter);
     }
 
     /**
@@ -205,6 +219,14 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     @Override
     public RetryRuleBuilder onException() {
         return (RetryRuleBuilder) super.onException();
+    }
+
+    /**
+     * Makes a {@link RetryRule} retry on a {@link TimeoutException}.
+     */
+    @Override
+    public RetryRuleBuilder onTimeoutException() {
+        return (RetryRuleBuilder) super.onTimeoutException();
     }
 
     /**

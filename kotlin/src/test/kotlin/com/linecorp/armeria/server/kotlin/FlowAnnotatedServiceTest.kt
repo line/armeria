@@ -59,7 +59,9 @@ internal class FlowAnnotatedServiceTest {
     @Test
     fun test_jsonStreaming_string() = runBlocking {
         client.get("/flow/json-string-streaming") shouldProduce listOf(
-            "\u001E\"hello\"\n", "\u001E\"world\"\n", ""
+            "\u001E\"hello\"\n",
+            "\u001E\"world\"\n",
+            ""
         )
     }
 

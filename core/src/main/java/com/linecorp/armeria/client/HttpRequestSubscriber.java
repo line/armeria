@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;

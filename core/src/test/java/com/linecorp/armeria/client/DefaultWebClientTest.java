@@ -82,7 +82,7 @@ class DefaultWebClientTest {
             await().untilAsserted(() -> {
                 assertThat(cctx.endpointGroup()).isSameAs(group);
                 assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
-                assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
+                assertThat(cctx.authority()).isEqualTo("127.0.0.1:1");
             });
         }
     }
@@ -107,7 +107,7 @@ class DefaultWebClientTest {
             await().untilAsserted(() -> {
                 assertThat(cctx.endpointGroup()).isSameAs(group);
                 assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
-                assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
+                assertThat(cctx.authority()).isEqualTo("127.0.0.1:1");
             });
         }
     }

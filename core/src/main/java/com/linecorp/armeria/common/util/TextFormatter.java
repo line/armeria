@@ -32,16 +32,25 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 public final class TextFormatter {
 
-    private TextFormatter() {}
-
     /**
      * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
      * given as {@code elapsed}.
      */
-    public static StringBuilder elapsed(long elapsedNanos) {
+    public static StringBuilder elapsed(long elapsed, TimeUnit timeUnit) {
         final StringBuilder buf = new StringBuilder(16);
-        appendElapsed(buf, elapsedNanos);
+        appendElapsed(buf, timeUnit.toNanos(elapsed));
         return buf;
+    }
+
+    /**
+     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
+     * given as {@code elapsed}.
+     *
+     * @deprecated Use {@link #elapsed(long, TimeUnit)}.
+     */
+    @Deprecated
+    public static StringBuilder elapsed(long elapsedNanos) {
+        return elapsed(elapsedNanos, TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -49,7 +58,7 @@ public final class TextFormatter {
      * between the specified {@code startTimeNanos} and {@code endTimeNanos}.
      */
     public static StringBuilder elapsed(long startTimeNanos, long endTimeNanos) {
-        return elapsed(endTimeNanos - startTimeNanos);
+        return elapsed(endTimeNanos - startTimeNanos, TimeUnit.NANOSECONDS);
     }
 
     /**
@@ -189,7 +198,7 @@ public final class TextFormatter {
      * that it does not format a host name if it's not available or it's same with the IP address.
      */
     public static void appendSocketAddress(StringBuilder buf, @Nullable SocketAddress addr) {
-        if (!(addr instanceof InetSocketAddress)) {
+        if (!(addr instanceof InetSocketAddress) || addr instanceof DomainSocketAddress) {
             buf.append(addr);
             return;
         }
@@ -265,4 +274,6 @@ public final class TextFormatter {
         // The host name and IP address equals; append only the first part.
         buf.append(str, 0, slashPos);
     }
+
+    private TextFormatter() {}
 }

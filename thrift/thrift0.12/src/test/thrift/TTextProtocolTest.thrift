@@ -20,7 +20,7 @@
  * Authors:
  * "Alex Roetter" <aroetter@twitter.com>
  */
-namespace java com.linecorp.armeria.common.thrift.text
+namespace java testing.thrift.text
 
 enum Letter {
   ALPHA   = 1,
@@ -74,7 +74,7 @@ struct TTextProtocolTestMsg {
 
   6: required bool f;
 
-  7: required byte g;
+  7: required i8 g;
 
   8: required map<i32, i64> h;
 

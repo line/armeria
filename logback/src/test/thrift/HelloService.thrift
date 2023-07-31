@@ -1,5 +1,5 @@
-namespace java com.linecorp.armeria.common.logback
+namespace java testing.logback
 
-service HelloService {
+service TestService {
     string hello(1:string name)
 }

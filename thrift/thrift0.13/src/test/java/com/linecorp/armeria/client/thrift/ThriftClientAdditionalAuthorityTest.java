@@ -29,8 +29,9 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.thrift.main.HelloService;
 
 class ThriftClientAdditionalAuthorityTest {
 
@@ -52,6 +53,7 @@ class ThriftClientAdditionalAuthorityTest {
             assertThat(client.hello("")).isEqualTo(expectedAuthority);
             assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
                     .isEqualTo(expectedAuthority);
+            assertThat(captor.get().authority()).isEqualTo(expectedAuthority);
         }
     }
 
@@ -67,6 +69,7 @@ class ThriftClientAdditionalAuthorityTest {
             assertThat(client.hello("")).isEqualTo("foo.com");
             assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
                     .isEqualTo("foo.com");
+            assertThat(captor.get().authority()).isEqualTo("foo.com");
         }
     }
 
@@ -83,6 +86,7 @@ class ThriftClientAdditionalAuthorityTest {
             assertThat(client.hello("")).isEqualTo("bar.com");
             assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
                     .isEqualTo("bar.com");
+            assertThat(captor.get().authority()).isEqualTo("bar.com");
         }
     }
 }

@@ -91,7 +91,11 @@ class HttpHeadersBase
 
     private final Map<AsciiString, Object> cache;
 
-    private boolean isContentLengthSet;
+    /**
+     * {@code true} if {@link #contentLengthUnknown(boolean)} was explicitly called with {@code true}.
+     * The value is set to {@code false} when {@link HttpHeaderNames#CONTENT_LENGTH} is mutated.
+     */
+    private boolean contentLengthUnknown;
     private boolean endOfStream;
 
     HttpHeadersBase(int sizeHint) {
@@ -104,7 +108,7 @@ class HttpHeadersBase
      */
     HttpHeadersBase(HttpHeadersBase parent, boolean shallowCopy) {
         super(parent, shallowCopy);
-        isContentLengthSet = parent.isContentLengthSet;
+        contentLengthUnknown = parent.contentLengthUnknown;
         endOfStream = parent.endOfStream;
         cache = new HashMap<>(parent.cache);
     }
@@ -115,15 +119,15 @@ class HttpHeadersBase
     HttpHeadersBase(HttpHeaderGetters parent) {
         super(parent);
         assert !(parent instanceof HttpHeadersBase);
-        isContentLengthSet = parent.isContentLengthSet();
+        contentLengthUnknown = parent.isContentLengthUnknown();
         endOfStream = parent.isEndOfStream();
         cache = new HashMap<>(4);
     }
 
     @Override
     void onChange(@Nullable AsciiString name, boolean add) {
-        if (HttpHeaderNames.CONTENT_LENGTH.equals(name)) {
-            isContentLengthSet = add;
+        if (HttpHeaderNames.CONTENT_LENGTH.equals(name) && add) {
+            contentLengthUnknown = false;
         }
 
         // This method could be called before the 'cache' field is initialized.
@@ -137,7 +141,7 @@ class HttpHeadersBase
 
     @Override
     void onClear() {
-        isContentLengthSet = false;
+        contentLengthUnknown = false;
         if (cache == null || cache.isEmpty()) {
             return;
         }
@@ -213,8 +217,19 @@ class HttpHeadersBase
             final String scheme = scheme();
             checkState(scheme != null, ":scheme header does not exist.");
             final String authority = authority();
-            checkState(authority != null, ":authority header does not exist.");
-            uri = scheme + "://" + authority + path;
+
+            final StringBuilder sb = new StringBuilder(
+                    scheme.length() + 1 +
+                    (authority != null ? (authority.length() + 2) : 0) +
+                    path.length());
+            sb.append(scheme);
+            sb.append(':');
+            if (authority != null) {
+                sb.append("//");
+                sb.append(authority);
+            }
+            sb.append(path);
+            uri = sb.toString();
         }
 
         try {
@@ -459,7 +474,7 @@ class HttpHeadersBase
 
     final void contentLength(long contentLength) {
         checkArgument(contentLength >= -1, "contentLength: %s (expected: >= -1)", contentLength);
-        isContentLengthSet = true;
+        contentLengthUnknown = false;
         // -1 just means the content size is unknown.
         if (contentLength >= 0) {
             cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
@@ -486,9 +501,14 @@ class HttpHeadersBase
         }
     }
 
+    public void contentLengthUnknown(boolean contentLengthUnknown) {
+        remove(HttpHeaderNames.CONTENT_LENGTH);
+        this.contentLengthUnknown = contentLengthUnknown;
+    }
+
     @Override
-    public boolean isContentLengthSet() {
-        return isContentLengthSet;
+    public boolean isContentLengthUnknown() {
+        return contentLengthUnknown;
     }
 
     List<MediaType> accept() {

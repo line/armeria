@@ -22,14 +22,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
@@ -61,7 +60,8 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     /** The response being decoded currently. */
     @Nullable
     private HttpResponseWrapper res;
-    private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
+    @Nullable
+    private KeepAliveHandler keepAliveHandler;
     private int resId = 1;
     private int lastPingReqId = -1;
     private State state = State.NEED_HEADERS;
@@ -71,13 +71,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     @Override
-    HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx, EventLoop eventLoop,
-            long responseTimeoutMillis, long maxContentLength) {
-
-        final HttpResponseWrapper resWrapper =
-                super.addResponse(id, res, ctx, eventLoop, responseTimeoutMillis, maxContentLength);
-
+    void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper resWrapper) {
         resWrapper.whenComplete().handle((unused, cause) -> {
             if (eventLoop.inEventLoop()) {
                 onWrapperCompleted(resWrapper, cause);
@@ -86,8 +80,6 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             }
             return null;
         });
-
-        return resWrapper;
     }
 
     private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
@@ -162,7 +154,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         if (!HttpUtil.isKeepAlive(nettyRes)) {
-                            disconnectWhenFinished();
+                            session().deactivate();
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
@@ -173,16 +165,18 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         assert res != null;
                         this.res = res;
 
-                        res.logResponseFirstBytesTransferred();
-
+                        res.startResponse();
+                        final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
+                        final boolean written;
                         if (nettyRes.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
+                            written = res.tryWrite(responseHeaders);
                         } else {
                             state = State.NEED_DATA_OR_TRAILERS;
+                            written = res.tryWriteResponseHeaders(responseHeaders);
                         }
 
-                        res.initTimeout();
-                        if (!res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes))) {
+                        if (!written) {
                             fail(ctx, ClosedSessionException.get());
                             return;
                         }
@@ -214,13 +208,9 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             final long writtenBytes = res.writtenBytes();
                             if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
                                 final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
-                                fail(ctx, ContentTooLargeException.builder()
-                                                                  .maxContentLength(maxContentLength)
-                                                                  .contentLength(res.headers())
-                                                                  .transferred(transferred)
-                                                                  .build());
+                                fail(ctx, contentTooLargeException(res, transferred));
                                 return;
-                            } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {
+                            } else if (!res.tryWriteData(HttpData.wrap(data.retain()))) {
                                 fail(ctx, ClosedSessionException.get());
                                 return;
                             }
@@ -236,7 +226,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                             final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                             if (!trailingHeaders.isEmpty() &&
-                                !res.tryWrite(ArmeriaHttpUtil.toArmeria(trailingHeaders))) {
+                                !res.tryWriteTrailers(ArmeriaHttpUtil.toArmeria(trailingHeaders))) {
                                 fail(ctx, ClosedSessionException.get());
                                 return;
                             }
@@ -320,25 +310,35 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     void setKeepAliveHandler(ChannelHandlerContext ctx, KeepAliveHandler keepAliveHandler) {
-        assert keepAliveHandler instanceof Http1ClientKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
-        maybeInitializeKeepAliveHandler(ctx);
+        if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
+            maybeInitializeKeepAliveHandler(ctx);
+        }
     }
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         if (ctx.channel().isActive()) {
-            keepAliveHandler.initialize(ctx);
+            final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+            if (keepAliveHandler != null) {
+                keepAliveHandler.initialize(ctx);
+            }
         }
     }
 
     private void destroyKeepAliveHandler() {
-        keepAliveHandler.destroy();
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.destroy();
+        }
     }
 
     private void onPingRead(Object msg) {
         if (msg instanceof HttpResponse) {
-            assert keepAliveHandler != NoopKeepAliveHandler.INSTANCE;
-            keepAliveHandler.onPing();
+            final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+            // Ping can not be activated with NoopKeepAliveHandler.
+            if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
+                keepAliveHandler.onPing();
+            }
         }
         if (msg instanceof LastHttpContent) {
             onPingComplete();

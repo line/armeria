@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -31,7 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
@@ -63,11 +61,11 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
-import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.google.protobuf.DoubleValue;
 import com.google.protobuf.Duration;
+import com.google.protobuf.FieldMask;
 import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
@@ -341,26 +339,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         throw new RecursiveTypeException(field.getMessageType());
                     }
 
-                    @Nullable
-                    Descriptor typeDesc =
-                            desc.getNestedTypes().stream()
-                                .filter(d -> d.getFullName().equals(field.getMessageType().getFullName()))
-                                .findFirst().orElse(null);
-                    if (typeDesc == null) {
-                        // From the proto file.
-                        typeDesc = findTypeDescriptor(desc.getFile(), field);
-                    }
-                    if (typeDesc == null) {
-                        // According to the Language guide, the public import functionality is not available
-                        // in Java. We will try to find dependencies only with "import" keyword.
-                        // https://developers.google.com/protocol-buffers/docs/proto3#importing_definitions
-                        typeDesc = desc.getFile().getDependencies().stream()
-                                       .map(fd -> findTypeDescriptor(fd, field))
-                                       .filter(Objects::nonNull).findFirst().orElse(null);
-                    }
-                    checkState(typeDesc != null,
-                               "Descriptor for the type '%s' does not exist.",
-                               field.getMessageType().getFullName());
+                    final Descriptor typeDesc = field.getMessageType();
                     try {
                         builder.putAll(buildFields(typeDesc,
                                                    ImmutableList.<String>builder()
@@ -397,7 +376,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         final String fullName = messageType.getFullName();
 
         if (Timestamp.getDescriptor().getFullName().equals(fullName) ||
-            Duration.getDescriptor().getFullName().equals(fullName)) {
+            Duration.getDescriptor().getFullName().equals(fullName) ||
+            FieldMask.getDescriptor().getFullName().equals(fullName)) {
             return JavaType.STRING;
         }
 
@@ -434,15 +414,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }
 
         return null;
-    }
-
-    @Nullable
-    private static Descriptor findTypeDescriptor(FileDescriptor file, FieldDescriptor field) {
-        final Descriptor messageType = field.getMessageType();
-        if (!file.getPackage().equals(messageType.getFile().getPackage())) {
-            return null;
-        }
-        return file.findMessageTypeByName(messageType.getName());
     }
 
     // to make it more efficient, we calculate whether extract response body one time
@@ -614,7 +585,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             }
             return null;
         });
-        return HttpResponse.from(responseFuture);
+        return HttpResponse.of(responseFuture);
     }
 
     /**

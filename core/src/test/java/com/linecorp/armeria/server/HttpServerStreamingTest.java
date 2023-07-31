@@ -165,7 +165,7 @@ class HttpServerStreamingTest {
         final byte[] content = new byte[maxContentLength + 1];
         final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).startsWith("Status: 404\n");
+        assertThat(res.content().isEmpty()).isTrue();
     }
 
     @ParameterizedTest
@@ -309,7 +309,7 @@ class HttpServerStreamingTest {
         @Override
         protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
             final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            final HttpResponse res = HttpResponse.from(responseFuture);
+            final HttpResponse res = HttpResponse.of(responseFuture);
             req.subscribe(new StreamConsumer(ctx.eventLoop(), slow) {
                 @Override
                 public void onError(Throwable cause) {

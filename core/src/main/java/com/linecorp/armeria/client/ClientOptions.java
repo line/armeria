@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -31,6 +32,8 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -70,6 +73,14 @@ public final class ClientOptions
      */
     public static final ClientOption<Long> MAX_RESPONSE_LENGTH =
             ClientOption.define("MAX_RESPONSE_LENGTH", Flags.defaultMaxResponseLength());
+
+    /**
+     * The amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    public static final ClientOption<Long> REQUEST_AUTO_ABORT_DELAY_MILLIS =
+            ClientOption.define("REQUEST_AUTO_ABORT_DELAY_MILLIS",
+                                Flags.defaultRequestAutoAbortDelayMillis());
 
     /**
      * The redirect configuration.
@@ -129,7 +140,6 @@ public final class ClientOptions
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
-            HttpHeaderNames.CONNECTION,
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
             HttpHeaderNames.PATH,
@@ -155,7 +165,26 @@ public final class ClientOptions
                         throw new IllegalArgumentException("prohibited header name: " + name);
                     }
                 }
-                return newHeaders;
+
+                boolean hasUnnormalizedCloseValue = false;
+                for (String connectionOption : newHeaders.getAll(HttpHeaderNames.CONNECTION)) {
+                    // - Disallow connection headers apart from "Connection: close".
+                    // - Connection options are case-insensitive.
+                    if ("close".equalsIgnoreCase(connectionOption)) {
+                        if (!"close".equals(connectionOption)) {
+                            hasUnnormalizedCloseValue = true;
+                        }
+                    } else {
+                        throw new IllegalArgumentException(
+                                "prohibited 'Connection' header value: " + connectionOption);
+                    }
+                }
+
+                if (hasUnnormalizedCloseValue) {
+                    return newHeaders.toBuilder().set(HttpHeaderNames.CONNECTION, CLOSE_STRING).build();
+                } else {
+                    return newHeaders;
+                }
             }, (oldValue, newValue) -> {
                 final HttpHeaders newHeaders = newValue.value();
                 if (newHeaders.isEmpty()) {
@@ -267,6 +296,14 @@ public final class ClientOptions
      */
     public long maxResponseLength() {
         return get(MAX_RESPONSE_LENGTH);
+    }
+
+    /**
+     * Returns the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     */
+    public long requestAutoAbortDelayMillis() {
+        return get(REQUEST_AUTO_ABORT_DELAY_MILLIS);
     }
 
     /**

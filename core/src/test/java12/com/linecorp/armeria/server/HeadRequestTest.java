@@ -212,7 +212,7 @@ class HeadRequestTest {
             assertThat(headers.status()).isEqualTo(HttpStatus.OK);
             assertThat(headers.getInt(HttpHeaderNames.CONTENT_LENGTH)).isEqualTo(RESPONSE_BODY.length());
             assertThat(headers.contentLength()).isEqualTo(RESPONSE_BODY.length());
-            assertThat(headers.isContentLengthSet()).isTrue();
+            assertThat(headers.isContentLengthUnknown()).isFalse();
         }
     }
 
@@ -229,7 +229,8 @@ class HeadRequestTest {
 
         assertThat(response.headers().firstValueAsLong(HttpHeaderNames.CONTENT_LENGTH.toString()))
                 .isEmpty();
-        if (version == Version.HTTP_1_1) {
+        if (version == Version.HTTP_1_1 && method != HttpMethod.HEAD) {
+            // A response to HEAD method does not have transfer-encoding header.
             assertThat(response.headers().firstValue(HttpHeaderNames.TRANSFER_ENCODING.toString()))
                     .hasValue(HttpHeaderValues.CHUNKED.toString());
         }
@@ -271,7 +272,7 @@ class HeadRequestTest {
             assertThat(headers.get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
             assertThat(headers.contentLength()).isEqualTo(-1);
             // `isContentLengthSet()` should be set always for decoded responses.
-            assertThat(headers.isContentLengthSet()).isTrue();
+            assertThat(headers.isContentLengthUnknown()).isTrue();
         }
     }
 

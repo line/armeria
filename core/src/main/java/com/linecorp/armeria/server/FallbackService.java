@@ -33,58 +33,59 @@ final class FallbackService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final RoutingContext routingCtx = ctx.routingContext();
-        final HttpStatusException cause = getStatusException(routingCtx);
-        if (cause.httpStatus() == HttpStatus.NOT_FOUND) {
-            return handleNotFound(ctx, routingCtx, cause);
-        } else {
-            throw cause;
-        }
-    }
 
-    private static HttpStatusException getStatusException(RoutingContext routingCtx) {
         if (routingCtx.status() == RoutingStatus.CORS_PREFLIGHT) {
             // '403 Forbidden' is better for a CORS preflight request than other statuses.
-            return HttpStatusException.of(HttpStatus.FORBIDDEN);
+            return newHeadersOnlyResponse(HttpStatus.FORBIDDEN);
         }
 
         final HttpStatusException cause = routingCtx.deferredStatusException();
-        if (cause == null) {
-            return HttpStatusException.of(HttpStatus.NOT_FOUND);
+        if (cause == null || cause.httpStatus() == HttpStatus.NOT_FOUND) {
+            return handleNotFound(ctx, routingCtx);
         }
-
-        return cause;
+        return newHeadersOnlyResponse(cause.httpStatus());
     }
 
-    private static HttpResponse handleNotFound(ServiceRequestContext ctx,
-                                               RoutingContext routingCtx,
-                                               HttpStatusException cause) {
+    private static HttpResponse handleNotFound(ServiceRequestContext ctx, RoutingContext routingCtx) {
         // Handle 404 Not Found.
         final String oldPath = routingCtx.path();
         if (oldPath.charAt(oldPath.length() - 1) == '/') {
             // No need to send a redirect response because the request path already ends with '/'.
-            throw cause;
+            return newHeadersOnlyResponse(HttpStatus.NOT_FOUND);
         }
 
         // Handle the case where '/path' (or '/path?query') doesn't exist
         // but '/path/' (or '/path/?query') exists.
-        final String newPath = oldPath + '/';
-        if (!ctx.config().virtualHost().findServiceConfig(routingCtx.overridePath(newPath)).isPresent()) {
+        if (!ctx.config().virtualHost().findServiceConfig(routingCtx.withPath(oldPath + '/')).isPresent()) {
             // No need to send a redirect response because '/path/' (or '/path/?query') does not exist.
-            throw cause;
+            return newHeadersOnlyResponse(HttpStatus.NOT_FOUND);
         }
 
-        // '/path/' (or '/path/?query') exists. Send a redirect response.
-        final String location;
-        if (routingCtx.query() == null) {
-            // '/path/'
-            location = newPath;
-        } else {
-            // '/path/?query'
-            location = newPath + '?' + routingCtx.query();
+        // Use relative path to handle the case where the server is behind a reverse proxy.
+        // The reverse proxy might rewrite the path, so we should use the relative path.
+        // For example, if the proxy rewrite the path /proxy/path -> /path, then we should send the location
+        // with path/ so that the client can send the request to /proxy/path/ again.
+        final int index = oldPath.lastIndexOf('/');
+        assert index >= 0;
+        String location = oldPath.substring(index + 1) + '/';
+        if (routingCtx.query() != null) {
+            location += '?' + routingCtx.query();
         }
 
         return HttpResponse.of(ResponseHeaders.builder(HttpStatus.TEMPORARY_REDIRECT)
                                               .add(HttpHeaderNames.LOCATION, location)
+                                              .build());
+    }
+
+    private static HttpResponse newHeadersOnlyResponse(HttpStatus status) {
+        // Send a headers-only response as a workaround for the following issue:
+        // 1) `FallbackService` returns a response and then the only headers are written to the channel.
+        // 2) The client continues to send a payload that exceeds the maximum length.
+        // 3) `Http{1,2}RequestDecoder` tries to fail the request with a 413 Request Entity Too Large response.
+        // 4) As the headers have already been written at 1), `fail()` resets the connection.
+        // 5) A 413 status or a 404 status is expected but the client ends up with a `ClosedSessionException`.
+        return HttpResponse.of(ResponseHeaders.builder(status)
+                                              .endOfStream(true)
                                               .build());
     }
 }

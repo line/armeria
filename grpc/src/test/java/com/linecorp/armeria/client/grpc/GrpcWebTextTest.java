@@ -44,10 +44,6 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -59,6 +55,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcWebTextTest {
 
@@ -111,19 +111,19 @@ class GrpcWebTextTest {
                                 return streaming;
                             });
 
-            return HttpResponse.from(responseFuture);
+            return HttpResponse.of(responseFuture);
         }
 
         private static void writeEncodedMessageAcrossFrames(
                 ByteBuf responseMessage, HttpResponseWriter streaming) {
             final ByteBuf buf = serializeMessage(responseMessage, false);
-            assert buf.readableBytes() == 35;
+            assertThat(buf.readableBytes()).isEqualTo(35);
             final ByteBuf first = encode64(buf.slice(0, 19));
             final ByteBuf second = encode64(buf.slice(19, 14));
             final ByteBuf third = encode64(buf.slice(33, 2));
-            assert first.readableBytes() == 28; // == appended.
-            assert second.readableBytes() == 20; // = appended.
-            assert third.readableBytes() == 4; // = appended.
+            assertThat(first.readableBytes()).isEqualTo(28); // == appended.
+            assertThat(second.readableBytes()).isEqualTo(20); // = appended.
+            assertThat(third.readableBytes()).isEqualTo(4); // = appended.
 
             // First HTTP data frame. (AAAAAB4KHBIaYW)
             streaming.write(HttpData.wrap(first.retainedSlice(0, 14)));
@@ -175,7 +175,7 @@ class GrpcWebTextTest {
                 @Override
                 public void onNext(DeframedMessage message) {
                     // Compression not supported.
-                    assert message.buf() != null;
+                    assertThat(message.buf()).isNotNull();
                     deframed.complete(message.buf());
                 }
 

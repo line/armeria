@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -87,7 +88,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      */
     @UnstableApi
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newDecorator(CircuitBreakerClientHandler<HttpRequest> handler, CircuitBreakerRule rule) {
+    newDecorator(CircuitBreakerClientHandler handler, CircuitBreakerRule rule) {
         requireNonNull(rule, "rule");
         requireNonNull(handler, "handler");
         return delegate -> new CircuitBreakerClient(delegate, handler, rule);
@@ -113,7 +114,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      */
     @UnstableApi
     public static Function<? super HttpClient, CircuitBreakerClient>
-    newDecorator(CircuitBreakerClientHandler<HttpRequest> handler,
+    newDecorator(CircuitBreakerClientHandler handler,
                  CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         requireNonNull(handler, "handler");
         requireNonNull(ruleWithContent, "ruleWithContent");
@@ -281,9 +282,18 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler<HttpRequest> handler,
-                         CircuitBreakerRule rule) {
-        super(delegate, handler, rule);
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler, CircuitBreakerRule rule) {
+        this(delegate, handler, rule, null);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link HttpClient}.
+     */
+    CircuitBreakerClient(
+            HttpClient delegate, CircuitBreakerClientHandler handler, CircuitBreakerRule rule,
+            @Nullable BiFunction<? super ClientRequestContext, ? super HttpRequest, ? extends HttpResponse>
+                    fallback) {
+        super(delegate, handler, rule, fallback);
         needsContentInRule = false;
         maxContentLength = 0;
     }
@@ -291,17 +301,20 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler<HttpRequest> handler,
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler,
                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
-        this(delegate, handler, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
+        this(delegate, handler, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH, null);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler<HttpRequest> handler,
-                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
-        super(delegate, handler, ruleWithContent);
+    CircuitBreakerClient(
+            HttpClient delegate, CircuitBreakerClientHandler handler,
+            CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength,
+            @Nullable BiFunction<? super ClientRequestContext, ? super HttpRequest, ? extends HttpResponse>
+                    fallback) {
+        super(delegate, handler, ruleWithContent, fallback);
         needsContentInRule = true;
         this.maxContentLength = maxContentLength;
     }

@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.jaxrs.samples.JaxRsApp;
 import com.linecorp.armeria.server.jaxrs.samples.books.Book;
@@ -211,12 +212,15 @@ public class BookServiceServerTest {
     }
 
     private static WebClient newWebClient() {
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .failureResponseLogLevel(LogLevel.WARN)
+                                             .build();
         return WebClient.builder(restServer.httpUri())
                         .decorator(LoggingClient.builder()
-                                                .logger(logger)
-                                                .requestLogLevel(LogLevel.INFO)
-                                                .successfulResponseLogLevel(LogLevel.INFO)
-                                                .failureResponseLogLevel(LogLevel.WARN)
+                                                .logWriter(logWriter)
                                                 .newDecorator())
                         .build();
     }

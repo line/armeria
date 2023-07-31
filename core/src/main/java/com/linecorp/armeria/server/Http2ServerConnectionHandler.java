@@ -72,7 +72,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         if (!needsKeepAliveHandler) {
-            return NoopKeepAliveHandler.INSTANCE;
+            return new NoopKeepAliveHandler();
         }
 
         return new Http2ServerKeepAliveHandler(
@@ -129,7 +129,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != NoopKeepAliveHandler.INSTANCE) {
+        if (!(keepAliveHandler instanceof NoopKeepAliveHandler)) {
             final Channel channel = ctx.channel();
             if (channel.isActive() && channel.isRegistered()) {
                 keepAliveHandler.initialize(ctx);
@@ -155,7 +155,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (keepAliveHandler().needToCloseConnection()) {
+        if (keepAliveHandler().needsDisconnection()) {
             // Connection timed out or exceeded maximum number of requests.
             setGoAwayDebugMessage("max-age");
         }

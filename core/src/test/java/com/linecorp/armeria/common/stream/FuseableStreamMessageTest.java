@@ -220,7 +220,7 @@ class FuseableStreamMessageTest {
                     .expectErrorMatches(cause -> cause == third)
                     .verify();
 
-        final DefaultStreamMessage<Integer> defaultStream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> defaultStream = StreamMessage.streaming();
         defaultStream.write(1);
         defaultStream.write(2);
         defaultStream.close(first);
@@ -239,6 +239,22 @@ class FuseableStreamMessageTest {
                     .expectNext(3, 4)
                     .expectErrorMatches(cause -> cause == third)
                     .verify();
+    }
+
+    @Test
+    void mapErrorWithNoError() {
+        StreamMessage<Integer> fixed = StreamMessage.of(1, 2, 3, 4);
+        StreamMessage<Integer> mapped = fixed.mapError(IllegalStateException::new);
+        // Test subscribe()
+        StepVerifier.create(mapped)
+                    .expectNext(1, 2, 3, 4)
+                    .expectComplete()
+                    .verify();
+
+        fixed = StreamMessage.of(1, 2, 3, 4, 5);
+        mapped = fixed.mapError(IllegalStateException::new);
+        // Test collect()
+        assertThat(mapped.collect().join()).containsExactly(1, 2, 3, 4, 5);
     }
 
     @CsvSource({ "true", "false" })

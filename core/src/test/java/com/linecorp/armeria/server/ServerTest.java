@@ -45,12 +45,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.ParseException;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +76,7 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -111,12 +113,8 @@ class ServerTest {
             final HttpService delayedResponseOnIoThread = new EchoService() {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
-                    try {
-                        Thread.sleep(processDelayMillis);
-                        return super.echo(aReq);
-                    } catch (InterruptedException e) {
-                        return HttpResponse.ofFailure(e);
-                    }
+                    BlockingUtils.blockingRun(() -> Thread.sleep(processDelayMillis));
+                    return super.echo(aReq);
                 }
             }.decorate(LoggingService.newDecorator());
 
@@ -124,7 +122,7 @@ class ServerTest {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final HttpResponse res = HttpResponse.of(responseFuture);
                     asyncExecutorGroup.schedule(
                             () -> super.echo(aReq), processDelayMillis, TimeUnit.MILLISECONDS)
                                       .addListener((Future<HttpResponse> future) ->
@@ -245,13 +243,13 @@ class ServerTest {
         assertThat(numBossThreads).isEqualTo(oldNumBossThreads);
     }
 
-    private static void testInvocation0(String path) throws IOException {
+    private static void testInvocation0(String path) throws IOException, ParseException {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpPost req = new HttpPost(server.httpUri().resolve(path));
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, world!");
             }
         }
@@ -264,8 +262,7 @@ class ServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()))
-                        .isNotEqualTo(HttpStatusClass.SUCCESS);
+                assertThat(HttpStatusClass.valueOf(res.getCode())).isNotEqualTo(HttpStatusClass.SUCCESS);
             }
         }
     }
@@ -277,8 +274,7 @@ class ServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()))
-                        .isEqualTo(HttpStatusClass.SUCCESS);
+                assertThat(HttpStatusClass.valueOf(res.getCode())).isEqualTo(HttpStatusClass.SUCCESS);
             }
         }
     }
@@ -417,7 +413,7 @@ class ServerTest {
         threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
         threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
 
-        threads.forEach(t -> assertThat(t.getName()).startsWith("globalEventExecutor"));
+        threads.forEach(t -> assertThat(t.getName()).startsWith("startstop-support"));
     }
 
     @Test
@@ -573,9 +569,9 @@ class ServerTest {
     private static class EchoService extends AbstractHttpService {
         @Override
         protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(req.aggregate()
-                                        .thenApply(this::echo)
-                                        .exceptionally(CompletionActions::log));
+            return HttpResponse.of(req.aggregate()
+                                      .thenApply(this::echo)
+                                      .exceptionally(CompletionActions::log));
         }
 
         protected HttpResponse echo(AggregatedHttpRequest aReq) {

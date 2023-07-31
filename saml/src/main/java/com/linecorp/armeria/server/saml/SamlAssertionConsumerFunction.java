@@ -141,7 +141,8 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
         if (Math.abs(now.getMillis() - issueInstant.getMillis()) > MILLIS_IN_MINUTE) {
             // Allow if 'issueInstant' is in [now - 60s, now + 60s] because there might be the
             // time difference between SP's timer and IdP's timer.
-            throw new InvalidSamlRequestException("invalid IssueInstant: " + issueInstant);
+            throw new InvalidSamlRequestException("invalid IssueInstant: " + issueInstant +
+                                                  " (now: " + now + ')');
         }
 
         final List<Assertion> assertions;

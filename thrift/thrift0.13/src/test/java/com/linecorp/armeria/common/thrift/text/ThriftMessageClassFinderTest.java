@@ -25,8 +25,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_args;
 import com.linecorp.armeria.common.util.SystemInfo;
+
+import testing.thrift.debug.RpcDebugService.doDebug_args;
 
 class ThriftMessageClassFinderTest {
     @ParameterizedTest(name = "testThriftMessageClassFinder {index}: finder={0}")

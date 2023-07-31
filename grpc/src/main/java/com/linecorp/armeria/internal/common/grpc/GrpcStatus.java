@@ -45,6 +45,7 @@ import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -62,6 +63,8 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -81,7 +84,7 @@ public final class GrpcStatus {
      * well and the protocol package.
      */
     public static Status fromThrowable(Throwable t) {
-        t = unwrap(requireNonNull(t, "t"));
+        t = peelAndUnwrap(requireNonNull(t, "t"));
         return statusFromThrowable(t);
     }
 
@@ -93,7 +96,7 @@ public final class GrpcStatus {
      */
     public static Status fromThrowable(@Nullable GrpcStatusFunction statusFunction, RequestContext ctx,
                                        Throwable t, Metadata metadata) {
-        t = unwrap(requireNonNull(t, "t"));
+        t = peelAndUnwrap(requireNonNull(t, "t"));
 
         if (statusFunction != null) {
             final Status status = statusFunction.apply(ctx, t, metadata);
@@ -117,10 +120,12 @@ public final class GrpcStatus {
             // instead.
             return s;
         }
-        if (t instanceof ClosedStreamException) {
-            return Status.CANCELLED;
+        if (t instanceof ClosedStreamException || t instanceof RequestTimeoutException) {
+            return Status.CANCELLED.withCause(t);
         }
-        if (t instanceof UnprocessedRequestException || t instanceof IOException) {
+        if (t instanceof UnprocessedRequestException ||
+            t instanceof IOException ||
+            t instanceof FailFastException) {
             return Status.UNAVAILABLE.withCause(t);
         }
         if (t instanceof Http2Exception) {
@@ -151,7 +156,7 @@ public final class GrpcStatus {
         if (statusFunction != null) {
             final Throwable cause = status.getCause();
             if (cause != null) {
-                final Throwable unwrapped = unwrap(cause);
+                final Throwable unwrapped = peelAndUnwrap(cause);
                 final Status newStatus = statusFunction.apply(ctx, unwrapped, metadata);
                 if (newStatus != null) {
                     return newStatus;
@@ -161,7 +166,8 @@ public final class GrpcStatus {
         return status;
     }
 
-    private static Throwable unwrap(Throwable t) {
+    private static Throwable peelAndUnwrap(Throwable t) {
+        t = Exceptions.peel(t);
         Throwable cause = t;
         while (cause != null) {
             if (cause instanceof ArmeriaStatusException) {

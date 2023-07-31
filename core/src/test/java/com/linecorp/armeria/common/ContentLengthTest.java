@@ -29,7 +29,7 @@ class ContentLengthTest {
         final HttpHeaders headers = HttpHeaders.builder()
                                                .contentLength(-1)
                                                .build();
-        assertThat(headers.isContentLengthSet()).isTrue();
+        assertThat(headers.isContentLengthUnknown()).isTrue();
         assertThat(headers.contentLength()).isEqualTo(-1);
         assertThat(headers.get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
 
@@ -39,16 +39,16 @@ class ContentLengthTest {
     }
 
     @Test
-    void shouldClearIsContentLengthSetWhenRemoved() {
+    void shouldClearIsContentLengthUnknownWhenRemoved() {
         final HttpHeaders headers = HttpHeaders.builder()
                                                .contentLength(10)
                                                .build();
-        assertThat(headers.isContentLengthSet()).isTrue();
+        assertThat(headers.isContentLengthUnknown()).isTrue();
         assertThat(headers.contentLength()).isEqualTo(10);
         final HttpHeaders withoutLength = headers.toBuilder()
                                                  .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
                                                  .build();
-        assertThat(withoutLength.isContentLengthSet()).isFalse();
+        assertThat(withoutLength.isContentLengthUnknown()).isFalse();
         assertThat(withoutLength.contentLength()).isEqualTo(-1);
     }
 
@@ -62,10 +62,10 @@ class ContentLengthTest {
                                                      .build();
         final HttpRequest request = HttpRequest.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
         assertThat(request.headers().contentLength()).isEqualTo(-1);
-        assertThat(request.headers().isContentLengthSet()).isTrue();
+        assertThat(request.headers().isContentLengthUnknown()).isTrue();
         final AggregatedHttpRequest aggregatedRequest = request.aggregate().join();
         assertThat(aggregatedRequest.headers().contentLength()).isEqualTo(-1);
-        assertThat(aggregatedRequest.headers().isContentLengthSet()).isTrue();
+        assertThat(aggregatedRequest.headers().isContentLengthUnknown()).isTrue();
     }
 
     @Test
@@ -78,7 +78,7 @@ class ContentLengthTest {
         final HttpResponse response = HttpResponse.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
         final AggregatedHttpResponse aggregatedResponse = response.aggregate().join();
         assertThat(aggregatedResponse.headers().contentLength()).isEqualTo(-1);
-        assertThat(aggregatedResponse.headers().isContentLengthSet()).isTrue();
+        assertThat(aggregatedResponse.headers().isContentLengthUnknown()).isTrue();
     }
 
     @Test
@@ -105,18 +105,18 @@ class ContentLengthTest {
                                                      .build();
         HttpRequest request = HttpRequest.of(headers, HttpData.ofUtf8("foo"));
         assertThat(request.headers().contentLength()).isEqualTo(3);
-        assertThat(request.headers().isContentLengthSet()).isTrue();
+        assertThat(request.headers().isContentLengthUnknown()).isTrue();
         AggregatedHttpRequest aggregatedRequest = request.aggregate().join();
         assertThat(aggregatedRequest.headers().contentLength()).isEqualTo(3);
-        assertThat(aggregatedRequest.headers().isContentLengthSet()).isTrue();
+        assertThat(aggregatedRequest.headers().isContentLengthUnknown()).isTrue();
 
         request = HttpRequest.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
         // The content-length of a StreamMessage is unknown until it is aggregated.
         assertThat(request.headers().contentLength()).isEqualTo(2);
-        assertThat(request.headers().isContentLengthSet()).isTrue();
+        assertThat(request.headers().isContentLengthUnknown()).isTrue();
         aggregatedRequest = request.aggregate().join();
         assertThat(aggregatedRequest.headers().contentLength()).isEqualTo(3);
-        assertThat(aggregatedRequest.headers().isContentLengthSet()).isTrue();
+        assertThat(aggregatedRequest.headers().isContentLengthUnknown()).isTrue();
     }
 
     @Test
@@ -129,22 +129,22 @@ class ContentLengthTest {
         HttpResponse fixedResponse = HttpResponse.of(headers, HttpData.ofUtf8("foo"));
         ResponseHeaders splitHeaders = fixedResponse.split().headers().join();
         assertThat(splitHeaders.contentLength()).isEqualTo(3);
-        assertThat(splitHeaders.isContentLengthSet()).isTrue();
+        assertThat(splitHeaders.isContentLengthUnknown()).isTrue();
 
         fixedResponse = HttpResponse.of(headers, HttpData.ofUtf8("foo"));
         AggregatedHttpResponse aggregatedResponse = fixedResponse.aggregate().join();
         assertThat(aggregatedResponse.headers().contentLength()).isEqualTo(3);
-        assertThat(aggregatedResponse.headers().isContentLengthSet()).isTrue();
+        assertThat(aggregatedResponse.headers().isContentLengthUnknown()).isTrue();
 
         HttpResponse streamResponse = HttpResponse.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
         splitHeaders = streamResponse.split().headers().join();
         // The content-length of a StreamMessage is unknown until it is aggregated.
         assertThat(splitHeaders.contentLength()).isEqualTo(2);
-        assertThat(splitHeaders.isContentLengthSet()).isTrue();
+        assertThat(splitHeaders.isContentLengthUnknown()).isTrue();
 
         streamResponse = HttpResponse.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
         aggregatedResponse = streamResponse.aggregate().join();
         assertThat(aggregatedResponse.headers().contentLength()).isEqualTo(3);
-        assertThat(aggregatedResponse.headers().isContentLengthSet()).isTrue();
+        assertThat(aggregatedResponse.headers().isContentLengthUnknown()).isTrue();
     }
 }

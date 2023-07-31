@@ -1,9 +1,0 @@
-dependencies {
-    api project(':spring:boot1-autoconfigure')
-
-    constraints {
-        api libs.micrometer13.core
-        api libs.spring.boot1.starter
-        api libs.spring.boot1.autoconfigure
-    }
-}

@@ -1,0 +1,241 @@
+import versions from '../../../gen-src/versions.json';
+
+# Kotlin integration
+
+## Coroutines support for annotated services
+
+<Tip>
+
+Visit [annotated-http-service-kotlin](https://github.com/line/armeria/examples/annotated-http-service-kotlin) to check out a fully working example.
+
+</Tip>
+
+You can implement annotated services with [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html)
+by adding the following dependency:
+
+<RequiredDependencies
+boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+dependencies={[
+{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-kotlin' },
+]}
+/>
+
+Then, define the suspending function:
+
+```kotlin
+class MyAnnotatedService {
+    @Get("/users/{name}")
+    suspend fun getUserToken(@Param("name") name: String): String {
+        val user = myReactiveRepository.findByName(name).await()
+        return user.token
+    }
+}
+```
+
+Note that you can omit the value of <type://@Param> if you compiled your Kotlin code with [`java-parameters`](https://kotlinlang.org/docs/reference/compiler-reference.html#-java-parameters) option.
+
+```kotlin
+class MyAnnotatedService {
+    @Get("/users/{name}")
+    suspend fun getUserToken(@Param name: String): String { ... }
+}
+```
+
+Data classes are also supported for JSON requests and responses:
+
+```kotlin
+data class User(val name: String, val token: String)
+data class Result(val status: Int, val message: String)
+
+class MyRestService {
+
+    @ConsumesJson
+    @ProducesJson
+    @Post("/users")
+    suspend fun createUser(user: User): Result {
+        return myReactiveRepository.save(user).await()
+    }
+}
+```
+
+### Coroutine context and dispatcher
+
+<type://ServiceRequestContext> is injected to the default `CoroutineContext` of a `suspend` function,
+so you can access <type://ServiceRequestContext> from a `suspend` function with <type://ServiceRequestContext.current()/> 
+and the context is inherits to child contexts.
+
+```kotlin
+class MyContextAwareService {
+    suspend fun contextPropagation(@Param name: String): String {
+        // Make sure that current thread is request context aware
+        assert(ServiceRequestContext.current() != null)
+
+        return withContext(myDispatcher) {
+            // Make sure that the ServiceRequestContext is propagated to other CoroutineContext which is needed 
+            // for logging, tracing.
+            assert(ServiceRequestContext.current() != null)
+            ...
+        }
+    }
+}
+```
+
+### Coroutine dispatcher
+
+By default, Armeria uses a context-aware event loop as a 
+[coroutine dispatcher](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-coroutine-dispatcher/) to run `suspend` functions.
+A context-aware blocking executor is used as a dispatcher if you annotate a service method with
+<type://@Blocking> or enable <type://AnnotatedServiceBindingBuilder#useBlockingTaskExecutor(boolean)>.
+
+```kotlin
+serverBuilder
+    .annotatedService()
+    // Enable `useBlockingTaskExecutor`.
+    .useBlockingTaskExecutor(true)
+    .build(MyAnnotatedService())
+
+// or use @Blocking annotation:
+
+import com.linecorp.armeria.server.annotation.Blocking
+
+class MyAnnotatedService {
+    @Blocking
+    @Get("/blocking/users/{name}")
+    suspend fun getUserTokenBlocking(@Param("name") name: String): String {
+        val id = myReactiveClient.getId(name).await()
+        val user = myBlockingRepository.findById(id)
+        return user.token
+    }
+}
+```
+
+<Tip>
+
+If you use [Logback integration](/docs/advanced-logging) or [Zipkin integration](/docs/advanced-zipkin),
+coroutines should be executed in a thread that is aware of <type://RequestContext>.
+
+</Tip>
+
+### Customizing `CoroutineContext` for annotated services
+
+Armeria provides a way to configure a coroutine context of annotated service methods
+using <type://CoroutineContextService> decorator.
+
+```kotlin
+import com.linecorp.armeria.server.kotlin.CoroutineContextService
+
+serverBuilder
+    .annotatedService()
+    .decorator(CoroutineContextService.newDecorator { ctx ->
+        CoroutineName(ctx.config().defaultServiceNaming().serviceName(ctx) ?: "name")
+    })
+    .build(MyAnnotatedService())
+```
+
+## Coroutines support for <type://RestClient>
+
+Armeria provides extension methods to convert <type://RestClientPreparation#execute(Class)> to a `suspend` function.
+
+```kotlin
+val client = RestClient.of("https://armeria.dev")
+// In a coroutine scope.
+val response: ResponseEntity<RestResponse> =
+   client.get("/api/v1/users/{id}")
+         .pathParam("id", "Armeria")
+         .header(HttpHeaderNames.AUTHORIZATION, "...")
+         // The suspend function executes the request and
+         // returns the response.
+         .execute<RestResponse>()
+```
+
+## Coroutines support for [gRPC-Kotlin](https://github.com/grpc/grpc-kotlin)
+
+<Tip>
+
+Visit [grpc-kotlin](https://github.com/line/armeria/examples/grpc-kotlin) to check out a fully working example.
+
+</Tip>
+
+### Running a gRPC-Kotlin service
+
+gRPC-kotlin support is enabled automatically by registering coroutine stub services in
+[the same way](/docs/server-grpc) as using gRPC-Java.
+
+```kotlin
+import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.docs.DocService
+import com.linecorp.armeria.server.grpc.GrpcService
+
+class YourServiceImpl : YourServiceGrpcKt.YourServiceCoroutineImplBase() {
+  ...
+}
+
+// Creates GrpcService with your gRPC stub generated by gRPC-Kotlin.
+val grpcService =
+  GrpcService
+    .builder()
+    // Add your gRPC-Kotlin stub to GrpcService
+    .addService(YourServiceImpl())
+    .enableUnframedRequests(true)
+    .build()
+
+// Creates Armeria Server for gRPC-Kotlin stub.
+Server
+  .builder()
+  .http(httpPort)
+  .https(httpsPort)
+  .service(grpcService)
+  // Add DocService for browsing the list of gRPC services and 
+  // invoking a service operation from a web form.
+  // See https://armeria.dev/docs/server-docservice for more information.
+  .serviceUnder("/docs", DocService())
+  .build()
+```
+
+### Calling a gRPC-Kotlin service
+
+You can use <type://GrpcClients> to specify a coroutine stub that ends with `CoroutineStub` when creating a 
+gRPC-Kotlin client.
+
+```kotlin
+val client =
+  GrpcClients
+    .builder("https://grpc.service.com")
+    .intercept(yourInterceptors)
+    .build(YourServiceGrpcKt.YourServiceCoroutineStub::class.java)
+```
+
+<Tip>
+
+Please refer to [Calling a gRPC service](/docs/client-grpc) for more information on gRPC clients.
+
+</Tip>
+
+### Customizing `CoroutineContext` for gRPC-Kotlin services
+
+When you use gRPC-Kotlin's suspend functions, the default `CoroutineContext` is the combination of
+<type://ServiceRequestContext> and an event loop `CoroutineDispatcher`. You can access 
+<type://ServiceRequestContext> from the suspend functions with <type://ServiceRequestContext#current()>, 
+similar to how you access it in annotated services.
+
+With Armeria's integration with gRPC-Kotlin, it's easy to set up a custom `CoroutineContext` for your
+gRPC-Kotlin service. You can create your own `CoroutineContext` using <type://CoroutineContextProvider>, and 
+add it to your service through Java SPI.
+
+Note that the <type://ServiceRequestContext> is still a part of the 
+`CoroutineContext`, but the event loop `CoroutineDispatcher` is disabled if the custom `CoroutineContext`
+is used.
+
+```kotlin
+class CustomCoroutineContextProvider : CoroutineContextProvider {
+    override fun provide(ctx: ServiceRequestContext): CoroutineContext {
+      return ... // A custom CoroutineContext
+    }
+}
+```
+<Tip>
+
+A custom `CoroutineContextProvider` should be registered via Java SPI in 
+`META-INF/services/com.linecorp.armeria.common.kotlin.CoroutineContextProvider`.
+
+</Tip>

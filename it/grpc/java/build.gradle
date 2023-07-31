@@ -1,4 +1,5 @@
 dependencies {
     implementation project(':grpc')
     implementation libs.grpc.netty.shaded
+    testImplementation libs.javax.annotation
 }

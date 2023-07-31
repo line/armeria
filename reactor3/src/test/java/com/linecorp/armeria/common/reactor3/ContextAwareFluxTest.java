@@ -390,12 +390,12 @@ class ContextAwareFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
         try (SafeCloseable ignored = ctx.push()) {
-            flux = Flux.deferWithContext(reactorCtx -> {
+            flux = Flux.deferContextual(reactorCtx -> {
                 assertThat((String) reactorCtx.get("foo")).isEqualTo("bar");
                 return Flux.just("baz");
             });
         }
-        final Flux<String> flux1 = flux.subscriberContext(reactorCtx -> reactorCtx.put("foo", "bar"));
+        final Flux<String> flux1 = flux.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
         StepVerifier.create(flux1)
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))

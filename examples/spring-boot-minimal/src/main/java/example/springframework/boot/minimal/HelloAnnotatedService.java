@@ -1,13 +1,13 @@
 package example.springframework.boot.minimal;
 
-import javax.validation.constraints.Size;
-
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
+
+import jakarta.validation.constraints.Size;
 
 /**
  * Note that this is not a Spring-based component but an annotated HTTP service that leverages

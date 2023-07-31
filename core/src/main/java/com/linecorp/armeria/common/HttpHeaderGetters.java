@@ -56,7 +56,7 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      * returns {@code true} if {@link HttpHeadersBuilder#contentLength(long)}} is set to {@code -1}.
      */
     @UnstableApi
-    boolean isContentLengthSet();
+    boolean isContentLengthUnknown();
 
     /**
      * Returns the parsed {@code "content-type"} header.

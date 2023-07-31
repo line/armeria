@@ -118,6 +118,11 @@ static def addFlags(Set<String> actualFlags, ...flags) {
         }
     }
 
+    // 'kotlin' implies 'java'
+    if (actualFlags.contains('kotlin')) {
+        actualFlags.add('java')
+    }
+
     return Collections.unmodifiableSet(actualFlags)
 }
 

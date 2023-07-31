@@ -16,23 +16,19 @@
 
 package com.linecorp.armeria.client.logging;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
-import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -40,6 +36,8 @@ import com.linecorp.armeria.common.util.Sampler;
  */
 public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, RpcResponse>
         implements RpcClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(LoggingRpcClient.class);
 
     /**
      * Returns a new {@link RpcClient} decorator that logs {@link Request}s and {@link Response}s at
@@ -54,39 +52,12 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
      * Returns a newly created {@link LoggingRpcClientBuilder}.
      */
     public static LoggingRpcClientBuilder builder() {
-        return new LoggingRpcClientBuilder();
+        return new LoggingRpcClientBuilder().defaultLogger(logger);
     }
 
-    /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}s with the specified sanitizers.
-     * If the logger is null, it means that the default logger is used.
-     */
-    LoggingRpcClient(
-            RpcClient delegate,
-            @Nullable Logger logger,
-            RequestLogLevelMapper requestLogLevelMapper,
-            ResponseLogLevelMapper responseLogLevelMapper,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable,
-                    ? extends @Nullable Object> responseCauseSanitizer,
-            Sampler<? super ClientRequestContext> successSampler,
-            Sampler<? super ClientRequestContext> failureSampler) {
-
-        super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
-              requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
-              responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-              responseCauseSanitizer, successSampler, failureSampler);
+    LoggingRpcClient(RpcClient delegate, LogWriter logWriter,
+                     Sampler<? super ClientRequestContext> successSampler,
+                     Sampler<? super ClientRequestContext> failureSampler) {
+        super(delegate, logWriter, successSampler, failureSampler);
     }
 }

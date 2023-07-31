@@ -24,7 +24,6 @@ import static org.reflections.ReflectionUtils.getFields;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -283,14 +282,14 @@ interface AccessLogComponent {
                         return ctx.clientAddress().getHostAddress();
                     }
                 case REMOTE_HOST:
-                    final SocketAddress ra = log.context().remoteAddress();
-                    return ra instanceof InetSocketAddress ? ((InetSocketAddress) ra).getHostString() : null;
+                    final InetSocketAddress ra = log.context().remoteAddress();
+                    return ra != null ? ra.getHostString() : null;
 
                 case RFC931:
-                case AUTHENTICATED_USER:
-                    // We do not support these kinds of log types now.
+                    // We do not support this log type now.
                     return null;
-
+                case AUTHENTICATED_USER:
+                    return log.authenticatedUser();
                 case REQUEST_LINE:
                     final String httpMethodName = log.requestHeaders().method().name();
                     final String path = log.requestHeaders().path();
@@ -300,7 +299,7 @@ interface AccessLogComponent {
                                            GRPC_SERVICE_NAME.equals(rpcRequest.serviceType().getName());
 
                     final String logName;
-                    if (name != null && !isGrpc) {
+                    if (!isGrpc) {
                         String serviceName = log.serviceName();
                         if (serviceName != null) {
                             final int idx = serviceName.lastIndexOf('.') + 1;

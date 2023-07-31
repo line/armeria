@@ -34,8 +34,9 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import testing.thrift.main.HelloService.Iface;
 
 /**
  * Ensures TMultiplexedProtocol works.

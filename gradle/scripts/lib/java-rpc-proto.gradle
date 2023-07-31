@@ -129,6 +129,14 @@ configure(projectsWithFlags('java')) {
                     // declaring an explicit or implicit dependency.
                     sourcesJarTask.dependsOn(task)
                 }
+
+                def kotlinSourcesJar = tasks.findByName('kotlinSourcesJar')
+                if (kotlinSourcesJar) {
+                    // A workaround for  ':grpc-kotlin:kotlinSourcesJar' uses this output of task
+                    // ':grpc-kotlin:generateProto' without declaring an explicit or implicit dependency.
+                    kotlinSourcesJar.dependsOn(task)
+                }
+
                 project.ext.getGenerateSourcesTask().dependsOn(task)
             }
         }

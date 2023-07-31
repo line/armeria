@@ -31,7 +31,7 @@ final class DefaultHttpHeadersBuilder
         if (delegate != null) {
             // If -1 is set to HttpHeadersBuilder.contentLength(), -1 is not stored into the internal map.
             // So the size could be empty although delegate.isContentLengthSet() returns true
-            if (delegate.isEmpty() && !delegate.isContentLengthSet()) {
+            if (delegate.isEmpty() && !delegate.isContentLengthUnknown()) {
                 return delegate.isEndOfStream() ? DefaultHttpHeaders.EMPTY_EOS : DefaultHttpHeaders.EMPTY;
             } else {
                 return new DefaultHttpHeaders(promoteDelegate());

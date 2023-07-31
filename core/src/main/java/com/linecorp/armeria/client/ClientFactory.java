@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.FlagsProvider;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -190,7 +191,10 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      * used during the initialization phase of an application, so that the application gets a chance to
      * switch to the preferred {@link MeterRegistry} implementation. Invoking this method after this factory
      * started to export stats to the old {@link MeterRegistry} may result in undocumented behavior.
+     *
+     * @deprecated Use {@link FlagsProvider} SPI to override the default {@link MeterRegistry}.
      */
+    @Deprecated
     void setMeterRegistry(MeterRegistry meterRegistry);
 
     /**

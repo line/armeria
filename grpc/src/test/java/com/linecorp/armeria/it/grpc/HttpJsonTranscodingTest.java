@@ -60,33 +60,6 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
-import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoAnyRequest;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoAnyResponse;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueRequest;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueResponse;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoRecursiveRequest;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoRecursiveResponse;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoResponseBodyRequest;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoResponseBodyResponse;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoStructRequest;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoStructResponse;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoTimestampAndDurationRequest;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoTimestampAndDurationResponse;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoValueRequest;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoValueResponse;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoWrappersRequest;
-import com.linecorp.armeria.grpc.testing.Transcoding.EchoWrappersResponse;
-import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV1;
-import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2;
-import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2.SubMessage;
-import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV3;
-import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV4;
-import com.linecorp.armeria.grpc.testing.Transcoding.Message;
-import com.linecorp.armeria.grpc.testing.Transcoding.MessageType;
-import com.linecorp.armeria.grpc.testing.Transcoding.Recursive;
-import com.linecorp.armeria.grpc.testing.Transcoding.UpdateMessageRequestV1;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -99,6 +72,37 @@ import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
+import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
+import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
+import testing.grpc.Transcoding.EchoAnyRequest;
+import testing.grpc.Transcoding.EchoAnyResponse;
+import testing.grpc.Transcoding.EchoFieldMaskRequest;
+import testing.grpc.Transcoding.EchoFieldMaskResponse;
+import testing.grpc.Transcoding.EchoListValueRequest;
+import testing.grpc.Transcoding.EchoListValueResponse;
+import testing.grpc.Transcoding.EchoNestedMessageRequest;
+import testing.grpc.Transcoding.EchoNestedMessageResponse;
+import testing.grpc.Transcoding.EchoRecursiveRequest;
+import testing.grpc.Transcoding.EchoRecursiveResponse;
+import testing.grpc.Transcoding.EchoResponseBodyRequest;
+import testing.grpc.Transcoding.EchoResponseBodyResponse;
+import testing.grpc.Transcoding.EchoStructRequest;
+import testing.grpc.Transcoding.EchoStructResponse;
+import testing.grpc.Transcoding.EchoTimestampAndDurationRequest;
+import testing.grpc.Transcoding.EchoTimestampAndDurationResponse;
+import testing.grpc.Transcoding.EchoValueRequest;
+import testing.grpc.Transcoding.EchoValueResponse;
+import testing.grpc.Transcoding.EchoWrappersRequest;
+import testing.grpc.Transcoding.EchoWrappersResponse;
+import testing.grpc.Transcoding.GetMessageRequestV1;
+import testing.grpc.Transcoding.GetMessageRequestV2;
+import testing.grpc.Transcoding.GetMessageRequestV2.SubMessage;
+import testing.grpc.Transcoding.GetMessageRequestV3;
+import testing.grpc.Transcoding.GetMessageRequestV4;
+import testing.grpc.Transcoding.Message;
+import testing.grpc.Transcoding.MessageType;
+import testing.grpc.Transcoding.Recursive;
+import testing.grpc.Transcoding.UpdateMessageRequestV1;
 
 // The public Static methods in this class are used by the classes in other packages.
 public class HttpJsonTranscodingTest {
@@ -167,6 +171,17 @@ public class HttpJsonTranscodingTest {
                                                                     .setTimestamp(request.getTimestamp())
                                                                     .setDuration(request.getDuration())
                                                                     .build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoFieldMask(EchoFieldMaskRequest request,
+                                  StreamObserver<EchoFieldMaskResponse> responseObserver) {
+            responseObserver.onNext(EchoFieldMaskResponse.newBuilder()
+                                                         .setFieldMask(request.getFieldMask())
+                                                         .setPathCount(request.getFieldMask()
+                                                                              .getPathsList().size())
+                                                         .build());
             responseObserver.onCompleted();
         }
 
@@ -281,6 +296,14 @@ public class HttpJsonTranscodingTest {
                                                StreamObserver<EchoResponseBodyResponse>
                                                        responseObserver) {
             responseObserver.onNext(getResponseBodyResponse(request));
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoNestedMessageField(EchoNestedMessageRequest request,
+                                           StreamObserver<EchoNestedMessageResponse> responseObserver) {
+            responseObserver
+                    .onNext(EchoNestedMessageResponse.newBuilder().setNested(request.getNested()).build());
             responseObserver.onCompleted();
         }
     }
@@ -491,6 +514,17 @@ public class HttpJsonTranscodingTest {
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
         assertThat(root.get("duration").asText()).isEqualTo(duration);
+    }
+
+    @Test
+    void shouldAcceptFieldMaskAsString() throws JsonProcessingException {
+        final String fieldMask = "a,b,c";
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/field_mask?field_mask=" + fieldMask).aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(root.get("fieldMask").asText()).isEqualTo(fieldMask);
+        assertThat(root.get("pathCount").asInt()).isEqualTo(3);
     }
 
     @Test
@@ -878,6 +912,23 @@ public class HttpJsonTranscodingTest {
                                                             .execute()
                                                             .content();
         assertThat(response2.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+    }
+
+    @Test
+    void shouldAcceptNestedMessageTypeFields() throws JsonProcessingException {
+        final String jsonContent =
+                '{' +
+                "  \"nested\": {" +
+                "    \"name\": \"Armeria\"" +
+                "  }" +
+                '}';
+        final AggregatedHttpResponse response = jsonPostRequest(webClient,
+                                                                "/v1/echo/nested_message", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        final JsonNode nested = root.get("nested");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(nested).isNotNull().matches(v -> ((TreeNode) v).isObject());
+        assertThat(nested.get("name").asText()).isEqualTo("Armeria");
     }
 
     public static JsonNode findMethod(JsonNode methods, String name) {

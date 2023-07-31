@@ -30,10 +30,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 
 class RouteTest {
 
     private static final String PATH = "/test";
+
+    private static final RequestTarget REQ_TARGET = RequestTarget.forServer(PATH);
 
     @Test
     void route() {
@@ -171,6 +174,20 @@ class RouteTest {
     void invalidRoutePath() {
         assertThatThrownBy(() -> Route.builder().path("foo")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Route.builder().path("foo:/bar")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void notAllowSemicolon() {
+        assertThatThrownBy(() -> Route.builder().path("/foo;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo/{bar};")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/bar/:baz;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("exact:/:foo/bar;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("prefix:/bar/baz;")).isInstanceOf(
+                IllegalArgumentException.class);
     }
 
     @Test
@@ -407,30 +424,36 @@ class RouteTest {
 
     private static RoutingContext withMethod(HttpMethod method) {
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        PATH, null, RequestHeaders.of(method, PATH), RoutingStatus.OK);
+                                        REQ_TARGET, RequestHeaders.of(method, PATH), RoutingStatus.OK);
     }
 
     private static RoutingContext withConsumeType(HttpMethod method, MediaType contentType) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.CONTENT_TYPE, contentType);
-        return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, RoutingStatus.OK);
+        return DefaultRoutingContext.of(virtualHost(), "example.com",
+                                        REQ_TARGET, headers, RoutingStatus.OK);
     }
 
     private static RoutingContext withAcceptHeader(HttpMethod method, String acceptHeader) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.ACCEPT, acceptHeader);
-        return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, RoutingStatus.OK);
+        return DefaultRoutingContext.of(virtualHost(), "example.com",
+                                        REQ_TARGET, headers, RoutingStatus.OK);
     }
 
     private static RoutingContext withPath(String path) {
+        final RequestTarget reqTarget = RequestTarget.forServer(path);
+        assertThat(reqTarget).isNotNull();
+
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        path, null, RequestHeaders.of(HttpMethod.GET, path), RoutingStatus.OK);
+                                        reqTarget, RequestHeaders.of(HttpMethod.GET, path),
+                                        RoutingStatus.OK);
     }
 
     private static RoutingContext withRequestHeaders(RequestHeaders headers) {
-        final String[] pathAndQuery = headers.path().split("\\?", 2);
+        final RequestTarget reqTarget = RequestTarget.forServer(headers.path());
+        assertThat(reqTarget).isNotNull();
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        pathAndQuery[0], pathAndQuery.length == 2 ? pathAndQuery[1] : null,
-                                        headers, RoutingStatus.OK);
+                                        reqTarget, headers, RoutingStatus.OK);
     }
 }

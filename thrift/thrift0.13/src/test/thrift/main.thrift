@@ -1,4 +1,4 @@
-namespace java com.linecorp.armeria.service.test.thrift.main
+namespace java testing.thrift.main
 
 // Tests a non-oneway method with a return value.
 service HelloService {
@@ -24,6 +24,15 @@ service TimeService {
 exception FileServiceException {}
 service FileService {
     void create(1:string path) throws (1:FileServiceException ouch)
+}
+
+// Tests required field.
+struct RequiredName {
+    1: required string first
+}
+
+service HelloRequiredNameService {
+    string hello(1:RequiredName name)
 }
 
 // Tests structs and lists.
@@ -109,4 +118,29 @@ service HeaderService {
 // Tests a binary parameter
 service BinaryService {
     binary process(1: binary data)
+}
+
+typedef list<TypedefedString> TypedefedListString
+typedef bool                  TypedefedBool
+typedef list<TypedefedBool>   TypedefedListBool
+typedef i8                    TypedefedByte
+typedef list<TypedefedByte>   TypedefedListByte
+typedef i16                   TypedefedI16
+typedef list<TypedefedI16>    TypedefedListI16
+typedef i32                   TypedefedI32
+typedef list<TypedefedI32>    TypedefedListI32
+typedef i64                   TypedefedI64
+typedef list<TypedefedI64>    TypedefedListI64
+typedef double                TypedefedDouble
+typedef list<TypedefedDouble> TypedefedListDouble
+typedef binary                TypedefedBinary
+typedef list<TypedefedBinary> TypedefedListBinary
+
+service TypeDefService {
+    void typeDefs(1: TypedefedString td1, 2: TypedefedListString td2, 3: TypedefedBool td3,
+                  4: TypedefedListBool td4, 5: TypedefedByte td5, 6: TypedefedListByte td6,
+                  7: TypedefedI16 td7, 8: TypedefedListI16 td8, 9: TypedefedI32 td9,
+                  10: TypedefedListI32 td10, 11: TypedefedI64 td11, 12: TypedefedListI64 td12,
+                  13: TypedefedDouble td13, 14: TypedefedListDouble td14, 15: TypedefedBinary td15,
+                  16: TypedefedListBinary td16)
 }

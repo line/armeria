@@ -28,7 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -46,7 +46,7 @@ class InvalidPathWithDataTest {
             sb.requestTimeoutMillis(0);
             sb.decorator(LoggingService.newDecorator());
             sb.service("/foo", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(agg -> HttpResponse.of(agg.contentUtf8())));
+                return HttpResponse.of(req.aggregate().thenApply(agg -> HttpResponse.of(agg.contentUtf8())));
             });
         }
     };
@@ -54,8 +54,8 @@ class InvalidPathWithDataTest {
     @Test
     void invalidPath() throws Exception {
         final String invalidPath = "/foo?download=../../secret.txt";
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(invalidPath);
-        assertThat(pathAndQuery).isNull();
+        final RequestTarget reqTarget = RequestTarget.forServer(invalidPath);
+        assertThat(reqTarget).isNull();
 
         final HttpClient client = HttpClient.newHttpClient();
 
@@ -94,8 +94,7 @@ class InvalidPathWithDataTest {
                     .anyMatch(event -> {
                         final String logMessage = event.getFormattedMessage();
                         return event.getLevel().equals(Level.DEBUG) &&
-                               logMessage.contains("received a DATA Frame for an invalid stream") &&
-                               logMessage.contains(invalidPath);
+                               logMessage.contains("Received a DATA frame for a finished stream");
                     });
         });
     }

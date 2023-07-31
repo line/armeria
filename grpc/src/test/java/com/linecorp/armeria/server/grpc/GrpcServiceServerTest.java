@@ -80,16 +80,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
@@ -115,7 +106,6 @@ import io.grpc.ServerInterceptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
-import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.ProtoUtils;
 import io.grpc.protobuf.services.ProtoReflectionService;
@@ -129,6 +119,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
+import testing.grpc.Messages.EchoStatus;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.Messages.StreamingOutputCallRequest;
+import testing.grpc.UnitTestServiceGrpc;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceImplBase;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceStub;
 
 class GrpcServiceServerTest {
 
@@ -197,7 +196,7 @@ class GrpcServiceServerTest {
 
         @Override
         public void errorNoMessage(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            responseObserver.onError(Status.ABORTED.asException());
+            responseObserver.onError(Status.ABORTED.asRuntimeException());
         }
 
         @Override
@@ -217,7 +216,25 @@ class GrpcServiceServerTest {
                             Base64.getEncoder().encodeToString(
                                     Int32Value.newBuilder().setValue(20).build().toByteArray())));
 
-            responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException(metadata));
+            responseObserver.onError(Status.ABORTED.withDescription("aborted call")
+                                                   .asRuntimeException(metadata));
+        }
+
+        @Override
+        public StreamObserver<SimpleRequest> errorFromClient(StreamObserver<SimpleResponse> responseObserver) {
+            return new StreamObserver<SimpleRequest>() {
+                @Override
+                public void onNext(SimpleRequest value) {
+                    // required to ensure connection to client before the client calls onError().
+                    responseObserver.onNext(RESPONSE_MESSAGE);
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onCompleted() {}
+            };
         }
 
         @Override
@@ -528,7 +545,7 @@ class GrpcServiceServerTest {
         COMPLETED.set(false);
         CLIENT_CLOSED.set(false);
 
-        PathAndQuery.clearCachedPaths();
+        RequestTargetCache.clearCachedPaths();
     }
 
     @AfterEach
@@ -547,7 +564,7 @@ class GrpcServiceServerTest {
         assertThat(blockingClient.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
 
         // Confirm gRPC paths are cached despite using serviceUnder
-        await().untilAsserted(() -> assertThat(PathAndQuery.cachedPaths())
+        await().untilAsserted(() -> assertThat(RequestTargetCache.cachedServerPaths())
                 .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall"));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
@@ -613,6 +630,50 @@ class GrpcServiceServerTest {
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
             assertThat(grpcStatus.getDescription()).isEqualTo("aborted call");
+            assertThat(rpcRes.cause()).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
+                assertThat(ex.getStatus().getCode()).isEqualTo(Code.ABORTED);
+                assertThat(ex.getStatus().getDescription()).isEqualTo("aborted call");
+                assertThat(ex.getTrailers().getAll(STRING_VALUE_KEY))
+                        .containsExactly(StringValue.newBuilder().setValue("custom metadata").build());
+                // INT_32_VALUE_KEY is not included here, since the key is directly injected to response header.
+                assertThat(ex.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
+            });
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(StreamingClientProvider.class)
+    void error_fromClient(UnitTestServiceStub streamingClient) throws Exception {
+        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        final StreamObserver<SimpleRequest> request = streamingClient.errorFromClient(response);
+        // Sending request and receiving response is required to ensure connection before calling onError.
+        request.onNext(REQUEST_MESSAGE);
+        response.firstValue().get();
+        final Metadata meta = new Metadata();
+        meta.put(STRING_VALUE_KEY, StringValue.newBuilder().setValue("client").build());
+        request.onError(Status.INVALID_ARGUMENT.withDescription("abort from client")
+                                               .asRuntimeException(meta));
+        response.awaitCompletion();
+
+        assertThat(response.getError()).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
+            assertThat(ex.getStatus()).isNotNull();
+            assertThat(ex.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+        });
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("ErrorFromClient");
+            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+
+            assertThat(rpcRes.cause()).isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
+                assertThat(cause.getStatus()).isNotNull();
+                assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+                assertThat(cause.getTrailers()).isNotNull();
+                assertThat(cause.getTrailers().keys()).isEmpty();
+                // Different from GrpcClientTest::errorFromClient server doesn't know the cause in detail,
+                // since ArmeriaClientCall doesn't send cause on error
+                assertThat(cause.getCause()).isInstanceOf(ClosedStreamException.class);
+            });
         });
     }
 
@@ -868,7 +929,7 @@ class GrpcServiceServerTest {
         assertThat(log.requestContent()).isNotNull();
 
         final RpcResponse rpcResponse = (RpcResponse) log.responseContent();
-        final StatusException cause = (StatusException) rpcResponse.cause();
+        final StatusRuntimeException cause = (StatusRuntimeException) rpcResponse.cause();
         assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
         if (protocol.isMultiplex()) {
             assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedStreamException.class);
@@ -1258,7 +1319,7 @@ class GrpcServiceServerTest {
 
         final Status grpcStatus;
         if (rpcRes.cause() != null) {
-            grpcStatus = ((StatusException) rpcRes.cause()).getStatus();
+            grpcStatus = ((StatusRuntimeException) rpcRes.cause()).getStatus();
         } else {
             grpcStatus = null;
         }
@@ -1276,7 +1337,7 @@ class GrpcServiceServerTest {
         assertThat((Object) rpcRes).isNotNull();
 
         assertThat(rpcRes.cause()).isNotNull();
-        checker.check(((StatusException) rpcRes.cause()).getStatus());
+        checker.check(((StatusRuntimeException) rpcRes.cause()).getStatus());
     }
 
     private static void assertNoRpcContent() throws InterruptedException {

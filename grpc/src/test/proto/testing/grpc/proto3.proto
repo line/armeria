@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package example.grpc.protoversion;
+option java_package = "testing.grpc";
+
+service Proto3Service {
+  rpc echo (Proto3Message) returns (Proto3Message) {}
+}
+
+enum Foo3 {
+  A3 = 0;
+  B3 = 1;
+}
+
+message Proto3Message {
+  Foo3 foo = 2;
+}

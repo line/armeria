@@ -180,7 +180,7 @@ public final class UnaryGrpcClient {
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
             final AggregationOptions aggregationOptions =
                     AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop());
-            return HttpResponse.from(
+            return HttpResponse.of(
                     req.aggregate(aggregationOptions)
                        .thenCompose(
                                msg -> {
@@ -193,7 +193,9 @@ public final class UnaryGrpcClient {
                                        }
 
                                        try {
-                                           return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
+                                           final HttpRequest framedReq = HttpRequest.of(req.headers(), framed);
+                                           ctx.updateRequest(framedReq);
+                                           return unwrap().execute(ctx, framedReq)
                                                           .aggregate(aggregationOptions);
                                        } catch (Exception e) {
                                            throw new ArmeriaStatusException(StatusCodes.INTERNAL,

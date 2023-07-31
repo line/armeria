@@ -32,12 +32,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
@@ -73,7 +73,7 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param delegate the {@link Client} that will process {@link Request}s
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param futureConverter the {@link Function} that converts a {@link CompletableFuture} of response
-     *                        into a response, e.g. {@link HttpResponse#from(CompletionStage)}
+     *                        into a response, e.g. {@link HttpResponse#of(CompletionStage)}
      *                        and {@link RpcResponse#from(CompletionStage)}
      * @param errorResponseFactory the {@link BiFunction} that returns a new response failed with
      *                             the given exception
@@ -123,14 +123,11 @@ public abstract class UserClient<I extends Request, O extends Response>
      *
      * @param protocol the {@link SessionProtocol} to use
      * @param method the method of the {@link Request}
-     * @param path the path part of the {@link Request} URI
-     * @param query the query part of the {@link Request} URI
-     * @param fragment the fragment part of the {@link Request} URI
+     * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
      */
-    protected final O execute(SessionProtocol protocol, HttpMethod method, String path,
-                              @Nullable String query, @Nullable String fragment, I req) {
-        return execute(protocol, method, path, query, fragment, req, RequestOptions.of());
+    protected final O execute(SessionProtocol protocol, HttpMethod method, RequestTarget reqTarget, I req) {
+        return execute(protocol, method, reqTarget, req, RequestOptions.of());
     }
 
     /**
@@ -138,16 +135,13 @@ public abstract class UserClient<I extends Request, O extends Response>
      *
      * @param protocol the {@link SessionProtocol} to use
      * @param method the method of the {@link Request}
-     * @param path the path part of the {@link Request} URI
-     * @param query the query part of the {@link Request} URI
-     * @param fragment the fragment part of the {@link Request} URI
+     * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
      * @param requestOptions the {@link RequestOptions} of the {@link Request}
      */
-    protected final O execute(SessionProtocol protocol, HttpMethod method, String path,
-                              @Nullable String query, @Nullable String fragment, I req,
-                              RequestOptions requestOptions) {
-        return execute(protocol, endpointGroup(), method, path, query, fragment, req, requestOptions);
+    protected final O execute(SessionProtocol protocol, HttpMethod method, RequestTarget reqTarget,
+                              I req, RequestOptions requestOptions) {
+        return execute(protocol, endpointGroup(), method, reqTarget, req, requestOptions);
     }
 
     /**
@@ -156,14 +150,12 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param protocol the {@link SessionProtocol} to use
      * @param endpointGroup the {@link EndpointGroup} of the {@link Request}
      * @param method the method of the {@link Request}
-     * @param path the path part of the {@link Request} URI
-     * @param query the query part of the {@link Request} URI
-     * @param fragment the fragment part of the {@link Request} URI
+     * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
      */
     protected final O execute(SessionProtocol protocol, EndpointGroup endpointGroup, HttpMethod method,
-                              String path, @Nullable String query, @Nullable String fragment, I req) {
-        return execute(protocol, endpointGroup, method, path, query, fragment, req, RequestOptions.of());
+                              RequestTarget reqTarget, I req) {
+        return execute(protocol, endpointGroup, method, reqTarget, req, RequestOptions.of());
     }
 
     /**
@@ -172,15 +164,12 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param protocol the {@link SessionProtocol} to use
      * @param endpointGroup the {@link EndpointGroup} of the {@link Request}
      * @param method the method of the {@link Request}
-     * @param path the path part of the {@link Request} URI
-     * @param query the query part of the {@link Request} URI
-     * @param fragment the fragment part of the {@link Request} URI
+     * @param reqTarget the {@link RequestTarget} of the {@link Request}
      * @param req the {@link Request}
      * @param requestOptions the {@link RequestOptions} of the {@link Request}
      */
     protected final O execute(SessionProtocol protocol, EndpointGroup endpointGroup, HttpMethod method,
-                              String path, @Nullable String query, @Nullable String fragment, I req,
-                              RequestOptions requestOptions) {
+                              RequestTarget reqTarget, I req, RequestOptions requestOptions) {
 
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
@@ -195,7 +184,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                meterRegistry, protocol, id, method, path, query, fragment, options(), httpReq, rpcReq,
+                meterRegistry, protocol, id, method, reqTarget, options(), httpReq, rpcReq,
                 requestOptions, System.nanoTime(), SystemInfo.currentTimeMicros());
 
         return initContextAndExecuteWithFallback(unwrap(), ctx, endpointGroup,

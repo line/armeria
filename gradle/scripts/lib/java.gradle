@@ -2,27 +2,15 @@ import java.util.regex.Pattern
 
 def buildJdkVersion = Integer.parseInt(JavaVersion.current().getMajorVersion())
 if (rootProject.hasProperty('buildJdkVersion')) {
-    def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
+    def jdkVersion = Integer.parseInt(String.valueOf(rootProject.findProperty('buildJdkVersion')))
     if (buildJdkVersion != jdkVersion) {
         buildJdkVersion = jdkVersion
         logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
     }
 }
 
-logger.info("Using JDK ${buildJdkVersion} to build ${project.name}")
+logger.info("Using JDK ${buildJdkVersion} for build")
 rootProject.ext.set("buildJdkVersion", buildJdkVersion)
-
-def testJavaVersion = buildJdkVersion
-if (rootProject.hasProperty('testJavaVersion')) {
-    def testVersion = Integer.parseInt(rootProject.findProperty('testJavaVersion'))
-    if (buildJdkVersion != testVersion) {
-        testJavaVersion = testVersion
-        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
-    }
-}
-
-logger.info("Using JRE ${testJavaVersion} to test ${project.name}")
-rootProject.ext.set("testJavaVersion", testJavaVersion)
 
 // Enable checkstyle if the rule file exists.
 def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
@@ -39,19 +27,19 @@ configure(rootProject) {
 /**
  * Checks each flag of the specified project for flags of format "java(\\d+)".
  * If such a flag exists, the minimum Java version is extracted and returned.
- * Otherwise, {@code defaultVersion} is returned.
+ * Otherwise, {@code null} is returned.
  */
-static def extractTargetJavaVersion(Project project, int defaultVersion) {
+static def extractTargetJavaVersion(Project project) {
     def pattern = Pattern.compile('^java(\\d+)$')
     def flags = project.ext.flags
-    for (def flag: flags) {
+    for (def flag : flags) {
         def matcher = pattern.matcher(flag)
         if (!matcher.matches()) {
             continue
         }
-        return Integer.parseInt(matcher.group(1))
+        return Integer.valueOf(matcher.group(1))
     }
-    return defaultVersion
+    return null
 }
 
 configure(projectsWithFlags('java')) {
@@ -59,6 +47,7 @@ configure(projectsWithFlags('java')) {
     apply plugin: 'java-library'
     apply plugin: 'eclipse'
     apply plugin: 'idea'
+    apply plugin: 'jvm-test-suite'
 
     archivesBaseName = project.ext.artifactId
 
@@ -70,17 +59,48 @@ configure(projectsWithFlags('java')) {
         delete project.ext.genSrcDir
     }
 
-    // the default targetJavaVersion is 'javaTargetCompatibility'
-    String defaultTargetJavaVersionStr = project.findProperty('javaTargetCompatibility') ?: '1.8'
-    def defaultTargetJavaVersion = Integer.parseInt(
-            JavaVersion.toVersion(defaultTargetJavaVersionStr).majorVersion)
-
-    // parse flags for the targetJavaVersion or return the default version
-    def targetJavaVersion = extractTargetJavaVersion(project, defaultTargetJavaVersion)
-    if (targetJavaVersion < 8) {
-        throw new IllegalArgumentException("The minimum target Java version ${version} specified " +
-                "for '${project.name}' cannot be smaller than 8")
+    def minimumJavaVersion = null
+    if (project.hasProperty('minimumJavaVersion')) {
+        minimumJavaVersion = Integer.valueOf(String.valueOf(project.findProperty('minimumJavaVersion')))
+        if (minimumJavaVersion < 8) {
+            throw new IllegalArgumentException("'minimumJavaVersion' cannot be smaller than 8. " +
+                                               "minimumJavaVersion: ${minimumJavaVersion}")
+        }
     }
+    // parse flags for the targetJavaVersion
+    def targetJavaVersion = extractTargetJavaVersion(project)
+    if (targetJavaVersion != null && targetJavaVersion < 8) {
+        throw new IllegalArgumentException("The minimum target Java version ${version} specified " +
+                                           "for '${project.path}' cannot be smaller than 8")
+    }
+
+    if (minimumJavaVersion != null && (targetJavaVersion == null || targetJavaVersion < minimumJavaVersion)) {
+        targetJavaVersion = minimumJavaVersion
+        logger.quiet("Overriding target Java version for ${project.path} with ${targetJavaVersion}")
+    }
+
+    def targetJavaVersionStr = null
+    if (targetJavaVersion != null) {
+        targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
+    }
+    def javaSourceCompatibility = targetJavaVersionStr ?: project.findProperty('javaSourceCompatibility') ?: '1.8'
+    def javaTargetCompatibility = targetJavaVersionStr ?: project.findProperty('javaTargetCompatibility') ?: '1.8'
+
+    // The default targetJavaVersion is 'javaTargetCompatibility'
+    targetJavaVersion = Integer.valueOf(JavaVersion.toVersion(javaTargetCompatibility).majorVersion)
+    project.ext.set('targetJavaVersion', targetJavaVersion)
+
+    def testJavaVersion = targetJavaVersion
+    if (project.hasProperty('testJavaVersion')) {
+        def testVersion = Integer.parseInt(String.valueOf(project.findProperty('testJavaVersion')))
+        if (testJavaVersion != testVersion) {
+            testJavaVersion = testVersion
+            logger.quiet("Overriding JRE for testing ${project.path} with ${testJavaVersion}")
+        }
+    }
+
+    logger.info("Using JRE ${testJavaVersion} to test ${project.path}")
+    project.ext.set("testJavaVersion", testJavaVersion)
 
     java {
         toolchain {
@@ -123,10 +143,9 @@ configure(projectsWithFlags('java')) {
 
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
-        def targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
-        sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: targetJavaVersionStr
-        targetCompatibility = project.findProperty('javaTargetCompatibility') ?: targetJavaVersionStr
-        if (buildJdkVersion >= 9) {
+        sourceCompatibility = javaSourceCompatibility
+        targetCompatibility = javaTargetCompatibility
+        if (rootProject.ext.buildJdkVersion >= 9) {
             // Supported since java 9 https://openjdk.org/jeps/247
             options.release.set(targetJavaVersion)
         }
@@ -135,40 +154,50 @@ configure(projectsWithFlags('java')) {
         options.compilerArgs += '-parameters'
     }
 
-    // Enable full exception logging for test failures.
-    tasks.withType(Test).configureEach {
-        testLogging.exceptionFormat = 'full'
-
-        // Use JUnit platform.
+    project.ext.configureFlakyTests = { Test testTask ->
         def flakyTests = rootProject.findProperty('flakyTests')
         if (flakyTests == 'true') {
-            useJUnitPlatform {
+            testTask.options {
                 includeTags 'FLAKY_TESTS'
             }
         } else if (flakyTests == 'false') {
-            useJUnitPlatform {
+            testTask.options {
                 excludeTags 'FLAKY_TESTS'
             }
-        } else {
-            if (flakyTests != null) {
-                throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
-            }
-            useJUnitPlatform()
+        } else if (flakyTests != null) {
+            throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
         }
+    }
 
+    project.ext.configureCommonTestSettings = { Test testTask ->
+        testTask.testLogging.exceptionFormat = 'full'
         // Use a different JRE for testing if necessary.
-        if (rootProject.ext.buildJdkVersion != rootProject.ext.testJavaVersion) {
-            javaLauncher = javaToolchains.launcherFor {
-                languageVersion = JavaLanguageVersion.of(rootProject.ext.testJavaVersion)
+        if (rootProject.ext.buildJdkVersion != project.ext.testJavaVersion) {
+            testTask.javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(project.ext.testJavaVersion)
             }
         }
 
         // disable tests for projects which target a higher java version
-        if (rootProject.ext.testJavaVersion < targetJavaVersion) {
-            project.logger.lifecycle("Skipping tests for ${project.name} since the " +
-                    "testJavaVersion(${testJavaVersion}) is smaller than the " +
-                    "targetJavaVersion(${targetJavaVersion})")
-            it.enabled = false
+        if (project.ext.testJavaVersion < project.ext.targetJavaVersion) {
+            project.logger.lifecycle("Skipping tests for ${project.path} since the " +
+                                     "testJavaVersion(${project.ext.testJavaVersion}) is smaller than the " +
+                                     "targetJavaVersion(${project.ext.targetJavaVersion})")
+            testTask.enabled = false
+        }
+    }
+
+    testing.suites {
+        test {
+            // Use JUnit platform.
+            useJUnitJupiter()
+
+            targets.configureEach {
+                testTask.configure {
+                    project.ext.configureFlakyTests(it)
+                    project.ext.configureCommonTestSettings(it)
+                }
+            }
         }
     }
 
@@ -177,8 +206,8 @@ configure(projectsWithFlags('java')) {
         apply plugin: 'checkstyle'
 
         checkstyle {
+            configDirectory = new File("${checkstyleConfigDir}")
             configFile = new File("${checkstyleConfigDir}/checkstyle.xml")
-            configProperties = ['checkstyleConfigDir': "$checkstyleConfigDir"]
             if (managedVersions.containsKey('com.puppycrawl.tools:checkstyle')) {
                 toolVersion = managedVersions['com.puppycrawl.tools:checkstyle']
             }

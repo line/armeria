@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
+import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
@@ -251,7 +252,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final HttpResponse res;
         if (method.getMethodDescriptor().getType() == MethodType.UNARY) {
             final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-            res = HttpResponse.from(resFuture);
+            res = HttpResponse.of(resFuture);
             startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
                       resFuture, serializationFormat);
         } else {

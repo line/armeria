@@ -35,7 +35,9 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.HttpSession;
+import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -62,6 +64,12 @@ final class HttpClientDelegate implements HttpClient {
         if (throwable != null) {
             return earlyFailedResponse(throwable, ctx, req);
         }
+        if (req != ctx.request()) {
+            return earlyFailedResponse(
+                    new IllegalStateException("ctx.request() does not match the actual request; " +
+                                              "did you forget to call ctx.updateRequest() in your decorator?"),
+                    ctx, req);
+        }
 
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
@@ -78,10 +86,6 @@ final class HttpClientDelegate implements HttpClient {
             return earlyFailedResponse(EmptyEndpointGroupException.get(ctx.endpointGroup()), ctx, req);
         }
 
-        if (!isValidPath(req)) {
-            return earlyFailedResponse(new IllegalArgumentException("invalid path: " + req.path()), ctx, req);
-        }
-
         final SessionProtocol protocol = ctx.sessionProtocol();
         final ProxyConfig proxyConfig;
         try {
@@ -92,14 +96,15 @@ final class HttpClientDelegate implements HttpClient {
             return HttpResponse.ofFailure(wrapped);
         }
 
-        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
+        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         // TODO(ikhoon) Use ctx.exchangeType() to create an optimized HttpResponse for non-streaming response.
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
-        if (endpointWithPort.hasIpAddr() || proxyConfig.proxyType().isForwardProxy()) {
+        if (endpointWithPort.hasIpAddr() ||
+            proxyConfig.proxyType().isForwardProxy()) {
             // There is no need to resolve the IP address either because it is already known,
             // or it isn't needed for forward proxies.
             acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder, proxyConfig);
@@ -129,8 +134,7 @@ final class HttpClientDelegate implements HttpClient {
 
         final Future<InetSocketAddress> resolveFuture =
                 addressResolverGroup.getResolver(ctx.eventLoop().withoutContext())
-                                    .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
-                                                                                endpoint.port()));
+                                    .resolve(endpoint.toSocketAddress(-1));
         if (resolveFuture.isSuccess()) {
             final InetAddress address = resolveFuture.getNow().getAddress();
             onComplete.accept(endpoint.withInetAddress(address), null);
@@ -163,9 +167,8 @@ final class HttpClientDelegate implements HttpClient {
                                               HttpRequest req, DecodedHttpResponse res,
                                               ClientConnectionTimingsBuilder timingsBuilder,
                                               ProxyConfig proxyConfig) {
-        final String ipAddr = endpoint.ipAddr();
         final SessionProtocol protocol = ctx.sessionProtocol();
-        final PoolKey key = new PoolKey(endpoint.host(), ipAddr, endpoint.port(), proxyConfig);
+        final PoolKey key = new PoolKey(endpoint, proxyConfig);
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
@@ -216,10 +219,6 @@ final class HttpClientDelegate implements HttpClient {
         } else {
             ctx.logBuilder().session(null, ctx.sessionProtocol(), connectionTimings);
         }
-    }
-
-    private static boolean isValidPath(HttpRequest req) {
-        return PathAndQuery.parse(req.path()) != null;
     }
 
     private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx, HttpRequest req) {

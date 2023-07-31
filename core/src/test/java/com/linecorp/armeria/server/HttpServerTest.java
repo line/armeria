@@ -86,7 +86,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -126,13 +126,15 @@ class HttpServerTest {
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
+            sb.requestTimeoutMillis(0);
+            sb.idleTimeoutMillis(0);
 
             sb.service("/delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final HttpResponse res = HttpResponse.of(responseFuture);
                     ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
                                              delayMillis, TimeUnit.MILLISECONDS);
                     return res;
@@ -141,7 +143,7 @@ class HttpServerTest {
 
             sb.service("/delay-deferred/{delay}", (ctx, req) -> {
                 final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                final HttpResponse res = HttpResponse.from(responseFuture);
+                final HttpResponse res = HttpResponse.of(responseFuture);
                 final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
                 ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
                                          delayMillis, TimeUnit.MILLISECONDS);
@@ -152,7 +154,7 @@ class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final HttpResponse res = HttpResponse.of(responseFuture);
                     ctx.whenRequestCancelling().thenRun(
                             () -> responseFuture.complete(
                                     HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
@@ -165,7 +167,7 @@ class HttpServerTest {
 
             sb.service("/delay-custom-deferred/{delay}", (ctx, req) -> {
                 final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                final HttpResponse res = HttpResponse.from(responseFuture);
+                final HttpResponse res = HttpResponse.of(responseFuture);
                 ctx.whenRequestCancelling().thenRun(
                         () -> responseFuture.complete(HttpResponse.of(
                                 HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
@@ -455,7 +457,7 @@ class HttpServerTest {
         serverMaxRequestLength = MAX_CONTENT_LENGTH;
         clientMaxResponseLength = MAX_CONTENT_LENGTH;
 
-        PathAndQuery.clearCachedPaths();
+        RequestTargetCache.clearCachedPaths();
     }
 
     @AfterEach
@@ -599,7 +601,8 @@ class HttpServerTest {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
         final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).startsWith("Status: 404\n");
+        // `FallbackService` does not send a response body.
+        assertThat(res.content().isEmpty()).isTrue();
     }
 
     @ParameterizedTest
@@ -772,7 +775,8 @@ class HttpServerTest {
             assertThat(new String(ByteStreams.toByteArray(in)))
                     .isEqualTo("HTTP/1.1 200 OK\r\n" +
                                "content-type: text/plain; charset=utf-8\r\n" +
-                               "content-length: 6\r\n\r\n");
+                               "content-length: 6\r\n" +
+                               "connection: close\r\n\r\n");
         }
     }
 
@@ -809,7 +813,7 @@ class HttpServerTest {
 
         final int port = server.httpPort();
         try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
-            s.setSoTimeout(10000);
+            s.setSoTimeout(Integer.MAX_VALUE);
             final InputStream in = s.getInputStream();
             final OutputStream out = s.getOutputStream();
             // Send 4 pipelined requests with 'Expect: 100-continue' header.
@@ -821,12 +825,20 @@ class HttpServerTest {
                        "Content-Length: 0\r\n" +
                        "Connection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
 
+            final StringBuilder responses = new StringBuilder();
+            for (int i = 0; i < 4; i++) {
+                responses.append("HTTP/1.1 100 Continue\r\n\r\n")
+                         .append("HTTP/1.1 200 OK\r\n")
+                         .append("content-type: text/plain; charset=utf-8\r\n")
+                         .append("content-length: 6\r\n");
+                if (i == 3) {
+                    responses.append("connection: close\r\n");
+                }
+                responses.append("\r\n200 OK");
+            }
             // '100 Continue' responses must appear once for each '200 OK' response.
             assertThat(new String(ByteStreams.toByteArray(in)))
-                    .isEqualTo(Strings.repeat("HTTP/1.1 100 Continue\r\n\r\n" +
-                                              "HTTP/1.1 200 OK\r\n" +
-                                              "content-type: text/plain; charset=utf-8\r\n" +
-                                              "content-length: 6\r\n\r\n200 OK", 4));
+                    .isEqualTo(responses.toString());
         }
     }
 
@@ -888,7 +900,7 @@ class HttpServerTest {
     void testExactPathCached(WebClient client) throws Exception {
         assertThat(client.get("/cached-exact-path")
                          .aggregate().get().status()).isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths()).contains("/cached-exact-path");
+        assertThat(RequestTargetCache.cachedServerPaths()).contains("/cached-exact-path");
     }
 
     @ParameterizedTest
@@ -896,7 +908,7 @@ class HttpServerTest {
     void testPrefixPathNotCached(WebClient client) throws Exception {
         assertThat(client.get("/not-cached-paths/hoge")
                          .aggregate().get().status()).isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths()).doesNotContain("/not-cached-paths/hoge");
+        assertThat(RequestTargetCache.cachedServerPaths()).doesNotContain("/not-cached-paths/hoge");
     }
 
     @ParameterizedTest
@@ -904,7 +916,7 @@ class HttpServerTest {
     void testPrefixPath_cacheForced(WebClient client) throws Exception {
         assertThat(client.get("/cached-paths/hoge")
                          .aggregate().get().status()).isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths()).contains("/cached-paths/hoge");
+        assertThat(RequestTargetCache.cachedServerPaths()).contains("/cached-paths/hoge");
     }
 
     @ParameterizedTest

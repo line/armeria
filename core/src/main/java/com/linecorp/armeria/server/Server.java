@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
@@ -48,6 +49,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -62,20 +64,24 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.common.util.Version;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -90,7 +96,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.Mapping;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -112,13 +117,13 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     private final UpdatableServerConfig config;
-    @Nullable
-    private final Mapping<String, SslContext> sslContexts;
-
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
+    private final ReentrantLock lock = new ReentrantShortLock();
+    @GuardedBy("lock")
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
+    private boolean hasWebSocketService;
 
     @Nullable
     @VisibleForTesting
@@ -127,14 +132,11 @@ public final class Server implements ListenableAsyncCloseable {
     Server(DefaultServerConfig serverConfig) {
         serverConfig.setServer(this);
         config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
-        sslContexts = config.sslContextMapping();
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
-        // Server-wide cache metrics.
-        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsed.path.cache");
-        PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
-
+        // Server-wide metrics.
+        RequestTargetCache.registerServerMetrics(config.meterRegistry());
         setupVersionMetrics();
 
         for (VirtualHost virtualHost : config().virtualHosts()) {
@@ -146,6 +148,7 @@ public final class Server implements ListenableAsyncCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        hasWebSocketService = hasWebSocketService(config);
     }
 
     /**
@@ -178,8 +181,11 @@ public final class Server implements ListenableAsyncCloseable {
      * @see Server#activePort()
      */
     public Map<InetSocketAddress, ServerPort> activePorts() {
-        synchronized (activePorts) {
+        lock.lock();
+        try {
             return Collections.unmodifiableMap(new LinkedHashMap<>(activePorts));
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -210,7 +216,8 @@ public final class Server implements ListenableAsyncCloseable {
     @Nullable
     private ServerPort activePort0(@Nullable SessionProtocol protocol) {
         ServerPort candidate = null;
-        synchronized (activePorts) {
+        lock.lock();
+        try {
             for (ServerPort serverPort : activePorts.values()) {
                 if (protocol == null || serverPort.hasProtocol(protocol)) {
                     if (!isLocalPort(serverPort)) {
@@ -220,6 +227,8 @@ public final class Server implements ListenableAsyncCloseable {
                     }
                 }
             }
+        } finally {
+            lock.unlock();
         }
         return candidate;
     }
@@ -245,7 +254,8 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     private int activeLocalPort0(@Nullable SessionProtocol protocol) {
-        synchronized (activePorts) {
+        lock.lock();
+        try {
             return activePorts.values().stream()
                               .filter(activePort -> (protocol == null || activePort.hasProtocol(protocol)) &&
                                                     isLocalPort(activePort))
@@ -256,6 +266,8 @@ public final class Server implements ListenableAsyncCloseable {
                                       activePorts.values()))
                               .localAddress()
                               .getPort();
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -470,6 +482,13 @@ public final class Server implements ListenableAsyncCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        hasWebSocketService = hasWebSocketService(config);
+    }
+
+    private static boolean hasWebSocketService(UpdatableServerConfig config) {
+        return config.serviceConfigs()
+                     .stream()
+                     .anyMatch(serviceConfig -> serviceConfig.service().as(WebSocketService.class) != null);
     }
 
     /**
@@ -516,10 +535,14 @@ public final class Server implements ListenableAsyncCloseable {
             assert it.hasNext();
 
             final ServerPort primary = it.next();
-            doStart(primary).addListener(new ServerPortStartListener(primary))
-                            .addListener(new NextServerPortStartListener(this, it, future));
+            try {
+                doStart(primary).addListener(new ServerPortStartListener(primary))
+                                .addListener(new NextServerPortStartListener(this, it, future));
+                setupServerMetrics();
+            } catch (Throwable cause) {
+                future.completeExceptionally(cause);
+            }
 
-            setupServerMetrics();
             return future;
         }
 
@@ -532,9 +555,11 @@ public final class Server implements ListenableAsyncCloseable {
                 b.option(castOption, v);
             });
             config.childChannelOptions().forEach((k, v) -> {
-                @SuppressWarnings("unchecked")
-                final ChannelOption<Object> castOption = (ChannelOption<Object>) k;
-                b.childOption(castOption, v);
+                if (!(port.isDomainSocket() && ChannelUtil.isTcpOption(k))) {
+                    @SuppressWarnings("unchecked")
+                    final ChannelOption<Object> castOption = (ChannelOption<Object>) k;
+                    b.childOption(castOption, v);
+                }
             });
 
             final EventLoopGroup bossGroup = EventLoopGroups.newEventLoopGroup(1, r -> {
@@ -544,11 +569,30 @@ public final class Server implements ListenableAsyncCloseable {
             });
 
             b.group(bossGroup, config.workerGroup());
-            b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            b.childHandler(new HttpServerPipelineConfigurator(config, port,
-                                                              sslContexts, gracefulShutdownSupport));
-            return b.bind(port.localAddress());
+            b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,
+                                                              hasWebSocketService));
+
+            final SocketAddress localAddress;
+            final Class<? extends ServerChannel> channelType;
+            final TransportType transportType = Flags.transportType();
+            if (port.isDomainSocket()) {
+                if (transportType.supportsDomainSockets()) {
+                    // Convert to Netty's DomainSocketAddress type.
+                    localAddress = ((DomainSocketAddress) port.localAddress()).asNettyAddress();
+                    channelType = transportType.domainServerChannelType();
+                } else {
+                    throw new IllegalStateException(
+                            "Unix domains sockets not supported by the current transport type: " +
+                            transportType.name());
+                }
+            } else {
+                localAddress = port.localAddress();
+                channelType = transportType.serverChannelType();
+            }
+
+            b.channel(channelType);
+            return b.bind(localAddress);
         }
 
         private void setupServerMetrics() {
@@ -620,8 +664,11 @@ public final class Server implements ListenableAsyncCloseable {
             final Set<Channel> serverChannels = ImmutableSet.copyOf(Server.this.serverChannels);
             ChannelUtil.close(serverChannels).handle((unused1, unused2) -> {
                 // All server ports have been closed.
-                synchronized (activePorts) {
+                lock.lock();
+                try {
                     activePorts.clear();
+                } finally {
+                    lock.unlock();
                 }
 
                 // Close all accepted sockets.
@@ -682,11 +729,14 @@ public final class Server implements ListenableAsyncCloseable {
                 builder.addAll(serviceConfig.shutdownSupports());
             }
 
-            CompletableFutures.successfulAsList(builder.build()
-                                                       .stream()
-                                                       .map(ShutdownSupport::shutdown)
-                                                       .collect(toImmutableList()), cause -> null)
-                              .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            CompletableFuture.runAsync(() -> {
+                // ShutdownSupport may be blocking so run the entire block inside the startStopExecutor
+                CompletableFutures.successfulAsList(builder.build()
+                                                           .stream()
+                                                           .map(ShutdownSupport::shutdown)
+                                                           .collect(toImmutableList()), cause -> null)
+                                  .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            }, config.startStopExecutor());
         }
 
         @Override
@@ -748,23 +798,40 @@ public final class Server implements ListenableAsyncCloseable {
             serverChannels.add(ch);
 
             if (f.isSuccess()) {
-                final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
-                final ServerPort actualPort =
-                        new ServerPort(localAddress, port.protocols(), port.portGroup());
+                final SocketAddress localAddress = ch.localAddress();
+                final ServerPort actualPort;
+                if (localAddress instanceof InetSocketAddress) {
+                    actualPort = new ServerPort((InetSocketAddress) localAddress,
+                                                port.protocols(),
+                                                port.portGroup());
+                } else if (localAddress instanceof io.netty.channel.unix.DomainSocketAddress) {
+                    // Convert Netty's DomainSocketAddress to ours.
+                    final DomainSocketAddress converted = DomainSocketAddress.of(
+                            (io.netty.channel.unix.DomainSocketAddress) localAddress);
+                    actualPort = new ServerPort(converted,
+                                                port.protocols(),
+                                                port.portGroup());
+                } else {
+                    logger.warn("Unexpected local address type: {}", localAddress.getClass().getName());
+                    return;
+                }
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
 
-                synchronized (activePorts) {
+                lock.lock();
+                try {
                     // Update the map of active ports.
-                    activePorts.put(localAddress, actualPort);
+                    activePorts.put(actualPort.localAddress(), actualPort);
+                } finally {
+                    lock.unlock();
                 }
 
                 if (logger.isInfoEnabled()) {
                     if (isLocalPort(actualPort)) {
                         port.protocols().forEach(p -> logger.info(
                                 "Serving {} at {} - {}://127.0.0.1:{}/",
-                                p.name(), localAddress, p.uriText(), localAddress.getPort()));
+                                p.name(), localAddress, p.uriText(), actualPort.localAddress().getPort()));
                     } else {
                         logger.info("Serving {} at {}", Joiner.on('+').join(port.protocols()), localAddress);
                     }
@@ -808,13 +875,16 @@ public final class Server implements ListenableAsyncCloseable {
             final long portGroup = next.portGroup();
             if (portGroup != 0) {
                 int previousPort = 0;
-                synchronized (activePorts) {
+                lock.lock();
+                try {
                     for (ServerPort activePort : activePorts.values()) {
                         if (activePort.portGroup() == portGroup) {
                             previousPort = activePort.localAddress().getPort();
                             break;
                         }
                     }
+                } finally {
+                    lock.unlock();
                 }
 
                 if (previousPort > 0) {
@@ -837,17 +907,24 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     private static String bossThreadName(ServerPort port) {
-        final InetSocketAddress localAddr = port.localAddress();
-        final String localHostName =
-                localAddr.getAddress().isAnyLocalAddress() ? "*" : localAddr.getHostString();
-
         // e.g. 'armeria-boss-http-*:8080'
         //      'armeria-boss-http-127.0.0.1:8443'
         //      'armeria-boss-proxy+http+https-127.0.0.1:8443'
+        //      'armeria-boss-http-unix:/var/run/server.sock'
         final String protocolNames = port.protocols().stream()
                                          .map(SessionProtocol::uriText)
                                          .collect(Collectors.joining("+"));
-        return "armeria-boss-" + protocolNames + '-' + localHostName + ':' + localAddr.getPort();
+        final InetSocketAddress localAddr = port.localAddress();
+        final String localAddrText;
+        if (!port.isDomainSocket()) {
+            localAddrText =
+                    (localAddr.getAddress().isAnyLocalAddress() ? "*" : localAddr.getHostString()) +
+                    ':' + localAddr.getPort();
+        } else {
+            localAddrText = "unix:" + localAddr;
+        }
+
+        return "armeria-boss-" + protocolNames + '-' + localAddrText;
     }
 
     private static boolean isLocalPort(ServerPort serverPort) {

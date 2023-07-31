@@ -61,6 +61,12 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder contentLength(long contentLength);
 
     /**
+     * Sets whether the <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a>
+     * is unknown.
+     */
+    HttpHeadersBuilder isContentLengthUnknown(boolean isContentLengthUnknown);
+
+    /**
      * Sets the {@code "content-type"} header.
      */
     HttpHeadersBuilder contentType(MediaType contentType);

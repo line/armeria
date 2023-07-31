@@ -25,6 +25,8 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 /**
@@ -46,7 +48,8 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator((ctx, req) -> circuitBreaker, ruleWithContent);
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return newDecorator(CircuitBreakerClientHandler.of(circuitBreaker), ruleWithContent);
     }
 
     /**
@@ -60,8 +63,23 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
-        return delegate -> new CircuitBreakerRpcClient(
-                delegate, CircuitBreakerClientHandler.of(mapping), ruleWithContent);
+        return newDecorator(CircuitBreakerClientHandler.of(mapping), ruleWithContent);
+    }
+
+    /**
+     * Creates a new decorator with the specified {@link CircuitBreakerClientHandler} and
+     * {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     */
+    @UnstableApi
+    public static Function<? super RpcClient, CircuitBreakerRpcClient>
+    newDecorator(CircuitBreakerClientHandler handler,
+                 CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        requireNonNull(handler, "handler");
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return delegate -> new CircuitBreakerRpcClient(delegate, handler, ruleWithContent);
     }
 
     /**
@@ -125,9 +143,20 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     /**
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
-    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerClientHandler<RpcRequest> handler,
+    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerClientHandler handler,
                             CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"));
+        this(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"), null);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link RpcClient}.
+     */
+    CircuitBreakerRpcClient(
+            RpcClient delegate, CircuitBreakerClientHandler handler,
+            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent,
+            @Nullable BiFunction<? super ClientRequestContext, ? super RpcRequest, ? extends RpcResponse>
+                    fallback) {
+        super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"), fallback);
     }
 
     @Override

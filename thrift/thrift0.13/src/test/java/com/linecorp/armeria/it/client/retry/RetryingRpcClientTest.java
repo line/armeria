@@ -55,9 +55,10 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.DevNullService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.thrift.main.DevNullService;
+import testing.thrift.main.HelloService;
 
 class RetryingRpcClientTest {
 
@@ -137,6 +138,42 @@ class RetryingRpcClientTest {
         serviceRetryCount.set(0);
         assertThat(client.hello("Bob")).isEqualTo("Hey");
         verify(serviceHandler, times(5)).hello("Bob");
+    }
+
+    @Test
+    void evaluatesMappingOnce() throws Exception {
+        final AtomicInteger evaluations = new AtomicInteger(0);
+        final HelloService.Iface client = helloClient(
+                (ctx, req) -> {
+                    evaluations.incrementAndGet();
+                    return RetryConfig
+                            .builderForRpc(retryOnException)
+                            .maxTotalAttempts(3)
+                            .build();
+                }
+        );
+
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenReturn("Hey");
+
+        assertThat(client.hello("Alice")).isEqualTo("Hey");
+        // 1 logical request; 3 retries
+        assertThat(evaluations.get()).isEqualTo(1);
+        verify(serviceHandler, times(3)).hello("Alice");
+
+        serviceRetryCount.set(0);
+
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenReturn("Hey");
+
+        assertThat(client.hello("Alice")).isEqualTo("Hey");
+        // 2 logical requests total; 6 retries total
+        assertThat(evaluations.get()).isEqualTo(2);
+        verify(serviceHandler, times(6)).hello("Alice");
     }
 
     @Test
