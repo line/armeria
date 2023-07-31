@@ -1,8 +1,11 @@
+import static java.util.Objects.requireNonNull
+
 allprojects {
     ext {
         hasSourceDirectory = this.&hasSourceDirectory.curry(project)
         getGenerateSourcesTask = this.&getGenerateSourcesTask.curry(project)
         getLintTask = this.&getLintTask.curry(project)
+        cliArgProvider = this.&cliArgProvider
     }
 }
 
@@ -58,4 +61,26 @@ static Task getLintTask(Project project) {
         }
     }
     return task
+}
+
+/**
+ * An argument provider which potentially avoids task input inconsistency when builds are run
+ * from different locations. Use this provider when you would intentionally like to exclude
+ * properties from task input checking.
+ * <pre>{@code
+ *   jvmArgumentProviders.add(project.ext.cliArgProvider({
+ *     [
+ *       "-XX:HeapDumpPath=${project.buildDir}",
+ *     ]
+ *   }))
+ * }</pre>
+ */
+static CommandLineArgumentProvider cliArgProvider(Closure<Iterable<String>> closure) {
+    requireNonNull(closure)
+    return new CommandLineArgumentProvider() {
+        @Override
+        Iterable<String> asArguments() {
+            return closure.call()
+        }
+    }
 }
