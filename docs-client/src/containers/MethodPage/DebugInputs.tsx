@@ -15,17 +15,13 @@
  */
 
 import React, { ChangeEvent, Dispatch, useCallback, useReducer } from 'react';
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
-import { Method, ServiceType } from '../../lib/specification';
+import { extractUrlPath, Method, ServiceType } from '../../lib/specification';
 import { SelectOption } from '../../lib/types';
 import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
 import GraphqlRequestBody from './GraphqlRequestBody';
-
-SyntaxHighlighter.registerLanguage('json', json);
 
 interface OwnProps {
   exactPathMapping: boolean;
@@ -53,11 +49,6 @@ const toggle = (prev: boolean, override: unknown) => {
     return override;
   }
   return !prev;
-};
-
-const extractUrlPath = (method: Method) => {
-  const endpoints = method.endpoints;
-  return endpoints[0].pathMapping.substring('exact:'.length);
 };
 
 const DebugInputs: React.FunctionComponent<OwnProps> = ({

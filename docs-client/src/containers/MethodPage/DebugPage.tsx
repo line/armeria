@@ -48,7 +48,7 @@ import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
-import { Method, ServiceType } from '../../lib/specification';
+import { extractUrlPath, Method, ServiceType } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
@@ -120,11 +120,6 @@ const toggle = (prev: boolean, override: unknown) => {
 };
 
 const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
-
-const extractUrlPath = (method: Method) => {
-  const endpoints = method.endpoints;
-  return endpoints[0].pathMapping.substring('exact:'.length);
-};
 
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,
@@ -501,7 +496,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   return (
     <>
       <Section>
-        <div id="debug-form">
+        <div id={debugFormIsOpen ? '' : 'debug-form'}>
           <Typography variant="body2" paragraph />
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
