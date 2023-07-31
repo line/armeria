@@ -50,10 +50,10 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     long contentLength();
 
     /**
-     * Returns {@code true} if a content length is set via {@link HttpHeadersBuilder#contentLength(long)}}.
-     *
-     * <p>Note that {@code get(HttpHeaderNames.CONTENT_LENGTH)} can return {@code null}, although this method
-     * returns {@code true} if {@link HttpHeadersBuilder#contentLength(long)}} is set to {@code -1}.
+     * Returns whether the content length is unknown.
+     * If {@code true}, {@code content-length} header is not set, but {@code "Transfer-Encoding: chunked"} can
+     * be set for HTTP/1.
+     * If {@code false}, the {@code "content-length"} is automatically set for non-streaming responses.
      */
     @UnstableApi
     boolean isContentLengthUnknown();

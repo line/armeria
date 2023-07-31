@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,15 +26,11 @@ class ContentLengthTest {
     @Test
     void shouldAllowMinusOne() {
         final HttpHeaders headers = HttpHeaders.builder()
-                                               .contentLength(-1)
+                                               .isContentLengthUnknown(true)
                                                .build();
         assertThat(headers.isContentLengthUnknown()).isTrue();
         assertThat(headers.contentLength()).isEqualTo(-1);
         assertThat(headers.get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
-
-        assertThatThrownBy(() -> HttpHeaders.builder().contentLength(-2))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("contentLength: -2 (expected: >= -1)");
     }
 
     @Test
@@ -43,7 +38,7 @@ class ContentLengthTest {
         final HttpHeaders headers = HttpHeaders.builder()
                                                .contentLength(10)
                                                .build();
-        assertThat(headers.isContentLengthUnknown()).isTrue();
+        assertThat(headers.isContentLengthUnknown()).isFalse();
         assertThat(headers.contentLength()).isEqualTo(10);
         final HttpHeaders withoutLength = headers.toBuilder()
                                                  .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
@@ -57,7 +52,7 @@ class ContentLengthTest {
         final RequestHeaders headers = RequestHeaders.builder()
                                                      .method(HttpMethod.POST)
                                                      .path("/")
-                                                     .contentLength(-1)
+                                                     .isContentLengthUnknown(true)
                                                      .contentType(MediaType.PLAIN_TEXT)
                                                      .build();
         final HttpRequest request = HttpRequest.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
@@ -72,7 +67,7 @@ class ContentLengthTest {
     void shouldPreserveExplicitNullContentLengthWhenAggregated_response() {
         final ResponseHeaders headers = ResponseHeaders.builder()
                                                        .status(HttpStatus.OK)
-                                                       .contentLength(-1)
+                                                       .isContentLengthUnknown(true)
                                                        .contentType(MediaType.PLAIN_TEXT)
                                                        .build();
         final HttpResponse response = HttpResponse.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
@@ -105,18 +100,18 @@ class ContentLengthTest {
                                                      .build();
         HttpRequest request = HttpRequest.of(headers, HttpData.ofUtf8("foo"));
         assertThat(request.headers().contentLength()).isEqualTo(3);
-        assertThat(request.headers().isContentLengthUnknown()).isTrue();
+        assertThat(request.headers().isContentLengthUnknown()).isFalse();
         AggregatedHttpRequest aggregatedRequest = request.aggregate().join();
         assertThat(aggregatedRequest.headers().contentLength()).isEqualTo(3);
-        assertThat(aggregatedRequest.headers().isContentLengthUnknown()).isTrue();
+        assertThat(aggregatedRequest.headers().isContentLengthUnknown()).isFalse();
 
         request = HttpRequest.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
         // The content-length of a StreamMessage is unknown until it is aggregated.
         assertThat(request.headers().contentLength()).isEqualTo(2);
-        assertThat(request.headers().isContentLengthUnknown()).isTrue();
+        assertThat(request.headers().isContentLengthUnknown()).isFalse();
         aggregatedRequest = request.aggregate().join();
         assertThat(aggregatedRequest.headers().contentLength()).isEqualTo(3);
-        assertThat(aggregatedRequest.headers().isContentLengthUnknown()).isTrue();
+        assertThat(aggregatedRequest.headers().isContentLengthUnknown()).isFalse();
     }
 
     @Test
@@ -129,22 +124,22 @@ class ContentLengthTest {
         HttpResponse fixedResponse = HttpResponse.of(headers, HttpData.ofUtf8("foo"));
         ResponseHeaders splitHeaders = fixedResponse.split().headers().join();
         assertThat(splitHeaders.contentLength()).isEqualTo(3);
-        assertThat(splitHeaders.isContentLengthUnknown()).isTrue();
+        assertThat(splitHeaders.isContentLengthUnknown()).isFalse();
 
         fixedResponse = HttpResponse.of(headers, HttpData.ofUtf8("foo"));
         AggregatedHttpResponse aggregatedResponse = fixedResponse.aggregate().join();
         assertThat(aggregatedResponse.headers().contentLength()).isEqualTo(3);
-        assertThat(aggregatedResponse.headers().isContentLengthUnknown()).isTrue();
+        assertThat(aggregatedResponse.headers().isContentLengthUnknown()).isFalse();
 
         HttpResponse streamResponse = HttpResponse.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
         splitHeaders = streamResponse.split().headers().join();
         // The content-length of a StreamMessage is unknown until it is aggregated.
         assertThat(splitHeaders.contentLength()).isEqualTo(2);
-        assertThat(splitHeaders.isContentLengthUnknown()).isTrue();
+        assertThat(splitHeaders.isContentLengthUnknown()).isFalse();
 
         streamResponse = HttpResponse.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
         aggregatedResponse = streamResponse.aggregate().join();
         assertThat(aggregatedResponse.headers().contentLength()).isEqualTo(3);
-        assertThat(aggregatedResponse.headers().isContentLengthUnknown()).isTrue();
+        assertThat(aggregatedResponse.headers().isContentLengthUnknown()).isFalse();
     }
 }

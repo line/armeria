@@ -20,7 +20,7 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 final class HttpRequestUtil {
 
     static RequestHeaders maybeModifyContentLength(RequestHeaders headers, HttpData content) {
-        if (headers.isContentLengthUnknown() && headers.contentLength() == -1) {
+        if (headers.isContentLengthUnknown()) {
             // A streaming content.
             return headers;
         }

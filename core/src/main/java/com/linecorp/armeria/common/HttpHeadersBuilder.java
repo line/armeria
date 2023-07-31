@@ -52,11 +52,6 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
 
     /**
      * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a> header.
-     *
-     * <p>{@code -1} means the content size is unknown. It allows streaming of content as chunks and
-     * explicitly signaling the end of the content.
-     *
-     * @throws IllegalArgumentException if {@code contentLength} is less than {@code -1}.
      */
     HttpHeadersBuilder contentLength(long contentLength);
 
@@ -64,7 +59,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * Sets whether the <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a>
      * is unknown.
      */
-    HttpHeadersBuilder isContentLengthUnknown(boolean isContentLengthUnknown);
+    HttpHeadersBuilder isContentLengthUnknown(boolean contentLengthUnknown);
 
     /**
      * Sets the {@code "content-type"} header.

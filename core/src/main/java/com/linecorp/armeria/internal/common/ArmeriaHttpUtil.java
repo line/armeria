@@ -577,8 +577,8 @@ public final class ArmeriaHttpUtil {
         final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
         builder.endOfStream(endOfStream);
         if (!builder.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-            // Set `isContentLengthUnknown` to true 1 not to override the content-length when the HTTP objects
-            // are aggregated.
+            // `isContentLengthUnknown` is set to true so as not to automatically fill the content-length when
+            // the HTTP objects are aggregated.
             builder.isContentLengthUnknown(true);
         }
         // A CONNECT request might not have ":scheme". See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
@@ -620,11 +620,7 @@ public final class ArmeriaHttpUtil {
         final HttpHeadersBuilder delegate = ((ArmeriaHttp2Headers) http2Headers).delegate();
         delegate.endOfStream(endOfStream);
 
-        HttpMethod method = null;
-        if (delegate instanceof RequestHeadersBuilder) {
-            method = ((RequestHeadersBuilder) delegate).method();
-        }
-        maybeUpdateContentLengthUnknown(method, delegate.contains(HttpHeaderNames.CONTENT_LENGTH), delegate);
+        maybeSetContentLengthUnknown(delegate.contains(HttpHeaderNames.CONTENT_LENGTH), delegate);
 
         HttpHeaders headers = delegate.build();
 
@@ -740,22 +736,27 @@ public final class ArmeriaHttpUtil {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
 
+        maybeSetContentLengthUnknown(inHeaders.contains(HttpHeaderNames.CONTENT_LENGTH), out);
+    }
+
+    private static void maybeSetContentLengthUnknown(boolean hasContentLength, HttpHeadersBuilder out) {
+        if (hasContentLength) {
+            return;
+        }
+
         HttpMethod method = null;
         if (out instanceof RequestHeadersBuilder) {
             method = ((RequestHeadersBuilder) out).method();
         }
-        maybeUpdateContentLengthUnknown(method, inHeaders.contains(HttpHeaderNames.CONTENT_LENGTH), out);
-    }
 
-    private static void maybeUpdateContentLengthUnknown(@Nullable HttpMethod method, boolean hasContentLength,
-                                                        HttpHeadersBuilder out) {
         final boolean isContentAlwaysEmpty;
         if (method != null) {
             isContentAlwaysEmpty = isContentAlwaysEmpty(method);
         } else {
             isContentAlwaysEmpty = false;
         }
-        if (!isContentAlwaysEmpty && !hasContentLength) {
+
+        if (!isContentAlwaysEmpty) {
             // Set isContentLengthUnknown to true not to override the content-length when the HTTP objects are
             // aggregated.
             out.isContentLengthUnknown(true);

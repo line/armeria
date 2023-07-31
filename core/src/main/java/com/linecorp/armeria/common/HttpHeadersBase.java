@@ -93,7 +93,7 @@ class HttpHeadersBase
 
     /**
      * {@code true} if {@link #contentLengthUnknown(boolean)} was explicitly called with {@code true}.
-     * The value is set to {@code false} when {@link HttpHeaderNames#CONTENT_LENGTH} is mutated.
+     * The value is set to {@code false} if {@link HttpHeaderNames#CONTENT_LENGTH} is set.
      */
     private boolean contentLengthUnknown;
     private boolean endOfStream;
@@ -473,14 +473,11 @@ class HttpHeadersBase
     }
 
     final void contentLength(long contentLength) {
-        checkArgument(contentLength >= -1, "contentLength: %s (expected: >= -1)", contentLength);
+        checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
+        cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
         contentLengthUnknown = false;
-        // -1 just means the content size is unknown.
-        if (contentLength >= 0) {
-            cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
-            final String contentLengthString = StringUtil.toString(contentLength);
-            setWithoutNotifying(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
-        }
+        final String contentLengthString = StringUtil.toString(contentLength);
+        setWithoutNotifying(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
     }
 
     @Override
@@ -682,7 +679,7 @@ class HttpHeadersBase
             return false;
         }
 
-        // `isContentLengthSet` is excluded from the comparison since it is not a field expressing headers data.
+        // `contentLengthUnknown` is excluded from the comparison since it is not a field expressing headers data.
         return endOfStream == ((HttpHeaderGetters) o).isEndOfStream() && super.equals(o);
     }
 
