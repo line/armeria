@@ -116,7 +116,8 @@ class KeyStoreUtilTest {
     }
 
     private File getFile(String filename) {
-        final URL url = getClass().getResource(filename);
+        final URL url = getClass().getClassLoader().getResource(
+                "testing/core/" + KeyStoreUtilTest.class.getSimpleName() + '/' + filename);
         assertThat(url).isNotNull();
         return new File(url.getFile());
     }

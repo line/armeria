@@ -19,8 +19,9 @@ configure(projectsWithFlags('java')) {
         def task = project.tasks.create([
                 name: sourceSet.getTaskName('compile', 'thrift'),
                 group: 'Build',
-                description: "Compiles the ${sourceSet.name} .thrift files."
-        ])
+                description: "Compiles the ${sourceSet.name} .thrift files.",
+                type: CompileThriftTask.class,
+        ]) as CompileThriftTask
 
         def sourcesJarTask = project.tasks.findByName(sourceSet.getTaskName('sources', 'jar'))
         if (sourcesJarTask) {
@@ -50,10 +51,17 @@ configure(projectsWithFlags('java')) {
             def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
             def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
             task.configure {
-                srcDirs.each { inputs.dir it }
-                includeDirs.each { inputs.dir it }
+                // configure caching
+                srcDirs.each { task.thriftDirs.add(it) }
+                includeDirs.each { task.thriftDirs.add(it) }
+                task.thriftVersion = project.ext.thriftVersion
+                task.thriftBinaryPath = project.ext.thriftPath
+                task.thriftJsonEnabled = thriftJsonEnabled
+                task.fullCamel = fullCamel
                 outputs.dir javaOutputDir
                 outputs.dir jsonOutputDir
+
+                outputs.cacheIf { true }
 
                 doFirst {
                     def actualThriftPath
@@ -62,7 +70,7 @@ configure(projectsWithFlags('java')) {
                     } else {
                         actualThriftPath =
                                 "${libDir}/thrift" +
-                                "/${project.findProperty('thriftVersion')?: '0.16'}" +
+                                "/${project.findProperty('thriftVersion')?: '0.18'}" +
                                 "/thrift.${rootProject.osdetector.classifier}"
                     }
 
@@ -112,14 +120,39 @@ configure(projectsWithFlags('java')) {
                 compileTask.dependsOn(task)
             }
 
-            def copyAlpnAgentTask= tasks.findByName('copyAlpnAgent')
-            if (copyAlpnAgentTask) {
-                // A workaround for ':generateProto' uses this output of task ':copyAlpnAgent' without
-                // declaring an explicit or implicit dependency.
-                task.dependsOn(copyAlpnAgentTask)
-            }
-
             project.ext.getGenerateSourcesTask().dependsOn(task)
         }
+    }
+}
+
+class CompileThriftTask extends DefaultTask {
+
+    @Internal
+    def thriftDirs = []
+
+    @Input
+    @Optional
+    def thriftVersion
+
+    @Internal
+    def thriftBinaryPath
+
+    @Input
+    def thriftJsonEnabled
+
+    @Input
+    def fullCamel
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    Iterable<File> getInputFiles() {
+        return project.files(thriftDirs)
+    }
+
+    @InputFile
+    @PathSensitive(PathSensitivity.RELATIVE)
+    @Optional
+    File getThriftBinary() {
+        return thriftBinaryPath != null ? project.file(thriftBinaryPath) : null
     }
 }

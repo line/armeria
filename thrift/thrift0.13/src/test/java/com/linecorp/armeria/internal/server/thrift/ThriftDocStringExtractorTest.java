@@ -52,10 +52,10 @@ class ThriftDocStringExtractorTest {
                         "META-INF/armeria/thrift/ThriftTest.json",
                         Resources.toByteArray(Resources.getResource(
                                 "META-INF/armeria/thrift/cassandra.json"))));
-        assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.Compression"))
+        assertThat(docStrings.get("testing.thrift.cassandra.Compression"))
                   .isEqualTo("CQL query compression");
         assertThat(
-                docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType")).isNull();
+                docStrings.get("testing.thrift.cassandra.CqlResultType")).isNull();
     }
 
     @Test
@@ -63,7 +63,7 @@ class ThriftDocStringExtractorTest {
         final Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
         assertThat(docStrings.containsKey("thrift.test.Numberz")).isTrue();
         assertThat(
-                docStrings.containsKey("com.linecorp.armeria.service.test.thrift.cassandra.Compression"))
+                docStrings.containsKey("testing.thrift.cassandra.Compression"))
                   .isTrue();
     }
 }

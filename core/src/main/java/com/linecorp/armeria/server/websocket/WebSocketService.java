@@ -51,6 +51,7 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -59,6 +60,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 /**
  * An {@link HttpService} that supports <a href="https://datatracker.ietf.org/doc/html/rfc6455">
  * The WebSocket Protocol</a>.
+ * This service has a few different default values for {@link ServiceConfig} from a normal {@link HttpService}
+ * because of the nature of WebSocket. See {@link WebSocketServiceBuilder} for more information.
  */
 @UnstableApi
 public final class WebSocketService extends AbstractHttpService {

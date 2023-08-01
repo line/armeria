@@ -37,19 +37,8 @@ import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc;
-import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.HttpEndpoint;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -71,11 +60,22 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider;
 
 import io.grpc.MethodDescriptor;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.HttpJsonTranscodingTestServiceGrpc;
+import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.ReconnectServiceGrpc;
+import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
+import testing.grpc.UnitTestServiceGrpc;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceImplBase;
 
 class GrpcDocServicePluginTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
-            com.linecorp.armeria.grpc.testing.Test.getDescriptor()
+            testing.grpc.Test.getDescriptor()
                                                   .findServiceByName("TestService");
 
     private static final GrpcDocServicePlugin generator = new GrpcDocServicePlugin();

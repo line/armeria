@@ -18,6 +18,9 @@ package com.linecorp.armeria.client.logging;
 
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.Request;
@@ -34,6 +37,8 @@ import com.linecorp.armeria.common.util.Sampler;
 public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, RpcResponse>
         implements RpcClient {
 
+    private static final Logger logger = LoggerFactory.getLogger(LoggingRpcClient.class);
+
     /**
      * Returns a new {@link RpcClient} decorator that logs {@link Request}s and {@link Response}s at
      * {@link LogLevel#DEBUG} for success, {@link LogLevel#WARN} for failure.
@@ -47,7 +52,7 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
      * Returns a newly created {@link LoggingRpcClientBuilder}.
      */
     public static LoggingRpcClientBuilder builder() {
-        return new LoggingRpcClientBuilder();
+        return new LoggingRpcClientBuilder().defaultLogger(logger);
     }
 
     LoggingRpcClient(RpcClient delegate, LogWriter logWriter,
