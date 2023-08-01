@@ -16,12 +16,10 @@ configure(projectsWithFlags('java')) {
         def scope = sourceSet.name
         // Create the task assuming the source directory exists
         // so that subprojects can refer to the task.
-        def task = project.tasks.create([
-                name: sourceSet.getTaskName('compile', 'thrift'),
-                group: 'Build',
-                description: "Compiles the ${sourceSet.name} .thrift files.",
-                type: CompileThriftTask.class,
-        ]) as CompileThriftTask
+        def task = project.tasks.register(
+            (sourceSet.getTaskName('compile', 'thrift')) as String,
+                CompileThriftTask,
+        )
 
         def sourcesJarTask = project.tasks.findByName(sourceSet.getTaskName('sources', 'jar'))
         if (sourcesJarTask) {
@@ -35,7 +33,7 @@ configure(projectsWithFlags('java')) {
                 def defaultSrcDir = "${projectDir}/src/${scope}/thrift"
                 if (!project.file(defaultSrcDir).isDirectory()) {
                     // Disable the compile*Thrift task which turned out to be unnecessary.
-                    task.enabled = false
+                    task.configure { enabled = false }
                     return
                 }
                 srcDirs = [defaultSrcDir]
@@ -51,7 +49,7 @@ configure(projectsWithFlags('java')) {
             def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
             def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
             task.configure {
-                // configure caching
+                // configure task inputs and outputs
                 srcDirs.each { task.thriftDirs.add(it) }
                 includeDirs.each { task.thriftDirs.add(it) }
                 task.thriftVersion = project.ext.thriftVersion
@@ -60,8 +58,6 @@ configure(projectsWithFlags('java')) {
                 task.fullCamel = fullCamel
                 outputs.dir javaOutputDir
                 outputs.dir jsonOutputDir
-
-                outputs.cacheIf { true }
 
                 doFirst {
                     def actualThriftPath
@@ -125,7 +121,17 @@ configure(projectsWithFlags('java')) {
     }
 }
 
+@CacheableTask
 class CompileThriftTask extends DefaultTask {
+    @Override
+    String getGroup() {
+        return 'build'
+    }
+
+    @Override
+    String getDescription() {
+        return "Compiles the ${name} .thrift files."
+    }
 
     @Internal
     def thriftDirs = []
