@@ -62,7 +62,7 @@ class MultipartCollectIntegrationTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/multipart/file", (ctx, req) -> HttpResponse.from(
+            sb.service("/multipart/file", (ctx, req) -> HttpResponse.of(
                       Multipart.from(req)
                                .collect(bodyPart -> {
                                    if (bodyPart.filename() != null) {
@@ -77,7 +77,7 @@ class MultipartCollectIntegrationTest {
                                })
                                .thenApply(aggregated -> aggregated.stream().collect(
                                        Collectors.toMap(Entry::getKey, Entry::getValue)))
-                               .thenApply(aggregated -> {
+                               .thenApplyAsync(aggregated -> {
                                    final StringBuilder responseStringBuilder = new StringBuilder();
                                    responseStringBuilder.append("param1/")
                                                         .append(aggregated.get("param1")).append('\n');
@@ -110,8 +110,8 @@ class MultipartCollectIntegrationTest {
                                    } catch (IOException e) {
                                        throw new UncheckedIOException(e);
                                    }
-                               })))
-              .service("/multipart/large-file", (ctx, req) -> HttpResponse.from(
+                               }, ctx.blockingTaskExecutor())))
+              .service("/multipart/large-file", (ctx, req) -> HttpResponse.of(
                       Multipart.from(req).collect(bodyPart -> {
                                    final Path path = tempDir.resolve(bodyPart.name());
                                    return bodyPart.writeTo(path)
@@ -120,7 +120,7 @@ class MultipartCollectIntegrationTest {
                                })
                                .thenApply(aggregated -> aggregated.stream().collect(
                                        Collectors.toMap(Entry::getKey, Entry::getValue)))
-                               .thenApply(aggregated -> {
+                               .thenApplyAsync(aggregated -> {
                                    final StringBuilder responseStringBuilder = new StringBuilder();
                                    try {
                                        final HashCode file1Hash =
@@ -140,7 +140,7 @@ class MultipartCollectIntegrationTest {
                                        throw new RuntimeException(e);
                                    }
                                    return HttpResponse.of(responseStringBuilder.toString());
-                               })))
+                               }, ctx.blockingTaskExecutor())))
               .requestTimeout(Duration.ZERO)
               .maxRequestLength(0);
         }
@@ -151,7 +151,7 @@ class MultipartCollectIntegrationTest {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-        final ClassPathResource file = new ClassPathResource("test.txt");
+        final ClassPathResource file = new ClassPathResource("testing/multipart/test.txt");
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file1", file);
         body.add("file2", file);

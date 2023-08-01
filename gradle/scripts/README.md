@@ -374,15 +374,6 @@ When a project has a `java` flag:
     }
     ```
 
-- [Jetty ALPN agent](https://github.com/jetty-project/jetty-alpn-agent) is
-  loaded automatically when launching a Java process if you specified it in
-  `dependencies.toml`:
-
-  ```toml
-  [libraries] 
-  jetty-alpn = { module = "org.mortbay.jetty.alpn:jetty-alpn-agent", version = "2.0.10" }
-  ```
-
 - The `package-list` files of the Javadocs specified in `dependencies.toml` will
   be downloaded and cached. The downloaded `package-list` files will be used
   when generating Javadocs, e.g. in `dependencies.toml`:
@@ -666,6 +657,10 @@ The flag may be added like the following:
 
 Note that if the target Java version is greater than the build JDK version,
 an `UnsupportedClassVersionError` may be raised.
+
+Plus, you can use `-PminimumJavaVersion` property to override the minimum version of `javaTargetCompatibility`
+set by `java` flag. For example, if you set `-PminimumJavaVersion=11`, `javaTargetCompatibility` lower than 
+Java 11 will be upgraded to Java 11.
 
 ## Tagging conveniently with `release` task
 

@@ -305,6 +305,11 @@ public final class WebClientRequestPreparation
             maxResponseLength(maxResponseLength);
         }
 
+        final Long delayMillis = requestOptions.requestAutoAbortDelayMillis();
+        if (delayMillis != null) {
+            requestAutoAbortDelayMillis(delayMillis);
+        }
+
         final long responseTimeoutMillis = requestOptions.responseTimeoutMillis();
         if (responseTimeoutMillis >= 0) {
             responseTimeoutMillis(responseTimeoutMillis);
@@ -352,6 +357,18 @@ public final class WebClientRequestPreparation
     @Override
     public WebClientRequestPreparation maxResponseLength(long maxResponseLength) {
         requestOptionsBuilder().maxResponseLength(maxResponseLength);
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation requestAutoAbortDelay(Duration delay) {
+        requestOptionsBuilder().requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation requestAutoAbortDelayMillis(long delayMillis) {
+        requestOptionsBuilder().requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

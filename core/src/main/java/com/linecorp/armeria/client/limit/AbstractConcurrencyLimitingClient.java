@@ -106,7 +106,9 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                         .handleAsync((permit, throwable) -> {
                             if (throwable != null) {
                                 // Wrap the exception with UnprocessedRequestException.
-                                resFuture.completeExceptionally(UnprocessedRequestException.of(throwable));
+                                final UnprocessedRequestException t =
+                                        UnprocessedRequestException.of(throwable);
+                                completeExceptionally(ctx, resFuture, t);
                                 return null;
                             }
                             numActiveRequests.incrementAndGet();
@@ -122,7 +124,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
                                 } catch (Throwable t) {
                                     permit.close();
                                     numActiveRequests.decrementAndGet();
-                                    resFuture.completeExceptionally(t);
+                                    completeExceptionally(ctx, resFuture, t);
                                 }
                             }
                             return null;
@@ -130,10 +132,17 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         return deferred;
     }
 
+    private static void completeExceptionally(ClientRequestContext ctx,
+                                              CompletableFuture<?> resFuture, Throwable t) {
+        resFuture.completeExceptionally(t);
+        ctx.logBuilder().endRequest(t);
+        ctx.logBuilder().endResponse(t);
+    }
+
     /**
      * Implement this method to return a new {@link Response} which delegates to the {@link Response}
      * the specified {@link CompletionStage} is completed with. For example, you could use
-     * {@link HttpResponse#from(CompletionStage, EventExecutor)}:
+     * {@link HttpResponse#of(CompletionStage, EventExecutor)}:
      * <pre>{@code
      * protected HttpResponse newDeferredResponse(
      *         ClientRequestContext ctx, CompletionStage<HttpResponse> resFuture) {

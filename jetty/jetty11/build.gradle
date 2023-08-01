@@ -1,0 +1,14 @@
+dependencies {
+    api libs.jetty11.server
+
+    // Can't exclude slf4j 1.x because the core module uses it as an api configuration.
+    // If this becomes problem, we will refactor the core more and exclude the slf4j 1.x dependency.
+    implementation libs.slf4j2.api
+
+    testImplementation libs.asm
+    testImplementation libs.jetty11.annotations
+    testImplementation libs.jetty11.apache.jsp
+    testImplementation libs.jetty11.apache.jstl
+    testImplementation libs.jetty11.webapp
+    testImplementation libs.logback14
+}

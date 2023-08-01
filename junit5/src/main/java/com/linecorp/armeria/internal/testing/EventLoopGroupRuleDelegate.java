@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import java.util.concurrent.ThreadFactory;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 
@@ -27,16 +29,14 @@ import io.netty.channel.EventLoopGroup;
 public final class EventLoopGroupRuleDelegate {
 
     private final int numThreads;
-    private final String threadNamePrefix;
-    private final boolean useDaemonThreads;
+    private final ThreadFactory threadFactory;
 
     @Nullable
     private volatile EventLoopGroup group;
 
-    public EventLoopGroupRuleDelegate(int numThreads, String threadNamePrefix, boolean useDaemonThreads) {
+    public EventLoopGroupRuleDelegate(int numThreads, ThreadFactory threadFactory) {
         this.numThreads = numThreads;
-        this.threadNamePrefix = threadNamePrefix;
-        this.useDaemonThreads = useDaemonThreads;
+        this.threadFactory = threadFactory;
     }
 
     public EventLoopGroup group() {
@@ -48,7 +48,7 @@ public final class EventLoopGroupRuleDelegate {
     }
 
     public void before() throws Throwable {
-        group = EventLoopGroups.newEventLoopGroup(numThreads, threadNamePrefix, useDaemonThreads);
+        group = EventLoopGroups.newEventLoopGroup(numThreads, threadFactory);
     }
 
     public void after() {

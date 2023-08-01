@@ -15,12 +15,10 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -47,6 +45,7 @@ import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -198,7 +197,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         if (this.proxiedAddresses != null) {
             proxiedAddresses = this.proxiedAddresses;
         } else {
-            proxiedAddresses = ProxiedAddresses.of((InetSocketAddress) remoteAddress());
+            proxiedAddresses = ProxiedAddresses.of(remoteAddress());
         }
 
         // Build a fake server which never starts up.
@@ -235,7 +234,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
         final RoutingContext routingCtx = DefaultRoutingContext.of(
                 server.config().defaultVirtualHost(),
-                ((InetSocketAddress) localAddress()).getHostString(),
+                localAddress().getHostString(),
                 requestTarget(),
                 req.headers(),
                 RoutingStatus.OK);
@@ -271,9 +270,11 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
 
         // Build the context with the properties set by a user and the fake objects.
+        final Channel ch = fakeChannel();
         return new DefaultServiceRequestContext(
-                serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                routingResult, exchangeType, req, sslSession(), proxiedAddresses, clientAddress,
+                serviceCfg, ch, meterRegistry(), sessionProtocol(), id(), routingCtx,
+                routingResult, exchangeType, req, sslSession(), proxiedAddresses,
+                clientAddress, remoteAddress(), localAddress(),
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
@@ -318,18 +319,14 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     @Override
-    public ServiceRequestContextBuilder remoteAddress(SocketAddress remoteAddress) {
+    public ServiceRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
         requireNonNull(remoteAddress, "remoteAddress");
-        checkArgument(remoteAddress instanceof InetSocketAddress,
-                      "remoteAddress: %s (expected: an InetSocketAddress)", remoteAddress);
         return (ServiceRequestContextBuilder) super.remoteAddress(remoteAddress);
     }
 
     @Override
-    public ServiceRequestContextBuilder localAddress(SocketAddress localAddress) {
+    public ServiceRequestContextBuilder localAddress(InetSocketAddress localAddress) {
         requireNonNull(localAddress, "remoteAddress");
-        checkArgument(localAddress instanceof InetSocketAddress,
-                      "localAddress: %s (expected: an InetSocketAddress)", localAddress);
         return (ServiceRequestContextBuilder) super.localAddress(localAddress);
     }
 

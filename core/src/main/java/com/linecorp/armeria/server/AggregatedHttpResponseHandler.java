@@ -29,6 +29,8 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
@@ -173,14 +175,13 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
             logBuilder().responseFirstBytesTransferred();
             if (tryComplete(cause)) {
                 if (cause == null) {
-                    cause = CapturedServiceException.get(reqCtx);
+                    final RequestLog requestLog = reqCtx.log()
+                            .getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+                    if (requestLog != null) {
+                        cause = requestLog.responseCause();
+                    }
                 }
-
-                if (cause == null) {
-                    endLogRequestAndResponse();
-                } else {
-                    endLogRequestAndResponse(cause);
-                }
+                endLogRequestAndResponse(cause);
                 maybeWriteAccessLog();
             }
             return;

@@ -36,9 +36,22 @@ configure(projectsWithFlags('kotlin')) {
         }
 
         afterEvaluate {
-            // A workaround for 'runKtlintCheckOverMainSourceSet' uses this output of task ':generateProto' without
-            // declaring an explicit or implicit dependency.
-            tasks.runKtlintCheckOverMainSourceSet.dependsOn(project.ext.getGenerateSourcesTask())
+
+            // `tasks.withType(KtLintCheckTask)` does not work here.
+            ['Main', 'Test', 'Jmh'].each { name ->
+                // A workaround for 'runKtlintCheckOverMainSourceSet' uses this output of task ':generateProto'
+                // without declaring an explicit or implicit dependency.
+                def ktlintTask = tasks.findByName("runKtlintCheckOver${name}SourceSet")
+                if (ktlintTask != null) {
+                    ktlintTask.dependsOn(project.ext.getGenerateSourcesTask())
+                }
+                // A workaround for 'compileJmhKotlin' uses this output of task 'compileJmhThrift' without
+                // declaring an explicit or implicit dependency.
+                def compileTask = tasks.findByName("compile${name}Kotlin")
+                if (compileTask != null) {
+                    compileTask.dependsOn(project.ext.getGenerateSourcesTask())
+                }
+            }
             project.ext.getLintTask().dependsOn(tasks.ktlintCheck)
         }
     }

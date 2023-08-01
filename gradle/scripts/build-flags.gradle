@@ -22,7 +22,6 @@ if (!projectsWithFlags('java').isEmpty()) {
     apply from: "${libDir}/java.gradle"
     apply from: "${libDir}/java-javadoc.gradle"
     apply from: "${libDir}/java-coverage.gradle"
-    apply from: "${libDir}/java-alpn.gradle"
     apply from: "${libDir}/java-rpc-thrift.gradle"
 
     if (projectsWithFlags('java').find { it.ext.hasSourceDirectory('proto') }) {

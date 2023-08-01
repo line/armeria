@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.AsciiString;
@@ -60,7 +61,7 @@ final class HttpHealthChecker implements AsyncCloseable {
 
     private static final AsciiString ARMERIA_LPHC = HttpHeaderNames.of("armeria-lphc");
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     private final HealthCheckerContext ctx;
     private final WebClient webClient;
     private final String authority;

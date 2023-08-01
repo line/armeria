@@ -161,8 +161,8 @@ class HttpResponseTest {
     @Test
     void httpResponseUsingDeliveredExecutor() {
         final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
-        final HttpResponse res = HttpResponse.from(responseSupplier,
-                                                   Executors.newSingleThreadScheduledExecutor());
+        final HttpResponse res = HttpResponse.of(responseSupplier,
+                                                 Executors.newSingleThreadScheduledExecutor());
 
         assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
     }

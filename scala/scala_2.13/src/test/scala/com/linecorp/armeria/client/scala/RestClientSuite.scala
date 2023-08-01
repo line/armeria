@@ -51,6 +51,20 @@ class RestClientSuite extends FunSuite with ServerSuite {
         @Delete
         @Patch
         @ProducesJson
+        @Path("/future")
+        def future(): Future[RestResponse] = Future.successful(RestResponse("1", "Hi!"))
+      },
+      Array.emptyObjectArray: _*
+    )
+
+    sb.annotatedService(
+      new {
+        @Get
+        @Post
+        @Put
+        @Delete
+        @Patch
+        @ProducesJson
         @Path("/rest/complex/{id}")
         def restApi(
             @Param id: String,
@@ -115,6 +129,18 @@ class RestClientSuite extends FunSuite with ServerSuite {
     assertEquals(content.trailer, "trailer-value")
     assertEquals(content.cookie, "cookie-value")
     assertEquals(content.content, "content")
+  }
+
+  test("future output") {
+    val restClient = server.webClient().asScalaRestClient()
+    val future =
+      restClient
+        .post("/future")
+        .execute[RestResponse]()
+
+    val content = Await.result(future, Duration.Inf).content()
+    assertEquals(content.id, "1")
+    assertEquals(content.content, "Hi!")
   }
 
   test("ScalaRestClientPreparation should return self type") {

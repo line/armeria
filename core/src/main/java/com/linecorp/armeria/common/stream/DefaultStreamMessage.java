@@ -434,7 +434,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
     }
 
     @Override
-    public final void close() {
+    public void close() {
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(SUCCESSFUL_CLOSE);
         }

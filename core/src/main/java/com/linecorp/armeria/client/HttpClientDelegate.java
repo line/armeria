@@ -96,14 +96,15 @@ final class HttpClientDelegate implements HttpClient {
             return HttpResponse.ofFailure(wrapped);
         }
 
-        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
+        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         // TODO(ikhoon) Use ctx.exchangeType() to create an optimized HttpResponse for non-streaming response.
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
-        if (endpointWithPort.hasIpAddr() || proxyConfig.proxyType().isForwardProxy()) {
+        if (endpointWithPort.hasIpAddr() ||
+            proxyConfig.proxyType().isForwardProxy()) {
             // There is no need to resolve the IP address either because it is already known,
             // or it isn't needed for forward proxies.
             acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder, proxyConfig);
@@ -133,8 +134,7 @@ final class HttpClientDelegate implements HttpClient {
 
         final Future<InetSocketAddress> resolveFuture =
                 addressResolverGroup.getResolver(ctx.eventLoop().withoutContext())
-                                    .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
-                                                                                endpoint.port()));
+                                    .resolve(endpoint.toSocketAddress(-1));
         if (resolveFuture.isSuccess()) {
             final InetAddress address = resolveFuture.getNow().getAddress();
             onComplete.accept(endpoint.withInetAddress(address), null);
@@ -167,9 +167,8 @@ final class HttpClientDelegate implements HttpClient {
                                               HttpRequest req, DecodedHttpResponse res,
                                               ClientConnectionTimingsBuilder timingsBuilder,
                                               ProxyConfig proxyConfig) {
-        final String ipAddr = endpoint.ipAddr();
         final SessionProtocol protocol = ctx.sessionProtocol();
-        final PoolKey key = new PoolKey(endpoint.host(), ipAddr, endpoint.port(), proxyConfig);
+        final PoolKey key = new PoolKey(endpoint, proxyConfig);
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {

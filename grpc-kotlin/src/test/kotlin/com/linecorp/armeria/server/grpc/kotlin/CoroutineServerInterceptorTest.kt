@@ -16,31 +16,32 @@
 
 package com.linecorp.armeria.server.grpc.kotlin
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.protobuf.ByteString
 import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.auth.AuthToken
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction
-import com.linecorp.armeria.grpc.testing.Messages.Payload
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallRequest
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallResponse
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse
-import com.linecorp.armeria.grpc.testing.TestServiceGrpcKt
 import com.linecorp.armeria.internal.testing.AnticipatedException
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.auth.Authorizer
+import com.linecorp.armeria.server.grpc.AsyncServerInterceptor
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
+import io.grpc.Context
+import io.grpc.Contexts
 import io.grpc.Metadata
 import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
 import io.grpc.Status
 import io.grpc.StatusException
+import io.grpc.kotlin.CoroutineContextServerInterceptor
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.asContextElement
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -51,13 +52,24 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import testing.grpc.Messages.Payload
+import testing.grpc.Messages.SimpleRequest
+import testing.grpc.Messages.SimpleResponse
+import testing.grpc.Messages.StreamingInputCallRequest
+import testing.grpc.Messages.StreamingInputCallResponse
+import testing.grpc.Messages.StreamingOutputCallRequest
+import testing.grpc.Messages.StreamingOutputCallResponse
+import testing.grpc.TestServiceGrpcKt
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
 
 internal class CoroutineServerInterceptorTest {
 
@@ -205,19 +217,30 @@ internal class CoroutineServerInterceptorTest {
         @RegisterExtension
         val server: ServerExtension = object : ServerExtension() {
             override fun configure(sb: ServerBuilder) {
-                val statusFunction = GrpcStatusFunction { _: RequestContext, throwable: Throwable, _: Metadata ->
-                    if (throwable is AnticipatedException && throwable.message == "Invalid access") {
-                        return@GrpcStatusFunction Status.UNAUTHENTICATED
+                val statusFunction =
+                    GrpcStatusFunction { _: RequestContext, throwable: Throwable, _: Metadata ->
+                        if (throwable is AnticipatedException && throwable.message == "Invalid access") {
+                            return@GrpcStatusFunction Status.UNAUTHENTICATED
+                        }
+                        // Fallback to the default.
+                        null
                     }
-                    // Fallback to the default.
-                    null
-                }
+                val threadLocalInterceptor = ThreadLocalInterceptor()
                 val authInterceptor = AuthInterceptor()
+                val coroutineNameInterceptor = CoroutineNameInterceptor()
                 sb.serviceUnder(
                     "/non-blocking",
                     GrpcService.builder()
                         .exceptionMapping(statusFunction)
-                        .intercept(authInterceptor)
+                        // applying order is "MyAsyncInterceptor -> coroutineNameInterceptor ->
+                        // authInterceptor -> threadLocalInterceptor -> MyAsyncInterceptor"
+                        .intercept(
+                            MyAsyncInterceptor(),
+                            threadLocalInterceptor,
+                            authInterceptor,
+                            coroutineNameInterceptor,
+                            MyAsyncInterceptor()
+                        )
                         .addService(TestService())
                         .build()
                 )
@@ -226,7 +249,15 @@ internal class CoroutineServerInterceptorTest {
                     GrpcService.builder()
                         .addService(TestService())
                         .exceptionMapping(statusFunction)
-                        .intercept(authInterceptor)
+                        // applying order is "MyAsyncInterceptor -> coroutineNameInterceptor ->
+                        // authInterceptor -> threadLocalInterceptor -> MyAsyncInterceptor"
+                        .intercept(
+                            MyAsyncInterceptor(),
+                            threadLocalInterceptor,
+                            authInterceptor,
+                            coroutineNameInterceptor,
+                            MyAsyncInterceptor()
+                        )
                         .useBlockingTaskExecutor(true)
                         .build()
                 )
@@ -235,6 +266,10 @@ internal class CoroutineServerInterceptorTest {
 
         private const val username = "Armeria"
         private const val token = "token-1234"
+
+        private val executorDispatcher = Executors.newSingleThreadExecutor(
+            ThreadFactoryBuilder().setNameFormat("my-executor").build()
+        ).asCoroutineDispatcher()
 
         private class AuthInterceptor : CoroutineServerInterceptor {
             private val authorizer = Authorizer { ctx: ServiceRequestContext, _: Metadata ->
@@ -254,21 +289,90 @@ internal class CoroutineServerInterceptorTest {
                 headers: Metadata,
                 next: ServerCallHandler<ReqT, RespT>
             ): ServerCall.Listener<ReqT> {
+                assertContextPropagation()
+
+                delay(100)
+                assertContextPropagation() // OK even if resume from suspend.
+
+                withContext(executorDispatcher) {
+                    // OK even if the dispatcher is switched
+                    assertContextPropagation()
+                    assertThat(Thread.currentThread().name).contains("my-executor")
+                }
+
                 val result = authorizer.authorize(ServiceRequestContext.current(), headers).await()
+
                 if (result) {
-                    return next.startCall(call, headers)
+                    val ctx = Context.current().withValue(AUTHORIZATION_RESULT_GRPC_CONTEXT_KEY, "OK")
+                    return Contexts.interceptCall(ctx, call, headers, next)
                 } else {
                     throw AnticipatedException("Invalid access")
                 }
+            }
+
+            private suspend fun assertContextPropagation() {
+                assertThat(ServiceRequestContext.currentOrNull()).isNotNull()
+                assertThat(currentCoroutineContext()[CoroutineName]?.name).isEqualTo("my-coroutine-name")
+            }
+
+            companion object {
+                val AUTHORIZATION_RESULT_GRPC_CONTEXT_KEY: Context.Key<String> =
+                    Context.key("authorization-result")
+            }
+        }
+
+        private class CoroutineNameInterceptor : CoroutineContextServerInterceptor() {
+            override fun coroutineContext(call: ServerCall<*, *>, headers: Metadata): CoroutineContext {
+                return CoroutineName("my-coroutine-name")
+            }
+        }
+
+        private class ThreadLocalInterceptor : CoroutineContextServerInterceptor() {
+            override fun coroutineContext(call: ServerCall<*, *>, headers: Metadata): CoroutineContext {
+                return THREAD_LOCAL.asContextElement(value = "thread-local-value")
+            }
+
+            companion object {
+                val THREAD_LOCAL = ThreadLocal<String>()
+            }
+        }
+
+        private class MyAsyncInterceptor : AsyncServerInterceptor {
+            override fun <I : Any, O : Any> asyncInterceptCall(
+                call: ServerCall<I, O>,
+                headers: Metadata,
+                next: ServerCallHandler<I, O>
+            ): CompletableFuture<ServerCall.Listener<I>> {
+                val context = Context.current()
+                return CompletableFuture.supplyAsync({
+                    // NB: When the current thread invoking `startCall` is different from the thread which
+                    // started `asyncInterceptCall`, `next.startCall()` should be wrapped with `context.call()`
+                    // to propagate the context to the next interceptor.
+                    context.call { next.startCall(call, headers) }
+                }, EXECUTOR)
+            }
+
+            companion object {
+                private val EXECUTOR = Executors.newSingleThreadExecutor()
             }
         }
 
         private class TestService : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
             override suspend fun unaryCall(request: SimpleRequest): SimpleResponse {
+                assertContextPropagation()
+
+                delay(100)
+                assertContextPropagation() // OK even if resume from suspend.
+
+                withContext(executorDispatcher) {
+                    // OK even if the dispatcher is switched
+                    assertContextPropagation()
+                    assertThat(Thread.currentThread().name).contains("my-executor")
+                }
+
                 if (request.fillUsername) {
                     return SimpleResponse.newBuilder().setUsername(username).build()
                 }
-
                 return SimpleResponse.getDefaultInstance()
             }
 
@@ -276,6 +380,7 @@ internal class CoroutineServerInterceptorTest {
                 return flow {
                     for (i in 1..5) {
                         delay(500)
+                        assertContextPropagation()
                         emit(buildReply(username))
                     }
                 }
@@ -284,15 +389,26 @@ internal class CoroutineServerInterceptorTest {
             override suspend fun streamingInputCall(requests: Flow<StreamingInputCallRequest>): StreamingInputCallResponse {
                 val names = requests.map { it.payload.body.toString() }.toList()
 
+                assertContextPropagation()
+
                 return buildReply(names)
             }
 
             override fun fullDuplexCall(requests: Flow<StreamingOutputCallRequest>): Flow<StreamingOutputCallResponse> {
                 return flow {
                     requests.collect {
+                        delay(500)
+                        assertContextPropagation()
                         emit(buildReply(username))
                     }
                 }
+            }
+
+            private suspend fun assertContextPropagation() {
+                assertThat(ServiceRequestContext.currentOrNull()).isNotNull()
+                assertThat(currentCoroutineContext()[CoroutineName]?.name).isEqualTo("my-coroutine-name")
+                assertThat(ThreadLocalInterceptor.THREAD_LOCAL.get()).isEqualTo("thread-local-value")
+                assertThat(AuthInterceptor.AUTHORIZATION_RESULT_GRPC_CONTEXT_KEY.get()).isEqualTo("OK")
             }
         }
 

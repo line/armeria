@@ -37,8 +37,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
@@ -48,6 +46,8 @@ import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class UnframedGrpcServiceTest {
 
@@ -171,7 +171,7 @@ class UnframedGrpcServiceTest {
                 .of(responseHeaders, HttpData.wrap(byteBuf));
         AbstractUnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
                                                       null, MediaType.PROTOBUF);
-        assertThat(HttpResponse.from(res).aggregate().get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(HttpResponse.of(res).aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

@@ -55,14 +55,15 @@ import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
-import com.linecorp.armeria.service.test.thrift.hbase.Hbase;
-import com.linecorp.armeria.service.test.thrift.main.FooService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
-import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
-import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import testing.thrift.cassandra.Cassandra;
+import testing.thrift.hbase.Hbase;
+import testing.thrift.main.FooService;
+import testing.thrift.main.HelloService;
+import testing.thrift.main.HelloService.hello_args;
+import testing.thrift.main.OnewayHelloService;
+import testing.thrift.main.SleepService;
 
 public class ThriftDocServiceTest {
 
