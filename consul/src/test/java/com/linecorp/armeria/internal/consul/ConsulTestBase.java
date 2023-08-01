@@ -49,24 +49,16 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A helper class for testing with an embedded Consul.
- * Unfortunately, an embedded Consul frequently fails to start in CI environment.
- * See https://github.com/line/armeria/issues/3514 for details.
- * Selectively disable Consul tests to suppress the stressful flakiness.
+ * A helper class for testing with Consul.
  */
 @FlakyTest
-@Testcontainers
-@EnabledIfDockerIsAvailable
+@Testcontainers(disabledWithoutDocker = true)
 public abstract class ConsulTestBase {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsulTestBase.class);
 
     protected static final String CONSUL_TOKEN = UUID.randomUUID().toString();
     protected static final String serviceName = "testService";
-
-    static boolean isDockerAvailable() {
-        return DockerClientFactory.instance().isDockerAvailable();
-    }
 
     protected static List<Endpoint> newSampleEndpoints() {
         final int[] ports = unusedPorts(3);
@@ -133,20 +125,19 @@ public abstract class ConsulTestBase {
     }
 
     private static String aclConfiguration(String token) {
-        return
-                new StringBuilder()
-                        .append('{')
-                        .append("  \"acl\": {")
-                        .append("    \"enabled\": true, ")
-                        .append("    \"default_policy\": \"deny\", ")
-                        .append("    \"down_policy\": \"deny\", ")
-                        .append("    \"tokens\": {")
-                        .append("      \"agent\": \"").append(token).append("\", ")
-                        .append("      \"initial_management\": \"").append(token).append('"')
-                        .append("    }")
-                        .append("  }")
-                        .append('}')
-                        .toString();
+        return new StringBuilder()
+                .append('{')
+                .append("  \"acl\": {")
+                .append("    \"enabled\": true, ")
+                .append("    \"default_policy\": \"deny\", ")
+                .append("    \"down_policy\": \"deny\", ")
+                .append("    \"tokens\": {")
+                .append("      \"agent\": \"").append(token).append("\", ")
+                .append("      \"initial_management\": \"").append(token).append('"')
+                .append("    }")
+                .append("  }")
+                .append('}')
+                .toString();
     }
 
     public static class EchoService extends AbstractHttpService {
