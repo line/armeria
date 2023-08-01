@@ -67,6 +67,7 @@ jwt = "4.3.0"
 kafka = "3.4.0"
 kotlin = "1.8.10"
 kotlin-coroutine = "1.6.4"
+krotodc = "1.0.5"
 ktlint-gradle-plugin = "11.1.0"
 logback = "1.2.11"
 micrometer = "1.10.5"
@@ -443,6 +444,14 @@ version.ref = "grpc-kotlin"
 [libraries.grpc-kotlin-protoc]
 module = "io.grpc:protoc-gen-grpc-kotlin"
 version.ref = "grpc-kotlin"
+
+[libraries.grpc-krotodc-core]
+module = "io.github.mscheong01:krotoDC-core"
+version.ref = "krotodc"
+
+[libraries.grpc-krotodc-protoc]
+module = "io.github.mscheong01:protoc-gen-krotoDC"
+version.ref = "krotodc"
 
 [libraries.guava]
 module = "com.google.guava:guava"
