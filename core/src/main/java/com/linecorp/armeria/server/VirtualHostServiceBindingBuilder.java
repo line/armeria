@@ -25,6 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -344,6 +345,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         return (VirtualHostServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (VirtualHostServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     /**
