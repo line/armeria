@@ -187,6 +187,8 @@ public abstract class UserClient<I extends Request, O extends Response>
                 meterRegistry, protocol, id, method, reqTarget, options(), httpReq, rpcReq,
                 requestOptions, System.nanoTime(), SystemInfo.currentTimeMicros());
 
+        ctx.hook(options().contextHook());
+
         return initContextAndExecuteWithFallback(unwrap(), ctx, endpointGroup,
                                                  futureConverter, errorResponseFactory);
     }

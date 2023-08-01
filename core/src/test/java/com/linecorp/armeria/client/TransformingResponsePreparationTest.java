@@ -19,9 +19,11 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -43,11 +45,15 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class TransformingResponsePreparationTest {
+    private static final List<String> serverHookCnt = new ArrayList<>();
+    private static final Supplier<? extends AutoCloseable> serverContextHook =
+            () -> () -> {serverHookCnt.add("1");};
+
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/string", (ctx, req) -> HttpResponse.of("hello"));
+            sb.contextHook(serverContextHook).service("/string", (ctx, req) -> HttpResponse.of("hello"));
             sb.service("/500", (ctx, req) -> {
                 throw HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR);
             });
@@ -217,6 +223,21 @@ class TransformingResponsePreparationTest {
         assertThatThrownBy(future3::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(InvalidHttpResponseException.class);
+    }
+
+    @Test
+    void adhoc() throws InterruptedException {
+        final List<String> s = new ArrayList<>();
+        Supplier<? extends AutoCloseable> contextHook = () ->
+                (AutoCloseable) () ->  {
+                    s.add("complete");
+                };
+        final WebClient client =  WebClient.builder(server.httpUri()).contextHook(contextHook).build();
+        final AggregatedHttpResponse response =  client.get("/string").aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("hello");
+        assertThat(serverHookCnt.size()).isEqualTo(1);
+        assertThat(s.size()).isEqualTo(1);
     }
 
     interface MyResponse {}
