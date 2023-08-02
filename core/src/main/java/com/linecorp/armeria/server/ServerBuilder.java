@@ -2154,8 +2154,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 ports = ImmutableList.of(new ServerPort(0, HTTP));
             }
         } else {
-            if (Flags.tlsEngineType() != TlsEngineType.OPENSSL &&
-                !SystemInfo.jettyAlpnOptionalOrAvailable()) {
+            if (Flags.tlsEngineType() != TlsEngineType.OPENSSL && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
                 throw new IllegalStateException(
                         "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
                         "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +

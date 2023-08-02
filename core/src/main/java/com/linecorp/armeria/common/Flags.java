@@ -188,9 +188,6 @@ public final class Flags {
             getValue(FlagsProvider::transportType, "transportType", TRANSPORT_TYPE_VALIDATOR);
 
     @Nullable
-    private static Boolean useOpenSsl;
-
-    @Nullable
     private static TlsEngineType TLS_ENGINE_TYPE;
 
     @Nullable
@@ -563,10 +560,23 @@ public final class Flags {
     }
 
     private static void setUseOpenSslAndDumpOpenSslInfo() {
-        TLS_ENGINE_TYPE = getValue(FlagsProvider::tlsEngineType, "tlsEngineType");
+        final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl");
+        final TlsEngineType tlsEngineType = getUserValue(FlagsProvider::tlsEngineType, "tlsEngineType");
+
+        if (useOpenSsl == null) {
+            TLS_ENGINE_TYPE = tlsEngineType != null ? tlsEngineType : TlsEngineType.OPENSSL;
+        } else if (tlsEngineType == null) {
+            TLS_ENGINE_TYPE = useOpenSsl ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
+        } else {
+            if (useOpenSsl != (tlsEngineType == TlsEngineType.OPENSSL)) {
+                logger.warn("useOpenSsl({}) and tlsEngineType({}) are incompatible, tlsEngineType will be used",
+                            useOpenSsl, tlsEngineType);
+            }
+            TLS_ENGINE_TYPE = tlsEngineType;
+        }
+
         if (TLS_ENGINE_TYPE != TlsEngineType.OPENSSL) {
             // OpenSSL explicitly disabled
-            Flags.useOpenSsl = false;
             dumpOpenSslInfo = false;
             return;
         }
@@ -574,11 +584,10 @@ public final class Flags {
             final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
             logger.info("OpenSSL not available: {}", cause.toString());
             TLS_ENGINE_TYPE = TlsEngineType.JDK;
-            Flags.useOpenSsl = false;
             dumpOpenSslInfo = false;
             return;
         }
-        Flags.useOpenSsl = true;
+
         logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
@@ -1597,6 +1606,29 @@ public final class Flags {
         }
         // Should never reach here because DefaultFlagsProvider always returns a normal value.
         throw new Error();
+    }
+
+    @Nullable
+    private static <T> T getUserValue(Function<FlagsProvider, @Nullable T> method, String flagName) {
+        for (FlagsProvider provider : FLAGS_PROVIDERS) {
+            if (provider instanceof DefaultFlagsProvider) {
+                continue;
+            }
+
+            try {
+                final T value = method.apply(provider);
+                if (value == null) {
+                    continue;
+                }
+
+                logger.info("{}: {} ({})", flagName, value, provider.name());
+                return value;
+            } catch (Exception ex) {
+                logger.warn("{}: ({}, {})", flagName, provider.name(), ex.getMessage());
+            }
+        }
+
+        return null;
     }
 
     private Flags() {}

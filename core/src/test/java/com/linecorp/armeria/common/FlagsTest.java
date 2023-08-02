@@ -108,13 +108,21 @@ class FlagsTest {
 
         final MethodHandle dumpOpenSslInfoMethodHandle =
                 lookup.findStatic(flags, "dumpOpenSslInfo", MethodType.methodType(boolean.class));
-        // // Call Flags.dumpOpenSslInfo();
+        // Call Flags.dumpOpenSslInfo();
         assertThat(dumpOpenSslInfoMethodHandle.invoke()).isSameAs(Boolean.TRUE);
     }
 
     @Test
     void defaultTlsEngineType() {
         assumeThat(System.getProperty("com.linecorp.armeria.tlsEngineType")).isNull();
+
+        assertThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
+    }
+
+    @Test
+    void tlsEngineTypeIsUsedWhenIncompatibleWithUseOpenSsl() {
+        System.setProperty("com.linecorp.armeria.useOpenSsl", "false");
+        System.setProperty("com.linecorp.armeria.tlsEngineType", "OPENSSL");
 
         assertThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
     }
