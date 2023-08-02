@@ -101,7 +101,7 @@ class CompileThriftTask extends DefaultTask {
 
     @InputDirectory
     @PathSensitive(PathSensitivity.RELATIVE)
-    String libDir
+    File libDir
 
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -127,12 +127,12 @@ class CompileThriftTask extends DefaultTask {
     @TaskAction
     def execute() {
         def actualThriftPath
-        if (project.findProperty('thriftPath') != null) {
-            actualThriftPath = project.findProperty('thriftPath')
+        if (thriftBinary != null) {
+            actualThriftPath = thriftBinary.path
         } else {
             actualThriftPath =
                 "${libDir}/thrift" +
-                    "/${project.findProperty('thriftVersion')?: '0.18'}" +
+                    "/${thriftVersion?: '0.18'}" +
                     "/thrift.${project.rootProject.osdetector.classifier}"
         }
 
