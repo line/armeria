@@ -63,12 +63,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        jvmArgumentProviders.add(project.ext.cliArgProvider({
-            [
-                    "-Dcom.linecorp.armeria.blockhound.reportFile=${project.buildDir}/blockhound.log",
-                    "-XX:HeapDumpPath=${project.buildDir}",
-            ]
-        }))
+        jvmArgumentProviders.add(new TestBuildDirArgumentsProvider(buildDir: project.buildDir))
 
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
@@ -120,6 +115,25 @@ allprojects {
                 failOnPassedAfterRetry = true
             }
         }
+    }
+}
+
+/**
+ * An argument provider which avoids task input inconsistency when builds are run
+ * from different locations. By handling this, we can take advantage of build caches
+ * when run from different locations. (i.e. remote build caches)
+ */
+class TestBuildDirArgumentsProvider implements CommandLineArgumentProvider {
+    // Ignore the build directory from task inputs
+    @Internal
+    String buildDir
+
+    @Override
+    Iterable<String> asArguments() {
+        [
+                "-Dcom.linecorp.armeria.blockhound.reportFile=${buildDir}/blockhound.log",
+                "-XX:HeapDumpPath=${buildDir}",
+        ]
     }
 }
 
