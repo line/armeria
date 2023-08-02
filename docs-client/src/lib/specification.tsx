@@ -106,6 +106,11 @@ export function packageName(fullName: string): string {
   return lastDotIdx >= 0 ? fullName.substring(0, lastDotIdx) : fullName;
 }
 
+export function extractUrlPath(method: Method): string {
+  const endpoints = method.endpoints;
+  return endpoints[0].pathMapping.substring('exact:'.length);
+}
+
 interface NamedObject {
   name: string;
 }
