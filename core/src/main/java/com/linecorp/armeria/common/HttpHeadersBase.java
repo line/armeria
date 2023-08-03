@@ -679,7 +679,8 @@ class HttpHeadersBase
             return false;
         }
 
-        // `contentLengthUnknown` is excluded from the comparison since it is not a field expressing headers data.
+        // `contentLengthUnknown` is excluded from the comparison since it is not a field expressing headers
+        // data.
         return endOfStream == ((HttpHeaderGetters) o).isEndOfStream() && super.equals(o);
     }
 
