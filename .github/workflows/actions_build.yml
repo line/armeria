@@ -163,8 +163,8 @@ jobs:
         if: failure()
         run: |
           find . '(' \
-          -name 'java_pid*.hprof' -or \
-          -name 'hs_err_*.log' -or \
+          -name '*/java_pid*.hprof' -or \
+          -name '*/hs_err_*.log' -or \
           -path '*/build/reports/tests' -or \
           -path '*/build/test-results' -or \
           -path '*/javadoc.options' -or \

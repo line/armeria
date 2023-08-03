@@ -63,7 +63,7 @@ allprojects {
     }
 
     tasks.withType(Test) {
-        jvmArgumentProviders.add(new TestBuildDirArgumentsProvider(buildDir: project.buildDir))
+        jvmArgumentProviders.add(new TestBuildDirArgumentsProvider(project.buildDir))
 
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
@@ -124,15 +124,30 @@ allprojects {
  * when run from different locations. (i.e. remote build caches)
  */
 class TestBuildDirArgumentsProvider implements CommandLineArgumentProvider {
+
+    TestBuildDirArgumentsProvider(File buildDir) {
+        this.buildDir = buildDir
+        this.heapDumpPath = buildDir.toPath().resolve("dump")
+        this.blockhoundReportPath = buildDir.toPath().resolve("blockhound.log")
+        // create the heap dump path in advance
+        heapDumpPath.toFile().mkdirs()
+    }
+
     // Ignore the build directory from task inputs
     @Internal
-    String buildDir
+    File buildDir
+
+    @LocalState
+    def heapDumpPath
+
+    @LocalState
+    def blockhoundReportPath
 
     @Override
     Iterable<String> asArguments() {
         [
-                "-Dcom.linecorp.armeria.blockhound.reportFile=${buildDir}/blockhound.log",
-                "-XX:HeapDumpPath=${buildDir}",
+                "-Dcom.linecorp.armeria.blockhound.reportFile=${blockhoundReportPath}",
+                "-XX:HeapDumpPath=${heapDumpPath}",
         ]
     }
 }
