@@ -55,10 +55,7 @@ class DefaultHttpResponseTest {
         final HttpResponseWriter res1 = HttpResponse.streaming();
         res1.close(AggregatedHttpResponse.of(204));
         StepVerifier.create(res1)
-                    .expectNext(ResponseHeaders.builder(204)
-                                               // The headers should be the end of stream for 204 status.
-                                               .endOfStream(true)
-                                               .build())
+                    .expectNext(ResponseHeaders.of(204))
                     .expectComplete()
                     .verify();
 

@@ -56,9 +56,6 @@ class DefaultAggregatedHttpResponseTest {
                     .expectNext(ResponseHeaders.builder(HttpStatus.OK)
                                                .contentType(PLAIN_TEXT_UTF_8)
                                                .contentLength(0)
-                                               // If a response only contains headers, the headers should be
-                                               // marked as endOfStream.
-                                               .endOfStream(true)
                                                .build())
                     .expectComplete()
                     .verify();
