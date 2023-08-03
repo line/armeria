@@ -126,16 +126,11 @@ allprojects {
 class TestBuildDirArgumentsProvider implements CommandLineArgumentProvider {
 
     TestBuildDirArgumentsProvider(File buildDir) {
-        this.buildDir = buildDir
         this.heapDumpPath = buildDir.toPath().resolve("dump")
         this.blockhoundReportPath = buildDir.toPath().resolve("blockhound.log")
         // create the heap dump path in advance
         heapDumpPath.toFile().mkdirs()
     }
-
-    // Ignore the build directory from task inputs
-    @Internal
-    File buildDir
 
     @LocalState
     def heapDumpPath
