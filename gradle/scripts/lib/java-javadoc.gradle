@@ -30,15 +30,12 @@ allprojects {
 def cacheDir = rootProject.buildDir.toPath().resolve(cacheDirName).toFile()
 def offlineDownloadTask =
         rootProject.tasks.register("offlineDownloadTask", OfflineLinkDownloadTask.class,
-                cacheDir, javadocLinkMap)
+                cacheDir, javadocLinkMap, offlineJavadoc)
 
 // Configure the Javadoc tasks of all projects.
 allprojects {
     tasks.withType(Javadoc) {
-        if (!offlineJavadoc) {
-            it.dependsOn(offlineDownloadTask)
-        }
-
+        it.dependsOn(offlineDownloadTask)
         options {
             def title = "${project.ext.projectName} ${project.version} API reference"
             docTitle = title
@@ -387,16 +384,25 @@ class OfflineLinkDownloadTask extends DefaultTask {
     @Internal
     Map<String, String> url2File = [:]
 
+    @Input
+    boolean offlineJavadoc
+
     @Inject
-    OfflineLinkDownloadTask(File javadocCacheDir, Map<String, String> links) {
+    OfflineLinkDownloadTask(File javadocCacheDir, Map<String, String> links,
+                            boolean offlineJavadoc) {
         this.links = links
         this.javadocCacheDir = javadocCacheDir
         packageListFile = new File(javadocCacheDir, 'package-list')
         elementListFile = new File(javadocCacheDir, 'element-list')
+        this.offlineJavadoc = offlineJavadoc
     }
 
     @TaskAction
     def run() {
+        if (offlineJavadoc) {
+            return
+        }
+
         links.entrySet().forEach {
             def (success, url, file) = addOfflineLink(it.key, it.value)
             if (success) {
