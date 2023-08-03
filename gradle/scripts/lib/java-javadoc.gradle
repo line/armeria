@@ -9,17 +9,16 @@ task cleanJavadocCache(type: Delete, group: 'Build', description: 'Deletes the j
 }
 
 Map<String, String> javadocLinkMap = [:]
+if (JavaVersion.current() >= JavaVersion.VERSION_11) {
+    // Javadoc in Java 11+ has more strict checks related with module system,
+    // so we have to use Java 11+ API docs.
+    javadocLinkMap.put('java11', 'https://docs.oracle.com/en/java/javase/11/docs/api/')
+} else {
+    // Javadoc in pre-Java 11 generates a broken link for Java 11+ API docs,
+    // so we have to use Java 10 (or less) API docs.
+    javadocLinkMap.put('java10', 'https://docs.oracle.com/javase/10/docs/api/')
+}
 allprojects {
-    if (JavaVersion.current() >= JavaVersion.VERSION_11) {
-        // Javadoc in Java 11+ has more strict checks related with module system,
-        // so we have to use Java 11+ API docs.
-        javadocLinkMap.put('java11', 'https://docs.oracle.com/en/java/javase/11/docs/api/')
-    } else {
-        // Javadoc in pre-Java 11 generates a broken link for Java 11+ API docs,
-        // so we have to use Java 10 (or less) API docs.
-        javadocLinkMap.put('java10', 'https://docs.oracle.com/javase/10/docs/api/')
-    }
-
     project.ext.javadocLinks.each {
         javadocLinkMap.put(
                 "${it['groupId']}/${it['artifactId']}".toString(),
