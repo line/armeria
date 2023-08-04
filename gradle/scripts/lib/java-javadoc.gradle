@@ -1,12 +1,10 @@
 import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 
-import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
 def cacheDirName = 'caches/package-lists'
-def javadocCacheMapFileName = 'javadocCacheMap'
 
 Map<String, String> javadocLinkMap = [:]
 if (JavaVersion.current() >= JavaVersion.VERSION_11) {
@@ -377,14 +375,8 @@ class DownloadJavadocPackageListTask extends DefaultTask {
     @Input
     JavaVersion javaVersion = JavaVersion.current()
 
-    @Internal
+    @OutputDirectory
     File javadocCacheDir
-
-    @OutputFile
-    File elementListFile
-
-    @OutputFile
-    File packageListFile
 
     @Internal
     def visitedUrls = new HashSet<>()
@@ -403,11 +395,9 @@ class DownloadJavadocPackageListTask extends DefaultTask {
                                    boolean offlineJavadoc, String gradleVersion) {
         this.links = links
         this.javadocCacheDir = javadocCacheDir
-        packageListFile = new File(javadocCacheDir, 'package-list')
-        elementListFile = new File(javadocCacheDir, 'element-list')
         this.offlineJavadoc = offlineJavadoc
         this.gradleVersion = gradleVersion
-        this.javadocCacheMapFile = javadocCacheDir.toPath().resolve('javadocCacheMap').toFile()
+        this.javadocCacheMapFile = new File(javadocCacheDir, 'javadocCacheMap')
     }
 
     @TaskAction
