@@ -241,7 +241,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata, remainingNanos);
 
         final HttpResponse res = initContextAndExecuteWithFallback(
-                httpClient, ctx, endpointGroup, HttpResponse::from,
+                httpClient, ctx, endpointGroup, HttpResponse::of,
                 (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
