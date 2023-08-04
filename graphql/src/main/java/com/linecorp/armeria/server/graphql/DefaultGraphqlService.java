@@ -107,7 +107,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         } else {
             future = graphQL.executeAsync(input);
         }
-        return HttpResponse.from(
+        return HttpResponse.of(
                 future.handle((executionResult, cause) -> {
                     if (executionResult.getData() instanceof Publisher) {
                         logger.warn("executionResult.getData() returns a {} that is not supported yet.",

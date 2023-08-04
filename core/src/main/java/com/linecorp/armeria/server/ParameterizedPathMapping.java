@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static java.util.Objects.requireNonNull;
 
@@ -32,6 +33,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -105,6 +107,11 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     }
 
     private ParameterizedPathMapping(String prefix, String pathPattern) {
+        if (!Flags.allowSemicolonInPathComponent()) {
+            checkArgument(prefix.indexOf(';') < 0, "prefix: %s (expected not to have a ';')", prefix);
+            checkArgument(pathPattern.indexOf(';') < 0,
+                          "pathPattern: %s (expected not to have a ';')", pathPattern);
+        }
         this.prefix = prefix;
         requireNonNull(pathPattern, "pathPattern");
 

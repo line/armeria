@@ -165,7 +165,7 @@ class AnnotatedServiceMultipartTest {
         @Post
         @Path("/uploadWithMultipartObject")
         public HttpResponse uploadWithMultipartObject(Multipart multipart) {
-            return HttpResponse.from(multipart.aggregate().handle((aggregated, cause) -> {
+            return HttpResponse.of(multipart.aggregate().handle((aggregated, cause) -> {
                 if (cause != null) {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                            cause.getMessage());

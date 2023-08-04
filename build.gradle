@@ -69,7 +69,7 @@ allprojects {
         // Drop heap dump and exit on OOME.
         jvmArgs '-XX:+ExitOnOutOfMemoryError'
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
-        jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
+        jvmArgs "-XX:HeapDumpPath=./build"
 
         // `-Djava.security.manager` was added in Java 17 and the default value was changed to
         // `disallow` in Java 18.
@@ -88,7 +88,7 @@ allprojects {
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
 
-        systemProperty 'com.linecorp.armeria.blockhound.reportFile', "${project.buildDir}/blockhound.log"
+        systemProperty 'com.linecorp.armeria.blockhound.reportFile', "./build/blockhound.log"
 
         // Pass special system property to tell our tests that we are measuring coverage.
         if (project.hasFlags('coverage')) {
@@ -108,6 +108,13 @@ allprojects {
                     hasLeak.set(true)
                 }
             })
+        }
+
+        retry {
+            if (rootProject.findProperty('retry') == 'true') {
+                maxRetries = 3
+                failOnPassedAfterRetry = true
+            }
         }
     }
 }
