@@ -85,18 +85,12 @@ public interface HttpResponse extends Response, HttpMessage {
      * closed with the same cause as well.
      *
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
+     *
+     * @deprecated Use {@link #of(CompletionStage)}.
      */
-    //TODO(minwoox): Rename this to 'of' for consistency.
+    @Deprecated
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
-        requireNonNull(stage, "stage");
-
-        if (stage instanceof CompletableFuture) {
-            return createHttpResponseFrom((CompletableFuture<? extends HttpResponse>) stage);
-        } else {
-            final DeferredHttpResponse res = new DeferredHttpResponse();
-            res.delegateWhenComplete(stage);
-            return res;
-        }
+        return of(stage);
     }
 
     /**
@@ -106,11 +100,11 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @param future the {@link CompletableFuture} which will produce the actual {@link HttpResponse}
      *
-     * @deprecated Use {@link #from(CompletionStage, EventExecutor)}.
+     * @deprecated Use {@link #of(CompletionStage)}.
      */
     @Deprecated
     static HttpResponse from(CompletableFuture<? extends HttpResponse> future) {
-        return createHttpResponseFrom(future);
+        return of(future);
     }
 
     /**
@@ -122,15 +116,13 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
      *                           the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
      *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     *
+     * @deprecated Use {@link #of(CompletionStage, EventExecutor)}.
      */
+    @Deprecated
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage,
                              EventExecutor subscriberExecutor) {
-        requireNonNull(stage, "stage");
-        requireNonNull(subscriberExecutor, "subscriberExecutor");
-        // Have to use DeferredHttpResponse to use the subscriberExecutor.
-        final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
-        res.delegateWhenComplete(stage);
-        return res;
+        return of(stage, subscriberExecutor);
     }
 
     /**
@@ -138,19 +130,12 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
      * @param executor the {@link Executor} that executes the {@link Supplier}.
+     *
+     * @deprecated Use {@link #of(Supplier, Executor)}.
      */
+    @Deprecated
     static HttpResponse from(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
-        requireNonNull(responseSupplier, "responseSupplier");
-        requireNonNull(executor, "executor");
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.execute(() -> {
-            try {
-                res.delegate(responseSupplier.get());
-            } catch (Throwable ex) {
-                res.abort(ex);
-            }
-        });
-        return res;
+        return of(responseSupplier, executor);
     }
 
     /**
@@ -501,6 +486,65 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         return PublisherBasedHttpResponse.from(headers, publisher);
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
+     */
+    static HttpResponse of(CompletionStage<? extends HttpResponse> stage) {
+        requireNonNull(stage, "stage");
+
+        if (stage instanceof CompletableFuture) {
+            return createHttpResponseFrom((CompletableFuture<? extends HttpResponse>) stage);
+        } else {
+            final DeferredHttpResponse res = new DeferredHttpResponse();
+            res.delegateWhenComplete(stage);
+            return res;
+        }
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    static HttpResponse of(CompletionStage<? extends HttpResponse> stage,
+                           EventExecutor subscriberExecutor) {
+        requireNonNull(stage, "stage");
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        // Have to use DeferredHttpResponse to use the subscriberExecutor.
+        final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
+        res.delegateWhenComplete(stage);
+        return res;
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} provided by the {@link Supplier}.
+     *
+     * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
+     * @param executor the {@link Executor} that executes the {@link Supplier}.
+     */
+    static HttpResponse of(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(executor, "executor");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        executor.execute(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        });
+        return res;
     }
 
     /**

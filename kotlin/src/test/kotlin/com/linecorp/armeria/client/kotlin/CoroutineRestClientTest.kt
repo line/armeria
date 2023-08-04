@@ -67,7 +67,7 @@ class RestClientTest {
         var server: ServerExtension = object : ServerExtension() {
             override fun configure(sb: ServerBuilder) {
                 sb.service("/rest/{id}") { ctx: ServiceRequestContext, req: HttpRequest ->
-                    HttpResponse.from(
+                    HttpResponse.of(
                         req.aggregate().thenApply { agg: AggregatedHttpRequest ->
                             val restResponse =
                                 RestResponse(

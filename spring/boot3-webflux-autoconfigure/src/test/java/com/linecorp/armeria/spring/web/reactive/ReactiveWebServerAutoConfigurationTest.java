@@ -34,7 +34,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
@@ -69,7 +68,6 @@ import reactor.core.publisher.Mono;
 class ReactiveWebServerAutoConfigurationTest {
 
     @SpringBootApplication
-    @Configuration
     static class TestConfiguration {
         @RestController
         static class TestController {

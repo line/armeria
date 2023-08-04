@@ -15,29 +15,25 @@
  */
 package com.linecorp.armeria.internal.consul;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.awaitility.Awaitility.await;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
-import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.consul.ConsulContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.pszymczyk.consul.ConsulProcess;
-import com.pszymczyk.consul.ConsulStarterBuilder;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -52,98 +48,47 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A helper class for testing with an embedded Consul.
- * Unfortunately, an embedded Consul frequently fails to start in CI environment.
- * See https://github.com/line/armeria/issues/3514 for details.
- * Selectively disable Consul tests to suppress the stressful flakiness.
+ * A helper class for testing with Consul.
  */
 @FlakyTest
+@Testcontainers(disabledWithoutDocker = true)
 public abstract class ConsulTestBase {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsulTestBase.class);
-
-    private static final String ENV_CONSUL_VERSION = "CONSUL_VERSION";
-    private static final String ENV_CONSUL_BINARY_DOWNLOAD_DIR = "CONSUL_BINARY_DOWNLOAD_DIR";
-    private static final String FALLBACK_CONSUL_VERSION = "1.15.3";
 
     protected static final String CONSUL_TOKEN = UUID.randomUUID().toString();
     protected static final String serviceName = "testService";
 
     protected static List<Endpoint> newSampleEndpoints() {
         final int[] ports = unusedPorts(3);
-        return ImmutableList.of(Endpoint.of("localhost", ports[0]).withWeight(2),
-                                Endpoint.of("127.0.0.1", ports[1]).withWeight(4),
-                                Endpoint.of("127.0.0.1", ports[2]).withWeight(2));
+        return ImmutableList.of(Endpoint.of("host.docker.internal", ports[0]).withWeight(2),
+                                Endpoint.of("host.docker.internal", ports[1]).withWeight(4),
+                                Endpoint.of("host.docker.internal", ports[2]).withWeight(2));
     }
 
-    protected ConsulTestBase() {}
+    @Container
+    static final ConsulContainer consulContainer = new ConsulContainer("hashicorp/consul:1.15")
+            .withLogConsumer(frame -> logger.debug(frame.getUtf8StringWithoutLineEnding()))
+            .withExtraHost("host.docker.internal", "host-gateway")
+            .withEnv("CONSUL_LOCAL_CONFIG", aclConfiguration(CONSUL_TOKEN));
 
     @Nullable
-    private static ConsulProcess consul;
+    private static URI consulUri;
+
+    protected ConsulTestBase() {}
 
     @Nullable
     private static ConsulClient consulClient;
 
     @BeforeAll
     static void start() throws Throwable {
-        // Initialize Consul embedded server for testing
-        // This EmbeddedConsul tested with Consul version above 1.4.0
-        final ConsulStarterBuilder builder =
-                ConsulStarterBuilder.consulStarter()
-                                    .withWaitTimeout(120)
-                                    .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
-                                    .withToken(CONSUL_TOKEN);
-
-        final String version = System.getenv(ENV_CONSUL_VERSION);
-        if (!Strings.isNullOrEmpty(version)) {
-            builder.withConsulVersion(version);
-            logger.info("{}={}", ENV_CONSUL_VERSION, version);
-        } else {
-            builder.withConsulVersion(FALLBACK_CONSUL_VERSION);
-            logger.warn("{}={} (fallback)", ENV_CONSUL_VERSION, FALLBACK_CONSUL_VERSION);
-        }
-
-        final String downloadDir = System.getenv(ENV_CONSUL_BINARY_DOWNLOAD_DIR);
-        if (!Strings.isNullOrEmpty(downloadDir)) {
-            builder.withConsulBinaryDownloadDirectory(Paths.get(downloadDir));
-            logger.info("{}={}", ENV_CONSUL_BINARY_DOWNLOAD_DIR, downloadDir);
-        } else {
-            logger.warn("{}=<unspecified>", ENV_CONSUL_BINARY_DOWNLOAD_DIR);
-        }
-
-        // The default timeout is 30. It'd be better to fail fast and restart Consul.
-        builder.withWaitTimeout(10);
-
-        // A workaround for 'Cannot run program "**/embedded_consul/consul" error=26, Text file busy'
-        await().timeout(Duration.ofSeconds(40)).pollInSameThread().pollInterval(Duration.ofSeconds(2))
-               .untilAsserted(() -> {
-                   assertThatCode(() -> {
-                       consul = builder.build().start();
-                   }).doesNotThrowAnyException();
-               });
-
         // Initialize Consul client
-        consulClient = ConsulClient.builder(URI.create("http://127.0.0.1:" + consul.getHttpPort()))
+        consulUri = URI.create(
+                "http://" + consulContainer.getHost() + ':' + consulContainer.getMappedPort(8500));
+
+        consulClient = ConsulClient.builder(consulUri)
                                    .consulToken(CONSUL_TOKEN)
                                    .build();
-    }
-
-    @AfterAll
-    static void stop() throws Throwable {
-        if (consul != null) {
-            consul.close();
-            consul = null;
-        }
-        if (consulClient != null) {
-            consulClient = null;
-        }
-    }
-
-    protected static ConsulProcess consul() {
-        if (consul == null) {
-            throw new IllegalStateException("embedded consul has not initialized");
-        }
-        return consul;
     }
 
     protected static ConsulClient client() {
@@ -151,6 +96,11 @@ public abstract class ConsulTestBase {
             throw new IllegalStateException("consul client has not initialized");
         }
         return consulClient;
+    }
+
+    protected static URI consulUri() {
+        checkState(consulUri != null, "consulUri has not initialized.");
+        return consulUri;
     }
 
     protected static int[] unusedPorts(int numPorts) {
@@ -174,19 +124,19 @@ public abstract class ConsulTestBase {
     }
 
     private static String aclConfiguration(String token) {
-        return
-                new StringBuilder()
-                        .append('{')
-                        .append("\"acl\": {")
-                        .append("\"enabled\": true, ")
-                        .append("\"default_policy\": \"deny\", ")
-                        .append("\"down_policy\": \"deny\", ")
-                        .append("\"tokens\": {")
-                        .append("    \"agent\": \"").append(token).append("\", ")
-                        .append("    \"master\": \"").append(token).append("\", ")
-                        .append("    }")
-                        .append('}')
-                        .toString();
+        return new StringBuilder()
+                .append('{')
+                .append("  \"acl\": {")
+                .append("    \"enabled\": true, ")
+                .append("    \"default_policy\": \"deny\", ")
+                .append("    \"down_policy\": \"deny\", ")
+                .append("    \"tokens\": {")
+                .append("      \"agent\": \"").append(token).append("\", ")
+                .append("      \"initial_management\": \"").append(token).append('"')
+                .append("    }")
+                .append("  }")
+                .append('}')
+                .toString();
     }
 
     public static class EchoService extends AbstractHttpService {
@@ -194,16 +144,16 @@ public abstract class ConsulTestBase {
 
         @Override
         protected final HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(req.aggregate()
-                                        .thenApply(aReq -> HttpResponse.of(HttpStatus.OK))
-                                        .exceptionally(CompletionActions::log));
+            return HttpResponse.of(req.aggregate()
+                                      .thenApply(aReq -> HttpResponse.of(HttpStatus.OK))
+                                      .exceptionally(CompletionActions::log));
         }
 
         @Override
         protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(req.aggregate()
-                                        .thenApply(this::echo)
-                                        .exceptionally(CompletionActions::log));
+            return HttpResponse.of(req.aggregate()
+                                      .thenApply(this::echo)
+                                      .exceptionally(CompletionActions::log));
         }
 
         protected HttpResponse echo(AggregatedHttpRequest aReq) {

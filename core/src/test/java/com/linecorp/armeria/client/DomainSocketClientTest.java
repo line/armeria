@@ -37,7 +37,9 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 @EnabledOnOsWithDomainSockets
 class DomainSocketClientTest {
 
-    private static final String ABSTRACT_PATH = "\0" + ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
+    private static final String ABSTRACT_PATH =
+            '\0' + DomainSocketClientTest.class.getSimpleName() + '-' +
+            ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
     @RegisterExtension
     static final TemporaryFolderExtension tempDir = new TemporaryFolderExtension();
@@ -90,13 +92,20 @@ class DomainSocketClientTest {
         assertThat(res2.status()).isEqualTo(HttpStatus.OK);
 
         // Connect to the domain socket server using a WebClient without baseURI and send a request to it.
-        final BlockingWebClient client = WebClient.builder()
-                                                  .factory(ClientFactory.insecure())
-                                                  .build()
-                                                  .blocking();
-        final AggregatedHttpResponse res = client.get(baseUri + "/greet");
-        assertThat(res.contentUtf8()).isEqualTo("Hello!");
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            final BlockingWebClient client = WebClient.builder()
+                                                      .factory(ClientFactory.insecure())
+                                                      .build()
+                                                      .blocking();
+            final AggregatedHttpResponse res = client.get(baseUri + "/greet");
+            assertThat(res.contentUtf8()).isEqualTo("Hello!");
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+            final ClientRequestContext ctx = ctxCaptor.get();
+            final String expectedAddress = domainSocketAddress(useAbstractNamespace).toString();
+            assertThat(ctx.localAddress()).hasToString(expectedAddress);
+            assertThat(ctx.remoteAddress()).hasToString(expectedAddress);
+        }
     }
 
     private static DomainSocketAddress domainSocketAddress(boolean useAbstractNamespace) {

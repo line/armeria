@@ -238,11 +238,15 @@ public interface FlagsProvider {
      * {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} or
      * {@link ClientFactoryBuilder#workerGroup(EventLoopGroup, boolean)}.
      *
-     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>} for {@link TransportType#NIO},
+     * {@link TransportType#EPOLL} and {@link TransportType#KQUEUE} and {@code <numCpuCores>} for
+     * {@link TransportType#IO_URING}. Specify the {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>}
+     * JVM option to override the default value.
+     *
+     * @param transportType the {@link TransportType} that will be used for I/O
      */
     @Nullable
-    default Integer numCommonWorkers() {
+    default Integer numCommonWorkers(TransportType transportType) {
         return null;
     }
 
