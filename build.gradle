@@ -63,13 +63,14 @@ allprojects {
     }
 
     tasks.withType(Test) {
+        jvmArgumentProviders.add(new TestBuildDirArgumentsProvider(project.buildDir))
+
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
 
         // Drop heap dump and exit on OOME.
         jvmArgs '-XX:+ExitOnOutOfMemoryError'
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
-        jvmArgs "-XX:HeapDumpPath=./build"
 
         // `-Djava.security.manager` was added in Java 17 and the default value was changed to
         // `disallow` in Java 18.
@@ -87,8 +88,6 @@ allprojects {
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
-
-        systemProperty 'com.linecorp.armeria.blockhound.reportFile', "./build/blockhound.log"
 
         // Pass special system property to tell our tests that we are measuring coverage.
         if (project.hasFlags('coverage')) {
@@ -116,6 +115,35 @@ allprojects {
                 failOnPassedAfterRetry = true
             }
         }
+    }
+}
+
+/**
+ * An argument provider which avoids task input inconsistency when builds are run
+ * from different locations. By handling this, we can take advantage of build caches
+ * when run from different locations. (i.e. remote build caches)
+ */
+class TestBuildDirArgumentsProvider implements CommandLineArgumentProvider {
+
+    TestBuildDirArgumentsProvider(File buildDir) {
+        this.heapDumpPath = buildDir.toPath().resolve("dump")
+        this.blockhoundReportPath = buildDir.toPath().resolve("blockhound.log")
+        // create the heap dump path in advance
+        heapDumpPath.toFile().mkdirs()
+    }
+
+    @LocalState
+    def heapDumpPath
+
+    @LocalState
+    def blockhoundReportPath
+
+    @Override
+    Iterable<String> asArguments() {
+        [
+                "-Dcom.linecorp.armeria.blockhound.reportFile=${blockhoundReportPath}",
+                "-XX:HeapDumpPath=${heapDumpPath}",
+        ]
     }
 }
 
