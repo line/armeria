@@ -28,7 +28,7 @@ allprojects {
 def cacheDir = rootProject.buildDir.toPath().resolve(cacheDirName).toFile()
 def offlineDownloadTask =
         rootProject.tasks.register("downloadJavadocPackageList", DownloadJavadocPackageListTask.class,
-                cacheDir, javadocLinkMap, offlineJavadoc, gradle.gradleVersion)
+                cacheDir, javadocLinkMap, offlineJavadoc)
 
 clean {
      delete cacheDir
@@ -387,16 +387,12 @@ class DownloadJavadocPackageListTask extends DefaultTask {
     @Input
     boolean offlineJavadoc
 
-    @Input
-    String gradleVersion
-
     @Inject
     DownloadJavadocPackageListTask(File javadocCacheDir, Map<String, String> links,
-                                   boolean offlineJavadoc, String gradleVersion) {
+                                   boolean offlineJavadoc) {
         this.links = links
         this.javadocCacheDir = javadocCacheDir
         this.offlineJavadoc = offlineJavadoc
-        this.gradleVersion = gradleVersion
         this.javadocCacheMapFile = new File(javadocCacheDir, 'javadocCacheMap')
     }
 
@@ -483,7 +479,7 @@ class DownloadJavadocPackageListTask extends DefaultTask {
             conn.setRequestProperty("Accept-Language", 'en-US,en;q=0.5')
             conn.setRequestProperty("Cache-Control", 'no-cache')
             conn.setRequestProperty('Pragma', 'no-cache')
-            conn.setRequestProperty('User-Agent', "Gradle/${gradleVersion} (${project.group}:${project.ext.artifactId})")
+            conn.setRequestProperty('User-Agent', "Gradle/${project.gradle.gradleVersion} (${project.group}:${project.ext.artifactId})")
             conn.setUseCaches(false)
 
             if (conn.responseCode == 200) {
