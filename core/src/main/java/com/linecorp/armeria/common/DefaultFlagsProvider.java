@@ -168,9 +168,13 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer numCommonWorkers() {
-        final int defaultNumCpuCores = Runtime.getRuntime().availableProcessors();
-        return defaultNumCpuCores * 2;
+    public Integer numCommonWorkers(TransportType transportType) {
+        final int numCpuCores = Runtime.getRuntime().availableProcessors();
+        if (transportType == TransportType.IO_URING) {
+            return numCpuCores;
+        } else {
+            return numCpuCores * 2;
+        }
     }
 
     @Override
@@ -412,6 +416,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public Boolean allowDoubleDotsInQueryString() {
+        return false;
+    }
+
+    @Override
+    public Boolean allowSemicolonInPathComponent() {
         return false;
     }
 

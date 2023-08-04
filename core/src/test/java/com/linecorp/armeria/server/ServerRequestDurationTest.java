@@ -58,7 +58,7 @@ class ServerRequestDurationTest {
 
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.from(req.aggregate().thenApply(agg -> {
+                    return HttpResponse.of(req.aggregate().thenApply(agg -> {
                         return HttpResponse.of(agg.contentUtf8());
                     }));
                 }
@@ -76,7 +76,7 @@ class ServerRequestDurationTest {
 
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.from(req.aggregate().thenApply(agg -> {
+                    return HttpResponse.of(req.aggregate().thenApply(agg -> {
                         final HttpResponseWriter writer = HttpResponse.streaming();
                         writer.write(ResponseHeaders.of(HttpStatus.OK));
                         writer.write(HttpData.ofUtf8("12"));

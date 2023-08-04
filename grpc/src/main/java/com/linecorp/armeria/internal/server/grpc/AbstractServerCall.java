@@ -240,7 +240,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             return;
         }
 
-        checkState(!closeCalled, "call already closed");
+        checkState(!closeCalled, "call already closed. status: %s, exception: %s",
+                   status, exception);
         closeCalled = true;
 
         boolean completed = true;

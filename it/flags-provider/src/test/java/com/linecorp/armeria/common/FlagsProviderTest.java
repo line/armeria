@@ -42,8 +42,10 @@ import com.linecorp.armeria.internal.common.metric.DistributionStatisticConfigUt
 
 import io.micrometer.core.instrument.Metrics;
 
-@SetSystemProperty(key = "com.linecorp.armeria.requestContextStorageProvider",
-        value = "com.linecorp.armeria.common.Custom2RequestContextStorageProvider")
+@SetSystemProperty(
+        key = "com.linecorp.armeria.requestContextStorageProvider",
+        value = "com.linecorp.armeria.common.Custom2RequestContextStorageProvider"
+)
 class FlagsProviderTest {
 
     private Class<?> flags;
