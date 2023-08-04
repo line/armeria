@@ -1,12 +1,7 @@
 import java.security.MessageDigest
 
 def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
-def javadocCacheDir = new File(gradle.gradleUserHomeDir, 'caches/package-lists')
 def cacheDirName = 'caches/package-lists'
-
-task cleanJavadocCache(type: Delete, group: 'Build', description: 'Deletes the javadoc cache directory.') {
-    delete javadocCacheDir
-}
 
 Map<String, String> javadocLinkMap = [:]
 if (JavaVersion.current() >= JavaVersion.VERSION_11) {
@@ -31,6 +26,10 @@ def cacheDir = rootProject.buildDir.toPath().resolve(cacheDirName).toFile()
 def offlineDownloadTask =
         rootProject.tasks.register("offlineDownloadTask", OfflineLinkDownloadTask.class,
                 cacheDir, javadocLinkMap, offlineJavadoc, gradle.gradleVersion)
+
+clean {
+     delete cacheDir
+}
 
 // Configure the Javadoc tasks of all projects.
 allprojects {
