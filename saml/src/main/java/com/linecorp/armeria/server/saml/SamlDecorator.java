@@ -106,7 +106,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(authorizer.authorize(ctx, req).handle((result, cause) -> {
+        return HttpResponse.of(authorizer.authorize(ctx, req).handle((result, cause) -> {
             if (cause == null && result) {
                 // Already authenticated.
                 try {
@@ -124,7 +124,7 @@ final class SamlDecorator extends SimpleDecoratingHttpService {
                         unused -> sp.idpConfigSelector().select(sp, ctx, req));
             }
             // Find an identity provider first where the request is to be sent to.
-            return HttpResponse.from(f.thenApply(idp -> {
+            return HttpResponse.of(f.thenApply(idp -> {
                 if (idp == null) {
                     throw new RuntimeException("cannot find a suitable identity provider from configurations");
                 }

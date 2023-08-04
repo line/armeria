@@ -250,7 +250,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                 return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
             }
 
-            return HttpResponse.from(readAttributes(ctx.blockingTaskExecutor()).thenApply(attrs -> {
+            return HttpResponse.of(readAttributes(ctx.blockingTaskExecutor()).thenApply(attrs -> {
                 if (attrs == null) {
                     return HttpResponse.of(HttpStatus.NOT_FOUND);
                 }

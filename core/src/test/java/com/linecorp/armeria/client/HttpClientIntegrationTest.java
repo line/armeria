@@ -220,7 +220,7 @@ class HttpClientIntegrationTest {
                                 accept);
                     }
 
-                    return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
+                    return HttpResponse.of(req.aggregate().handle((aReq, cause) -> {
                         if (cause != null) {
                             return HttpResponse.of(
                                     HttpStatus.INTERNAL_SERVER_ERROR,
