@@ -1,7 +1,12 @@
+import groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
+
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
 def cacheDirName = 'caches/package-lists'
+def javadocCacheMapFileName = 'javadocCacheMap'
 
 Map<String, String> javadocLinkMap = [:]
 if (JavaVersion.current() >= JavaVersion.VERSION_11) {
@@ -24,7 +29,7 @@ allprojects {
 
 def cacheDir = rootProject.buildDir.toPath().resolve(cacheDirName).toFile()
 def offlineDownloadTask =
-        rootProject.tasks.register("offlineDownloadTask", OfflineLinkDownloadTask.class,
+        rootProject.tasks.register("downloadJavadocPackageList", DownloadJavadocPackageListTask.class,
                 cacheDir, javadocLinkMap, offlineJavadoc, gradle.gradleVersion)
 
 clean {
@@ -343,9 +348,13 @@ allprojects {
         }
 
         doFirst {
-            offlineDownloadTask.get().url2File.entrySet().forEach { e ->
-                options {
-                    linksOffline(e.key, e.value)
+            def javadocCacheMapFile = cacheDir.toPath().resolve('javadocCacheMap').toFile()
+            if (javadocCacheMapFile.exists()) {
+                def url2File = new JsonSlurper().parseText(javadocCacheMapFile.text)
+                url2File.entrySet().forEach { e ->
+                    options {
+                        linksOffline(e.key, e.value)
+                    }
                 }
             }
         }
@@ -360,7 +369,7 @@ static def normalizeJavadocUrl(String javadocUrl) {
 }
 
 @CacheableTask
-class OfflineLinkDownloadTask extends DefaultTask {
+class DownloadJavadocPackageListTask extends DefaultTask {
 
     @Input
     Map<String, String> links = [:]
@@ -380,8 +389,8 @@ class OfflineLinkDownloadTask extends DefaultTask {
     @Internal
     def visitedUrls = new HashSet<>()
 
-    @Internal
-    Map<String, String> url2File = [:]
+    @OutputFile
+    File javadocCacheMapFile
 
     @Input
     boolean offlineJavadoc
@@ -390,14 +399,15 @@ class OfflineLinkDownloadTask extends DefaultTask {
     String gradleVersion
 
     @Inject
-    OfflineLinkDownloadTask(File javadocCacheDir, Map<String, String> links,
-                            boolean offlineJavadoc, String gradleVersion) {
+    DownloadJavadocPackageListTask(File javadocCacheDir, Map<String, String> links,
+                                   boolean offlineJavadoc, String gradleVersion) {
         this.links = links
         this.javadocCacheDir = javadocCacheDir
         packageListFile = new File(javadocCacheDir, 'package-list')
         elementListFile = new File(javadocCacheDir, 'element-list')
         this.offlineJavadoc = offlineJavadoc
         this.gradleVersion = gradleVersion
+        this.javadocCacheMapFile = javadocCacheDir.toPath().resolve('javadocCacheMap').toFile()
     }
 
     @TaskAction
@@ -406,11 +416,16 @@ class OfflineLinkDownloadTask extends DefaultTask {
             return
         }
 
+        def url2File = [:]
         links.entrySet().forEach {
             def (success, url, file) = addOfflineLink(it.key, it.value)
             if (success) {
                 url2File[url] = file.toString()
             }
+        }
+        javadocCacheMapFile.createNewFile()
+        javadocCacheMapFile.withPrintWriter('UTF-8') { out ->
+            out.println(new JsonBuilder(url2File).toPrettyString())
         }
     }
 
@@ -456,7 +471,7 @@ class OfflineLinkDownloadTask extends DefaultTask {
         return [success, javadocUrl, listFileDir]
     }
 
-    def downloadListFile(File listFile, URL listUrl) {
+    private def downloadListFile(File listFile, URL listUrl) {
         // Do not attempt to download more than once.
         if (!visitedUrls.add(listUrl.toString())) {
             return
