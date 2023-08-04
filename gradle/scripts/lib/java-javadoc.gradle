@@ -31,7 +31,7 @@ def offlineDownloadTask =
                 cacheDir, javadocLinkMap, offlineJavadoc)
 
 clean {
-     delete cacheDir
+    delete cacheDir
 }
 
 // Configure the Javadoc tasks of all projects.
@@ -308,10 +308,10 @@ allprojects {
             }
 
             bottom = project.ext.copyrightFooter +
-                     scriptParts.join('').readLines().stream()
-                                .map({ line -> line.trim() })
-                                .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
-                                .collect().join('')
+                    scriptParts.join('').readLines().stream()
+                            .map({ line -> line.trim() })
+                            .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
+                            .collect().join('')
 
             encoding = 'UTF-8'
             docEncoding = 'UTF-8'
