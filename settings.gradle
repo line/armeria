@@ -54,6 +54,7 @@ includeWithFlags ':kafka',                               'java', 'publish', 'rel
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate'
 includeWithFlags ':logback13',                           'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':logback14',                           'java11', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate'
