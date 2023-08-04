@@ -16,9 +16,11 @@
 package com.linecorp.armeria.common.logback;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Marker;
+import org.slf4j.event.KeyValuePair;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -93,10 +95,14 @@ final class LoggingEventWrapper extends LoggingEvent {
         return event.getTimeStamp();
     }
 
-    // This method was introduced in logback 1.3.x
-    // @Override
+    @Override
     public Instant getInstant() {
-        return Instant.ofEpochMilli(event.getTimeStamp());
+        return event.getInstant();
+    }
+
+    @Override
+    public long getSequenceNumber() {
+        return event.getSequenceNumber();
     }
 
     @Override
@@ -112,6 +118,11 @@ final class LoggingEventWrapper extends LoggingEvent {
     @Override
     public Marker getMarker() {
         return event.getMarker();
+    }
+
+    @Override
+    public List<Marker> getMarkerList() {
+        return event.getMarkerList();
     }
 
     @Override
@@ -132,6 +143,11 @@ final class LoggingEventWrapper extends LoggingEvent {
     @Deprecated
     public Map<String, String> getMdc() {
         return event.getMDCPropertyMap();
+    }
+
+    @Override
+    public List<KeyValuePair> getKeyValuePairs() {
+        return event.getKeyValuePairs();
     }
 
     @Override
