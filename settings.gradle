@@ -11,12 +11,43 @@ plugins {
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.11.1'
 }
 
+import com.gradle.scan.plugin.PublishedBuildScan
+
 gradleEnterprise {
     server = "https://ge.armeria.dev"
     buildScan {
-        publishIfAuthenticated()
-        publishAlways()
-        uploadInBackground = System.getenv("CI") == null
+        if (System.getenv("CI") == null) {
+            publishIfAuthenticated()
+            publishAlways()
+        } else {
+            uploadInBackground = false
+            buildScanPublished { PublishedBuildScan scan ->
+                def scanUrl = new File("build/build-scan-url.txt")
+                if(!scanUrl.getParentFile().exists()) {
+                    scanUrl.getParentFile().mkdirs()
+                }
+                scanUrl.newWriter().withWriter { w -> w << "${scan.buildScanUri}" }
+            }
+
+            // Add links to GitHub Actions and PR
+            def githubUrl = "${System.getenv("GITHUB_SERVER_URL")}/${System.getenv("GITHUB_REPOSITORY")}"
+            def prNumber = System.getenv("PR_NUMBER")
+            if (prNumber != null) {
+                link "GitHub PR", "${githubUrl}/pull/${prNumber}"
+                def sha = System.getenv("COMMIT_SHA")
+                if (sha != null) {
+                    link "GitHub commit", "${githubUrl}/pull/${prNumber}/commits/${sha}"
+                }
+
+                def runId = System.getenv("RUN_ID")
+                def jobId = System.getenv("JOB_ID")
+                if (runId != null && jobId != null) {
+                    link "GitHub Actions job", "${githubUrl}/actions/runs/${runId}/job/${jobId}?pr=${prNumber}"
+                }
+            }
+
+        }
+
         capture {
             taskInputFiles = true
         }
