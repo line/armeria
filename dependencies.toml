@@ -16,7 +16,6 @@ caffeine = "2.9.3"
 cglib = "3.3.0"
 checkerframework = "2.5.5"
 checkstyle = "10.3.2"
-consul = "2.2.1"
 curator = "5.5.0"
 dagger = "2.46.1"
 dgs = "5.5.0"
@@ -34,7 +33,6 @@ futures-extra = "4.3.1"
 gax-grpc = "2.29.0"
 graphql-java = "20.4"
 graphql-kotlin = "6.5.2"
-groovy = "3.0.17"
 grpc-java = "1.56.0"
 grpc-kotlin = "1.3.0"
 guava = "32.0.1-jre"
@@ -77,7 +75,8 @@ kotlin = "1.8.22"
 kotlin-coroutine = "1.7.1"
 ktlint-gradle-plugin = "11.4.0"
 logback12 = "1.2.11"
-logback14 = "1.4.7"
+logback13 = "1.3.8"
+logback14 = "1.4.8"
 micrometer = "1.11.1"
 micrometer13 = "1.3.20"
 mockito = "4.11.0"
@@ -127,6 +126,7 @@ slf4j2 = "2.0.7"
 spring6 = "6.0.9"
 spring-boot2 = "2.7.12"
 spring-boot3 = "3.1.0"
+testcontainers = "1.18.3"
 testng = "7.5"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
@@ -153,6 +153,7 @@ grpc-java = { module = "io.grpc:grpc-bom", version.ref = "grpc-java" }
 jackson = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
 junit5 = { module = "org.junit:junit-bom", version.ref = "junit5" }
 netty = { module = "io.netty:netty-bom", version.ref = "netty" }
+testcontainers = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
 
 # Akka is used only for testing in it:grpcweb module.
 [libraries.akka-http-cors_v213]
@@ -273,10 +274,6 @@ version.ref = "checkerframework"
 [libraries.checkstyle]
 module = "com.puppycrawl.tools:checkstyle"
 version.ref = "checkstyle"
-
-[libraries.consul]
-module = "com.pszymczyk.consul:embedded-consul"
-version.ref = "consul"
 
 # Ensure that we use the same ZooKeeper version as what Curator depends on.
 # See: https://github.com/apache/curator/blob/master/pom.xml
@@ -423,11 +420,6 @@ version.ref = "graphql-kotlin"
 [libraries.graphql-kotlin-schema-generator]
 module = "com.expediagroup:graphql-kotlin-schema-generator"
 version.ref = "graphql-kotlin"
-
-# Groovy is only used for testing consul
-[libraries.groovy-xml]
-module = "org.codehaus.groovy:groovy-xml"
-version.ref = "groovy"
 
 [libraries.grpc-core]
 module = "io.grpc:grpc-core"
@@ -753,6 +745,11 @@ version.ref = "kotlin-coroutine"
 module = "ch.qos.logback:logback-classic"
 version.ref = "logback12"
 javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.12/"
+
+[libraries.logback13]
+module = "ch.qos.logback:logback-classic"
+version.ref = "logback13"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.3.8/"
 
 [libraries.logback14]
 module = "ch.qos.logback:logback-classic"
@@ -1153,6 +1150,11 @@ exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
 [libraries.spring-boot3-configuration-processor]
 module = "org.springframework.boot:spring-boot-configuration-processor"
 version.ref = "spring-boot3"
+
+[libraries.testcontainers-consul]
+module = "org.testcontainers:consul"
+[libraries.testcontainers-junit-jupiter]
+module = "org.testcontainers:junit-jupiter"
 
 # jdk 11 is required from testng version 7.6
 [libraries.testng]

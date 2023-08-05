@@ -93,7 +93,7 @@ final class LoggingEventWrapper extends LoggingEvent {
         return event.getTimeStamp();
     }
 
-    // To keep compatibility with logback 1.4.x
+    // This method was introduced in logback 1.3.x
     // @Override
     public Instant getInstant() {
         return Instant.ofEpochMilli(event.getTimeStamp());
