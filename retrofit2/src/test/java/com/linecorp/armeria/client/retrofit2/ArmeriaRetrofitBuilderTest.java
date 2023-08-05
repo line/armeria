@@ -55,7 +55,7 @@ class ArmeriaRetrofitBuilderTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/secret", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(aggReq -> {
+                return HttpResponse.of(req.aggregate().thenApply(aggReq -> {
                     if ("Bearer: access-token".equals(aggReq.headers().get(HttpHeaderNames.AUTHORIZATION))) {
                         return HttpResponse.of("\"OK\"");
                     } else {

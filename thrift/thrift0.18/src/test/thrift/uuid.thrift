@@ -1,10 +1,10 @@
-namespace java com.linecorp.armeria.common.thrift.text.uuid
+namespace java testing.thrift.uuid
 
 struct UuidMessage {
   1: uuid id
   2: string message
 }
 
-service UuidService {
+service TestUuidService {
   UuidMessage echo(1: UuidMessage request)
 }
