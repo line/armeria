@@ -295,7 +295,7 @@ public final class AnnotatedService implements HttpService {
             }
         }
 
-        return HttpResponse.from(serve1(ctx, req, aggregationType));
+        return HttpResponse.of(serve1(ctx, req, aggregationType));
     }
 
     /**
@@ -415,7 +415,7 @@ public final class AnnotatedService implements HttpService {
                                                  HttpHeaders trailers) {
         if (result instanceof CompletionStage) {
             final CompletionStage<?> future = (CompletionStage<?>) result;
-            return HttpResponse.from(
+            return HttpResponse.of(
                     future.thenApply(object -> convertResponseInternal(ctx, headers, object, trailers)));
         }
 
