@@ -333,8 +333,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                 subscribed = true;
                 publisher.subscribe(this, executor, options);
             } else {
-                assert upstreamRequested > 0;
-                if (upstreamRequested < Long.MAX_VALUE) {
+                if (0 < upstreamRequested && upstreamRequested < Long.MAX_VALUE) {
                     upstreamRequested--;
                 }
             }
