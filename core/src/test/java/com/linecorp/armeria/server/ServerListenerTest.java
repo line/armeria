@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ServerListenerTest {
@@ -103,143 +105,202 @@ class ServerListenerTest {
 
     @Test
     void testGracefulShutdownPeriodicExecutorWaitIndefinitelyOnServerStopping() throws Exception {
-        final ExecutorService executor = periodicExecutor();
-        final ServerListener sl = ServerListener.builder()
-                                                .stoppingWithExecutor(executor)
-                                                .build();
+        final CompletableFuture<Void> stopFuture;
+        try (CloseableRunnable task = new CloseableRunnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }) {
+            final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
+            periodic.scheduleAtFixedRate(task, 0, 1000, TimeUnit.MILLISECONDS);
+            final ServerListener sl = ServerListener.builder()
+                                                    .stoppingWithExecutor(periodic)
+                                                    .build();
 
-        final Server server = Server.builder()
-                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                    .serverListener(sl)
-                                    .build();
-        server.start().get();
-        server.stop();
-        Thread.sleep(3000);
+            final Server server = Server.builder()
+                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                        .serverListener(sl)
+                                        .build();
+            server.start().get();
+            stopFuture = server.stop();
+            Thread.sleep(3000);
 
-        assertThat(executor.isTerminated()).isEqualTo(true);
+            assertThat(periodic.isTerminated()).isEqualTo(true);
+        }
+        stopFuture.get();
     }
 
     @Test
     void testGracefulShutdownInterruptibleExecutorWaitIndefinitelyOnServerStopping() throws Exception {
-        final ExecutorService executor = interruptibleExecutor();
-        final ServerListener sl = ServerListener.builder()
-                                                .stoppingWithExecutor(executor)
-                                                .build();
+        final CompletableFuture<Void> stopFuture;
+        try (CloseableRunnable task = new CloseableRunnable() {
+            @Override
+            public void run() {
+                while (!isClose() && !Thread.currentThread().isInterrupted()) {
+                    final int foo = 42;
+                }
+            }
+        }) {
+            final ExecutorService interruptible = Executors.newSingleThreadExecutor();
+            interruptible.submit(task);
+            final ServerListener sl = ServerListener.builder()
+                                                    .stoppingWithExecutor(interruptible)
+                                                    .build();
 
-        final Server server = Server.builder()
-                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                    .serverListener(sl)
-                                    .build();
-        server.start().get();
-        server.stop();
-        Thread.sleep(3000);
+            final Server server = Server.builder()
+                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                        .serverListener(sl)
+                                        .build();
+            server.start().get();
+            stopFuture = server.stop();
+            Thread.sleep(3000);
 
-        assertThat(executor.isTerminated()).isEqualTo(false);
+            assertThat(interruptible.isTerminated()).isEqualTo(false);
+        }
+        stopFuture.get();
     }
 
     @Test
     void testGracefulShutdownUnstoppableExecutorWaitIndefinitelyOnServerStopping() throws Exception {
-        final ExecutorService executor = unstoppableExecutor();
-        final ServerListener sl = ServerListener.builder()
-                                                .stoppingWithExecutor(executor)
-                                                .build();
+        final CompletableFuture<Void> stopFuture;
+        try (CloseableRunnable task = new CloseableRunnable() {
+            @Override
+            public void run() {
+                while (!isClose()) {
+                    final int foo = 42;
+                }
+            }
+        }) {
+            final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
+            unstoppable.submit(task);
+            final ServerListener sl = ServerListener.builder()
+                                                    .stoppingWithExecutor(unstoppable)
+                                                    .build();
 
-        final Server server = Server.builder()
-                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                    .serverListener(sl)
-                                    .build();
-        server.start().get();
-        server.stop();
-        Thread.sleep(3000);
+            final Server server = Server.builder()
+                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                        .serverListener(sl)
+                                        .build();
+            server.start().get();
+            stopFuture = server.stop();
+            Thread.sleep(3000);
 
-        assertThat(executor.isTerminated()).isEqualTo(false);
+            assertThat(unstoppable.isTerminated()).isEqualTo(false);
+        }
+        stopFuture.get();
     }
 
     @Test
     void testGracefulShutdownPeriodicExecutorWaitWithTimeoutOnServerStopping() throws Exception {
-        final ExecutorService executor = periodicExecutor();
-        final ServerListener sl = ServerListener.builder()
-                                                .stoppingWithExecutor(executor, 1, TimeUnit.SECONDS)
-                                                .build();
+        final CompletableFuture<Void> stopFuture;
+        try (CloseableRunnable task = new CloseableRunnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }) {
+            final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
+            periodic.scheduleAtFixedRate(task, 0, 1000, TimeUnit.MILLISECONDS);
+            final ServerListener sl = ServerListener.builder()
+                                                    .stoppingWithExecutor(periodic, 1, TimeUnit.SECONDS)
+                                                    .build();
 
-        final Server server = Server.builder()
-                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                    .serverListener(sl)
-                                    .build();
-        server.start().get();
-        server.stop();
-        Thread.sleep(3000);
+            final Server server = Server.builder()
+                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                        .serverListener(sl)
+                                        .build();
+            server.start().get();
+            stopFuture = server.stop();
+            Thread.sleep(3000);
 
-        assertThat(executor.isTerminated()).isEqualTo(true);
+            assertThat(periodic.isTerminated()).isEqualTo(true);
+        }
+        stopFuture.get();
     }
 
     @Test
     void testGracefulShutdownInterruptibleExecutorWaitWithTimeoutOnServerStopping() throws Exception {
-        final ExecutorService executor = interruptibleExecutor();
-        final ServerListener sl = ServerListener.builder()
-                                                .stoppingWithExecutor(executor, 1, TimeUnit.SECONDS)
-                                                .build();
+        final CompletableFuture<Void> stopFuture;
+        try (CloseableRunnable task = new CloseableRunnable() {
+            @Override
+            public void run() {
+                while (!isClose() && !Thread.currentThread().isInterrupted()) {
+                    final int foo = 42;
+                }
+            }
+        }) {
+            final ExecutorService interruptible = Executors.newSingleThreadExecutor();
+            interruptible.submit(task);
+            final ServerListener sl = ServerListener.builder()
+                                                    .stoppingWithExecutor(interruptible, 1, TimeUnit.SECONDS)
+                                                    .build();
 
-        final Server server = Server.builder()
-                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                    .serverListener(sl)
-                                    .build();
-        server.start().get();
-        server.stop();
-        Thread.sleep(3000);
+            final Server server = Server.builder()
+                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                        .serverListener(sl)
+                                        .build();
+            server.start().get();
+            stopFuture = server.stop();
+            Thread.sleep(3000);
 
-        assertThat(executor.isTerminated()).isEqualTo(true);
+            assertThat(interruptible.isTerminated()).isEqualTo(true);
+        }
+        stopFuture.get();
     }
 
     @Test
     void testGracefulShutdownUnstoppableExecutorWaitWithTimeoutOnServerStopping() throws Exception {
-        final ExecutorService executor = unstoppableExecutor();
-        final ServerListener sl = ServerListener.builder()
-                                                .stoppingWithExecutor(executor, 1, TimeUnit.SECONDS)
-                                                .build();
+        final CompletableFuture<Void> stopFuture;
+        try (CloseableRunnable task = new CloseableRunnable() {
+            @Override
+            public void run() {
+                while (!isClose()) {
+                    final int foo = 42;
+                }
+            }
+        }) {
+            final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
+            unstoppable.submit(task);
+            final ServerListener sl = ServerListener.builder()
+                                                    .stoppingWithExecutor(unstoppable, 1, TimeUnit.SECONDS)
+                                                    .build();
 
-        final Server server = Server.builder()
-                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                    .serverListener(sl)
-                                    .build();
-        server.start().get();
-        server.stop();
-        Thread.sleep(3000);
+            final Server server = Server.builder()
+                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                        .serverListener(sl)
+                                        .build();
+            server.start().get();
+            stopFuture = server.stop();
+            Thread.sleep(3000);
 
-        assertThat(executor.isTerminated()).isEqualTo(false);
+            assertThat(unstoppable.isTerminated()).isEqualTo(false);
+        }
+        stopFuture.get();
     }
 
-    private static ExecutorService periodicExecutor() {
-        final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
-        periodic.scheduleAtFixedRate(() -> {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }, 0, 1000, TimeUnit.MILLISECONDS);
-        return periodic;
-    }
+    private abstract static class CloseableRunnable implements SafeCloseable, Runnable {
+        private volatile boolean close;
 
-    private static ExecutorService interruptibleExecutor() {
-        // It will be terminated by calling `shutdownNow()`.
-        final ExecutorService interruptible = Executors.newSingleThreadExecutor();
-        interruptible.submit(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                final int foo = 42;
-            }
-        });
-        return interruptible;
-    }
+        CloseableRunnable() {
+            close = false;
+        }
 
-    private static ExecutorService unstoppableExecutor() {
-        // It cannot be terminated.
-        final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
-        unstoppable.submit(() -> {
-            while (true) {
-                final int foo = 42;
-            }
-        });
-        return unstoppable;
+        boolean isClose() {
+            return close;
+        }
+
+        @Override
+        public void close() {
+            close = true;
+        }
     }
 }
