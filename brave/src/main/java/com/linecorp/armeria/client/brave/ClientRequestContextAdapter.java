@@ -82,11 +82,8 @@ final class ClientRequestContextAdapter {
         @Override
         public long startTimestamp() {
             final RequestLogAccess logAccess = ctx.log();
-            if (logAccess.isAvailable(RequestLogProperty.REQUEST_START_TIME)) {
-                return logAccess.partial().requestStartTimeMicros();
-            } else {
-                return 0;
-            }
+            final RequestLog requestLog = logAccess.getIfAvailable(RequestLogProperty.REQUEST_START_TIME);
+            return requestLog != null ? requestLog.requestStartTimeMicros() : 0;
         }
     }
 

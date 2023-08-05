@@ -35,6 +35,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 class ServerTlsCertificateMetricsTest {
 
+    private static final String RESOURCE_PATH_PREFIX =
+            "/testing/core/" + ServerTlsCertificateMetricsTest.class.getSimpleName() + '/';
+
     private static final String CERT_VALIDITY_GAUGE_NAME = "armeria.server.tls.certificate.validity";
     private static final String CERT_VALIDITY_DAYS_GAUGE_NAME = "armeria.server.tls.certificate.validity.days";
 
@@ -127,8 +130,9 @@ class ServerTlsCertificateMetricsTest {
 
     @Test
     void tlsMetricGivenCertificateChainNotExpired() {
-        final InputStream expiredCertificateChain = getClass().getResourceAsStream("certificate-chain.pem");
-        final InputStream pk = getClass().getResourceAsStream("pk.key");
+        final InputStream expiredCertificateChain = getClass().getResourceAsStream(
+                RESOURCE_PATH_PREFIX + "certificate-chain.pem");
+        final InputStream pk = getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "pk.key");
 
         final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
@@ -166,8 +170,8 @@ class ServerTlsCertificateMetricsTest {
     @Test
     void tlsMetricGivenCertificateChainExpired() {
         final InputStream expiredCertificateChain = getClass()
-                .getResourceAsStream("expired-certificate-chain.pem");
-        final InputStream pk = getClass().getResourceAsStream("expire-pk.key");
+                .getResourceAsStream(RESOURCE_PATH_PREFIX + "expired-certificate-chain.pem");
+        final InputStream pk = getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "expire-pk.key");
 
         final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()

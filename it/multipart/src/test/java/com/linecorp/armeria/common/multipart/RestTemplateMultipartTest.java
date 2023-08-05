@@ -39,7 +39,7 @@ class RestTemplateMultipartTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/multipart/text", (ctx, req) -> {
-                return HttpResponse.from(
+                return HttpResponse.of(
                         Multipart.from(req).aggregate().thenApply(multiPart -> {
                             final AggregatedBodyPart user = multiPart.field("user");
                             final AggregatedBodyPart org = multiPart.field("org");
@@ -48,7 +48,7 @@ class RestTemplateMultipartTest {
             });
 
             sb.service("/multipart/file", (ctx, req) -> {
-                return HttpResponse.from(
+                return HttpResponse.of(
                         Multipart.from(req).aggregate().thenApply(multiPart -> {
                             final AggregatedBodyPart file = multiPart.field("file");
                             return HttpResponse
@@ -81,7 +81,7 @@ class RestTemplateMultipartTest {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-        final ClassPathResource file = new ClassPathResource("test.txt");
+        final ClassPathResource file = new ClassPathResource("testing/multipart/test.txt");
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file", file);
 

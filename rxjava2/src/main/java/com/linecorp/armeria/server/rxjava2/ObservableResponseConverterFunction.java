@@ -159,7 +159,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
     }
 
     private static HttpResponse respond(CompletableFuture<HttpResponse> future, Disposable disposable) {
-        final HttpResponse response = HttpResponse.from(future);
+        final HttpResponse response = HttpResponse.of(future);
         response.whenComplete().exceptionally(cause -> {
             disposable.dispose();
             return null;

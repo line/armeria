@@ -26,8 +26,11 @@ import java.io.IOException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -46,6 +49,7 @@ import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.util.ResourceUtils;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
@@ -55,6 +59,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -127,8 +132,8 @@ public final class ArmeriaConfigurationUtil {
         if (needsManagementPort && managementServerPort != null) {
             internalPortsBuilder.add(managementServerPort);
         }
-        final List<Port> internalPorts = internalPortsBuilder.build();
-        configurePorts(server, settings.getPorts());
+        final List<Port> internalPorts = dedupPorts(internalPortsBuilder.build());
+        configurePorts(server, dedupPorts(settings.getPorts()));
         configurePorts(server, internalPorts);
 
         configureSettings(server, settings);
@@ -461,6 +466,38 @@ public final class ArmeriaConfigurationUtil {
             throw new IllegalArgumentException("Invalid data size text: " + dataSizeText +
                                                " (expected: " + DATA_SIZE_PATTERN + ')', e);
         }
+    }
+
+    /**
+     * Remove duplicate {@link Port} entries within the list.
+     * If there are duplicates, keep the preceding {@link Port}.
+     * The criteria for duplication are based on {@link Port#getPort()}, {@link Port#getAddress()},and
+     * {@link Port#getIp()}.
+     */
+    private static List<Port> dedupPorts(List<Port> ports) {
+        final List<Port> dedupedList = new ArrayList<>();
+        for (Port port : ports) {
+            boolean found = false;
+            for (Port deduped : dedupedList) {
+                if (port.getPort() == deduped.getPort() &&
+                    Objects.equal(port.getAddress(), deduped.getAddress()) &&
+                    Objects.equal(port.getIp(), deduped.getIp())) {
+                    found = true;
+                    if (port.getProtocols() != null) {
+                        final Set<SessionProtocol> merged = EnumSet.copyOf(port.getProtocols());
+                        if (deduped.getProtocols() != null) {
+                            merged.addAll(deduped.getProtocols());
+                        }
+                        deduped.setProtocols(ImmutableList.copyOf(merged));
+                    }
+                    break;
+                }
+            }
+            if (!found) {
+                dedupedList.add(port);
+            }
+        }
+        return ImmutableList.copyOf(dedupedList);
     }
 
     private ArmeriaConfigurationUtil() {}

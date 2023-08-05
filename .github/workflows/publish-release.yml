@@ -43,3 +43,16 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
         shell: bash
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+
+      - name: Perform post-release process
+        working-directory: .github/actions
+        run: |
+          export NVM_DIR=~/.nvm
+          source ~/.nvm/nvm.sh
+          npm install
+          npm run post-release ${{ github.ref_name }}
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
