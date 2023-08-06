@@ -17,9 +17,8 @@ env:
 jobs:
   upload-gradle-build-scan:
     name: Upload Gradle build scans
-    # TODO(ikhoon): Uncomment this after testing
-#    if: github.repository == 'line/armeria'
-    runs-on: ubuntu-latest
+    if: github.repository == 'line/armeria'
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3
 

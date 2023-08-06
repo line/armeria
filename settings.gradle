@@ -45,7 +45,6 @@ gradleEnterprise {
                     link "GitHub Actions job", "${githubUrl}/actions/runs/${runId}/job/${jobId}?pr=${prNumber}"
                 }
             }
-
         }
 
         capture {
