@@ -344,11 +344,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
             requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
         }
 
-        // TODO(miyoshi) contextHookの初期化について、検討の余地あり
-        if (contextHook == null) {
-            contextHook = () -> (AutoCloseable) () -> {};
-        }
-
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
@@ -364,7 +359,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
                 requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler,
-                contextHook);
+                contextHook != null ? contextHook : () -> (AutoCloseable) () -> {});
     }
 
     @Override

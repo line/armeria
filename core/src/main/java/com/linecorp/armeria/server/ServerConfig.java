@@ -30,6 +30,8 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -321,5 +323,9 @@ public interface ServerConfig {
      */
     long unhandledExceptionsReportIntervalMillis();
 
+    /**
+     * Returns the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
+     * from the {@link RequestContextStorage}.
+     */
     Supplier<? extends AutoCloseable> contextHook();
 }

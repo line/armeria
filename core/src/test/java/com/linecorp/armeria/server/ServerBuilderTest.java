@@ -116,7 +116,6 @@ class ServerBuilderTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.contextHook(contextHook).service("/hook", (ctx, req) -> HttpResponse.of("hook"));
-
         }
     };
 

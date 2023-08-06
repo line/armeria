@@ -34,6 +34,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -362,6 +364,10 @@ public final class ClientOptions
         return get(CONTEXT_CUSTOMIZER);
     }
 
+    /**
+     * Returns the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
+     * from the {@link RequestContextStorage}.
+     */
     public Supplier<? extends AutoCloseable> contextHook() {
         return get(CONTEXT_HOOK);
     }

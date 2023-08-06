@@ -613,7 +613,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private DefaultServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
+    private DefaultServiceRequestContext newEarlyRespondingRequestContext(Channel channel,
+                                                                   DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
                                                                    InetSocketAddress remoteAddress,

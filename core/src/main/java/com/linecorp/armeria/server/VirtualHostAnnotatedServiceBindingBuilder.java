@@ -336,7 +336,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
     }
 
     @Override
-    public VirtualHostAnnotatedServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+    public VirtualHostAnnotatedServiceBindingBuilder contextHook(
+            Supplier<? extends AutoCloseable> contextHook) {
         defaultServiceConfigSetters.contextHook(contextHook);
         return this;
     }

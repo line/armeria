@@ -75,6 +75,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -1925,6 +1926,12 @@ public final class ServerBuilder implements TlsSetters {
         return this;
     }
 
+    /**
+     * Sets the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
+     * from the {@link RequestContextStorage}.
+     *
+     * @param contextHook the {@link Supplier} that provides the {@link AutoCloseable}
+     */
     public ServerBuilder contextHook(Supplier<? extends  AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         this.contextHook = contextHook;
