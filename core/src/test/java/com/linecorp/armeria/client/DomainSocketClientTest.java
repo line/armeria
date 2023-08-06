@@ -17,10 +17,9 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.file.Path;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -29,22 +28,32 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.testing.EnabledOnOsWithDomainSockets;
+import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 @EnabledOnOsWithDomainSockets
 class DomainSocketClientTest {
 
-    @TempDir
-    static Path tempDir;
+    private static final String ABSTRACT_PATH =
+            '\0' + DomainSocketClientTest.class.getSimpleName() + '-' +
+            ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
+
+    @RegisterExtension
+    static final TemporaryFolderExtension tempDir = new TemporaryFolderExtension();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(domainSocketAddress());
-            sb.https(domainSocketAddress());
+            sb.http(domainSocketAddress(false));
+            sb.https(domainSocketAddress(false));
+            if (SystemInfo.isLinux()) {
+                sb.http(domainSocketAddress(true));
+                sb.https(domainSocketAddress(true));
+            }
             sb.tlsSelfSigned();
             sb.service("/greet", (ctx, req) -> HttpResponse.builder()
                                                            .ok()
@@ -55,11 +64,23 @@ class DomainSocketClientTest {
 
     @ParameterizedTest
     @CsvSource({
-            "H1C", "H2C", "H1", "H2", "HTTP", "HTTPS"
+            "H1C,   false",
+            "H1C,   true",
+            "H2C,   false",
+            "H1,    false",
+            "H2,    false",
+            "HTTP,  false",
+            "HTTPS, false"
     })
-    void shouldSupportConnectingToDomainSocket(SessionProtocol protocol) {
+    void shouldSupportConnectingToDomainSocket(SessionProtocol protocol, boolean useAbstractNamespace) {
+        if (useAbstractNamespace && !SystemInfo.isLinux()) {
+            // Abstract namespace is not supported on macOS.
+            return;
+        }
+
         SessionProtocolNegotiationCache.clear();
-        final String baseUri = protocol.uriText() + "://" + domainSocketAddress().authority();
+        final String baseUri = protocol.uriText() + "://" +
+                               domainSocketAddress(useAbstractNamespace).authority();
 
         // Connect to the domain socket server using a WebClient with baseURI and send a request to it.
         final BlockingWebClient client2 = WebClient.builder(baseUri)
@@ -71,16 +92,24 @@ class DomainSocketClientTest {
         assertThat(res2.status()).isEqualTo(HttpStatus.OK);
 
         // Connect to the domain socket server using a WebClient without baseURI and send a request to it.
-        final BlockingWebClient client = WebClient.builder()
-                                                  .factory(ClientFactory.insecure())
-                                                  .build()
-                                                  .blocking();
-        final AggregatedHttpResponse res = client.get(baseUri + "/greet");
-        assertThat(res.contentUtf8()).isEqualTo("Hello!");
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            final BlockingWebClient client = WebClient.builder()
+                                                      .factory(ClientFactory.insecure())
+                                                      .build()
+                                                      .blocking();
+            final AggregatedHttpResponse res = client.get(baseUri + "/greet");
+            assertThat(res.contentUtf8()).isEqualTo("Hello!");
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+            final ClientRequestContext ctx = ctxCaptor.get();
+            final String expectedAddress = domainSocketAddress(useAbstractNamespace).toString();
+            assertThat(ctx.localAddress()).hasToString(expectedAddress);
+            assertThat(ctx.remoteAddress()).hasToString(expectedAddress);
+        }
     }
 
-    private static DomainSocketAddress domainSocketAddress() {
-        return DomainSocketAddress.of(tempDir.resolve("test.sock"));
+    private static DomainSocketAddress domainSocketAddress(boolean useAbstractNamespace) {
+        return DomainSocketAddress.of(
+                useAbstractNamespace ? ABSTRACT_PATH : tempDir.getRoot().resolve("test.sock").toString());
     }
 }

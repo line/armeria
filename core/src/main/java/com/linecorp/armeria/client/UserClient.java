@@ -73,7 +73,7 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param delegate the {@link Client} that will process {@link Request}s
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param futureConverter the {@link Function} that converts a {@link CompletableFuture} of response
-     *                        into a response, e.g. {@link HttpResponse#from(CompletionStage)}
+     *                        into a response, e.g. {@link HttpResponse#of(CompletionStage)}
      *                        and {@link RpcResponse#from(CompletionStage)}
      * @param errorResponseFactory the {@link BiFunction} that returns a new response failed with
      *                             the given exception

@@ -1,4 +1,4 @@
-namespace java com.linecorp.armeria.service.test.thrift.main
+namespace java testing.thrift.main
 
 // Tests a non-oneway method with a return value.
 service HelloService {

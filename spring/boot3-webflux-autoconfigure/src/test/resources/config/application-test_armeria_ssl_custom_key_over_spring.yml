@@ -1,7 +1,7 @@
 server:
   ssl:
     enabled: true
-    key-store: classpath:keystore_with_two_keys.pkcs12
+    key-store: classpath:testing/webflux/keystore_with_two_keys.pkcs12
     key-store-type: PKCS12
     key-store-password: mystorepass
     key-alias: key2
@@ -9,7 +9,7 @@ server:
 armeria:
   ssl:
     enabled: true
-    key-store: classpath:keystore_with_two_keys.pkcs12
+    key-store: classpath:testing/webflux/keystore_with_two_keys.pkcs12
     key-store-type: PKCS12
     key-store-password: mystorepass
     key-alias: key1

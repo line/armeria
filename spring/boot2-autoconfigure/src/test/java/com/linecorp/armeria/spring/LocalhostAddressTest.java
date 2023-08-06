@@ -22,13 +22,11 @@ import java.util.Collection;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
@@ -38,11 +36,10 @@ import com.linecorp.armeria.spring.LocalhostAddressTest.TestConfiguration;
 /**
  * Tests for keeping the behavior of {@link Port#getIp()}.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "localhostAddressTest" })
 @DirtiesContext
-public class LocalhostAddressTest {
+class LocalhostAddressTest {
 
     @SpringBootApplication
     static class TestConfiguration {}
@@ -51,7 +48,7 @@ public class LocalhostAddressTest {
     private Server server;
 
     @Test
-    public void testLocalhostAddressCanBeUsed() {
+    void testLocalhostAddressCanBeUsed() {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
         assertThat(serverPorts).hasSize(1);
         for (ServerPort sp : serverPorts) {

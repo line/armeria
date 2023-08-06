@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
@@ -67,6 +68,9 @@ import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
 
 class ServerBuilderTest {
+
+    private static final String RESOURCE_PATH_PREFIX =
+            "/testing/core/" + ServerBuilderTest.class.getSimpleName() + '/';
 
     private static ClientFactory clientFactory;
 
@@ -524,26 +528,26 @@ class ServerBuilderTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
-    void tlsPkcsPrivateKeys(String privateKeyPath) {
+    @CsvSource({ "pkcs5.pem", "pkcs8.pem" })
+    void tlsPkcsPrivateKeys(String privateKeyFileName) {
         final String resourceRoot =
                 '/' + MinifiedBouncyCastleProvider.class.getPackage().getName().replace('.', '/') + '/';
         Server.builder()
-              .tls(getClass().getResourceAsStream("/cert.pem"),
-                   getClass().getResourceAsStream(privateKeyPath))
+              .tls(getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "cert.pem"),
+                   getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + privateKeyFileName))
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
     }
 
     @ParameterizedTest
-    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
-    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyPath) {
+    @CsvSource({ "pkcs5.pem", "pkcs8.pem" })
+    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyFileName) {
         Server.builder()
               .tlsSelfSigned()
               .tlsCustomizer(sslCtxBuilder -> {
                   sslCtxBuilder.keyManager(
-                          getClass().getResourceAsStream("/cert.pem"),
-                          getClass().getResourceAsStream(privateKeyPath));
+                          getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "cert.pem"),
+                          getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + privateKeyFileName));
               })
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
@@ -707,6 +711,23 @@ class ServerBuilderTest {
                       .unhandledExceptionsReportIntervalMillis(-1000)
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
+    }
+
+    @Test
+    void multipleDomainSocketAddresses() {
+        final Server server = Server.builder()
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .http(DomainSocketAddress.of("/tmp/foo"))
+                                    .http(DomainSocketAddress.of("/tmp/bar"))
+                                    .https(DomainSocketAddress.of("/tmp/foo"))
+                                    .https(DomainSocketAddress.of("/tmp/bar"))
+                                    .tlsSelfSigned()
+                                    .build();
+        assertThat(server.config().ports()).containsExactly(
+                new ServerPort(DomainSocketAddress.of("/tmp/foo"),
+                               SessionProtocol.HTTP, SessionProtocol.HTTPS),
+                new ServerPort(DomainSocketAddress.of("/tmp/bar"),
+                               SessionProtocol.HTTP, SessionProtocol.HTTPS));
     }
 
     @Test
