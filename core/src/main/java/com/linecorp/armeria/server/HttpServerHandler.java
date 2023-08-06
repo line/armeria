@@ -346,7 +346,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
-            // TODO(miyoshi) Serviceのコンテキスト使用箇所であるが、hookメソッドの使用方法が正しいか検討する
             final DefaultServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
                     channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx);
 
@@ -370,7 +369,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
 
-        // TODO(miyoshi) Serviceのコンテキスト使用箇所であるが、hookメソッドの使用方法が正しいか検討する
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),

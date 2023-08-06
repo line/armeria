@@ -750,4 +750,15 @@ class ServerBuilderTest {
         assertThat(response.contentUtf8()).isEqualTo("hook_route");
         assertThat(poppedRouter).isTrue();
     }
+
+    @Test
+    void contextHook_otherRoute() {
+        assertThat(poppedRouter).isFalse();
+
+        final WebClient client =  WebClient.builder(server.httpUri()).build();
+        final AggregatedHttpResponse response =  client.get("/").aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(poppedRouter).isFalse();
+    }
 }
