@@ -373,7 +373,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         assert response != null || aggregatedRes != null;
         final RequestLogProperty logProperty =
                 retryConfig.requiresResponseTrailers() ?
-                RequestLogProperty.RESPONSE_TRAILERS : RequestLogProperty.RESPONSE_HEADERS;
+                RequestLogProperty.RESPONSE_END_TIME : RequestLogProperty.RESPONSE_HEADERS;
 
         derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable responseCause =

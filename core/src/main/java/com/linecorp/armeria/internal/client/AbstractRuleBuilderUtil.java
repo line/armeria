@@ -92,9 +92,9 @@ public final class AbstractRuleBuilderUtil {
 
             // Safe to return true since no filters are set
             if (exceptionFilter == null && responseHeadersFilter == null &&
-                    responseTrailersFilter == null && grpcTrailersFilter == null &&
-                    responseDurationFilter == null &&
-                    !hasResponseFilter) {
+                responseTrailersFilter == null && grpcTrailersFilter == null &&
+                responseDurationFilter == null &&
+                !hasResponseFilter) {
                 return true;
             }
 
@@ -142,8 +142,14 @@ public final class AbstractRuleBuilderUtil {
                 }
             }
 
-            return responseDurationFilter != null &&
-                    responseDurationFilter.test(ctx, Duration.ofNanos(log.responseDurationNanos()));
+            if (responseDurationFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
+                final long responseEndTimeNanos = log.responseEndTimeNanos();
+                if (responseDurationFilter.test(ctx, Duration.ofNanos(responseEndTimeNanos))) {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
