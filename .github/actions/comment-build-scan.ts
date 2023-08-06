@@ -31,13 +31,6 @@ async function main(): Promise<void> {
     run_id: parseInt(process.env.RUN_ID),
   });
 
-  console.log(`💻 Getting comments for #${prNumber} ...`)
-  const comments = await octokit.rest.issues.listComments({
-    owner,
-    repo,
-    issue_number: prNumber,
-  })
-
   let commentBody = `## 🔍 Build Scan® (commit: ${process.env.COMMIT_SHA})\n\n`;
   commentBody += `| Job name | Status | Build Scan® |\n`;
   commentBody += `| --- | --- | --- |\n`;
@@ -55,8 +48,8 @@ async function main(): Promise<void> {
     }
   }
 
-  const scanComment = comments.data.find(comment =>
-    comment.user.login === "github-actions[bot]" && comment.body.includes('Build Scan®'))
+  console.log(`💻 Getting comments for #${prNumber} ...`)
+  const scanComment = await findScanComment(octokit, owner, repo, prNumber)
   if (scanComment) {
     // Update the previous comment
     console.log(`📝 Updating the previous comment: ${scanComment.html_url} ...`)
@@ -76,5 +69,28 @@ async function main(): Promise<void> {
       body: commentBody
     })
     console.log(`💬 A new comment has been created: ${newComment.html_url}`)
+  }
+}
+
+async function findScanComment(octokit: Octokit, owner: string, repo: string, prNumber: number, page: number = 1): Promise<any> {
+  const pageSize = 30;
+  const comments = await octokit.rest.issues.listComments({
+    owner,
+    repo,
+    issue_number: prNumber,
+    page,
+    per_page: pageSize,
+  });
+
+  const comment = comments.data.find(comment =>
+    comment.user.login === "github-actions[bot]" && comment.body.includes('Build Scan®'));
+  if (comment) {
+    return comment;
+  } else {
+    if (comments.data.length === 0 || comments.data.length < pageSize) {
+      return null;
+    } else {
+      return await findScanComment(octokit, owner, repo, prNumber, page + 1);
+    }
   }
 }
