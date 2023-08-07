@@ -20,7 +20,7 @@ gradleEnterprise {
         publishIfAuthenticated()
         publishAlways()
         uploadInBackground = !isCi
-        if (isCI) {
+        if (isCi) {
             buildScanPublished { PublishedBuildScan scan ->
                 def scanUrl = new File("build/build-scan-url.txt")
                 if(!scanUrl.getParentFile().exists()) {
