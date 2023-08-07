@@ -16,6 +16,7 @@ if (JavaVersion.current() >= JavaVersion.VERSION_11) {
     // so we have to use Java 10 (or less) API docs.
     javadocLinkMap.put('java10', 'https://docs.oracle.com/javase/10/docs/api/')
 }
+
 allprojects {
     project.ext.javadocLinks.each {
         javadocLinkMap.put(
