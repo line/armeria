@@ -16,11 +16,11 @@ import com.gradle.scan.plugin.PublishedBuildScan
 gradleEnterprise {
     server = "https://ge.armeria.dev"
     buildScan {
-        if (System.getenv("CI") == null) {
-            publishIfAuthenticated()
-            publishAlways()
-        } else {
-            uploadInBackground = false
+        def isCi = System.getenv("CI") != null
+        publishIfAuthenticated()
+        publishAlways()
+        uploadInBackground = !isCi
+        if (isCI) {
             buildScanPublished { PublishedBuildScan scan ->
                 def scanUrl = new File("build/build-scan-url.txt")
                 if(!scanUrl.getParentFile().exists()) {
