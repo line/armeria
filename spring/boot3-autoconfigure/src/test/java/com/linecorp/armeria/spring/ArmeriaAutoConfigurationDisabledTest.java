@@ -19,13 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationDisabledTest.TestConfiguration;
@@ -34,10 +32,9 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationDisabledTest.TestConf
  * This test {@link ArmeriaAutoConfiguration} could be disabled.
  * application-disabled.yml will set armeria.server-enabled to false:
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "disabled" })
-public class ArmeriaAutoConfigurationDisabledTest {
+class ArmeriaAutoConfigurationDisabledTest {
 
     @SpringBootApplication
     public static class TestConfiguration {
@@ -47,7 +44,7 @@ public class ArmeriaAutoConfigurationDisabledTest {
     private ApplicationContext applicationContext;
 
     @Test
-    public void serverNotCreated() throws Exception {
+    void serverNotCreated() throws Exception {
         assertThat(applicationContext.getBeansOfType(Server.class)).isEmpty();
     }
 }
