@@ -47,7 +47,7 @@ import io.netty.util.AsciiString;
  *
  * @param <T> the type of the object to be tested
  */
-final class RoutingPredicate<T> implements Predicate<T> {
+final class RoutingPredicate<T> {
     private static final Logger logger = LoggerFactory.getLogger(RoutingPredicate.class);
 
     /**
@@ -235,7 +235,6 @@ final class RoutingPredicate<T> implements Predicate<T> {
      *
      * @see DefaultRoute where this predicate is evaluated
      */
-    @Override
     public boolean test(T t) {
         try {
             return delegate.test(t);
