@@ -144,9 +144,7 @@ final class Routers {
     private static Set<Route> resolveDynamicPredicateRoutes(List<Route> allRoutes) {
         final Set<Route> dynamicRoutes =
                 allRoutes.stream()
-                         .filter(route -> !route.paramPredicates().isEmpty() ||
-                                          !route.headerPredicates().isEmpty() ||
-                                          !route.excludedRoutes().isEmpty())
+                         .filter(route -> !route.isCacheable())
                          .collect(toImmutableSet());
         final Set<List<Object>> dynamicRouteKeys =
                 dynamicRoutes.stream().map(Routers::dynamicRouteKey)

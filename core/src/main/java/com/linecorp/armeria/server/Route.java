@@ -18,13 +18,9 @@ package com.linecorp.armeria.server;
 
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * {@link Route} maps from an incoming HTTP request to an {@link HttpService} based on its path, method,
@@ -215,16 +211,7 @@ public interface Route {
     Route withPrefix(String prefix);
 
     /**
-     * A list of predicates used to determine whether a {@link Route} will accept a request
-     * based on its HTTP parameters.
+     * Returns whether the current {@link Route} is cacheable when queried from a {@link Router}.
      */
-    @UnstableApi
-    List<? extends Predicate<QueryParams>> paramPredicates();
-
-    /**
-     * A list of predicates used to determine whether a {@link Route} will accept a request
-     * based on its HTTP headers.
-     */
-    @UnstableApi
-    List<? extends Predicate<HttpHeaders>> headerPredicates();
+    boolean isCacheable();
 }
