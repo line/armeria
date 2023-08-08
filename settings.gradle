@@ -5,21 +5,12 @@ plugins {
     // If Gradle can’t find a locally available toolchain that matches the requirements of the build, it can
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
-    id("org.gradle.toolchains.foojay-resolver") version "0.5.0"
-    id "com.gradle.enterprise" version "3.13.3"
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
+    id 'com.gradle.enterprise' version '3.14.1'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.11'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.11.1'
+}
 
-}
-toolchainManagement {
-    jvm {
-        javaRepositories {
-            repository("foojay") {
-                resolverClass = org.gradle.toolchains.foojay.FoojayToolchainResolver
-            }
-        }
-    }
-}
 gradleEnterprise {
     server = "https://ge.armeria.dev"
     buildScan {
@@ -62,6 +53,7 @@ includeWithFlags ':junit5',                              'java', 'publish', 'rel
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate'
+includeWithFlags ':logback13',                           'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate'
@@ -135,7 +127,7 @@ includeWithFlags ':benchmarks:jmh',                            'java', 'kotlin'
 includeWithFlags ':benchmarks:ghz',                            'java'
 includeWithFlags ':it:builders',                               'java'
 includeWithFlags ':it:context-storage',                        'java'
-includeWithFlags ':it:dgs',                                    'java'
+includeWithFlags ':it:dgs',                                    'java17'
 includeWithFlags ':it:flags-cyclic-dep',                       'java'
 includeWithFlags ':it:graphql-multipart',                      'java17'
 includeWithFlags ':it:grpcweb',                                'java', 'akka-grpc_2.13'
@@ -147,12 +139,14 @@ includeWithFlags ':it:grpc:reactor',                           'java', 'relocate
 includeWithFlags ':it:flags-provider',                         'java', 'relocate'
 includeWithFlags ':it:jackson-provider',                       'java', 'relocate'
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
+includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
 includeWithFlags ':it:micrometer1.3',                          'java', 'relocate'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
+includeWithFlags ':it:spring:boot3-jetty11',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-mixed-tomcat10',            'java17', 'relocate'

@@ -106,6 +106,6 @@ final class CallCredentialsDecoratingClient extends SimpleDecoratingHttpClient {
                     }
                 });
 
-        return HttpResponse.from(response);
+        return HttpResponse.of(response);
     }
 }

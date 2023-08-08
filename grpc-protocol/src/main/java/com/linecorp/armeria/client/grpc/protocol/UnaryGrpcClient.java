@@ -180,7 +180,7 @@ public final class UnaryGrpcClient {
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
             final AggregationOptions aggregationOptions =
                     AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop());
-            return HttpResponse.from(
+            return HttpResponse.of(
                     req.aggregate(aggregationOptions)
                        .thenCompose(
                                msg -> {
