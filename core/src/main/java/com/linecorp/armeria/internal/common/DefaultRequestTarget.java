@@ -123,6 +123,7 @@ public final class DefaultRequestTarget implements RequestTarget {
             null,
             null,
             "*",
+            "*",
             null,
             null);
 
@@ -130,13 +131,14 @@ public final class DefaultRequestTarget implements RequestTarget {
      * The main implementation of {@link RequestTarget#forServer(String)}.
      */
     @Nullable
-    public static RequestTarget forServer(String reqTarget, boolean allowDoubleDotsInQueryString) {
+    public static RequestTarget forServer(String reqTarget, boolean allowSemicolonInPathComponent,
+                                          boolean allowDoubleDotsInQueryString) {
         final RequestTarget cached = RequestTargetCache.getForServer(reqTarget);
         if (cached != null) {
             return cached;
         }
 
-        return slowForServer(reqTarget, allowDoubleDotsInQueryString);
+        return slowForServer(reqTarget, allowSemicolonInPathComponent, allowDoubleDotsInQueryString);
     }
 
     /**
@@ -183,8 +185,9 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     public static RequestTarget createWithoutValidation(
             RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
-            String path, @Nullable String query, @Nullable String fragment) {
-        return new DefaultRequestTarget(form, scheme, authority, path, query, fragment);
+            String path, String pathWithMatrixVariables, @Nullable String query, @Nullable String fragment) {
+        return new DefaultRequestTarget(
+                form, scheme, authority, path, pathWithMatrixVariables, query, fragment);
     }
 
     private final RequestTargetForm form;
@@ -193,6 +196,7 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Nullable
     private final String authority;
     private final String path;
+    private final String maybePathWithMatrixVariables;
     @Nullable
     private final String query;
     @Nullable
@@ -200,7 +204,8 @@ public final class DefaultRequestTarget implements RequestTarget {
     private boolean cached;
 
     private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
-                                 String path, @Nullable String query, @Nullable String fragment) {
+                                 String path, String maybePathWithMatrixVariables,
+                                 @Nullable String query, @Nullable String fragment) {
 
         assert (scheme != null && authority != null) ||
                (scheme == null && authority == null) : "scheme: " + scheme + ", authority: " + authority;
@@ -209,6 +214,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         this.scheme = scheme;
         this.authority = authority;
         this.path = path;
+        this.maybePathWithMatrixVariables = maybePathWithMatrixVariables;
         this.query = query;
         this.fragment = fragment;
     }
@@ -234,6 +240,11 @@ public final class DefaultRequestTarget implements RequestTarget {
     }
 
     @Override
+    public String maybePathWithMatrixVariables() {
+        return maybePathWithMatrixVariables;
+    }
+
+    @Override
     public String query() {
         return query;
     }
@@ -256,18 +267,6 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     public void setCached() {
         cached = true;
-    }
-
-    /**
-     * Returns a copy of this {@link RequestTarget} with its {@link #path()} overridden with
-     * the specified {@code path}.
-     */
-    public RequestTarget withPath(String path) {
-        if (this.path == path) {
-            return this;
-        }
-
-        return new DefaultRequestTarget(form, scheme, authority, path, query, fragment);
     }
 
     @Override
@@ -312,7 +311,8 @@ public final class DefaultRequestTarget implements RequestTarget {
     }
 
     @Nullable
-    private static RequestTarget slowForServer(String reqTarget, boolean allowDoubleDotsInQueryString) {
+    private static RequestTarget slowForServer(String reqTarget, boolean allowSemicolonInPathComponent,
+                                               boolean allowDoubleDotsInQueryString) {
         final Bytes path;
         final Bytes query;
 
@@ -321,18 +321,18 @@ public final class DefaultRequestTarget implements RequestTarget {
         if (queryPos >= 0) {
             if ((path = decodePercentsAndEncodeToUtf8(
                     reqTarget, 0, queryPos,
-                    ComponentType.SERVER_PATH, null)) == null) {
+                    ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
                 return null;
             }
             if ((query = decodePercentsAndEncodeToUtf8(
                     reqTarget, queryPos + 1, reqTarget.length(),
-                    ComponentType.QUERY, EMPTY_BYTES)) == null) {
+                    ComponentType.QUERY, EMPTY_BYTES, true)) == null) {
                 return null;
             }
         } else {
             if ((path = decodePercentsAndEncodeToUtf8(
                     reqTarget, 0, reqTarget.length(),
-                    ComponentType.SERVER_PATH, null)) == null) {
+                    ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
                 return null;
             }
             query = null;
@@ -349,19 +349,63 @@ public final class DefaultRequestTarget implements RequestTarget {
         }
 
         // Reject the prohibited patterns.
-        if (pathContainsDoubleDots(path)) {
+        if (pathContainsDoubleDots(path, allowSemicolonInPathComponent)) {
             return null;
         }
         if (!allowDoubleDotsInQueryString && queryContainsDoubleDots(query)) {
             return null;
         }
 
+        final String encodedPath = encodePathToPercents(path);
+        final String matrixVariablesRemovedPath;
+        if (allowSemicolonInPathComponent) {
+            matrixVariablesRemovedPath = encodedPath;
+        } else {
+            matrixVariablesRemovedPath = removeMatrixVariables(encodedPath);
+            if (matrixVariablesRemovedPath == null) {
+                return null;
+            }
+        }
         return new DefaultRequestTarget(RequestTargetForm.ORIGIN,
                                         null,
                                         null,
-                                        encodePathToPercents(path),
+                                        matrixVariablesRemovedPath,
+                                        encodedPath,
                                         encodeQueryToPercents(query),
                                         null);
+    }
+
+    @Nullable
+    public static String removeMatrixVariables(String path) {
+        int semicolonIndex = path.indexOf(';');
+        if (semicolonIndex < 0) {
+            return path;
+        }
+        if (semicolonIndex == 0 || path.charAt(semicolonIndex - 1) == '/') {
+            // Invalid matrix variable e.g. /;a=b/foo
+            return null;
+        }
+        int subStringStartIndex = 0;
+        try (TemporaryThreadLocals threadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder sb = threadLocals.stringBuilder();
+            for (;;) {
+                sb.append(path, subStringStartIndex, semicolonIndex);
+                final int slashIndex = path.indexOf('/', semicolonIndex + 1);
+                if (slashIndex < 0) {
+                    return sb.toString();
+                }
+                subStringStartIndex = slashIndex;
+                semicolonIndex = path.indexOf(';', subStringStartIndex + 1);
+                if (semicolonIndex < 0) {
+                    sb.append(path, subStringStartIndex, path.length());
+                    return sb.toString();
+                }
+                if (path.charAt(semicolonIndex - 1) == '/') {
+                    // Invalid matrix variable e.g. /prefix/;a=b/foo
+                    return null;
+                }
+            }
+        }
     }
 
     @Nullable
@@ -396,7 +440,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                                             schemeAndAuthority.getScheme(),
                                             schemeAndAuthority.getRawAuthority(),
                                             "/",
-                                            null,
+                                            "/", null,
                                             null);
         }
 
@@ -457,7 +501,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         if (queryPos >= 0) {
             if ((path = decodePercentsAndEncodeToUtf8(
                     reqTarget, pathPos, queryPos,
-                    ComponentType.CLIENT_PATH, SLASH_BYTES)) == null) {
+                    ComponentType.CLIENT_PATH, SLASH_BYTES, true)) == null) {
                 return null;
             }
 
@@ -465,19 +509,19 @@ public final class DefaultRequestTarget implements RequestTarget {
                 // path?query#fragment
                 if ((query = decodePercentsAndEncodeToUtf8(
                         reqTarget, queryPos + 1, fragmentPos,
-                        ComponentType.QUERY, EMPTY_BYTES)) == null) {
+                        ComponentType.QUERY, EMPTY_BYTES, true)) == null) {
                     return null;
                 }
                 if ((fragment = decodePercentsAndEncodeToUtf8(
                         reqTarget, fragmentPos + 1, reqTarget.length(),
-                        ComponentType.FRAGMENT, EMPTY_BYTES)) == null) {
+                        ComponentType.FRAGMENT, EMPTY_BYTES, true)) == null) {
                     return null;
                 }
             } else {
                 // path?query
                 if ((query = decodePercentsAndEncodeToUtf8(
                         reqTarget, queryPos + 1, reqTarget.length(),
-                        ComponentType.QUERY, EMPTY_BYTES)) == null) {
+                        ComponentType.QUERY, EMPTY_BYTES, true)) == null) {
                     return null;
                 }
                 fragment = null;
@@ -487,20 +531,20 @@ public final class DefaultRequestTarget implements RequestTarget {
                 // path#fragment
                 if ((path = decodePercentsAndEncodeToUtf8(
                         reqTarget, pathPos, fragmentPos,
-                        ComponentType.CLIENT_PATH, EMPTY_BYTES)) == null) {
+                        ComponentType.CLIENT_PATH, EMPTY_BYTES, true)) == null) {
                     return null;
                 }
                 query = null;
                 if ((fragment = decodePercentsAndEncodeToUtf8(
                         reqTarget, fragmentPos + 1, reqTarget.length(),
-                        ComponentType.FRAGMENT, EMPTY_BYTES)) == null) {
+                        ComponentType.FRAGMENT, EMPTY_BYTES, true)) == null) {
                     return null;
                 }
             } else {
                 // path
                 if ((path = decodePercentsAndEncodeToUtf8(
                         reqTarget, pathPos, reqTarget.length(),
-                        ComponentType.CLIENT_PATH, EMPTY_BYTES)) == null) {
+                        ComponentType.CLIENT_PATH, EMPTY_BYTES, true)) == null) {
                     return null;
                 }
                 query = null;
@@ -529,14 +573,14 @@ public final class DefaultRequestTarget implements RequestTarget {
                                             schemeAndAuthority.getScheme(),
                                             schemeAndAuthority.getRawAuthority(),
                                             encodedPath,
-                                            encodedQuery,
+                                            encodedPath, encodedQuery,
                                             encodedFragment);
         } else {
             return new DefaultRequestTarget(RequestTargetForm.ORIGIN,
                                             null,
                                             null,
                                             encodedPath,
-                                            encodedQuery,
+                                            encodedPath, encodedQuery,
                                             encodedFragment);
         }
     }
@@ -577,7 +621,8 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     @Nullable
     private static Bytes decodePercentsAndEncodeToUtf8(String value, int start, int end,
-                                                       ComponentType type, @Nullable Bytes whenEmpty) {
+                                                       ComponentType type, @Nullable Bytes whenEmpty,
+                                                       boolean allowSemicolonInPathComponent) {
         final int length = end - start;
         if (length == 0) {
             return whenEmpty;
@@ -605,7 +650,8 @@ public final class DefaultRequestTarget implements RequestTarget {
                 }
 
                 final int decoded = (digit1 << 4) | digit2;
-                if (type.mustPreserveEncoding(decoded)) {
+                if (type.mustPreserveEncoding(decoded) ||
+                    (!allowSemicolonInPathComponent && decoded == ';')) {
                     buf.ensure(1);
                     buf.addEncoded((byte) decoded);
                     wasSlash = false;
@@ -713,7 +759,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         return true;
     }
 
-    private static boolean pathContainsDoubleDots(Bytes path) {
+    private static boolean pathContainsDoubleDots(Bytes path, boolean allowSemicolonInPathComponent) {
         final int length = path.length;
         byte b0 = 0;
         byte b1 = 0;
@@ -721,7 +767,8 @@ public final class DefaultRequestTarget implements RequestTarget {
         for (int i = 1; i < length; i++) {
             final byte b3 = path.data[i];
             // Flag if the last four bytes are `/../`.
-            if (b1 == '.' && b2 == '.' && isSlash(b0) && isSlash(b3)) {
+            if (b1 == '.' && b2 == '.' && isSlash(b0) &&
+                (isSlash(b3) || (!allowSemicolonInPathComponent && b3 == ';'))) {
                 return true;
             }
             b0 = b1;
