@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import io.micrometer.core.instrument.MeterRegistry;
 
 @ExtendWith(MockitoExtension.class)
-public class CaffeineMetricSupportTest {
+class CaffeineMetricSupportTest {
 
     @Mock
     private Policy<Object, Object> policy;
