@@ -431,7 +431,7 @@ public final class HealthCheckService implements TransientHttpService {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
 
-        return HttpResponse.from(updateHandler.handle(ctx, req).thenApply(updateResult -> {
+        return HttpResponse.of(updateHandler.handle(ctx, req).thenApply(updateResult -> {
             if (updateResult != null) {
                 switch (updateResult) {
                     case HEALTHY:

@@ -34,7 +34,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -59,7 +58,6 @@ import reactor.core.publisher.Mono;
 class ReactiveWebServerLoadBalancerInteropTest {
 
     @SpringBootApplication
-    @Configuration
     static class TestConfiguration {
         @RestController
         static class TestController {
