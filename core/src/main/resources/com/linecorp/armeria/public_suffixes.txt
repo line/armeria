@@ -424,6 +424,11 @@ amsterdam
 amusement.aero
 an.it
 analytics
+analytics-gateway.ap-northeast-1.amazonaws.com
+analytics-gateway.eu-west-1.amazonaws.com
+analytics-gateway.us-east-1.amazonaws.com
+analytics-gateway.us-east-2.amazonaws.com
+analytics-gateway.us-west-2.amazonaws.com
 anamizu.ishikawa.jp
 anan.nagano.jp
 anan.tokushima.jp
@@ -1354,7 +1359,6 @@ clerk.app
 clerkstage.app
 cleverapps.io
 click
-clicketcloud.com
 clickrising.net
 clinic
 clinique
@@ -3208,7 +3212,6 @@ hidaka.hokkaido.jp
 hidaka.kochi.jp
 hidaka.saitama.jp
 hidaka.wakayama.jp
-hidora.com
 higashi.fukuoka.jp
 higashi.fukushima.jp
 higashi.okinawa.jp
@@ -3362,7 +3365,6 @@ hot
 hotel.hu
 hotel.lk
 hotel.tz
-hoteles
 hotels
 hotelwithflight.com
 hotmail
@@ -5152,7 +5154,6 @@ musica.bo
 musician.io
 mutsu.aomori.jp
 mutsuzawa.chiba.jp
-mutual
 mutual.ar
 mv
 mw
@@ -6221,7 +6222,6 @@ parti.se
 partners
 parts
 party
-passagens
 passenger-association.aero
 patria.bo
 pavia.it
@@ -7383,6 +7383,7 @@ store.st
 store.ve
 storebase.store
 storfjord.no
+storipress.app
 storj.farm
 strand.no
 stranda.no
@@ -7649,7 +7650,6 @@ tickets
 tickets.io
 tienda
 tiengiang.vn
-tiffany
 time.no
 tingvoll.no
 tinn.no
@@ -8069,7 +8069,6 @@ user.party.eus
 user.srcf.net
 user.webaccel.jp
 usercontent.jp
-users.scale.virtualcloud.com.br
 ushiku.ibaraki.jp
 usr.cloud.muni.cz
 ustka.pl
@@ -8267,7 +8266,6 @@ vs.mythic-beasts.com
 vt.it
 vt.us
 vu
-vuelos
 vv.it
 vxl.sh
 w.bg
@@ -8340,6 +8338,27 @@ website.yandexcloud.net
 websozai.jp
 webspace.rocks
 webthings.io
+webview-assets.aws-cloud9.af-south-1.amazonaws.com
+webview-assets.aws-cloud9.ap-east-1.amazonaws.com
+webview-assets.aws-cloud9.ap-northeast-1.amazonaws.com
+webview-assets.aws-cloud9.ap-northeast-2.amazonaws.com
+webview-assets.aws-cloud9.ap-northeast-3.amazonaws.com
+webview-assets.aws-cloud9.ap-south-1.amazonaws.com
+webview-assets.aws-cloud9.ap-southeast-1.amazonaws.com
+webview-assets.aws-cloud9.ap-southeast-2.amazonaws.com
+webview-assets.aws-cloud9.ca-central-1.amazonaws.com
+webview-assets.aws-cloud9.eu-central-1.amazonaws.com
+webview-assets.aws-cloud9.eu-north-1.amazonaws.com
+webview-assets.aws-cloud9.eu-south-1.amazonaws.com
+webview-assets.aws-cloud9.eu-west-1.amazonaws.com
+webview-assets.aws-cloud9.eu-west-2.amazonaws.com
+webview-assets.aws-cloud9.eu-west-3.amazonaws.com
+webview-assets.aws-cloud9.me-south-1.amazonaws.com
+webview-assets.aws-cloud9.sa-east-1.amazonaws.com
+webview-assets.aws-cloud9.us-east-1.amazonaws.com
+webview-assets.aws-cloud9.us-east-2.amazonaws.com
+webview-assets.aws-cloud9.us-west-1.amazonaws.com
+webview-assets.aws-cloud9.us-west-2.amazonaws.com
 webview-assets.cloud9.af-south-1.amazonaws.com
 webview-assets.cloud9.ap-east-1.amazonaws.com
 webview-assets.cloud9.ap-northeast-1.amazonaws.com

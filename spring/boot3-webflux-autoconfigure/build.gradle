@@ -29,6 +29,7 @@ dependencies {
     testImplementation project(':spring:boot3-actuator-autoconfigure')
     testImplementation project(':thrift0.18')
     testImplementation libs.spring.boot3.starter.test
+    testImplementation libs.spring6.web
     // Added for sharing test suites with boot2
     testImplementation libs.javax.inject
 }

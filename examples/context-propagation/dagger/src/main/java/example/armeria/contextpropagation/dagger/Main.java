@@ -35,7 +35,7 @@ public class Main {
             return Server.builder()
                          .http(8080)
                          .serviceUnder("/", ((ctx, req) ->
-                                 HttpResponse.from(
+                                 HttpResponse.of(
                                          ListenableFuturesExtra.toCompletableFuture(
                                                  graphBuilder.get().request(req).build().execute()))))
                          .build();

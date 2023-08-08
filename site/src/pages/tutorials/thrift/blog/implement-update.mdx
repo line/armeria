@@ -1,0 +1,176 @@
+---
+menuTitle: "Implement UPDATE"
+order: 6
+category: thrift
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing UPDATE operation
+
+Previously, we created and read blog posts.
+Now, let's implement and make a call to update a blog post.
+We'll also learn how to handle an exception with a custom exception handler.
+
+<TutorialSteps current={6} />
+
+## What you need
+
+You need to have the following obtained from previous steps:
+
+- [Generated Java code](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file)
+- `Main.java`
+- `BlogServiceImpl.java`
+- `BlogClient.java`
+- `BlogServiceTest.java`
+
+## 1. Implement server-side
+
+Let's implement the server-side for updating blog posts.
+This time, we'll use a custom exception handler.
+
+### Add an exception handler
+
+First, add a custom exception handler for the blog service.
+
+1. Add an exception handler class to convert an `IllegalArgumentException` into a `BlogNotFoundException`.
+  ```java filename=BlogServiceExceptionHandler.java
+  package example.armeria.server.blog.thrift;
+
+  import java.util.function.BiFunction;
+
+  import com.linecorp.armeria.common.RpcResponse;
+  import com.linecorp.armeria.server.ServiceRequestContext;
+
+  import example.armeria.blog.thrift.BlogNotFoundException;
+
+  public class BlogServiceExceptionHandler implements BiFunction<ServiceRequestContext, Throwable, RpcResponse> {
+
+    @Override
+    public RpcResponse apply(ServiceRequestContext serviceRequestContext, Throwable cause) {
+      if (cause instanceof IllegalArgumentException) {
+        return RpcResponse.ofFailure(new BlogNotFoundException(cause.getMessage()));
+      }
+      return RpcResponse.ofFailure(cause);
+    }
+  }
+  ```
+2. In the `Main` class, bind the `BlogServiceExceptionHandler` to our service.
+  ```java filename=Main.java
+  ...
+  private static Server newServer(int port) throws Exception {
+    final THttpService tHttpService =
+      THttpService.builder()
+                  .addService(new BlogServiceImpl())
+                  .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
+                  .build();
+    ...
+  }
+  ```
+
+### Implement service methods
+
+In the `BlogServiceImpl` class, implement the `updateBlogPost()` method to update a blog post.
+This time, let's use the `IllegalArgumentException` instead of the `BlogNotFoundException`.
+
+```java filename=BlogServiceImpl.java
+@Override
+public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+        throws TException {
+  final BlogPost oldBlogPost = blogPosts.get(request.getId());
+  if (oldBlogPost == null) {
+    resultHandler.onError(
+            new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
+  } else {
+    final BlogPost newBlogPost = oldBlogPost
+            .deepCopy()
+            .setTitle(request.getTitle())
+            .setContent(request.getContent())
+            .setModifiedAt(Instant.now().toEpochMilli());
+    blogPosts.put(request.getId(), newBlogPost);
+    resultHandler.onComplete(newBlogPost);
+  }
+}
+```
+
+## 2. Implement client-side
+
+Add a method `updateBlogPost()` to send a request to update a blog post.
+
+```java filename=BlogClient.java
+import example.armeria.blog.thrift.UpdateBlogPostRequest;
+...
+BlogPost updateBlogPost(int id, String newTitle, String newContent) throws TException {
+  final UpdateBlogPostRequest request = new UpdateBlogPostRequest().setId(id).setTitle(newTitle).setContent(newContent);
+  return blogService.updateBlogPost(request);
+}
+```
+
+## 3. Test updating a blog post
+
+Let's try updating the content of the first blog post.
+Add a method like the following.
+
+```java filename=BlogServiceTest.java
+@Test
+@Order(5)
+void updateBlogPosts() throws TException {
+  final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+  final BlogPost updated = client.updateBlogPost(0, "My first blog", "Hello awesome Armeria!");
+  assertThat(updated.getId()).isZero();
+  assertThat(updated.getTitle()).isEqualTo("My first blog");
+  assertThat(updated.getContent()).isEqualTo("Hello awesome Armeria!");
+  System.out.println(updated);
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
+
+## 4. Test an error case
+
+To check that our exception handler is working, let's try updating a post which does not exist.
+
+1. Bind the exception handler to the service for the test server.
+  ```java filename=BlogServiceTest.java
+  @RegisterExtension
+  static final ServerExtension server = new ServerExtension() {
+    @Override
+    protected void configure(ServerBuilder sb) throws Exception {
+      sb.service("/thrift", THttpService.builder()
+          .exceptionHandler(new BlogServiceExceptionHandler()) // Add this
+          .addService(new BlogServiceImpl())
+          .build());
+    }
+  };
+  ```
+2. Add a test method to update a blog post with an invalid ID, asserting a `BlogNotFoundException` is thrown.
+  ```java filename=BlogServiceTest.java
+  @Test
+  @Order(6)
+  void updateInvalidBlogPost() {
+    final BlogClient client = new BlogClient(server.httpUri(), "/thrift");
+    final Throwable exception = catchThrowable(() -> {
+      final BlogPost updated = client.updateBlogPost(Integer.MAX_VALUE, "My first blog", "Hello awesome Armeria!");
+    });
+    assertThat(exception)
+      .isInstanceOf(BlogNotFoundException.class)
+      .extracting("reason")
+      .asString()
+      .isEqualTo("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+  }
+  ```
+3. Run all the test cases on your IDE or using Gradle.
+  Check that you see the test is passed.
+
+## What's next
+
+In this step, we've implemented a service method and client method for updating a blog post.
+We've also added an exception handler.
+
+Next, at [Step 7. Implement DELETE](/tutorials/thrift/blog/implement-delete), we'll implement a method
+for deleting a blog post and add a [Documentation Service](/docs/server-docservice) to our service.
+
+<TutorialSteps current={6} />

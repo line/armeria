@@ -135,7 +135,7 @@ enum HeapDumpService implements HttpService {
             }
         });
 
-        return HttpResponse.from(responseFuture);
+        return HttpResponse.of(responseFuture);
     }
 
     @Override

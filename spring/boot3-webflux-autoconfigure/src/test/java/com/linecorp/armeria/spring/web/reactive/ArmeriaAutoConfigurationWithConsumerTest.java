@@ -25,7 +25,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -37,7 +36,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 class ArmeriaAutoConfigurationWithConsumerTest {
 
     @SpringBootApplication
-    @Configuration
     public static class TestConfiguration {
         @Bean
         public Consumer<ServerBuilder> customizer() {
