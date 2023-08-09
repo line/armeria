@@ -31,7 +31,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -74,16 +73,12 @@ class ServerBuilderTest {
 
     private static ClientFactory clientFactory;
 
-    private static final AtomicBoolean poppedRouter = new AtomicBoolean();
+    private static final AtomicInteger poppedRouterCnt = new AtomicInteger();
     private static final Supplier<? extends AutoCloseable> contextHookRouter = () ->
-            (AutoCloseable) () ->  {
-                poppedRouter.set(true);
-            };
-    private static final AtomicBoolean popped = new AtomicBoolean();
+            (AutoCloseable) poppedRouterCnt::getAndIncrement;
+    private static final AtomicInteger poppedCnt = new AtomicInteger();
     private static final Supplier<? extends AutoCloseable> contextHook = () ->
-            (AutoCloseable) () ->  {
-                popped.set(true);
-            };
+            (AutoCloseable) poppedCnt::getAndIncrement;
 
     @RegisterExtension
     static final SelfSignedCertificateExtension selfSignedCertificate = new SelfSignedCertificateExtension();
@@ -731,34 +726,34 @@ class ServerBuilderTest {
 
     @Test
     void contextHook() {
-        assertThat(popped).isFalse();
+        assertThat(poppedCnt.get()).isEqualTo(0);
 
         final WebClient client =  WebClient.builder(server1.httpUri()).build();
         final AggregatedHttpResponse response =  client.get("/hook").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook");
-        assertThat(popped).isTrue();
+        assertThat(poppedCnt.get()).isEqualTo(1);
     }
 
     @Test
     void contextHook_route() {
-        assertThat(poppedRouter).isFalse();
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
 
         final WebClient client =  WebClient.builder(server.httpUri()).build();
         final AggregatedHttpResponse response =  client.get("/hook_route").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook_route");
-        assertThat(poppedRouter).isTrue();
+        assertThat(poppedRouterCnt.get()).isEqualTo(1);
     }
 
     @Test
     void contextHook_otherRoute() {
-        assertThat(poppedRouter).isFalse();
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
 
         final WebClient client =  WebClient.builder(server.httpUri()).build();
         final AggregatedHttpResponse response =  client.get("/").aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(poppedRouter).isFalse();
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
     }
 }

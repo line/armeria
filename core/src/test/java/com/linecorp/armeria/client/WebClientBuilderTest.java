@@ -18,7 +18,7 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
@@ -200,16 +200,14 @@ class WebClientBuilderTest {
 
     @Test
     void contextHook() {
-        final AtomicBoolean popped = new AtomicBoolean();
+        final AtomicInteger popped = new AtomicInteger();
         final Supplier<? extends AutoCloseable> contextHook = () ->
-                (AutoCloseable) () ->  {
-                    popped.set(true);
-                };
+                (AutoCloseable) popped::getAndIncrement;
 
         final WebClient client =  WebClient.builder(server.httpUri()).contextHook(contextHook).build();
         final AggregatedHttpResponse response =  client.get("/head").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("Hello Armeria");
-        assertThat(popped).isTrue();
+        assertThat(popped.get()).isEqualTo(3);
     }
 }
