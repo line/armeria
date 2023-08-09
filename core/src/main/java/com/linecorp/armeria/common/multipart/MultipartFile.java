@@ -94,8 +94,7 @@ public interface MultipartFile {
         if (headers.contentType() == null) {
             final String guessedContentType = URLConnection.guessContentTypeFromName(filename);
             final MediaType contentType = guessedContentType != null ?
-                                          MediaType.parse(guessedContentType) :
-                                          MediaType.OCTET_STREAM;
+                                          MediaType.parse(guessedContentType) : MediaType.OCTET_STREAM;
             newHeaders = headers.withMutations(builder -> builder.contentType(contentType));
         } else {
             newHeaders = headers;
