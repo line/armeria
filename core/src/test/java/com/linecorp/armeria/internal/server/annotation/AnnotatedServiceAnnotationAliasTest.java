@@ -22,8 +22,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.ParameterizedType;
 import java.util.function.Function;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -66,11 +66,11 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.AttributeKey;
 
-public class AnnotatedServiceAnnotationAliasTest {
+class AnnotatedServiceAnnotationAliasTest {
 
     @RequestConverter(MyRequestConverter.class)
     @ResponseConverter(MyResponseConverter.class)
@@ -206,8 +206,8 @@ public class AnnotatedServiceAnnotationAliasTest {
         ctx.setAttr(decoratedFlag, (v == null ? "" : v) + value);
     }
 
-    @ClassRule
-    public static ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService(new Object() {
@@ -233,9 +233,9 @@ public class AnnotatedServiceAnnotationAliasTest {
     };
 
     @Test
-    public void metaAnnotations() {
+    void metaAnnotations() {
         final AggregatedHttpResponse msg =
-                WebClient.of(rule.httpUri())
+                WebClient.of(server.httpUri())
                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                     HttpHeaderNames.CONTENT_TYPE,
                                                     MediaType.PLAIN_TEXT_UTF_8,
@@ -253,9 +253,9 @@ public class AnnotatedServiceAnnotationAliasTest {
     }
 
     @Test
-    public void metaOfMetaAnnotation_ProducesJson() {
+    void metaOfMetaAnnotation_ProducesJson() {
         final AggregatedHttpResponse msg =
-                WebClient.of(rule.httpUri())
+                WebClient.of(server.httpUri())
                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                     HttpHeaderNames.CONTENT_TYPE,
                                                     MediaType.PLAIN_TEXT_UTF_8,
@@ -274,9 +274,9 @@ public class AnnotatedServiceAnnotationAliasTest {
     }
 
     @Test
-    public void exception1() {
+    void exception1() {
         final AggregatedHttpResponse msg =
-                WebClient.of(rule.httpUri()).get("/exception1").aggregate().join();
+                WebClient.of(server.httpUri()).get("/exception1").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.
@@ -287,9 +287,9 @@ public class AnnotatedServiceAnnotationAliasTest {
     }
 
     @Test
-    public void exception2() {
+    void exception2() {
         final AggregatedHttpResponse msg =
-                WebClient.of(rule.httpUri()).get("/exception2").aggregate().join();
+                WebClient.of(server.httpUri()).get("/exception2").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.
