@@ -49,7 +49,7 @@ public class WebClientIntegrationBenchmark {
                       .service("/get", (ctx, req) -> {
                           return HttpResponse.of("Hello! Armeria");
                       }).service("/post", (ctx, req) -> {
-                          return HttpResponse.from(req.aggregate().thenApply(agg -> {
+                          return HttpResponse.of(req.aggregate().thenApply(agg -> {
                               return HttpResponse.of(agg.contentUtf8());
                           }));
                       }).build();

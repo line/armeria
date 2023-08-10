@@ -139,9 +139,9 @@ final class WebOperationService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
         if (operation.isBlocking()) {
-            return HttpResponse.from(req.aggregate().thenApplyAsync(invoke(ctx), ctx.blockingTaskExecutor()));
+            return HttpResponse.of(req.aggregate().thenApplyAsync(invoke(ctx), ctx.blockingTaskExecutor()));
         } else {
-            return HttpResponse.from(req.aggregate().thenApply(invoke(ctx)));
+            return HttpResponse.of(req.aggregate().thenApply(invoke(ctx)));
         }
     }
 

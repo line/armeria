@@ -177,6 +177,20 @@ class RouteTest {
     }
 
     @Test
+    void notAllowSemicolon() {
+        assertThatThrownBy(() -> Route.builder().path("/foo;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo/{bar};")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/bar/:baz;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("exact:/:foo/bar;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("prefix:/bar/baz;")).isInstanceOf(
+                IllegalArgumentException.class);
+    }
+
+    @Test
     void testHeader() {
         final Route route = Route.builder()
                                  .path(PATH)

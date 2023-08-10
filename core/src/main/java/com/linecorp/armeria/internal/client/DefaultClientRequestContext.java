@@ -665,11 +665,8 @@ public final class DefaultClientRequestContext
     @Nullable
     @Override
     public SSLSession sslSession() {
-        if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.partial().sslSession();
-        } else {
-            return null;
-        }
+        final RequestLog requestLog = log.getIfAvailable(RequestLogProperty.SESSION);
+        return requestLog != null ? requestLog.sslSession() : null;
     }
 
     @Override

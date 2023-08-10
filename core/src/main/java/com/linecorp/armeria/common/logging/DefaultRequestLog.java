@@ -212,6 +212,18 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return hasInterestedFlags(flags, interestedFlags);
     }
 
+    @Nullable
+    @Override
+    public RequestLog getIfAvailable(RequestLogProperty... properties) {
+        return isAvailable(properties) ? this : null;
+    }
+
+    @Nullable
+    @Override
+    public RequestLog getIfAvailable(Iterable<RequestLogProperty> properties) {
+        return isAvailable(properties) ? this : null;
+    }
+
     private static boolean hasInterestedFlags(int flags, RequestLogProperty property) {
         return hasInterestedFlags(flags, property.flag());
     }
@@ -1531,6 +1543,22 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             requireNonNull(properties, "properties");
             checkArgument(!Iterables.isEmpty(properties), "properties is empty.");
             return true;
+        }
+
+        @Nullable
+        @Override
+        public RequestLog getIfAvailable(RequestLogProperty... properties) {
+            requireNonNull(properties, "properties");
+            checkArgument(properties.length != 0, "properties is empty.");
+            return this;
+        }
+
+        @Nullable
+        @Override
+        public RequestLog getIfAvailable(Iterable<RequestLogProperty> properties) {
+            requireNonNull(properties, "properties");
+            checkArgument(!Iterables.isEmpty(properties), "properties is empty.");
+            return this;
         }
 
         @Override
