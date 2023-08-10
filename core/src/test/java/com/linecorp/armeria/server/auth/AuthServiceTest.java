@@ -450,6 +450,7 @@ class AuthServiceTest {
 
         assertThat(response.aggregate().join().status()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(causeRef.get()).isInstanceOf(AnticipatedException.class);
+        assertThat(MoreMeters.measureAll(meterRegistry)).containsEntry("armeria.server.auth#count", 1.0);
     }
 
     private static HttpUriRequestBase getRequest(String path, String authorization) {
