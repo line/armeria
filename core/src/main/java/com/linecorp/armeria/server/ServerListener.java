@@ -16,11 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import java.time.Duration;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
 /**
  * Listens to life cycle events of a {@link Server}.
  *
@@ -34,49 +29,6 @@ public interface ServerListener {
      */
     static ServerListenerBuilder builder() {
         return new ServerListenerBuilder();
-    }
-
-    /**
-     * Creates a new {@link ServerListener} instance with the provided {@link ExecutorService}. The returned
-     * {@link ServerListener} will gracefully shut down the given {@link ExecutorService} when the
-     * {@link Server} is stopping. It will wait indefinitely for the {@link ExecutorService} to terminate
-     * during shutdown.
-     */
-    static ServerListener withExecutor(ExecutorService executorService) {
-        return builder().stoppingWithExecutor(executorService).build();
-    }
-
-    /**
-     * Creates a new {@link ServerListener} instance with the provided {@link ExecutorService}. The returned
-     * {@link ServerListener} will gracefully shut down the given {@link ExecutorService} when the
-     * {@link Server} is stopping. It allows a maximum duration of {@code terminationTimeout} for the
-     * {@link ExecutorService} to terminate gracefully before it is forcefully terminated.
-     */
-    static ServerListener withExecutor(ExecutorService executorService, Duration terminationTimeout) {
-        return builder().stoppingWithExecutor(executorService, terminationTimeout).build();
-    }
-
-    /**
-     * Creates a new {@link ServerListener} instance with the provided {@link ExecutorService}. The returned
-     * {@link ServerListener} will gracefully shut down the given {@link ExecutorService} when the
-     * {@link Server} is stopping. It allows a maximum duration of {@code terminationTimeout} in the specified
-     * {@code timeUnit} for the {@link ExecutorService} to terminate gracefully before it is forcefully
-     * terminated.
-     */
-    static ServerListener withExecutor(ExecutorService executorService, long terminationTimeout,
-                                       TimeUnit timeUnit) {
-        return builder().stoppingWithExecutor(executorService, terminationTimeout, timeUnit).build();
-    }
-
-    /**
-     * Creates a new {@link ServerListener} instance with the provided {@link ExecutorService}. The returned
-     * {@link ServerListener} will gracefully shut down the given {@link ExecutorService} when the
-     * {@link Server} is stopping. It uses the specified {@code shutdownStrategy} to control the shutdown
-     * behavior.
-     */
-    static ServerListener withExecutor(ExecutorService executorService,
-                                       Consumer<ExecutorService> shutdownStrategy) {
-        return builder().stoppingWithExecutor(executorService, shutdownStrategy).build();
     }
 
     /**

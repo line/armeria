@@ -269,7 +269,7 @@ public final class ServerListenerBuilder {
      * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
      * is stopping. It will wait indefinitely for the {@link ExecutorService} to terminate during shutdown.
      */
-    public ServerListenerBuilder stoppingWithExecutor(ExecutorService executorService) {
+    public ServerListenerBuilder shutdownWhenStopping(ExecutorService executorService) {
         requireNonNull(executorService, "executorService");
         serverStoppingCallbacks.add(s -> ShutdownSupport.of(executorService).shutdown());
         return this;
@@ -280,7 +280,7 @@ public final class ServerListenerBuilder {
      * is stopping. It allows a maximum duration of {@code terminationTimeout} for the {@link ExecutorService}
      * to terminate gracefully before it is forcefully terminated.
      */
-    public ServerListenerBuilder stoppingWithExecutor(ExecutorService executorService,
+    public ServerListenerBuilder shutdownWhenStopping(ExecutorService executorService,
                                                       Duration terminationTimeout) {
         requireNonNull(executorService, "executorService");
         requireNonNull(terminationTimeout, "terminationTimeout");
@@ -290,7 +290,7 @@ public final class ServerListenerBuilder {
         } catch (ArithmeticException ignore) {
             nanoSeconds = terminationTimeout.isNegative() ? Long.MIN_VALUE : Long.MAX_VALUE;
         }
-        stoppingWithExecutor(executorService, nanoSeconds, TimeUnit.NANOSECONDS);
+        shutdownWhenStopping(executorService, nanoSeconds, TimeUnit.NANOSECONDS);
         return this;
     }
 
@@ -300,7 +300,7 @@ public final class ServerListenerBuilder {
      * {@code timeUnit} for the {@link ExecutorService} to terminate gracefully before it is forcefully
      * terminated.
      */
-    public ServerListenerBuilder stoppingWithExecutor(ExecutorService executorService, long terminationTimeout,
+    public ServerListenerBuilder shutdownWhenStopping(ExecutorService executorService, long terminationTimeout,
                                                       TimeUnit timeUnit) {
         requireNonNull(executorService, "executorService");
         requireNonNull(timeUnit, "timeUnit");
@@ -313,7 +313,7 @@ public final class ServerListenerBuilder {
      * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
      * is stopping. It uses the specified {@code shutdownStrategy} to control the shutdown behavior.
      */
-    public ServerListenerBuilder stoppingWithExecutor(ExecutorService executorService,
+    public ServerListenerBuilder shutdownWhenStopping(ExecutorService executorService,
                                                       Consumer<ExecutorService> shutdownStrategy) {
         requireNonNull(executorService, "executorService");
         requireNonNull(shutdownStrategy, "shutdownStrategy");
