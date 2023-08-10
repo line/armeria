@@ -21,27 +21,20 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Function;
 
 import org.apache.kafka.clients.producer.Producer;
-import org.slf4j.Logger;
 
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.logging.AbstractLogWriterBuilder;
 import com.linecorp.armeria.common.logging.LogFormatter;
-import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
-import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 
 /**
  * Builds a new Kafka based {@link LogWriter}.
  */
 @UnstableApi
 @SuppressWarnings("unchecked")
-public class KafkaLogWriterBuilder<K> extends AbstractLogWriterBuilder {
+public class KafkaLogWriterBuilder<K> {
 
     KafkaLogWriterBuilder() {}
 
@@ -56,70 +49,16 @@ public class KafkaLogWriterBuilder<K> extends AbstractLogWriterBuilder {
             KafkaRequestLogOutputPredicate.always();
     private KafkaResponseLogOutputPredicate responseLogOutputPredicate =
             KafkaResponseLogOutputPredicate.always();
-
-    @Override
-    public KafkaLogWriterBuilder<K> logger(Logger logger) {
-        return (KafkaLogWriterBuilder<K>) super.logger(logger);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> logger(String loggerName) {
-        return (KafkaLogWriterBuilder<K>) super.logger(loggerName);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> requestLogLevel(LogLevel requestLogLevel) {
-        return (KafkaLogWriterBuilder<K>) super.requestLogLevel(requestLogLevel);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> requestLogLevel(Class<? extends Throwable> clazz,
-                                                    LogLevel requestLogLevel) {
-        return (KafkaLogWriterBuilder<K>) super.requestLogLevel(clazz, requestLogLevel);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
-        return (KafkaLogWriterBuilder<K>) super.requestLogLevelMapper(requestLogLevelMapper);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> responseLogLevel(HttpStatus status, LogLevel logLevel) {
-        return (KafkaLogWriterBuilder<K>) super.responseLogLevel(status, logLevel);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
-        return (KafkaLogWriterBuilder<K>) super.responseLogLevel(statusClass, logLevel);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
-        return (KafkaLogWriterBuilder<K>) super.responseLogLevel(clazz, logLevel);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
-        return (KafkaLogWriterBuilder<K>) super.successfulResponseLogLevel(successfulResponseLogLevel);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> failureResponseLogLevel(LogLevel failedResponseLogLevel) {
-        return (KafkaLogWriterBuilder<K>) super.failureResponseLogLevel(failedResponseLogLevel);
-    }
-
-    @Override
-    public KafkaLogWriterBuilder<K> responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
-        return (KafkaLogWriterBuilder<K>) super.responseLogLevelMapper(responseLogLevelMapper);
-    }
+    @Nullable
+    private LogFormatter logFormatter;
 
     /**
      * Sets the {@link LogFormatter} which converts a {@link RequestOnlyLog} or {@link RequestLog}
      * into a log message. By default {@link LogFormatter#ofJson()} will be used.
      */
-    @Override
     public KafkaLogWriterBuilder<K> logFormatter(LogFormatter logFormatter) {
-        return (KafkaLogWriterBuilder<K>) super.logFormatter(logFormatter);
+        this.logFormatter = requireNonNull(logFormatter, "logFormatter");
+        return this;
     }
 
     /**
@@ -202,7 +141,6 @@ public class KafkaLogWriterBuilder<K> extends AbstractLogWriterBuilder {
     public LogWriter build() {
         requireNonNull(producer, "producer");
         requireNonNull(topic, "topic");
-        LogFormatter logFormatter = logFormatter();
         if (logFormatter == null) {
             logFormatter = LogFormatter.ofJson();
         }
