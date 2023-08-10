@@ -568,12 +568,8 @@ public final class DefaultClientRequestContext
 
                 if (reqTarget.form() != RequestTargetForm.ABSOLUTE) {
                     // Not an absolute URI.
-                    final DefaultClientRequestContext ctx =
-                            new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, null,
-                                                            sessionProtocol(), newHeaders.method(), reqTarget);
-                    // TODO(minwoox): Consider adding serizalizationFormat to ClientRequestContext constructor.
-                    ctx.logBuilder().serializationFormat(log().partial().serializationFormat());
-                    return ctx;
+                    return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, null,
+                                                           sessionProtocol(), newHeaders.method(), reqTarget);
                 }
 
                 // Recalculate protocol and endpoint from the absolute URI.
@@ -587,16 +583,12 @@ public final class DefaultClientRequestContext
                 final HttpRequest newReq = req.withHeaders(req.headers()
                                                               .toBuilder()
                                                               .path(reqTarget.pathAndQuery()));
-                final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                        this, id, newReq, rpcReq, newEndpoint, null, protocol, newHeaders.method(), reqTarget);
-                ctx.logBuilder().serializationFormat(log().partial().serializationFormat());
-                return ctx;
+                return new DefaultClientRequestContext(this, id, newReq, rpcReq, newEndpoint, null,
+                                                       protocol, newHeaders.method(), reqTarget);
             }
         }
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                this, id, req, rpcReq, endpoint, endpointGroup(), sessionProtocol(), method(), requestTarget());
-        ctx.logBuilder().serializationFormat(log().partial().serializationFormat());
-        return ctx;
+        return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
+                                               sessionProtocol(), method(), requestTarget());
     }
 
     @Override

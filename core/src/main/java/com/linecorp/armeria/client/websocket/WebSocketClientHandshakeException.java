@@ -19,10 +19,12 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.InvalidResponseException;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An {@link InvalidResponseException} raised when a client received a response with invalid headers.
  */
+@UnstableApi
 public final class WebSocketClientHandshakeException extends InvalidResponseException {
 
     private static final long serialVersionUID = -8521952766254225005L;

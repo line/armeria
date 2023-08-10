@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
@@ -67,6 +68,7 @@ import com.linecorp.armeria.common.util.Unwrappable;
  *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455">The WebSocket Protocol</a>
  */
+@UnstableApi
 public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
 
     /**

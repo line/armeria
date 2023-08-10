@@ -103,7 +103,7 @@ public interface HttpSession {
     SerializationFormat serializationFormat();
 
     /**
-     * Returns the explicit {@link SessionProtocol} of this {@link HttpSession} uses.
+     * Returns the explicit {@link SessionProtocol} of this {@link HttpSession}.
      * This is one of {@link SessionProtocol#H1}, {@link SessionProtocol#H1C}, {@link SessionProtocol#H2} and
      * {@link SessionProtocol#H2C}.
      */

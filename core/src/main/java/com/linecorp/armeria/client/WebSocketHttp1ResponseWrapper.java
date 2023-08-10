@@ -46,7 +46,8 @@ final class WebSocketHttp1ResponseWrapper extends AbstractHttpResponseWrapper {
             return;
         }
         // Do not close the response right away to give a chance to WebSocketFrameDecoder to close the
-        // response normally if it receives a close frame.
+        // response normally if it receives a close frame instead of completing
+        // exceptionally due to a ClosedSessionException.
         eventLoop().schedule(() -> {
             close0(cause, false);
         }, 3, TimeUnit.SECONDS);

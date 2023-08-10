@@ -93,8 +93,7 @@ class WebSocketClientTest {
         assertThat(headers.get(HttpHeaderNames.ORIGIN)).isEqualTo(
                 protocol.isHttps() ? server.httpsUri().toString() : server.httpUri().toString());
 
-        final WebSocketWriter outbound = WebSocket.streaming();
-        assertThat(webSocketSession.setOutbound(outbound)).isTrue();
+        final WebSocketWriter outbound = webSocketSession.outbound();
         outbound.write(WebSocketFrame.ofText("hello"));
 
         final WebSocketInboundHandler inboundHandler = new WebSocketInboundHandler(

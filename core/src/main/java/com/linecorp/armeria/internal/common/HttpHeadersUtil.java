@@ -88,14 +88,9 @@ public final class HttpHeadersUtil {
                                                      HttpHeaders defaultHeaders,
                                                      HttpHeaders additionalHeaders,
                                                      HttpHeaders internalHeaders) {
-        if (defaultHeaders.isEmpty() && additionalHeaders.isEmpty()) {
-            if (internalHeaders.isEmpty()) {
-                return headers;
-            }
-            if (internalHeaders.size() == 1 && internalHeaders.contains(HttpHeaderNames.USER_AGENT) &&
-                headers.contains(HttpHeaderNames.USER_AGENT)) {
-                return headers;
-            }
+        if (defaultHeaders.isEmpty() && additionalHeaders.isEmpty() && internalHeaders.isEmpty() &&
+            headers.contains(HttpHeaderNames.USER_AGENT)) {
+            return headers;
         }
         if (defaultHeaders.isEmpty() && additionalHeaders.isEmpty()) {
             boolean containInternalHeaders = true;

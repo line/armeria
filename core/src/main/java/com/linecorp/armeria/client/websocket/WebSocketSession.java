@@ -32,11 +32,12 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 
 /**
  * A WebSocket session that is created after {@link WebSocketClient#connect(String)} succeeds.
- * You can start sending {@link WebSocketFrame}s via {@link #setOutbound(WebSocket)}. You can also subscribe to
+ * You can start sending {@link WebSocketFrame}s via {@link #setOutbound(Publisher)}. You can also subscribe to
  * {@link #inbound()} to receive {@link WebSocketFrame}s from the server.
  */
 public final class WebSocketSession {
@@ -83,17 +84,33 @@ public final class WebSocketSession {
     }
 
     /**
-     * Returns the {@link WebSocket} which is used to receive WebSocket frames from the server.
+     * Returns the {@link WebSocket} that is used to receive WebSocket frames from the server.
      */
     public WebSocket inbound() {
         return inbound;
     }
 
     /**
-     * Sets the {@link WebSocket} which is used to send WebSocket frames to the server.
+     * Returns the {@link WebSocketWriter} that is used to send WebSocket frames to the server.
+     *
+     * @throws IllegalStateException if this method or {@link #setOutbound(Publisher)} has been called already.
      */
-    public boolean setOutbound(Publisher<? extends WebSocketFrame> outbound) {
+    public WebSocketWriter outbound() {
+        final WebSocketWriter writer = WebSocket.streaming();
+        setOutbound(writer);
+        return writer;
+    }
+
+    /**
+     * Sets the {@link WebSocket} that is used to send WebSocket frames to the server.
+     *
+     * @throws IllegalStateException if this method or {@link #outbound()} has been called already.
+     */
+    public void setOutbound(Publisher<? extends WebSocketFrame> outbound) {
         requireNonNull(outbound, "outbound");
+        if (outboundFuture.isDone()) {
+            throw new IllegalStateException("outbound() or setOutbound() has been already called.");
+        }
         final StreamMessage<? extends WebSocketFrame> streamMessage;
         if (outbound instanceof StreamMessage) {
             streamMessage = (StreamMessage<? extends WebSocketFrame>) outbound;
@@ -101,8 +118,10 @@ public final class WebSocketSession {
             streamMessage = new PublisherBasedStreamMessage<>(outbound);
         }
 
-        return outboundFuture.complete(streamMessage.map(
-                webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame))));
+        if (!outboundFuture.complete(
+                streamMessage.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame))))) {
+            throw new IllegalStateException("outbound() or setOutbound() has been already called.");
+        }
     }
 
     @Override
