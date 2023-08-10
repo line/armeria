@@ -59,7 +59,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     public static final SerializationFormat NONE;
 
     /**
-     * Serialization format for WebSocket client.
+     * Serialization format for WebSocket.
      */
     @UnstableApi
     public static final SerializationFormat WS;

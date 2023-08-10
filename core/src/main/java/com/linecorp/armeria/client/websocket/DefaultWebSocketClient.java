@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -54,7 +55,6 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.util.internal.PlatformDependent;
 
 final class DefaultWebSocketClient implements WebSocketClient {
 
@@ -213,7 +213,7 @@ final class DefaultWebSocketClient implements WebSocketClient {
     @VisibleForTesting
     static String generateSecWebSocketKey() {
         final byte[] bytes = new byte[16];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         return Base64.getEncoder().encodeToString(bytes);
     }
 

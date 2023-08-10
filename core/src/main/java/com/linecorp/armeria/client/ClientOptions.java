@@ -320,6 +320,7 @@ public final class ClientOptions
      * Returns whether to add an {@link HttpHeaderNames#ORIGIN} header automatically when sending
      * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
      */
+    @UnstableApi
     public boolean autoFillOriginHeader() {
         return get(AUTO_FILL_ORIGIN_HEADER);
     }
