@@ -16,11 +16,10 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,18 +75,23 @@ public final class TemporaryFolder {
             return;
         }
 
-        try (Stream<Path> walk = Files.walk(root)) {
-            walk.sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(file -> {
-                    try {
-                        file.delete();
-                    } catch (Exception e) {
-                        logger.warn("Unexpected exception while deleting file: {}", file.getName(), e);
-                    }
-                });
-        }
-
+        deleteAll(root.toFile());
         root = null;
+    }
+
+    private static void deleteAll(File file) throws IOException {
+        // Use File#listFiles() instead of Files#list() to ignore files deleted by other threads during
+        // iteration. See https://github.com/line/armeria/issues/4959
+        if (file.isDirectory()) {
+            final File[] files = file.listFiles();
+            if (files == null) {
+                return;
+            }
+            for (File child : files) {
+                deleteAll(child);
+            }
+        } else {
+            Files.deleteIfExists(file.toPath());
+        }
     }
 }
