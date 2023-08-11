@@ -85,8 +85,8 @@ public final class TemporaryFolder {
             for (File child : files) {
                 deleteAll(child);
             }
-        } else {
-            Files.deleteIfExists(file.toPath());
         }
+
+        Files.deleteIfExists(file.toPath());
     }
 }
