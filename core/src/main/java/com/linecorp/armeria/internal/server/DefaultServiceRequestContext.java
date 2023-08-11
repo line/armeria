@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.net.ssl.SSLSession;
@@ -144,12 +145,13 @@ public final class DefaultServiceRequestContext
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
-            long requestStartTimeNanos, long requestStartTimeMicros) {
+            long requestStartTimeNanos, long requestStartTimeMicros,
+            Supplier<? extends AutoCloseable> contextHook) {
 
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, exchangeType,
              req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
              null /* requestCancellationScheduler */, requestStartTimeNanos, requestStartTimeMicros,
-             HttpHeaders.of(), HttpHeaders.of());
+             HttpHeaders.of(), HttpHeaders.of(), contextHook);
     }
 
     public DefaultServiceRequestContext(
@@ -159,7 +161,8 @@ public final class DefaultServiceRequestContext
             InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
-            HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
+            HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers,
+            Supplier<? extends AutoCloseable> contextHook) {
 
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(),
@@ -195,6 +198,9 @@ public final class DefaultServiceRequestContext
         maxRequestLength = cfg.maxRequestLength();
         this.additionalResponseHeaders = additionalResponseHeaders;
         this.additionalResponseTrailers = additionalResponseTrailers;
+
+        hook(contextHook);
+        hook(this.cfg.contextHook());
     }
 
     @Override

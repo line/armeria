@@ -33,6 +33,8 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -436,7 +438,11 @@ public final class ServiceConfig {
         return serviceErrorHandler;
     }
 
-    Supplier<? extends AutoCloseable> contextHook() {
+    /**
+     * Returns the {@link Supplier}  which provides an {@link AutoCloseable} and will be called whenever this
+     * {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     */
+    public Supplier<? extends AutoCloseable> contextHook() {
         return contextHook;
     }
 

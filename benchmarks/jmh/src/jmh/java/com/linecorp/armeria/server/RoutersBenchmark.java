@@ -51,6 +51,7 @@ public class RoutersBenchmark {
             RequestHeaders.of(HttpMethod.POST, "/grpc.package.Service/Method1");
 
     private static final RequestTarget METHOD1_REQ_TARGET = RequestTarget.forServer(METHOD1_HEADERS.path());
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     static {
         final String defaultLogName = "log";
@@ -60,7 +61,7 @@ public class RoutersBenchmark {
         final Route route2 = Route.builder().exact("/grpc.package.Service/Method2").build();
         final Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
         final ServiceErrorHandler serviceErrorHandler = ServerErrorHandler.ofDefault().asServiceErrorHandler();
-        final Supplier<? extends AutoCloseable> contextHook = () -> () -> {};
+        final Supplier<? extends AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
         SERVICES = ImmutableList.of(
                 new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,

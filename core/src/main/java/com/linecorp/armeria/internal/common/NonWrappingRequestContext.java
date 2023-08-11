@@ -55,6 +55,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     private static final AtomicReferenceFieldUpdater<NonWrappingRequestContext, Supplier>
             contextHookUpdater = AtomicReferenceFieldUpdater.newUpdater(
             NonWrappingRequestContext.class, Supplier.class, "contextHook");
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     private final MeterRegistry meterRegistry;
     private final ConcurrentAttributes attrs;
@@ -271,6 +272,11 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public void hook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
+
+        if (contextHook == NOOP_CONTEXT_HOOK) {
+            return;
+        }
+
         for (;;) {
             final Supplier<? extends AutoCloseable> oldContextHook = this.contextHook;
             final Supplier<? extends AutoCloseable> newContextHook;

@@ -324,8 +324,8 @@ public interface ServerConfig {
     long unhandledExceptionsReportIntervalMillis();
 
     /**
-     * Returns the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
-     * from the {@link RequestContextStorage}.
+     * Returns the {@link Supplier}  which provides an {@link AutoCloseable} and will be called whenever this
+     * {@link RequestContext} is popped from the {@link RequestContextStorage}.
      */
     Supplier<? extends AutoCloseable> contextHook();
 }

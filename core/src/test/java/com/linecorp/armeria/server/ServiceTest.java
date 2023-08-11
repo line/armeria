@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.function.Supplier;
+
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +36,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class ServiceTest {
+
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     /**
      * Tests if a user can write a decorator with working as() and serviceAdded() using lambda expressions only.
@@ -66,7 +70,7 @@ public class ServiceTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   ctx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

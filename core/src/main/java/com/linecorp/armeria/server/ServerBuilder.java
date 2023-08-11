@@ -171,6 +171,7 @@ public final class ServerBuilder implements TlsSetters {
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
     private static final Consumer<ChannelPipeline> DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER =
             v -> { /* no-op */ };
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
@@ -223,7 +224,7 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    private Supplier<? extends AutoCloseable> contextHook = () -> (AutoCloseable) () -> {};
+    private Supplier<? extends AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
     @Nullable
     private DependencyInjector dependencyInjector;
     private Function<? super String, String> absoluteUriTransformer = Function.identity();

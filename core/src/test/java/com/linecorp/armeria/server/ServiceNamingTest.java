@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.function.Supplier;
+
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 
@@ -35,6 +37,9 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 class ServiceNamingTest {
+    
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
+    
     @Test
     void fullTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
@@ -45,7 +50,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(HealthCheckService.class.getName());
@@ -61,7 +66,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName)
@@ -78,7 +83,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName() + "$TrailingDollarSign");
@@ -94,7 +99,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName() + "$TrailingDollarSign");
@@ -110,7 +115,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName());
@@ -126,7 +131,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(HealthCheckService.class.getSimpleName());
@@ -142,7 +147,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName)
@@ -159,7 +164,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
@@ -175,7 +180,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
@@ -191,7 +196,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName());
@@ -207,7 +212,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName).isEqualTo("c.l.a.s.h." + HealthCheckService.class.getSimpleName());
@@ -223,7 +228,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName).isEqualTo("c.l.a.s." + ServiceNamingTest.class.getSimpleName() + '$' +
@@ -240,7 +245,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
@@ -257,7 +262,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
@@ -274,7 +279,7 @@ class ServiceNamingTest {
                                   SuccessFunction.always(),
                                   0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
                                   routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), () -> () -> {});
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)

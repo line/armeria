@@ -30,6 +30,7 @@ import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -91,6 +92,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
     private static final InetSocketAddress UNKNOWN_ADDR;
+
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     static {
         InetAddress unknownAddr;
@@ -371,10 +374,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
-                req.requestStartTimeNanos(), req.requestStartTimeMicros());
-
-        reqCtx.hook(serviceCfg.contextHook());
-        reqCtx.hook(config.contextHook());
+                req.requestStartTimeNanos(), req.requestStartTimeMicros(), config.contextHook());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
@@ -625,7 +625,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 channel, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                System.nanoTime(), SystemInfo.currentTimeMicros(), NOOP_CONTEXT_HOOK);
     }
 
     private static RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {

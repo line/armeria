@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.net.ssl.SSLSession;
 
@@ -85,6 +86,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      * A cancellation scheduler that has been finished.
      */
     private static final CancellationScheduler noopRequestCancellationScheduler = new CancellationScheduler(0);
+
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     static {
         noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask,
@@ -278,7 +281,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                HttpHeaders.of(), HttpHeaders.of());
+                HttpHeaders.of(), HttpHeaders.of(), NOOP_CONTEXT_HOOK);
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {

@@ -46,6 +46,8 @@ import com.linecorp.armeria.server.websocket.WebSocketService;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
 
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
+
     private final Route route;
     private final HttpService service;
 
@@ -359,7 +361,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
                 requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler,
-                contextHook != null ? contextHook : () -> (AutoCloseable) () -> {});
+                contextHook != null ? contextHook : NOOP_CONTEXT_HOOK);
     }
 
     @Override

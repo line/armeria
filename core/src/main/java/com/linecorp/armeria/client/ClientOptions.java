@@ -141,9 +141,10 @@ public final class ClientOptions
     public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
+    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
     @UnstableApi
     public static final ClientOption<Supplier<? extends AutoCloseable>> CONTEXT_HOOK =
-            ClientOption.define("CONTEXT_HOOK", () -> () -> {});
+            ClientOption.define("CONTEXT_HOOK", NOOP_CONTEXT_HOOK);
 
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.HTTP2_SETTINGS,
@@ -366,8 +367,8 @@ public final class ClientOptions
     }
 
     /**
-     * Returns the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
-     * from the {@link RequestContextStorage}.
+     * Returns the {@link Supplier}  which provides an {@link AutoCloseable} and will be called whenever this
+     * {@link RequestContext} is popped from the {@link RequestContextStorage}.
      */
     @UnstableApi
     public Supplier<? extends AutoCloseable> contextHook() {
