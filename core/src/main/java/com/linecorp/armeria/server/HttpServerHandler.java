@@ -349,8 +349,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final DefaultServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
                     channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx);
 
-            reqCtx.hook(config.contextHook());
-
             // Handle 'OPTIONS * HTTP/1.1'.
             if (routingStatus == RoutingStatus.OPTIONS) {
                 handleOptions(ctx, reqCtx);

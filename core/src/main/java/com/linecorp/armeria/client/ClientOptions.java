@@ -141,6 +141,7 @@ public final class ClientOptions
     public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
+    @UnstableApi
     public static final ClientOption<Supplier<? extends AutoCloseable>> CONTEXT_HOOK =
             ClientOption.define("CONTEXT_HOOK", () -> () -> {});
 
@@ -368,6 +369,7 @@ public final class ClientOptions
      * Returns the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
      * from the {@link RequestContextStorage}.
      */
+    @UnstableApi
     public Supplier<? extends AutoCloseable> contextHook() {
         return get(CONTEXT_HOOK);
     }

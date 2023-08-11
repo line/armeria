@@ -263,10 +263,10 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
-     * from the {@link RequestContextStorage}.
+     * Sets the {@link Supplier}  which provides an {@link AutoCloseable} and will be called whenever this
+     * {@link RequestContext} is popped from the {@link RequestContextStorage}.
      *
-     * @param contextHook the {@link Supplier} that provides the {@link AutoCloseable}
+     * @param contextHook the {@link Supplier} that provides an {@link AutoCloseable}
      */
     public AbstractClientOptionsBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
