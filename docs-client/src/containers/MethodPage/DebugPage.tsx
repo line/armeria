@@ -49,7 +49,7 @@ import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
 import {
-  extractUrlPath
+  extractUrlPath,
   Method,
   Route,
   RoutePathType,
