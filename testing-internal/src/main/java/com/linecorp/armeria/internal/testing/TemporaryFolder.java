@@ -87,6 +87,7 @@ public final class TemporaryFolder {
             }
         }
 
-        Files.deleteIfExists(file.toPath());
+        //noinspection ResultOfMethodCallIgnored
+        file.delete();
     }
 }
