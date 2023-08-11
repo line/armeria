@@ -39,7 +39,6 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
-import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Produces;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Mono;
+import testing.protobuf.Messages.SimpleResponse;
 
 class ProtobufResponseConverterFunctionTest {
 

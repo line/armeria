@@ -64,7 +64,7 @@ class GraphqlDocServiceTest {
                 sb.http(8080);
             }
             final File graphqlSchemaFile =
-                    new File(getClass().getResource("/test.graphqls").toURI());
+                    new File(getClass().getResource("/testing/graphql/test.graphqls").toURI());
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)

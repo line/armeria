@@ -139,7 +139,7 @@ class MultipartIntegrationTest {
 
             sb.service("/simple", (ctx, req) -> {
                 final Multipart multipart = Multipart.from(req);
-                return HttpResponse.from(multipart.aggregate().thenApply(agg -> {
+                return HttpResponse.of(multipart.aggregate().thenApply(agg -> {
                     return HttpResponse.of(200);
                 }));
             });
@@ -194,7 +194,7 @@ class MultipartIntegrationTest {
             });
 
             sb.service("/echo", (ctx, req) -> {
-                return HttpResponse.from(
+                return HttpResponse.of(
                         req.aggregate()
                            .thenApply(r -> HttpResponse.of(HttpStatus.OK,
                                                            requireNonNull(r.contentType(), "contentType"),

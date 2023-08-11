@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.jetty;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp1Headers;
+import static com.linecorp.armeria.internal.common.util.MappedPathUtil.mappedPath;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -54,6 +55,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
@@ -256,6 +258,12 @@ public final class JettyService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+        final String mappedPath = mappedPath(ctx);
+        if (mappedPath == null) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                   "Invalid matrix variable: " +
+                                   ctx.routingContext().requestTarget().maybePathWithMatrixVariables());
+        }
         final ArmeriaConnector connector = this.connector;
         assert connector != null;
 

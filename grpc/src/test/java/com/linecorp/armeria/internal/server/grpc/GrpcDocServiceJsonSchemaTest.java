@@ -33,9 +33,6 @@ import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.grpc.testing.Messages.ExtendedTestMessage;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
@@ -45,11 +42,14 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.ExtendedTestMessage;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcDocServiceJsonSchemaTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
-            com.linecorp.armeria.grpc.testing.Test.getDescriptor()
+            testing.grpc.Test.getDescriptor()
                                                   .findServiceByName("TestService");
 
     private static class TestService extends TestServiceImplBase {

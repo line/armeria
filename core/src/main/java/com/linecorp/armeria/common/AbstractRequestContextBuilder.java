@@ -142,13 +142,20 @@ public abstract class AbstractRequestContextBuilder {
         sessionProtocol = getSessionProtocol(uri);
 
         if (server) {
-            reqTarget = DefaultRequestTarget.createWithoutValidation(
-                    RequestTargetForm.ORIGIN, null, null,
-                    uri.getRawPath(), uri.getRawQuery(), null);
+            String path = uri.getRawPath();
+            final String query = uri.getRawQuery();
+            if (query != null) {
+                path += '?' + query;
+            }
+            final RequestTarget reqTarget = RequestTarget.forServer(path);
+            if (reqTarget == null) {
+                throw new IllegalArgumentException("invalid uri: " + uri);
+            }
+            this.reqTarget = reqTarget;
         } else {
             reqTarget = DefaultRequestTarget.createWithoutValidation(
                     RequestTargetForm.ORIGIN, null, null,
-                    uri.getRawPath(), uri.getRawQuery(), uri.getRawFragment());
+                    uri.getRawPath(), uri.getRawPath(), uri.getRawQuery(), uri.getRawFragment());
         }
     }
 

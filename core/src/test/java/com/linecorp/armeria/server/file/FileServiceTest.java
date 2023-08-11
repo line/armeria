@@ -74,8 +74,8 @@ class FileServiceTest {
     private static final ZoneId UTC = ZoneId.of("UTC");
     private static final Pattern ETAG_PATTERN = Pattern.compile("^\"[^\"]+\"$");
 
-    private static final String baseResourceDir =
-            FileServiceTest.class.getPackage().getName().replace('.', '/') + '/';
+    static final String baseResourceDir =
+            "testing/core/" + FileServiceTest.class.getSimpleName() + '/';
 
     @TempDir
     static Path tmpDir;
