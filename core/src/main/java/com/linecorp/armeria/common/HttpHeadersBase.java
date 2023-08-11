@@ -499,7 +499,9 @@ class HttpHeadersBase
     }
 
     public void contentLengthUnknown(boolean contentLengthUnknown) {
-        remove(HttpHeaderNames.CONTENT_LENGTH);
+        if (contentLengthUnknown) {
+            remove(HttpHeaderNames.CONTENT_LENGTH);
+        }
         this.contentLengthUnknown = contentLengthUnknown;
     }
 
