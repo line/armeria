@@ -23,7 +23,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
+import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalManagementPort;
@@ -41,7 +41,7 @@ import com.linecorp.armeria.spring.LocalArmeriaPort;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles({ "local", "healthGroupTest" })
 @DirtiesContext
-@AutoConfigureMetrics
+@AutoConfigureObservability
 @EnableAutoConfiguration
 class ActuatorAutoConfigurationHealthGroupTest {
 

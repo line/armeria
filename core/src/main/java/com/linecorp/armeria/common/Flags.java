@@ -195,7 +195,8 @@ public final class Flags {
             getValue(FlagsProvider::maxNumConnections, "maxNumConnections", value -> value > 0);
 
     private static final int NUM_COMMON_WORKERS =
-            getValue(FlagsProvider::numCommonWorkers, "numCommonWorkers", value -> value > 0);
+            getValue(provider -> provider.numCommonWorkers(TRANSPORT_TYPE),
+                     "numCommonWorkers", value -> value > 0);
 
     private static final int NUM_COMMON_BLOCKING_TASK_THREADS =
             getValue(FlagsProvider::numCommonBlockingTaskThreads, "numCommonBlockingTaskThreads",
@@ -600,8 +601,10 @@ public final class Flags {
      * {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} or
      * {@link ClientFactoryBuilder#workerGroup(EventLoopGroup, boolean)}.
      *
-     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>} for {@link TransportType#NIO},
+     * {@link TransportType#EPOLL} and {@link TransportType#KQUEUE} and {@code <numCpuCores>} for
+     * {@link TransportType#IO_URING}. Specify the {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>}
+     * JVM option to override the default value.
      */
     public static int numCommonWorkers() {
         return NUM_COMMON_WORKERS;

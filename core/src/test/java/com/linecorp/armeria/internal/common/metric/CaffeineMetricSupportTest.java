@@ -26,15 +26,11 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -47,21 +43,19 @@ import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
-public class CaffeineMetricSupportTest {
-
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
+@ExtendWith(MockitoExtension.class)
+class CaffeineMetricSupportTest {
 
     @Mock
     private Policy<Object, Object> policy;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         when(policy.isRecordingStats()).thenReturn(true);
     }
 
     @Test
-    public void test() {
+    void test() {
         final MockLoadingCache cache = new MockLoadingCache(1, 2, 3, 4, 5, 6, 7, 8);
         final AtomicLong ticker = new AtomicLong();
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
@@ -105,7 +99,7 @@ public class CaffeineMetricSupportTest {
     }
 
     @Test
-    public void testNonLoadingCache() {
+    void testNonLoadingCache() {
         final MockCache cache = new MockCache(1, 2, 3, 4, 5);
         final AtomicLong ticker = new AtomicLong();
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
@@ -129,7 +123,7 @@ public class CaffeineMetricSupportTest {
     }
 
     @Test
-    public void aggregation() {
+    void aggregation() {
         final MockLoadingCache cache1 = new MockLoadingCache(1, 2, 3, 4, 5, 6, 7, 8);
         final MockLoadingCache cache2 = new MockLoadingCache(9, 10, 11, 12, 13, 14, 15, 16);
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
@@ -152,7 +146,7 @@ public class CaffeineMetricSupportTest {
     }
 
     @Test
-    public void aggregationAfterGC() throws Exception {
+    void aggregationAfterGC() throws Exception {
         final MockCache cache1 = new MockCache(1, 2, 3, 4, 5);
         Object cache2 = new MockLoadingCache(6, 7, 8, 9, 10, 11, 12, 13);
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
@@ -194,7 +188,7 @@ public class CaffeineMetricSupportTest {
     }
 
     @Test
-    public void sameCacheTwice() {
+    void sameCacheTwice() {
         final MockCache cache = new MockCache(1, 2, 3, 4, 5);
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final MeterIdPrefix idPrefix = new MeterIdPrefix("baz");
@@ -213,7 +207,7 @@ public class CaffeineMetricSupportTest {
     }
 
     @Test
-    public void notRecording() {
+    void notRecording() {
         when(policy.isRecordingStats()).thenReturn(false);
         final MockLoadingCache cache = new MockLoadingCache(1, 2, 3, 4, 5, 6, 7, 8);
         final AtomicLong ticker = new AtomicLong();
@@ -262,7 +256,6 @@ public class CaffeineMetricSupportTest {
             return estimatedSizeCalls;
         }
 
-        @Nonnull
         @Override
         public CacheStats stats() {
             statsCalls++;
@@ -276,38 +269,37 @@ public class CaffeineMetricSupportTest {
         }
 
         @Override
-        public Object getIfPresent(@Nonnull Object key) {
+        public Object getIfPresent(Object key) {
             return reject();
         }
 
         @Override
-        public Object get(@Nonnull Object key, @Nonnull Function<? super Object, ?> mappingFunction) {
-            return reject();
-        }
-
-        @Nonnull
-        @Override
-        public Map<Object, Object> getAllPresent(@Nonnull Iterable<?> keys) {
+        public Object get(Object key, Function<? super Object, ?> mappingFunction) {
             return reject();
         }
 
         @Override
-        public void put(@Nonnull Object key, @Nonnull Object value) {
+        public Map<Object, Object> getAllPresent(Iterable<?> keys) {
+            return reject();
+        }
+
+        @Override
+        public void put(Object key, Object value) {
             reject();
         }
 
         @Override
-        public void putAll(@Nonnull Map<?, ?> map) {
+        public void putAll(Map<?, ?> map) {
             reject();
         }
 
         @Override
-        public void invalidate(@Nonnull Object key) {
+        public void invalidate(Object key) {
             reject();
         }
 
         @Override
-        public void invalidateAll(@Nonnull Iterable<?> keys) {
+        public void invalidateAll(Iterable<?> keys) {
             reject();
         }
 
@@ -316,7 +308,6 @@ public class CaffeineMetricSupportTest {
             reject();
         }
 
-        @Nonnull
         @Override
         public ConcurrentMap<Object, Object> asMap() {
             return reject();
@@ -327,7 +318,6 @@ public class CaffeineMetricSupportTest {
             reject();
         }
 
-        @Nonnull
         @Override
         public Policy<Object, Object> policy() {
             return policy;
@@ -346,20 +336,18 @@ public class CaffeineMetricSupportTest {
                   totalLoadTime, evictionCount, evictionWeight, estimatedSize);
         }
 
-        @CheckForNull
         @Override
-        public Object get(@Nonnull Object key) {
-            return reject();
-        }
-
-        @Nonnull
-        @Override
-        public Map<Object, Object> getAll(@Nonnull Iterable<?> keys) {
+        public Object get(Object key) {
             return reject();
         }
 
         @Override
-        public void refresh(@Nonnull Object key) {
+        public Map<Object, Object> getAll(Iterable<?> keys) {
+            return reject();
+        }
+
+        @Override
+        public void refresh(Object key) {
             reject();
         }
     }
