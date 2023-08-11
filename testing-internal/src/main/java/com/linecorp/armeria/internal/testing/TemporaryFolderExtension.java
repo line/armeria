@@ -45,15 +45,9 @@ public class TemporaryFolderExtension extends AbstractAllOrEachExtension {
     // Forked from https://github.com/line/centraldogma/blob/e5a9c1cf402b7ea59fddb56aae40ebdd1502213e/testing-internal/src/main/java/com/linecorp/centraldogma/testing/internal/TemporaryFolderExtension.java
 
     private final TemporaryFolder delegate;
-    private final boolean autoDelete;
 
     public TemporaryFolderExtension() {
-        this(true);
-    }
-
-    public TemporaryFolderExtension(boolean autoDelete) {
         delegate = new TemporaryFolder();
-        this.autoDelete = autoDelete;
     }
 
     @Override
@@ -63,9 +57,7 @@ public class TemporaryFolderExtension extends AbstractAllOrEachExtension {
 
     @Override
     public void after(ExtensionContext context) throws Exception {
-        if (autoDelete) {
-            delegate.delete();
-        }
+        delegate.delete();
     }
 
     public void create() throws IOException {

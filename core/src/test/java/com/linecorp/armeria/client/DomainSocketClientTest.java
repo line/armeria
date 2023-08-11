@@ -44,7 +44,7 @@ class DomainSocketClientTest {
     // Domain socket files are automatically deleted on close by Netty.
     // https://github.com/netty/netty/blob/9eb029d630b269e907aaa4a19bc86753d70e399c/transport-classes-epoll/src/main/java/io/netty/channel/epoll/EpollServerDomainSocketChannel.java#L78-L81
     @RegisterExtension
-    static final TemporaryFolderExtension tempDir = new TemporaryFolderExtension(false);
+    static final TemporaryFolderExtension tempDir = new TemporaryFolderExtension();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
