@@ -70,7 +70,7 @@ class RequestContextAssemblyTest {
                             .flatMapCompletable(RequestContextAssemblyTest::completable)
                             .subscribe(() -> res.complete(HttpResponse.of(HttpStatus.OK)),
                                        res::completeExceptionally);
-                    return HttpResponse.from(res);
+                    return HttpResponse.of(res);
                 }
 
                 @SuppressWarnings("CheckReturnValue")
@@ -80,7 +80,7 @@ class RequestContextAssemblyTest {
                     Single.just("")
                           .flatMap(RequestContextAssemblyTest::single)
                           .subscribe((s, throwable) -> res.complete(HttpResponse.of(HttpStatus.OK)));
-                    return HttpResponse.from(res);
+                    return HttpResponse.of(res);
                 }
             });
         }

@@ -17,6 +17,9 @@ package com.linecorp.armeria.client.logging;
 
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
@@ -33,6 +36,8 @@ import com.linecorp.armeria.common.util.Sampler;
 public final class LoggingClient extends AbstractLoggingClient<HttpRequest, HttpResponse>
         implements HttpClient {
 
+    private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
+
     /**
      * Returns a new {@link HttpClient} decorator that logs {@link Request}s and {@link Response}s at
      * {@link LogLevel#DEBUG} for success, {@link LogLevel#WARN} for failure. See {@link LoggingClientBuilder}
@@ -46,7 +51,7 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
      * Returns a newly created {@link LoggingClientBuilder}.
      */
     public static LoggingClientBuilder builder() {
-        return new LoggingClientBuilder();
+        return new LoggingClientBuilder().defaultLogger(logger);
     }
 
     LoggingClient(HttpClient delegate, LogWriter logWriter,

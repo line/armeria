@@ -167,7 +167,7 @@ class BraveIntegrationTest {
                                     }))).collect(toImmutableList()));
 
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final HttpResponse res = HttpResponse.of(responseFuture);
                     transformAsync(spanAware,
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
                                            i -> executorService.submit(

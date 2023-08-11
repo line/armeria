@@ -70,8 +70,8 @@ class DeferredHttpResponseTest {
         @SuppressWarnings("checkstyle:PreferUnmodifiableFuture")
         final CompletableFuture<HttpResponse> completedFuture = CompletableFuture.completedFuture(originalRes);
 
-        final HttpResponse res1 = HttpResponse.from(completedFuture);
-        final HttpResponse res2 = HttpResponse.from((CompletionStage<? extends HttpResponse>) completedFuture);
+        final HttpResponse res1 = HttpResponse.of(completedFuture);
+        final HttpResponse res2 = HttpResponse.of((CompletionStage<? extends HttpResponse>) completedFuture);
         assertThat(res1).isSameAs(originalRes);
         assertThat(res2).isSameAs(originalRes);
     }
@@ -87,8 +87,8 @@ class DeferredHttpResponseTest {
         final CompletableFuture<HttpResponse> completedFuture = new CompletableFuture<>();
         completedFuture.completeExceptionally(originalCause);
 
-        final HttpResponse res1 = HttpResponse.from(completedFuture);
-        final HttpResponse res2 = HttpResponse.from((CompletionStage<? extends HttpResponse>) completedFuture);
+        final HttpResponse res1 = HttpResponse.of(completedFuture);
+        final HttpResponse res2 = HttpResponse.of((CompletionStage<? extends HttpResponse>) completedFuture);
         assertThat(res1).isInstanceOf(AbortedHttpResponse.class);
         assertThat(res2).isInstanceOf(AbortedHttpResponse.class);
         assertThatThrownBy(() -> res1.collect().join()).hasCause(originalCause);

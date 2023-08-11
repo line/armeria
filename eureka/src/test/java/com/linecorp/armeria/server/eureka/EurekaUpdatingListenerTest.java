@@ -81,7 +81,7 @@ class EurekaUpdatingListenerTest {
                     future.complete(HttpResponse.of(HttpStatus.NO_CONTENT));
                     return null;
                 });
-                return HttpResponse.from(future);
+                return HttpResponse.of(future);
             });
             sb.service("/apps/" + APP_NAME + '/' + INSTANCE_ID, (ctx, req) -> {
                 req.aggregate();
