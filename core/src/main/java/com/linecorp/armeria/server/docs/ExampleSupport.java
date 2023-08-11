@@ -28,7 +28,6 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.server.Route;
 
 final class ExampleSupport {
 
@@ -50,18 +49,17 @@ final class ExampleSupport {
     /**
      * Adds examples to the {@link ServiceSpecification} and {@link ServiceInfo} objects.
      * @param spec Spec itself.
-     * @param docServiceRoute Route of the doc service.
      * @return new {@link ServiceSpecification} with examples.
      */
-    ServiceSpecification addExamples(ServiceSpecification spec, Route docServiceRoute) {
+    ServiceSpecification addExamples(ServiceSpecification spec) {
         final List<ServiceInfo> serviceWithExample =
                 spec.services().stream().map(this::addServiceExamples).collect(toImmutableList());
         final Iterable<HttpHeaders> exampleHeaders =
                 Iterables.concat(spec.exampleHeaders(),
                                  this.exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get(""));
 
-        return new ServiceSpecification(serviceWithExample, spec.enums(), spec.structs(),
-                                        spec.exceptions(), exampleHeaders, docServiceRoute);
+        return new ServiceSpecification(serviceWithExample, spec.enums(), spec.structs(), spec.exceptions(),
+                                        exampleHeaders);
     }
 
     private ServiceInfo addServiceExamples(ServiceInfo service) {

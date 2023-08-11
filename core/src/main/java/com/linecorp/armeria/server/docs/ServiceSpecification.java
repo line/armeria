@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -54,12 +53,7 @@ public final class ServiceSpecification {
     /**
      * Merges the specified {@link ServiceSpecification}s into one.
      */
-    public static ServiceSpecification merge(Iterable<ServiceSpecification> specs) {
-        // Find the first non-null doc service route. We can only have one doc service instance
-        // so selecting one is enough.
-        final Route docServiceRoute = Streams.stream(specs).map(s -> s.docServiceRoute)
-                                             .filter(Objects::nonNull)
-                                             .findFirst().orElse(null);
+    public static ServiceSpecification merge(Iterable<ServiceSpecification> specs, Route docServiceRoute) {
         return new ServiceSpecification(
                 Streams.stream(specs).flatMap(s -> s.services().stream())::iterator,
                 Streams.stream(specs).flatMap(s -> s.enums().stream())::iterator,
@@ -134,7 +128,7 @@ public final class ServiceSpecification {
     private final Set<ExceptionInfo> exceptions;
     private final List<HttpHeaders> exampleHeaders;
     @Nullable
-    private Route docServiceRoute;
+    private final Route docServiceRoute;
 
     /**
      * Creates a new instance.
@@ -153,6 +147,18 @@ public final class ServiceSpecification {
                                 Iterable<EnumInfo> enums,
                                 Iterable<StructInfo> structs,
                                 Iterable<ExceptionInfo> exceptions,
+                                Iterable<HttpHeaders> exampleHeaders
+    ) {
+        this(services, enums, structs, exceptions, exampleHeaders, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ServiceSpecification(Iterable<ServiceInfo> services,
+                                Iterable<EnumInfo> enums,
+                                Iterable<StructInfo> structs,
+                                Iterable<ExceptionInfo> exceptions,
                                 Iterable<HttpHeaders> exampleHeaders,
                                 @Nullable Route docServiceRoute) {
         this.services = Streams.stream(requireNonNull(services, "services"))
@@ -161,7 +167,11 @@ public final class ServiceSpecification {
         this.structs = collectStructInfo(structs);
         this.exceptions = collectDescriptiveTypeInfo(exceptions, "exceptions");
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
-        this.docServiceRoute = docServiceRoute;
+        if (docServiceRoute != null && docServiceRoute.pathType() == RoutePathType.PREFIX) {
+            this.docServiceRoute = docServiceRoute;
+        } else {
+            this.docServiceRoute = null;
+        }
     }
 
     private static <T extends DescriptiveTypeInfo> Set<T> collectDescriptiveTypeInfo(
@@ -234,10 +244,6 @@ public final class ServiceSpecification {
     @JsonProperty
     @Nullable
     public Route docServiceRoute() {
-        if (docServiceRoute != null && docServiceRoute.pathType() == RoutePathType.PREFIX) {
-            return docServiceRoute;
-        }
-
-        return null;
+        return docServiceRoute;
     }
 }

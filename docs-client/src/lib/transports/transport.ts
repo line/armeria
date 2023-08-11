@@ -27,10 +27,10 @@ export default abstract class Transport {
   public async send(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-    pathPrefix?: string,
   ): Promise<string> {
     const providedHeaders = await Promise.all(
       providers.map((provider) => provider()),
@@ -54,10 +54,10 @@ export default abstract class Transport {
     const httpResponse = await this.doSend(
       method,
       filledHeaders,
+      pathPrefix,
       bodyJson,
       endpointPath,
       queries,
-      pathPrefix,
     );
     const responseText = await httpResponse.text();
     const applicationType = httpResponse.headers.get('content-type') || '';
@@ -157,9 +157,9 @@ export default abstract class Transport {
   protected abstract doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-    pathPrefix?: string,
   ): Promise<Response>;
 }

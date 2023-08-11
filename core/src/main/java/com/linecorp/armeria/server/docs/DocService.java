@@ -319,9 +319,9 @@ public final class DocService extends SimpleDecoratingHttpService {
                                                                                      Route docServiceRoute) {
             return CompletableFuture.supplyAsync(() -> {
                 final DocStringSupport docStringSupport = new DocStringSupport(services);
-                ServiceSpecification spec = generate(services);
+                ServiceSpecification spec = generate(services, docServiceRoute);
                 spec = docStringSupport.addDocStrings(spec);
-                spec = exampleSupport.addExamples(spec, docServiceRoute);
+                spec = exampleSupport.addExamples(spec);
                 return spec;
             }, executor);
         }
@@ -363,13 +363,13 @@ public final class DocService extends SimpleDecoratingHttpService {
                     .build();
         }
 
-        private ServiceSpecification generate(List<ServiceConfig> services) {
+        private ServiceSpecification generate(List<ServiceConfig> services, Route docServiceRoute) {
             return ServiceSpecification.merge(
                     plugins.stream()
                            .map(plugin -> plugin.generateSpecification(
                                    findSupportedServices(plugin, services),
                                    filter, descriptiveTypeInfoProvider))
-                           .collect(toImmutableList()));
+                           .collect(toImmutableList()), docServiceRoute);
         }
 
         private static DescriptiveTypeInfoProvider composeDescriptiveTypeInfoProvider(

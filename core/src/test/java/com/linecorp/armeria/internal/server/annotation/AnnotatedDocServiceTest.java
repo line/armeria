@@ -485,7 +485,6 @@ class AnnotatedDocServiceTest {
         private final String proxyPath;
 
         private ProxyService(String proxyPath) {
-            super();
             this.proxyPath = proxyPath;
         }
 

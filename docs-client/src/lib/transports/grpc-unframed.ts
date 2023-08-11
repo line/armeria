@@ -32,9 +32,9 @@ export default class GrpcUnframedTransport extends Transport {
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
-    pathPrefix?: string,
   ): Promise<Response> {
     if (!bodyJson) {
       throw new Error('A gRPC request must have body.');

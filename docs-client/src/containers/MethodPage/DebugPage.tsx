@@ -119,7 +119,7 @@ const copyTextToClipboard = (text: string) => {
   modal.removeChild(textArea);
 };
 
-const parseServerRootPath = (docServiceRoute: Route | undefined) => {
+const parseServerRootPath = (docServiceRoute: Route | undefined): string => {
   if (
     docServiceRoute === undefined ||
     docServiceRoute.pathType !== RoutePathType.PREFIX
@@ -281,7 +281,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         `${window.location.port ? `:${window.location.port}` : ''}`;
 
       const httpMethod = method.httpMethod;
-      let baseUri;
+      let mappedPath;
       let endpoint;
 
       if (
@@ -291,26 +291,26 @@ const DebugPage: React.FunctionComponent<Props> = ({
         const queries = additionalQueries;
         if (exactPathMapping) {
           endpoint = transport.getDebugMimeTypeEndpoint(method);
-          baseUri =
+          mappedPath =
             `'${escapeSingleQuote(
               endpoint.pathMapping.substring('exact:'.length),
             )}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
           endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-          baseUri =
+          mappedPath =
             `'${escapeSingleQuote(additionalPath)}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         }
       } else if (additionalPath.length > 0) {
         endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-        baseUri = `'${escapeSingleQuote(additionalPath)}'`;
+        mappedPath = `'${escapeSingleQuote(additionalPath)}'`;
       } else {
         endpoint = transport.getDebugMimeTypeEndpoint(method);
-        baseUri = `'${escapeSingleQuote(endpoint.pathMapping)}'`;
+        mappedPath = `'${escapeSingleQuote(endpoint.pathMapping)}'`;
       }
 
-      const uri = host + parseServerRootPath(docServiceRoute) + baseUri;
+      const uri = host + parseServerRootPath(docServiceRoute) + mappedPath;
 
       const body = transport.getCurlBody(
         endpoint,
@@ -400,10 +400,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
         executedDebugResponse = await transport.send(
           method,
           headers,
+          parseServerRootPath(docServiceRoute),
           executedRequestBody,
           executedEndpointPath,
           queries,
-          parseServerRootPath(docServiceRoute),
         );
       } catch (e) {
         if (e instanceof Object) {

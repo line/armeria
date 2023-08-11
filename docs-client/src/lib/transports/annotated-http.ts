@@ -83,10 +83,10 @@ export default class AnnotatedHttpTransport extends Transport {
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-    pathPrefix?: string,
   ): Promise<Response> {
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
