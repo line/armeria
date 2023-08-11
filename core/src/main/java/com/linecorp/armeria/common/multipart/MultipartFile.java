@@ -19,11 +19,10 @@ package com.linecorp.armeria.common.multipart;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.net.URLConnection;
 import java.nio.file.Path;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A file uploaded from a {@link Multipart} request.
@@ -40,8 +39,6 @@ public interface MultipartFile {
      * @param file the file that stores the {@link BodyPart#content()}.
      */
     static MultipartFile of(String name, String filename, File file) {
-        requireNonNull(name, "name");
-        requireNonNull(filename, "filename");
         requireNonNull(file, "file");
         return of(name, filename, file.toPath());
     }
@@ -54,9 +51,6 @@ public interface MultipartFile {
      * @param path the path that stores the {@link BodyPart#content()}.
      */
     static MultipartFile of(String name, String filename, Path path) {
-        requireNonNull(name, "name");
-        requireNonNull(filename, "filename");
-        requireNonNull(path, "path");
         return of(name, filename, path, HttpHeaders.of());
     }
 
@@ -68,11 +62,9 @@ public interface MultipartFile {
      * @param file the file that stores the {@link BodyPart#content()}.
      * @param headers HTTP part headers.
      */
+    @UnstableApi
     static MultipartFile of(String name, String filename, File file, HttpHeaders headers) {
-        requireNonNull(name, "name");
-        requireNonNull(filename, "filename");
         requireNonNull(file, "file");
-        requireNonNull(headers, "headers");
         return of(name, filename, file.toPath(), headers);
     }
 
@@ -84,22 +76,13 @@ public interface MultipartFile {
      * @param path the path that stores the {@link BodyPart#content()}.
      * @param headers HTTP part headers.
      */
+    @UnstableApi
     static MultipartFile of(String name, String filename, Path path, HttpHeaders headers) {
         requireNonNull(name, "name");
         requireNonNull(filename, "filename");
         requireNonNull(path, "path");
         requireNonNull(headers, "headers");
-
-        final HttpHeaders newHeaders;
-        if (headers.contentType() == null) {
-            final String guessedContentType = URLConnection.guessContentTypeFromName(filename);
-            final MediaType contentType = guessedContentType != null ?
-                                          MediaType.parse(guessedContentType) : MediaType.OCTET_STREAM;
-            newHeaders = headers.withMutations(builder -> builder.contentType(contentType));
-        } else {
-            newHeaders = headers;
-        }
-        return new DefaultMultipartFile(name, filename, path, newHeaders);
+        return new DefaultMultipartFile(name, filename, path, headers);
     }
 
     /**
@@ -115,7 +98,7 @@ public interface MultipartFile {
     String filename();
 
     /**
-     * Returns HTTP part headers.
+     * Returns the headers of this {@link MultipartFile}.
      */
     HttpHeaders headers();
 
