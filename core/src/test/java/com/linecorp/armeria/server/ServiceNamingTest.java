@@ -37,9 +37,9 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 class ServiceNamingTest {
-    
+
     private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
-    
+
     @Test
     void fullTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
