@@ -76,6 +76,11 @@ class ServerBuilderTest {
     private static final AtomicInteger poppedRouterCnt = new AtomicInteger();
     private static final Supplier<? extends AutoCloseable> contextHookRouter = () ->
             (AutoCloseable) poppedRouterCnt::getAndIncrement;
+
+    private static final AtomicInteger poppedRouterCnt2 = new AtomicInteger();
+    private static final Supplier<? extends AutoCloseable> contextHookRouter2 = () ->
+            (AutoCloseable) poppedRouterCnt2::getAndIncrement;
+
     private static final AtomicInteger poppedCnt = new AtomicInteger();
     private static final Supplier<? extends AutoCloseable> contextHook = () ->
             (AutoCloseable) poppedCnt::getAndIncrement;
@@ -101,7 +106,7 @@ class ServerBuilderTest {
                           mutator -> mutator.add("virtualhost_decorator", "true"));
                   return delegate.serve(ctx, req);
               });
-            sb.route().path("/hook_route").contextHook(contextHookRouter)
+            sb.route().path("/hook_route").contextHook(contextHookRouter).contextHook(contextHookRouter2)
               .build((ctx, req) -> HttpResponse.of("hook_route"));
         }
     };
@@ -738,12 +743,14 @@ class ServerBuilderTest {
     @Test
     void contextHook_route() {
         assertThat(poppedRouterCnt.get()).isEqualTo(0);
+        assertThat(poppedRouterCnt2.get()).isEqualTo(0);
 
         final WebClient client =  WebClient.builder(server.httpUri()).build();
         final AggregatedHttpResponse response =  client.get("/hook_route").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook_route");
         assertThat(poppedRouterCnt.get()).isEqualTo(1);
+        assertThat(poppedRouterCnt2.get()).isEqualTo(1);
     }
 
     @Test

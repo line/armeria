@@ -284,7 +284,21 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
-        this.contextHook = contextHook;
+
+        if (this.contextHook == null) {
+            this.contextHook = contextHook;
+            return this;
+        }
+
+        final Supplier<? extends AutoCloseable> oldContextHook = this.contextHook;
+        this.contextHook = () -> {
+            final AutoCloseable oldHook = oldContextHook.get();
+            final AutoCloseable newHook = contextHook.get();
+            return () -> {
+                oldHook.close();
+                newHook.close();
+            };
+        };
         return this;
     }
 
