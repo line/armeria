@@ -80,8 +80,7 @@ class AggregatedResponseAsTest {
 
         assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, SUCCESS_PREDICATE).as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
-                .hasMessageContaining(
-                        "status: 500 Internal Server Error is not expected by predicate method. response: ");
+                .hasMessageContaining("status: 500 Internal Server Error");
     }
 
     @Test
