@@ -148,11 +148,11 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
-     * into the specified non-container type using the default {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * into the specified non-container type using the default {@link ObjectMapper} if the
+     * {@link Predicate} is satisifed.
      *
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
-     * {@link Map}. Use {@link #json(TypeReference)} for the container type.
+     * {@link Map}. Use {@link #json(TypeReference, Predicate)} for the container type.
      *
      * @see JacksonObjectMapperProvider
      */
@@ -167,11 +167,11 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
-     * into the specified non-container type using the specified {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * into the specified non-container type using the specified {@link ObjectMapper} if the
+     * {@link Predicate} is satisfied.
      *
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
-     * {@link Map}. Use {@link #json(TypeReference, ObjectMapper)} for the container type.
+     * {@link Map}. Use {@link #json(TypeReference, ObjectMapper, Predicate)} for the container type.
      */
     @UnstableApi
     static <V> BlockingConditionalResponseAs<V> json(
@@ -184,8 +184,8 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
-     * into the specified Java type using the default {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * into the specified Java type using the default {@link ObjectMapper} if the {@link Predicate}
+     * is satisfied.
      *
      * @see JacksonObjectMapperProvider
      */
@@ -200,8 +200,8 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
-     * into the specified Java type using the specified {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * into the specified Java type using the specified {@link ObjectMapper} if the {@link Predicate}
+     * is satisfied.
      */
     @UnstableApi
     static <V> BlockingConditionalResponseAs<V> json(

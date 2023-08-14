@@ -19,17 +19,35 @@ package com.linecorp.armeria.client;
 import java.util.function.Predicate;
 
 /**
- * Transforms a response into another by given conditions.
+ * Provides a way for users to add {@link ResponseAs} mappings to transform a response
+ * given that the corresponding {@link Predicate} is satisfied. Note that the conditionals are
+ * invoked in the order in which they are added.
+ *
+ * <pre>{@code
+ * WebClient.of(...)
+ *   .prepare()
+ *   .get("/server_error")
+ *   .as(ResponseAs.blocking()
+ *     .<MyResponse>andThen(
+ *       res -> new MyError(res.status().codeAsText(), res.contentUtf8()),
+ *       res -> res.status().isError())
+ *     .andThen(
+ *       res -> new EmptyMessage(),
+ *       res -> !res.headers().contains("x-header"))
+ *     .orElse(res -> new MyMessage(res.contentUtf8())))
+ * }
  */
 public interface ConditionalResponseAs<T, R, V> {
 
     /**
-     * Adds the mapping of {@link ResponseAs} and {@link Predicate} to the List.
+     * Adds a mapping such that {@link ResponseAs} will be applied if the {@link Predicate} is satisfied.
      */
     ConditionalResponseAs<T, R, V> andThen(ResponseAs<R, V> responseAs, Predicate<R> predicate);
 
     /**
-     * Returns {@link ResponseAs} whose {@link Predicate} is evaluated as true.
+     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
+     * mappings. If none of the {@link Predicate}s are satisfied, the specified {@link ResponseAs}
+     * is used as a fallback.
      */
     ResponseAs<T, V> orElse(ResponseAs<R, V> responseAs);
 }
