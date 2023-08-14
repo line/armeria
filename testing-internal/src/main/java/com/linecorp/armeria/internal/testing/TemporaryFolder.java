@@ -16,14 +16,10 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.stream.Stream;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -31,8 +27,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A helper class to handle temporary folders in JUnit {@code Extension}s.
  */
 public final class TemporaryFolder {
-
-    private static final Logger logger = LoggerFactory.getLogger(TemporaryFolder.class);
 
     // Forked from CentralDogma 0.44.4
     // https://github.com/line/centraldogma/blob/4dbc351addc92b509f77be784605b88c3d1b21f2/testing/common/src/main/java/com/linecorp/centraldogma/testing/internal/TemporaryFolder.java
@@ -76,18 +70,24 @@ public final class TemporaryFolder {
             return;
         }
 
-        try (Stream<Path> walk = Files.walk(root)) {
-            walk.sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(file -> {
-                    try {
-                        file.delete();
-                    } catch (Exception e) {
-                        logger.warn("Unexpected exception while deleting file: {}", file.getName(), e);
-                    }
-                });
+        deleteAll(root.toFile());
+        root = null;
+    }
+
+    private static void deleteAll(File file) throws IOException {
+        // Use File#listFiles() instead of Files#list() to ignore files deleted by other threads during
+        // iteration. See https://github.com/line/armeria/issues/4959
+        if (file.isDirectory()) {
+            final File[] files = file.listFiles();
+            if (files == null) {
+                return;
+            }
+            for (File child : files) {
+                deleteAll(child);
+            }
         }
 
-        root = null;
+        //noinspection ResultOfMethodCallIgnored
+        file.delete();
     }
 }
