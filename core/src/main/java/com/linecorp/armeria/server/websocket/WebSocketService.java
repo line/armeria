@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
-import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -190,9 +189,8 @@ public final class WebSocketService extends AbstractHttpService {
 
     private HttpResponse handleUpgradeRequest(ServiceRequestContext ctx, HttpRequest req,
                                               ResponseHeaders responseHeaders) {
-        final WebSocketFrameDecoder decoder =
-                new WebSocketFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch,
-                                          true); // client sends masked frames.
+        final WebSocketServiceFrameDecoder decoder =
+                new WebSocketServiceFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch);
         final StreamMessage<WebSocketFrame> inboundFrames = req.decode(decoder, ctx.alloc());
         final WebSocket outboundFrames = handler.handle(ctx, new WebSocketWrapper(inboundFrames));
         decoder.setOutboundWebSocket(outboundFrames);

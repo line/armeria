@@ -20,8 +20,6 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
-import javax.annotation.Nonnull;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,8 +52,8 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream;
 
-final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Connection.Listener,
-                                                                        Http2FrameListener {
+final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements Http2Connection.Listener,
+                                                                                Http2FrameListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2ResponseDecoder.class);
 
@@ -77,7 +75,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     }
 
     @Override
-    void onResponseAdded(int id, EventLoop eventLoop, AbstractHttpResponseWrapper resWrapper) {
+    void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper resWrapper) {
         resWrapper.whenComplete().handle((unused, cause) -> {
             if (eventLoop.inEventLoop()) {
                 onWrapperCompleted(resWrapper, id, cause);
@@ -88,7 +86,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         });
     }
 
-    private void onWrapperCompleted(AbstractHttpResponseWrapper resWrapper, int id, @Nullable Throwable cause) {
+    private void onWrapperCompleted(HttpResponseWrapper resWrapper, int id, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
         resWrapper.onSubscriptionCancelled(cause);
 
@@ -131,7 +129,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamClosed(Http2Stream stream) {
         goAwayHandler.onStreamClosed(channel(), stream);
 
-        final AbstractHttpResponseWrapper res = removeResponse(streamIdToId(stream.id()));
+        final HttpResponseWrapper res = removeResponse(streamIdToId(stream.id()));
         if (res == null) {
             return;
         }
@@ -188,7 +186,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead();
-        final AbstractHttpResponseWrapper res = getResponse(streamIdToId(streamId));
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
         if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -241,7 +239,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         keepAliveChannelRead();
 
         final int dataLength = data.readableBytes();
-        final AbstractHttpResponseWrapper res = getResponse(streamIdToId(streamId));
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
         if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -290,7 +288,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
         keepAliveChannelRead();
-        final AbstractHttpResponseWrapper res = getResponse(streamIdToId(streamId));
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId));
         if (res == null || !res.isOpen()) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -345,9 +343,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
 
-    @Nonnull
     @Override
-    KeepAliveHandler keepAliveHandler() {
+    public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
     }
 

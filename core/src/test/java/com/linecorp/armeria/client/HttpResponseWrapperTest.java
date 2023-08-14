@@ -43,7 +43,7 @@ class HttpResponseWrapperTest {
     @Test
     void headersAndData() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final AbstractHttpResponseWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWriteResponseHeaders(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
@@ -60,7 +60,7 @@ class HttpResponseWrapperTest {
     @Test
     void headersAndTrailers() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final AbstractHttpResponseWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
@@ -76,7 +76,7 @@ class HttpResponseWrapperTest {
     @Test
     void dataIsIgnoreAfterSecondHeaders() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final AbstractHttpResponseWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWriteTrailers(
@@ -94,7 +94,7 @@ class HttpResponseWrapperTest {
     @Test
     void splitTrailersIsIgnored() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final AbstractHttpResponseWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
@@ -111,7 +111,7 @@ class HttpResponseWrapperTest {
     @Test
     void splitTrailersAfterDataIsIgnored() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final AbstractHttpResponseWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWriteResponseHeaders(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
@@ -131,7 +131,7 @@ class HttpResponseWrapperTest {
     @Test
     void informationalHeadersHeadersDataAndTrailers() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
-        final AbstractHttpResponseWrapper wrapper = httpResponseWrapper(res);
+        final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(100))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("a"), "b"))).isTrue();
@@ -151,7 +151,7 @@ class HttpResponseWrapperTest {
                     .verify();
     }
 
-    private static AbstractHttpResponseWrapper httpResponseWrapper(DecodedHttpResponse res) {
+    private static HttpResponseWrapper httpResponseWrapper(DecodedHttpResponse res) {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
         final InboundTrafficController controller = InboundTrafficController.disabled();
@@ -160,11 +160,10 @@ class HttpResponseWrapperTest {
         final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
         res.init(controller);
-        return decoder.addResponse(1, res, cctx, cctx.eventLoop(), cctx.responseTimeoutMillis(),
-                                   cctx.maxResponseLength(), false);
+        return decoder.addResponse(1, res, cctx, cctx.eventLoop());
     }
 
-    private static class TestHttpResponseDecoder extends HttpResponseDecoder {
+    private static class TestHttpResponseDecoder extends AbstractHttpResponseDecoder {
         private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler();
 
         TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
@@ -172,10 +171,10 @@ class HttpResponseWrapperTest {
         }
 
         @Override
-        void onResponseAdded(int id, EventLoop eventLoop, AbstractHttpResponseWrapper responseWrapper) {}
+        void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {}
 
         @Override
-        KeepAliveHandler keepAliveHandler() {
+        public KeepAliveHandler keepAliveHandler() {
             return keepAliveHandler;
         }
     }

@@ -150,8 +150,6 @@ public final class DefaultClientRequestContext
 
     @Nullable
     private volatile CompletableFuture<Boolean> whenInitialized;
-    @Nullable
-    private Consumer<@Nullable Throwable> closingResponseTask;
 
     /**
      * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
@@ -799,18 +797,6 @@ public final class DefaultClientRequestContext
     @Override
     public HttpHeaders internalRequestHeaders() {
         return internalRequestHeaders;
-    }
-
-    @Override
-    public void setClosingResponseTask(Consumer<@Nullable Throwable> closingResponseTask) {
-        this.closingResponseTask = closingResponseTask;
-    }
-
-    @Override
-    public void closeResponse(@Nullable Throwable cause) {
-        if (closingResponseTask != null) {
-            closingResponseTask.accept(cause);
-        }
     }
 
     @Override

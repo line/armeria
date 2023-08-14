@@ -19,10 +19,12 @@ package com.linecorp.armeria.it.websocket;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
 
 import org.eclipse.jetty.http2.server.HTTP2ServerConnectionFactory;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -33,11 +35,14 @@ import org.eclipse.jetty.websocket.jakarta.server.config.JakartaWebSocketServlet
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.websocket.WebSocketClient;
 import com.linecorp.armeria.client.websocket.WebSocketSession;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
@@ -83,7 +88,33 @@ class WebSocketClientItTest {
         writer.write("bye");
         writer.close();
 
-        final List<WebSocketFrame> frames = webSocketSession.inbound().collect().join();
+        final CountDownLatch latch = new CountDownLatch(1);
+        final List<WebSocketFrame> frames = new ArrayList<>();
+        webSocketSession.inbound().subscribe(
+                new Subscriber<WebSocketFrame>() {
+                    @Override
+                    public void onSubscribe(Subscription s) {
+                        s.request(Long.MAX_VALUE);
+                    }
+
+                    @Override
+                    public void onNext(WebSocketFrame webSocketFrame) {
+                        frames.add(webSocketFrame);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        // The connection is closed by the server if HTTP/1.1
+                        assertThat(t).isExactlyInstanceOf(ClosedSessionException.class);
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        latch.countDown();
+                    }
+                });
+        latch.await();
         assertThat(frames.size()).isOne();
         final WebSocketFrame frame = frames.get(0);
         assertThat(frame).isInstanceOf(CloseWebSocketFrame.class);

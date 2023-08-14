@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
+
 import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -26,15 +28,17 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.proxy.ConnectProxyConfig;
 import com.linecorp.armeria.client.proxy.HAProxyConfig;
@@ -89,9 +93,9 @@ final class HttpChannelPool implements AsyncCloseable {
     private final ConnectionPoolListener listener;
 
     // Fields for creating a new connection:
-    private final Bootstrap[] inetBootstraps;
+    private final Bootstrap[][] inetBootstraps;
     @Nullable
-    private final Bootstrap[] unixBootstraps;
+    private final Bootstrap[][] unixBootstraps;
     private final int connectTimeoutMillis;
 
     private final SslContext sslCtxHttp1Or2;
@@ -102,17 +106,9 @@ final class HttpChannelPool implements AsyncCloseable {
                     ConnectionPoolListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
-        pool = newEnumMap(
-                Map.class,
-                unused -> new HashMap<>(),
-                SessionProtocol.H1, SessionProtocol.H1C,
-                SessionProtocol.H2, SessionProtocol.H2C);
-        pendingAcquisitions = newEnumMap(
-                Map.class,
-                unused -> new HashMap<>(),
-                SessionProtocol.HTTP, SessionProtocol.HTTPS,
-                SessionProtocol.H1, SessionProtocol.H1C,
-                SessionProtocol.H2, SessionProtocol.H2C);
+        pool = newEnumMap(ImmutableSet.of(SessionProtocol.H1, SessionProtocol.H1C,
+                                          SessionProtocol.H2, SessionProtocol.H2C));
+        pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
         this.listener = listener;
         this.sslCtxHttp1Only = sslCtxHttp1Only;
@@ -132,26 +128,41 @@ final class HttpChannelPool implements AsyncCloseable {
                                                           .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
     }
 
-    private Bootstrap[] newBootstrapMap(Bootstrap baseBootstrap,
-                                        HttpClientFactory clientFactory,
-                                        EventLoop eventLoop) {
+    private Bootstrap[][] newBootstrapMap(Bootstrap baseBootstrap,
+                                          HttpClientFactory clientFactory,
+                                          EventLoop eventLoop) {
         baseBootstrap.group(eventLoop);
-        return newEnumMap(Bootstrap.class,
-                desiredProtocol -> {
-                    final SslContext sslCtx = determineSslContext(desiredProtocol);
-                    final Bootstrap bootstrap = baseBootstrap.clone();
-                    bootstrap.handler(new ChannelInitializer<Channel>() {
-                        @Override
-                        protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(
-                                    new HttpClientPipelineConfigurator(clientFactory, desiredProtocol, sslCtx));
-                        }
-                    });
-                    return bootstrap;
-                },
-                SessionProtocol.HTTP, SessionProtocol.HTTPS,
-                SessionProtocol.H1, SessionProtocol.H1C,
-                SessionProtocol.H2, SessionProtocol.H2C);
+        final Set<SessionProtocol> sessionProtocols = httpAndHttpsValues();
+        final Bootstrap[][] maps = (Bootstrap[][]) Array.newInstance(
+                Bootstrap.class, SessionProtocol.values().length, 2);
+        // Attempting to access the array with an unallowed protocol will trigger NPE,
+        // which will help us find a bug.
+        for (SessionProtocol p : sessionProtocols) {
+            final SslContext sslCtx = determineSslContext(p);
+            setBootstrap(baseBootstrap.clone(), clientFactory, maps, p, sslCtx, true);
+            setBootstrap(baseBootstrap.clone(), clientFactory, maps, p, sslCtx, false);
+        }
+        return maps;
+    }
+
+    private static void setBootstrap(Bootstrap bootstrap, HttpClientFactory clientFactory, Bootstrap[][] maps,
+                                     SessionProtocol p, SslContext sslCtx, boolean webSocket) {
+        bootstrap.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                ch.pipeline().addLast(
+                        new HttpClientPipelineConfigurator(clientFactory, webSocket, p, sslCtx));
+            }
+        });
+        maps[p.ordinal()][toIndex(webSocket)] = bootstrap;
+    }
+
+    private static int toIndex(boolean webSocket) {
+        return webSocket ? 1 : 0;
+    }
+
+    private static int toIndex(SerializationFormat serializationFormat) {
+        return toIndex(serializationFormat == SerializationFormat.WS);
     }
 
     private SslContext determineSslContext(SessionProtocol desiredProtocol) {
@@ -204,22 +215,22 @@ final class HttpChannelPool implements AsyncCloseable {
     /**
      * Returns an array whose index signifies {@link SessionProtocol#ordinal()}. Similar to {@link EnumMap}.
      */
-    private static <T> T[] newEnumMap(Class<?> elementType,
-                                      Function<SessionProtocol, T> factory,
-                                      SessionProtocol... allowedProtocols) {
+    private static <T> Map<PoolKey, T>[] newEnumMap(Set<SessionProtocol> allowedProtocols) {
         @SuppressWarnings("unchecked")
-        final T[] maps = (T[]) Array.newInstance(elementType, SessionProtocol.values().length);
+        final Map<PoolKey, T>[] maps =
+                (Map<PoolKey, T>[]) Array.newInstance(Map.class, SessionProtocol.values().length);
         // Attempting to access the array with an unallowed protocol will trigger NPE,
         // which will help us find a bug.
         for (SessionProtocol p : allowedProtocols) {
-            maps[p.ordinal()] = factory.apply(p);
+            maps[p.ordinal()] = new HashMap<>();
         }
         return maps;
     }
 
-    private Bootstrap getBootstrap(SessionProtocol desiredProtocol, SocketAddress remoteAddress) {
+    private Bootstrap getBootstrap(SessionProtocol desiredProtocol, SocketAddress remoteAddress,
+                                   SerializationFormat serializationFormat) {
         if (remoteAddress instanceof InetSocketAddress) {
-            return inetBootstraps[desiredProtocol.ordinal()];
+            return inetBootstraps[desiredProtocol.ordinal()][toIndex(serializationFormat)];
         }
 
         assert remoteAddress instanceof DomainSocketAddress : remoteAddress;
@@ -229,7 +240,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                                eventLoop.getClass().getName());
         }
 
-        return unixBootstraps[desiredProtocol.ordinal()];
+        return unixBootstraps[desiredProtocol.ordinal()][toIndex(serializationFormat)];
     }
 
     @Nullable
@@ -426,7 +437,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         final Bootstrap bootstrap;
         try {
-            bootstrap = getBootstrap(desiredProtocol, remoteAddress);
+            bootstrap = getBootstrap(desiredProtocol, remoteAddress, serializationFormat);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;

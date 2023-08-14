@@ -42,8 +42,10 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     AbstractHttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder,
                                   HttpResponseDecoder responseDecoder,
                                   HttpRequest request, DecodedHttpResponse originalRes,
-                                  ClientRequestContext ctx, long timeoutMillis, boolean http1WebSocket) {
-        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty(), http1WebSocket);
+                                  ClientRequestContext ctx, long timeoutMillis, boolean allowTrailers,
+                                  boolean keepAlive) {
+        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty(), allowTrailers,
+              keepAlive);
         this.request = request;
     }
 

@@ -19,7 +19,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -30,8 +29,6 @@ import java.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
@@ -40,7 +37,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -50,11 +46,8 @@ import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -363,41 +356,26 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
-                final boolean webSocket = serializationFormat == SerializationFormat.WS;
-                if (webSocket) {
-                    responseDecoder.setWebSocket();
-                }
-
-                final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
-                final long pingIntervalMillis = clientFactory.pingIntervalMillis();
-                final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
-                final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
-                final boolean needsKeepAliveHandler =
-                        needsKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
-                                              maxConnectionAgeMillis, maxNumRequestsPerConnection);
-
+                final HttpResponseDecoder responseDecoder;
                 final KeepAliveHandler keepAliveHandler;
-                if (needsKeepAliveHandler) {
-                    final Timer keepAliveTimer =
-                            MoreMeters.newTimer(clientFactory.meterRegistry(),
-                                                "armeria.client.connections.lifespan",
-                                                ImmutableList.of(Tag.of("protocol", protocol.uriText())));
-                    keepAliveHandler = new Http1ClientKeepAliveHandler(
-                            channel, responseDecoder, keepAliveTimer, idleTimeoutMillis,
-                            pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                if (serializationFormat == SerializationFormat.WS) {
+                    responseDecoder = ctx.pipeline().get(WebSocketHttp1ClientChannelHandler.class);
+                    keepAliveHandler = responseDecoder.keepAliveHandler();
                 } else {
-                    keepAliveHandler = new NoopKeepAliveHandler();
+                    final Http1ResponseDecoder http1ResponseDecoder =
+                            ctx.pipeline().get(Http1ResponseDecoder.class);
+                    http1ResponseDecoder.maybeInitializeKeepAliveHandler(ctx);
+                    responseDecoder = http1ResponseDecoder;
+                    keepAliveHandler = http1ResponseDecoder.keepAliveHandler();
                 }
 
                 final ClientHttp1ObjectEncoder requestEncoder =
                         new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming(),
-                                                     keepAliveHandler, webSocket);
+                                                     keepAliveHandler,
+                                                     serializationFormat == SerializationFormat.WS);
                 if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
                     ((Http1ClientKeepAliveHandler) keepAliveHandler).setEncoder(requestEncoder);
                 }
-
-                responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
 
                 this.requestEncoder = requestEncoder;
                 this.responseDecoder = responseDecoder;

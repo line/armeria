@@ -59,7 +59,7 @@ class HttpResponseDecoderTest {
 
     /**
      * This test would be passed because the {@code cancelAction} method of the
-     * {@link AbstractHttpResponseWrapper} is invoked in the event loop of the {@link Channel}.
+     * {@link HttpResponseWrapper} is invoked in the event loop of the {@link Channel}.
      */
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})

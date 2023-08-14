@@ -124,6 +124,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      */
     private static final long UPGRADE_RESPONSE_MAX_LENGTH = 16384;
 
+    private static final RequestOptions REQUEST_OPTIONS_FOR_UPGRADE_REQUEST =
+            RequestOptions.builder()
+                          .responseTimeoutMillis(0)
+                          .maxResponseLength(UPGRADE_RESPONSE_MAX_LENGTH).build();
+
     private enum HttpPreference {
         HTTP1_REQUIRED,
         HTTP2_PREFERRED,
@@ -131,6 +136,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     private final HttpClientFactory clientFactory;
+    private final boolean webSocket;
     @Nullable
     private final SslContext sslCtx;
     private final HttpPreference httpPreference;
@@ -141,9 +147,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private final SessionProtocol http2;
 
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
-                                   SessionProtocol sessionProtocol,
+                                   boolean webSocket, SessionProtocol sessionProtocol,
                                    @Nullable SslContext sslCtx) {
         this.clientFactory = clientFactory;
+        this.webSocket = webSocket;
 
         if (sessionProtocol == HTTP || sessionProtocol == HTTPS) {
             httpPreference = HttpPreference.HTTP2_PREFERRED;
@@ -400,7 +407,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     void finishSuccessfully(ChannelPipeline pipeline, SessionProtocol protocol) {
 
         if (protocol == H1 || protocol == H1C) {
-            addBeforeSessionHandler(pipeline, new Http1ResponseDecoder(pipeline.channel()));
+            addBeforeSessionHandler(
+                    pipeline, webSocket ? new WebSocketHttp1ClientChannelHandler(pipeline.channel())
+                                        : new Http1ResponseDecoder(pipeline.channel(),
+                                                                   clientFactory, protocol));
         } else if (protocol == H2 || protocol == H2C) {
             final int initialWindow = clientFactory.http2InitialConnectionWindowSize();
             if (initialWindow > DEFAULT_WINDOW_SIZE) {
@@ -420,7 +430,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
     }
 
-    private void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
+    private static void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
         final ChannelHandlerContext lastContext = pipeline.lastContext();
         if (lastContext.handler().getClass() == HttpSessionHandler.class) {
             // Get the name of the HttpSessionHandler so that we can put our handlers before it.
@@ -532,12 +542,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     com.linecorp.armeria.common.HttpMethod.OPTIONS,
                     RequestTarget.forClient("*"), ClientOptions.of(),
                     HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
-                    null, RequestOptions.of(), noopResponseCancellationScheduler,
+                    null, REQUEST_OPTIONS_FOR_UPGRADE_REQUEST, noopResponseCancellationScheduler,
                     System.nanoTime(), SystemInfo.currentTimeMicros());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, reqCtx, ctx.channel().eventLoop(), /* response timeout */ 0,
-                                        UPGRADE_RESPONSE_MAX_LENGTH, false);
+            responseDecoder.addResponse(0, res, reqCtx, ctx.channel().eventLoop());
             ctx.fireChannelActive();
         }
 

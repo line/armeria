@@ -50,7 +50,6 @@ import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
-import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 
@@ -115,8 +114,8 @@ final class DefaultWebSocketClient implements WebSocketClient {
                 return null;
             }
 
-            final WebSocketFrameDecoder decoder =
-                    new WebSocketFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch, false);
+            final WebSocketClientFrameDecoder decoder =
+                    new WebSocketClientFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch);
             final WebSocketWrapper inbound = new WebSocketWrapper(split.body().decode(decoder, ctx.alloc()));
 
             result.complete(new WebSocketSession(ctx, responseHeaders, inbound, outboundFuture, encoder));

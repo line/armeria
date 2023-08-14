@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.SessionProtocol;
+
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -34,7 +36,8 @@ class Http1ResponseDecoderTest {
     void testRequestTimeoutClosesImmediately() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel();
         try {
-            final Http1ResponseDecoder decoder = new Http1ResponseDecoder(channel);
+            final Http1ResponseDecoder decoder = new Http1ResponseDecoder(
+                    channel, new HttpClientFactory(ClientFactoryOptions.of()), SessionProtocol.H1);
             channel.pipeline().addLast(decoder);
 
             final HttpHeaders httpHeaders = new DefaultHttpHeaders();
