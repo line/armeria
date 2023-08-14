@@ -29,6 +29,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -97,7 +98,7 @@ class WebSocketClientTest {
         outbound.write(WebSocketFrame.ofText("hello"));
 
         final WebSocketInboundHandler inboundHandler = new WebSocketInboundHandler(
-                webSocketSession.inbound());
+                webSocketSession.inbound(), protocol);
 
         WebSocketFrame frame = inboundHandler.inboundQueue().take();
         assertThat(frame).isEqualTo(WebSocketFrame.ofText("hello"));
@@ -121,7 +122,7 @@ class WebSocketClientTest {
         private final ArrayBlockingQueue<WebSocketFrame> inboundQueue = new ArrayBlockingQueue<>(4);
         private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
-        WebSocketInboundHandler(WebSocket inbound) {
+        WebSocketInboundHandler(WebSocket inbound, SessionProtocol protocol) {
             inbound.subscribe(new Subscriber<WebSocketFrame>() {
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -135,7 +136,12 @@ class WebSocketClientTest {
 
                 @Override
                 public void onError(Throwable t) {
-                    completionFuture.completeExceptionally(t);
+                    if (protocol.isExplicitHttp1()) {
+                        // After receiving a close frame, ClosedSessionException can be raised for HTTP/1.1
+                        // before onComplete is called.
+                        assertThat(t).isExactlyInstanceOf(ClosedSessionException.class);
+                    }
+                    completionFuture.complete(null);
                 }
 
                 @Override
