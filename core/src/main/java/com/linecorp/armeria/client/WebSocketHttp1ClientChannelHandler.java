@@ -164,10 +164,6 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                 return;
             }
 
-            if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
-                keepAliveHandler.onReadOrWrite();
-            }
-
             final HttpResponse nettyRes = (HttpResponse) msg;
             final DecoderResult decoderResult = nettyRes.decoderResult();
             if (!decoderResult.isSuccess()) {
@@ -195,10 +191,6 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                 fail(ctx, ClosedSessionException.get());
             }
             return;
-        }
-
-        if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
-            keepAliveHandler.onReadOrWrite();
         }
 
         try {

@@ -35,11 +35,6 @@ final class WebSocketHttp1ResponseWrapper extends HttpResponseWrapper {
     }
 
     @Override
-    public void close(Throwable cause) {
-        super.close(cause);
-    }
-
-    @Override
     void close(@Nullable Throwable cause, boolean cancel) {
         if (cancel || !(cause instanceof ClosedSessionException)) {
             close0(cause, cancel);

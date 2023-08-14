@@ -120,6 +120,7 @@ public final class WebSocketSession {
 
         if (!outboundFuture.complete(
                 streamMessage.map(webSocketFrame -> HttpData.wrap(encoder.encode(ctx, webSocketFrame))))) {
+            streamMessage.abort();
             throw new IllegalStateException("outbound() or setOutbound() has been already called.");
         }
     }
