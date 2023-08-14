@@ -25,8 +25,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map.Entry;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpMethod;
@@ -43,13 +43,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-public class ArmeriaClientHttpRequestTest {
+class ArmeriaClientHttpRequestTest {
 
     private static final String TEST_PATH_AND_QUERY = "/index.html?q=1";
 
     static WebClient webClient;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         webClient = mock(WebClient.class);
         when(webClient.execute((HttpRequest) any())).thenReturn(HttpResponse.of(HttpStatus.OK));
@@ -61,7 +61,7 @@ public class ArmeriaClientHttpRequestTest {
     }
 
     @Test
-    public void completeWithoutBody() {
+    void completeWithoutBody() {
         final ArmeriaClientHttpRequest request = request();
         request.setComplete().subscribe();
 
@@ -88,7 +88,7 @@ public class ArmeriaClientHttpRequestTest {
     }
 
     @Test
-    public void writeWithPublisher() {
+    void writeWithPublisher() {
         final ArmeriaClientHttpRequest request = request();
         final Flux<DataBuffer> body = Flux.just("a", "b", "c", "d", "e")
                                           .map(String::getBytes)
@@ -135,7 +135,7 @@ public class ArmeriaClientHttpRequestTest {
     }
 
     @Test
-    public void writeAndFlushWithMultiplePublisher() {
+    void writeAndFlushWithMultiplePublisher() {
         final ArmeriaClientHttpRequest request = request();
         final Flux<Flux<DataBuffer>> body = Flux.just(
                 Flux.just("a", "b", "c", "d", "e").map(String::getBytes)
