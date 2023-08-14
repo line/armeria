@@ -69,7 +69,7 @@ class DefaultHttpClientObservationConvention implements ObservationConvention<Cl
         return KeyValues.of(builder.build());
     }
 
-    private void addIfNotNull(@Nullable KeyValue keyValue, ImmutableList.Builder<KeyValue> builder) {
+    private static void addIfNotNull(@Nullable KeyValue keyValue, ImmutableList.Builder<KeyValue> builder) {
         if (keyValue != null) {
             builder.add(keyValue);
         }

@@ -89,7 +89,7 @@ public final class ObservationService extends SimpleDecoratingHttpService {
         requireNonNull(observationRegistry, "observationRegistry");
         requireNonNull(observationConvention, "observationConvention");
         return service -> new ObservationService(
-                service, observationRegistry, requireNonNull(observationConvention, "observationConvention"));
+                service, observationRegistry, observationConvention);
     }
 
     private final ObservationRegistry observationRegistry;
@@ -106,9 +106,9 @@ public final class ObservationService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING) ||
-            !ctx.config().transientServiceOptions().contains(
-                    TransientServiceOption.WITH_METRIC_COLLECTION)) {
+        final Set<TransientServiceOption> transientServiceOptions = ctx.config().transientServiceOptions();
+        if (!transientServiceOptions.contains(TransientServiceOption.WITH_TRACING) ||
+            !transientServiceOptions.contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
             return unwrap().serve(ctx, req);
         }
 
@@ -133,9 +133,9 @@ public final class ObservationService extends SimpleDecoratingHttpService {
         return observation.scopedChecked(() -> unwrap().serve(ctx, req));
     }
 
-    private void enrichObservation(ServiceRequestContext ctx,
-                                   ServiceObservationContext serviceObservationContext,
-                                   Observation observation) {
+    private static void enrichObservation(ServiceRequestContext ctx,
+                                          ServiceObservationContext serviceObservationContext,
+                                          Observation observation) {
         ctx.log()
            .whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
            .thenAccept(requestLog -> observation.event(

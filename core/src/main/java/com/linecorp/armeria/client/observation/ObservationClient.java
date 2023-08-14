@@ -63,7 +63,7 @@ import io.micrometer.observation.ObservationRegistry;
  *
  * // add the decorator
  * WebClient.builder()
- *          .decorator(MicrometerObservationClient.newDecorator(observationRegistry))
+ *          .decorator(ObservationClient.newDecorator(observationRegistry))
  * ...
  * }</pre>
  */
@@ -86,9 +86,9 @@ public final class ObservationClient extends SimpleDecoratingHttpClient {
      */
     public static Function<? super HttpClient, ObservationClient> newDecorator(
             ObservationRegistry observationRegistry,
-            @Nullable ObservationConvention<ClientObservationContext> observationConvention) {
+            ObservationConvention<ClientObservationContext> observationConvention) {
         requireNonNull(observationRegistry, "observationRegistry");
-
+        requireNonNull(observationConvention, "observationConvention");
         return delegate -> new ObservationClient(delegate, observationRegistry,
                                                  observationConvention);
     }
