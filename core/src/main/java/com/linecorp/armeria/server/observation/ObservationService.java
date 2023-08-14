@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.observation.ObservationClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -65,6 +66,8 @@ import io.micrometer.observation.ObservationRegistry;
  *       .decorator(ObservationService.newDecorator(observationRegistry))
  * ...
  * }</pre>
+ *
+ * @see ObservationClient
  */
 @UnstableApi
 public final class ObservationService extends SimpleDecoratingHttpService {

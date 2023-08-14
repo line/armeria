@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.server.observation.ObservationService;
 
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationConvention;
@@ -66,6 +67,8 @@ import io.micrometer.observation.ObservationRegistry;
  *          .decorator(ObservationClient.newDecorator(observationRegistry))
  * ...
  * }</pre>
+ *
+ * @see ObservationService
  */
 @UnstableApi
 public final class ObservationClient extends SimpleDecoratingHttpClient {

@@ -55,17 +55,6 @@ public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClien
         return ImmutableList.of(SessionProtocol.H1C, SessionProtocol.H2C);
     }
 
-    /**
-     * OkHttp's MockWebServer does not support H2C with HTTP/1 upgrade request.
-     */
-    private static final ClientFactory clientFactoryWithoutUpgradeRequest =
-            ClientFactory.builder().useHttp2Preface(true).build();
-
-    @AfterClass
-    public static void closeClientFactory() {
-        clientFactoryWithoutUpgradeRequest.closeAsync();
-    }
-
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
 
@@ -98,7 +87,6 @@ public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClien
     @Override
     protected WebClient newClient(int port) {
         return WebClient.builder(sessionProtocol.uriText() + "://127.0.0.1:" + port)
-                        .factory(clientFactoryWithoutUpgradeRequest)
                         .decorator(ObservationClient.newDecorator(
                                 observationRegistry(), clientObservationConvention))
                         .build();
@@ -144,30 +132,30 @@ public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClien
     public void supportsPortableCustomization() throws IOException {
         clientObservationConvention = new DefaultHttpClientObservationConvention() {
 
-                    @Override
-                    public KeyValues getHighCardinalityKeyValues(ClientObservationContext context) {
-                        context.setRemoteServiceName("remote-service"); // TODO: As a side effect
-                        KeyValues values =
-                                super.getHighCardinalityKeyValues(
-                                        context);
-                        values = values.and(
-                                KeyValues.of("http.url",
-                                             context.requestContext().uri().toString(),
-                                                         "request_customizer.is_span", "false"));
-                        if (context.getResponse() != null) {
-                            values = values.and("response_customizer.is_span", "false");
-                        }
-                        return values;
-                    }
+            @Override
+            public KeyValues getHighCardinalityKeyValues(ClientObservationContext context) {
+                context.setRemoteServiceName("remote-service"); // TODO: As a side effect
+                KeyValues values =
+                        super.getHighCardinalityKeyValues(
+                                context);
+                values = values.and(
+                        KeyValues.of("http.url",
+                                     context.requestContext().uri().toString(),
+                                     "request_customizer.is_span", "false"));
+                if (context.getResponse() != null) {
+                    values = values.and("response_customizer.is_span", "false");
+                }
+                return values;
+            }
 
-                    @Override
-                    public String getContextualName(ClientObservationContext context) {
-                        return context.httpRequest().method()
-                                      .toString().toLowerCase() + " " +
-                               context.httpRequest().path()
-                                      .substring(0, context.httpRequest().path().indexOf("?"));
-                    }
-                };
+            @Override
+            public String getContextualName(ClientObservationContext context) {
+                return context.httpRequest().method()
+                              .toString().toLowerCase() + " " +
+                       context.httpRequest().path()
+                              .substring(0, context.httpRequest().path().indexOf("?"));
+            }
+        };
         super.supportsPortableCustomization();
     }
 
