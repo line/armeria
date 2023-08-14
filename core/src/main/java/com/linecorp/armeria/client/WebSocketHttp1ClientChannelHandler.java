@@ -243,7 +243,6 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        // keepAliveHandler.onReadOrWrite(); is called by Http1ObjectEncoder.
         if (msg instanceof HttpContent) {
             ctx.write(((HttpContent) msg).content(), promise);
             return;

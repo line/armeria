@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
  * You can start sending {@link WebSocketFrame}s via {@link #setOutbound(Publisher)}. You can also subscribe to
  * {@link #inbound()} to receive {@link WebSocketFrame}s from the server.
  */
+@UnstableApi
 public final class WebSocketSession {
 
     private final ClientRequestContext ctx;
