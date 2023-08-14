@@ -195,7 +195,8 @@ public final class Flags {
             getValue(FlagsProvider::maxNumConnections, "maxNumConnections", value -> value > 0);
 
     private static final int NUM_COMMON_WORKERS =
-            getValue(FlagsProvider::numCommonWorkers, "numCommonWorkers", value -> value > 0);
+            getValue(provider -> provider.numCommonWorkers(TRANSPORT_TYPE),
+                     "numCommonWorkers", value -> value > 0);
 
     private static final int NUM_COMMON_BLOCKING_TASK_THREADS =
             getValue(FlagsProvider::numCommonBlockingTaskThreads, "numCommonBlockingTaskThreads",
@@ -380,6 +381,9 @@ public final class Flags {
 
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
             getValue(FlagsProvider::allowDoubleDotsInQueryString, "allowDoubleDotsInQueryString");
+
+    private static final boolean ALLOW_SEMICOLON_IN_PATH_COMPONENT =
+            getValue(FlagsProvider::allowSemicolonInPathComponent, "allowSemicolonInPathComponent");
 
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
@@ -603,8 +607,10 @@ public final class Flags {
      * {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} or
      * {@link ClientFactoryBuilder#workerGroup(EventLoopGroup, boolean)}.
      *
-     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>} for {@link TransportType#NIO},
+     * {@link TransportType#EPOLL} and {@link TransportType#KQUEUE} and {@code <numCpuCores>} for
+     * {@link TransportType#IO_URING}. Specify the {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>}
+     * JVM option to override the default value.
      */
     public static int numCommonWorkers() {
         return NUM_COMMON_WORKERS;
@@ -1368,6 +1374,27 @@ public final class Flags {
      */
     public static boolean allowDoubleDotsInQueryString() {
         return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
+    }
+
+    /**
+     * Returns whether to allow a semicolon ({@code ;}) in a request path component on the server-side.
+     * If disabled, the substring from the semicolon to before the next slash, commonly referred to as
+     * matrix variables, is removed. For example, {@code /foo;a=b/bar} will be converted to {@code /foo/bar}.
+     * Also, an exception is raised if a semicolon is used for binding a service. For example, the following
+     * code raises an exception:
+     * <pre>{@code
+     * Server server =
+     *    Server.builder()
+     *      .service("/foo;bar", ...)
+     *      .build();
+     * }</pre>
+     * Note that this flag has no effect on the client-side.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowSemicolonInPathComponent=true} JVM option to enable it.
+     */
+    public static boolean allowSemicolonInPathComponent() {
+        return ALLOW_SEMICOLON_IN_PATH_COMPONENT;
     }
 
     /**

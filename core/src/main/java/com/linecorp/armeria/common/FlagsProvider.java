@@ -238,11 +238,15 @@ public interface FlagsProvider {
      * {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} or
      * {@link ClientFactoryBuilder#workerGroup(EventLoopGroup, boolean)}.
      *
-     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>} for {@link TransportType#NIO},
+     * {@link TransportType#EPOLL} and {@link TransportType#KQUEUE} and {@code <numCpuCores>} for
+     * {@link TransportType#IO_URING}. Specify the {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>}
+     * JVM option to override the default value.
+     *
+     * @param transportType the {@link TransportType} that will be used for I/O
      */
     @Nullable
-    default Integer numCommonWorkers() {
+    default Integer numCommonWorkers(TransportType transportType) {
         return null;
     }
 
@@ -1007,6 +1011,28 @@ public interface FlagsProvider {
      */
     @Nullable
     default Boolean allowDoubleDotsInQueryString() {
+        return null;
+    }
+
+    /**
+     * Returns whether to allow a semicolon ({@code ;}) in a request path component on the server-side.
+     * If disabled, the substring from the semicolon to before the next slash, commonly referred to as
+     * matrix variables, is removed. For example, {@code /foo;a=b/bar} will be converted to {@code /foo/bar}.
+     * Also, an exception is raised if a semicolon is used for binding a service. For example, the following
+     * code raises an exception:
+     * <pre>{@code
+     * Server server =
+     *    Server.builder()
+     *      .service("/foo;bar", ...)
+     *      .build();
+     * }</pre>
+     * Note that this flag has no effect on the client-side.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowSemicolonInPathComponent=true} JVM option to enable it.
+     */
+    @Nullable
+    default Boolean allowSemicolonInPathComponent() {
         return null;
     }
 

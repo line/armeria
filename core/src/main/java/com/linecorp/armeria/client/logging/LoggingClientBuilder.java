@@ -61,6 +61,11 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     // Override the return type of the chaining methods in the superclass.
 
     @Override
+    protected LoggingClientBuilder defaultLogger(Logger logger) {
+        return (LoggingClientBuilder) super.defaultLogger(logger);
+    }
+
+    @Override
     public LoggingClientBuilder samplingRate(float samplingRate) {
         return (LoggingClientBuilder) super.samplingRate(samplingRate);
     }

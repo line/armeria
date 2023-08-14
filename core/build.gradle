@@ -35,6 +35,7 @@ mrJarVersions.each { version->
         testClassesDirs = sourceSets."java${version}Test".output.classesDirs
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
+        useJUnitPlatform()
         project.ext.configureCommonTestSettings(it)
         enabled = project.ext.testJavaVersion >= targetJavaVersion
     }
@@ -93,6 +94,9 @@ dependencies {
     api libs.jackson.databind
     api libs.jackson.datatype.jdk8
     api libs.jackson.datatype.jsr310
+
+    // Logback is only used for RequestScopedMdc integration.
+    compileOnly libs.logback14
 
     // Micrometer and other metric-related stuff
     api libs.micrometer.core
