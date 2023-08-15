@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-import org.junit.AfterClass;
 import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -30,7 +29,6 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -75,6 +73,7 @@ public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClien
     @Before
     @Override
     public void setup() throws IOException {
+        clientObservationConvention = DefaultHttpClientObservationConvention.INSTANCE;
         server.setProtocols(protocols);
         super.setup();
     }

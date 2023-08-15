@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.observation;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.observation.ObservationClient;
