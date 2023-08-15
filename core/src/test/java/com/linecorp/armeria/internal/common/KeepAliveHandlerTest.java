@@ -348,7 +348,6 @@ class KeepAliveHandlerTest {
     @ParameterizedTest
     @CsvSource({ "true", "false" })
     void testKeepAliveOnPing(boolean keepAliveOnPing) throws InterruptedException {
-        final AtomicLong lastIdleEventTime = new AtomicLong();
         final AtomicInteger idleCounter = new AtomicInteger();
         final long idleTimeout = 2000;
 
@@ -382,7 +381,6 @@ class KeepAliveHandlerTest {
                     }
                 };
 
-        lastIdleEventTime.set(System.nanoTime());
         idleTimeoutScheduler.initialize(ctx);
 
         for (int i = 0; i < 10; i++) {
