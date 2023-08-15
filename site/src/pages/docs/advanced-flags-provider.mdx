@@ -2,18 +2,22 @@
 
 ## What flags in Armeria are
 
-Flags are global variables that controls the behavior of Armeria. You can can implement a <type://FlagsProvider> and let Armeria discover it for the following purposes:
+Flags are global variables that control the behavior of Armeria.
+These variables mostly serve one of the following two purposes:
 
-1. To override the default system values.
+1. Overriding the default system values.
     - Overriding <type://FlagsProvider#defaultRequestTimeoutMillis()> changes the server-side timeout of a request.
-    - Overriding <type://FlagsProvider#defaultMaxServerNumRequestsPerConnection()> changes the server-side maximum allowed number of requests that can be served through one connection.
+    - Overriding <type://FlagsProvider#defaultMaxServerNumRequestsPerConnection()> changes the server-side maximum number of requests
+      allowed that can be served concurrently through one connection.
     - Overriding <type://FlagsProvider#transportType()> changes the transport type that will be used for socket I/O in Armeria.
-    - Overriding <type://FlagsProvider#fileServiceCacheSpec()> changes the cache specification of file service.
-2. For debugging or monitoring.
-    - Overriding <type://FlagsProvider#reportBlockedEventLoop()> enables to log a warning if CompletableFuture.join() or CompletableFuture.get() are called from an event loop thread.
-    - Overriding <type://FlagsProvider#verboseSocketExceptions()> enables to log the socket exceptions which are mostly harmless.
-    - Overriding <type://FlagsProvider#meterRegistry()> changes the default MeterRegistry where armeria records metrics.
-    - Overriding <type://FlagsProvider#requestContextLeakDetectionSampler()> enables to trace the request contexts leaks by specifying <type://Sampler> of request contexts.
+    - Overriding <type://FlagsProvider#fileServiceCacheSpec()> changes the cache specification of <type://FileService>.
+2. Enhanced debugging or monitoring.
+    - Overriding <type://FlagsProvider#reportBlockedEventLoop()> enables to log a warning if blocking calls
+      such as `CompletableFuture.join()` are called from an event loop thread.
+    - Overriding <type://FlagsProvider#verboseSocketExceptions()> enables logging for socket exceptions which are mostly harmless.
+    - Overriding <type://FlagsProvider#meterRegistry()> changes the default `MeterRegistry` where Armeria records metrics.
+    - Overriding <type://FlagsProvider#requestContextLeakDetectionSampler()> enables to request context leak tracing by specifying
+      a <type://Sampler>.
 
 You can also override these properties by setting JVM system properties. For example:
 - `-Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>`
