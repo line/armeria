@@ -4,16 +4,22 @@ configure(projectsWithFlags('publish', 'java')) {
             jar(MavenPublication) {
                 from components.java
 
+                // Resolved versions are used to publish platform dependencies in pom XML.
+                versionMapping {
+                    usage(Usage.JAVA_RUNTIME) {
+                        fromResolutionResult()
+                    }
+                    usage(Usage.JAVA_API) {
+                        // compileOnly dependencies should not be included in the compile scope of POM. If we
+                        // don't exclude them, compileOnly dependencies are also used to resolve the final
+                        // dependency version.
+                        fromResolutionOf("runtimeClasspath")
+                    }
+                }
+
                 // We don't publish Gradle metadata yet so don't need to worry about these variants.
                 suppressPomMetadataWarningsFor('optionalApiElements')
                 suppressPomMetadataWarningsFor('optionalRuntimeElements')
-
-                // Publish resolved versions
-                versionMapping {
-                    allVariants {
-                        fromResolutionResult()
-                    }
-                }
 
                 // Replace published jar with shaded when available. We manually create shading tasks instead of
                 // applying the shadow plugin itself so need to do it ourselves.
