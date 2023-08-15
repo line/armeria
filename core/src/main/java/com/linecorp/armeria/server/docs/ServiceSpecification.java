@@ -28,6 +28,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
@@ -133,6 +134,7 @@ public final class ServiceSpecification {
     /**
      * Creates a new instance.
      */
+    @VisibleForTesting
     public ServiceSpecification(Iterable<ServiceInfo> services,
                                 Iterable<EnumInfo> enums,
                                 Iterable<StructInfo> structs,
@@ -143,6 +145,7 @@ public final class ServiceSpecification {
     /**
      * Creates a new instance.
      */
+    @VisibleForTesting
     public ServiceSpecification(Iterable<ServiceInfo> services,
                                 Iterable<EnumInfo> enums,
                                 Iterable<StructInfo> structs,

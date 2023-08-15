@@ -59,7 +59,7 @@ final class ExampleSupport {
                                  this.exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get(""));
 
         return new ServiceSpecification(serviceWithExample, spec.enums(), spec.structs(), spec.exceptions(),
-                                        exampleHeaders);
+                                        exampleHeaders, spec.docServiceRoute());
     }
 
     private ServiceInfo addServiceExamples(ServiceInfo service) {

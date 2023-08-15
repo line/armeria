@@ -146,7 +146,7 @@ export default abstract class Transport {
    * Default implementation is suitable for RPC, using endpoint.pathMapping === path.
    */
   protected validatePath(endpoint: Endpoint, path: string): { error?: string } {
-    if (!path.endsWith(endpoint.pathMapping)) {
+    if (endpoint.pathMapping !== path) {
       return {
         error: `The path: '${path}' must end with ${endpoint.pathMapping}`,
       };

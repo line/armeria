@@ -129,11 +129,12 @@ const parseServerRootPath = (docServiceRoute: Route | undefined): string => {
 
   // Remove '/*' from the path
   const docServicePath = docServiceRoute.patternString.slice(0, -2);
+  const index = window.location.pathname.indexOf(docServicePath);
+  if (index < 0) {
+    return '';
+  }
 
-  return window.location.pathname.substring(
-    0,
-    window.location.pathname.indexOf(docServicePath),
-  );
+  return window.location.pathname.substring(0, index);
 };
 
 const toggle = (prev: boolean, override: unknown) => {
