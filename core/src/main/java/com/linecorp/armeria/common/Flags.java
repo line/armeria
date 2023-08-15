@@ -156,37 +156,33 @@ public final class Flags {
     private static final Predicate<TransportType> TRANSPORT_TYPE_VALIDATOR = transportType -> {
         switch (transportType) {
             case IO_URING:
-                if (TransportType.IO_URING.isAvailable()) {
-                    logger.info("Using io_uring");
-                    return true;
-                } else {
-                    final Throwable cause = TransportType.IO_URING.unavailabilityCause();
-                    if (cause != null) {
-                        logger.info("io_uring not available: {}", cause.toString());
-                    } else {
-                        logger.info("io_uring not available: ?");
-                    }
-                    return false;
-                }
+                return validateTransportType(TransportType.IO_URING, "io_uring");
+            case KQUEUE:
+                return validateTransportType(TransportType.KQUEUE, "Kqueue");
             case EPOLL:
-                if (TransportType.EPOLL.isAvailable()) {
-                    logger.info("Using /dev/epoll");
-                    return true;
-                } else {
-                    final Throwable cause = TransportType.EPOLL.unavailabilityCause();
-                    if (cause != null) {
-                        logger.info("/dev/epoll not available: {}", cause.toString());
-                    } else {
-                        logger.info("/dev/epoll not available: ?");
-                    }
-                    return false;
-                }
+                return validateTransportType(TransportType.EPOLL, "/dev/epoll");
             case NIO:
                 return true;
             default:
                 return false;
         }
     };
+
+    private static boolean validateTransportType(TransportType transportType, String friendlyName) {
+        if (transportType.isAvailable()) {
+            logger.info("Using {}", friendlyName);
+            return true;
+        } else {
+            final Throwable cause = transportType.unavailabilityCause();
+            if (cause != null) {
+                logger.info("{} not available: {}", friendlyName, cause.toString());
+            } else {
+                logger.info("{} not available: ?", friendlyName);
+            }
+            return false;
+        }
+    }
+
     private static final TransportType TRANSPORT_TYPE =
             getValue(FlagsProvider::transportType, "transportType", TRANSPORT_TYPE_VALIDATOR);
 
@@ -199,7 +195,8 @@ public final class Flags {
             getValue(FlagsProvider::maxNumConnections, "maxNumConnections", value -> value > 0);
 
     private static final int NUM_COMMON_WORKERS =
-            getValue(FlagsProvider::numCommonWorkers, "numCommonWorkers", value -> value > 0);
+            getValue(provider -> provider.numCommonWorkers(TRANSPORT_TYPE),
+                     "numCommonWorkers", value -> value > 0);
 
     private static final int NUM_COMMON_BLOCKING_TASK_THREADS =
             getValue(FlagsProvider::numCommonBlockingTaskThreads, "numCommonBlockingTaskThreads",
@@ -297,6 +294,9 @@ public final class Flags {
     private static final boolean DEFAULT_USE_HTTP2_PREFACE =
             getValue(FlagsProvider::defaultUseHttp2Preface, "defaultUseHttp2Preface");
 
+    private static final boolean DEFAULT_USE_HTTP2_WITHOUT_ALPN =
+            getValue(FlagsProvider::defaultUseHttp2WithoutAlpn, "defaultUseHttp2WithoutAlpn");
+
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING =
             getValue(FlagsProvider::defaultUseHttp1Pipelining, "defaultUseHttp1Pipelining");
 
@@ -313,6 +313,9 @@ public final class Flags {
 
     private static final int DEFAULT_MAX_TOTAL_ATTEMPTS =
             getValue(FlagsProvider::defaultMaxTotalAttempts, "defaultMaxTotalAttempts", value -> value > 0);
+
+    private static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS =
+            getValue(FlagsProvider::defaultRequestAutoAbortDelayMillis, "defaultRequestAutoAbortDelayMillis");
 
     @Nullable
     private static final String ROUTE_CACHE_SPEC =
@@ -372,6 +375,9 @@ public final class Flags {
 
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
             getValue(FlagsProvider::allowDoubleDotsInQueryString, "allowDoubleDotsInQueryString");
+
+    private static final boolean ALLOW_SEMICOLON_IN_PATH_COMPONENT =
+            getValue(FlagsProvider::allowSemicolonInPathComponent, "allowSemicolonInPathComponent");
 
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
@@ -595,8 +601,10 @@ public final class Flags {
      * {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} or
      * {@link ClientFactoryBuilder#workerGroup(EventLoopGroup, boolean)}.
      *
-     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>} for {@link TransportType#NIO},
+     * {@link TransportType#EPOLL} and {@link TransportType#KQUEUE} and {@code <numCpuCores>} for
+     * {@link TransportType#IO_URING}. Specify the {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>}
+     * JVM option to override the default value.
      */
     public static int numCommonWorkers() {
         return NUM_COMMON_WORKERS;
@@ -776,6 +784,22 @@ public final class Flags {
      */
     public static boolean defaultUseHttp2Preface() {
         return DEFAULT_USE_HTTP2_PREFACE;
+    }
+
+    /**
+     * Returns the default value of the {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)} option.
+     * If enabled, even when ALPN negotiation fails client will try to attempt upgrade to HTTP/2 when needed.
+     * This will be either HTTP/2 connection preface or HTTP/1-to-2 upgrade request,
+     * depending on {@link ClientFactoryBuilder#useHttp2Preface(boolean)} setting.
+     * If disabled, when ALPN negotiation fails client will also fail in case HTTP/2 was required.
+     * {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2WithoutAlpn=true} JVM option to enable it.
+     */
+    @UnstableApi
+    public static boolean defaultUseHttp2WithoutAlpn() {
+        return DEFAULT_USE_HTTP2_WITHOUT_ALPN;
     }
 
     /**
@@ -1000,6 +1024,23 @@ public final class Flags {
      */
     public static int defaultMaxTotalAttempts() {
         return DEFAULT_MAX_TOTAL_ATTEMPTS;
+    }
+
+    /**
+     * Returns the amount of time to wait by default before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#requestAutoAbortDelayMillis(long)} (long)} or
+     * {@link ClientBuilder#requestAutoAbortDelayMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultRequestAutoAbortDelayMillis=<long>} JVM option
+     * to override the default value.
+     */
+    @UnstableApi
+    public static long defaultRequestAutoAbortDelayMillis() {
+        return DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
     }
 
     /**
@@ -1303,6 +1344,27 @@ public final class Flags {
      */
     public static boolean allowDoubleDotsInQueryString() {
         return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
+    }
+
+    /**
+     * Returns whether to allow a semicolon ({@code ;}) in a request path component on the server-side.
+     * If disabled, the substring from the semicolon to before the next slash, commonly referred to as
+     * matrix variables, is removed. For example, {@code /foo;a=b/bar} will be converted to {@code /foo/bar}.
+     * Also, an exception is raised if a semicolon is used for binding a service. For example, the following
+     * code raises an exception:
+     * <pre>{@code
+     * Server server =
+     *    Server.builder()
+     *      .service("/foo;bar", ...)
+     *      .build();
+     * }</pre>
+     * Note that this flag has no effect on the client-side.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowSemicolonInPathComponent=true} JVM option to enable it.
+     */
+    public static boolean allowSemicolonInPathComponent() {
+        return ALLOW_SEMICOLON_IN_PATH_COMPONENT;
     }
 
     /**

@@ -48,7 +48,7 @@ class RetryingClientWithDecoratorTest {
         // Retry only 3 times.
         final RetryRule retryRule = RetryRule.builder()
                                              .onException((ctx, cause) -> {
-                                                 assert cause instanceof AnticipatedException;
+                                                 assertThat(cause).isInstanceOf(AnticipatedException.class);
                                                  return onExceptionCounter.incrementAndGet() != 3;
                                              })
                                              .onResponseTrailers((ctx, trailers) -> false)

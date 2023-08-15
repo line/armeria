@@ -44,6 +44,7 @@ import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthComponent;
+import org.springframework.boot.actuate.health.HttpCodeStatusMapper;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.core.io.Resource;
 import org.springframework.util.MimeType;
@@ -122,11 +123,11 @@ final class WebOperationService implements HttpService {
     }
 
     private final WebOperation operation;
-    private final SimpleHttpCodeStatusMapper statusMapper;
+    private final HttpCodeStatusMapper statusMapper;
     private final boolean isServerNamespace;
     private final Map<String, Object> additionalArguments;
 
-    WebOperationService(WebOperation operation, SimpleHttpCodeStatusMapper statusMapper,
+    WebOperationService(WebOperation operation, HttpCodeStatusMapper statusMapper,
                         boolean isServerNamespace, // management if it's false.
                         Map<String, Object> additionalArguments) {
         this.operation = operation;
@@ -138,9 +139,9 @@ final class WebOperationService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
         if (operation.isBlocking()) {
-            return HttpResponse.from(req.aggregate().thenApplyAsync(invoke(ctx), ctx.blockingTaskExecutor()));
+            return HttpResponse.of(req.aggregate().thenApplyAsync(invoke(ctx), ctx.blockingTaskExecutor()));
         } else {
-            return HttpResponse.from(req.aggregate().thenApply(invoke(ctx)));
+            return HttpResponse.of(req.aggregate().thenApply(invoke(ctx)));
         }
     }
 
@@ -204,7 +205,7 @@ final class WebOperationService implements HttpService {
         return new InvocationContext(SecurityContext.NONE, arguments);
     }
 
-    static HttpResponse handleResult(SimpleHttpCodeStatusMapper statusMapper, ServiceRequestContext ctx,
+    static HttpResponse handleResult(HttpCodeStatusMapper statusMapper, ServiceRequestContext ctx,
                                      @Nullable Object result, HttpMethod method) throws Throwable {
         if (result == null) {
             return HttpResponse.of(method != HttpMethod.GET ? HttpStatus.NO_CONTENT : HttpStatus.NOT_FOUND);
@@ -213,7 +214,7 @@ final class WebOperationService implements HttpService {
         return handleResult0(statusMapper, ctx, result);
     }
 
-    static HttpResponse handleResult0(SimpleHttpCodeStatusMapper statusMapper,
+    static HttpResponse handleResult0(HttpCodeStatusMapper statusMapper,
                                       ServiceRequestContext ctx, Object result) throws Throwable {
         final HttpStatus status;
         final Object body;

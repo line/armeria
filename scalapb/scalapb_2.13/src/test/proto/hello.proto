@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package armeria.scalapb;
+package testing.scalapb.service;
 
-service HelloService {
+service TestService {
   rpc Hello (HelloRequest) returns (HelloReply) {}
   rpc LazyHello (HelloRequest) returns (HelloReply) {}
   rpc BlockingHello (HelloRequest) returns (HelloReply) {}

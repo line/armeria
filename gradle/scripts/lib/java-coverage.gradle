@@ -49,11 +49,11 @@ configure(rootProject) {
     task jacocoTestReport(type: JacocoReport) {
         def reportTask = delegate
         reports {
-            csv.enabled = false
-            xml.enabled = true
-            xml.destination = file("${rootProject.buildDir}/report/jacoco/jacocoTestReport.xml")
-            html.enabled = true
-            html.destination = file("${rootProject.buildDir}/report/jacoco/html")
+            csv.required = false
+            xml.required = true
+            xml.outputLocation.set(file("${rootProject.buildDir}/report/jacoco/jacocoTestReport.xml"))
+            html.required = true
+            html.outputLocation.set(file("${rootProject.buildDir}/report/jacoco/html"))
         }
 
         jacocoClasspath = configurations.jacocoAnt
@@ -66,7 +66,6 @@ configure(rootProject) {
                 }
 
                 p.tasks.withType(Test).each { testTask ->
-                    reportTask.dependsOn(testTask.path)
                     reportTask.mustRunAfter(testTask)
                     testTask.finalizedBy(reportTask)
 

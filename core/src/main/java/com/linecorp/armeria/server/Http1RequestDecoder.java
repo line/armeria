@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
@@ -27,6 +28,7 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -36,12 +38,14 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -78,6 +82,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
     private ServerHttpObjectEncoder encoder;
+    private final HttpServer httpServer;
 
     /** The request being decoded currently. */
     @Nullable
@@ -86,11 +91,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private boolean discarding;
 
     Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
-                        ServerHttp1ObjectEncoder encoder) {
+                        ServerHttp1ObjectEncoder encoder, HttpServer httpServer) {
         this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.encoder = encoder;
+        this.httpServer = httpServer;
     }
 
     @Override
@@ -110,7 +116,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         super.channelUnregistered(ctx);
         if (req instanceof HttpRequestWriter) {
             // Ignored if the stream has already been closed.
-            ((HttpRequestWriter) req).close(ClosedSessionException.get());
+            req.close(ClosedSessionException.get());
         }
     }
 
@@ -209,25 +215,51 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         return;
                     }
 
+                    final EventLoop eventLoop = ctx.channel().eventLoop();
+
                     // Close the request early when it is certain there will be neither content nor trailers.
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
                                                                         headers, reqTarget);
                     if (routingCtx.status().routeMustExist()) {
-                        try {
-                            // Find the service that matches the path.
-                            final Routed<ServiceConfig> routed =
-                                    routingCtx.virtualHost().findServiceConfig(routingCtx, true);
-                            assert routed.isPresent();
-                        } catch (Throwable cause) {
-                            logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
-                            fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+                        // Find the service that matches the path.
+                        final Routed<ServiceConfig> routed =
+                                routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                        assert routed.isPresent();
+                        final ServiceConfig serviceConfig = routingCtx.result().value();
+                        if (isHttp1WebSocketUpgradeRequest(headers)) {
+                            if (serviceConfig.service().as(WebSocketService.class) == null) {
+                                fail(id, headers, HttpStatus.BAD_REQUEST,
+                                     "WebSocket upgrade requested but the service does not support it.", null);
+                                return;
+                            }
+
+                            logger.trace("Received WebSocket upgrade headers: {}", headers);
+                            if (httpServer.unfinishedRequests() > 0) {
+                                fail(id, headers, HttpStatus.BAD_REQUEST,
+                                     "WebSocket session cannot share the connection.", null);
+                                return;
+                            }
+                            final StreamingDecodedHttpRequest webSocketRequest =
+                                    new StreamingDecodedHttpRequest(
+                                            eventLoop, id, 1, headers, false, inboundTrafficController,
+                                            serviceConfig.maxRequestLength(), routingCtx,
+                                            ExchangeType.BIDI_STREAMING,
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true);
+                            assert encoder instanceof ServerHttp1ObjectEncoder;
+                            ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
+                            final ChannelPipeline pipeline = ctx.pipeline();
+                            pipeline.replace(this, null, new WebSocketSessionChannelHandler(
+                                    webSocketRequest, encoder, serviceConfig));
+                            if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
+                                pipeline.remove(HttpServerUpgradeHandler.class);
+                            }
+                            ctx.fireChannelRead(webSocketRequest);
                             return;
                         }
                     }
 
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
-                    final EventLoop eventLoop = ctx.channel().eventLoop();
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);
 
@@ -293,7 +325,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (!trailingHeaders.isEmpty()) {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
-
                     decodedReq.close();
                     if (decodedReq.needsAggregation()) {
                         // An aggregated request is now ready to be fired.

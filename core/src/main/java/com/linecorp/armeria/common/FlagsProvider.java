@@ -238,11 +238,15 @@ public interface FlagsProvider {
      * {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} or
      * {@link ClientFactoryBuilder#workerGroup(EventLoopGroup, boolean)}.
      *
-     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>} for {@link TransportType#NIO},
+     * {@link TransportType#EPOLL} and {@link TransportType#KQUEUE} and {@code <numCpuCores>} for
+     * {@link TransportType#IO_URING}. Specify the {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>}
+     * JVM option to override the default value.
+     *
+     * @param transportType the {@link TransportType} that will be used for I/O
      */
     @Nullable
-    default Integer numCommonWorkers() {
+    default Integer numCommonWorkers(TransportType transportType) {
         return null;
     }
 
@@ -432,6 +436,23 @@ public interface FlagsProvider {
      */
     @Nullable
     default Boolean defaultUseHttp2Preface() {
+        return null;
+    }
+
+    /**
+     * Returns the default value of the {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)} option.
+     * If enabled, even when ALPN negotiation fails client will try to attempt upgrade to HTTP/2 when needed.
+     * This will be either HTTP/2 connection preface or HTTP/1-to-2 upgrade request,
+     * depending on {@link ClientFactoryBuilder#useHttp2Preface(boolean)} setting.
+     * If disabled, when ALPN negotiation fails client will also fail in case HTTP/2 was required.
+     * {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2WithoutAlpn=true} JVM option to enable it.
+     */
+    @Nullable
+    @UnstableApi
+    default Boolean defaultUseHttp2WithoutAlpn() {
         return null;
     }
 
@@ -670,6 +691,19 @@ public interface FlagsProvider {
      */
     @Nullable
     default Integer defaultMaxTotalAttempts() {
+        return null;
+    }
+
+    /**
+     * Returns the amount of time to wait by default before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#requestAutoAbortDelayMillis(long)} or
+     * {@link ClientBuilder#requestAutoAbortDelayMillis(long)}.
+     */
+    @UnstableApi
+    @Nullable
+    default Long defaultRequestAutoAbortDelayMillis() {
         return null;
     }
 
@@ -951,6 +985,28 @@ public interface FlagsProvider {
      */
     @Nullable
     default Boolean allowDoubleDotsInQueryString() {
+        return null;
+    }
+
+    /**
+     * Returns whether to allow a semicolon ({@code ;}) in a request path component on the server-side.
+     * If disabled, the substring from the semicolon to before the next slash, commonly referred to as
+     * matrix variables, is removed. For example, {@code /foo;a=b/bar} will be converted to {@code /foo/bar}.
+     * Also, an exception is raised if a semicolon is used for binding a service. For example, the following
+     * code raises an exception:
+     * <pre>{@code
+     * Server server =
+     *    Server.builder()
+     *      .service("/foo;bar", ...)
+     *      .build();
+     * }</pre>
+     * Note that this flag has no effect on the client-side.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowSemicolonInPathComponent=true} JVM option to enable it.
+     */
+    @Nullable
+    default Boolean allowSemicolonInPathComponent() {
         return null;
     }
 

@@ -100,9 +100,6 @@ public abstract class ServerRuleDelegate {
         server.start().join();
 
         this.server.set(server);
-
-        final WebClient webClient = webClientBuilder().build();
-        this.webClient.set(webClient);
         return server;
     }
 
@@ -347,7 +344,17 @@ public abstract class ServerRuleDelegate {
      * Returns the {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
      */
     public WebClient webClient() {
-        return webClient.get();
+        final WebClient webClient = this.webClient.get();
+        if (webClient != null) {
+            return webClient;
+        }
+
+        final WebClient newWebClient = webClientBuilder().build();
+        if (this.webClient.compareAndSet(null, newWebClient)) {
+            return newWebClient;
+        } else {
+            return this.webClient.get();
+        }
     }
 
     /**

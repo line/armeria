@@ -109,7 +109,7 @@ class RestClientTest {
                     preparation = restClient.delete("/rest/{id}");
                     break;
             }
-            assert preparation != null;
+            assertThat(preparation).isNotNull();
             final RestResponse response =
                     preparation.content("content")
                                .header("x-header", "header-value")

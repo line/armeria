@@ -269,7 +269,7 @@ class RetryingClientTest {
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    return HttpResponse.from(req.aggregate().handle((aggregatedRequest, thrown) -> {
+                    return HttpResponse.of(req.aggregate().handle((aggregatedRequest, thrown) -> {
                         if (reqPostCount.getAndIncrement() < 1) {
                             return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                         } else {

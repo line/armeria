@@ -29,21 +29,26 @@ import io.netty.util.AttributeKey;
 
 final class DefaultRequestOptions implements RequestOptions {
 
-    static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1, -1, ImmutableMap.of(), null);
+    static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1, -1, null,
+                                                                         ImmutableMap.of(), null);
 
     private final long responseTimeoutMillis;
     private final long writeTimeoutMillis;
     private final long maxResponseLength;
+    @Nullable
+    private final Long requestAutoAbortDelayMillis;
     private final Map<AttributeKey<?>, Object> attributeMap;
     @Nullable
     private final ExchangeType exchangeType;
 
     DefaultRequestOptions(long responseTimeoutMillis, long writeTimeoutMillis,
-                          long maxResponseLength, Map<AttributeKey<?>, Object> attributeMap,
+                          long maxResponseLength, @Nullable Long requestAutoAbortDelayMillis,
+                          Map<AttributeKey<?>, Object> attributeMap,
                           @Nullable ExchangeType exchangeType) {
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.writeTimeoutMillis = writeTimeoutMillis;
         this.maxResponseLength = maxResponseLength;
+        this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.attributeMap = attributeMap;
         this.exchangeType = exchangeType;
     }
@@ -61,6 +66,11 @@ final class DefaultRequestOptions implements RequestOptions {
     @Override
     public long maxResponseLength() {
         return maxResponseLength;
+    }
+
+    @Override
+    public Long requestAutoAbortDelayMillis() {
+        return requestAutoAbortDelayMillis;
     }
 
     @Override
@@ -104,6 +114,7 @@ final class DefaultRequestOptions implements RequestOptions {
                           .add("responseTimeoutMillis", responseTimeoutMillis)
                           .add("writeTimeoutMillis", writeTimeoutMillis)
                           .add("maxResponseLength", maxResponseLength)
+                          .add("requestAutoAbortDelayMillis", requestAutoAbortDelayMillis)
                           .add("attributeMap", attributeMap)
                           .add("exchangeType", exchangeType)
                           .toString();

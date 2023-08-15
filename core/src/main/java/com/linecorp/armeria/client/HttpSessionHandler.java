@@ -64,8 +64,7 @@ import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWritte
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyConnectionEvent;
-import io.netty.handler.ssl.SslCloseCompletionEvent;
-import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.ssl.SslCompletionEvent;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
@@ -120,7 +119,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      * {@code true} if the protocol upgrade to HTTP/2 has failed.
      * If set to {@code true}, another connection attempt will follow.
      */
-    private boolean needsRetryWithH1C;
+    @Nullable
+    private SessionProtocol retryProtocol;
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
@@ -272,8 +272,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void retryWithH1C() {
-        needsRetryWithH1C = true;
+    public void retryWith(SessionProtocol protocol) {
+        retryProtocol = protocol;
     }
 
     @Override
@@ -410,9 +410,26 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
+        if (evt instanceof SslCompletionEvent) {
+            final SslCompletionEvent sslCompletionEvent = (SslCompletionEvent) evt;
+            if (sslCompletionEvent.isSuccess()) {
+                // Expected event
+            } else {
+                Throwable handshakeException = sslCompletionEvent.cause();
+                final Throwable pendingException = getPendingException(ctx);
+                if (pendingException != null && handshakeException != pendingException) {
+                    // Use pendingException as the primary cause.
+                    pendingException.addSuppressed(handshakeException);
+                    handshakeException = pendingException;
+                }
+                sessionTimeoutFuture.cancel(false);
+                sessionPromise.tryFailure(handshakeException);
+                ctx.close();
+            }
+            return;
+        }
+
         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent ||
-            evt instanceof SslHandshakeCompletionEvent ||
-            evt instanceof SslCloseCompletionEvent ||
             evt instanceof ChannelInputShutdownReadComplete) {
             // Expected events
             return;
@@ -442,20 +459,20 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         isAcquirable = false;
 
         // Protocol upgrade has failed, but needs to retry.
-        if (needsRetryWithH1C) {
+        if (retryProtocol != null) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, H1C, poolKey, sessionPromise);
+                channelPool.connect(proxyDestinationAddress, retryProtocol, poolKey, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, H1C, poolKey, sessionPromise);
+                channelPool.connect(remoteAddress, retryProtocol, poolKey, sessionPromise);
             }
         } else {
             // Fail all pending responses.
             final HttpResponseDecoder responseDecoder = this.responseDecoder;
             final Throwable pendingException;
             if (responseDecoder != null && responseDecoder.hasUnfinishedResponses()) {
-                pendingException = getPendingException(ctx);
+                pendingException = maybeGetPendingException(ctx);
                 responseDecoder.failUnfinishedResponses(pendingException);
             } else {
                 pendingException = null;
@@ -466,7 +483,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             sessionTimeoutFuture.cancel(false);
             if (!sessionPromise.isDone()) {
                 sessionPromise.tryFailure(pendingException != null ? pendingException
-                                                                   : getPendingException(ctx));
+                                                                   : maybeGetPendingException(ctx));
             }
         }
     }
@@ -488,12 +505,21 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
     }
 
+    private static Throwable maybeGetPendingException(ChannelHandlerContext ctx) {
+        final Throwable pendingException = getPendingException(ctx);
+        if (pendingException != null) {
+            return pendingException;
+        }
+        return ClosedSessionException.get();
+    }
+
+    @Nullable
     private static Throwable getPendingException(ChannelHandlerContext ctx) {
         if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
             return ctx.channel().attr(PENDING_EXCEPTION).get();
         }
 
-        return ClosedSessionException.get();
+        return null;
     }
 
     static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {

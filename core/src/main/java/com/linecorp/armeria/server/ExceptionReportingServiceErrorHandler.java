@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 
 final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler {
 
@@ -42,6 +43,9 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
     }
 
     private static boolean isIgnorableException(Throwable cause) {
+        if (Exceptions.isExpected(cause)) {
+            return true;
+        }
         return (cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
                cause.getCause() == null;
     }

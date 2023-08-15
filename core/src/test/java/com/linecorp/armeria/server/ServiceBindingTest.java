@@ -84,7 +84,7 @@ class ServiceBindingTest {
                       return HttpResponse.of(ctx.pathParam("name"));
                   }
                   if (req.method() == HttpMethod.POST) {
-                      return HttpResponse.from(
+                      return HttpResponse.of(
                               req.aggregate().thenApply(request -> HttpResponse.of(request.contentUtf8())));
                   }
                   fail("Should never reach here");
@@ -96,7 +96,7 @@ class ServiceBindingTest {
               .consumes(MediaType.JSON, MediaType.PLAIN_TEXT_UTF_8)
               .produces(MediaType.JSON, MediaType.PLAIN_TEXT_UTF_8)
               .decorators(decorator1, decorator2, decorator3)
-              .build((ctx, req) -> HttpResponse.from(
+              .build((ctx, req) -> HttpResponse.of(
                       req.aggregate().thenApply(request -> {
                           final String resContent;
                           final MediaType contentType = req.contentType();

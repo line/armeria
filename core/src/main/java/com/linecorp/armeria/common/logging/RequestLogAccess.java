@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides the access to a {@link RequestLog} or {@link RequestOnlyLog}, while ensuring the interested
@@ -75,6 +76,20 @@ public interface RequestLogAccess {
      * @throws IllegalArgumentException if {@code properties} is empty.
      */
     boolean isAvailable(Iterable<RequestLogProperty> properties);
+
+    /**
+     * Returns {@link RequestLog} if all of the specified {@link RequestLogProperty}s are available.
+     */
+    @UnstableApi
+    @Nullable
+    RequestLog getIfAvailable(RequestLogProperty... properties);
+
+    /**
+     * Returns {@link RequestLog} if all of the specified {@link RequestLogProperty}s are available.
+     */
+    @UnstableApi
+    @Nullable
+    RequestLog getIfAvailable(Iterable<RequestLogProperty> properties);
 
     /**
      * Returns a {@link CompletableFuture} which will be completed when the {@link Request} has been processed

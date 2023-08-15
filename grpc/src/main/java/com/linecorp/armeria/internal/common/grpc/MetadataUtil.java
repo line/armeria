@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.BaseEncoding;
+import com.google.rpc.Status;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -36,12 +37,21 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 
 import io.grpc.InternalMetadata;
 import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
+import io.grpc.protobuf.ProtoUtils;
 import io.netty.util.AsciiString;
 
 /**
  * Utilities for working with {@link Metadata}.
  */
 public final class MetadataUtil {
+
+    /**
+     * A key for {@link Status} whose name is {@code "grpc-status-details-bin"}.
+     */
+    public static final Key<Status> GRPC_STATUS_DETAILS_BIN_KEY = Key.of(
+            GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN.toString(),
+            ProtoUtils.metadataMarshaller(Status.getDefaultInstance()));
 
     private static final Logger logger = LoggerFactory.getLogger(MetadataUtil.class);
 

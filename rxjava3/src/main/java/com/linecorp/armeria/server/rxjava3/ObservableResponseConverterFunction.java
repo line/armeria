@@ -113,18 +113,18 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         if (result instanceof Maybe) {
             @SuppressWarnings("unchecked")
             final CompletionStage<Object> future = ((Maybe<Object>) result).toCompletionStage(null);
-            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
+            return HttpResponse.of(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         if (result instanceof Single) {
             @SuppressWarnings("unchecked")
             final CompletionStage<Object> future = ((Single<Object>) result).toCompletionStage();
-            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
+            return HttpResponse.of(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         if (result instanceof Completable) {
             final CompletionStage<Object> future = ((Completable) result).toCompletionStage(null);
-            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
+            return HttpResponse.of(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         return ResponseConverterFunction.fallthrough();

@@ -28,7 +28,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.http.MediaType;
@@ -58,7 +57,6 @@ class ReactiveWebServerCompressionLeakTest {
     private static final BlockingQueue<NettyDataBuffer> nettyData = new LinkedTransferQueue<>();
 
     @SpringBootApplication
-    @Configuration
     static class TestConfiguration {
 
         @Bean
@@ -92,7 +90,7 @@ class ReactiveWebServerCompressionLeakTest {
                             public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
                                 final Mono<? extends DataBuffer> buffer = Mono.from(body);
                                 return super.writeWith(buffer.doOnNext(b -> {
-                                    assert b instanceof NettyDataBuffer;
+                                    assertThat(b).isInstanceOf(NettyDataBuffer.class);
                                     nettyData.add((NettyDataBuffer) b);
                                 }));
                             }
