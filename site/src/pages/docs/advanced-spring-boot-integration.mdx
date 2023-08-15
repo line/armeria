@@ -1,15 +1,17 @@
 # Spring Boot integration
 
-The Spring framework provides powerful features necessary for building web applications, such as dependency injection, data binding, AOP, and transaction management.
+The [Spring](https://spring.io/) framework provides powerful features necessary for building web applications
+such as dependency injection, data binding, AOP and transaction management.
 Armeria is a lightweight microservices framework that offers capabilities comparable to existing full-stack web frameworks.
-It has Rich support for [Apache Thrift](https://thrift.apache.org/) and [gRPC](https://grpc.io/), including a user-friendly [web console](https://armeria.dev/docs/server-docservice)
+It has rich support for [Apache Thrift](https://thrift.apache.org/) and [gRPC](https://grpc.io/).
+It also includes a user-friendly [web console](https://armeria.dev/docs/server-docservice)
 that allows you to send Thrift and gRPC requests directly from a web browser. Armeria supports both HTTP/1 and HTTP/2,
 and these protocols both support [cleartext](https://simple.wikipedia.org/wiki/Cleartext) and TLS cryptographic protocols.
 Armeria utilizes an [event loop](https://en.wikipedia.org/wiki/Event_loop) based on [Netty](https://netty.io/index.html),
-enabling non-blocking I/O operations. As a result, it demonstrates better performance in certain scenarios, such as media streaming or
-large file transfers. By integrating your Spring application with Armeria, you can serve both legacy Spring services
-and any services built with Armeria, such as gRPC or Thrift, on the same port. Additionally, you can gradually migrate your services,
-starting with those expected to improve performance.
+enabling non-blocking I/O operations. As a result, it demonstrates better performance in certain scenarios such as streaming media or
+large files. By integrating your Spring application with Armeria, you can serve both legacy Spring services
+and  gRPC or Thrift services on the same port. Additionally, you can gradually migrate your services to Armeria
+for improved performance.
 
 Armeria provides a simple way to integrate legacy Spring Boot applications with just a few lines of code.
 Furthermore, Armeria supports several internal services for monitoring and management purposes,
@@ -19,7 +21,7 @@ which can be conveniently configured through beans.
 
 <Tip>
 
-  Visit [armeria-examples/spring-boot-tomcat](https://github.com/line/armeria/tree/main/examples/spring-boot-tomcatj) to
+  Visit [armeria-examples/spring-boot-tomcat](https://github.com/line/armeria/tree/main/examples/spring-boot-tomcat) to
   find a fully working example.
 
 </Tip>
@@ -43,7 +45,7 @@ First, add the following dependency to your application.
   ]}
 />
 
-Serve the embedded Tomcat service via Armeria by using the <type://ArmeriaServerConfigurator> bean.
+Serve the embedded <type://TomcatService> via Armeria by using the <type://ArmeriaServerConfigurator> bean.
 
 ```java filename=ArmeriaConfiguration.java
 import com.linecorp.armeria.server.tomcat.TomcatService;
@@ -91,8 +93,8 @@ armeria:
 ```
 
 With this simple configuration, everything is set up. Now you can serve your legacy Spring service through Armeria.
-Although it may not seem like much has changed compared to before, your application is now ready to incorporate RPC services
-(such as gRPC or Thrift) or Armeria's annotated service for RESTful service.
+Although it may not seem like much has changed compared to before, your application is now ready to serve both RPC services
+(such as gRPC or Thrift) and RESTful services via Armeria.
 
 
 ## Integrating with Spring Boot
@@ -121,8 +123,8 @@ First, you need the `armeria-spring-boot3-starter` dependency:
   ]}
 />
 
-Armeria's annotated service is similar to a Spring controller. Spring will automatically inject the required dependencies into the annotated service.
-You can declare the annotated service as a bean and inject it into the server building process.
+Armeria's annotated service is similar to a Spring controller.
+You can declare the annotated service as a bean and inject it into the <type://ServerBuilder>.
 Here's an example:
 
 ```java filename=TodoAnnotatedService.java
@@ -135,7 +137,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 
-// Make this annotated service as bean.
+// Make this annotated service a bean.
 @Controller
 @PathPrefix("/todos")
 public class TodoAnnotatedService {
@@ -228,7 +230,7 @@ It is acceptable to set the port of the internal service to be the same as one o
 ### Documentation service
 
 Armeria has its own [documentation service](/docs/server-docservice) that offers useful features.
-For instance, it allows you to test RPC protocols in a web browser console, similar to Swagger.
+For instance, it allows you to test RPC protocols in a web browser console, similar to [Swagger](https://swagger.io/).
 
 Add the service ID `docs` to `armeria.internal-services.include` configuration.
 The `armeria.docs-path` is not necessary, as the default path for the documentation service is `/internal/docs`.
@@ -289,7 +291,8 @@ public HealthCheckServiceConfigurator healthCheckServiceConfigurator() {
 ### Collecting metrics
 
 Armeria provides a [built-in metric service](/docs/advanced-metrics) using the [Micrometer](https://micrometer.io) library.
-You can expose the collected metrics to various monitoring systems, such as [Prometheus](https://prometheus.io) or [Dropwizard](https://metrics.dropwizard.io/), for comprehensive monitoring and analysis.
+You can expose the collected metrics to various monitoring systems, such as [Prometheus](https://prometheus.io) or [Dropwizard](https://metrics.dropwizard.io/)
+ for comprehensive monitoring and analysis.
 
 To include the metrics service, simply add the service ID `metrics` to the `armeria-internal-services.include` configuration.
 You do not need to specify `armeria.enable-metrics` or `armeria.metrics-path` as the default path for the metrics service is `/internal/metrics`.
@@ -325,7 +328,7 @@ public PrometheusMeterRegistry prometheusMeterRegistry() {
 
   If you are using [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/actuator-api/htmlsingle/),
   the `PrometheusMeterRegistry` bean will already be configured by the actuator. Therefore, you should not create the above bean
-  to avoid potential expected problems.
+  to avoid potential problems.
 
 </Tip>
 
@@ -349,13 +352,11 @@ public MetricCollectingServiceConfigurator metricCollectingServiceConfigurator()
 }
 ```
 
-Please note that you should avoid configuring the aforementioned settings directly using <type://ServerBuilder> through
-<type://ArmeriaServerConfigurator> or a `Consumer<ServerBuilder>` bean. These configurations will be overridden by the automatic configuration of Armeria.
-
 ### Actuator support
 
 If you are using [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/actuator-api/htmlsingle/),
-you can serve it at the `armeria.internal-services.port`, and the internal services can be served at the `management.server.port`.
+you can serve it at the `armeria.internal-services.port`.
+The internal services may also be served at the `management.server.port` if specified.
 
 In order to use the actuator service, you need to first add the following dependencies.
 
@@ -393,10 +394,11 @@ and not [`Ordered.LOWEST_PRECEDENCE`](https://docs.spring.io/spring-framework/do
 
 ### <type://DependencyInjector>
 
-Armeria provides the ability to manually inject dependencies using <type://DependencyInjector>. You can refer to the example in the [1.17.0 release notes](/release-notes/1.17.0) for more details.
+Armeria provides the ability to manually inject dependencies using <type://DependencyInjector>.
+You can refer to the example in the [1.17.0 release notes](/release-notes/1.17.0) for more details.
 
-Create the <type://DependencyInjector> bean, which will replace the default dependency injector. It's important to note that in this case,
-you should be aware that instances that were automatically injected before may not be injected anymore.
+Create the <type://DependencyInjector> bean, which will replace the default dependency injector.
+It's important to note that in this case dependencies that were automatically injected before may not be injected anymore.
 
 ```java filename=ArmeriaConfiguration.java
 @Bean
