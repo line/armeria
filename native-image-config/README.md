@@ -21,7 +21,7 @@ The generation process consists of the following 3 sub-steps:
 
 ## Step 2: Review the generated native image configuration files and update the build configuration
 
-Then, review the generate native image configuration files at `build/step-3-final-natiive-image-config`
+Then, review the generated native image configuration files at `build/step-3-final-native-image-config`
 to ensure it doesn't contain any irrelevant entries. You can remove such entries by updating the following places:
 
 - `processNativeImageTraces` task:
