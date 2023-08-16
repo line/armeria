@@ -99,6 +99,7 @@ final class HttpClientFactory implements ClientFactory {
     private final int http1MaxHeaderSize;
     private final int http1MaxChunkSize;
     private final long idleTimeoutMillis;
+    private final boolean keepAliveOnPing;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
     private final int maxNumRequestsPerConnection;
@@ -177,6 +178,7 @@ final class HttpClientFactory implements ClientFactory {
         http1MaxHeaderSize = options.http1MaxHeaderSize();
         http1MaxChunkSize = options.http1MaxChunkSize();
         idleTimeoutMillis = options.idleTimeoutMillis();
+        keepAliveOnPing = options.keepAliveOnPing();
         useHttp2Preface = options.useHttp2Preface();
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
@@ -246,6 +248,10 @@ final class HttpClientFactory implements ClientFactory {
 
     long idleTimeoutMillis() {
         return idleTimeoutMillis;
+    }
+
+    boolean keepAliveOnPing() {
+        return keepAliveOnPing;
     }
 
     long pingIntervalMillis() {
