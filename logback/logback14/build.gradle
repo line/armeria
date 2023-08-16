@@ -13,8 +13,6 @@ task generateSources(type: Copy) {
     }
     from "${logback13Dir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
-
-    exclude "**/package-info.java"
 }
 
 task generateTestSources(type: Copy) {

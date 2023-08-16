@@ -1,22 +1,4 @@
 dependencies {
-    if (project.ext.targetJavaVersion >= 11) {
-        testImplementation project(':thrift0.18')
-    } else {
-        testImplementation project(':thrift0.17')
-    }
     // Logback
     api libs.logback12
-}
-
-def logback12Dir = "${rootProject.projectDir}/logback/logback12"
-tasks.compileJava.source "${logback12Dir}/src/main/java"
-tasks.processResources.from "${logback12Dir}/src/main/resources"
-tasks.compileTestJava.source "${logback12Dir}/src/test/java"
-tasks.processTestResources.from "${logback12Dir}/src/test/resources"
-tasks.sourcesJar.from "${logback12Dir}/src/main/java"
-tasks.sourcesJar.from "${logback12Dir}/src/main/resources"
-tasks.javadoc.source "${logback12Dir}/src/main/java"
-
-ext {
-    testThriftSrcDirs = ["$logback12Dir/src/test/thrift"]
 }
