@@ -21,16 +21,20 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaders;
+
 final class DefaultMultipartFile implements MultipartFile {
 
     private final String name;
     private final String filename;
     private final Path path;
+    private final HttpHeaders headers;
 
-    DefaultMultipartFile(String name, String filename, Path path) {
+    DefaultMultipartFile(String name, String filename, Path path, HttpHeaders headers) {
         this.name = name;
         this.filename = filename;
         this.path = path;
+        this.headers = headers;
     }
 
     @Override
@@ -49,6 +53,11 @@ final class DefaultMultipartFile implements MultipartFile {
     }
 
     @Override
+    public HttpHeaders headers() {
+        return headers;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -61,12 +70,13 @@ final class DefaultMultipartFile implements MultipartFile {
         final MultipartFile that = (MultipartFile) o;
         return name.equals(that.name()) &&
                filename.equals(that.filename()) &&
-               path.equals(that.path());
+               path.equals(that.path()) &&
+               headers.equals(that.headers());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, filename, path);
+        return Objects.hash(name, filename, path, headers);
     }
 
     @Override
@@ -75,6 +85,7 @@ final class DefaultMultipartFile implements MultipartFile {
                           .add("name", name)
                           .add("filename", filename)
                           .add("path", path)
+                          .add("headers", headers)
                           .toString();
     }
 }
