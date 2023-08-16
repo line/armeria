@@ -89,17 +89,12 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
                             return copied;
                         } else {
                             cause = Exceptions.peel(cause);
-                            if (cause instanceof UnknownHostException) {
-                                if (DnsUtil.isDnsQueryTimedOut(cause)) {
-                                    logger.debug("[{}] Not caching a timed-out DNS query: {}",
-                                                 name, question);
-                                } else {
-                                    logger.debug("[{}] Caching a failed DNS query: {}, cause: {}",
-                                                 name, question, cause.getMessage());
-                                    dnsCache.cache(key, (UnknownHostException) cause);
-                                }
+                            if (cause instanceof UnknownHostException && !DnsUtil.isDnsQueryTimedOut(cause)) {
+                                logger.debug("[{}] Caching a failed DNS query: {}, cause: {}",
+                                             name, question, cause.getMessage());
+                                dnsCache.cache(key, (UnknownHostException) cause);
                             } else {
-                                logger.debug("[{}] Not caching a DNS query failed with an unexpected cause: {}",
+                                logger.debug("[{}] Not caching an unexpectedly failed DNS query: {}",
                                              name, question, cause);
                             }
                             return Exceptions.throwUnsafely(cause);
