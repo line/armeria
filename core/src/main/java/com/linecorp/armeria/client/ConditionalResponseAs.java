@@ -35,7 +35,7 @@ import java.util.function.Predicate;
  *       res -> new EmptyMessage(),
  *       res -> !res.headers().contains("x-header"))
  *     .orElse(res -> new MyMessage(res.contentUtf8())))
- * }
+ * }</pre>
  */
 public interface ConditionalResponseAs<T, R, V> {
 

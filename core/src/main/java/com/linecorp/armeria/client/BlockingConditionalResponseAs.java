@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *     ResponseAs.<MyResponse>json(MyMessage.class, res -> res.status().isError())
  *       .andThenJson(EmptyMessage.class, res -> res.status().isInformational())
  *       .orElseJson(MyError.class);
- * }
+ * }</pre>
  */
 @UnstableApi
 public final class BlockingConditionalResponseAs<V>
