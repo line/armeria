@@ -350,3 +350,18 @@ class TestsReportTask extends DefaultTask {
         }
     }
 }
+
+// additional configuration that can't be done at settings.gradle
+gradleEnterprise {
+    buildScan {
+        // maintain a whitelist so that sensitive information (credentials) aren't accidentally published.
+        Set<String> whiteList = ['coverage', 'leak', 'blockhound', 'noLint',
+                                 'flakyTests', 'buildJdkVersion', 'testJavaVersion', 'minimumJavaVersion']
+        def self = owner
+        rootProject.properties.each {k, v ->
+            if (whiteList.contains(k)) {
+                self.value(k.toString(), v.toString())
+            }
+        }
+    }
+}
