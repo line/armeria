@@ -78,23 +78,29 @@ final class CachingDnsResolver extends AbstractUnwrappable<DnsResolver> implemen
                     }
 
                     return unwrap().resolve(ctx, key).handle((records, cause) -> {
+                        final String name = question.name();
                         if (records != null) {
                             final List<DnsRecord> copied = records.stream()
                                                                   .map(ByteArrayDnsRecord::copyOf)
                                                                   .collect(toImmutableList());
 
-                            logger.debug("[{}] Caching DNS records: {}", question.name(), copied);
+                            logger.debug("[{}] Caching DNS records: {}", name, copied);
                             dnsCache.cache(key, copied);
                             return copied;
                         } else {
                             cause = Exceptions.peel(cause);
-                            if (DnsUtil.isDnsQueryTimedOut(cause)) {
-                                logger.debug("[{}] Not caching a timed-out DNS query: {}",
-                                             question.name(), question);
+                            if (cause instanceof UnknownHostException) {
+                                if (DnsUtil.isDnsQueryTimedOut(cause)) {
+                                    logger.debug("[{}] Not caching a timed-out DNS query: {}",
+                                                 name, question);
+                                } else {
+                                    logger.debug("[{}] Caching a failed DNS query: {}, cause: {}",
+                                                 name, question, cause.getMessage());
+                                    dnsCache.cache(key, (UnknownHostException) cause);
+                                }
                             } else {
-                                logger.debug("[{}] Caching a failed DNS query: {}, cause: {}",
-                                             question.name(), question, cause.getMessage());
-                                dnsCache.cache(key, (UnknownHostException) cause);
+                                logger.debug("[{}] Not caching a DNS query failed with an unexpected cause: {}",
+                                             name, question, cause);
                             }
                             return Exceptions.throwUnsafely(cause);
                         }
