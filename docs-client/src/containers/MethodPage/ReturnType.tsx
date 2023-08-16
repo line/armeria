@@ -33,6 +33,9 @@ import { Method, Specification } from '../../lib/specification';
 const useStyles = makeStyles({
   expand: {
     textAlign: 'end',
+    '& svg': {
+      verticalAlign: 'middle',
+    },
   },
 });
 
@@ -54,6 +57,8 @@ const ReturnType: React.FunctionComponent<Props> = ({
   );
 
   const styles = useStyles();
+  const hasVariables = returnTypeVariables.length > 0;
+
   return (
     <Section>
       <Typography variant="h6">Return Type</Typography>
@@ -68,25 +73,23 @@ const ReturnType: React.FunctionComponent<Props> = ({
                   )}
                 </code>
               </TableCell>
-              {returnTypeVariables.length > 0 && (
+              {hasVariables && (
                 <TableCell className={styles.expand}>
                   {returnTypeExpanded ? <ExpandLess /> : <ExpandMore />}
                 </TableCell>
               )}
             </TableRow>
-            {returnTypeExpanded && returnTypeVariables.length > 0 && (
-              <TableRow>
-                <VariableList
-                  key={method.returnTypeSignature}
-                  title=""
-                  variables={returnTypeVariables}
-                  specification={specification}
-                />
-              </TableRow>
-            )}
           </TableBody>
         </Table>
       </TableContainer>
+      {returnTypeExpanded && hasVariables && (
+        <VariableList
+          key={method.returnTypeSignature}
+          title=""
+          variables={returnTypeVariables}
+          specification={specification}
+        />
+      )}
     </Section>
   );
 };
