@@ -202,10 +202,6 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     }
 
     void close(@Nullable Throwable cause, boolean cancel) {
-        close0(cause, cancel);
-    }
-
-    void close0(@Nullable Throwable cause, boolean cancel) {
         if (closed) {
             return;
         }

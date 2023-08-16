@@ -30,14 +30,14 @@ final class WebSocketHttp1ResponseWrapper extends HttpResponseWrapper {
                                   long responseTimeoutMillis, long maxContentLength) {
         super(delegate, eventLoop, ctx, responseTimeoutMillis, maxContentLength);
         WebSocketClientUtil.setClosingResponseTask(ctx, cause -> {
-            close0(cause, false);
+            super.close(cause, false);
         });
     }
 
     @Override
     void close(@Nullable Throwable cause, boolean cancel) {
         if (cancel || !(cause instanceof ClosedSessionException)) {
-            close0(cause, cancel);
+            super.close(cause, cancel);
             return;
         }
         // Close the delegate directly so that we can give a chance to WebSocketFrameDecoder to close the
