@@ -4,6 +4,10 @@ configure(projectsWithFlags('publish', 'java')) {
             jar(MavenPublication) {
                 from components.java
 
+                // We don't publish Gradle metadata yet so don't need to worry about these variants.
+                suppressPomMetadataWarningsFor('optionalApiElements')
+                suppressPomMetadataWarningsFor('optionalRuntimeElements')
+
                 // Resolved versions are used to publish platform dependencies in pom XML.
                 versionMapping {
                     usage(Usage.JAVA_RUNTIME) {
@@ -16,10 +20,6 @@ configure(projectsWithFlags('publish', 'java')) {
                         fromResolutionOf("runtimeClasspath")
                     }
                 }
-
-                // We don't publish Gradle metadata yet so don't need to worry about these variants.
-                suppressPomMetadataWarningsFor('optionalApiElements')
-                suppressPomMetadataWarningsFor('optionalRuntimeElements')
 
                 // Replace published jar with shaded when available. We manually create shading tasks instead of
                 // applying the shadow plugin itself so need to do it ourselves.
