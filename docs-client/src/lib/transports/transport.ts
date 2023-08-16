@@ -148,7 +148,7 @@ export default abstract class Transport {
   protected validatePath(endpoint: Endpoint, path: string): { error?: string } {
     if (endpoint.pathMapping !== path) {
       return {
-        error: `The path: '${path}' must end with ${endpoint.pathMapping}`,
+        error: `The path: '${path}' must be equal to ${endpoint.pathMapping}`,
       };
     }
     return {};
