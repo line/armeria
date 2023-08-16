@@ -100,7 +100,7 @@ public class DocumentationProcessorTest {
         try (Reader reader = new InputStreamReader(
                 this.getClass()
                     .getClassLoader()
-                    .getResourceAsStream("DocumentationProcessor/" + fileName))) {
+                    .getResourceAsStream("testing/DocumentationProcessor/" + fileName))) {
             return CharStreams.toString(reader);
         }
     }

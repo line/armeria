@@ -48,12 +48,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.protobuf.testing.Messages.CompressionType;
-import com.linecorp.armeria.protobuf.testing.Messages.ReconnectInfo;
-import com.linecorp.armeria.protobuf.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.protobuf.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.protobuf.testing.Messages.TestMessage;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.Post;
@@ -70,6 +64,13 @@ import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignatureType;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.protobuf.Messages.CompressionType;
+import testing.protobuf.Messages.ReconnectInfo;
+import testing.protobuf.Messages.SimpleRequest;
+import testing.protobuf.Messages.SimpleResponse;
+import testing.protobuf.Messages.StreamingOutputCallRequest;
+import testing.protobuf.Messages.TestMessage;
 
 class ProtobufDescriptiveTypeInfoProviderTest {
 
@@ -192,7 +193,7 @@ class ProtobufDescriptiveTypeInfoProviderTest {
                                         .execute()
                                         .content();
         final InputStream resourceAsStream = ProtobufDescriptiveTypeInfoProviderTest.class.getResourceAsStream(
-                "ProtobufDescriptiveTypeInfoProviderTest_specification.json5");
+                "/testing/protobuf/ProtobufDescriptiveTypeInfoProviderTest_specification.json5");
         final JsonMapper json5Mapper = JsonMapper.builder()
                                                  .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature())
                                                  .enable(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature())
@@ -220,7 +221,7 @@ class ProtobufDescriptiveTypeInfoProviderTest {
                                        .get("parameters").get(0);
         assertThat(param.get("name").textValue()).isEqualTo("req");
         assertThat(param.get("typeSignature").textValue()).isEqualTo(
-                "com.linecorp.armeria.protobuf.testing.Messages$SimpleRequest");
+                "testing.protobuf.Messages$SimpleRequest");
         final JsonNode struct = response.get("structs").get(0);
         assertThat(struct.get("name").textValue()).isEqualTo("CustomSimpleRequest");
         final JsonNode fields = struct.get("fields");

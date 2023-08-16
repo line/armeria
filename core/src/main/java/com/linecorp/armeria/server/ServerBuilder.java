@@ -84,6 +84,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -196,6 +197,7 @@ public final class ServerBuilder implements TlsSetters {
             DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER;
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
+    private boolean keepAliveOnPing = Flags.defaultServerKeepAliveOnPing();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
     private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
@@ -562,6 +564,18 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the idle timeout of a connection in milliseconds for keep-alive and whether to prevent
+     * connection going idle when an HTTP/2 PING frame or {@code "OPTIONS * HTTP/1.1"} request is received.
+     *
+     * @param idleTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame, OPTIONS * request or not.
+     */
+    @UnstableApi
+    public ServerBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {
+        return idleTimeout(Duration.ofMillis(idleTimeoutMillis), keepAliveOnPing);
+    }
+
+    /**
      * Sets the idle timeout of a connection for keep-alive.
      *
      * @param idleTimeout the timeout. {@code 0} disables the timeout.
@@ -569,6 +583,21 @@ public final class ServerBuilder implements TlsSetters {
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
         idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
+        return this;
+    }
+
+    /**
+     * Sets the idle timeout of a connection for keep-alive and whether to prevent connection
+     * connection going idle when an HTTP/2 PING frame or {@code "OPTIONS * HTTP/1.1"} request is received.
+     *
+     * @param idleTimeout the timeout. {@code 0} disables the timeout.
+     * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame, OPTIONS * request or not.
+     */
+    @UnstableApi
+    public ServerBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
+        requireNonNull(idleTimeout, "idleTimeout");
+        idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
+        this.keepAliveOnPing = keepAliveOnPing;
         return this;
     }
 
@@ -2080,7 +2109,8 @@ public final class ServerBuilder implements TlsSetters {
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
+                maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
@@ -2102,25 +2132,43 @@ public final class ServerBuilder implements TlsSetters {
      */
     private static List<ServerPort> resolveDistinctPorts(List<ServerPort> ports) {
         final List<ServerPort> distinctPorts = new ArrayList<>();
-        for (final ServerPort p : ports) {
+        for (final ServerPort port : ports) {
             boolean found = false;
             // Do not check the port number 0 because a user may want his or her server to be bound
             // on multiple arbitrary ports.
-            if (p.localAddress().getPort() > 0) {
+            final InetSocketAddress portAddress = port.localAddress();
+            if (portAddress.getPort() > 0) {
                 for (int i = 0; i < distinctPorts.size(); i++) {
-                    final ServerPort port = distinctPorts.get(i);
-                    if (port.localAddress().equals(p.localAddress())) {
+                    final ServerPort distinctPort = distinctPorts.get(i);
+                    final InetSocketAddress distinctPortAddress = distinctPort.localAddress();
+
+                    // Compare the addresses taking `DomainSocketAddress` into account.
+                    final boolean hasSameAddress;
+                    if (portAddress instanceof DomainSocketAddress) {
+                        if (distinctPortAddress instanceof DomainSocketAddress) {
+                            hasSameAddress = ((DomainSocketAddress) portAddress).path().equals(
+                                    ((DomainSocketAddress) distinctPortAddress).path());
+                        } else {
+                            hasSameAddress = false;
+                        }
+                    } else {
+                        hasSameAddress = portAddress.equals(distinctPortAddress);
+                    }
+
+                    // Merge two `ServerPort`s into one if their addresses are equal.
+                    if (hasSameAddress) {
                         final ServerPort merged =
-                                new ServerPort(port.localAddress(),
-                                               Sets.union(port.protocols(), p.protocols()));
+                                new ServerPort(distinctPort.localAddress(),
+                                               Sets.union(distinctPort.protocols(), port.protocols()));
                         distinctPorts.set(i, merged);
                         found = true;
                         break;
                     }
                 }
             }
+
             if (!found) {
-                distinctPorts.add(p);
+                distinctPorts.add(port);
             }
         }
         return Collections.unmodifiableList(distinctPorts);

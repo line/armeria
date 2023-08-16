@@ -206,8 +206,8 @@ configure(projectsWithFlags('java')) {
         apply plugin: 'checkstyle'
 
         checkstyle {
+            configDirectory = new File("${checkstyleConfigDir}")
             configFile = new File("${checkstyleConfigDir}/checkstyle.xml")
-            configProperties = ['checkstyleConfigDir': "$checkstyleConfigDir"]
             if (managedVersions.containsKey('com.puppycrawl.tools:checkstyle')) {
                 toolVersion = managedVersions['com.puppycrawl.tools:checkstyle']
             }

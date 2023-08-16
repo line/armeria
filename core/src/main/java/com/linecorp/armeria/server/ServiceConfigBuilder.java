@@ -32,13 +32,16 @@ import java.util.function.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
 
@@ -288,7 +291,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         BlockingTaskExecutor defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
-                        long requestAutoAbortDelayMillis,
+                        long defaultRequestAutoAbortDelayMillis,
                         Path defaultMultipartUploadsLocation,
                         HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
@@ -302,18 +305,46 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                                                                      unhandledExceptionsReporter);
         }
 
+        final boolean webSocket = service.as(WebSocketService.class) != null;
+        final long requestTimeoutMillis;
+        if (this.requestTimeoutMillis != null) {
+            requestTimeoutMillis = this.requestTimeoutMillis;
+        } else if (!webSocket || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
+            requestTimeoutMillis = defaultRequestTimeoutMillis;
+        } else {
+            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_TIMEOUT_MILLIS;
+        }
+
+        final long maxRequestLength;
+        if (this.maxRequestLength != null) {
+            maxRequestLength = this.maxRequestLength;
+        } else if (!webSocket || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
+            maxRequestLength = defaultMaxRequestLength;
+        } else {
+            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_LENGTH;
+        }
+
+        final long requestAutoAbortDelayMillis;
+        if (this.requestAutoAbortDelayMillis != null) {
+            requestAutoAbortDelayMillis = this.requestAutoAbortDelayMillis;
+        } else if (!webSocket ||
+                   defaultRequestAutoAbortDelayMillis != Flags.defaultRequestAutoAbortDelayMillis()) {
+            requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
+        } else {
+            requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
+        }
+
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
-                requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
-                maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
+                requestTimeoutMillis,
+                maxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
                 accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 successFunction != null ? successFunction : defaultSuccessFunction,
-                this.requestAutoAbortDelayMillis != null ? this.requestAutoAbortDelayMillis
-                                                         : requestAutoAbortDelayMillis,
+                requestAutoAbortDelayMillis,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),

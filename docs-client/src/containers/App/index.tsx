@@ -256,7 +256,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           </ListItemText>
                           {method.endpoints.map((endpoint) => (
                             <ListItemText
-                              key={`${method.id}`}
+                              key={`${endpoint.pathMapping}`}
                               primaryTypographyProps={{
                                 variant: 'caption',
                               }}
