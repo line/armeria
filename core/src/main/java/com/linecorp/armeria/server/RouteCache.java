@@ -65,10 +65,10 @@ final class RouteCache {
      * performance of the {@link ServiceConfig} search.
      */
     static Router<ServiceConfig> wrapVirtualHostRouter(Router<ServiceConfig> delegate,
-                                                       Set<Route> ambiguousRoutes) {
+                                                       Set<Route> dynamicPredicateRoutes) {
         return FIND_CACHE == null ? delegate
                                   : new CachingRouter<>(delegate, ServiceConfig::route,
-                                                        FIND_CACHE, FIND_ALL_CACHE, ambiguousRoutes);
+                                                        FIND_CACHE, FIND_ALL_CACHE, dynamicPredicateRoutes);
     }
 
     /**
@@ -76,12 +76,12 @@ final class RouteCache {
      * performance of the {@link RouteDecoratingService} search.
      */
     static Router<RouteDecoratingService> wrapRouteDecoratingServiceRouter(
-            Router<RouteDecoratingService> delegate, Set<Route> ambiguousRoutes) {
+            Router<RouteDecoratingService> delegate, Set<Route> dynamicPredicateRoutes) {
         return DECORATOR_FIND_CACHE == null ? delegate
                                             : new CachingRouter<>(delegate, RouteDecoratingService::route,
                                                                   DECORATOR_FIND_CACHE,
                                                                   DECORATOR_FIND_ALL_CACHE,
-                                                                  ambiguousRoutes);
+                                                                  dynamicPredicateRoutes);
     }
 
     private static <T> Cache<RoutingContext, T> buildCache(String spec) {
@@ -99,21 +99,21 @@ final class RouteCache {
         private final Function<V, Route> routeResolver;
         private final Cache<RoutingContext, V> findCache;
         private final Cache<RoutingContext, List<V>> findAllCache;
-        private final Set<Route> ambiguousRoutes;
+        private final Set<Route> dynamicPredicateRoutes;
 
         CachingRouter(Router<V> delegate, Function<V, Route> routeResolver,
                       Cache<RoutingContext, V> findCache,
                       Cache<RoutingContext, List<V>> findAllCache,
-                      Set<Route> ambiguousRoutes) {
+                      Set<Route> dynamicPredicateRoutes) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.routeResolver = requireNonNull(routeResolver, "routeResolver");
             this.findCache = requireNonNull(findCache, "findCache");
             this.findAllCache = requireNonNull(findAllCache, "findAllCache");
 
-            final Set<Route> newAmbiguousRoutes =
-                    Collections.newSetFromMap(new IdentityHashMap<>(ambiguousRoutes.size()));
-            newAmbiguousRoutes.addAll(requireNonNull(ambiguousRoutes, "ambiguousRoutes"));
-            this.ambiguousRoutes = Collections.unmodifiableSet(newAmbiguousRoutes);
+            final Set<Route> newDynamicPredicateRoutes =
+                    Collections.newSetFromMap(new IdentityHashMap<>(dynamicPredicateRoutes.size()));
+            newDynamicPredicateRoutes.addAll(requireNonNull(dynamicPredicateRoutes, "dynamicPredicateRoutes"));
+            this.dynamicPredicateRoutes = Collections.unmodifiableSet(newDynamicPredicateRoutes);
         }
 
         @Override
@@ -128,7 +128,8 @@ final class RouteCache {
             }
 
             final Routed<V> result = delegate.find(routingCtx);
-            if (result.isPresent() && !ambiguousRoutes.contains(result.route())) {
+            if (result.isPresent() && result.route().isCacheable() &&
+                !dynamicPredicateRoutes.contains(result.route())) {
                 findCache.put(routingCtx, result.value());
             }
             return result;
@@ -141,9 +142,9 @@ final class RouteCache {
                 return filterRoutes(cachedList, routingCtx);
             }
 
-            // Disable matching headers and/or query parameters only if there's ambiguous routes.
+            // Disable matching headers and/or query parameters only if there's dynamic predicate routes.
             final List<Routed<V>> result = delegate.findAll(
-                    ambiguousRoutes.isEmpty() ? routingCtx : new CachingRoutingContext(routingCtx));
+                    dynamicPredicateRoutes.isEmpty() ? routingCtx : new CachingRoutingContext(routingCtx));
             final List<V> valid = result.stream()
                                         .filter(Routed::isPresent)
                                         .map(Routed::value)
