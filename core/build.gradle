@@ -174,58 +174,47 @@ if (!rootProject.hasProperty('noWeb')) {
 }
 
 // Run HttpServerStreamingTest separately with memory constraint.
-tasks.test.exclude '**/HttpServerStreamingTest**'
-tasks.shadedTest.exclude '**/HttpServerStreamingTest**'
 testing.suites {
-    testStreaming(JvmTestSuite) {
+    project.ext.registerTestSettings('streamingTest', delegate, {testTask, suite ->
+        testTask.configure {
+            group = 'Verification'
+            description = 'Runs the streaming tests.'
 
-        targets.configureEach {
-            testTask.configure {
-                group = 'Verification'
-                description = 'Runs the streaming tests.'
+            dependsOn tasks.copyShadedTestClasses
+            // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
+            maxHeapSize = '64m'
 
-                project.ext.configureCommonTestSettings(it)
+            include '**/HttpServerStreamingTest**'
+            testClassesDirs = tasks.shadedTest.testClassesDirs
+            classpath = testClassesDirs
 
-                dependsOn(tasks.shadedTestClasses)
-                // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
-                maxHeapSize = '64m'
-
-                include '**/HttpServerStreamingTest**'
-                testClassesDirs = tasks.shadedTest.testClassesDirs
-                classpath = testClassesDirs
-
-                // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
-                doFirst {
-                    classpath += project.files(configurations.shadedJarTestRuntime.resolve())
-                }
+            // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
+            doFirst {
+                classpath += project.files(configurations.shadedJarTestRuntime.resolve())
             }
         }
-    }
+    })
 }
-tasks.shadedTest.finalizedBy testing.suites.testStreaming
-tasks.check.dependsOn testing.suites.testStreaming
+tasks.shadedTest.finalizedBy testing.suites.streamingTest
+tasks.check.dependsOn testing.suites.streamingTest
 
 // Run the test cases based on reactive-streams-tck only with non-flaky mode
 if (rootProject.findProperty('flakyTests') != 'true') {
     testing.suites {
-        testNg(JvmTestSuite) {
-            useTestNG()
+        project.ext.registerTestSettings('testNg', delegate, {testTask, suite ->
+            suite.useTestNG()
+            testTask.configure {
+                include '/com/linecorp/armeria/**/common/**'
+                dependsOn tasks.copyShadedTestClasses
+                scanForTestClasses = false
+                testClassesDirs = tasks.shadedTest.testClassesDirs
+                classpath = testClassesDirs
 
-            targets.configureEach {
-                testTask.configure {
-
-                    project.ext.configureCommonTestSettings(it)
-                    include '/com/linecorp/armeria/**/common/**'
-                    dependsOn tasks.shadedTestClasses
-                    scanForTestClasses = false
-                    testClassesDirs = tasks.shadedTest.testClassesDirs
-                    classpath = testClassesDirs
-                    doFirst {
-                        classpath += project.files(configurations.shadedJarTestRuntime.resolve())
-                    }
+                doFirst {
+                    classpath += project.files(configurations.shadedJarTestRuntime.resolve())
                 }
             }
-        }
+        })
     }
     tasks.shadedTest.finalizedBy testing.suites.testNg
     tasks.check.dependsOn testing.suites.testNg

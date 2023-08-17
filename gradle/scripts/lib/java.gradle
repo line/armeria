@@ -187,18 +187,57 @@ configure(projectsWithFlags('java')) {
         }
     }
 
-    testing.suites {
-        test {
-            // Use JUnit platform.
-            useJUnitJupiter()
-
-            targets.configureEach {
-                testTask.configure {
-                    project.ext.configureFlakyTests(it)
-                    project.ext.configureCommonTestSettings(it)
+    project.ext.registerTestSettings = (String baseName,
+                                        NamedDomainObjectContainer<TestSuite> container,
+                                        Closure<Void> closure) -> {
+        if (tasks.findByName(baseName) == null) {
+            container.register(baseName, JvmTestSuite) {
+                def self = delegate
+                targets.configureEach {
+                    testTask.configure {
+                        enabled = false
+                        // although this is a container, it may be useful to share test configurations
+                        // such as classpath with other suites
+                        closure(it, self)
+                    }
                 }
             }
         }
+
+        [true, false].each {isFlaky ->
+            def newName = isFlaky ? 'flaky' : 'nonFlaky'
+            newName += baseName.capitalize()
+            container.register(newName, JvmTestSuite) {
+                def self = delegate
+                targets.configureEach {
+                    testTask.configure {
+                        project.ext.configureCommonTestSettings(it)
+                        options {
+                            if (isFlaky) {
+                                includeTags 'FLAKY_TESTS'
+                            } else {
+                                excludeTags 'FLAKY_TESTS'
+                            }
+                        }
+                        tasks.named(baseName).get().dependsOn it
+                        closure(it, self)
+                    }
+                }
+            }
+        }
+    }
+
+    testing.suites {
+        test{
+            useJUnitJupiter()
+        }
+        project.ext.registerTestSettings('test', delegate, {testTask, suite ->
+            testTask.configure {
+                testClassesDirs = tasks.test.testClassesDirs
+                classpath = tasks.test.classpath
+                exclude '**/HttpServerStreamingTest**'
+            }
+        })
     }
 
     // Enforce checkstyle rules.

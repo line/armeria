@@ -180,31 +180,25 @@ configure(relocatedProjects) {
 
     // Add tests for the shaded JAR.
     testing.suites {
-        shadedTest(JvmTestSuite) {
+        project.ext.registerTestSettings('shadedTest', delegate, {testTask, suite ->
+            testTask.configure {
+                group = 'Verification'
+                description = 'Runs the unit tests with the shaded classes.'
 
-            targets.configureEach {
-                testTask.configure {
+                dependsOn tasks.copyShadedTestClasses
 
-                    group = 'Verification'
-                    description = 'Runs the unit tests with the shaded classes.'
+                // The tests against the shaded artifacts should run after the tests against the unshaded ones.
+                shouldRunAfter tasks.test
 
-                    project.ext.configureFlakyTests(it)
-                    project.ext.configureCommonTestSettings(it)
+                testClassesDirs = files(tasks.copyShadedTestClasses.destinationDir)
+                classpath = testClassesDirs
 
-                    dependsOn tasks.copyShadedTestClasses
-
-                    // The tests against the shaded artifacts should run after the tests against the unshaded ones.
-                    shouldRunAfter tasks.test
-
-                    testClassesDirs = files(tasks.copyShadedTestClasses.destinationDir)
-                    classpath = testClassesDirs
-
-                    project.ext.relocations.each {
-                        exclude "${it['to'].replace('.', '/')}/**"
-                    }
+                project.ext.relocations.each {
+                    exclude "${it['to'].replace('.', '/')}/**"
                 }
+                exclude '**/HttpServerStreamingTest**'
             }
-        }
+        })
     }
     tasks.check.dependsOn testing.suites.shadedTest
 
@@ -234,9 +228,11 @@ configure(relocatedProjects) {
                 configureShadedTestImplementConfiguration(p)
             }
             relocatedProjects.each { p ->
-                p.testing.suites.shadedTest.targets.configureEach {
-                    testTask.configure {
-                        classpath += p.files(p.configurations.getByName('shadedJarTestRuntime').resolve())
+                p.testing.suites.findAll {it.name.toLowerCase().contains('shaded')}.each {
+                    it.targets.configureEach {
+                        testTask.configure {
+                            classpath += p.files(p.configurations.getByName('shadedJarTestRuntime').resolve())
+                        }
                     }
                 }
             }
