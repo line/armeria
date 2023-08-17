@@ -10,6 +10,7 @@ def logback13Dir = "${rootProject.projectDir}/logback/logback13"
 task generateSources(type: Copy) {
     from("${logback12Dir}/src/main/java") {
         exclude "**/LoggingEventWrapper.java"
+        exclude "**/package-info.java"
     }
     from "${logback13Dir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
