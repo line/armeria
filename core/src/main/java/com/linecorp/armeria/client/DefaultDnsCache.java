@@ -121,6 +121,11 @@ final class DefaultDnsCache implements DnsCache {
     public void cache(DnsQuestion question, Iterable<? extends DnsRecord> records) {
         requireNonNull(question, "question");
         requireNonNull(records, "records");
+        if (maxTtl == 0) {
+            // DNS records cache is disabled.
+            return;
+        }
+
         final List<DnsRecord> copied = ImmutableList.copyOf(records);
 
         final long ttl = copied.stream()
