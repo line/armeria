@@ -213,4 +213,9 @@ public interface Route {
      * </ul>
      */
     Route withPrefix(String prefix);
+
+    /**
+     * Returns whether the current {@link Route} is cacheable when queried from a {@link Router}.
+     */
+    boolean isCacheable();
 }

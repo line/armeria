@@ -196,7 +196,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           </Button>
         )}
       </Grid>
-      {method.descriptionInfo && (
+      {method.descriptionInfo?.docString && (
         <Section>
           <Description descriptionInfo={method.descriptionInfo} />
         </Section>
