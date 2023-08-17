@@ -73,7 +73,8 @@ public final class FileAggregatedMultipart {
                     return bodyPart.writeTo(path, eventLoop, executor).thenCompose(ignore -> {
                         final Path completeDir = destination.resolve("complete");
                         return moveFile(path, completeDir, executor);
-                    }).thenApply(completePath -> MultipartFile.of(name, filename, completePath.toFile()));
+                    }).thenApply(completePath -> MultipartFile.of(name, filename, completePath.toFile(),
+                                                                  bodyPart.headers()));
                 });
             }
 

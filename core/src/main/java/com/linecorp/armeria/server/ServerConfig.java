@@ -145,6 +145,13 @@ public interface ServerConfig {
     long idleTimeoutMillis();
 
     /**
+     * Returns whether to prevent the server from staying in an idle state when an HTTP/2 PING frame
+     * is received.
+     */
+    @UnstableApi
+    boolean keepAliveOnPing();
+
+    /**
      * Returns the HTTP/2 PING interval in milliseconds.
      */
     long pingIntervalMillis();

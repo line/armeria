@@ -55,6 +55,7 @@
     "advanced-kotlin",
     "advanced-scala",
     "advanced-scalapb",
+    "advanced-flags-provider",
     "advanced-zipkin",
     "advanced-client-interoperability"
   ]

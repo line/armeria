@@ -95,6 +95,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private static final Logger logger = LoggerFactory.getLogger(AbstractServerCall.class);
 
     private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
+    private static final String GRPC_STATUS_CODE_INTERNAL =
+            String.valueOf(Status.Code.INTERNAL.value());
 
     private final MethodDescriptor<I, O> method;
     private final String simpleMethodName;
@@ -538,10 +540,19 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     public static HttpHeaders statusToTrailers(
             ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
+        try {
+            MetadataUtil.fillHeaders(metadata, trailersBuilder);
+        } catch (Exception e) {
+            // A buggy user-implemented custom metadata serializer may throw
+            // an exception. Leave a log message and set the INTERNAL status.
+            logger.warn("{} Failed to serialize metadata; overriding the original status ({}) with INTERNAL:",
+                        ctx, status, e);
+            return trailersBuilder
+                    .set(GrpcHeaderNames.GRPC_STATUS, GRPC_STATUS_CODE_INTERNAL)
+                    .build();
+        }
         GrpcTrailersUtil.addStatusMessageToTrailers(
                 trailersBuilder, status.getCode().value(), status.getDescription());
-
-        MetadataUtil.fillHeaders(metadata, trailersBuilder);
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
