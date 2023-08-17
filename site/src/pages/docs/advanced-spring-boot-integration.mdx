@@ -2,15 +2,8 @@
 
 The [Spring](https://spring.io/) framework provides powerful features necessary for building web applications
 such as dependency injection, data binding, AOP and transaction management.
-Armeria is a lightweight microservices framework that offers capabilities comparable to existing full-stack web frameworks.
-It has rich support for [Apache Thrift](https://thrift.apache.org/) and [gRPC](https://grpc.io/).
-It also includes a user-friendly [web console](https://armeria.dev/docs/server-docservice)
-that allows you to send Thrift and gRPC requests directly from a web browser. Armeria supports both HTTP/1 and HTTP/2,
-and these protocols both support [cleartext](https://simple.wikipedia.org/wiki/Cleartext) and TLS cryptographic protocols.
-Armeria utilizes an [event loop](https://en.wikipedia.org/wiki/Event_loop) based on [Netty](https://netty.io/index.html),
-enabling non-blocking I/O operations. As a result, it demonstrates better performance in certain scenarios such as streaming media or
-large files. By integrating your Spring application with Armeria, you can serve both legacy Spring services
-and  gRPC or Thrift services on the same port. Additionally, you can gradually migrate your services to Armeria
+By integrating your Spring application with Armeria, you can serve both legacy Spring services
+and gRPC or Thrift services on the same port. Additionally, you can gradually migrate your services to Armeria
 for improved performance.
 
 Armeria provides a simple way to integrate legacy Spring Boot applications with just a few lines of code.
@@ -96,12 +89,11 @@ With this simple configuration, everything is set up. Now you can serve your leg
 Although it may not seem like much has changed compared to before, your application is now ready to serve both RPC services
 (such as gRPC or Thrift) and RESTful services via Armeria.
 
-
 ## Integrating with Spring Boot
 
 <Tip>
 
-  Visit [armeria-examples/spring-boot-minimal](https://github.com/line/armeria/tree/main/examples/spring-boot-minimal) to
+  Visit [armeria-examples/spring-boot-minimal](https://github.com/line/armeria-examples/tree/main/spring-boot-minimal) to
   find a fully working example.
 
 </Tip>
@@ -123,7 +115,7 @@ First, you need the `armeria-spring-boot3-starter` dependency:
   ]}
 />
 
-Armeria's annotated service is similar to a Spring controller.
+Armeria's [annotated service](/docs/server-annotated-service) is similar to a Spring controller.
 You can declare the annotated service as a bean and inject it into the <type://ServerBuilder>.
 Here's an example:
 
@@ -154,7 +146,7 @@ public class TodoAnnotatedService {
     public HttpResponse get(@Param Integer id) {
         Todo todo = todoRepository.get(id);
         if (todo == null) {
-            HttpResponse.of(HttpStatus.NO_CONTENT);
+            return HttpResponse.of(HttpStatus.NO_CONTENT);
         }
         return HttpResponse.ofJson(todo);
     }
@@ -176,8 +168,8 @@ To inject the annotated service into the <type://ArmeriaServerConfigurator> bean
 @Bean
 public ArmeriaServerConfigurator armeriaServerConfigurator(TodoAnnotatedService todoAnnotatedService) {
    return serverBuilder -> {
-       serverBuilder.serviceUnder("/docs", new DocService());
-                    .decorator(LoggingService.newDecorator());
+       serverBuilder.serviceUnder("/docs", new DocService())
+                    .decorator(LoggingService.newDecorator())
                     .annotatedService("/api", todoAnnotatedService);
    };
 }
@@ -201,7 +193,7 @@ armeria:
 
 Armeria supports four internal services that are useful for monitoring and management purposes.
 You can enable these services by including their service IDs in your `application.yml` (or `application.properties`) file.
-Service ids are `docs`, `health`, `metrics`, `actuator`. You can include one or multiple service IDs based on your requirements.
+Service ids are `docs`, `health`, `metrics`, and `actuator`. You can include one or multiple service IDs based on your requirements.
 
 ```yaml filename=application.yml
 armeria:
@@ -266,8 +258,8 @@ armeria:
   health-check-path: /internal/healthcheck
 ```
 
-You can create a <type://HealthChecker> bean that implements your custom health check logic,
-For example, the below code is checking tomcat connector state.
+You can create a <type://HealthChecker> bean that implements your custom health check logic.
+For example, the below code determines if the server is healthy using Tomcat connector state.
 
 ```java filename=ArmeriaConfiguration.java
 @Bean
@@ -292,9 +284,9 @@ public HealthCheckServiceConfigurator healthCheckServiceConfigurator() {
 
 Armeria provides a [built-in metric service](/docs/advanced-metrics) using the [Micrometer](https://micrometer.io) library.
 You can expose the collected metrics to various monitoring systems, such as [Prometheus](https://prometheus.io) or [Dropwizard](https://metrics.dropwizard.io/)
- for comprehensive monitoring and analysis.
+for comprehensive monitoring and analysis.
 
-To include the metrics service, simply add the service ID `metrics` to the `armeria-internal-services.include` configuration.
+To include the metrics service, simply add the service ID `metrics` to the `armeria.internal-services.include` configuration.
 You do not need to specify `armeria.enable-metrics` or `armeria.metrics-path` as the default path for the metrics service is `/internal/metrics`.
 
 ```yaml filename=application.yml
@@ -369,7 +361,7 @@ In order to use the actuator service, you need to first add the following depend
   ]}
 />
 
-To include the actuator service, add the service ID `actuator` to the `armeria-internal-services.include` configuration.
+To include the actuator service, add the service ID `actuator` to the `armeria.internal-services.include` configuration.
 
 ```yaml filename=application.yml
 armeria:
