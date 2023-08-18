@@ -77,6 +77,7 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -91,6 +92,7 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 
+@GenerateNativeImageTrace
 class ServerTest {
 
     private static final long processDelayMillis = 1000;

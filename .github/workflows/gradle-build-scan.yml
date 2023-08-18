@@ -43,14 +43,14 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
       - id: get-pr-number-by-sha
         name: Get PR number by SHA
         working-directory: .github/actions
         run: |
-          export NVM_DIR=~/.nvm
-          source ~/.nvm/nvm.sh
-          npm install
+          npm ci
           npm run get-pr-number-by-sha
 
       - name: Setup Gradle
@@ -89,10 +89,7 @@ jobs:
         name: Create or update comment
         if: steps.get-pr-number-by-sha.outputs.pr_number
         working-directory: .github/actions
-        run: |
-          export NVM_DIR=~/.nvm
-          source ~/.nvm/nvm.sh
-          npm run comment-build-scan
+        run: npm run comment-build-scan
         env:
           BUILD_SCANS: ${{ steps.upload-build-scans.outputs.BUILD_SCANS }}
           PR_NUMBER: ${{ steps.get-pr-number-by-sha.outputs.pr_number }}

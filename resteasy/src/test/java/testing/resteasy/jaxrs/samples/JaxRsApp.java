@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.jaxrs.samples;
+package testing.resteasy.jaxrs.samples;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -22,7 +22,7 @@ import java.util.Set;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
 
-import com.linecorp.armeria.server.jaxrs.samples.books.BookService;
+import testing.resteasy.jaxrs.samples.books.BookService;
 
 @ApplicationPath("/app")
 public class JaxRsApp extends Application {

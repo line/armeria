@@ -439,6 +439,7 @@ const dummySpecification = new Specification({
   exceptions: [],
   services: [],
   structs: [],
+  docServiceRoute: undefined,
 });
 
 const App: React.FunctionComponent<Props> = (props) => {

@@ -56,7 +56,7 @@ import testing.grpc.Messages.StreamingOutputCallResponse;
 import testing.grpc.TestServiceGrpc;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
-class GrpcServiceImplErrorTest {
+class InvalidGrpcMetadataTest {
 
     // Valid metadata has even count of binaryValues.
     private static final Metadata validMetadata = InternalMetadata.newMetadata(
@@ -144,7 +144,7 @@ class GrpcServiceImplErrorTest {
             final ServiceRequestContextCaptor serviceCaptor = server.requestContextCaptor();
             assertThat(serviceCaptor.size()).isEqualTo(1);
             final ServiceRequestContext serviceCtx = serviceCaptor.take();
-            assertThat(serviceCtx.log().ensureComplete().responseCause())
+            assertThat(serviceCtx.log().whenComplete().join().responseCause())
                     .isInstanceOf(StatusRuntimeException.class)
                     .satisfies(cause -> {
                         assertThat(Status.fromThrowable(cause).getCode()).isEqualTo(

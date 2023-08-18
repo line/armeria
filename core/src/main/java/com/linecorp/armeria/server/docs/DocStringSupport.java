@@ -45,7 +45,8 @@ final class DocStringSupport {
                 spec.enums().stream().map(this::addEnumDocStrings).collect(toImmutableList()),
                 spec.structs().stream().map(this::addStructDocStrings).collect(toImmutableList()),
                 spec.exceptions().stream().map(this::addExceptionDocStrings).collect(toImmutableList()),
-                spec.exampleHeaders());
+                spec.exampleHeaders(),
+                spec.docServiceRoute());
     }
 
     private ServiceInfo addServiceDocStrings(ServiceInfo service) {
