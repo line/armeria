@@ -46,6 +46,11 @@ final class ExampleSupport {
         this.exampleQueries = exampleQueries;
     }
 
+    /**
+     * Adds examples to the {@link ServiceSpecification} and {@link ServiceInfo} objects.
+     * @param spec Spec itself.
+     * @return new {@link ServiceSpecification} with examples.
+     */
     ServiceSpecification addExamples(ServiceSpecification spec) {
         final List<ServiceInfo> serviceWithExample =
                 spec.services().stream().map(this::addServiceExamples).collect(toImmutableList());
@@ -53,8 +58,8 @@ final class ExampleSupport {
                 Iterables.concat(spec.exampleHeaders(),
                                  this.exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get(""));
 
-        return new ServiceSpecification(serviceWithExample, spec.enums(), spec.structs(),
-                                        spec.exceptions(), exampleHeaders);
+        return new ServiceSpecification(serviceWithExample, spec.enums(), spec.structs(), spec.exceptions(),
+                                        exampleHeaders, spec.docServiceRoute());
     }
 
     private ServiceInfo addServiceExamples(ServiceInfo service) {

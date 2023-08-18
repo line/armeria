@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
 import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -208,7 +209,7 @@ class GrpcDocServiceTest {
         removeDescriptionInfos(actualJson);
         removeDescriptionInfos(expectedJson);
 
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
 
         final AggregatedHttpResponse injected = client.get("/docs/injected.js").aggregate().join();
 
@@ -224,11 +225,14 @@ class GrpcDocServiceTest {
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
-        final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of()));
+        final Route docServiceRoute = Route.builder().pathPrefix("/excludeAll").build();
+        final ServiceSpecification emptySpecification = new ServiceSpecification(ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 docServiceRoute);
+        final JsonNode expectedJson = mapper.valueToTree(emptySpecification);
         assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 
