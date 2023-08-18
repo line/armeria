@@ -5154,7 +5154,6 @@ musica.bo
 musician.io
 mutsu.aomori.jp
 mutsuzawa.chiba.jp
-mutual
 mutual.ar
 mv
 mw
@@ -5691,7 +5690,6 @@ nordre-land.no
 nordreisa.no
 nore-og-uvdal.no
 north-kazakhstan.su
-northwesternmutual
 norton
 nose.osaka.jp
 nosegawa.nara.jp
