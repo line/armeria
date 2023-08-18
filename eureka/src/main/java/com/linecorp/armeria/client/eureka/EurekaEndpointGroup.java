@@ -57,14 +57,16 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.eureka.InstanceInfo;
+import com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus;
+import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.internal.common.eureka.Application;
 import com.linecorp.armeria.internal.common.eureka.Applications;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
@@ -74,6 +76,13 @@ import io.netty.util.concurrent.ScheduledFuture;
  * @see EurekaUpdatingListener
  */
 public final class EurekaEndpointGroup extends DynamicEndpointGroup {
+
+    /**
+     * Instance info attributeKey.
+     */
+    @UnstableApi
+    public static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf(
+            EurekaEndpointGroup.class, "instanceInfo");
 
     private static final Logger logger = LoggerFactory.getLogger(EurekaEndpointGroup.class);
 
@@ -409,7 +418,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         }
 
         assert hostname != null;
-        Endpoint endpoint = Endpoint.of(hostname, port);
+        Endpoint endpoint = Endpoint.of(hostname, port).withAttr(INSTANCE_INFO, instanceInfo);
         final String ipAddr = instanceInfo.getIpAddr();
         if (ipAddr != null && hostname != ipAddr) {
             endpoint = endpoint.withIpAddr(ipAddr);

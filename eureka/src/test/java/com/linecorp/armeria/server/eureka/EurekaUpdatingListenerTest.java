@@ -40,8 +40,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.eureka.InstanceInfo;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -142,21 +142,21 @@ class EurekaUpdatingListenerTest {
     @Test
     void reRegisterIfInstanceNoLongerRegistered() throws IOException {
         final EurekaUpdatingListener listener =
-            EurekaUpdatingListener.builder(eurekaServer.httpUri())
-                .instanceId(INSTANCE_ID)
-                .renewalIntervalMillis(2000)
-                .leaseDurationMillis(10000)
-                .appName(APP_NAME)
-                .build();
+                EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                                      .instanceId(INSTANCE_ID)
+                                      .renewalIntervalMillis(2000)
+                                      .leaseDurationMillis(10000)
+                                      .appName(APP_NAME)
+                                      .build();
         final int previousRegisterCount = registerCounter.get();
         final Server application = Server.builder()
-            .http(0)
-            .https(0)
-            .tlsSelfSigned()
-            .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-            .service("/health", HealthCheckService.of())
-            .serverListener(listener)
-            .build();
+                                         .http(0)
+                                         .https(0)
+                                         .tlsSelfSigned()
+                                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .service("/health", HealthCheckService.of())
+                                         .serverListener(listener)
+                                         .build();
         application.start().join();
         await().until(() -> registerContentCaptor.get() != null);
         assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 1);

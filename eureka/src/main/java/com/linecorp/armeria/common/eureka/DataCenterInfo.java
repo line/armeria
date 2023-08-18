@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.eureka;
+package com.linecorp.armeria.common.eureka;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
@@ -27,12 +27,14 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * The data center information.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonSerialize(using = DataCenterInfoSerializer.class)
+@UnstableApi
 public final class DataCenterInfo {
 
     private final String name;
@@ -52,10 +54,16 @@ public final class DataCenterInfo {
         }
     }
 
+    /**
+     * Returns the data center name, such as {@code "aws-us-east-2"}.
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the data center metadata.
+     */
     public Map<String, String> getMetadata() {
         return metadata;
     }

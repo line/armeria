@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.eureka;
+package com.linecorp.armeria.common.eureka;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.google.common.base.Objects;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A lease information of an instance in Eureka.
  * See <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
@@ -31,6 +33,7 @@ import com.google.common.base.Objects;
  */
 @JsonRootName("leaseInfo")
 @JsonInclude(Include.NON_DEFAULT)
+@UnstableApi
 public final class LeaseInfo {
 
     private final int renewalIntervalInSecs;
