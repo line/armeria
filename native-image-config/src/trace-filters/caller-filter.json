@@ -7,6 +7,9 @@
       "excludeClasses": "com.sun.beans.**"
     },
     {
+      "excludeClasses": "com.sun.jna.**"
+    },
+    {
       "excludeClasses": "groovy.**"
     },
     {
@@ -35,6 +38,9 @@
     },
     {
       "excludeClasses": "org.mockito.**"
+    },
+    {
+      "excludeClasses": "org.testcontainers.**"
     },
     {
       "excludeClasses": "worker.org.gradle.**"

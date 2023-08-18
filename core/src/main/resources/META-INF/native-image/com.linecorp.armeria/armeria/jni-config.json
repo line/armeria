@@ -185,20 +185,82 @@
 },
 {
   "name":"java.lang.Boolean",
-  "methods":[{"name":"getBoolean","parameterTypes":["java.lang.String"] }]
+  "fields":[
+    {"name":"TYPE"}, 
+    {"name":"value"}
+  ],
+  "methods":[
+    {"name":"<init>","parameterTypes":["boolean"] }, 
+    {"name":"getBoolean","parameterTypes":["java.lang.String"] }
+  ]
+},
+{
+  "name":"java.lang.Byte",
+  "fields":[
+    {"name":"TYPE"}, 
+    {"name":"value"}
+  ],
+  "methods":[{"name":"<init>","parameterTypes":["byte"] }]
+},
+{
+  "name":"java.lang.Character",
+  "fields":[
+    {"name":"TYPE"}, 
+    {"name":"value"}
+  ],
+  "methods":[{"name":"<init>","parameterTypes":["char"] }]
 },
 {
   "name":"java.lang.Class",
-  "methods":[{"name":"getCanonicalName","parameterTypes":[] }]
+  "methods":[
+    {"name":"getCanonicalName","parameterTypes":[] },
+    {"name":"getComponentType","parameterTypes":[] }
+  ]
+},
+{
+  "name":"java.lang.Double",
+  "fields":[
+    {"name":"TYPE"}, 
+    {"name":"value"}
+  ],
+  "methods":[{"name":"<init>","parameterTypes":["double"] }]
 },
 {
   "name":"java.lang.Exception"
 },
 {
+  "name":"java.lang.Float",
+  "fields":[
+    {"name":"TYPE"}, 
+    {"name":"value"}
+  ],
+  "methods":[{"name":"<init>","parameterTypes":["float"] }]
+},
+{
   "name":"java.lang.IllegalArgumentException"
 },
 {
+  "name":"java.lang.Integer",
+  "fields":[
+    {"name":"TYPE"}, 
+    {"name":"value"}
+  ],
+  "methods":[{"name":"<init>","parameterTypes":["int"] }]
+},
+{
+  "name":"java.lang.Long",
+  "fields":[
+    {"name":"TYPE"}, 
+    {"name":"value"}
+  ],
+  "methods":[{"name":"<init>","parameterTypes":["long"] }]
+},
+{
   "name":"java.lang.NullPointerException"
+},
+{
+  "name":"java.lang.Object",
+  "methods":[{"name":"toString","parameterTypes":[] }]
 },
 {
   "name":"java.lang.OutOfMemoryError"
@@ -207,19 +269,41 @@
   "name":"java.lang.RuntimeException"
 },
 {
+  "name":"java.lang.Short",
+  "fields":[
+    {"name":"TYPE"}, 
+    {"name":"value"}
+  ],
+  "methods":[{"name":"<init>","parameterTypes":["short"] }]
+},
+{
   "name":"java.lang.String",
   "methods":[
     {"name":"<init>","parameterTypes":["byte[]"] }, 
-    {"name":"getBytes","parameterTypes":[] }, 
-    {"name":"lastIndexOf","parameterTypes":["int"] }, 
-    {"name":"substring","parameterTypes":["int"] }
+    {"name":"<init>","parameterTypes":["byte[]","java.lang.String"] }, 
+    {"name":"getBytes","parameterTypes":[] },
+    {"name":"lastIndexOf","parameterTypes":["int"] },
+    {"name":"substring","parameterTypes":["int"] },
+    {"name":"getBytes","parameterTypes":["java.lang.String"] },
+    {"name":"toCharArray","parameterTypes":[] }
   ]
 },
 {
   "name":"java.lang.System",
   "methods":[
-    {"name":"getProperty","parameterTypes":["java.lang.String"] }, 
+    {"name":"getProperty","parameterTypes":["java.lang.String"] },
     {"name":"setProperty","parameterTypes":["java.lang.String","java.lang.String"] }
+  ]
+},
+{
+  "name":"java.lang.Void",
+  "fields":[{"name":"TYPE"}]
+},
+{
+  "name":"java.lang.reflect.Method",
+  "methods":[
+    {"name":"getParameterTypes","parameterTypes":[] }, 
+    {"name":"getReturnType","parameterTypes":[] }
   ]
 },
 {
@@ -241,7 +325,56 @@
   ]
 },
 {
+  "name":"java.nio.ByteBuffer",
+  "methods":[
+    {"name":"array","parameterTypes":[] }, 
+    {"name":"arrayOffset","parameterTypes":[] }
+  ]
+},
+{
+  "name":"java.nio.CharBuffer",
+  "methods":[
+    {"name":"array","parameterTypes":[] }, 
+    {"name":"arrayOffset","parameterTypes":[] }
+  ]
+},
+{
   "name":"java.nio.DirectByteBuffer"
+},
+{
+  "name":"java.nio.DoubleBuffer",
+  "methods":[
+    {"name":"array","parameterTypes":[] }, 
+    {"name":"arrayOffset","parameterTypes":[] }
+  ]
+},
+{
+  "name":"java.nio.FloatBuffer",
+  "methods":[
+    {"name":"array","parameterTypes":[] }, 
+    {"name":"arrayOffset","parameterTypes":[] }
+  ]
+},
+{
+  "name":"java.nio.IntBuffer",
+  "methods":[
+    {"name":"array","parameterTypes":[] }, 
+    {"name":"arrayOffset","parameterTypes":[] }
+  ]
+},
+{
+  "name":"java.nio.LongBuffer",
+  "methods":[
+    {"name":"array","parameterTypes":[] }, 
+    {"name":"arrayOffset","parameterTypes":[] }
+  ]
+},
+{
+  "name":"java.nio.ShortBuffer",
+  "methods":[
+    {"name":"array","parameterTypes":[] }, 
+    {"name":"arrayOffset","parameterTypes":[] }
+  ]
 },
 {
   "name":"java.nio.channels.ClosedChannelException",

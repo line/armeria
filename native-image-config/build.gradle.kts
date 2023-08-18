@@ -39,7 +39,7 @@ val nativeImageConfigToolPath = "${graalHome.resolve("lib/svm/bin/native-image-c
 val thisProject = project
 val callerFilterFile = projectDir.resolve("src/trace-filters/caller-filter.json")
 val processNativeImageTracesOutputDir = buildDir.resolve("step-1-process-native-image-traces")
-val cleanupNativeImageConfigOutputDir = buildDir.resolve("step-2-cleanup-native-image-config")
+val simplifyNativeImageConfigOutputDir = buildDir.resolve("step-2-simplify-native-image-config")
 val nativeImageConfigOutputDir = buildDir.resolve("step-3-final-native-image-config")
 val nativeImageTraceFiles = mutableListOf<Path>()
 
@@ -76,13 +76,13 @@ tasks.register("processNativeImageTraces", Exec::class).configure {
 }
 val processNativeImageTracesTask = tasks.named("processNativeImageTraces", Exec::class)
 
-tasks.register("cleanupNativeImageConfig", CleanupNativeImageConfigTask::class).configure {
+tasks.register("simplifyNativeImageConfig", SimplifyNativeImageConfigTask::class).configure {
     dependsOn(processNativeImageTracesTask)
     group = "Build"
-    description = "Cleans up the generated native image config."
+    description = "Simplifies up the generated native image config."
 
     sourceNativeImageConfigDir.set(processNativeImageTracesOutputDir)
-    targetNativeImageConfigDir.set(cleanupNativeImageConfigOutputDir)
+    targetNativeImageConfigDir.set(simplifyNativeImageConfigOutputDir)
     baseResourceConfigFile.set(project.file("src/base-config/resource-config.json"))
 
     excludedTypeRegexes.apply {
@@ -91,6 +91,7 @@ tasks.register("cleanupNativeImageConfig", CleanupNativeImageConfigTask::class).
         add("""Suite(?:$|\$)""".toRegex())
         add("""\.Test[A-Z]""".toRegex())
         add("""^android\.""".toRegex())
+        add("""^com\.sun\.jna\.""".toRegex())
         add("""^groovyx?\.""".toRegex())
         add("""^io\.grpc\.netty\.""".toRegex())
         add("""^io\.grpc\.okhttp\.""".toRegex())
@@ -98,6 +99,7 @@ tasks.register("cleanupNativeImageConfig", CleanupNativeImageConfigTask::class).
         add("""^org\.assertj\.""".toRegex())
         add("""^org\.mockito\.""".toRegex())
         add("""^org\.gradle\.""".toRegex())
+        add("""^org\.testcontainers\.""".toRegex())
         add("""^testing\.""".toRegex())
         add("""^worker\.org\.gradle\.""".toRegex())
     }
@@ -117,7 +119,10 @@ tasks.register("cleanupNativeImageConfig", CleanupNativeImageConfigTask::class).
         add("""^META-INF/services/org\.assertj\.""".toRegex())
         add("""^META-INF/services/org\.codehaus\.groovy\.""".toRegex())
         add("""^META-INF/services/org\.junit(?:pioneer)?\.""".toRegex())
+        add("""^META-INF/services/org\.testcontainers\.""".toRegex())
         add("""^catalog/""".toRegex())
+        add("""^com/sun/jna/""".toRegex())
+        add("""^docker-java\.properties$""".toRegex())
         add("""^jndi\.properties$""".toRegex())
         add("""^junit-platform\.properties$""".toRegex())
         add("""^logback-test\.xml$""".toRegex())
@@ -126,15 +131,16 @@ tasks.register("cleanupNativeImageConfig", CleanupNativeImageConfigTask::class).
         add("""^org/apache/hc/""".toRegex())
         add("""^org/apache/http/""".toRegex())
         add("""^org/apache/xml/""".toRegex())
+        add("""^testcontainers\.properties$""".toRegex())
     }
 }
-val cleanupNativeImageConfigTask = tasks.named("cleanupNativeImageConfig", CleanupNativeImageConfigTask::class)
+val simplifyNativeImageConfigTask = tasks.named("simplifyNativeImageConfig", SimplifyNativeImageConfigTask::class)
 
 tasks.register("nativeImageConfig", Exec::class).configure {
     group = "Build"
     description = "Generates the final native image config by merging the base and generated native image config."
 
-    dependsOn(cleanupNativeImageConfigTask)
+    dependsOn(simplifyNativeImageConfigTask)
     inputs.dir(project.file("src/base-config"))
     outputs.dir(nativeImageConfigOutputDir)
 
@@ -142,7 +148,7 @@ tasks.register("nativeImageConfig", Exec::class).configure {
             nativeImageConfigToolPath,
             "generate",
             "--input-dir=src/base-config",
-            "--input-dir=$cleanupNativeImageConfigOutputDir",
+            "--input-dir=$simplifyNativeImageConfigOutputDir",
             "--output-dir=$nativeImageConfigOutputDir"
     )
 
@@ -161,7 +167,7 @@ configure(relocatedProjects) {
     }
 }
 
-abstract class CleanupNativeImageConfigTask : DefaultTask() {
+abstract class SimplifyNativeImageConfigTask : DefaultTask() {
 
     private val mapper = JsonMapper.builder().enable(SerializationFeature.INDENT_OUTPUT).build()
 

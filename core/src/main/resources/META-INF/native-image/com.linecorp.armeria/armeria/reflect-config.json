@@ -1482,28 +1482,28 @@
   "queryAllDeclaredMethods":true,
   "queryAllDeclaredConstructors":true,
   "methods":[
-    {"name":"getAliasNode","parameterTypes":[] }, 
-    {"name":"getArgs","parameterTypes":[] }, 
-    {"name":"getCheckId","parameterTypes":[] }, 
-    {"name":"getDeregisterCriticalServiceAfter","parameterTypes":[] }, 
-    {"name":"getDockerContainerID","parameterTypes":[] }, 
-    {"name":"getGrpc","parameterTypes":[] }, 
-    {"name":"getHeader","parameterTypes":[] }, 
-    {"name":"getHttp","parameterTypes":[] }, 
-    {"name":"getId","parameterTypes":[] }, 
-    {"name":"getInterval","parameterTypes":[] }, 
-    {"name":"getMethod","parameterTypes":[] }, 
-    {"name":"getName","parameterTypes":[] }, 
-    {"name":"getNode","parameterTypes":[] }, 
-    {"name":"getNotes","parameterTypes":[] }, 
-    {"name":"getOutputMaxSize","parameterTypes":[] }, 
-    {"name":"getServiceId","parameterTypes":[] }, 
-    {"name":"getShell","parameterTypes":[] }, 
-    {"name":"getStatus","parameterTypes":[] }, 
-    {"name":"getTcp","parameterTypes":[] }, 
-    {"name":"getTimeout","parameterTypes":[] }, 
-    {"name":"getTtl","parameterTypes":[] }, 
-    {"name":"isGrpcUseTls","parameterTypes":[] }, 
+    {"name":"getAliasNode","parameterTypes":[] },
+    {"name":"getArgs","parameterTypes":[] },
+    {"name":"getCheckId","parameterTypes":[] },
+    {"name":"getDeregisterCriticalServiceAfter","parameterTypes":[] },
+    {"name":"getDockerContainerID","parameterTypes":[] },
+    {"name":"getGrpc","parameterTypes":[] },
+    {"name":"getHeader","parameterTypes":[] },
+    {"name":"getHttp","parameterTypes":[] },
+    {"name":"getId","parameterTypes":[] },
+    {"name":"getInterval","parameterTypes":[] },
+    {"name":"getMethod","parameterTypes":[] },
+    {"name":"getName","parameterTypes":[] },
+    {"name":"getNode","parameterTypes":[] },
+    {"name":"getNotes","parameterTypes":[] },
+    {"name":"getOutputMaxSize","parameterTypes":[] },
+    {"name":"getServiceId","parameterTypes":[] },
+    {"name":"getShell","parameterTypes":[] },
+    {"name":"getStatus","parameterTypes":[] },
+    {"name":"getTcp","parameterTypes":[] },
+    {"name":"getTimeout","parameterTypes":[] },
+    {"name":"getTtl","parameterTypes":[] },
+    {"name":"isGrpcUseTls","parameterTypes":[] },
     {"name":"isTlsSkipVerify","parameterTypes":[] }
   ]
 },
@@ -3538,8 +3538,8 @@
 {
   "name":"java.net.StandardSocketOptions",
   "fields":[
-    {"name":"IP_MULTICAST_IF"}, 
-    {"name":"IP_MULTICAST_LOOP"}, 
+    {"name":"IP_MULTICAST_IF"},
+    {"name":"IP_MULTICAST_LOOP"},
     {"name":"IP_MULTICAST_TTL"}
   ]
 },
@@ -3572,14 +3572,14 @@
 {
   "name":"java.nio.channels.NetworkChannel",
   "queriedMethods":[
-    {"name":"getOption","parameterTypes":["java.net.SocketOption"] }, 
+    {"name":"getOption","parameterTypes":["java.net.SocketOption"] },
     {"name":"setOption","parameterTypes":["java.net.SocketOption","java.lang.Object"] }
   ]
 },
 {
   "name":"java.nio.channels.spi.SelectorProvider",
   "queriedMethods":[
-    {"name":"openServerSocketChannel","parameterTypes":["java.net.ProtocolFamily"] }, 
+    {"name":"openServerSocketChannel","parameterTypes":["java.net.ProtocolFamily"] },
     {"name":"openSocketChannel","parameterTypes":["java.net.ProtocolFamily"] }
   ]
 },
@@ -8870,7 +8870,7 @@
 {
   "name":"sun.nio.ch.SelectorImpl",
   "fields":[
-    {"name":"publicSelectedKeys"}, 
+    {"name":"publicSelectedKeys"},
     {"name":"selectedKeys"}
   ]
 },
