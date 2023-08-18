@@ -162,6 +162,14 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
     /**
+     * If the idle timeout is reset when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"}
+     * is received.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Boolean> KEEP_ALIVE_ON_PING =
+            ClientFactoryOption.define("KEEP_ALIVE_ON_PING", Flags.defaultClientKeepAliveOnPing());
+
+    /**
      * The PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
      * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
@@ -462,6 +470,15 @@ public final class ClientFactoryOptions
      */
     public long idleTimeoutMillis() {
         return get(IDLE_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Returns whether to keep connection alive when an HTTP/2 PING frame or the response of
+     * {@code "OPTIONS * HTTP/1.1"} is received.
+     */
+    @UnstableApi
+    public boolean keepAliveOnPing() {
+        return get(KEEP_ALIVE_ON_PING);
     }
 
     /**

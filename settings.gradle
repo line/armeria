@@ -52,8 +52,14 @@ includeWithFlags ':junit4',                              'java', 'publish', 'rel
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
-includeWithFlags ':logback',                             'java', 'publish', 'relocate', 'native'
+includeWithFlags ':logback',                             'java', 'publish', 'relocate', 'no_aggregation'
+project(':logback').projectDir = file('logback/logback')
+includeWithFlags ':logback12',                           'java', 'publish', 'relocate', 'native'
+project(':logback12').projectDir = file('logback/logback12')
 includeWithFlags ':logback13',                           'java', 'publish', 'relocate', 'no_aggregation'
+project(':logback13').projectDir = file('logback/logback13')
+includeWithFlags ':logback14',                           'java11', 'publish', 'relocate', 'no_aggregation'
+project(':logback14').projectDir = file('logback/logback14')
 includeWithFlags ':native-image-config'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate', 'native'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate', 'native'
@@ -196,6 +202,7 @@ project(':examples:graphql-sangria-example').projectDir = file('examples/graphql
 includeWithFlags ':examples:grpc-example',                         'java11'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java11', 'kotlin-grpc', 'kotlin'
+includeWithFlags ':examples:grpc-krotodc',                         'java11', 'krotodc-grpc', 'kotlin'
 includeWithFlags ':examples:grpc-scala',                           'java11', 'scala-grpc_2.13', 'scala_2.13'
 includeWithFlags ':examples:grpc-reactor',                         'java11', 'reactor-grpc'
 includeWithFlags ':examples:proxy-server',                         'java11'
