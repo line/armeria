@@ -22,11 +22,6 @@ async function main(): Promise<void> {
   const octokit = new Octokit({auth: process.env.GITHUB_TOKEN});
   const buildScans = process.env.BUILD_SCANS.split(",");
   const prNumber = parseInt(process.env.PR_NUMBER);
-  if (isNaN(prNumber)) {
-    console.log(`❔PR_NUMBER is not set. Skipping comment.`);
-    return;
-  }
-
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
 
   console.log(`💻 Getting jobs for ${process.env.RUN_ID} ...`);
