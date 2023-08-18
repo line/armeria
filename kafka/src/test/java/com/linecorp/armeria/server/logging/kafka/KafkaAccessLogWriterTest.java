@@ -33,8 +33,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+@GenerateNativeImageTrace
 class KafkaAccessLogWriterTest {
 
     private static final String TOPIC_NAME = "topic-test";

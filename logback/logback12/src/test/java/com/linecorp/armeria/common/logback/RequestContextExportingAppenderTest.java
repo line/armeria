@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -79,9 +80,13 @@ import ch.qos.logback.core.status.Status;
 import ch.qos.logback.core.status.StatusManager;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import testing.logback.CustomObject;
+import testing.logback.CustomObjectNameStringifier;
+import testing.logback.CustomObjectValueStringifier;
 import testing.logback.TestService.hello_args;
 import testing.logback.TestService.hello_result;
 
+@GenerateNativeImageTrace
 class RequestContextExportingAppenderTest {
 
     public static final int ASYNC_LOG_WAIT_TIMEOUT = 5000;

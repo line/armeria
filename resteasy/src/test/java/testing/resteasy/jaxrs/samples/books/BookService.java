@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.jaxrs.samples.books;
+package testing.resteasy.jaxrs.samples.books;
 
 import java.util.Collection;
 import java.util.Map;

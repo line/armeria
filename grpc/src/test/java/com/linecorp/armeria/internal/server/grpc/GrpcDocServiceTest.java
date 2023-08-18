@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.server.grpc;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,6 +48,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.internal.testing.TestUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -71,6 +71,7 @@ import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import testing.grpc.TestServiceGrpc;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
+@GenerateNativeImageTrace
 class GrpcDocServiceTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
@@ -143,7 +144,7 @@ class GrpcDocServiceTest {
                                       .build());
             sb.serviceUnder("/",
                             GrpcService.builder()
-                                       .addService(mock(ReconnectServiceImplBase.class))
+                                       .addService(new ReconnectServiceImplBase() {})
                                        .build());
         }
     };
