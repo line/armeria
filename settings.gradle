@@ -87,8 +87,14 @@ includeWithFlags ':junit4',                              'java', 'publish', 'rel
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin'
-includeWithFlags ':logback',                             'java', 'publish', 'relocate'
+includeWithFlags ':logback',                             'java', 'publish', 'relocate', 'no_aggregation'
+project(':logback').projectDir = file('logback/logback')
+includeWithFlags ':logback12',                           'java', 'publish', 'relocate'
+project(':logback12').projectDir = file('logback/logback12')
 includeWithFlags ':logback13',                           'java', 'publish', 'relocate', 'no_aggregation'
+project(':logback13').projectDir = file('logback/logback13')
+includeWithFlags ':logback14',                           'java11', 'publish', 'relocate', 'no_aggregation'
+project(':logback14').projectDir = file('logback/logback14')
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate'
@@ -162,7 +168,7 @@ includeWithFlags ':benchmarks:jmh',                            'java', 'kotlin'
 includeWithFlags ':benchmarks:ghz',                            'java'
 includeWithFlags ':it:builders',                               'java'
 includeWithFlags ':it:context-storage',                        'java'
-includeWithFlags ':it:dgs',                                    'java'
+includeWithFlags ':it:dgs',                                    'java17'
 includeWithFlags ':it:flags-cyclic-dep',                       'java'
 includeWithFlags ':it:graphql-multipart',                      'java17'
 includeWithFlags ':it:grpcweb',                                'java', 'akka-grpc_2.13'
@@ -230,6 +236,7 @@ project(':examples:graphql-sangria-example').projectDir = file('examples/graphql
 includeWithFlags ':examples:grpc-example',                         'java11'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java11', 'kotlin-grpc', 'kotlin'
+includeWithFlags ':examples:grpc-krotodc',                         'java11', 'krotodc-grpc', 'kotlin'
 includeWithFlags ':examples:grpc-scala',                           'java11', 'scala-grpc_2.13', 'scala_2.13'
 includeWithFlags ':examples:grpc-reactor',                         'java11', 'reactor-grpc'
 includeWithFlags ':examples:proxy-server',                         'java11'

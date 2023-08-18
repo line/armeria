@@ -14,13 +14,25 @@
  * under the License.
  */
 
-/**
- * <a href="https://logback.qos.ch/">Logback</a> integration.
- *
- * <p>Read '<a href="https://armeria.dev/docs/server-basics">Logging contextual information</a>'
- * for more information.
- */
-@NonNullByDefault
-package com.linecorp.armeria.common.logback;
+package com.linecorp.armeria.internal.common.observation;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
+
+import brave.handler.MutableSpan;
+import brave.handler.SpanHandler;
+import brave.propagation.TraceContext;
+
+public final class SpanCollector extends SpanHandler {
+
+    private final BlockingQueue<MutableSpan> spans = new LinkedTransferQueue<>();
+
+    @Override
+    public boolean end(TraceContext context, MutableSpan span, Cause cause) {
+        return spans.add(span);
+    }
+
+    public BlockingQueue<MutableSpan> spans() {
+        return spans;
+    }
+}

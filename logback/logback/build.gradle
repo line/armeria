@@ -1,0 +1,4 @@
+dependencies {
+    // Logback
+    api libs.logback12
+}

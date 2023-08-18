@@ -57,6 +57,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
             HttpClientFactory clientFactory, SessionProtocol protocol) {
 
         final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
+        final boolean keepAliveOnPing = clientFactory.keepAliveOnPing();
         final long pingIntervalMillis = clientFactory.pingIntervalMillis();
         final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
@@ -72,7 +73,8 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
                                     ImmutableList.of(Tag.of("protocol", protocol.uriText())));
         return new Http2ClientKeepAliveHandler(
                 channel, encoder.frameWriter(), keepAliveTimer,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                keepAliveOnPing);
     }
 
     Http2ResponseDecoder responseDecoder() {
