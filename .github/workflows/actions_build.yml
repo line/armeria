@@ -21,6 +21,7 @@ env:
   # Used by GitHub CLI
   GH_TOKEN: ${{ github.token }}
   RUN_ID: ${{ github.run_id }}
+  PR_NUMBER: ${{ github.event.pull_request.number }}
 
 jobs:
   build:
@@ -119,14 +120,13 @@ jobs:
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
 
       - name: Upload Gradle build scan
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: build-scan-${{ env.JOB_NAME }}
+          name: ${{ env.PR_NUMBER && format('{0}-', env.PR_NUMBER) || '' }}build-scan-${{ env.JOB_NAME }}
           path: ~/.gradle/build-scan-data
 
       - if: ${{ matrix.snapshot && github.ref_name == 'main' }}

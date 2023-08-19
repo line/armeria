@@ -1,11 +1,9 @@
 {
   "scripts": {
     "post-release": "ts-node post-release.ts",
-    "comment-build-scan": "ts-node comment-build-scan.ts",
-    "get-pr-number-by-sha": "ts-node get-pr-number-by-sha.ts"
+    "comment-build-scan": "ts-node comment-build-scan.ts"
   },
   "dependencies": {
-    "@actions/core": "^1.10.0",
     "octokit": "^2.1.0",
     "ts-node": "^10.9.1"
   }
