@@ -161,49 +161,67 @@ files into the specific location in the class path.
 - Configure the protobuf plugin to generate the `.dsc` file that contains the docstrings and
   put it into the `META-INF/armeria/grpc` directory:
 
-  Using Gradle:
-
-  ```groovy
-  protobuf {
-      generateProtoTasks {
-          all().each { task ->
-              task.generateDescriptorSet = true
-              task.descriptorSetOptions.includeSourceInfo = true
-              task.descriptorSetOptions.includeImports = true
-              task.descriptorSetOptions.path =
-                      "${buildDir}/resources/main/META-INF/armeria/grpc/service-name.dsc"
+  <Tabs>
+    <TabPane tab="Gradle" key="gradle">
+      <CodeBlock language="groovy" filename="build.gradle">{`
+      protobuf {
+          generateProtoTasks {
+              all().each { task ->
+                  task.generateDescriptorSet = true
+                  task.descriptorSetOptions.includeSourceInfo = true
+                  task.descriptorSetOptions.includeImports = true
+                  task.descriptorSetOptions.path =
+                          "\${buildDir}/resources/main/META-INF/armeria/grpc/service-name.dsc"
+              }
           }
       }
-  }
-  ```
-  Using Maven:
-
-  ```xml
-  <!-- See https://www.xolstice.org/protobuf-maven-plugin/usage.html for more information. -->
-  <plugin>
-    <groupId>org.xolstice.maven.plugins</groupId>
-    <artifactId>protobuf-maven-plugin</artifactId>
-    <version>0.6.1</version>
-    <configuration>
-      <protocArtifact>com.google.protobuf:protoc:${protoc.version}:exe:${os.detected.classifier}</protocArtifact>
-      <pluginId>grpc-java</pluginId>
-      <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
-      <writeDescriptorSet>true</writeDescriptorSet>
-      <includeDependenciesInDescriptorSet>true</includeDependenciesInDescriptorSet>
-      <includeSourceInfoInDescriptorSet>true</includeSourceInfoInDescriptorSet>
-      <descriptorSetOutputDirectory>${project.build.outputDirectory}/META-INF/armeria/grpc</descriptorSetOutputDirectory>
-      <descriptorSetFileName>${project.build.finalName}.dsc</descriptorSetFileName>
-    </configuration>
-    <executions>
-      <execution>
-        <goals>
-          <goal>compile</goal>
-          <goal>compile-custom</goal>
-        </goals>
-      </execution>
-    </executions>
-  </plugin>
-  ```
+      `}
+      </CodeBlock>
+    </TabPane>
+    <TabPane tab="Gradle (Kotlin)" key="gradle_kotlin">
+      <CodeBlock language="kotlin" filename="build.gradle.kts">{`
+      protobuf {
+          generateProtoTasks {
+              all().forEach {
+                  it.generateDescriptorSet = true
+                  it.descriptorSetOptions.includeSourceInfo = true
+                  it.descriptorSetOptions.includeImports = true
+                  it.descriptorSetOptions.path =
+                          "\${buildDir}/resources/main/META-INF/armeria/grpc/service-name.dsc"
+              }
+          }
+      }
+      `}</CodeBlock>
+    </TabPane>
+    <TabPane tab="Maven" key="maven">
+      <CodeBlock language="xml" filename="pom.xml">{`
+      <!-- See https://www.xolstice.org/protobuf-maven-plugin/usage.html for more information. -->
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <version>0.6.1</version>
+        <configuration>
+          <protocArtifact>com.google.protobuf:protoc:\${protoc.version}:exe:\${os.detected.classifier}</protocArtifact>
+          <pluginId>grpc-java</pluginId>
+          <pluginArtifact>io.grpc:protoc-gen-grpc-java:\${grpc.version}:exe:\${os.detected.classifier}</pluginArtifact>
+          <writeDescriptorSet>true</writeDescriptorSet>
+          <includeDependenciesInDescriptorSet>true</includeDependenciesInDescriptorSet>
+          <includeSourceInfoInDescriptorSet>true</includeSourceInfoInDescriptorSet>
+          <descriptorSetOutputDirectory>\${project.build.outputDirectory}/META-INF/armeria/grpc</descriptorSetOutputDirectory>
+          <descriptorSetFileName>\${project.build.finalName}.dsc</descriptorSetFileName>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>compile-custom</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      `}</CodeBlock>
+    </TabPane>
+  </Tabs>
 
 ### For annotated service
 
@@ -255,27 +273,27 @@ files into the specific location in the class path.
   This only works with method parameters.
   To enable it, you have to add the armeria annotation processor to your project:
 
-  Gradle configuration:
-
-  ```groovy
-  dependencies {
-    compileOnly 'com.linecorp.armeria:armeria-annotation-processor'
-    annotationProcessor 'com.linecorp.armeria:armeria-annotation-processor'
-  }
-  ```
-
-  Kotlin configuration:
-
-  ```kotlin
-  plugins {
-    kotlin("kapt") apply true
-  }
-
-  dependencies {
-      configurations["kapt"].dependencies.add("com.linecorp.armeria:armeria-annotation-processor")
-  }
-
-  kapt {
-      annotationProcessor("com.linecorp.armeria.server.annotation.processor.DocumentationProcessor")
-  }
-  ```
+  <Tabs>
+    <TabPane tab="Gradle" key="gradle">
+      <CodeBlock language="groovy" filename="build.gradle">{`
+      dependencies {
+          compileOnly 'com.linecorp.armeria:armeria-annotation-processor'
+          annotationProcessor 'com.linecorp.armeria:armeria-annotation-processor'
+      }
+      `}
+      </CodeBlock>
+    </TabPane>
+    <TabPane tab="Gradle (Kotlin)" key="gradle_kotlin">
+      <CodeBlock language="kotlin" filename="build.gradle.kts">{`
+      plugins {
+          kotlin("kapt") apply true
+      }\n
+      dependencies {
+          configurations["kapt"].dependencies.add("com.linecorp.armeria:armeria-annotation-processor")
+      }\n
+      kapt {
+          annotationProcessor("com.linecorp.armeria.server.annotation.processor.DocumentationProcessor")
+      }
+      `}</CodeBlock>
+    </TabPane>
+  </Tabs>
