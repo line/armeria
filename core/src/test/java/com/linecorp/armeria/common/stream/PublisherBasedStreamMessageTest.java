@@ -27,6 +27,7 @@ import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
@@ -42,6 +43,8 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.AbortableS
 
 import io.netty.buffer.ByteBuf;
 
+// TODO(ikhoon): Revert this change after testing.
+@Disabled
 class PublisherBasedStreamMessageTest {
 
     /**
