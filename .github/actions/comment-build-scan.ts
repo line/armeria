@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   const prNumber = parseInt(process.env.PR_NUMBER);
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
 
-  console.log(`💻 Getting jobs for ${process.env.RUN_ID} ...`)
+  console.log(`💻 Getting jobs for ${process.env.RUN_ID} ...`);
   const {data: {jobs}} = await octokit.rest.actions.listJobsForWorkflowRun({
     owner: owner,
     repo: repo,
@@ -42,33 +42,33 @@ async function main(): Promise<void> {
     const [jobName, scanUrl]= scan.split(" ");
     const job = jobs.find(job => job.name === jobName);
     if (job.conclusion === 'success') {
-      commentBody += `| [${job.name}](${job.url}) | ✅| ${scanUrl} |\n`;
+      commentBody += `| [${job.name}](${job.url}) | ✅ | ${scanUrl} |\n`;
     } else {
       commentBody += `| [${job.name}](${job.url}) | ❌ (${job.conclusion}) | ${scanUrl} |\n`;
     }
   }
 
-  console.log(`💻 Getting comments for #${prNumber} ...`)
-  const scanComment = await findScanComment(octokit, owner, repo, prNumber)
+  console.log(`💻 Getting comments for #${prNumber} ...`);
+  const scanComment = await findScanComment(octokit, owner, repo, prNumber);
   if (scanComment) {
     // Update the previous comment
-    console.log(`📝 Updating the previous comment: ${scanComment.html_url} ...`)
+    console.log(`📝 Updating the previous comment: ${scanComment.html_url} ...`);
     await octokit.rest.issues.updateComment({
       owner,
       repo,
       comment_id: scanComment.id,
       body: commentBody
-    })
+    });
   } else {
     // If no previous comment, create a new one
-    console.log(`📝 Creating a new comment for #${prNumber} ...`)
+    console.log(`📝 Creating a new comment for #${prNumber} ...`);
     const { data: newComment } = await octokit.rest.issues.createComment({
       owner,
       repo,
       issue_number: prNumber,
       body: commentBody
-    })
-    console.log(`💬 A new comment has been created: ${newComment.html_url}`)
+    });
+    console.log(`💬 A new comment has been created: ${newComment.html_url}`);
   }
 }
 

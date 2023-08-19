@@ -13,6 +13,7 @@ env:
   COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
   # Used by Octokit
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DOWNLOAD_DIR: build-scans/
 
 jobs:
   upload-gradle-build-scan:
@@ -37,21 +38,21 @@ jobs:
           run_id: ${{ env.RUN_ID }}
           name: build-scan.*
           name_is_regexp: true
-          path: build-scans
+          path: ${{ env.DOWNLOAD_DIR }}
           check_artifacts: true
           search_artifacts: true
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - id: get-pr-number-by-sha
-        name: Get PR number by SHA
-        working-directory: .github/actions
+      - id: get-pr-number
+        name: Get PR number
         run: |
-          npm ci
-          npm run get-pr-number-by-sha
+          PR_NUMBER=$(ls $DOWNLOAD_DIR | head -1 | sed -n 's/\([0-9]*\)-build-scan.*/\1/p')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "❔️No pull request number found."
+          else
+            echo "✅ Pull request number: ${PR_NUMBER}"
+            echo "PR_NUMBER=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
@@ -59,7 +60,6 @@ jobs:
       - id: upload-build-scans
         name: Upload build scans
         run: |
-          DOWNLOAD_DIR="build-scans/"
           BUILD_SCAN_DIR="${HOME}/.gradle/build-scan-data"
           BUILD_SCANS=""
 
@@ -71,7 +71,7 @@ jobs:
             echo "🚚 Copying build scan: ${DOWNLOAD_DIR}${SCAN}/ to $BUILD_SCAN_DIR ..."
             cp -r ${DOWNLOAD_DIR}${SCAN}/* $BUILD_SCAN_DIR
 
-            JOB_NAME=$(echo ${SCAN} | sed 's/build-scan-\(.*\)/\1/')
+            JOB_NAME=$(echo ${SCAN} | sed 's/.*build-scan-\(.*\)/\1/')
             echo "📤 Uploading build scan for job ${JOB_NAME} ..."
             ./gradlew --no-daemon --stacktrace clean buildScanPublishPrevious
             echo "✅ Published build scan: ${JOB_NAME}"
@@ -85,11 +85,19 @@ jobs:
           echo "BUILD_SCANS=${BUILD_SCANS}" >> "$GITHUB_OUTPUT"
         shell: bash
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
       - id: create-or-update-comment
         name: Create or update comment
-        if: steps.get-pr-number-by-sha.outputs.pr_number
+        if: steps.get-pr-number.outputs.PR_NUMBER
         working-directory: .github/actions
-        run: npm run comment-build-scan
+        run: |
+          npm ci
+          npm run comment-build-scan
+        shell: bash
         env:
           BUILD_SCANS: ${{ steps.upload-build-scans.outputs.BUILD_SCANS }}
-          PR_NUMBER: ${{ steps.get-pr-number-by-sha.outputs.pr_number }}
+          PR_NUMBER: ${{ steps.get-pr-number.outputs.PR_NUMBER }}
