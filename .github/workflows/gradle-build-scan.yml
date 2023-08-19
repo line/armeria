@@ -73,11 +73,14 @@ jobs:
 
             JOB_NAME=$(echo ${SCAN} | sed 's/.*build-scan-\(.*\)/\1/')
             echo "📤 Uploading build scan for job ${JOB_NAME} ..."
-            ./gradlew --no-daemon --stacktrace clean buildScanPublishPrevious
-            echo "✅ Published build scan: ${JOB_NAME}"
-
-            BUILD_SCANS="${JOB_NAME} $(cat build/build-scan-url.txt),${BUILD_SCANS}"
-            echo "- [${JOB_NAME}]($(cat build/build-scan-url.txt))" >> "$GITHUB_STEP_SUMMARY"
+          
+            if ./gradlew --no-daemon --stacktrace clean buildScanPublishPrevious; then
+              echo "✅ Published build scan: ${JOB_NAME}"
+              BUILD_SCANS="${JOB_NAME} $(cat build/build-scan-url.txt),${BUILD_SCANS}"
+              echo "- [${JOB_NAME}]($(cat build/build-scan-url.txt))" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ Failed to upload build scan: ${JOB_NAME}"
+            fi
 
             rm -rf $BUILD_SCAN_DIR
           done
