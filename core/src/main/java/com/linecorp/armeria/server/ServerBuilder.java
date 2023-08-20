@@ -1436,11 +1436,11 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the default context path.
-     * the default context path will be used when build {@link VirtualHost}.
+     * Sets the context path.
+     * the base context path will be used when build {@link VirtualHost}.
      */
-    public ServerBuilder defaultContextPath(String contextPath) {
-        virtualHostTemplate.defaultContextPath(contextPath);
+    public ServerBuilder baseContextPath(String contextPath) {
+        defaultVirtualHostBuilder.baseContextPath(contextPath);
         return this;
     }
 

@@ -77,8 +77,6 @@ public final class VirtualHost {
     private final String defaultHostname;
     private final String hostnamePattern;
     private final int port;
-    private final String contextPath;
-
     @Nullable
     private final SslContext sslContext;
     private final Router<ServiceConfig> router;
@@ -100,7 +98,7 @@ public final class VirtualHost {
     private final List<ShutdownSupport> shutdownSupports;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
 
-    VirtualHost(String defaultHostname, String hostnamePattern, int port, String contextPath,
+    VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
                 Iterable<ServiceConfig> serviceConfigs,
                 ServiceConfig fallbackServiceConfig,
@@ -127,7 +125,6 @@ public final class VirtualHost {
             this.hostnamePattern = hostnamePattern;
         }
         this.port = port;
-        this.contextPath = contextPath;
         this.sslContext = sslContext;
         this.defaultServiceNaming = defaultServiceNaming;
         this.defaultLogName = defaultLogName;
@@ -160,7 +157,7 @@ public final class VirtualHost {
     }
 
     VirtualHost withNewSslContext(SslContext sslContext) {
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, contextPath, sslContext,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
@@ -182,12 +179,6 @@ public final class VirtualHost {
         }
 
         return Ascii.toLowerCase(defaultHostname);
-    }
-
-    static String normalizeContextPath(String contextPath) {
-        requireNonNull(contextPath, "contextPath");
-        // TODO Implement this
-        return contextPath;
     }
 
     /**
@@ -534,7 +525,7 @@ public final class VirtualHost {
         final ServiceConfig fallbackServiceConfig =
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, contextPath, sslContext,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,

@@ -296,7 +296,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
-                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
+                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
+                        String contextPath) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
@@ -335,7 +336,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         }
 
         return new ServiceConfig(
-                route, mappedRoute == null ? route : mappedRoute,
+                route.withPrefix(contextPath), mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis,
@@ -349,10 +350,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
                 requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler);
-    }
-
-    public ServiceConfigBuilder getPrefixedServiceConfigBuilder(String contextPath) {
-        return new ServiceConfigBuilder(route.withPrefix(contextPath), service);
     }
 
     @Override

@@ -26,7 +26,6 @@ import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATTERN;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
-import static com.linecorp.armeria.server.VirtualHost.normalizeContextPath;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.isPseudoHeader;
@@ -50,6 +49,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -83,6 +83,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
+import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -122,8 +123,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Nullable
     private String hostnamePattern;
     private int port = -1;
-    @Nullable
-    private String contextPath;
+    private String contextPath = "/";
     @Nullable
     private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
@@ -209,10 +209,10 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the default hostname of this {@link VirtualHost}.
+     * Sets the contextPath of this {@link VirtualHost}.
      */
-    public VirtualHostBuilder defaultContextPath(String contextPath) {
-        this.contextPath = normalizeContextPath(contextPath);
+    public VirtualHostBuilder baseContextPath(String contextPath) {
+        this.contextPath = RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
         return this;
     }
 
@@ -501,8 +501,7 @@ public final class VirtualHostBuilder implements TlsSetters {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public VirtualHostBuilder service(String pathPattern, HttpService service) {
-        final String prefixed = contextPath == null ? pathPattern : contextPath + pathPattern;
-        service(Route.builder().path(prefixed).build(), service);
+        service(Route.builder().path(pathPattern).build(), service);
         return this;
     }
 
@@ -701,27 +700,7 @@ public final class VirtualHostBuilder implements TlsSetters {
         } else {
             serviceConfigSetters = ImmutableList.copyOf(this.serviceConfigSetters);
         }
-
-        if (defaultVirtualHostBuilder.contextPath() != null) {
-            return applyPrefixToServiceConfigSetters(serviceConfigSetters,
-                                                     defaultVirtualHostBuilder.contextPath());
-        }
-
         return serviceConfigSetters;
-    }
-
-    private List<ServiceConfigSetters> applyPrefixToServiceConfigSetters(
-            List<ServiceConfigSetters> serviceConfigSetters, String contextPath) {
-        final List<ServiceConfigSetters> prefixedConfigSetters = new ArrayList<>(serviceConfigSetters.size());
-        for (ServiceConfigSetters setters : serviceConfigSetters) {
-            if (setters instanceof ServiceConfigBuilder) {
-                prefixedConfigSetters.add(((ServiceConfigBuilder) setters)
-                                                  .getPrefixedServiceConfigBuilder(contextPath));
-            } else {
-                prefixedConfigSetters.add(setters);
-            }
-        }
-        return prefixedConfigSetters;
     }
 
     VirtualHostBuilder addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
@@ -737,7 +716,7 @@ public final class VirtualHostBuilder implements TlsSetters {
 
     @Nullable
     private Function<? super HttpService, ? extends HttpService> getRouteDecoratingService(
-            @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
+            @Nullable VirtualHostBuilder defaultVirtualHostBuilder, String contextPath) {
         final List<RouteDecoratingService> routeDecoratingServices;
         if (defaultVirtualHostBuilder != null) {
             routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
@@ -749,8 +728,10 @@ public final class VirtualHostBuilder implements TlsSetters {
         }
 
         if (!routeDecoratingServices.isEmpty()) {
-            return RouteDecoratingService.newDecorator(
-                    Routers.ofRouteDecoratingService(routeDecoratingServices));
+            final List<RouteDecoratingService> prefixed = routeDecoratingServices.stream()
+                    .map(service -> service.withRoutePrefix(contextPath))
+                    .collect(Collectors.toList());
+            return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
         } else {
             return null;
         }
@@ -1338,7 +1319,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                                             successFunction, requestAutoAbortDelayMillis,
                                             multipartUploadsLocation, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
-                                            unhandledExceptionsReporter);
+                                            unhandledExceptionsReporter, contextPath);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
@@ -1347,14 +1328,14 @@ public final class VirtualHostBuilder implements TlsSetters {
                                accessLogWriter, blockingTaskExecutor, successFunction,
                                requestAutoAbortDelayMillis, multipartUploadsLocation,
                                defaultHeaders, requestIdGenerator,
-                               defaultErrorHandler, unhandledExceptionsReporter);
+                               defaultErrorHandler, unhandledExceptionsReporter, "/");
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);
         builder.addAll(template.shutdownSupports);
 
         final VirtualHost virtualHost =
-                new VirtualHost(defaultHostname, hostnamePattern, port, contextPath, sslContext(template),
+                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
@@ -1362,7 +1343,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                                 builder.build(), requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
-                getRouteDecoratingService(template);
+                getRouteDecoratingService(template, contextPath);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
