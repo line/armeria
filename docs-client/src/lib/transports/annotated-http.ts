@@ -83,6 +83,7 @@ export default class AnnotatedHttpTransport extends Transport {
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
@@ -103,6 +104,7 @@ export default class AnnotatedHttpTransport extends Transport {
           ? `${newPath}&${queries}`
           : `${newPath}?${queries}`;
     }
+    newPath = pathPrefix + newPath;
 
     return fetch(encodeURI(newPath), {
       headers: hdrs,

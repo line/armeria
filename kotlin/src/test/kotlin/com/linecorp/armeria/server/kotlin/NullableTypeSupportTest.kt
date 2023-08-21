@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.QueryParams
 import com.linecorp.armeria.common.annotation.Nullable
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.Get
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.lang.reflect.ParameterizedType
 
+@GenerateNativeImageTrace
 class NullableTypeSupportTest {
     @ParameterizedTest
     @ValueSource(
