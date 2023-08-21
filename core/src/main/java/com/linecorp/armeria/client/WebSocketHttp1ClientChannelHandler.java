@@ -199,7 +199,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     if (!res.tryWriteResponseHeaders(responseHeaders)) {
                         fail(ctx, ClosedSessionException.get());
                     }
-                    return;
+                    break;
                 case NEEDS_HANDSHAKE_RESPONSE_END:
                     // HttpClientCodec produces this after creating the headers. We can just ignore it.
                     if (msg != EMPTY_LAST_CONTENT) {
@@ -225,6 +225,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                             ctx.close();
                         }
                     }
+                    break;
             }
         } finally {
             ReferenceCountUtil.release(msg);
