@@ -227,6 +227,7 @@ final class HttpChannelPool implements AsyncCloseable {
         return maps;
     }
 
+    // TODO(minwoox): refactor this. https://github.com/line/armeria/issues/5129
     private Bootstrap getBootstrap(SessionProtocol desiredProtocol, SocketAddress remoteAddress,
                                    SerializationFormat serializationFormat) {
         if (remoteAddress instanceof InetSocketAddress) {
