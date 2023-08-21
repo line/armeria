@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -38,55 +37,42 @@ interface ShutdownSupport {
 
     static ShutdownSupport of(ExecutorService executor) {
         requireNonNull(executor, "executor");
-        return of(executor, e -> {
-            e.shutdown();
+        return () -> {
+            executor.shutdown();
             try {
-                while (!e.isTerminated()) {
-                    e.awaitTermination(1, TimeUnit.HOURS);
+                while (!executor.isTerminated()) {
+                    executor.awaitTermination(1, TimeUnit.HOURS);
                 }
             } catch (InterruptedException cause) {
                 logger.warn("During the termination wait, an interrupt occurs, attempting to forcefully " +
-                            "terminate the {}:", e, cause);
-                e.shutdownNow();
+                            "terminate the {}:", executor, cause);
+                executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
-        });
+            return UnmodifiableFuture.completedFuture(null);
+        };
     }
 
-    static ShutdownSupport of(ExecutorService executor, long terminationTimeout, TimeUnit timeUnit) {
+    static ShutdownSupport of(ExecutorService executor, long terminationTimeoutMillis) {
         requireNonNull(executor, "executor");
-        requireNonNull(timeUnit, "timeUnit");
-        return of(executor, e -> {
-            e.shutdown();
+        return () -> {
+            executor.shutdown();
             try {
-                if (!e.awaitTermination(terminationTimeout, timeUnit)) {
+                if (!executor.awaitTermination(terminationTimeoutMillis, TimeUnit.MILLISECONDS)) {
                     logger.warn("As the termination does not complete within the specified timeout, an " +
-                                "attempt is made to forcefully terminate the {}:", e);
-                    e.shutdownNow();
-                    if (!e.awaitTermination(60, TimeUnit.SECONDS)) {
+                                "attempt is made to forcefully terminate the {}:", executor);
+                    executor.shutdownNow();
+                    if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
                         logger.warn("The forced termination of the {} could not be completed within 60 " +
-                                    "seconds.", e);
+                                    "seconds.", executor);
                     }
                 }
             } catch (InterruptedException cause) {
                 logger.warn("During the termination wait, an interrupt occurs, attempting to forcefully " +
                             "terminate the {}:", executor, cause);
-                e.shutdownNow();
+                executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
-        });
-    }
-
-    static ShutdownSupport of(ExecutorService executor, Consumer<ExecutorService> shutdownStrategy) {
-        requireNonNull(executor, "executor");
-        return () -> {
-            final ExecutorService e;
-            if (executor instanceof UnstoppableScheduledExecutorService) {
-                e = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
-            } else {
-                e = executor;
-            }
-            shutdownStrategy.accept(e);
             return UnmodifiableFuture.completedFuture(null);
         };
     }
