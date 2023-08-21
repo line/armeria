@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,12 +14,19 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.kotlin
+package com.linecorp.armeria.internal.testing;
 
-class ExampleService {
-    fun normal(): Int = 1
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    suspend fun suspendingUnit() {}
+import org.junit.jupiter.api.Tag;
 
-    suspend fun suspendingInt(): Int = 1
+@Inherited
+@Target({ ElementType.TYPE, ElementType.METHOD })
+@Retention(RetentionPolicy.RUNTIME)
+@Tag("NATIVE_IMAGE_TRACE")
+public @interface GenerateNativeImageTrace {
 }

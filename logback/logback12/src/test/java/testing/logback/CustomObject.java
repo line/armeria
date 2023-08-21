@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logback;
+package testing.logback;
 
 import com.google.common.base.MoreObjects;
 
@@ -21,8 +21,8 @@ import io.netty.util.AttributeKey;
 
 public class CustomObject {
 
-    static final AttributeKey<CustomObject> ATTR = AttributeKey.valueOf(CustomObject.class, "ATTR");
-    static final AttributeKey<String> FOO = AttributeKey.valueOf(CustomObject.class, "FOO");
+    public static final AttributeKey<CustomObject> ATTR = AttributeKey.valueOf(CustomObject.class, "ATTR");
+    public static final AttributeKey<String> FOO = AttributeKey.valueOf(CustomObject.class, "FOO");
 
     final String name;
     final String value;

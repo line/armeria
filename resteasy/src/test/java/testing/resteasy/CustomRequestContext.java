@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.resteasy;
+package testing.resteasy;
 
 import static java.util.Objects.requireNonNull;
 
