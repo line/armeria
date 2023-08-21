@@ -68,7 +68,8 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      */
     protected AbstractWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                        @Nullable String path) {
-        this(null, validateSessionProtocol(sessionProtocol), requireNonNull(endpointGroup, "endpointGroup"), path);
+        this(null, validateSessionProtocol(sessionProtocol),
+             requireNonNull(endpointGroup, "endpointGroup"), path);
     }
 
     /**
