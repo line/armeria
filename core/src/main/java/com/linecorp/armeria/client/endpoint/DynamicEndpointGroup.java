@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -340,20 +341,36 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     @Override
     public String toString() {
-        return toStringHelper().toString();
+        return toString(unused -> {});
     }
 
     /**
-     * Returns {@link ToStringHelper} that contains fields information.
+     * Returns the string representation of this {@link DynamicEndpointGroup}. Specify a {@link Consumer}
+     * to add more fields to the returned string, e.g.
+     * <pre>{@code
+     * > @Override
+     * > public String toString() {
+     * >     return toString(buf -> {
+     * >         buf.append(", foo=").append(foo);
+     * >         buf.append(", bar=").append(bar);
+     * >     });
+     * > }
+     * }</pre>
+     *
+     * @param builderMutator the {@link Consumer} that appends the additional fields into the given
+     *                       {@link StringBuilder}.
      */
-    protected ToStringHelper toStringHelper() {
-        return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("selectionStrategy", selectionStrategy.getClass())
-                          .add("allowsEmptyEndpoints", allowEmptyEndpoints)
-                          .add("endpoints", truncate(endpoints, 10))
-                          .add("numEndpoints", endpoints.size())
-                          .add("initialized", initialEndpointsFuture.isDone());
+    @UnstableApi
+    protected final String toString(Consumer<? super StringBuilder> builderMutator) {
+        final StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append("{selectionStrategy=").append(selectionStrategy.getClass());
+        buf.append(", allowsEmptyEndpoints=").append(allowEmptyEndpoints);
+        buf.append(", initialized=").append(initialEndpointsFuture.isDone());
+        buf.append(", numEndpoints=").append(endpoints.size());
+        buf.append(", endpoints=").append(truncate(endpoints, 10));
+        builderMutator.accept(buf);
+        return buf.append('}').toString();
     }
 
     private class InitialEndpointsFuture extends EventLoopCheckingFuture<List<Endpoint>> {
