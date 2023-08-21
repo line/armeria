@@ -26,12 +26,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.awaitility.Durations;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class SamlRequestIdManagerTest {
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
+
+@GenerateNativeImageTrace
+class SamlRequestIdManagerTest {
 
     @Test
-    public void shouldBeDifferentToEachOther() throws UnsupportedEncodingException {
+    void shouldBeDifferentToEachOther() throws UnsupportedEncodingException {
         final SamlRequestIdManager manager =
                 SamlRequestIdManager.ofJwt("me", "test", 60, 5);
 
@@ -44,7 +47,7 @@ public class SamlRequestIdManagerTest {
     }
 
     @Test
-    public void shouldMatchJWTPattern() throws UnsupportedEncodingException {
+    void shouldMatchJWTPattern() throws UnsupportedEncodingException {
         final Pattern p = Pattern.compile("[a-zA-Z0-9-_]+\\.[a-zA-Z0-9-_]+\\.[a-zA-Z0-9-_]+");
         final SamlRequestIdManager manager =
                 SamlRequestIdManager.ofJwt("me", "test", 60, 5);
@@ -54,7 +57,7 @@ public class SamlRequestIdManagerTest {
     }
 
     @Test
-    public void shouldBeExpired() throws InterruptedException, UnsupportedEncodingException {
+    void shouldBeExpired() throws Exception {
         final SamlRequestIdManager manager =
                 SamlRequestIdManager.ofJwt("me", "test", 2, 0);
 
@@ -73,7 +76,7 @@ public class SamlRequestIdManagerTest {
     }
 
     @Test
-    public void shouldBeAcceptedBecauseOfLeeway() throws InterruptedException, UnsupportedEncodingException {
+    void shouldBeAcceptedBecauseOfLeeway() throws Exception {
         final SamlRequestIdManager manager =
                 SamlRequestIdManager.ofJwt("me", "test", 1, 2);
 
@@ -92,7 +95,7 @@ public class SamlRequestIdManagerTest {
     }
 
     @Test
-    public void shouldFail() {
+    void shouldFail() {
         assertThatThrownBy(() -> SamlRequestIdManager.ofJwt("me", "test", 0, 0))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> SamlRequestIdManager.ofJwt("me", "test", -1, 0))

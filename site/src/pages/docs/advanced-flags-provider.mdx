@@ -1,0 +1,83 @@
+# Configuring global flags
+
+## What flags in Armeria are
+
+Flags are global variables that control the behavior of Armeria.
+These variables mostly serve one of the following two purposes:
+
+1. Overriding the default system values.
+    - Overriding <type://FlagsProvider#defaultRequestTimeoutMillis()> changes the server-side timeout of a request.
+    - Overriding <type://FlagsProvider#defaultMaxServerNumRequestsPerConnection()> changes the server-side maximum number of requests
+      allowed that can be served concurrently through one connection.
+    - Overriding <type://FlagsProvider#transportType()> changes the transport type that will be used for socket I/O in Armeria.
+    - Overriding <type://FlagsProvider#fileServiceCacheSpec()> changes the cache specification of <type://FileService>.
+2. Enhanced debugging or monitoring.
+    - Overriding <type://FlagsProvider#reportBlockedEventLoop()> enables to log a warning if blocking calls
+      such as `CompletableFuture.join()` are called from an event loop thread.
+    - Overriding <type://FlagsProvider#verboseSocketExceptions()> enables logging for socket exceptions which are mostly harmless.
+    - Overriding <type://FlagsProvider#meterRegistry()> changes the default `MeterRegistry` where Armeria records metrics.
+    - Overriding <type://FlagsProvider#requestContextLeakDetectionSampler()> enables to request context leak tracing by specifying
+      a <type://Sampler>.
+
+You can also override these properties by setting JVM system properties. For example:
+- `-Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>`
+- `-Dcom.linecorp.armeria.defaultMaxServerNumRequestsPerConnection=<integer>`
+- `-Dcom.linecorp.armeria.reportBlockedEventLoop=<boolean>`
+- `-Dcom.linecorp.armeria.verboseSocketExceptions=<boolean>`
+
+<Tip>
+
+  Please refer to <type://FlagsProvider> for the complete list of global flags.
+
+</Tip>
+
+## Implementing your own <type://FlagsProvider>
+
+Create your own <type://FlagsProvider> and load it via [Java SPI](https://docs.oracle.com/javase/tutorial/sound/SPI-intro.html).
+If there are multiple implementations of <type://FlagsProvider>, the implementation with the highest priority will take precedence over the others.
+
+```java filename=MyFlagsProvider.java
+package com.example.providers;
+
+public class MyFlagsProvider implements FlagsProvider {
+
+  @Override
+  public int priority() {
+    // The provider with higher value will be evaluated first.
+    return 100;
+  }
+
+  @Override
+  public Long defaultRequestTimeoutMillis() {
+      return 5000L;
+  }
+
+  @Override
+  public TransportType transportType() {
+      return TransportType.EPOLL;
+  }
+
+  @Override
+  public Boolean reportBlockedEventLoop() {
+      return true;
+  }
+
+  @Override
+  public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+      // Samples all request contexts.
+      return Sampler.always();
+  }
+
+  @Override
+  public MeterRegistry meterRegistry() {
+      return PrometheusMeterRegistries.newRegistry();
+  }
+
+}
+```
+
+Add the following text file to your classpath or JAR file.
+
+```text filename=META-INF/services/com.linecorp.armeria.common.FlagsProvider
+com.example.providers.MyFlagsProvider
+```

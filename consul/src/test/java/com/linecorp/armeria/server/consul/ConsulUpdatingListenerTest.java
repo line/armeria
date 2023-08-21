@@ -35,9 +35,11 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulTestBase;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 
+@GenerateNativeImageTrace
 class ConsulUpdatingListenerTest extends ConsulTestBase {
 
     private static final List<Server> servers = new ArrayList<>();
