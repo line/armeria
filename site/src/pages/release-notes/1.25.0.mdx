@@ -44,7 +44,7 @@ date: 2023-08-22
   ```
 - Users can now retrieve headers from a multipart request in an annotated service
   using <type://MultipartFile#headers()>.  #5106
-- <type://RequestLogAccess#getIfAvailable> has been introduced,
+- <type://RequestLogAccess#getIfAvailable(Iterable<RequestLogProperty>)> has been introduced,
   which allows users to access a <type://RequestLogProperty> immediately if available. #4956 #4966
 - The `keepAliveOnPing` option has been introduced. Enabling this option will keep an idle connection
   alive when a HTTP/2 PING frame or `OPTIONS * HTTP/1.1` is received. The option can be configured
@@ -55,7 +55,8 @@ date: 2023-08-22
 ## 📈 Improvements
 
 - The number of event loops is equal to the number of cores by default when `io_uring` is used as the transport type. #5089
-- Users may now customize not found error responses using <type://ServiceErrorHandler#renderStatus()>. #4996
+- Users may now customize error responses when a service for a request is not found
+  using <type://ServiceErrorHandler#renderStatus()>. #4996
 - Redirection for a trailing slash is done correctly even if a reverse proxy rewrites the path. #4994
 - <type://DocService> now tries to guess the correct route behind a reverse proxy. #4987
 
@@ -65,8 +66,8 @@ date: 2023-08-22
 - <type://DnsCache> now allows zero TTL for resolved DNS records. #5119
 - Armeria's DNS resolver doesn't cache a DNS query timeout. #5117
 - Fixed a bug where headers could be written twice if `Content-Length` was exceeded during HTTP/2 cleartext upgrade. #5113
-- <type://RequestLog#localAddress()> and <type://RequestLog#remoteAddress()> now return correct values
-  when using domain sockets in abstract namespace. #5096
+- <type://ServiceRequestContext#localAddress()> and <type://ServiceRequestContext#remoteAddress()> now return
+  correct values when using domain sockets in abstract namespace. #5096
 - `armeria-logback12`, `armeria-logback13`, `armeria-logback14` have been introduced for better
   compatibility with [Logback](https://logback.qos.ch/). #5045 #5079 #5078 #5077
 - You can now use either an inline debug form or a modal debug form when using <type://DocService>. #5072
