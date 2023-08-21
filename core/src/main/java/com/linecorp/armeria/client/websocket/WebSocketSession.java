@@ -111,6 +111,9 @@ public final class WebSocketSession {
     public void setOutbound(Publisher<? extends WebSocketFrame> outbound) {
         requireNonNull(outbound, "outbound");
         if (outboundFuture.isDone()) {
+            if (outbound instanceof StreamMessage) {
+                ((StreamMessage<?>) outbound).abort();
+            }
             throw new IllegalStateException("outbound() or setOutbound() has been already called.");
         }
         final StreamMessage<? extends WebSocketFrame> streamMessage;
