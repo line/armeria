@@ -66,6 +66,7 @@ jobs:
           echo "## Build Scan®" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
+          rm -rf $BUILD_SCAN_DIR
           for SCAN in $(ls $DOWNLOAD_DIR) ; do
             mkdir -p $BUILD_SCAN_DIR
             echo "🚚 Copying build scan: ${DOWNLOAD_DIR}${SCAN}/ to $BUILD_SCAN_DIR ..."
