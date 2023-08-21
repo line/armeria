@@ -28,7 +28,6 @@ import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * Builds a new {@link HttpResponse}.
@@ -299,8 +298,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
             if (trailers == null) {
                 return HttpResponse.of(responseHeaders, publisher);
             } else {
-                return HttpResponse.of(responseHeaders,
-                                       StreamMessage.concat(publisher, StreamMessage.of(trailers.build())));
+                return HttpResponse.of(responseHeaders, publisher, trailers.build());
             }
         }
     }
