@@ -39,7 +39,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
-import com.linecorp.armeria.common.SerializationFormatProvider.Entry;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -104,7 +103,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     private static SerializationFormat register(
             BiMap<String, SerializationFormat> uriTextToFormats,
             Multimap<MediaType, SerializationFormat> simplifiedMediaTypeToFormats,
-            Entry entry) {
+            SerializationFormatProvider.Entry entry) {
 
         checkState(!uriTextToFormats.containsKey(entry.uriText),
                    "serialization format registered already: %s", entry.uriText);

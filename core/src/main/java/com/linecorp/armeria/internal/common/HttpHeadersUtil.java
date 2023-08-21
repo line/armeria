@@ -93,15 +93,15 @@ public final class HttpHeadersUtil {
             return headers;
         }
         if (defaultHeaders.isEmpty() && additionalHeaders.isEmpty()) {
-            boolean containInternalHeaders = true;
+            boolean containAllInternalHeaders = true;
             for (AsciiString name : internalHeaders.names()) {
                 if (!headers.contains(name)) {
-                    containInternalHeaders = false;
+                    containAllInternalHeaders = false;
                     break;
                 }
             }
 
-            if (containInternalHeaders) {
+            if (containAllInternalHeaders) {
                 return headers;
             }
         }

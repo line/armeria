@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 
@@ -32,6 +33,24 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         implements Subscriber<HttpObject> {
 
     private static final HttpData EMPTY_EOS = HttpData.empty().withEndOfStream();
+
+    static AbstractHttpRequestSubscriber of(Channel channel, ClientHttpObjectEncoder requestEncoder,
+                                            HttpResponseDecoder responseDecoder, SessionProtocol protocol,
+                                            ClientRequestContext ctx, HttpRequest req,
+                                            DecodedHttpResponse res, long writeTimeoutMillis,
+                                            boolean webSocket) {
+        if (webSocket) {
+            if (protocol.isExplicitHttp1()) {
+                return new WebSocketHttp1RequestSubscriber(
+                        channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+            }
+            assert protocol.isExplicitHttp2();
+            return new WebSocketHttp2RequestSubscriber(
+                    channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+        }
+        return new HttpRequestSubscriber(
+                channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+    }
 
     private final HttpRequest request;
 

@@ -70,7 +70,6 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     private final KeepAliveHandler keepAliveHandler;
 
     private State state = State.NEEDS_HANDSHAKE_RESPONSE;
-    private boolean webSocketEstablished;
     @Nullable
     private HttpSession httpSession;
 
@@ -233,12 +232,14 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
+        final String message;
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
             buf.append("unexpected message type: " + msg.getClass().getName() +
                        " (expected: " + expected.getName() + ", channel: " + ctx.channel() + ')');
-            fail(ctx, new ProtocolViolationException(buf.toString()));
+            message = buf.toString();
         }
+        fail(ctx, new ProtocolViolationException(message));
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {

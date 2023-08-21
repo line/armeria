@@ -279,6 +279,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
+        final String message;
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
             buf.append("unexpected message type: " + msg.getClass().getName() +
@@ -289,8 +290,9 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
             } else {
                 buf.append(", lastPingReqId: " + lastPingReqId + ')');
             }
-            fail(ctx, new ProtocolViolationException(buf.toString()));
+            message = buf.toString();
         }
+        fail(ctx, new ProtocolViolationException(message));
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {

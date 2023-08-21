@@ -149,7 +149,7 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
         return !session().isAcquirable() && !hasUnfinishedResponses();
     }
 
-    static Exception contentTooLargeException(HttpResponseWrapper res, long transferred) {
+    static ContentTooLargeException contentTooLargeException(HttpResponseWrapper res, long transferred) {
         final ContentTooLargeExceptionBuilder builder =
                 ContentTooLargeException.builder()
                                         .maxContentLength(res.maxContentLength())

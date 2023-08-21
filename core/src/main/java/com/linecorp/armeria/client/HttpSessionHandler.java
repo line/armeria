@@ -223,20 +223,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 return;
             }
 
-            final AbstractHttpRequestSubscriber subscriber;
-            if (isWebSocket()) {
-                if (protocol.isExplicitHttp1()) {
-                    subscriber = new WebSocketHttp1RequestSubscriber(
-                            channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
-                } else {
-                    assert protocol.isExplicitHttp2();
-                    subscriber = new WebSocketHttp2RequestSubscriber(
-                            channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
-                }
-            } else {
-                subscriber = new HttpRequestSubscriber(
-                        channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
-            }
+            final AbstractHttpRequestSubscriber subscriber = AbstractHttpRequestSubscriber.of(
+                    channel, requestEncoder, responseDecoder, protocol,
+                    ctx, req, res, writeTimeoutMillis, isWebSocket());
             req.subscribe(subscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         }
     }
@@ -362,17 +351,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
                 final HttpResponseDecoder responseDecoder;
-                final KeepAliveHandler keepAliveHandler;
                 if (isWebSocket()) {
                     responseDecoder = ctx.pipeline().get(WebSocketHttp1ClientChannelHandler.class);
-                    keepAliveHandler = responseDecoder.keepAliveHandler();
                 } else {
-                    final Http1ResponseDecoder http1ResponseDecoder =
-                            ctx.pipeline().get(Http1ResponseDecoder.class);
-                    http1ResponseDecoder.maybeInitializeKeepAliveHandler(ctx);
-                    responseDecoder = http1ResponseDecoder;
-                    keepAliveHandler = http1ResponseDecoder.keepAliveHandler();
+                    responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
                 }
+                final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
+                keepAliveHandler.initialize(ctx);
 
                 final ClientHttp1ObjectEncoder requestEncoder =
                         new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming(),

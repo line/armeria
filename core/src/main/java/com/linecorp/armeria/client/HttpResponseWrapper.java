@@ -215,15 +215,15 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
             return;
         }
         final long requestAutoAbortDelayMillis = ctx.requestAutoAbortDelayMillis();
+        if (requestAutoAbortDelayMillis < 0 || requestAutoAbortDelayMillis == Long.MAX_VALUE) {
+            return;
+        }
         if (requestAutoAbortDelayMillis == 0) {
             request.abort(ResponseCompleteException.get());
             return;
         }
-        if (requestAutoAbortDelayMillis > 0 &&
-            requestAutoAbortDelayMillis < Long.MAX_VALUE) {
-            ctx.eventLoop().schedule(() -> request.abort(ResponseCompleteException.get()),
-                                     requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
-        }
+        ctx.eventLoop().schedule(() -> request.abort(ResponseCompleteException.get()),
+                                 requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
     }
 
     private void closeAction(@Nullable Throwable cause) {
