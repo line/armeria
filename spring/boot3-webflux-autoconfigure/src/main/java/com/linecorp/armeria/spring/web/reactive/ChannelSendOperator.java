@@ -70,7 +70,7 @@ final class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
     private final Flux<T> source;
 
     ChannelSendOperator(Publisher<? extends T> source,
-                               Function<Publisher<T>, Publisher<Void>> writeFunction) {
+                        Function<Publisher<T>, Publisher<Void>> writeFunction) {
         this.source = Flux.from(source);
         this.writeFunction = writeFunction;
     }
