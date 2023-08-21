@@ -197,6 +197,7 @@ public final class ServerBuilder implements TlsSetters {
             DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER;
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
+    private boolean keepAliveOnPing = Flags.defaultServerKeepAliveOnPing();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
     private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
@@ -563,6 +564,18 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the idle timeout of a connection in milliseconds for keep-alive and whether to prevent
+     * connection going idle when an HTTP/2 PING frame or {@code "OPTIONS * HTTP/1.1"} request is received.
+     *
+     * @param idleTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame, OPTIONS * request or not.
+     */
+    @UnstableApi
+    public ServerBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {
+        return idleTimeout(Duration.ofMillis(idleTimeoutMillis), keepAliveOnPing);
+    }
+
+    /**
      * Sets the idle timeout of a connection for keep-alive.
      *
      * @param idleTimeout the timeout. {@code 0} disables the timeout.
@@ -570,6 +583,21 @@ public final class ServerBuilder implements TlsSetters {
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
         idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
+        return this;
+    }
+
+    /**
+     * Sets the idle timeout of a connection for keep-alive and whether to prevent connection
+     * connection going idle when an HTTP/2 PING frame or {@code "OPTIONS * HTTP/1.1"} request is received.
+     *
+     * @param idleTimeout the timeout. {@code 0} disables the timeout.
+     * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame, OPTIONS * request or not.
+     */
+    @UnstableApi
+    public ServerBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
+        requireNonNull(idleTimeout, "idleTimeout");
+        idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
+        this.keepAliveOnPing = keepAliveOnPing;
         return this;
     }
 
@@ -2081,7 +2109,8 @@ public final class ServerBuilder implements TlsSetters {
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
+                maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,

@@ -62,6 +62,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.docs.DocService;
@@ -105,6 +106,7 @@ import testing.grpc.Transcoding.Recursive;
 import testing.grpc.Transcoding.UpdateMessageRequestV1;
 
 // The public Static methods in this class are used by the classes in other packages.
+@GenerateNativeImageTrace
 public class HttpJsonTranscodingTest {
 
     static class HttpJsonTranscodingTestService extends HttpJsonTranscodingTestServiceImplBase {

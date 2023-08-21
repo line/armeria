@@ -28,12 +28,16 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -45,17 +49,20 @@ public final class ServiceSpecification {
 
     private static final ServiceSpecification emptyServiceSpecification =
             new ServiceSpecification(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
-                                     ImmutableList.of(), ImmutableList.of());
+                                     ImmutableList.of(), ImmutableList.of(), null);
 
     /**
      * Merges the specified {@link ServiceSpecification}s into one.
      */
-    public static ServiceSpecification merge(Iterable<ServiceSpecification> specs) {
+    public static ServiceSpecification merge(Iterable<ServiceSpecification> specs, Route docServiceRoute) {
         return new ServiceSpecification(
                 Streams.stream(specs).flatMap(s -> s.services().stream())::iterator,
                 Streams.stream(specs).flatMap(s -> s.enums().stream())::iterator,
                 Streams.stream(specs).flatMap(s -> s.structs().stream())::iterator,
-                Streams.stream(specs).flatMap(s -> s.exceptions().stream())::iterator);
+                Streams.stream(specs).flatMap(s -> s.exceptions().stream())::iterator,
+                ImmutableList.of(),
+                docServiceRoute
+        );
     }
 
     /**
@@ -121,15 +128,31 @@ public final class ServiceSpecification {
     private final Set<StructInfo> structs;
     private final Set<ExceptionInfo> exceptions;
     private final List<HttpHeaders> exampleHeaders;
+    @Nullable
+    private final Route docServiceRoute;
 
     /**
      * Creates a new instance.
      */
+    @VisibleForTesting
     public ServiceSpecification(Iterable<ServiceInfo> services,
                                 Iterable<EnumInfo> enums,
                                 Iterable<StructInfo> structs,
                                 Iterable<ExceptionInfo> exceptions) {
-        this(services, enums, structs, exceptions, ImmutableList.of());
+        this(services, enums, structs, exceptions, ImmutableList.of(), null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    @VisibleForTesting
+    public ServiceSpecification(Iterable<ServiceInfo> services,
+                                Iterable<EnumInfo> enums,
+                                Iterable<StructInfo> structs,
+                                Iterable<ExceptionInfo> exceptions,
+                                Iterable<HttpHeaders> exampleHeaders
+    ) {
+        this(services, enums, structs, exceptions, exampleHeaders, null);
     }
 
     /**
@@ -139,14 +162,19 @@ public final class ServiceSpecification {
                                 Iterable<EnumInfo> enums,
                                 Iterable<StructInfo> structs,
                                 Iterable<ExceptionInfo> exceptions,
-                                Iterable<HttpHeaders> exampleHeaders) {
-
+                                Iterable<HttpHeaders> exampleHeaders,
+                                @Nullable Route docServiceRoute) {
         this.services = Streams.stream(requireNonNull(services, "services"))
                                .collect(toImmutableSortedSet(comparing(ServiceInfo::name)));
         this.enums = collectDescriptiveTypeInfo(enums, "enums");
         this.structs = collectStructInfo(structs);
         this.exceptions = collectDescriptiveTypeInfo(exceptions, "exceptions");
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
+        if (docServiceRoute != null && docServiceRoute.pathType() == RoutePathType.PREFIX) {
+            this.docServiceRoute = docServiceRoute;
+        } else {
+            this.docServiceRoute = null;
+        }
     }
 
     private static <T extends DescriptiveTypeInfo> Set<T> collectDescriptiveTypeInfo(
@@ -211,5 +239,14 @@ public final class ServiceSpecification {
     @JsonProperty
     public List<HttpHeaders> exampleHeaders() {
         return exampleHeaders;
+    }
+
+    /**
+     * Returns the path pattern string of the {@link DocService} mount location on server.
+     */
+    @JsonProperty
+    @Nullable
+    public Route docServiceRoute() {
+        return docServiceRoute;
     }
 }

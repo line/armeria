@@ -17,10 +17,12 @@
 package com.linecorp.armeria.server
 
 import com.linecorp.armeria.common.{HttpStatus, MediaType}
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.annotation.{Post, ProducesJson}
 import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
 
+@GenerateNativeImageTrace
 class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
 
   override protected def configureServer: ServerBuilder => Unit = {
@@ -66,23 +68,23 @@ class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
       }
     }
   }
+
+  class ServiceWithCaseClass {
+
+    @ProducesJson
+    @Post("/echo")
+    def echo(foo: TestFoo): TestFoo = {
+      foo
+    }
+
+    @ProducesJson
+    @Post("/echo-option")
+    def echo(foo: TestFooWithOption): TestFooWithOption = {
+      foo
+    }
+  }
 }
 
-class ServiceWithCaseClass {
+case class TestFoo(x: Int, y: String)
 
-  @ProducesJson
-  @Post("/echo")
-  def echo(foo: Foo): Foo = {
-    foo
-  }
-
-  @ProducesJson
-  @Post("/echo-option")
-  def echo(foo: FooWithOption): FooWithOption = {
-    foo
-  }
-}
-
-case class Foo(x: Int, y: String)
-
-case class FooWithOption(x: Int, y: Option[String])
+case class TestFooWithOption(x: Int, y: Option[String])
