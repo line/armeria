@@ -68,7 +68,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      */
     protected AbstractWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                        @Nullable String path) {
-        this(null, validateScheme(sessionProtocol), requireNonNull(endpointGroup, "endpointGroup"), path);
+        this(null, validateSessionProtocol(sessionProtocol), requireNonNull(endpointGroup, "endpointGroup"), path);
     }
 
     /**
@@ -100,7 +100,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
         return URI.create(scheme.uriText() + uri.toString().substring(givenScheme.length()));
     }
 
-    private static Scheme validateScheme(SessionProtocol sessionProtocol) {
+    private static Scheme validateSessionProtocol(SessionProtocol sessionProtocol) {
         requireNonNull(sessionProtocol, "sessionProtocol");
         validateScheme(sessionProtocol.uriText());
         return Scheme.of(SerializationFormat.NONE, sessionProtocol);

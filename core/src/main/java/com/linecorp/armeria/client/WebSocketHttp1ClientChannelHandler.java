@@ -57,12 +57,19 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketHttp1ClientChannelHandler.class);
 
+    private enum State {
+        NEEDS_HANDSHAKE_RESPONSE,
+        NEEDS_HANDSHAKE_RESPONSE_END,
+        UPGRADE_COMPLETE
+    }
+
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
     @Nullable
     private HttpResponseWrapper res;
     private final KeepAliveHandler keepAliveHandler;
 
+    private State state = State.NEEDS_HANDSHAKE_RESPONSE;
     private boolean webSocketEstablished;
     @Nullable
     private HttpSession httpSession;
@@ -154,79 +161,81 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!webSocketEstablished) {
-            if (!(msg instanceof HttpObject)) {
-                ctx.fireChannelRead(msg);
-                return;
-            }
-            if (!(msg instanceof HttpResponse)) {
-                failWithUnexpectedMessageType(ctx, msg);
-                return;
-            }
-
-            final HttpResponse nettyRes = (HttpResponse) msg;
-            final DecoderResult decoderResult = nettyRes.decoderResult();
-            if (!decoderResult.isSuccess()) {
-                fail(ctx, new ProtocolViolationException(decoderResult.cause()));
-                return;
-            }
-
-            if (!HttpUtil.isKeepAlive(nettyRes)) {
-                session().deactivate();
-            }
-
-            if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
-                ctx.close();
-                return;
-            }
-
-            res.startResponse();
-            final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
-            if (responseHeaders.status() == HttpStatus.SWITCHING_PROTOCOLS) {
-                final ChannelPipeline pipeline = ctx.pipeline();
-                pipeline.remove(HttpClientCodec.class);
-                webSocketEstablished = true;
-            }
-            if (!res.tryWriteResponseHeaders(responseHeaders)) {
-                fail(ctx, ClosedSessionException.get());
-            }
-            return;
-        }
-
         try {
-            if (msg instanceof ByteBuf) {
-                final ByteBuf data = (ByteBuf) msg;
-                final int dataLength = data.readableBytes();
-                if (dataLength > 0) {
-                    final long maxContentLength = res.maxContentLength();
-                    final long writtenBytes = res.writtenBytes();
-                    if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
-                        final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
-                        res.close(contentTooLargeException(res, transferred));
+            switch (state) {
+                case NEEDS_HANDSHAKE_RESPONSE:
+                    if (!(msg instanceof HttpObject)) {
+                        ctx.fireChannelRead(msg);
+                        return;
+                    }
+                    if (!(msg instanceof HttpResponse)) {
+                        failWithUnexpectedMessageType(ctx, msg, HttpResponse.class);
+                        return;
+                    }
+
+                    final HttpResponse nettyRes = (HttpResponse) msg;
+                    final DecoderResult decoderResult = nettyRes.decoderResult();
+                    if (!decoderResult.isSuccess()) {
+                        fail(ctx, new ProtocolViolationException(decoderResult.cause()));
+                        return;
+                    }
+
+                    if (!HttpUtil.isKeepAlive(nettyRes)) {
+                        session().deactivate();
+                    }
+
+                    if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
                         ctx.close();
                         return;
                     }
-                    if (!res.tryWriteData(HttpData.wrap(data.retain()))) {
-                        ctx.close();
+
+                    res.startResponse();
+                    final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
+                    if (responseHeaders.status() == HttpStatus.SWITCHING_PROTOCOLS) {
+                        final ChannelPipeline pipeline = ctx.pipeline();
+                        pipeline.remove(HttpClientCodec.class);
+                        state = State.NEEDS_HANDSHAKE_RESPONSE_END;
                     }
-                }
-                return;
+                    if (!res.tryWriteResponseHeaders(responseHeaders)) {
+                        fail(ctx, ClosedSessionException.get());
+                    }
+                    return;
+                case NEEDS_HANDSHAKE_RESPONSE_END:
+                    // HttpClientCodec produces this after creating the headers. We can just ignore it.
+                    if (msg != EMPTY_LAST_CONTENT) {
+                        failWithUnexpectedMessageType(ctx, msg, EMPTY_LAST_CONTENT.getClass());
+                        return;
+                    }
+                    state = State.UPGRADE_COMPLETE;
+                    break;
+                case UPGRADE_COMPLETE:
+                    assert msg instanceof ByteBuf;
+                    final ByteBuf data = (ByteBuf) msg;
+                    final int dataLength = data.readableBytes();
+                    if (dataLength > 0) {
+                        final long maxContentLength = res.maxContentLength();
+                        final long writtenBytes = res.writtenBytes();
+                        if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
+                            final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
+                            res.close(contentTooLargeException(res, transferred));
+                            ctx.close();
+                            return;
+                        }
+                        if (!res.tryWriteData(HttpData.wrap(data.retain()))) {
+                            ctx.close();
+                        }
+                    }
             }
-            if (msg == EMPTY_LAST_CONTENT) {
-                // HttpClientCodec produces this after creating the headers. We can just ignore it.
-                return;
-            }
-            ctx.fireChannelRead(msg);
         } finally {
             ReferenceCountUtil.release(msg);
         }
     }
 
-    private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg) {
+    private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
             buf.append("unexpected message type: " + msg.getClass().getName() +
-                       " (expected: " + HttpResponse.class.getName() + ", channel: " + ctx.channel() + ')');
+                       " (expected: " + expected.getName() + ", channel: " + ctx.channel() + ')');
             fail(ctx, new ProtocolViolationException(buf.toString()));
         }
     }

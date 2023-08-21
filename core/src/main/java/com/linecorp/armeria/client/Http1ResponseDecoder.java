@@ -169,9 +169,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
             ReferenceCountUtil.release(msg);
             return;
         }
-        if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
-            keepAliveHandler.onReadOrWrite();
-        }
+        keepAliveHandler.onReadOrWrite();
 
         try {
             switch (state) {
@@ -341,20 +339,14 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     }
 
     void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
-        if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
-            if (ctx.channel().isActive()) {
-                keepAliveHandler.initialize(ctx);
-            }
+        if (ctx.channel().isActive()) {
+            keepAliveHandler.initialize(ctx);
         }
     }
 
     private void onPingRead(Object msg) {
         if (msg instanceof HttpResponse) {
-            final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-            // Ping can not be activated with NoopKeepAliveHandler.
-            if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
-                keepAliveHandler.onPing();
-            }
+            keepAliveHandler.onPing();
         }
         if (msg instanceof LastHttpContent) {
             onPingComplete();

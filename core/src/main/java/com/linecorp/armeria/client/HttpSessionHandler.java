@@ -197,7 +197,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         assert responseDecoder != null;
         assert requestEncoder != null;
         if (!protocol.isMultiplex() && !serializationFormat.requiresNewConnection(protocol)) {
-            // When HTTP/1.1 is used:
+            // When HTTP/1.1 is used and the serialization format does not require
+            // a new connection (w.g. WebSocket):
             // If pipelining is enabled, return as soon as the request is fully sent.
             // If pipelining is disabled,
             // return after the response is fully received and the request is fully sent.
@@ -223,7 +224,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             }
 
             final AbstractHttpRequestSubscriber subscriber;
-            if (serializationFormat == SerializationFormat.WS) {
+            if (isWebSocket()) {
                 if (protocol.isExplicitHttp1()) {
                     subscriber = new WebSocketHttp1RequestSubscriber(
                             channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
@@ -238,6 +239,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             }
             req.subscribe(subscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         }
+    }
+
+    private boolean isWebSocket() {
+        return serializationFormat == SerializationFormat.WS;
     }
 
     @Override
@@ -358,7 +363,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             if (protocol == H1 || protocol == H1C) {
                 final HttpResponseDecoder responseDecoder;
                 final KeepAliveHandler keepAliveHandler;
-                if (serializationFormat == SerializationFormat.WS) {
+                if (isWebSocket()) {
                     responseDecoder = ctx.pipeline().get(WebSocketHttp1ClientChannelHandler.class);
                     keepAliveHandler = responseDecoder.keepAliveHandler();
                 } else {
@@ -372,7 +377,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 final ClientHttp1ObjectEncoder requestEncoder =
                         new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming(),
                                                      keepAliveHandler,
-                                                     serializationFormat == SerializationFormat.WS);
+                                                     isWebSocket());
                 if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
                     ((Http1ClientKeepAliveHandler) keepAliveHandler).setEncoder(requestEncoder);
                 }

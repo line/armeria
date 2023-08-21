@@ -34,7 +34,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     private static final HttpData EMPTY_EOS = HttpData.empty().withEndOfStream();
 
     private final HttpRequest request;
-    // subscription, id and responseWrapper are assigned in onSubscribe()
+
     @Nullable
     private Subscription subscription;
     private boolean isSubscriptionCompleted;

@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.
@@ -123,6 +124,7 @@ public enum SessionProtocol {
     /**
      * Returns an immutable {@link Set} that contains {@link #httpValues()} and {@link #httpsValues()}.
      */
+    @UnstableApi
     public static Set<SessionProtocol> httpAndHttpsValues() {
         return HTTP_AND_HTTPS_VALUES;
     }
