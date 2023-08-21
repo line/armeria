@@ -25,8 +25,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
@@ -58,8 +56,6 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
     @Nullable
     private volatile SurroundingSubscriber<T> surroundingSubscriber;
-
-    private static final Logger logger = LoggerFactory.getLogger(SurroundingPublisher.class);
 
     @SuppressWarnings("unchecked")
     public SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail) {
@@ -353,7 +349,6 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            logger.debug("onSubscribe: {}, state: {}", subscription, state, new RuntimeException());
             if (state == State.DONE) {
                 subscription.cancel();
                 return;

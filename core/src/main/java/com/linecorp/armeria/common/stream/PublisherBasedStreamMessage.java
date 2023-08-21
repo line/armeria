@@ -142,32 +142,7 @@ public class PublisherBasedStreamMessage<T> extends AggregationSupport implement
             //noinspection unchecked
             ((StreamMessage<? extends T>) publisher).subscribe(s, executor);
         } else {
-            // TODO(ikhoon): Revert this after testing.
-            publisher.subscribe(new Subscriber<T>() {
-                @Override
-                public void onSubscribe(Subscription subscription) {
-                    logger.debug("onSubscribe: {}", subscription, new RuntimeException());
-                    s.onSubscribe(subscription);
-                }
-
-                @Override
-                public void onNext(T t) {
-                    logger.debug("onNext: {}", t, new RuntimeException());
-                    s.onNext(t);
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    logger.debug("onError", t);
-                    s.onError(t);
-                }
-
-                @Override
-                public void onComplete() {
-                    logger.debug("onComplete", new RuntimeException());
-                    s.onComplete();
-                }
-            });
+            publisher.subscribe(s);
         }
 
         return true;
