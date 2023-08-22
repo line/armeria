@@ -69,6 +69,8 @@ date: 2023-08-22
   using <type://ServiceErrorHandler#renderStatus()>. #4996
 - Redirection for a trailing slash is done correctly even if a reverse proxy rewrites the path. #4994
 - <type://DocService> now tries to guess the correct route behind a reverse proxy. #4987
+- The `RetentionPolicy` of <type://@UnstableApi> annotation is now `CLASS` so that
+  bytecode analysis tools can detect the declaration and usage of unstable APIs. #5131
 
 ## 🛠️ Bug fixes
 
