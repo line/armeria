@@ -195,6 +195,7 @@ configure(projectsWithFlags('java')) {
                 def self = delegate
                 targets.configureEach {
                     testTask.configure {
+                        project.ext.configureCommonTestSettings(it)
                         enabled = false
                         // although this is a container, it may be useful to share test configurations
                         // such as classpath with other suites
