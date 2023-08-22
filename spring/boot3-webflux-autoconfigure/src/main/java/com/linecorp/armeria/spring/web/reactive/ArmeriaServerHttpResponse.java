@@ -87,7 +87,24 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponseVersionS
                     HttpResponse.of(armeriaHeaders.build(),
                                     publisher.map(factoryWrapper::toHttpData)
                                              .contextWrite(contextView)
-                                             .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release));
+                                             .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release)
+                                             .doOnCancel(() -> {
+                                                 logger.debug("{} Response stream cancelled", ctx,
+                                                              new RuntimeException());
+                                             })
+                                             .doOnError(cause -> {
+                                                 logger.debug("{} Response stream aborted. cause: {}", ctx,
+                                                              cause, new RuntimeException());
+                                             })
+                                             .doOnComplete(() -> {
+                                                 logger.debug("{} Response stream completed", ctx,
+                                                              new RuntimeException());
+                                             })
+                                             .doFinally(signalType -> {
+                                                 logger.debug("{} Response stream has been finished", ctx,
+                                                              new RuntimeException());
+                                             })
+                    );
             future.complete(response);
             return Mono.fromFuture(response.whenComplete())
                        .onErrorResume(cause -> cause instanceof CancelledSubscriptionException ||

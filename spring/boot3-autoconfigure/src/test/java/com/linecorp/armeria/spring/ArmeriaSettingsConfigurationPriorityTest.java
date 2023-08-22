@@ -20,25 +20,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.spring.ArmeriaSettingsConfigurationPriorityTest.TestConfiguration;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "settings" })
 @DirtiesContext
-public class ArmeriaSettingsConfigurationPriorityTest {
+class ArmeriaSettingsConfigurationPriorityTest {
 
     @SpringBootApplication
     static class TestConfiguration {
@@ -53,7 +50,7 @@ public class ArmeriaSettingsConfigurationPriorityTest {
     private Server server;
 
     @Test
-    public void shouldConfigurePropertiesBeforeBean() {
+    void shouldConfigurePropertiesBeforeBean() {
         assertThat(server).isNotNull();
         final ServerConfig config = server.config();
 

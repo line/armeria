@@ -17,14 +17,11 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,12 +31,10 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 
 import reactor.core.publisher.Mono;
 
-@RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-public class ArmeriaClientAutoConfigurationTest {
+class ArmeriaClientAutoConfigurationTest {
 
     @SpringBootApplication
-    @Configuration
     static class TestConfiguration {
         @RestController
         static class TestController {
@@ -68,7 +63,7 @@ public class ArmeriaClientAutoConfigurationTest {
     int port;
 
     @Test
-    public void shouldGetHelloFromRestController() throws Exception {
+    void shouldGetHelloFromRestController() throws Exception {
         final WebClient client = WebClient.of("http://127.0.0.1:" + port);
         final AggregatedHttpResponse response = client.get("/proxy?port=" + port).aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("hello");

@@ -86,6 +86,12 @@ public interface HttpRequestSetters extends RequestMethodSetters, PathAndQueryPa
      * Sets the {@link Publisher} for this request.
      */
     @Override
+    HttpRequestSetters content(Publisher<? extends HttpData> content);
+
+    /**
+     * Sets the {@link Publisher} for this request.
+     */
+    @Override
     HttpRequestSetters content(MediaType contentType, Publisher<? extends HttpData> content);
 
     /**

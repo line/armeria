@@ -16,14 +16,12 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
+import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Set;
 import java.util.function.Function;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
@@ -35,18 +33,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A skeletal builder implementation for {@link WebClient}.
  */
 public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuilder {
-
-    /**
-     * An undefined {@link URI} to create {@link WebClient} without specifying {@link URI}.
-     */
-    static final URI UNDEFINED_URI = URI.create("http://undefined");
-
-    private static final Set<SessionProtocol> SUPPORTED_PROTOCOLS =
-            Sets.immutableEnumSet(
-                    ImmutableList.<SessionProtocol>builder()
-                                 .addAll(SessionProtocol.httpValues())
-                                 .addAll(SessionProtocol.httpsValues())
-                                 .build());
 
     @Nullable
     private final URI uri;
@@ -61,10 +47,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      * Creates a new instance.
      */
     protected AbstractWebClientBuilder() {
-        uri = UNDEFINED_URI;
-        scheme = null;
-        endpointGroup = null;
-        path = null;
+        this(UNDEFINED_URI, null, null, null);
     }
 
     /**
@@ -74,24 +57,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      *                                  in {@link SessionProtocol}
      */
     protected AbstractWebClientBuilder(URI uri) {
-        if (Clients.isUndefinedUri(uri)) {
-            this.uri = uri;
-        } else {
-            final String givenScheme = requireNonNull(uri, "uri").getScheme();
-            final Scheme scheme = validateScheme(givenScheme);
-            if (scheme.uriText().equals(givenScheme)) {
-                // No need to replace the user-specified scheme because it's already in its normalized form.
-                this.uri = uri;
-            } else {
-                // Replace the user-specified scheme with the normalized one.
-                // e.g. http://foo.com/ -> none+http://foo.com/
-                this.uri = URI.create(scheme.uriText() +
-                                      uri.toString().substring(givenScheme.length()));
-            }
-        }
-        scheme = null;
-        endpointGroup = null;
-        path = null;
+        this(validateUri(uri), null, null, null);
     }
 
     /**
@@ -102,29 +68,65 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      */
     protected AbstractWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                        @Nullable String path) {
-        validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
-        if (path != null) {
-            checkArgument(path.startsWith("/"),
-                          "path: %s (expected: an absolute path starting with '/')", path);
-        }
+        this(null, validateSessionProtocol(sessionProtocol),
+             requireNonNull(endpointGroup, "endpointGroup"), path);
+    }
 
-        uri = null;
-        scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
-        this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
-        this.path = path;
+    /**
+     * Creates a new instance.
+     */
+    protected AbstractWebClientBuilder(@Nullable URI uri, @Nullable Scheme scheme,
+                                       @Nullable EndpointGroup endpointGroup, @Nullable String path) {
+        assert uri != null || (scheme != null && endpointGroup != null);
+        assert path == null || uri == null;
+        this.uri = uri;
+        this.scheme = scheme;
+        this.endpointGroup = endpointGroup;
+        this.path = validatePath(path);
+    }
+
+    private static URI validateUri(URI uri) {
+        requireNonNull(uri, "uri");
+        if (Clients.isUndefinedUri(uri)) {
+            return uri;
+        }
+        final String givenScheme = requireNonNull(uri, "uri").getScheme();
+        final Scheme scheme = validateScheme(givenScheme);
+        if (scheme.uriText().equals(givenScheme)) {
+            // No need to replace the user-specified scheme because it's already in its normalized form.
+            return uri;
+        }
+        // Replace the user-specified scheme with the normalized one.
+        // e.g. http://foo.com/ -> none+http://foo.com/
+        return URI.create(scheme.uriText() + uri.toString().substring(givenScheme.length()));
+    }
+
+    private static Scheme validateSessionProtocol(SessionProtocol sessionProtocol) {
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        validateScheme(sessionProtocol.uriText());
+        return Scheme.of(SerializationFormat.NONE, sessionProtocol);
     }
 
     private static Scheme validateScheme(String scheme) {
         final Scheme parsedScheme = Scheme.tryParse(scheme);
         if (parsedScheme != null) {
             if (parsedScheme.serializationFormat() == SerializationFormat.NONE &&
-                SUPPORTED_PROTOCOLS.contains(parsedScheme.sessionProtocol())) {
+                httpAndHttpsValues().contains(parsedScheme.sessionProtocol())) {
                 return parsedScheme;
             }
         }
 
-        throw new IllegalArgumentException("scheme : " + scheme +
-                                           " (expected: one of " + SUPPORTED_PROTOCOLS + ')');
+        throw new IllegalArgumentException("scheme: " + scheme +
+                                           " (expected: one of " + httpAndHttpsValues() + ')');
+    }
+
+    @Nullable
+    private static String validatePath(@Nullable String path) {
+        if (path != null) {
+            checkArgument(path.startsWith("/"),
+                          "path: %s (expected: an absolute path starting with '/')", path);
+        }
+        return path;
     }
 
     /**

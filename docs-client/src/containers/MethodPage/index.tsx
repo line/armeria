@@ -196,7 +196,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           </Button>
         )}
       </Grid>
-      {method.descriptionInfo && (
+      {method.descriptionInfo?.docString && (
         <Section>
           <Description descriptionInfo={method.descriptionInfo} />
         </Section>
@@ -239,6 +239,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           useRequestBody={needsToUseRequestBody(props.match.params.httpMethod)}
           debugFormIsOpen={debugFormIsOpen}
           setDebugFormIsOpen={setDebugFormIsOpen}
+          docServiceRoute={props.specification.getDocServiceRoute()}
         />
       )}
     </>

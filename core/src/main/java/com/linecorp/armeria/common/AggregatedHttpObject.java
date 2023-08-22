@@ -36,9 +36,20 @@ public interface AggregatedHttpObject {
     HttpData content();
 
     /**
-     * Returns the content of this message as a string encoded in the specified {@link Charset}.
+     * Returns the content decoded in the {@link Charset} of the {@code content-type} header if present,
+     * or the content decoded in the specified {@link Charset} otherwise.
      */
     default String content(Charset charset) {
+        final MediaType contentType = headers().contentType();
+
+        if (contentType != null) {
+            final Charset contentTypeCharset = contentType.charset();
+
+            if (contentTypeCharset != null) {
+                return content().toString(contentTypeCharset);
+            }
+        }
+
         return content().toString(charset);
     }
 
