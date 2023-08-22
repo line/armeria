@@ -45,7 +45,7 @@ date: 2023-08-22
   };
   Server.builder().service(
     GrpcService.builder()
-      .exceptionMapping(statusFunction)
+      .exceptionMapping(statusFunction))
   ```
 - **New API for Multipart Headers**: You can now retrieve headers from a multipart request in an annotated service
   using <type://MultipartFile#headers()>. #5106
