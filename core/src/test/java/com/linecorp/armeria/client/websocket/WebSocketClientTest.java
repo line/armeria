@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -114,7 +115,7 @@ class WebSocketClientTest {
         frame = inboundHandler.inboundQueue().take();
         assertThat(frame).isEqualTo(WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE));
         inboundHandler.completionFuture().join();
-        assertThat(outbound.isComplete()).isTrue();
+        await().until(outbound::isComplete);
     }
 
     static final class WebSocketInboundHandler {
