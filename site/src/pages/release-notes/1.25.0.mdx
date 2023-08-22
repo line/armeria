@@ -94,6 +94,11 @@ date: 2023-08-22
 - Documentation on how <type://Flags> work in Armeria has been added. #4870
 - A new example on how to use [krotoDC](https://github.com/mscheong01/krotoDC) with Armeria has been added. #5092
 
+## ☢️ Breaking changes
+
+- The `toStringHelper()` method in <type://DynamicEndpointGroup> has been replaced
+  with `toString(Consumer)` to avoid exposing an internal API in the public API. #5132
+
 ## 🏚️ Deprecations
 
 - <type://HttpResponse#from(CompletionStage)> and its variants methods are deprecated. #5075
