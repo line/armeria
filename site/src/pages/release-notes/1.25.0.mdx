@@ -4,7 +4,9 @@ date: 2023-08-22
 
 ## 🌟 New features
 
-- **GraalVM Support**: You can now easily build [GraalVM](https://www.graalvm.org/) native images for Armeria applications. #5005
+- **GraalVM Support**: Armeria now provides [GraalVM](https://www.graalvm.org/)
+  [reachability metadata](https://www.graalvm.org/latest/reference-manual/native-image/metadata/) to easily build
+  [GraalVM](https://www.graalvm.org/) native images. #5005
 - **Micrometer Observation Support**: Support for [Micrometer Observation](https://micrometer.io/docs/observation) is added.
   Refer to <type://ObservationClient> or <type://ObservationService> for details on how to integrate with Armeria.  #4659 #4980
   ```java
@@ -47,6 +49,9 @@ date: 2023-08-22
     GrpcService.builder()
       .exceptionMapping(statusFunction))
   ```
+- **Set HTTP Trailers Easily** You can now easily set trailers to be sent after the data stream using
+  <type://HttpRequest#of(RequestHeaders,Publisher,HttpHeaders)> or
+  <type://HttpResponse#of(ResponseHeaders,Publisher,HttpHeaders)>. #3959 #4727
 - **New API for Multipart Headers**: You can now retrieve headers from a multipart request in an annotated service
   using <type://MultipartFile#headers()>. #5106
 - **Access RequestLogProperty values more easily**: <type://RequestLogAccess#getIfAvailable()>
@@ -96,16 +101,16 @@ date: 2023-08-22
 
 ## ⛓ Dependencies
 
-- gRPC-Java 1.56.1 → 1.57.2
+- gRPC-Java 1.56.0 → 1.57.2
 - GraphQL Kotlin 6.5.2 → 6.5.3
 - Guava 32.0.1-jre → 32.1.2-jre
 - Jakarta Websocket 2.1.0 → 2.1.1
 - Kafka client 3.4.0 → 3.4.1
 - Kotlin 1.8.22 → 1.9.0
 - Kotlin Coroutine 1.7.1 → 1.7.3
-- Logback 1.4.8 → 1.4.11
+- Logback 1.4.7 → 1.4.11
 - Micrometer 1.11.1 → 1.11.3
-- Netty 4.1.95.Final → 4.1.96.Final
+- Netty 4.1.94.Final → 4.1.96.Final
 - Protobuf 3.22.3 → 3.24.0
 - Reactor 3.5.7 → 3.5.8
 - Resilience4j 2.0.2 → 2.1.0
