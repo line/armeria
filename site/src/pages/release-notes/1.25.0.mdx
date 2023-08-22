@@ -52,7 +52,7 @@ date: 2023-08-22
 - **Access RequestLogProperty values more easily**: <type://RequestLogAccess#getIfAvailable()>
   has been introduced, which allows users to access a <type://RequestLogProperty> immediately if available. #4956 #4966
 - **Keep an Idle Connection Alive on PING**: The `keepAliveOnPing` option has been introduced. Enabling this option will keep
-  an idle connection alive when a HTTP/2 PING frame or `OPTIONS * HTTP/1.1` is received. The option can be configured
+  an idle connection alive when an HTTP/2 PING frame or `OPTIONS * HTTP/1.1` is received. The option can be configured
   by <type://ServerBuilder#idleTimeout(Duration,boolean)> or <type://ClientFactoryBuilder#idleTimeout(Duration,boolean)>. #4794 #4806
 - **Create a StreamMessage from Future**: You can now easily create a <type://StreamMessage> from a <type://CompletionStage>
   using <type://StreamMessage#of(CompletionStage<?>)>. #4995
