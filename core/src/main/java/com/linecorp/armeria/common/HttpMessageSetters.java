@@ -77,6 +77,11 @@ public interface HttpMessageSetters {
     /**
      * Sets the {@link Publisher} for this message.
      */
+    HttpMessageSetters content(Publisher<? extends HttpData> content);
+
+    /**
+     * Sets the {@link Publisher} for this message.
+     */
     HttpMessageSetters content(MediaType contentType, Publisher<? extends HttpData> content);
 
     /**
