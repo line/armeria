@@ -33,7 +33,7 @@ date: 2023-08-22
     webSocketSessions.inbound().subscribe(subscriber);
   });
   ```
-- **Implement gRPC Richer Error Model more easily**: You can now easily use gRPC
+- **Implement gRPC Richer Error Model More Easily**: You can now easily use gRPC
   [Richer Error Model](https://grpc.io/docs/guides/error/#richer-error-model) via <type://GoogleGrpcStatusFunction>. #4614 #4986
   ```java
   GoogleGrpcStatusFunction statusFunction = (ctx, throwable, metadata) -> {
@@ -54,7 +54,7 @@ date: 2023-08-22
   <type://HttpResponse#of(ResponseHeaders,Publisher,HttpHeaders)>. #3959 #4727
 - **New API for Multipart Headers**: You can now retrieve headers from a multipart request in an annotated service
   using <type://MultipartFile#headers()>. #5106
-- **Access RequestLogProperty values more easily**: <type://RequestLogAccess#getIfAvailable()>
+- **Access RequestLogProperty Values More Easily**: <type://RequestLogAccess#getIfAvailable()>
   has been introduced, which allows users to access a <type://RequestLogProperty> immediately if available. #4956 #4966
 - **Keep an Idle Connection Alive on PING**: The `keepAliveOnPing` option has been introduced. Enabling this option will keep
   an idle connection alive when an HTTP/2 PING frame or `OPTIONS * HTTP/1.1` is received. The option can be configured
