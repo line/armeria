@@ -16,7 +16,8 @@ date: 2023-08-22
     .decorator(ObservationService.newDecorator(observationRegistry))
   ...
   ```
-- **Websocket Client**: You may now use <type://WebSocketClient> to call websocket services. #4972
+- **WebSocket Client Support**: You can now send and receive data over [WebSocket](https://en.wikipedia.org/wiki/WebSocket)
+  using <type://WebSocketClient>. #4972
   ```java
   WebSocketClient client = WebSocketClient.of("ws://...");
   client.connect("/").thenAccept(webSocketSession -> {
@@ -30,32 +31,35 @@ date: 2023-08-22
     webSocketSessions.inbound().subscribe(subscriber);
   });
   ```
-- **Implement gRPC Richer Error Model more easily**: <type://GoogleGrpcStatusFunction> is introduced so that users
-  can more easily implement gRPC [Richer Error Model](https://grpc.io/docs/guides/error/#richer-error-model). #4614 #4986
+- **Implement gRPC Richer Error Model more easily**: You can now easily use gRPC
+  [Richer Error Model](https://grpc.io/docs/guides/error/#richer-error-model) via <type://GoogleGrpcStatusFunction>. #4614 #4986
   ```java
   GoogleGrpcStatusFunction statusFunction = (ctx, throwable, metadata) -> {
-  if (throwable instanceof MyException) {
-        return ...;
+    if (throwable instanceof MyException) {
+      return com.google.rpc.Status.newBuilder()
+        .setCode(Code.UNAUTHENTICATED.getNumber())
+        .addDetails(detail(throwable))
+        .build();
     }
   };
   Server.builder().service(
     GrpcService.builder()
       .exceptionMapping(statusFunction)
   ```
-- **New API for Multipart Headers**: Users can now retrieve headers from a multipart request in an annotated service
+- **New API for Multipart Headers**: You can now retrieve headers from a multipart request in an annotated service
   using <type://MultipartFile#headers()>.  #5106
 - **Access RequestLogProperty values more easily**: <type://RequestLogAccess#getIfAvailable()>
   has been introduced, which allows users to access a <type://RequestLogProperty> immediately if available. #4956 #4966
 - **Keep an Idle Connection Alive on PING**: The `keepAliveOnPing` option has been introduced. Enabling this option will keep
   an idle connection alive when a HTTP/2 PING frame or `OPTIONS * HTTP/1.1` is received. The option can be configured
   by <type://ServerBuilder#idleTimeout(Duration,boolean)> or <type://ClientFactoryBuilder#idleTimeout(Duration,boolean)>. #4794 #4806
-- **Create a StreamMessage from Future**: You can now easily create a <type://StreamMessage> from a future
+- **Create a StreamMessage from Future**: You can now easily create a <type://StreamMessage> from a <type://CompletionStage>
   using <type://StreamMessage#of(CompletionStage<?>)>. #4995
 
 ## 📈 Improvements
 
 - The number of event loops is equal to the number of cores by default when `io_uring` is used as the transport type. #5089
-- Users may now customize error responses when a service for a request is not found
+- You can now customize error responses when a service for a request is not found
   using <type://ServiceErrorHandler#renderStatus()>. #4996
 - Redirection for a trailing slash is done correctly even if a reverse proxy rewrites the path. #4994
 - <type://DocService> now tries to guess the correct route behind a reverse proxy. #4987
@@ -64,11 +68,11 @@ date: 2023-08-22
 
 - <type://GrpcService> now returns an `INTERNAL` error code if an error occurs while serializing gRPC metadata. #4625 #4686
 - <type://DnsCache> now allows zero TTL for resolved DNS records. #5119
-- Armeria's DNS resolver doesn't cache a DNS query timeout. #5117
+- Armeria's DNS resolver doesn't cache a DNS whose query was timed out. #5117
 - Fixed a bug where headers could be written twice if `Content-Length` was exceeded during HTTP/2 cleartext upgrade. #5113
 - <type://ServiceRequestContext#localAddress()> and <type://ServiceRequestContext#remoteAddress()> now return
   correct values when using domain sockets in abstract namespace. #5096
-- `armeria-logback12`, `armeria-logback13`, `armeria-logback14` have been introduced for better
+- `armeria-logback12`, `armeria-logback13`, and `armeria-logback14` have been introduced for better
   compatibility with [Logback](https://logback.qos.ch/). #5045 #5079 #5078 #5077
 - You can now use either an inline debug form or a modal debug form when using <type://DocService>. #5072
 - When using Spring integrations, even if `internal-services.port` and `management.server.port`
@@ -86,8 +90,8 @@ date: 2023-08-22
 
 ## 🏚️ Deprecations
 
-- <type://HttpResponse#from(CompletionStage)> and its variants methods are deprecated.
-  - Use <type://HttpResponse#of(CompletionStage)> and its variants instead. #5075
+- <type://HttpResponse#from(CompletionStage)> and its variants methods are deprecated. #5075
+  - Use <type://HttpResponse#of(CompletionStage)> and its variants instead.
 
 ## ⛓ Dependencies
 
