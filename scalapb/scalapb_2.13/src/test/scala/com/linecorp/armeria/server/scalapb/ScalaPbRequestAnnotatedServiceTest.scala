@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.scalapb
 
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.{AggregatedHttpResponse, HttpMethod, HttpRequest, MediaType}
-import com.linecorp.armeria.scalapb.testing.messages.SimpleRequest
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.{ConsumesJson, ConsumesProtobuf, Post}
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestAnnotatedServiceTest.server
@@ -29,7 +29,9 @@ import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import scalapb.json4s.Printer
+import testing.scalapb.messages.SimpleRequest
 
+@GenerateNativeImageTrace
 class ScalaPbRequestAnnotatedServiceTest {
 
   private val printer = new Printer()

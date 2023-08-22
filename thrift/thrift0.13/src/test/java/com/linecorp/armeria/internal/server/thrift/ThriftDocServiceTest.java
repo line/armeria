@@ -49,20 +49,22 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
-import com.linecorp.armeria.service.test.thrift.hbase.Hbase;
-import com.linecorp.armeria.service.test.thrift.main.FooService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
-import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
-import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import testing.thrift.cassandra.Cassandra;
+import testing.thrift.hbase.Hbase;
+import testing.thrift.main.FooService;
+import testing.thrift.main.HelloService;
+import testing.thrift.main.HelloService.hello_args;
+import testing.thrift.main.OnewayHelloService;
+import testing.thrift.main.SleepService;
 
 public class ThriftDocServiceTest {
 
@@ -189,7 +191,7 @@ public class ThriftDocServiceTest {
         removeDescriptionInfos(actualJson);
         removeDescriptionInfos(expectedJson);
 
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
     }
 
     private static void addExamples(JsonNode json) {
@@ -243,12 +245,13 @@ public class ThriftDocServiceTest {
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
-
+        final Route docServiceRoute = Route.builder().pathPrefix("/excludeAll").build();
         final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
                                                                                   ImmutableList.of(),
                                                                                   ImmutableList.of(),
                                                                                   ImmutableList.of(),
-                                                                                  ImmutableList.of()));
+                                                                                  ImmutableList.of(),
+                                                                                  docServiceRoute));
         assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 

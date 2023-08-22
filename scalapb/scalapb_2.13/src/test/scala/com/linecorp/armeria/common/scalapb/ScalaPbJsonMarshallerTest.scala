@@ -1,12 +1,15 @@
 package com.linecorp.armeria.common.scalapb
 
-import com.linecorp.armeria.scalapb.testing.messages.{Add, Literal}
-import java.io.ByteArrayOutputStream
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import scalapb.GeneratedSealedOneof
+import testing.scalapb.messages.{Add, Literal}
 
+import java.io.ByteArrayOutputStream
+
+@GenerateNativeImageTrace
 class ScalaPbJsonMarshallerTest {
 
   @Test

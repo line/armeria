@@ -21,9 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.nio.file.Path;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A file uploaded from a {@link Multipart} request.
- *
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc7578#section-4.2">
  *      Content-Disposition Header Field for Each Part</a>
  */
@@ -37,8 +39,6 @@ public interface MultipartFile {
      * @param file the file that stores the {@link BodyPart#content()}.
      */
     static MultipartFile of(String name, String filename, File file) {
-        requireNonNull(name, "name");
-        requireNonNull(filename, "filename");
         requireNonNull(file, "file");
         return of(name, filename, file.toPath());
     }
@@ -51,10 +51,38 @@ public interface MultipartFile {
      * @param path the path that stores the {@link BodyPart#content()}.
      */
     static MultipartFile of(String name, String filename, Path path) {
+        return of(name, filename, path, HttpHeaders.of());
+    }
+
+    /**
+     * Creates a new {@link MultipartFile}.
+     * @param name the name parameter of the {@code "content-disposition"}
+     * @param filename the filename parameter of the {@code "content-disposition"}
+     *                 header.
+     * @param file the file that stores the {@link BodyPart#content()}.
+     * @param headers HTTP part headers.
+     */
+    @UnstableApi
+    static MultipartFile of(String name, String filename, File file, HttpHeaders headers) {
+        requireNonNull(file, "file");
+        return of(name, filename, file.toPath(), headers);
+    }
+
+    /**
+     * Creates a new {@link MultipartFile}.
+     * @param name the name parameter of the {@code "content-disposition"}
+     * @param filename the filename parameter of the {@code "content-disposition"}
+     *                 header.
+     * @param path the path that stores the {@link BodyPart#content()}.
+     * @param headers HTTP part headers.
+     */
+    @UnstableApi
+    static MultipartFile of(String name, String filename, Path path, HttpHeaders headers) {
         requireNonNull(name, "name");
         requireNonNull(filename, "filename");
         requireNonNull(path, "path");
-        return new DefaultMultipartFile(name, filename, path);
+        requireNonNull(headers, "headers");
+        return new DefaultMultipartFile(name, filename, path, headers);
     }
 
     /**
@@ -68,6 +96,11 @@ public interface MultipartFile {
      * @see BodyPart#filename()
      */
     String filename();
+
+    /**
+     * Returns the headers of this {@link MultipartFile}.
+     */
+    HttpHeaders headers();
 
     /**
      * Returns the file that stores the {@link BodyPart#content()}.

@@ -21,15 +21,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -45,11 +43,10 @@ import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.spring.SpringDependencyInjectorBeanTest.TestConfiguration;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "settings" })
 @DirtiesContext
-public class SpringDependencyInjectorBeanTest {
+class SpringDependencyInjectorBeanTest {
 
     private static final AtomicInteger counter = new AtomicInteger();
 
@@ -100,7 +97,7 @@ public class SpringDependencyInjectorBeanTest {
     private Server server;
 
     @Test
-    public void fooDecoratorInjectedViaDependencyInjector() throws Exception {
+    void fooDecoratorInjectedViaDependencyInjector() throws Exception {
         final WebClient client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
 
         final HttpResponse response = client.get("/foo");

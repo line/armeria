@@ -1,0 +1,103 @@
+name: Upload Gradle build scans to ge.armeria.dev
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types:
+      - completed
+
+env:
+  LC_ALL: "en_US.UTF-8"
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  RUN_ID: ${{ github.event.workflow_run.id }}
+  COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+  # Used by Octokit
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DOWNLOAD_DIR: build-scans/
+
+jobs:
+  upload-gradle-build-scan:
+    name: Upload Gradle build scans
+    if: github.repository == 'line/armeria'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: setup-jdk-19
+        name: Set up JDK 19
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '19'
+
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow_conclusion: ""
+          run_id: ${{ env.RUN_ID }}
+          name: build-scan.*
+          name_is_regexp: true
+          path: ${{ env.DOWNLOAD_DIR }}
+          check_artifacts: true
+          search_artifacts: true
+
+      - id: get-pr-number
+        name: Get PR number
+        run: |
+          PR_NUMBER=$(ls $DOWNLOAD_DIR | head -1 | sed -n 's/\([0-9]*\)-build-scan.*/\1/p')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "❔️No pull request number found."
+          else
+            echo "✅ Pull request number: ${PR_NUMBER}"
+            echo "PR_NUMBER=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - id: upload-build-scans
+        name: Upload build scans
+        run: |
+          BUILD_SCAN_DIR="${HOME}/.gradle/build-scan-data"
+          BUILD_SCANS=""
+
+          echo "## Build Scan®" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          for SCAN in $(ls $DOWNLOAD_DIR) ; do
+            mkdir -p $BUILD_SCAN_DIR
+            echo "🚚 Copying build scan: ${DOWNLOAD_DIR}${SCAN}/ to $BUILD_SCAN_DIR ..."
+            cp -r ${DOWNLOAD_DIR}${SCAN}/* $BUILD_SCAN_DIR
+
+            JOB_NAME=$(echo ${SCAN} | sed 's/.*build-scan-\(.*\)/\1/')
+            echo "📤 Uploading build scan for job ${JOB_NAME} ..."
+            ./gradlew --no-daemon --stacktrace clean buildScanPublishPrevious
+            echo "✅ Published build scan: ${JOB_NAME}"
+
+            BUILD_SCANS="${JOB_NAME} $(cat build/build-scan-url.txt),${BUILD_SCANS}"
+            echo "- [${JOB_NAME}]($(cat build/build-scan-url.txt))" >> "$GITHUB_STEP_SUMMARY"
+
+            rm -rf $BUILD_SCAN_DIR
+          done
+
+          echo "BUILD_SCANS=${BUILD_SCANS}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - id: create-or-update-comment
+        name: Create or update comment
+        if: steps.get-pr-number.outputs.PR_NUMBER
+        working-directory: .github/actions
+        run: |
+          npm ci
+          npm run comment-build-scan
+        shell: bash
+        env:
+          BUILD_SCANS: ${{ steps.upload-build-scans.outputs.BUILD_SCANS }}
+          PR_NUMBER: ${{ steps.get-pr-number.outputs.PR_NUMBER }}

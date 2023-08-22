@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@GenerateNativeImageTrace
 class HttpClientSniTest {
 
     private static int httpsPort;

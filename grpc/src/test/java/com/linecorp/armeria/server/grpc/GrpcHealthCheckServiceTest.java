@@ -36,9 +36,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
@@ -53,6 +50,9 @@ import io.grpc.health.v1.HealthCheckResponse.ServingStatus;
 import io.grpc.health.v1.HealthGrpc.HealthBlockingStub;
 import io.grpc.health.v1.HealthGrpc.HealthStub;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcHealthCheckServiceTest {
 
@@ -61,7 +61,7 @@ class GrpcHealthCheckServiceTest {
     static final GrpcHealthCheckService service = GrpcHealthCheckService
             .builder()
             .checkers(serverHealth)
-            .serviceCheckers("com.linecorp.armeria.grpc.testing.TestService",
+            .serviceCheckers("testing.grpc.TestService",
                              new SettableHealthChecker(true))
             .build();
 
@@ -92,18 +92,18 @@ class GrpcHealthCheckServiceTest {
         assertThat(response.getStatus()).isEqualTo(ServingStatus.SERVING);
 
         request = HealthCheckRequest.newBuilder()
-                                    .setService("com.linecorp.armeria.grpc.testing.TestService")
+                                    .setService("testing.grpc.TestService")
                                     .build();
         response = client.check(request);
         assertThat(response.getStatus()).isEqualTo(ServingStatus.SERVING);
 
         assertThatThrownBy(() -> client.check(
                 HealthCheckRequest.newBuilder()
-                                  .setService("com.linecorp.armeria.grpc.testing.NotFoundTestService")
+                                  .setService("testing.grpc.NotFoundTestService")
                                   .build()))
                 .isInstanceOf(StatusRuntimeException.class)
                 .hasMessage(
-                        "NOT_FOUND: The service name(com.linecorp.armeria.grpc.testing.NotFoundTestService) " +
+                        "NOT_FOUND: The service name(testing.grpc.NotFoundTestService) " +
                         "is not registered in this service")
                 .extracting(throwable -> ((StatusRuntimeException) throwable).getStatus().getCode())
                 .isEqualTo(Status.NOT_FOUND.getCode());

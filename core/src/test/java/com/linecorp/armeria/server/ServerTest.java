@@ -77,6 +77,7 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -91,6 +92,7 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 
+@GenerateNativeImageTrace
 class ServerTest {
 
     private static final long processDelayMillis = 1000;
@@ -122,7 +124,7 @@ class ServerTest {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final HttpResponse res = HttpResponse.of(responseFuture);
                     asyncExecutorGroup.schedule(
                             () -> super.echo(aReq), processDelayMillis, TimeUnit.MILLISECONDS)
                                       .addListener((Future<HttpResponse> future) ->
@@ -569,9 +571,9 @@ class ServerTest {
     private static class EchoService extends AbstractHttpService {
         @Override
         protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(req.aggregate()
-                                        .thenApply(this::echo)
-                                        .exceptionally(CompletionActions::log));
+            return HttpResponse.of(req.aggregate()
+                                      .thenApply(this::echo)
+                                      .exceptionally(CompletionActions::log));
         }
 
         protected HttpResponse echo(AggregatedHttpRequest aReq) {

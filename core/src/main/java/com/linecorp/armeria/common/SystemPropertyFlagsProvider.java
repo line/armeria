@@ -159,7 +159,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer numCommonWorkers() {
+    public Integer numCommonWorkers(TransportType transportType) {
         return getInt("numCommonWorkers");
     }
 
@@ -433,6 +433,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Boolean allowDoubleDotsInQueryString() {
         return getBoolean("allowDoubleDotsInQueryString");
+    }
+
+    @Override
+    public Boolean allowSemicolonInPathComponent() {
+        return getBoolean("allowSemicolonInPathComponent");
     }
 
     @Override

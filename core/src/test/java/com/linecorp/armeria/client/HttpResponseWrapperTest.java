@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -161,11 +160,10 @@ class HttpResponseWrapperTest {
         final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
         res.init(controller);
-        return decoder.addResponse(1, res, cctx, cctx.eventLoop(), cctx.responseTimeoutMillis(),
-                                   cctx.maxResponseLength());
+        return decoder.addResponse(1, res, cctx, cctx.eventLoop());
     }
 
-    private static class TestHttpResponseDecoder extends HttpResponseDecoder {
+    private static class TestHttpResponseDecoder extends AbstractHttpResponseDecoder {
         private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler();
 
         TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
@@ -176,7 +174,7 @@ class HttpResponseWrapperTest {
         void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {}
 
         @Override
-        KeepAliveHandler keepAliveHandler() {
+        public KeepAliveHandler keepAliveHandler() {
             return keepAliveHandler;
         }
     }

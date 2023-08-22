@@ -293,4 +293,22 @@ class DefaultDnsCacheTest {
         await().untilTrue(evicted);
         assertThat(removed).isFalse();
     }
+
+    @Test
+    void zeroTtl() throws UnknownHostException {
+        final DnsCache dnsCache = DnsCache.builder()
+                                          .ttl(0, 0)
+                                          .negativeTtl(1000)
+                                          .build();
+
+        final DnsQuestionWithoutTrailingDot query =
+                DnsQuestionWithoutTrailingDot.of("foo.com.", DnsRecordType.A);
+        final DnsRecord record = newRecord("foo.com.", "1.1.1.0", 20);
+        dnsCache.cache(query, ImmutableList.of(record));
+        assertThat(dnsCache.get(query)).isNull();
+
+        final UnknownHostException unknownHostException = new UnknownHostException("not found");
+        dnsCache.cache(query, unknownHostException);
+        assertThatThrownBy(() -> dnsCache.get(query)).isEqualTo(unknownHostException);
+    }
 }
