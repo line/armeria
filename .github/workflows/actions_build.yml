@@ -22,6 +22,8 @@ env:
   GH_TOKEN: ${{ github.token }}
   RUN_ID: ${{ github.run_id }}
   PR_NUMBER: ${{ github.event.pull_request.number }}
+  GRADLE_ENTERPRISE_CACHE_USERNAME: ${{ secrets.GRADLE_ENTERPRISE_CACHE_USERNAME }}
+  GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
 
 jobs:
   build:
@@ -93,6 +95,7 @@ jobs:
           -PnoLint \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
+          -Dscan.tag.exp5 \
           ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
@@ -116,6 +119,7 @@ jobs:
           -Pretry=true \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
+          -Dscan.tag.exp5 \
           ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
@@ -226,7 +230,7 @@ jobs:
 
       - name: Run the linters
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel lint
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -Dscan.tag.exp5 lint
 
   site:
     if: github.repository == 'line/armeria'
@@ -280,6 +284,7 @@ jobs:
           -PnoLint -PflakyTests=true -Pretry=true \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ env.BUILD_JDK_VERSION }} \
+          -Dscan.tag.exp5 \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }}
 
       - name: Summarize the failed tests

@@ -58,6 +58,19 @@ gradleEnterprise {
     }
 }
 
+buildCache {
+    local { enabled = false }
+    remote(HttpBuildCache) {
+        url = 'https://ge.armeria.dev/cache/exp5/'
+        credentials { creds ->
+            creds.username = System.getenv('GRADLE_ENTERPRISE_CACHE_USERNAME')
+            creds.password = System.getenv('GRADLE_ENTERPRISE_CACHE_PASSWORD')
+        }
+        enabled = true
+        push = System.getenv('CI') != null
+    }
+}
+
 rootProject.name = 'armeria'
 
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
