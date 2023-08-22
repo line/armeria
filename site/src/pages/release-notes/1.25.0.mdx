@@ -4,8 +4,8 @@ date: 2023-08-22
 
 ## 🌟 New features
 
-- Users can now easily build [GraalVM](https://www.graalvm.org/) native images for Armeria applications. #5005
-- Support for [Micrometer Observation](https://micrometer.io/docs/observation) is added.
+- **GraalVM Support**: Users can now easily build [GraalVM](https://www.graalvm.org/) native images for Armeria applications. #5005
+- **Micrometer Observation Support**: Support for [Micrometer Observation](https://micrometer.io/docs/observation) is added.
   Refer to <type://ObservationClient> or <type://ObservationService> for details on how to integrate with Armeria.  #4659 #4980
   ```java
   ObservationRegistry observationRegistry = ...
@@ -16,7 +16,7 @@ date: 2023-08-22
     .decorator(ObservationService.newDecorator(observationRegistry))
   ...
   ```
-- You may now use <type://WebSocketClient> to call websocket services. #4972
+- **Websocket Client**: You may now use <type://WebSocketClient> to call websocket services. #4972
   ```java
   WebSocketClient client = WebSocketClient.of("ws://...");
   client.connect("/").thenAccept(webSocketSession -> {
@@ -30,8 +30,8 @@ date: 2023-08-22
     webSocketSessions.inbound().subscribe(subscriber);
   });
   ```
-- <type://GoogleGrpcStatusFunction> is introduced so that users can more easily implement
-  gRPC [Richer Error Model](https://grpc.io/docs/guides/error/#richer-error-model). #4614 #4986
+- **Implement gRPC Richer Error Model more easily**: <type://GoogleGrpcStatusFunction> is introduced so that users
+  can more easily implement gRPC [Richer Error Model](https://grpc.io/docs/guides/error/#richer-error-model). #4614 #4986
   ```java
   GoogleGrpcStatusFunction statusFunction = (ctx, throwable, metadata) -> {
   if (throwable instanceof MyException) {
@@ -42,15 +42,15 @@ date: 2023-08-22
     GrpcService.builder()
       .exceptionMapping(statusFunction)
   ```
-- Users can now retrieve headers from a multipart request in an annotated service
+- **New API for Multipart Headers**: Users can now retrieve headers from a multipart request in an annotated service
   using <type://MultipartFile#headers()>.  #5106
-- <type://RequestLogAccess#getIfAvailable(Iterable<RequestLogProperty>)> has been introduced,
-  which allows users to access a <type://RequestLogProperty> immediately if available. #4956 #4966
-- The `keepAliveOnPing` option has been introduced. Enabling this option will keep an idle connection
-  alive when a HTTP/2 PING frame or `OPTIONS * HTTP/1.1` is received. The option can be configured
-  by <type://ServerBuilder#idleTimeout(Duration,boolean)> or
-  <type://ClientFactoryBuilder#idleTimeout(Duration,boolean)>. #4794 #4806
-- You can now easily create a <type://StreamMessage> from a future using <type://StreamMessage#of(CompletionStage<?>)>. #4995
+- **Access RequestLogProperty values more easily**: <type://RequestLogAccess#getIfAvailable()>
+  has been introduced, which allows users to access a <type://RequestLogProperty> immediately if available. #4956 #4966
+- **Keep an Idle Connection Alive on PING**: The `keepAliveOnPing` option has been introduced. Enabling this option will keep
+  an idle connection alive when a HTTP/2 PING frame or `OPTIONS * HTTP/1.1` is received. The option can be configured
+  by <type://ServerBuilder#idleTimeout(Duration,boolean)> or <type://ClientFactoryBuilder#idleTimeout(Duration,boolean)>. #4794 #4806
+- **Create a StreamMessage from Future**: You can now easily create a <type://StreamMessage> from a future
+  using <type://StreamMessage#of(CompletionStage<?>)>. #4995
 
 ## 📈 Improvements
 
