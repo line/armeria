@@ -90,7 +90,7 @@ class DefaultDnsResolverTest {
                     DefaultDnsResolver.of(
                             new DnsNameResolverBuilder(eventLoop)
                                     .channelType(TransportType.datagramChannelType(eventLoop))
-                                    .queryTimeoutMillis(Long.MAX_VALUE)
+                                    .queryTimeoutMillis(TimeUnit.HOURS.toMillis(1))
                                     .nameServerProvider(
                                             name -> DnsServerAddresses.sequential(dnsServer.addr()).stream())
                                     .build(),
@@ -148,7 +148,7 @@ class DefaultDnsResolverTest {
                     DefaultDnsResolver.of(
                             new DnsNameResolverBuilder(eventLoop)
                                     .channelType(TransportType.datagramChannelType(eventLoop))
-                                    .queryTimeoutMillis(Long.MAX_VALUE)
+                                    .queryTimeoutMillis(TimeUnit.HOURS.toMillis(1))
                                     .nameServerProvider(
                                             name -> DnsServerAddresses.sequential(dnsServer.addr()).stream())
                                     .build(),

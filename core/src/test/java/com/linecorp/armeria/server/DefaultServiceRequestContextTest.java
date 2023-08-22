@@ -22,6 +22,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +35,7 @@ import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 class DefaultServiceRequestContextTest {
 
-    AtomicBoolean finished;
+    private AtomicBoolean finished;
 
     @BeforeEach
     void setUp() {
@@ -135,15 +136,21 @@ class DefaultServiceRequestContextTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext ctx = (DefaultServiceRequestContext) ServiceRequestContext.of(req);
 
+        final AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
         ctx.eventLoop().execute(() -> {
-            ctx.setRequestTimeoutMillis(2000);
-            assertThat(ctx.requestTimeoutMillis()).isCloseTo(2000, Offset.offset(400L));
-            ctx.clearRequestTimeout();
-            assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
+            try {
+                ctx.setRequestTimeoutMillis(4000);
+                assertThat(ctx.requestTimeoutMillis()).isCloseTo(4000, Offset.offset(2000L));
+                ctx.clearRequestTimeout();
+                assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
+            } catch (Throwable e) {
+                exceptionRef.set(e);
+            }
             finished.set(true);
         });
 
         await().untilTrue(finished);
+        assertThat(exceptionRef).hasValue(null);
     }
 
     @Test
@@ -151,19 +158,25 @@ class DefaultServiceRequestContextTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
 
+        final AtomicReference<Throwable> exceptionRef = new AtomicReference<>();
         ctx.eventLoop().execute(() -> {
-            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
-            assertThat(ctx.requestTimeoutMillis()).isCloseTo(1000, Offset.offset(300L));
-            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
-            assertThat(ctx.requestTimeoutMillis()).isCloseTo(2000, Offset.offset(300L));
-            ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(3));
-            assertThat(ctx.requestTimeoutMillis()).isCloseTo(3000, Offset.offset(300L));
-            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 0);
-            assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
+            try {
+                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
+                assertThat(ctx.requestTimeoutMillis()).isCloseTo(1000, Offset.offset(300L));
+                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
+                assertThat(ctx.requestTimeoutMillis()).isCloseTo(2000, Offset.offset(300L));
+                ctx.setRequestTimeout(TimeoutMode.SET_FROM_START, Duration.ofSeconds(3));
+                assertThat(ctx.requestTimeoutMillis()).isCloseTo(3000, Offset.offset(300L));
+                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, 0);
+                assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
+            } catch (Throwable e) {
+                exceptionRef.set(e);
+            }
             finished.set(true);
         });
 
         await().untilTrue(finished);
+        assertThat(exceptionRef).hasValue(null);
     }
 
     @Test

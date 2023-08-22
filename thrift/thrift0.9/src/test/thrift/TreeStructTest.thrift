@@ -1,4 +1,4 @@
-namespace java com.linecorp.armeria.service.test.thrift.tree
+namespace java testing.thrift.tree
 
 struct IntLeaf {
     1: i32 value

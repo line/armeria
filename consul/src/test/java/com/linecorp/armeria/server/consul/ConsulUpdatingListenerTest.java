@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.awaitility.Awaitility.await;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,9 +35,11 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulTestBase;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 
+@GenerateNativeImageTrace
 class ConsulUpdatingListenerTest extends ConsulTestBase {
 
     private static final List<Server> servers = new ArrayList<>();
@@ -58,8 +59,7 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                                                 .build();
                     final ServerListener listener =
                             ConsulUpdatingListener
-                                    .builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                             serviceName)
+                                    .builder(consulUri(), serviceName)
                                     .consulToken(CONSUL_TOKEN)
                                     .endpoint(endpoint)
                                     .checkUri("http://" + endpoint.host() +
@@ -84,11 +84,9 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
 
     @Test
     void testBuild() {
-        assertThat(ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                                  serviceName)
+        assertThat(ConsulUpdatingListener.builder(consulUri(), serviceName)
                                          .build()).isNotNull();
-        assertThat(ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                                  serviceName)
+        assertThat(ConsulUpdatingListener.builder(consulUri(), serviceName)
                                          .build()).isNotNull();
     }
 
@@ -98,14 +96,13 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
         await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
             assertThatCode(() -> {
                 final int port = unusedPorts(1)[0];
-                final Endpoint endpoint = Endpoint.of("127.0.0.1", port).withWeight(1);
+                final Endpoint endpoint = Endpoint.of("host.docker.internal", port).withWeight(1);
                 final Server server = Server.builder()
                                             .http(port)
                                             .service("/echo", new EchoService())
                                             .build();
                 final ServerListener listener =
-                        ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                                       "testThatDefaultCheckMethodIsHead")
+                        ConsulUpdatingListener.builder(consulUri(), "testThatDefaultCheckMethodIsHead")
                                               .consulApiVersion("v1")
                                               .consulToken(CONSUL_TOKEN)
                                               .endpoint(endpoint)
@@ -156,7 +153,7 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
         });
 
         // Make a service to produce 503 error for checking by consul.
-        final Endpoint firstEndpoint = sampleEndpoints.get(0);
+        final Endpoint firstEndpoint = sampleEndpoints.get(0).withHost("127.0.0.1");
         final BlockingWebClient webClient = BlockingWebClient.of(firstEndpoint.toUri(SessionProtocol.HTTP));
         webClient.post("echo", "503");
 
@@ -166,7 +163,7 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                     .hasSize(sampleEndpoints.size() - 1);
         });
 
-        // But, the size of endpoints does not changed.
+        // But, the size of endpoints is not changed.
         await().untilAsserted(() -> {
             assertThat(client().endpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints);
         });
@@ -181,15 +178,17 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
     @Test
     void testThatTagsAreAdded() {
         final int port = unusedPorts(1)[0];
+        final Endpoint endpoint = Endpoint.of("host.docker.internal", port).withWeight(1);
+
         final Server server = Server.builder()
                                     .http(port)
                                     .service("/echo", new EchoService())
                                     .build();
         final ServerListener listener =
-                ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                               "testThatTagsAreAdded")
+                ConsulUpdatingListener.builder(consulUri(), "testThatTagsAreAdded")
                                       .consulApiVersion("v1")
                                       .consulToken(CONSUL_TOKEN)
+                                      .endpoint(endpoint)
                                       .tags("production", "v1")
                                       .build();
         server.addListener(listener);

@@ -51,7 +51,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     // Use slightly greater value than the client-side default so that clients close the connection more often.
     static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
+    static final boolean DEFAULT_SERVER_KEEP_ALIVE_ON_PING = false;
     static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS = 10000; // 10 seconds
+    static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING = false;
     static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
 
@@ -166,9 +168,13 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer numCommonWorkers() {
-        final int defaultNumCpuCores = Runtime.getRuntime().availableProcessors();
-        return defaultNumCpuCores * 2;
+    public Integer numCommonWorkers(TransportType transportType) {
+        final int numCpuCores = Runtime.getRuntime().availableProcessors();
+        if (transportType == TransportType.IO_URING) {
+            return numCpuCores;
+        } else {
+            return numCpuCores * 2;
+        }
     }
 
     @Override
@@ -209,6 +215,16 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultServerIdleTimeoutMillis() {
         return DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS;
+    }
+
+    @Override
+    public Boolean defaultServerKeepAliveOnPing() {
+        return DEFAULT_SERVER_KEEP_ALIVE_ON_PING;
+    }
+
+    @Override
+    public Boolean defaultClientKeepAliveOnPing() {
+        return DEFAULT_CLIENT_KEEP_ALIVE_ON_PING;
     }
 
     @Override
@@ -410,6 +426,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public Boolean allowDoubleDotsInQueryString() {
+        return false;
+    }
+
+    @Override
+    public Boolean allowSemicolonInPathComponent() {
         return false;
     }
 

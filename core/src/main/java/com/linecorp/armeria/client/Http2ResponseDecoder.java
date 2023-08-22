@@ -20,8 +20,6 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
-import javax.annotation.Nonnull;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,8 +52,8 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream;
 
-final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Connection.Listener,
-                                                                        Http2FrameListener {
+final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements Http2Connection.Listener,
+                                                                                Http2FrameListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2ResponseDecoder.class);
 
@@ -345,9 +343,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
 
-    @Nonnull
     @Override
-    KeepAliveHandler keepAliveHandler() {
+    public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
     }
 

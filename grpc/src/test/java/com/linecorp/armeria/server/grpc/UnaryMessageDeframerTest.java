@@ -28,12 +28,12 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
 
 class UnaryMessageDeframerTest {
 

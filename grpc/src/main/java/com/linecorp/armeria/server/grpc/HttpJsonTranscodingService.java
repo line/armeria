@@ -585,7 +585,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             }
             return null;
         });
-        return HttpResponse.from(responseFuture);
+        return HttpResponse.of(responseFuture);
     }
 
     /**

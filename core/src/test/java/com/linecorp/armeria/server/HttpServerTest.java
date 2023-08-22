@@ -134,7 +134,7 @@ class HttpServerTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final HttpResponse res = HttpResponse.of(responseFuture);
                     ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
                                              delayMillis, TimeUnit.MILLISECONDS);
                     return res;
@@ -143,7 +143,7 @@ class HttpServerTest {
 
             sb.service("/delay-deferred/{delay}", (ctx, req) -> {
                 final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                final HttpResponse res = HttpResponse.from(responseFuture);
+                final HttpResponse res = HttpResponse.of(responseFuture);
                 final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
                 ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(HttpStatus.OK)),
                                          delayMillis, TimeUnit.MILLISECONDS);
@@ -154,7 +154,7 @@ class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    final HttpResponse res = HttpResponse.from(responseFuture);
+                    final HttpResponse res = HttpResponse.of(responseFuture);
                     ctx.whenRequestCancelling().thenRun(
                             () -> responseFuture.complete(
                                     HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
@@ -167,7 +167,7 @@ class HttpServerTest {
 
             sb.service("/delay-custom-deferred/{delay}", (ctx, req) -> {
                 final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                final HttpResponse res = HttpResponse.from(responseFuture);
+                final HttpResponse res = HttpResponse.of(responseFuture);
                 ctx.whenRequestCancelling().thenRun(
                         () -> responseFuture.complete(HttpResponse.of(
                                 HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out")));
@@ -601,8 +601,7 @@ class HttpServerTest {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
         final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-        // `FallbackService` does not send a response body.
-        assertThat(res.content().isEmpty()).isTrue();
+        assertThat(res.contentUtf8()).startsWith("Status: 404\n");
     }
 
     @ParameterizedTest

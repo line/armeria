@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
@@ -45,6 +46,7 @@ import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 
+@GenerateNativeImageTrace
 class RequestContextAssemblyTest {
 
     @RegisterExtension
@@ -67,7 +69,7 @@ class RequestContextAssemblyTest {
                             .flatMapCompletable(RequestContextAssemblyTest::completable)
                             .subscribe(() -> res.complete(HttpResponse.of(HttpStatus.OK)),
                                        res::completeExceptionally);
-                    return HttpResponse.from(res);
+                    return HttpResponse.of(res);
                 }
 
                 @Get("/single")
@@ -77,7 +79,7 @@ class RequestContextAssemblyTest {
                     Single.just("")
                           .flatMap(RequestContextAssemblyTest::single)
                           .subscribe((s, throwable) -> res.complete(HttpResponse.of(HttpStatus.OK)));
-                    return HttpResponse.from(res);
+                    return HttpResponse.of(res);
                 }
             });
         }

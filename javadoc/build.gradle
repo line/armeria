@@ -31,8 +31,13 @@ task checkJavadoc(
                 'nested.classes.inherited.from.class.'
         ]
         def allowedListPrefixes = ['java.', 'javax.']
-        def disallowedListPrefixes = [ 'com.linecorp.armeria.internal.' ] +
-                rootProject.ext.relocations.collect { it[1] + '.' }
+        def disallowedListPrefixes = ['com.linecorp.armeria.internal.']
+        disallowedListPrefixes.addAll(rootProject.ext.relocations.collect {
+            def packageName = it["from"]
+            assert packageName != null
+            packageName + '.'
+        })
+
         def errors = []
 
         reportFile.parentFile.mkdirs()

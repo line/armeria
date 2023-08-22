@@ -39,7 +39,9 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -51,6 +53,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.DataFetcher;
 
+@GenerateNativeImageTrace
 class GraphqlDocServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -63,7 +66,7 @@ class GraphqlDocServiceTest {
                 sb.http(8080);
             }
             final File graphqlSchemaFile =
-                    new File(getClass().getResource("/test.graphqls").toURI());
+                    new File(getClass().getResource("/testing/graphql/test.graphqls").toURI());
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
@@ -160,11 +163,14 @@ class GraphqlDocServiceTest {
         final AggregatedHttpResponse res = client.get(path + "/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
-        final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of()));
+        final Route docServiceRoute = Route.builder().pathPrefix(path).build();
+        final ServiceSpecification emptySpecification = new ServiceSpecification(ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 docServiceRoute);
+        final JsonNode expectedJson = mapper.valueToTree(emptySpecification);
         assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 }

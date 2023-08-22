@@ -105,21 +105,21 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
             final SamlEndpoint sloResEndpoint = idp.sloResEndpoint();
             if (sloResEndpoint == null) {
                 // No response URL. Just return 200 OK.
-                return HttpResponse.from(sloHandler.logoutSucceeded(ctx, req, messageContext)
-                                                   .thenApply(unused -> HttpResponse.of(HttpStatus.OK)));
+                return HttpResponse.of(sloHandler.logoutSucceeded(ctx, req, messageContext)
+                                                 .thenApply(unused -> HttpResponse.of(HttpStatus.OK)));
             }
 
             final LogoutResponse logoutResponse = createLogoutResponse(logoutRequest, StatusCode.SUCCESS);
             try {
                 final HttpResponse response = respond(logoutResponse, sloResEndpoint);
-                return HttpResponse.from(sloHandler.logoutSucceeded(ctx, req, messageContext)
-                                                   .thenApply(unused -> response));
+                return HttpResponse.of(sloHandler.logoutSucceeded(ctx, req, messageContext)
+                                                 .thenApply(unused -> response));
             } catch (SamlException e) {
                 logger.warn("{} Cannot respond a logout response in response to {}",
                             ctx, logoutRequest.getID(), e);
                 final HttpResponse response = fail(ctx, logoutRequest, sloResEndpoint);
-                return HttpResponse.from(sloHandler.logoutFailed(ctx, req, e)
-                                                   .thenApply(unused -> response));
+                return HttpResponse.of(sloHandler.logoutFailed(ctx, req, e)
+                                                 .thenApply(unused -> response));
             }
         } catch (SamlException e) {
             return fail(ctx, e);

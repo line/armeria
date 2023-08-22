@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.awaitility.Awaitility.await;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,10 +30,12 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.consul.ConsulTestBase;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListener;
 
+@GenerateNativeImageTrace
 class ConsulEndpointGroupTest extends ConsulTestBase {
 
     private static final List<Server> servers = new ArrayList<>();
@@ -53,8 +54,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
                                                 .build();
                     final ServerListener listener =
                             ConsulUpdatingListener
-                                    .builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                             serviceName)
+                                    .builder(consulUri(), serviceName)
                                     .consulToken(CONSUL_TOKEN)
                                     .build();
                     server.addListener(listener);
@@ -75,8 +75,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
     @Test
     void testConsulEndpointGroupWithClient() {
         try (ConsulEndpointGroup endpointGroup =
-                     ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                                 serviceName)
+                     ConsulEndpointGroup.builder(consulUri(), serviceName)
                                         .consulApiVersion("v1")
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchIntervalMillis(1000)
@@ -108,8 +107,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
     @Test
     void testConsulEndpointGroupWithUrl() {
         try (ConsulEndpointGroup endpointGroup =
-                     ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                                 serviceName)
+                     ConsulEndpointGroup.builder(consulUri(), serviceName)
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .build()) {
@@ -140,8 +138,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
     @Test
     void testSelectStrategy() {
         try (ConsulEndpointGroup endpointGroup =
-                     ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                                 serviceName)
+                     ConsulEndpointGroup.builder(consulUri(), serviceName)
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .build()) {
@@ -154,8 +151,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
     @Test
     void testConsulEndpointGroupWithDatacenter() {
         final ConsulEndpointGroupBuilder builder =
-                ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                            serviceName)
+                ConsulEndpointGroup.builder(consulUri(), serviceName)
                                    .consulApiVersion("v1")
                                    .consulToken(CONSUL_TOKEN)
                                    .registryFetchIntervalMillis(1000);
@@ -179,8 +175,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
                                .findFirst()
                                .orElseThrow(() -> new IllegalArgumentException("No sample endpoints."));
         try (ConsulEndpointGroup endpointGroup =
-                     ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
-                                                 serviceName)
+                     ConsulEndpointGroup.builder(consulUri(), serviceName)
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .filter("ServicePort == " + endpoint.port())

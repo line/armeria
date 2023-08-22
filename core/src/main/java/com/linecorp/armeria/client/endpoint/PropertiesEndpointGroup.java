@@ -233,8 +233,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     public String toString() {
-        return toStringHelper()
-                .add("watchRegisterKey", watchRegisterKey)
-                .toString();
+        return toString(buf -> buf.append(", watchRegisterKey=").append(watchRegisterKey));
     }
 }

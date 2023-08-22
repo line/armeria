@@ -19,14 +19,17 @@ package com.linecorp.armeria.client.scala
 import com.google.common.collect.Iterables
 import com.linecorp.armeria.client.{ClientOptions, Clients, RequestPreparationSetters, WebClient}
 import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, ResponseEntity}
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.annotation._
 import com.linecorp.armeria.server.{ServerBuilder, ServerSuite}
 import munit.FunSuite
 import org.reflections.ReflectionUtils
+
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
+@GenerateNativeImageTrace
 class RestClientSuite extends FunSuite with ServerSuite {
   override protected def configureServer: ServerBuilder => Unit = { sb =>
     sb.annotatedService(
@@ -38,7 +41,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
         @Patch
         @ProducesJson
         @Path("/rest/{id}")
-        def restApi(@Param id: String, content: String): RestResponse = RestResponse(id, content)
+        def restApi(@Param id: String, content: String): TestRestResponse = TestRestResponse(id, content)
       },
       Array.emptyObjectArray: _*
     )
@@ -52,7 +55,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
         @Patch
         @ProducesJson
         @Path("/future")
-        def future(): Future[RestResponse] = Future.successful(RestResponse("1", "Hi!"))
+        def future(): Future[TestRestResponse] = Future.successful(TestRestResponse("1", "Hi!"))
       },
       Array.emptyObjectArray: _*
     )
@@ -70,8 +73,8 @@ class RestClientSuite extends FunSuite with ServerSuite {
             @Param id: String,
             @Param query: String,
             @Header("x-header") header: String,
-            agg: AggregatedHttpRequest): ComplexResponse = {
-          ComplexResponse(
+            agg: AggregatedHttpRequest): TestComplexResponse = {
+          TestComplexResponse(
             id = id,
             method = agg.method().toString,
             query = query,
@@ -88,22 +91,22 @@ class RestClientSuite extends FunSuite with ServerSuite {
 
   test("should create ScalaRestClient with implicit class") {
     val restClient = server.webClient().asScalaRestClient()
-    val future: Future[ResponseEntity[RestResponse]] =
+    val future: Future[ResponseEntity[TestRestResponse]] =
       restClient
         .get("/rest/{id}")
         .pathParam("id", 1)
-        .execute[RestResponse]()
+        .execute[TestRestResponse]()
     val content = Await.result(future, Duration.Inf).content()
     assertEquals(content.id, "1")
   }
 
   test("should create ScalaRestClient with factory method") {
     val restClient = ScalaRestClient(server.webClient())
-    val future: Future[ResponseEntity[RestResponse]] =
+    val future: Future[ResponseEntity[TestRestResponse]] =
       restClient
         .get("/rest/{id}")
         .pathParam("id", 1)
-        .execute[RestResponse]()
+        .execute[TestRestResponse]()
     val content = Await.result(future, Duration.Inf).content()
     assertEquals(content.id, "1")
   }
@@ -119,7 +122,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
         .cookies(List(Cookie.ofSecure("cookie", "cookie-value")))
         .pathParams(Map("id" -> "1"))
         .queryParams(Map("query" -> "query-value"))
-        .execute[ComplexResponse]()
+        .execute[TestComplexResponse]()
 
     val content = Await.result(future, Duration.Inf).content()
     assertEquals(content.id, "1")
@@ -136,7 +139,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
     val future =
       restClient
         .post("/future")
-        .execute[RestResponse]()
+        .execute[TestRestResponse]()
 
     val content = Await.result(future, Duration.Inf).content()
     assertEquals(content.id, "1")
@@ -169,9 +172,10 @@ class RestClientSuite extends FunSuite with ServerSuite {
   }
 }
 
-case class RestResponse(id: String, content: String)
 
-case class ComplexResponse(
+case class TestRestResponse(id: String, content: String)
+
+case class TestComplexResponse(
     id: String,
     method: String,
     query: String,

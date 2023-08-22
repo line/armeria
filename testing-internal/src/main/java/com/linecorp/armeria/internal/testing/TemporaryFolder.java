@@ -20,8 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.stream.Stream;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -72,12 +70,24 @@ public final class TemporaryFolder {
             return;
         }
 
-        try (Stream<Path> walk = Files.walk(root)) {
-            walk.sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(File::delete);
+        deleteAll(root.toFile());
+        root = null;
+    }
+
+    private static void deleteAll(File file) throws IOException {
+        // Use File#listFiles() instead of Files#list() to ignore files deleted by other threads during
+        // iteration. See https://github.com/line/armeria/issues/4959
+        if (file.isDirectory()) {
+            final File[] files = file.listFiles();
+            if (files == null) {
+                return;
+            }
+            for (File child : files) {
+                deleteAll(child);
+            }
         }
 
-        root = null;
+        //noinspection ResultOfMethodCallIgnored
+        file.delete();
     }
 }
