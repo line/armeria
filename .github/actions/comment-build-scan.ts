@@ -42,9 +42,9 @@ async function main(): Promise<void> {
     const [jobName, scanUrl]= scan.split(" ");
     const job = jobs.find(job => job.name === jobName);
     if (job.conclusion === 'success') {
-      commentBody += `| [${job.name}](${job.url}) | ✅ | ${scanUrl} |\n`;
+      commentBody += `| [${job.name}](${job.html_url}) | ✅ | ${scanUrl} |\n`;
     } else {
-      commentBody += `| [${job.name}](${job.url}) | ❌ (${job.conclusion}) | ${scanUrl} |\n`;
+      commentBody += `| [${job.name}](${job.html_url}) | ❌ (${job.conclusion}) | ${scanUrl} |\n`;
     }
   }
 
