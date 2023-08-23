@@ -38,15 +38,15 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
 
-final class WebSocketSessionChannelHandler extends ChannelDuplexHandler {
+final class WebSocketServiceChannelHandler extends ChannelDuplexHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebSocketSessionChannelHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketServiceChannelHandler.class);
 
     private final StreamingDecodedHttpRequest req;
     private final ServerHttpObjectEncoder encoder;
     private final ServiceConfig serviceConfig;
 
-    WebSocketSessionChannelHandler(StreamingDecodedHttpRequest req, ServerHttpObjectEncoder encoder,
+    WebSocketServiceChannelHandler(StreamingDecodedHttpRequest req, ServerHttpObjectEncoder encoder,
                                    ServiceConfig serviceConfig) {
         this.req = req;
         this.encoder = encoder;
@@ -82,6 +82,7 @@ final class WebSocketSessionChannelHandler extends ChannelDuplexHandler {
             logger.warn("{} Unexpected msg: {}", ctx.channel(), msg);
             return;
         }
+        encoder.keepAliveHandler().onReadOrWrite();
         try {
             final ByteBuf data = (ByteBuf) msg;
             final int dataLength = data.readableBytes();
@@ -123,7 +124,7 @@ final class WebSocketSessionChannelHandler extends ChannelDuplexHandler {
             final HttpResponse response = (HttpResponse) msg;
             final HttpResponseStatus status = response.status();
             ctx.write(msg, promise);
-            if (status == HttpResponseStatus.SWITCHING_PROTOCOLS) {
+            if (status.code() == HttpResponseStatus.SWITCHING_PROTOCOLS.code()) {
                 ctx.pipeline().remove(HttpServerCodec.class);
             }
             return;

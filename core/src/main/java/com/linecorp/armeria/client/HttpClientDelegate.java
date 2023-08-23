@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
@@ -167,25 +168,27 @@ final class HttpClientDelegate implements HttpClient {
                                               HttpRequest req, DecodedHttpResponse res,
                                               ClientConnectionTimingsBuilder timingsBuilder,
                                               ProxyConfig proxyConfig) {
-        final SessionProtocol protocol = ctx.sessionProtocol();
         final PoolKey key = new PoolKey(endpoint, proxyConfig);
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
-        final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
+        final SessionProtocol protocol = ctx.sessionProtocol();
+        final SerializationFormat serializationFormat = ctx.log().partial().serializationFormat();
+        final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
             doExecute(pooledChannel, ctx, req, res);
         } else {
-            pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {
-                logSession(ctx, newPooledChannel, timingsBuilder.build());
-                if (cause == null) {
-                    doExecute(newPooledChannel, ctx, req, res);
-                } else {
-                    final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
-                    handleEarlyRequestException(ctx, req, wrapped);
-                    res.close(wrapped);
-                }
-                return null;
-            });
+            pool.acquireLater(protocol, serializationFormat, key, timingsBuilder)
+                .handle((newPooledChannel, cause) -> {
+                    logSession(ctx, newPooledChannel, timingsBuilder.build());
+                    if (cause == null) {
+                        doExecute(newPooledChannel, ctx, req, res);
+                    } else {
+                        final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
+                        handleEarlyRequestException(ctx, req, wrapped);
+                        res.close(wrapped);
+                    }
+                    return null;
+                });
         }
     }
 

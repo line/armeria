@@ -128,6 +128,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     }
 
     @Override
+    public HttpRequestBuilder content(Publisher<? extends HttpData> publisher) {
+        return (HttpRequestBuilder) super.content(publisher);
+    }
+
+    @Override
     public HttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         return (HttpRequestBuilder) super.content(contentType, publisher);
     }

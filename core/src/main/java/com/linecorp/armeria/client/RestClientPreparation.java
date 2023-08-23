@@ -199,6 +199,12 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     }
 
     @Override
+    public RestClientPreparation content(Publisher<? extends HttpData> content) {
+        delegate.content(content);
+        return this;
+    }
+
+    @Override
     public RestClientPreparation content(MediaType contentType, Publisher<? extends HttpData> content) {
         delegate.content(contentType, content);
         return this;
