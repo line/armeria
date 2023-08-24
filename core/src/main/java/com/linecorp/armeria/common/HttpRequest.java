@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
+import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -280,6 +281,26 @@ public interface HttpRequest extends Request, HttpMessage {
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
         }
+    }
+
+    /**
+     * Creates a new instance from an existing {@link RequestHeaders}, {@link Publisher} and trailers.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    @UnstableApi
+    static HttpRequest of(RequestHeaders headers,
+                          Publisher<? extends HttpData> publisher,
+                          HttpHeaders trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailers, "trailers");
+        if (trailers.isEmpty()) {
+            return of(headers, publisher);
+        }
+        return of(headers, new SurroundingPublisher<>(null, publisher, trailers));
     }
 
     /**

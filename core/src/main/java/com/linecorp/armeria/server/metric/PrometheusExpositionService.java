@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
@@ -47,11 +46,27 @@ import io.prometheus.client.exporter.common.TextFormat;
 public final class PrometheusExpositionService extends AbstractHttpService implements TransientHttpService {
 
     /**
+     * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from
+     * {@link CollectorRegistry#defaultRegistry}.
+     */
+    public static PrometheusExpositionService of() {
+        return of(CollectorRegistry.defaultRegistry);
+    }
+
+    /**
      * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from the specified
      * {@link CollectorRegistry}.
      */
     public static PrometheusExpositionService of(CollectorRegistry collectorRegistry) {
         return new PrometheusExpositionService(collectorRegistry, Flags.transientServiceOptions());
+    }
+
+    /**
+     * Returns a new {@link PrometheusExpositionServiceBuilder} created with
+     * {@link CollectorRegistry#defaultRegistry}.
+     */
+    public static PrometheusExpositionServiceBuilder builder() {
+        return builder(CollectorRegistry.defaultRegistry);
     }
 
     /**

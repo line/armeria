@@ -144,6 +144,14 @@ public abstract class AbstractHttpMessageBuilder implements HttpMessageSetters {
     }
 
     @Override
+    public AbstractHttpMessageBuilder content(Publisher<? extends HttpData> publisher) {
+        requireNonNull(publisher, "publisher");
+        checkState(content == null, "content has been set already");
+        this.publisher = publisher;
+        return this;
+    }
+
+    @Override
     public AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         requireNonNull(contentType, "contentType");
         requireNonNull(publisher, "publisher");
