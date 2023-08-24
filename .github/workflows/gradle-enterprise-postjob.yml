@@ -10,8 +10,6 @@ env:
   LC_ALL: "en_US.UTF-8"
   BUILD_JDK_VERSION: "19"
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-  GRADLE_ENTERPRISE_CACHE_USERNAME: ${{ secrets.GRADLE_ENTERPRISE_CACHE_USERNAME }}
-  GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
   RUN_ID: ${{ github.event.workflow_run.id }}
   COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
   # Used by Octokit

@@ -13,10 +13,11 @@ plugins {
 
 import com.gradle.scan.plugin.PublishedBuildScan
 
+def isCi = System.getenv("CI") != null
+
 gradleEnterprise {
     server = "https://ge.armeria.dev"
     buildScan {
-        def isCi = System.getenv("CI") != null
         publishIfAuthenticated()
         publishAlways()
         uploadInBackground = !isCi
@@ -59,13 +60,8 @@ gradleEnterprise {
 }
 
 buildCache {
-    remote(HttpBuildCache) {
-        url = 'https://ge.armeria.dev/cache/armeria/'
-        credentials { creds ->
-            creds.username = System.getenv('GRADLE_ENTERPRISE_CACHE_USERNAME')
-            creds.password = System.getenv('GRADLE_ENTERPRISE_CACHE_PASSWORD')
-        }
-        push = System.getenv('CI') != null
+    remote(gradleEnterprise.buildCache) {
+        push = isCi
     }
 }
 

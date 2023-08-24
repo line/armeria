@@ -22,8 +22,6 @@ env:
   GH_TOKEN: ${{ github.token }}
   RUN_ID: ${{ github.run_id }}
   PR_NUMBER: ${{ github.event.pull_request.number }}
-  GRADLE_ENTERPRISE_CACHE_USERNAME: ${{ secrets.GRADLE_ENTERPRISE_CACHE_USERNAME }}
-  GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
 
 jobs:
   build:
