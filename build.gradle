@@ -207,6 +207,12 @@ configure(projectsWithFlags('java')) {
         // Jetty ALPN support
         compileOnly libs.jetty.alpn.api
 
+        // Snappy
+        implementation 'org.xerial.snappy:snappy-java:1.1.10.3'
+
+        // Zstd
+        implementation 'com.github.luben:zstd-jni:1.5.5-5'
+
         // Logging
         implementation libs.slf4j.api
         testImplementation libs.slf4j.jul.to.slf4j

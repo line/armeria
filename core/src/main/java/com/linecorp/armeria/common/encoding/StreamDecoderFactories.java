@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.common.encoding;
 
+import com.github.luben.zstd.ZstdFrameProgression;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.compression.BrotliDecoder;
+import io.netty.handler.codec.compression.SnappyFrameDecoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 enum StreamDecoderFactories implements StreamDecoderFactory {
@@ -52,6 +54,28 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         @Override
         public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
             return new BrotliStreamDecoder(new BrotliDecoder(), alloc, maxLength);
+        }
+    },
+    SNAPPY {
+        @Override
+        public String encodingHeaderValue() {
+            return "snappy";
+        }
+
+        @Override
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new SnappyStreamDecoder(new SnappyFrameDecoder(), alloc, maxLength);
+        }
+    },
+    ZSTD {
+        @Override
+        public String encodingHeaderValue() {
+            return "zstd";
+        }
+
+        @Override
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new ZstdStreamDecoder(new ZstdFrameDecoder(), alloc, maxLength);
         }
     }
 }

@@ -28,11 +28,13 @@ import java.util.zip.GZIPOutputStream;
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
 import com.aayushatharva.brotli4j.encoder.Encoder;
 
+import com.github.luben.zstd.ZstdOutputStream;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.handler.codec.compression.Brotli;
+import org.xerial.snappy.SnappyOutputStream;
 
 /**
  * Support utilities for dealing with HTTP encoding (e.g., gzip).
@@ -75,6 +77,14 @@ final class HttpEncoders {
                 } catch (IOException e) {
                     throw new IllegalStateException(
                             "Error writing brotli header. This should not happen with byte arrays.", e);
+                }
+            case SNAPPY:
+                return new SnappyOutputStream(out);
+            case ZSTD:
+                try {
+                    return new ZstdOutputStream(out);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             default:
                 throw new IllegalArgumentException("Unexpected zlib type, this is a programming bug.");

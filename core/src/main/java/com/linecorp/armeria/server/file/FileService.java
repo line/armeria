@@ -519,7 +519,9 @@ public final class FileService extends AbstractHttpService {
         // Order matters, we use the enum ordinal as the priority to pick an encoding in. Encodings should
         // be ordered by priority.
         BROTLI(".br", "br", StreamDecoderFactory.brotli()),
-        GZIP(".gz", "gzip", StreamDecoderFactory.gzip());
+        GZIP(".gz", "gzip", StreamDecoderFactory.gzip()),
+        SNAPPY(".snappy", "snappy", StreamDecoderFactory.snappy()),
+        ZSTD(".zstd", "zstd", StreamDecoderFactory.zstd());
 
         static final Set<ContentEncoding> availableEncodings;
 

@@ -22,5 +22,7 @@ package com.linecorp.armeria.server.encoding;
 enum HttpEncodingType {
     GZIP,
     DEFLATE,
-    BROTLI
+    BROTLI,
+    SNAPPY,
+    ZSTD
 }
