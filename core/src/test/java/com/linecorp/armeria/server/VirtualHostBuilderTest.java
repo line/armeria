@@ -333,7 +333,7 @@ class VirtualHostBuilderTest {
                                                                         reqTarget, RoutingStatus.OK);
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
         final Route route = serviceConfig.route();
-        assertThat(route).isSameAs(routeA);
+        assertThat(route).isEqualTo(routeA);
     }
 
     @Test

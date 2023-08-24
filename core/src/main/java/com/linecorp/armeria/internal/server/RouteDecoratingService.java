@@ -96,6 +96,9 @@ public final class RouteDecoratingService implements HttpService {
         this.decorator = requireNonNull(decorator, "decorator");
     }
 
+    /**
+     * Adds the specified {@code prefix} to this {@code decorator}.
+     */
     public RouteDecoratingService withRoutePrefix(String prefix) {
         return new RouteDecoratingService(route.withPrefix(prefix), decorator);
     }
