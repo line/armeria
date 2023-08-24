@@ -67,12 +67,12 @@ class RouteDecoratingServiceTest {
         final WebClient baseContextPathAppliedWebClient = WebClient.of(baseContextPathAppliedServer.httpUri());
         // This GET request doesn't go through the decorator.
         final HttpResponse response3 = baseContextPathAppliedWebClient
-                .execute(HttpRequest.of(HttpMethod.GET, "/api"));
-        assertThat(response3.aggregate().get().status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+                .execute(HttpRequest.of(HttpMethod.GET, "/api/"));
+        assertThat(response3.aggregate().get().status()).isEqualTo(HttpStatus.OK);
 
         final HttpResponse response4 = baseContextPathAppliedWebClient
-                .execute(HttpRequest.of(HttpMethod.TRACE, "/api"));
-        assertThat(response4.aggregate().get().status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+                .execute(HttpRequest.of(HttpMethod.TRACE, "/api/"));
+        assertThat(response4.aggregate().get().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test

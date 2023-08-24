@@ -259,12 +259,8 @@ public final class VirtualHostBuilder implements TlsSetters {
      * Sets the contextPath of this {@link VirtualHost}.
      */
     public VirtualHostBuilder contextPath(String contextPath) {
-        this.contextPath = normalizeContextPath(contextPath);
+        this.contextPath = RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
         return this;
-    }
-
-    String contextPath() {
-        return this.contextPath;
     }
 
     @Override
