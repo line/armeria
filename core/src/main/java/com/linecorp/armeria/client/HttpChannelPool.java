@@ -63,6 +63,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyConnectException;
@@ -91,8 +92,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     // Fields for creating a new connection:
     private final Bootstraps bootstraps;
-    private final SslContext sslCtxHttp1Or2;
-    private final SslContext sslCtxHttp1Only;
+    private final int connectTimeoutMillis;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
@@ -104,15 +104,15 @@ final class HttpChannelPool implements AsyncCloseable {
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
         this.listener = listener;
-        this.sslCtxHttp1Only = sslCtxHttp1Only;
-        this.sslCtxHttp1Or2 = sslCtxHttp1Or2;
 
-        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Only, sslCtxHttp1Or2);
-    }
+        final Bootstrap inetBaseBootstrap = clientFactory.newInetBootstrap();
+        final Bootstrap unixBaseBootstrap = clientFactory.newUnixBootstrap();
 
-    private SslContext determineSslContext(SessionProtocol desiredProtocol) {
-        return desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C ?
-               sslCtxHttp1Only : sslCtxHttp1Or2;
+        connectTimeoutMillis = (Integer) inetBaseBootstrap.config().options()
+                                                          .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+
+        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only,
+                                    inetBaseBootstrap, unixBaseBootstrap);
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
@@ -148,11 +148,11 @@ final class HttpChannelPool implements AsyncCloseable {
             default:
                 throw new Error(); // Should never reach here.
         }
-        proxyHandler.setConnectTimeoutMillis(bootstraps.getConnectTimeoutMillis());
+        proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = determineSslContext(desiredProtocol);
+            final SslContext sslCtx = bootstraps.determineSslContext(desiredProtocol);
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
         }
     }
@@ -442,7 +442,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     desiredProtocol, "connection established, but session creation timed out: " + ch))) {
                 ch.close();
             }
-        }, bootstraps.getConnectTimeoutMillis(), TimeUnit.MILLISECONDS);
+        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
 
         ch.pipeline().addLast(
                 new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture,
@@ -506,7 +506,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     // Clean up old unhealthy channels by iterating from the beginning of the queue.
                     final Deque<PooledChannel> queue = getPool(protocol, key);
                     if (queue != null) {
-                        for (;;) {
+                        for (; ; ) {
                             final PooledChannel pooledChannel = queue.peekFirst();
                             if (pooledChannel == null || isHealthy(pooledChannel)) {
                                 break;
@@ -878,4 +878,5 @@ final class HttpChannelPool implements AsyncCloseable {
             }
         }
     }
+
 }
