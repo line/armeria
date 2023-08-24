@@ -243,6 +243,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
                                     GrpcStatus.fromThrowable(statusFunction, ctx, e, metadata), metadata));
                 }
+            } else {
+                // As per gRPC specification, if timeout is omitted a server should assume an infinite timeout.
+                // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#protocol
+                ctx.clearRequestTimeout();
             }
         }
 
