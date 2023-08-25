@@ -1,4 +1,4 @@
-name: Upload Gradle build scans to ge.armeria.dev
+name: Upload artifacts to ge.armeria.dev
 
 on:
   workflow_run:
@@ -8,6 +8,7 @@ on:
 
 env:
   LC_ALL: "en_US.UTF-8"
+  BUILD_JDK_VERSION: "19"
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
   RUN_ID: ${{ github.event.workflow_run.id }}
   COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -105,3 +106,34 @@ jobs:
         env:
           BUILD_SCANS: ${{ steps.upload-build-scans.outputs.BUILD_SCANS }}
           PR_NUMBER: ${{ steps.get-pr-number.outputs.PR_NUMBER }}
+
+  upload-build-cache:
+    runs-on: ${{ matrix.on }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        on: [ self-hosted, macos-12, windows-latest ]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ env.COMMIT_SHA }}
+
+      - id: setup-build-jdk
+        name: Set up build JDK ${{ env.BUILD_JDK_VERSION }}
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.BUILD_JDK_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build with Gradle
+        run: |
+          ./gradlew --no-daemon --stacktrace --build-cache build \
+          ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
+          -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
+          -Pretry=true -PfailOnPassedAfterRetry=false \
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }}
+        shell: bash
