@@ -13,10 +13,11 @@ plugins {
 
 import com.gradle.scan.plugin.PublishedBuildScan
 
+def isCi = System.getenv("CI") != null
+
 gradleEnterprise {
     server = "https://ge.armeria.dev"
     buildScan {
-        def isCi = System.getenv("CI") != null
         publishIfAuthenticated()
         publishAlways()
         uploadInBackground = !isCi
@@ -55,6 +56,12 @@ gradleEnterprise {
         capture {
             taskInputFiles = true
         }
+    }
+}
+
+buildCache {
+    remote(gradleEnterprise.buildCache) {
+        push = isCi
     }
 }
 
