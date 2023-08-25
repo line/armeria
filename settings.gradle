@@ -60,7 +60,11 @@ gradleEnterprise {
 }
 
 buildCache {
+    local {
+        enabled = false
+    }
     remote(gradleEnterprise.buildCache) {
+        enabled = true
         push = isCi
     }
 }

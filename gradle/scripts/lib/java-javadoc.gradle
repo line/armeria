@@ -352,7 +352,7 @@ allprojects {
                 def url2File = new JsonSlurper().parseText(javadocCacheMapFile.text)
                 url2File.entrySet().forEach { e ->
                     options {
-                        linksOffline(e.key, e.value)
+                        linksOffline(e.key, "${projectDir.relativePath(rootProject.projectDir)}/${e.value}")
                     }
                 }
             }
@@ -407,7 +407,7 @@ class DownloadJavadocPackageListTask extends DefaultTask {
         links.entrySet().forEach {
             def (success, url, file) = addOfflineLink(it.key, it.value)
             if (success) {
-                url2File[url] = file.toString()
+                url2File[url] = project.getRootDir().relativePath(file).toString()
             }
         }
         javadocCacheMapFile.createNewFile()
