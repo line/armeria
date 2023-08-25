@@ -28,7 +28,6 @@ import java.util.zip.GZIPOutputStream;
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
 import com.aayushatharva.brotli4j.encoder.Encoder;
 
-import com.github.luben.zstd.ZstdOutputStream;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -80,12 +79,6 @@ final class HttpEncoders {
                 }
             case SNAPPY:
                 return new SnappyOutputStream(out);
-            case ZSTD:
-                try {
-                    return new ZstdOutputStream(out);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
             default:
                 throw new IllegalArgumentException("Unexpected zlib type, this is a programming bug.");
         }

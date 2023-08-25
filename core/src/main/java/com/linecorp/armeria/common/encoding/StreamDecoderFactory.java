@@ -56,11 +56,6 @@ public interface StreamDecoderFactory extends com.linecorp.armeria.client.encodi
     static StreamDecoderFactory snappy() { return StreamDecoderFactories.SNAPPY; }
 
     /**
-     * Returns the {@link StreamDecoderFactory} for {@code "zstd"} content encoding.
-     */
-    static StreamDecoderFactory zstd() { return StreamDecoderFactories.ZSTD; }
-
-    /**
      * Returns the value of the Content-Encoding header which this factory applies to.
      */
     @Override

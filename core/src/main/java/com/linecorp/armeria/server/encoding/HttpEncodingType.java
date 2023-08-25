@@ -23,6 +23,5 @@ enum HttpEncodingType {
     GZIP,
     DEFLATE,
     BROTLI,
-    SNAPPY,
-    ZSTD
+    SNAPPY
 }

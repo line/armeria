@@ -520,8 +520,7 @@ public final class FileService extends AbstractHttpService {
         // be ordered by priority.
         BROTLI(".br", "br", StreamDecoderFactory.brotli()),
         GZIP(".gz", "gzip", StreamDecoderFactory.gzip()),
-        SNAPPY(".snappy", "snappy", StreamDecoderFactory.snappy()),
-        ZSTD(".zstd", "zstd", StreamDecoderFactory.zstd());
+        SNAPPY(".snappy", "snappy", StreamDecoderFactory.snappy());
 
         static final Set<ContentEncoding> availableEncodings;
 
