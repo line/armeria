@@ -28,7 +28,6 @@ import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * Builds a new {@link HttpResponse}.
@@ -186,6 +185,14 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      * Sets the {@link Publisher} for this response.
      */
     @Override
+    public HttpResponseBuilder content(Publisher<? extends HttpData> content) {
+        return (HttpResponseBuilder) super.content(content);
+    }
+
+    /**
+     * Sets the {@link Publisher} for this response.
+     */
+    @Override
     public HttpResponseBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
         return (HttpResponseBuilder) super.content(contentType, content);
     }
@@ -299,8 +306,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
             if (trailers == null) {
                 return HttpResponse.of(responseHeaders, publisher);
             } else {
-                return HttpResponse.of(responseHeaders,
-                                       StreamMessage.concat(publisher, StreamMessage.of(trailers.build())));
+                return HttpResponse.of(responseHeaders, publisher, trailers.build());
             }
         }
     }

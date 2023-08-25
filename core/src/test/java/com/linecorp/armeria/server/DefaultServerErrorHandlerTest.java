@@ -58,7 +58,7 @@ class DefaultServerErrorHandlerTest {
 
         sb.service("/", (ctx, req) -> {
             // Consume the request to trigger 413 Request Entity Too Large.
-            return HttpResponse.from(req.aggregate().thenApply(unused -> HttpResponse.of(200)));
+            return HttpResponse.of(req.aggregate().thenApply(unused -> HttpResponse.of(200)));
         });
 
         sb.annotatedService(new Object() {

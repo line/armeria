@@ -88,12 +88,26 @@ export interface Struct {
   descriptionInfo: DescriptionInfo;
 }
 
+export enum RoutePathType {
+  EXACT = 'EXACT',
+  PREFIX = 'PREFIX',
+  PARAMETERIZED = 'PARAMETERIZED',
+  REGEX = 'REGEX',
+  REGEX_WITH_PREFIX = 'REGEX_WITH_PREFIX',
+}
+
+export interface Route {
+  pathType: RoutePathType;
+  patternString: string;
+}
+
 export interface SpecificationData {
   services: Service[];
   enums: Enum[];
   structs: Struct[];
   exceptions: Struct[];
   exampleHeaders: { [name: string]: string }[];
+  docServiceRoute?: Route;
 }
 
 export function simpleName(fullName: string): string {
@@ -104,6 +118,11 @@ export function simpleName(fullName: string): string {
 export function packageName(fullName: string): string {
   const lastDotIdx = fullName.lastIndexOf('.');
   return lastDotIdx >= 0 ? fullName.substring(0, lastDotIdx) : fullName;
+}
+
+export function extractUrlPath(method: Method): string {
+  const endpoints = method.endpoints;
+  return endpoints[0].pathMapping.substring('exact:'.length);
 }
 
 interface NamedObject {
@@ -147,6 +166,8 @@ export class Specification {
 
   private readonly uniqueStructNames: boolean;
 
+  private readonly docServiceRoute?: Route;
+
   constructor(data: SpecificationData) {
     this.data = JSON.parse(JSON.stringify(data));
 
@@ -163,6 +184,7 @@ export class Specification {
     this.uniqueStructNames = hasUniqueNames(this.structsByName);
 
     this.updateDocStrings();
+    this.docServiceRoute = this.data.docServiceRoute;
   }
 
   public getServices(): Service[] {
@@ -195,6 +217,10 @@ export class Specification {
 
   public getStructByName(name: string): Struct | undefined {
     return this.structsByName.get(name);
+  }
+
+  public getDocServiceRoute(): Route | undefined {
+    return this.docServiceRoute;
   }
 
   public hasUniqueEnumNames(): boolean {

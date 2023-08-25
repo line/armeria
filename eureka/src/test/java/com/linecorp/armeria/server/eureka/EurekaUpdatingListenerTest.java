@@ -42,11 +42,13 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@GenerateNativeImageTrace
 class EurekaUpdatingListenerTest {
 
     private static final String INSTANCE_ID = "i-00000000";
@@ -79,7 +81,7 @@ class EurekaUpdatingListenerTest {
                     future.complete(HttpResponse.of(HttpStatus.NO_CONTENT));
                     return null;
                 });
-                return HttpResponse.from(future);
+                return HttpResponse.of(future);
             });
             sb.service("/apps/" + APP_NAME + '/' + INSTANCE_ID, (ctx, req) -> {
                 req.aggregate();

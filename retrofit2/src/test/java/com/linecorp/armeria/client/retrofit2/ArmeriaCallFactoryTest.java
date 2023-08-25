@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -78,6 +79,7 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 import retrofit2.http.Url;
 
+@GenerateNativeImageTrace
 class ArmeriaCallFactoryTest {
     public static class Pojo {
         @Nullable
@@ -189,7 +191,7 @@ class ArmeriaCallFactoryTest {
 
                   @Override
                   protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
+                      return HttpResponse.of(req.aggregate().handle((aReq, cause) -> {
                           final String name = ctx.mappedPath().substring(1);
                           final int age = QueryParams.fromQueryString(ctx.query()).getInt("age", -1);
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
@@ -216,7 +218,7 @@ class ArmeriaCallFactoryTest {
               .service("/queryString", new AbstractHttpService() {
                   @Override
                   protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
+                      return HttpResponse.of(req.aggregate().handle((aReq, cause) -> {
                           final QueryParams params = QueryParams.fromQueryString(ctx.query());
                           return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
                                                  "{\"name\":\"" + params.get("name", "<NULL>") + "\", " +
@@ -227,7 +229,7 @@ class ArmeriaCallFactoryTest {
               .service("/post", new AbstractHttpService() {
                   @Override
                   protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
+                      return HttpResponse.of(req.aggregate().handle((aReq, cause) -> {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                      MediaType.PLAIN_TEXT_UTF_8,
@@ -250,7 +252,7 @@ class ArmeriaCallFactoryTest {
               .service("/postForm", new AbstractHttpService() {
                   @Override
                   protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
+                      return HttpResponse.of(req.aggregate().handle((aReq, cause) -> {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                      MediaType.PLAIN_TEXT_UTF_8,
@@ -267,7 +269,7 @@ class ArmeriaCallFactoryTest {
               .service("/postCustomContentType", new AbstractHttpService() {
                   @Override
                   protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      return HttpResponse.from(req.aggregate().handle((aReq, cause) -> {
+                      return HttpResponse.of(req.aggregate().handle((aReq, cause) -> {
                           if (cause != null) {
                               return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                      MediaType.PLAIN_TEXT_UTF_8,

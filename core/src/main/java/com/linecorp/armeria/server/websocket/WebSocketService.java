@@ -15,19 +15,17 @@
  */
 package com.linecorp.armeria.server.websocket;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.generateSecWebSocketAccept;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newCloseWebSocketFrame;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
-import com.google.common.hash.Hashing;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.HttpData;
@@ -46,7 +44,6 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
-import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -67,8 +64,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 public final class WebSocketService extends AbstractHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketService.class);
-
-    private static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     private static final String SUB_PROTOCOL_WILDCARD = "*";
 
@@ -192,19 +187,10 @@ public final class WebSocketService extends AbstractHttpService {
                              HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, selectedSubprotocol));
     }
 
-    // Generate Sec-WebSocket-Accept using Sec-WebSocket-Key.
-    // See https://datatracker.ietf.org/doc/html/rfc6455#section-11.3.3
-    private static String generateSecWebSocketAccept(String webSocketKey) {
-        final String acceptSeed = webSocketKey + WEBSOCKET_13_ACCEPT_GUID;
-        final byte[] sha1 = Hashing.sha1().hashBytes(acceptSeed.getBytes(StandardCharsets.US_ASCII)).asBytes();
-        return Base64.getEncoder().encodeToString(sha1);
-    }
-
     private HttpResponse handleUpgradeRequest(ServiceRequestContext ctx, HttpRequest req,
                                               ResponseHeaders responseHeaders) {
-        final WebSocketFrameDecoder decoder =
-                new WebSocketFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch,
-                                          true); // client sends masked frames.
+        final WebSocketServiceFrameDecoder decoder =
+                new WebSocketServiceFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch);
         final StreamMessage<WebSocketFrame> inboundFrames = req.decode(decoder, ctx.alloc());
         final WebSocket outboundFrames = handler.handle(ctx, new WebSocketWrapper(inboundFrames));
         decoder.setOutboundWebSocket(outboundFrames);

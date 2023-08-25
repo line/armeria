@@ -63,7 +63,7 @@ class DecodingServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/decodeTest", (ctx1, req1) -> HttpResponse.from(
+            sb.service("/decodeTest", (ctx1, req1) -> HttpResponse.of(
                     req1.aggregate()
                         .thenApply(aggregated -> {
                             return HttpResponse.of("Hello " + aggregated.contentUtf8() + '!');
@@ -73,7 +73,7 @@ class DecodingServiceTest {
               .path("/length-limit")
               .maxRequestLength(ORIGINAL_MESSAGE_LENGTH - 1)
               .build((ctx, req) -> {
-                  return HttpResponse.from(req.aggregate().thenApply(agg -> {
+                  return HttpResponse.of(req.aggregate().thenApply(agg -> {
                       // The large decoded content should be rejected by DecodingService.
                       return HttpResponse.of("Should never reach here");
                   }));

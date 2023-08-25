@@ -60,6 +60,13 @@ public final class Scheme implements Comparable<Scheme> {
                 final Scheme scheme = new Scheme(f, p);
                 schemes.put(ftxt + '+' + ptxt, scheme);
                 schemes.put(ptxt + '+' + ftxt, scheme);
+                if (SerializationFormat.WS == f) {
+                    if (SessionProtocol.HTTP == p) {
+                        schemes.put("ws", scheme);
+                    } else if (SessionProtocol.HTTPS == p) {
+                        schemes.put("wss", scheme);
+                    }
+                }
             }
         }
 

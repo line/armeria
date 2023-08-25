@@ -28,21 +28,21 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.kotlin.ExampleService;
+import com.linecorp.armeria.server.kotlin.TestService;
 
 import kotlin.coroutines.Continuation;
 
 class KotlinUtilWithKotlinDependenciesTest {
-    final ExampleService exampleService;
+    final TestService testService;
     final Method normal;
     final Method suspendingUnit;
     final Method suspendingInt;
 
     KotlinUtilWithKotlinDependenciesTest() throws NoSuchMethodException {
-        exampleService = new ExampleService();
-        normal = ExampleService.class.getDeclaredMethod("normal");
-        suspendingUnit = ExampleService.class.getDeclaredMethod("suspendingUnit", Continuation.class);
-        suspendingInt = ExampleService.class.getDeclaredMethod("suspendingInt", Continuation.class);
+        testService = new TestService();
+        normal = TestService.class.getDeclaredMethod("normal");
+        suspendingUnit = TestService.class.getDeclaredMethod("suspendingUnit", Continuation.class);
+        suspendingInt = TestService.class.getDeclaredMethod("suspendingInt", Continuation.class);
     }
 
     @Test
@@ -56,7 +56,7 @@ class KotlinUtilWithKotlinDependenciesTest {
 
         final RequestContext ctx = getRequestContext();
         final CompletableFuture<?> res =
-                (CompletableFuture<?>) callSuspendingMethod.invoke(suspendingInt, exampleService,
+                (CompletableFuture<?>) callSuspendingMethod.invoke(suspendingInt, testService,
                                                                    new Object[0], ctx.eventLoop(), ctx);
         assertThat(res.get()).isEqualTo(1);
     }
@@ -67,7 +67,7 @@ class KotlinUtilWithKotlinDependenciesTest {
 
         final RequestContext ctx = getRequestContext();
         final CompletableFuture<?> res =
-                (CompletableFuture<?>) callSuspendingMethod.invoke(suspendingUnit, exampleService,
+                (CompletableFuture<?>) callSuspendingMethod.invoke(suspendingUnit, testService,
                                                                    new Object[0], ctx.eventLoop(), ctx);
         assertThat(res.get()).isNull();
     }

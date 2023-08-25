@@ -85,7 +85,7 @@ const Description: React.FunctionComponent<DescriptionInfoProps> = ({
         />
       )}
       {descriptionInfo && descriptionInfo.markup === 'NONE' && (
-        <Typography variant="body2">
+        <Typography variant="body2" component="span">
           {renderDefaultDocString(descriptionInfo.docString)}
         </Typography>
       )}

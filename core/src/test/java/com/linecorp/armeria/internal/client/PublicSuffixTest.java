@@ -20,6 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
+
+@GenerateNativeImageTrace
 class PublicSuffixTest {
 
     private static final PublicSuffix ps = PublicSuffix.get();
