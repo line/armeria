@@ -1,5 +1,5 @@
 {
     "componentChunkName": "component---src-pages-release-notes-1-25-1-mdx",
     "path": "/release-notes/1.25.1/",
-    "result": {"pageContext":{"frontmatter":{"date":"2023-08-23T00:00:00.000Z"},"hrefs":{"next":{"label":"Older: 1.25.0","href":"/release-notes/1.25.0"}}}},
+    "result": {"pageContext":{"frontmatter":{"date":"2023-08-23T00:00:00.000Z"},"hrefs":{"prev":{"label":"Newer: 1.25.2","href":"/release-notes/1.25.2"},"next":{"label":"Older: 1.25.0","href":"/release-notes/1.25.0"}}}},
     "staticQueryHashes": ["1552981879","512065377","636866790"]}
