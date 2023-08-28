@@ -29,7 +29,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
@@ -59,8 +58,8 @@ class HttpResponseDecoderTest {
     };
 
     /**
-     * This test would be passed because the {@code cancelAction} method of the {@link HttpResponseWrapper} is
-     * invoked in the event loop of the {@link Channel}.
+     * This test would be passed because the {@code cancelAction} method of the
+     * {@link HttpResponseWrapper} is invoked in the event loop of the {@link Channel}.
      */
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})

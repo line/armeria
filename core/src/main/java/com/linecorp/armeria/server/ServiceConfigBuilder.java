@@ -312,7 +312,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         } else if (!webSocket || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
             requestTimeoutMillis = defaultRequestTimeoutMillis;
         } else {
-            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_TIMEOUT_MILLIS;
+            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS;
         }
 
         final long maxRequestLength;
@@ -321,7 +321,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         } else if (!webSocket || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
             maxRequestLength = defaultMaxRequestLength;
         } else {
-            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_LENGTH;
+            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH;
         }
 
         final long requestAutoAbortDelayMillis;

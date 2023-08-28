@@ -24,7 +24,9 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.common.zookeeper.CuratorXNodeValueCodec;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
+@GenerateNativeImageTrace
 class CuratorDiscoverySpecTest {
 
     @Test

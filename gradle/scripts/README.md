@@ -319,7 +319,7 @@ automatically:
 - `publish` - Makes a project publish its artifact to a Maven repository
 - `bom` - Makes a project publish Maven BOM based on `dependencies.toml`
 - `shade`, `relocate` and `trim` - Makes a Java project produce an additional 'shaded' JAR
-- `reactor-grpc`, `rxgrpc` or `kotlin-grpc` - Enables [`reactor-grpc`](https://github.com/salesforce/reactive-grpc/tree/master/reactor), [`rxgrpc`](https://github.com/salesforce/reactive-grpc/tree/master/rx-java) or [`kotlin-grpc`](https://github.com/grpc/grpc-kotlin) support to the project
+- `reactor-grpc`, `rxgrpc`, `kotlin-grpc` or `krotodc-grpc` - Enables [`reactor-grpc`](https://github.com/salesforce/reactive-grpc/tree/master/reactor), [`rxgrpc`](https://github.com/salesforce/reactive-grpc/tree/master/rx-java), [`kotlin-grpc`](https://github.com/grpc/grpc-kotlin) or [`krotodc-grpc`](https://github.com/mscheong01/krotoDC) support to the project
 
 We will learn what these flags exactly do in the following sections.
 

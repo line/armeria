@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -43,7 +44,7 @@ class DefaultWebClientTest {
     @Test
     void testRequestParamsUndefinedEndPoint() {
         final String path = "http://127.0.0.1/helloWorld/test?q1=foo";
-        final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
+        final WebClient client = WebClient.of(UNDEFINED_URI);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path))).aggregate();
@@ -54,7 +55,7 @@ class DefaultWebClientTest {
     @Test
     void testWithoutRequestParamsUndefinedEndPoint() {
         final String path = "http://127.0.0.1/helloWorld/test";
-        final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
+        final WebClient client = WebClient.of(UNDEFINED_URI);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path))).aggregate();
@@ -118,7 +119,7 @@ class DefaultWebClientTest {
         final QueryParams queryParams = QueryParams.builder()
                                                    .add("q1", "foo")
                                                    .build();
-        final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
+        final WebClient client = WebClient.of(UNDEFINED_URI);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.get(path, queryParams).aggregate();
             assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");

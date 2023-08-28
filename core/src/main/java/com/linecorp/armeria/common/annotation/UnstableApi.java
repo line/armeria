@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
  * Indicates the API of the target is not mature enough to guarantee the compatibility between releases.
  * Its behavior, signature or even existence might change without a prior notice at any point.
  */
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.CLASS)
 @Target({
         ElementType.ANNOTATION_TYPE,
         ElementType.CONSTRUCTOR,

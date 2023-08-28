@@ -87,7 +87,8 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponseVersionS
                     HttpResponse.of(armeriaHeaders.build(),
                                     publisher.map(factoryWrapper::toHttpData)
                                              .contextWrite(contextView)
-                                             .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release));
+                                             .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release)
+                    );
             future.complete(response);
             return Mono.fromFuture(response.whenComplete())
                        .onErrorResume(cause -> cause instanceof CancelledSubscriptionException ||

@@ -65,6 +65,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.testing.BlockingUtils;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -86,6 +87,7 @@ import brave.sampler.Sampler;
 import testing.brave.TestService;
 import testing.brave.TestService.AsyncIface;
 
+@GenerateNativeImageTrace
 class BraveIntegrationTest {
 
     private static final SpanHandlerImpl spanHandler = new SpanHandlerImpl();
