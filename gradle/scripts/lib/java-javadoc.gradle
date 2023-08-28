@@ -26,14 +26,10 @@ allprojects {
     }
 }
 
-def cacheDir = rootProject.buildDir.toPath().resolve(cacheDirName).toFile()
+def cacheDir = rootProject.layout.buildDirectory.dir(cacheDirName)
 def offlineDownloadTask =
         rootProject.tasks.register("downloadJavadocPackageList", DownloadJavadocPackageListTask.class,
                 cacheDir, javadocLinkMap, offlineJavadoc)
-
-clean {
-    delete cacheDir
-}
 
 // Configure the Javadoc tasks of all projects.
 allprojects {
@@ -347,7 +343,7 @@ allprojects {
         }
 
         doFirst {
-            def javadocCacheMapFile = cacheDir.toPath().resolve('javadocCacheMap').toFile()
+            def javadocCacheMapFile = cacheDir.get().file('javadocCacheMap').asFile
             if (javadocCacheMapFile.exists()) {
                 def url2File = new JsonSlurper().parseText(javadocCacheMapFile.text)
                 url2File.entrySet().forEach { e ->
@@ -377,24 +373,24 @@ class DownloadJavadocPackageListTask extends DefaultTask {
     JavaVersion javaVersion = JavaVersion.current()
 
     @OutputDirectory
-    File javadocCacheDir
+    Provider<Directory> javadocCacheDir
 
     @Internal
     def visitedUrls = new HashSet<>()
 
     @OutputFile
-    File javadocCacheMapFile
+    Provider<RegularFile> javadocCacheMapFile
 
     @Input
     boolean offlineJavadoc
 
     @Inject
-    DownloadJavadocPackageListTask(File javadocCacheDir, Map<String, String> links,
+    DownloadJavadocPackageListTask(Provider<Directory> javadocCacheDir, Map<String, String> links,
                                    boolean offlineJavadoc) {
         this.links = links
         this.javadocCacheDir = javadocCacheDir
         this.offlineJavadoc = offlineJavadoc
-        this.javadocCacheMapFile = new File(javadocCacheDir, 'javadocCacheMap')
+        this.javadocCacheMapFile = javadocCacheDir.map {it -> it.file('javadocCacheMapFile')}
     }
 
     @TaskAction
@@ -410,17 +406,19 @@ class DownloadJavadocPackageListTask extends DefaultTask {
                 url2File[url] = project.getRootDir().relativePath(file).toString()
             }
         }
-        javadocCacheMapFile.createNewFile()
-        javadocCacheMapFile.withPrintWriter('UTF-8') { out ->
+
+        def file = javadocCacheMapFile.get().asFile
+        file.createNewFile()
+        file.withPrintWriter('UTF-8') { out ->
             out.println(new JsonBuilder(url2File).toPrettyString())
         }
     }
 
     def addOfflineLink(String name, String javadocUrl) {
         def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
-        def listFileDir = new File(javadocCacheDir, "${name}/${javadocUrlSha1}")
-        def packageListFile = new File(listFileDir, 'package-list')
-        def elementListFile = new File(listFileDir, 'element-list')
+        def listFileDir = javadocCacheDir.get().dir("${name}/${javadocUrlSha1}")
+        def packageListFile = listFileDir.file('package-list').asFile
+        def elementListFile = listFileDir.file('element-list').asFile
 
         def success = packageListFile.exists() ||
                 JavaVersion.current() >= JavaVersion.VERSION_1_10 && elementListFile.exists()
@@ -455,7 +453,7 @@ class DownloadJavadocPackageListTask extends DefaultTask {
             }
         }
 
-        return [success, javadocUrl, listFileDir]
+        return [success, javadocUrl, listFileDir.asFile]
     }
 
     private def downloadListFile(File listFile, URL listUrl) {
