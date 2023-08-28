@@ -42,24 +42,41 @@ import com.linecorp.armeria.common.annotation.Nullable;
 // Forked from <a href="https://github.com/micrometer-metrics/micrometer/blob/8339d57bef8689beb8d7a18b429a166f6595f2af/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/system/ProcessorMetrics.java">ProcessorMetrics.java</a> in the micrometer core.
 final class CpuHealthChecker implements HealthChecker {
 
+    private static final DoubleSupplier currentSystemCpuUsageSupplier;
+
+    private static final DoubleSupplier currentProcessCpuUsageSupplier;
+
+    private static final OperatingSystemMXBean operatingSystemBean;
+
+    private static final Class<?> operatingSystemBeanClass;
+
     private static final List<String> OPERATING_SYSTEM_BEAN_CLASS_NAMES = ImmutableList.of(
             "com.ibm.lang.management.OperatingSystemMXBean", // J9
             "com.sun.management.OperatingSystemMXBean" // HotSpot
     );
 
-    private final OperatingSystemMXBean operatingSystemBean;
-
-    private final Class<?> operatingSystemBeanClass;
+    @Nullable
+    @VisibleForTesting
+    static final Method systemCpuUsage;
 
     @Nullable
     @VisibleForTesting
-    final Method systemCpuUsage;
+    static final Method processCpuUsage;
+
+    static {
+        operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));;
+        operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
+        systemCpuUsage = detectMethod("getSystemCpuLoad");
+        processCpuUsage = detectMethod("getProcessCpuLoad");
+        currentSystemCpuUsageSupplier = () -> invoke(systemCpuUsage);
+        currentProcessCpuUsageSupplier = () -> invoke(processCpuUsage);
+    }
 
     private final double targetCpuUsage;
 
-    @Nullable
-    @VisibleForTesting
-    final Method processCpuUsage;
+    private final DoubleSupplier systemCpuUsageSupplier;
+
+    private final DoubleSupplier processCpuUsageSupplier;
 
     private final double targetProcessCpuLoad;
 
@@ -70,43 +87,22 @@ final class CpuHealthChecker implements HealthChecker {
     /**
      * Instantiates a new Default cpu health checker.
      *
-     * @param targetCpuUsage the target cpu usage
-     * @param targetProcessCpuLoad the target process cpu usage
+     * @param cpuUsageThreshold the target cpu usage
+     * @param processCpuLoadThreshold the target process cpu usage
      */
-    private CpuHealthChecker(double targetCpuUsage, double targetProcessCpuLoad) {
-        this.targetCpuUsage = targetCpuUsage;
-        this.targetProcessCpuLoad = targetProcessCpuLoad;
-        this.operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
-        this.operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
-        this.systemCpuUsage = detectMethod("getSystemCpuLoad");
-        this.processCpuUsage = detectMethod("getProcessCpuLoad");
+    private CpuHealthChecker(double cpuUsageThreshold, double processCpuLoadThreshold) {
+        this(cpuUsageThreshold, processCpuLoadThreshold, currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
     }
 
-    public static CpuHealthChecker of(double targetCpuUsage, double targetProcessCpuLoad) {
-        return new CpuHealthChecker(targetCpuUsage, targetProcessCpuLoad);
+    private CpuHealthChecker(double cpuUsageThreshold, double processCpuLoadThreshold,
+                             DoubleSupplier systemCpuUsageSupplier, DoubleSupplier processCpuUsageSupplier) {
+        this.targetCpuUsage = cpuUsageThreshold;
+        this.targetProcessCpuLoad = processCpuLoadThreshold;
+        this.systemCpuUsageSupplier = systemCpuUsageSupplier;
+        this.processCpuUsageSupplier = processCpuUsageSupplier;
     }
 
-    /**
-     * Returns true if and only if System CPU Usage and Processes cpu usage is below the target usage.
-     */
-    @Override
-    public boolean isHealthy() {
-        assert systemCpuUsage != null;
-        assert processCpuUsage != null;
-        final double currentSystemCpuUsage = invoke(systemCpuUsage);
-        final double currentProcessCpuUsage = invoke(processCpuUsage);
-        return currentSystemCpuUsage <= targetCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
-    }
-
-    @VisibleForTesting
-    public boolean isHealthy(
-            DoubleSupplier currentSystemCpuUsageSupplier, DoubleSupplier currentProcessCpuUsageSupplier) {
-        final double currentSystemCpuUsage = currentSystemCpuUsageSupplier.getAsDouble();
-        final double currentProcessCpuUsage = currentProcessCpuUsageSupplier.getAsDouble();
-        return currentSystemCpuUsage <= targetCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
-    }
-
-    private double invoke(final Method method) {
+    private static double invoke(final Method method) {
         MethodHandle mh = CACHE.get(method.getName());
         if (mh == null) {
             try {
@@ -126,7 +122,7 @@ final class CpuHealthChecker implements HealthChecker {
     }
 
     @Nullable
-    private Method detectMethod(final String name) {
+    private static Method detectMethod(final String name) {
         try {
             // ensure the Bean we have is actually an instance of the interface
             requireNonNull(operatingSystemBeanClass.cast(operatingSystemBean));
@@ -145,5 +141,27 @@ final class CpuHealthChecker implements HealthChecker {
             }
         }
         return null;
+    }
+
+    public static CpuHealthChecker of(double targetCpuUsage, double targetProcessCpuLoad) {
+        return new CpuHealthChecker(targetCpuUsage, targetProcessCpuLoad);
+    }
+
+    /**
+     * Returns true if and only if System CPU Usage and Processes cpu usage is below the target usage.
+     */
+    @Override
+    public boolean isHealthy() {
+        final double currentSystemCpuUsage = systemCpuUsageSupplier.getAsDouble();
+        final double currentProcessCpuUsage = processCpuUsageSupplier.getAsDouble();
+        return currentSystemCpuUsage <= targetCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
+    }
+
+    @VisibleForTesting
+    boolean isHealthy(
+            DoubleSupplier currentSystemCpuUsageSupplier, DoubleSupplier currentProcessCpuUsageSupplier) {
+        final double currentSystemCpuUsage = currentSystemCpuUsageSupplier.getAsDouble();
+        final double currentProcessCpuUsage = currentProcessCpuUsageSupplier.getAsDouble();
+        return currentSystemCpuUsage <= targetCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
     }
 }

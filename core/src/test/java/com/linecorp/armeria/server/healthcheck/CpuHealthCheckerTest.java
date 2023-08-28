@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 class CpuHealthCheckerTest {
 
     @Test
-    void testGatheringCpuUsageInformation1() {
+    void shouldGatherCpuUsageInformationAndCheckHealth() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
         final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
         final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
@@ -36,7 +36,7 @@ class CpuHealthCheckerTest {
     }
 
     @Test
-    void testGatheringCpuUsageInformation2() {
+    void shouldGatherCpuUsageInformationAndCheckHealthWithBoundaryCpuUsage() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
         final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
         final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
@@ -46,7 +46,7 @@ class CpuHealthCheckerTest {
     }
 
     @Test
-    void testGatheringCpuUsageInformation3() {
+    void shouldGatherCpuUsageInformationAndCheckHealthWithBoundaryProcessUsage() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
         final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
         final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
