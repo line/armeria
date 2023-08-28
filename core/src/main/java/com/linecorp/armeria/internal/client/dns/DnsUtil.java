@@ -18,13 +18,16 @@ package com.linecorp.armeria.internal.client.dns;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.UnknownHostException;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.DnsTimeoutException;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
@@ -35,6 +38,7 @@ import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 
 public final class DnsUtil {
 
@@ -124,6 +128,25 @@ public final class DnsUtil {
 
     public static long defaultDnsQueryTimeoutMillis() {
         return DEFAULT_DNS_QUERY_TIMEOUT_MILLIS;
+    }
+
+    public static boolean isDnsQueryTimedOut(Throwable cause) {
+        final Throwable rootCause = Throwables.getRootCause(cause);
+        if (rootCause instanceof DnsTimeoutException ||
+            rootCause instanceof DnsNameResolverTimeoutException) {
+            return true;
+        }
+
+        if (rootCause instanceof UnknownHostException) {
+            for (Throwable suppressedCause : rootCause.getSuppressed()) {
+                final Throwable suppressedRootCause = Throwables.getRootCause(suppressedCause);
+                if (suppressedRootCause instanceof DnsNameResolverTimeoutException) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private DnsUtil() {}

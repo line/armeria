@@ -34,8 +34,7 @@ package com.linecorp.armeria.internal.common.websocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
@@ -45,14 +44,12 @@ import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
-import com.linecorp.armeria.internal.common.RequestContextExtension;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> {
+public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> {
 
     // Forked from Netty 4.1.92 https://github.com/netty/netty/blob/e8df52e442629214e0355528c00e873e213f0139/codec-http/src/main/java/io/netty/handler/codec/http/websocketx/WebSocket08FrameDecoder.java
 
@@ -67,10 +64,9 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
         CORRUPT
     }
 
-    private final ServiceRequestContext ctx;
+    private final RequestContext ctx;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
-    private final boolean expectMaskedFrames;
     @Nullable
     private WebSocket outboundFrames;
 
@@ -85,12 +81,10 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     private boolean receivedClosingHandshake;
     private State state = State.READING_FIRST;
 
-    public WebSocketFrameDecoder(ServiceRequestContext ctx, int maxFramePayloadLength,
-                                 boolean allowMaskMismatch, boolean expectMaskedFrames) {
+    protected WebSocketFrameDecoder(RequestContext ctx, int maxFramePayloadLength, boolean allowMaskMismatch) {
         this.ctx = ctx;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
-        this.expectMaskedFrames = expectMaskedFrames;
     }
 
     public void setOutboundWebSocket(WebSocket outboundFrames) {
@@ -136,7 +130,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         throw protocolViolation("RSV != 0 and no extension negotiated, RSV:" + frameRsv);
                     }
 
-                    if (!allowMaskMismatch && expectMaskedFrames != frameMasked) {
+                    if (!allowMaskMismatch && expectMaskedFrames() != frameMasked) {
                         throw protocolViolation("received a frame that is not masked as expected");
                     }
 
@@ -273,7 +267,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         final CloseWebSocketFrame decodedFrame = WebSocketFrame.ofPooledClose(payloadBuffer);
                         out.add(decodedFrame);
                         logger.trace("{} is decoded.", decodedFrame);
-                        closeRequest();
+                        onCloseFrameRead();
                         continue; // to while loop
                     }
 
@@ -303,6 +297,10 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
             }
         }
     }
+
+    protected abstract boolean expectMaskedFrames();
+
+    protected abstract void onCloseFrameRead();
 
     private void unmask(ByteBuf frame) {
         long longMask = mask & 0xFFFFFFFFL;
@@ -366,19 +364,17 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
         }
     }
 
-    private void closeRequest() {
-        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
-        assert ctxExtension != null;
-        final Request request = ctxExtension.originalRequest();
-        assert request instanceof HttpRequestWriter : request;
-        //noinspection OverlyStrongTypeCast
-        ((HttpRequestWriter) request).close();
-    }
-
     @Override
     public void processOnError(Throwable cause) {
-        if (outboundFrames != null) {
-            outboundFrames.abort(cause);
+        // If an exception from the inbound stream is raised after receiving a close frame,
+        // we should not abort the outbound stream.
+        if (!receivedClosingHandshake) {
+            if (outboundFrames != null) {
+                outboundFrames.abort(cause);
+            }
         }
+        onProcessOnError(cause);
     }
+
+    protected void onProcessOnError(Throwable cause) {}
 }

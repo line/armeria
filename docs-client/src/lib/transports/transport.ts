@@ -27,6 +27,7 @@ export default abstract class Transport {
   public async send(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
@@ -53,6 +54,7 @@ export default abstract class Transport {
     const httpResponse = await this.doSend(
       method,
       filledHeaders,
+      pathPrefix,
       bodyJson,
       endpointPath,
       queries,
@@ -155,6 +157,7 @@ export default abstract class Transport {
   protected abstract doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,

@@ -39,6 +39,7 @@ import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -48,8 +49,13 @@ public class MultipartEncoderTckTest extends PublisherVerification<HttpData> {
 
     // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderTckTest.java
 
+    static {
+        // Make sure the worker group is initialized.
+        CommonPools.workerGroup().next().submit(() -> {});
+    }
+
     public MultipartEncoderTckTest() {
-        super(new TestEnvironment(200));
+        super(new TestEnvironment(500));
     }
 
     @Override

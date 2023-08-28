@@ -261,6 +261,39 @@ class HttpResponseBuilderTest {
         assertThat(aggregatedRes.trailers().get("trailer-name")).isEqualTo("trailer-value");
     }
 
+    @Test
+    void buildWithHeadersAndPublisherContentAndTrailers() {
+        final HttpResponse res = HttpResponse.builder()
+                                             .ok()
+                                             .headers(HttpHeaders.of("header-1",
+                                                                     "header-value1",
+                                                                     "header-2",
+                                                                     "header-value2"))
+                                             .content(MediaType.PLAIN_TEXT_UTF_8,
+                                                      StreamMessage.of(
+                                                              HttpData.ofUtf8(
+                                                                      "Armeriaはいろんな使い方がアルメリア"
+                                                              )
+                                                      ))
+                                             .trailers(HttpHeaders.of("trailer-1",
+                                                                      "trailer-value1",
+                                                                      "trailer-2",
+                                                                      "trailer-value2"))
+                                             .build();
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedRes.headers().contains("header-1")).isTrue();
+        assertThat(aggregatedRes.headers().contains("header-2")).isTrue();
+        assertThat(aggregatedRes.headers().get("header-1")).isEqualTo("header-value1");
+        assertThat(aggregatedRes.headers().get("header-2")).isEqualTo("header-value2");
+        assertThat(aggregatedRes.contentUtf8()).isEqualTo("Armeriaはいろんな使い方がアルメリア");
+        assertThat(aggregatedRes.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(aggregatedRes.trailers().contains("trailer-1")).isTrue();
+        assertThat(aggregatedRes.trailers().contains("trailer-2")).isTrue();
+        assertThat(aggregatedRes.trailers().get("trailer-1")).isEqualTo("trailer-value1");
+        assertThat(aggregatedRes.trailers().get("trailer-2")).isEqualTo("trailer-value2");
+    }
+
     static class SampleObject {
         private final int id;
 
