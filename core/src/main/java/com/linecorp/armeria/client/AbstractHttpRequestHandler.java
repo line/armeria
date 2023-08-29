@@ -17,6 +17,8 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpSessionHandler.MAX_NUM_REQUESTS_SENT;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedStreamException;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeRequestHeaders;
 
@@ -36,7 +38,6 @@ import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
@@ -255,7 +256,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     private void write(HttpObject o, boolean endOfStream) {
         if (!ch.isActive()) {
             PooledObjects.close(o);
-            fail(ClosedSessionException.get());
+            fail(newClosedSessionException(ch));
             return;
         }
 
@@ -287,9 +288,9 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         //    the subscriber attempts to write the next data to the stream closed at 2).
         if (!encoder.isWritable(id, streamId())) {
             if (ctx.sessionProtocol().isMultiplex()) {
-                failAndReset(ClosedStreamException.get());
+                failAndReset(newClosedStreamException(ch));
             } else {
-                failAndReset(ClosedSessionException.get());
+                failAndReset(newClosedSessionException(ch));
             }
             return true;
         }

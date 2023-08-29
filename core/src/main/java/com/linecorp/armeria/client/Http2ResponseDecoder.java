@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedStreamException;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -136,7 +137,7 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
 
         if (res.isOpen()) {
             if (!goAwayHandler.receivedGoAway()) {
-                res.close(ClosedStreamException.get());
+                res.close(newClosedStreamException(channel()));
                 return;
             }
 
@@ -144,7 +145,7 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
             if (stream.id() > lastStreamId) {
                 res.close(UnprocessedRequestException.of(GoAwayReceivedException.get()));
             } else {
-                res.close(ClosedStreamException.get());
+                res.close(newClosedStreamException(channel()));
             }
         }
 
@@ -215,7 +216,7 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         }
 
         if (!written) {
-            throw connectionError(INTERNAL_ERROR, ClosedStreamException.get(),
+            throw connectionError(INTERNAL_ERROR, newClosedStreamException(ctx),
                                   "failed to consume a HEADERS frame");
         }
 

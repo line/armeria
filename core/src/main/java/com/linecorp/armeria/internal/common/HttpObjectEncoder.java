@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
+
 import com.linecorp.armeria.common.ByteBufAccessMode;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -105,7 +106,7 @@ public interface HttpObjectEncoder {
     boolean isWritable(int id, int streamId);
 
     default ChannelFuture newClosedSessionFuture() {
-        return newFailedFuture(ClosedSessionException.get());
+        return newFailedFuture(newClosedSessionException(channel()));
     }
 
     default ChannelFuture newFailedFuture(Throwable cause) {

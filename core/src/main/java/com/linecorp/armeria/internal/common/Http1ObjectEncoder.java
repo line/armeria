@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static java.util.Objects.requireNonNull;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
@@ -402,7 +403,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             return;
         }
 
-        final ClosedSessionException cause = ClosedSessionException.get();
+        final ClosedSessionException cause = newClosedSessionException(ch);
         for (Queue<Entry<HttpObject, ChannelPromise>> queue : pendingWritesMap.values()) {
             for (;;) {
                 final Entry<HttpObject, ChannelPromise> e = queue.poll();

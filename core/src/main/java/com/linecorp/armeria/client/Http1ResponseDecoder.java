@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 
 import org.slf4j.Logger;
@@ -151,7 +152,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (res != null) {
-            res.close(ClosedSessionException.get());
+            res.close(newClosedSessionException(ctx));
         }
         keepAliveHandler.destroy();
         ctx.fireChannelInactive();
@@ -206,7 +207,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                         }
 
                         if (!written) {
-                            fail(ctx, ClosedSessionException.get());
+                            fail(ctx, newClosedSessionException(ctx));
                             return;
                         }
                     } else {
