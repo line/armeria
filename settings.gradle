@@ -65,7 +65,8 @@ buildCache {
     }
     remote(gradleEnterprise.buildCache) {
         enabled = true
-        push = isCi
+        // also check access key to avoid warning logs
+        push = isCi && System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY") != null
     }
 }
 
