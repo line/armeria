@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
