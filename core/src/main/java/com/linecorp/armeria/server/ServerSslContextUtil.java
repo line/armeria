@@ -100,7 +100,7 @@ final class ServerSslContextUtil {
             Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
         return SslContextUtil
                 .createSslContext(sslContextBuilderSupplier,
-                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers);
+                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers, null);
     }
 
     private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {

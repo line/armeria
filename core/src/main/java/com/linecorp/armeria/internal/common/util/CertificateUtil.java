@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.common.util;
 
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -33,7 +33,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class CertificateUtil {
+public final class CertificateUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(CertificateUtil.class);
 
@@ -52,7 +52,7 @@ final class CertificateUtil {
                     });
 
     @Nullable
-    static String getCommonName(SSLSession session) {
+    public static String getCommonName(SSLSession session) {
         final Certificate[] certs = session.getLocalCertificates();
         if (certs == null || certs.length == 0) {
             return null;
@@ -61,7 +61,7 @@ final class CertificateUtil {
     }
 
     @Nullable
-    static String getCommonName(Certificate certificate) {
+    public static String getCommonName(Certificate certificate) {
         if (!(certificate instanceof X509Certificate)) {
             return null;
         }

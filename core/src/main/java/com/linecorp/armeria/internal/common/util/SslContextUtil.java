@@ -19,6 +19,9 @@ package com.linecorp.armeria.internal.common.util;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import java.lang.reflect.Field;
+import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -35,6 +38,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -94,7 +98,8 @@ public final class SslContextUtil {
     public static SslContext createSslContext(
             Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
             boolean tlsAllowUnsafeCiphers,
-            Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers) {
+            Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers,
+            @Nullable List<X509Certificate> keyCertChainCaptor) {
 
         return MinifiedBouncyCastleProvider.call(() -> {
             final SslContextBuilder builder = builderSupplier.get();
@@ -129,6 +134,7 @@ public final class SslContextUtil {
             if (!forceHttp1) {
                 builder.applicationProtocolConfig(ALPN_CONFIG);
             }
+            maybeCaptureKeyCertChain(builder, keyCertChainCaptor);
 
             SslContext sslContext = null;
             boolean success = false;
@@ -159,6 +165,25 @@ public final class SslContextUtil {
                 }
             }
         });
+    }
+
+    private static void maybeCaptureKeyCertChain(SslContextBuilder sslContextBuilder,
+                                                 @Nullable List<X509Certificate> keyCertChainCaptor) {
+        if (keyCertChainCaptor == null) {
+            return;
+        }
+        try {
+            // TODO(ikhoon): Open an issue to Netty to expose `keyCertChain` in `SslContextBuilder`.
+            final Field keyCertChain = SslContextBuilder.class.getDeclaredField("keyCertChain");
+            keyCertChain.setAccessible(true);
+            final X509Certificate[] certificates = (X509Certificate[]) keyCertChain.get(sslContextBuilder);
+            if (certificates == null || certificates.length == 0) {
+                return;
+            }
+            keyCertChainCaptor.addAll(Arrays.asList(certificates));
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            logger.warn("Failed to access keyCertChain in {}", SslContextBuilder.class, e);
+        }
     }
 
     @VisibleForTesting

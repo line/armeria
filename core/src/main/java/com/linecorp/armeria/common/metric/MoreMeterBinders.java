@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.common.metric;
 
+import static java.util.Objects.requireNonNull;
+
+import java.security.cert.X509Certificate;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
@@ -38,9 +42,44 @@ public final class MoreMeterBinders {
      */
     @UnstableApi
     public static MeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup, String name) {
-        return new EventLoopMetrics(eventLoopGroup, name);
+        requireNonNull(name, "name");
+        return eventLoopMetrics(eventLoopGroup, new MeterIdPrefix("armeria.netty." + name));
     }
 
-    private MoreMeterBinders() {
+    /**
+     * Returns a new {@link MeterBinder} to observe Netty's {@link EventLoopGroup}s. The following stats are
+     * currently exported per registered {@link MeterIdPrefix}.
+     *
+     * <ul>
+     *   <li>"event.loop.workers" (gauge) - the total number of Netty's event loops</li>
+     *   <li>"event.loop.pending.tasks" (gauge)
+     *     - the total number of IO tasks waiting to be run on event loops</li>
+     * </ul>
+     */
+    @UnstableApi
+    public static MeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup, MeterIdPrefix meterIdPrefix) {
+        return new EventLoopMetrics(eventLoopGroup, meterIdPrefix);
     }
+
+    /**
+     * Returns a new {@link MeterBinder} to observe the specified {@link X509Certificate}'s validity.
+     *  The following stats are currently exported per registered {@link MeterIdPrefix}.
+     *
+     *  <ul>
+     *    <li>"tls.certificate.validity" (gauge) - 1 if TLS certificate is in validity period, 0 if certificate
+     *        is not in validity period</li>
+     *    <li>"tls.certificate.validity.days" (gauge) - Duration in days before TLS certificate expires, which
+     *        becomes -1 if certificate is expired</li>
+     *  </ul>
+     * @param certificate the certificate to monitor
+     * @param meterIdPrefix the prefix to use for all metrics
+     */
+    @UnstableApi
+    public static MeterBinder certificateMetrics(X509Certificate certificate, MeterIdPrefix meterIdPrefix) {
+        requireNonNull(certificate, "certificate");
+        requireNonNull(meterIdPrefix, "meterIdPrefix");
+        return new CertificateMetrics(certificate, meterIdPrefix);
+    }
+
+    private MoreMeterBinders() {}
 }

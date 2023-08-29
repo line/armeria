@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -47,6 +48,8 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
@@ -82,6 +85,18 @@ final class HttpClientFactory implements ClientFactory {
                   .flatMap(p -> Stream.of(Scheme.of(SerializationFormat.NONE, p),
                                           Scheme.of(SerializationFormat.WS, p)))
                   .collect(toImmutableSet());
+
+    private static void setupTlsMetrics(List<X509Certificate> certificates, MeterRegistry registry) {
+        final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.client");
+        for (X509Certificate certificate : certificates) {
+            try {
+                MoreMeterBinders.certificateMetrics(certificate, meterIdPrefix)
+                                .bindTo(registry);
+            } catch (Exception ex) {
+                logger.warn("Failed to set up TLS certificate metrics: {}", certificate, ex);
+            }
+        }
+    }
 
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
@@ -164,10 +179,14 @@ final class HttpClientFactory implements ClientFactory {
         final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
                 ImmutableList.of(options.tlsCustomizer());
         final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
+        final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
         sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers);
+                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers,
+                                  keyCertChainCaptor);
         sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers);
+                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers,
+                                  keyCertChainCaptor);
+        setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
