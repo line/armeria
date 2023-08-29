@@ -447,10 +447,12 @@ gradleEnterprise {
     }
 }
 
-normalization {
-    runtimeClasspath {
-        metaInf {
-            ignoreManifest()
+allprojects {
+    normalization {
+        runtimeClasspath {
+            metaInf {
+                ignoreManifest()
+            }
         }
     }
 }
