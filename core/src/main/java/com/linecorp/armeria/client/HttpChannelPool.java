@@ -505,7 +505,7 @@ final class HttpChannelPool implements AsyncCloseable {
         assert eventLoop.inEventLoop();
 
         final ScheduledFuture<?> timeoutFuture = eventLoop.schedule(() -> {
-            if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
+            if (sessionPromise.tryFailure(new SessionCreationTimeoutException(
                     desiredProtocol, "connection established, but session creation timed out: " + ch))) {
                 ch.close();
             }

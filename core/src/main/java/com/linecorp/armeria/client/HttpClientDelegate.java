@@ -120,6 +120,7 @@ final class HttpClientDelegate implements HttpClient {
                     final UnprocessedRequestException wrappedCause = UnprocessedRequestException.of(cause);
                     handleEarlyRequestException(ctx, req, wrappedCause);
                     res.close(wrappedCause);
+                    ctx.cancel(cause);
                 }
             });
         }

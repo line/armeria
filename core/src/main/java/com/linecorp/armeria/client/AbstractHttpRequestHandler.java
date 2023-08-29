@@ -179,8 +179,11 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         if (timeoutMillis > 0) {
             // The timer would be executed if the first message has not been sent out within the timeout.
             timeoutFuture = ch.eventLoop().schedule(
-                    () -> failAndReset(WriteTimeoutException.get()),
-                    timeoutMillis, TimeUnit.MILLISECONDS);
+                    () -> {
+                        final WriteTimeoutException exception = WriteTimeoutException.get();
+                        failAndReset(exception);
+                        ctx.cancel(exception);
+                    }, timeoutMillis, TimeUnit.MILLISECONDS);
         }
         return true;
     }
