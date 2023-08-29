@@ -446,3 +446,11 @@ gradleEnterprise {
         }
     }
 }
+
+normalization {
+    runtimeClasspath {
+        metaInf {
+            ignoreManifest()
+        }
+    }
+}
