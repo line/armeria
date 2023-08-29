@@ -64,7 +64,7 @@ private def getRepoStatus() {
 
     // Retrieve the repository status from the Git repository.
     try {
-        def gitLogOut = project.ext.executeGit('log', '-1', '--format=format:%h%x20%H%x20%cd', '--date=iso')
+        def gitLogOut = project.ext.executeGit('log', '-1', '--format=format:%h%x20%H%x20%cd', '--date=iso', '--abbrev=9')
         if (gitLogOut) {
             logger.info("Latest commit: ${gitLogOut}")
             def tokens = gitLogOut.tokenize(' ')
