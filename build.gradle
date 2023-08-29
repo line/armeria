@@ -451,7 +451,8 @@ allprojects {
     normalization {
         runtimeClasspath {
             metaInf {
-                ignoreManifest()
+                ignoreAttribute("Ant-Version")
+                ignoreAttribute("Created-By")
             }
         }
     }
