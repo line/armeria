@@ -55,10 +55,11 @@ class ClientCertificateMetricsTest {
                                                                         Date.from(notAfter));
             try {
                 final MeterRegistry meterRegistry = new SimpleMeterRegistry();
-                ClientFactory factory = ClientFactory.builder()
-                                                     .tls(ssc.certificate(), ssc.privateKey())
-                                                     .meterRegistry(meterRegistry)
-                                                     .build();
+                final ClientFactory factory =
+                        ClientFactory.builder()
+                                     .tls(ssc.certificate(), ssc.privateKey())
+                                     .meterRegistry(meterRegistry)
+                                     .build();
                 final Map<String, Double> metrics = MoreMeters.measureAll(meterRegistry);
                 assertThat(metrics)
                         .containsEntry(
