@@ -91,7 +91,7 @@ class ClientCertificateMetricsTest {
     }
 
     @Test
-    void measureExpireCertificate() throws CertificateException {
+    void measureExpiredCertificate() throws CertificateException {
         final Calendar calendar = Calendar.getInstance();
         calendar.add(Calendar.DAY_OF_MONTH, -1);
         final java.util.Date notAfter = calendar.getTime();
