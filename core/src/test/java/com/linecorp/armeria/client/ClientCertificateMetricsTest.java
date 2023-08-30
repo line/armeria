@@ -83,8 +83,8 @@ class ClientCertificateMetricsTest {
                         .bindTo(registry);
 
         final String validityName = "valid.tls.certificate.validity";
-        assertThatGauge(registry, validityName, "localhost").isOne();
         final String validityDaysName = "valid.tls.certificate.validity.days";
+        assertThatGauge(registry, validityName, "localhost").isOne();
         assertThatGauge(registry, validityDaysName, "localhost").isPositive();
         assertThatGauge(registry, validityName, "test.root.armeria").isOne();
         assertThatGauge(registry, validityDaysName, "test.root.armeria").isPositive();
