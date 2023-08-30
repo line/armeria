@@ -88,14 +88,12 @@ final class HttpClientFactory implements ClientFactory {
 
     private static void setupTlsMetrics(List<X509Certificate> certificates, MeterRegistry registry) {
         final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.client");
-        for (X509Certificate certificate : certificates) {
             try {
-                MoreMeterBinders.certificateMetrics(certificate, meterIdPrefix)
+                MoreMeterBinders.certificateMetrics(certificates, meterIdPrefix)
                                 .bindTo(registry);
             } catch (Exception ex) {
-                logger.warn("Failed to set up TLS certificate metrics: {}", certificate, ex);
+                logger.warn("Failed to set up TLS certificate metrics: {}", certificates, ex);
             }
-        }
     }
 
     private final EventLoopGroup workerGroup;

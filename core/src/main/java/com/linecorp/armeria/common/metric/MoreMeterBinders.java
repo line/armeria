@@ -102,7 +102,7 @@ public final class MoreMeterBinders {
     @UnstableApi
     public static MeterBinder certificateMetrics(Iterable<? extends X509Certificate> certificates,
                                                  MeterIdPrefix meterIdPrefix) {
-        requireNonNull(certificates, "certificate");
+        requireNonNull(certificates, "certificates");
         requireNonNull(meterIdPrefix, "meterIdPrefix");
         return new CertificateMetrics(ImmutableList.copyOf(certificates), meterIdPrefix);
     }

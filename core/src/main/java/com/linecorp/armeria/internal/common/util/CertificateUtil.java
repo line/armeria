@@ -91,7 +91,7 @@ public final class CertificateUtil {
         return ImmutableList.copyOf(SslContextProtectedAccessHack.toX509CertificateList(in));
     }
 
-    private static class SslContextProtectedAccessHack extends SslContext {
+    private static final class SslContextProtectedAccessHack extends SslContext {
 
         static X509Certificate[] toX509CertificateList(File file) throws CertificateException {
             return SslContext.toX509Certificates(file);
