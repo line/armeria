@@ -23,6 +23,7 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 
@@ -32,41 +33,43 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 
 final class CertificateMetrics implements MeterBinder {
 
-    private final X509Certificate certificate;
+    private final List<X509Certificate> certificates;
     private final MeterIdPrefix meterIdPrefix;
 
-    CertificateMetrics(X509Certificate certificate, MeterIdPrefix meterIdPrefix) {
-        this.certificate = certificate;
+    CertificateMetrics(List<X509Certificate> certificates, MeterIdPrefix meterIdPrefix) {
+        this.certificates = certificates;
         this.meterIdPrefix = meterIdPrefix;
     }
 
     @Override
     public void bindTo(MeterRegistry registry) {
-        final String commonName = firstNonNull(CertificateUtil.getCommonName(certificate), "");
+        for (X509Certificate certificate : certificates) {
+            final String commonName = firstNonNull(CertificateUtil.getCommonName(certificate), "");
 
-        Gauge.builder(meterIdPrefix.name("tls.certificate.validity"), certificate, x509Cert -> {
-                 try {
-                     x509Cert.checkValidity();
-                 } catch (CertificateExpiredException | CertificateNotYetValidException e) {
-                     return 0;
-                 }
-                 return 1;
-             })
-             .description("1 if TLS certificate is in validity period, 0 if certificate is not in " +
-                          "validity period")
-             .tags("common.name", commonName)
-             .tags(meterIdPrefix.tags())
-             .register(registry);
+            Gauge.builder(meterIdPrefix.name("tls.certificate.validity"), certificate, x509Cert -> {
+                     try {
+                         x509Cert.checkValidity();
+                     } catch (CertificateExpiredException | CertificateNotYetValidException e) {
+                         return 0;
+                     }
+                     return 1;
+                 })
+                 .description("1 if TLS certificate is in validity period, 0 if certificate is not in " +
+                              "validity period")
+                 .tags("common.name", commonName)
+                 .tags(meterIdPrefix.tags())
+                 .register(registry);
 
-        Gauge.builder(meterIdPrefix.name("tls.certificate.validity.days"), certificate, x509Cert -> {
-                 final Duration diff = Duration.between(Instant.now(),
-                                                        x509Cert.getNotAfter().toInstant());
-                 return diff.isNegative() ? -1 : diff.toDays();
-             })
-             .description("Duration in days before TLS certificate expires, which becomes -1 " +
-                          "if certificate is expired")
-             .tags("common.name", commonName)
-             .tags(meterIdPrefix.tags())
-             .register(registry);
+            Gauge.builder(meterIdPrefix.name("tls.certificate.validity.days"), certificate, x509Cert -> {
+                     final Duration diff = Duration.between(Instant.now(),
+                                                            x509Cert.getNotAfter().toInstant());
+                     return diff.isNegative() ? -1 : diff.toDays();
+                 })
+                 .description("Duration in days before TLS certificate expires, which becomes -1 " +
+                              "if certificate is expired")
+                 .tags("common.name", commonName)
+                 .tags(meterIdPrefix.tags())
+                 .register(registry);
+        }
     }
 }
