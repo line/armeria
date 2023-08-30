@@ -55,6 +55,7 @@ final class CertificateMetrics implements MeterBinder {
              .description("1 if TLS certificate is in validity period, 0 if certificate is not in " +
                           "validity period")
              .tags("common.name", commonName)
+             .tags(meterIdPrefix.tags())
              .register(registry);
 
         Gauge.builder(meterIdPrefix.name("tls.certificate.validity.days"), certificate, x509Cert -> {
@@ -65,6 +66,7 @@ final class CertificateMetrics implements MeterBinder {
              .description("Duration in days before TLS certificate expires, which becomes -1 " +
                           "if certificate is expired")
              .tags("common.name", commonName)
+             .tags(meterIdPrefix.tags())
              .register(registry);
     }
 }
