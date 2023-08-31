@@ -117,6 +117,8 @@ class DecoderLengthLimitTest {
                 return StreamDecoderFactory.deflate().newDecoder(ByteBufAllocator.DEFAULT, maxLength);
             case BROTLI:
                 return StreamDecoderFactory.brotli().newDecoder(ByteBufAllocator.DEFAULT, maxLength);
+            case SNAPPY:
+                return StreamDecoderFactory.snappy().newDecoder(ByteBufAllocator.DEFAULT, maxLength);
         }
         // Never reach here.
         throw new Error();
