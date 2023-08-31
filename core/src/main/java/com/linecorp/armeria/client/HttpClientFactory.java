@@ -29,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +79,8 @@ final class HttpClientFactory implements ClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
-                  .map(p -> Scheme.of(SerializationFormat.NONE, p))
+                  .flatMap(p -> Stream.of(Scheme.of(SerializationFormat.NONE, p),
+                                          Scheme.of(SerializationFormat.WS, p)))
                   .collect(toImmutableSet());
 
     private final EventLoopGroup workerGroup;

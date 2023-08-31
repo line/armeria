@@ -185,6 +185,14 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
      * Sets the {@link Publisher} for this response.
      */
     @Override
+    public HttpResponseBuilder content(Publisher<? extends HttpData> content) {
+        return (HttpResponseBuilder) super.content(content);
+    }
+
+    /**
+     * Sets the {@link Publisher} for this response.
+     */
+    @Override
     public HttpResponseBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
         return (HttpResponseBuilder) super.content(contentType, content);
     }
