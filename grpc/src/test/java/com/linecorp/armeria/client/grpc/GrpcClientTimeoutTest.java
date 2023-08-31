@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -106,6 +106,18 @@ class GrpcClientTimeoutTest {
     }
 
     @Test
+    void clientNoDeadline() {
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(server.httpUri())
+                           // Server disables the timeout if grpc-timeout is not specified and
+                           // useClientTimeoutHeaders is set to true.
+                           .responseTimeoutMillis(0)
+                           .build(TestServiceBlockingStub.class);
+        final SimpleResponse simpleResponse = client.unaryCall(SimpleRequest.getDefaultInstance());
+        assertThat(simpleResponse.getUsername()).isEqualTo("Armeria");
+    }
+
+    @Test
     void serverTimeout() throws InterruptedException {
         final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
                                                           .responseTimeoutMillis(0)
@@ -127,19 +139,16 @@ class GrpcClientTimeoutTest {
     }
 
     private static class SlowService extends TestServiceImplBase {
+        @Blocking
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            ServiceRequestContext.current()
-                                 .blockingTaskExecutor()
-                                 .submit(() -> {
-                                     // Defer response
-                                     logger.debug("Perform a long running task.");
-                                     Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
-                                     responseObserver.onNext(SimpleResponse.newBuilder()
-                                                                           .setUsername("Armeria")
-                                                                           .build());
-                                     responseObserver.onCompleted();
-                                 });
+            // Defer response
+            logger.debug("Perform a long running task.");
+            Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+            responseObserver.onNext(SimpleResponse.newBuilder()
+                                                  .setUsername("Armeria")
+                                                  .build());
+            responseObserver.onCompleted();
         }
     }
 }
