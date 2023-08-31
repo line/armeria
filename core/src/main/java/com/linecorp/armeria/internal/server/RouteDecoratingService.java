@@ -91,7 +91,7 @@ public final class RouteDecoratingService implements HttpService {
         decorator = requireNonNull(decoratorFunction, "decoratorFunction").apply(this);
     }
 
-    public RouteDecoratingService(Route route, HttpService decorator) {
+    private RouteDecoratingService(Route route, HttpService decorator) {
         this.route = requireNonNull(route, "route");
         this.decorator = requireNonNull(decorator, "decorator");
     }
