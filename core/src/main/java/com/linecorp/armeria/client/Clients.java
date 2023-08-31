@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -603,7 +604,7 @@ public final class Clients {
      * {@code isUndefinedUri(WebClient.of().uri())} will return {@code true}.
      */
     public static boolean isUndefinedUri(URI uri) {
-        return uri == AbstractWebClientBuilder.UNDEFINED_URI;
+        return uri == UNDEFINED_URI;
     }
 
     private Clients() {}

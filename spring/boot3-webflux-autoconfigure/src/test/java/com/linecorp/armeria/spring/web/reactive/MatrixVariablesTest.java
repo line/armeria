@@ -22,6 +22,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.MatrixVariable;
@@ -29,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 import reactor.core.publisher.Flux;
 
@@ -53,6 +56,11 @@ class MatrixVariablesTest {
                     @MatrixVariable(name = "q", pathVar = "petId") int q2) {
                 return Flux.just(q1, q2);
             }
+        }
+
+        @Bean
+        public ArmeriaServerConfigurator serverConfigurator() {
+            return sb -> sb.decorator(LoggingService.newDecorator());
         }
     }
 

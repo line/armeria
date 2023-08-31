@@ -137,7 +137,7 @@ configure(relocatedProjects) {
             if (jmodDir.isDirectory()) {
                 jmodDir.listFiles().findAll { File f ->
                     f.isFile() && f.name.toLowerCase(Locale.ENGLISH).endsWith(".jmod")
-                }.each { libraryjars it }
+                }.sort().each { libraryjars it }
             } else {
                 libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
             }

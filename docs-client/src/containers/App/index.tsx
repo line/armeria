@@ -474,6 +474,7 @@ const App: React.FunctionComponent<Props> = (props) => {
         });
         setSpecification(initialSpecification);
       } catch (e) {
+        console.log(e);
         setSpecLoadingStatus(SpecLoadingStatus.FAILED);
         return;
       }

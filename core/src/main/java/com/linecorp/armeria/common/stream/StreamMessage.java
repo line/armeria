@@ -202,7 +202,7 @@ public interface StreamMessage<T> extends Publisher<T> {
         } else {
             final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>();
             //noinspection unchecked
-            deferred.delegateWhenCompleteStage((CompletionStage<? extends Publisher<T>>) stage);
+            deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) stage);
             return deferred;
         }
     }
@@ -224,7 +224,7 @@ public interface StreamMessage<T> extends Publisher<T> {
         // Have to use DeferredStreamMessage to use the subscriberExecutor.
         final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>(subscriberExecutor);
         //noinspection unchecked
-        deferred.delegateWhenCompleteStage((CompletionStage<? extends Publisher<T>>) stage);
+        deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) stage);
         return deferred;
     }
 
