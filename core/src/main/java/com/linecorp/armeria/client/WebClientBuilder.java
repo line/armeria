@@ -200,7 +200,7 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
         requireNonNull(value, "value");
         final DecoratingHttpClientFunction decorator = (client, ctx, req) -> {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            value.get().handle((header, cause) -> {
+            ctx.makeContextAware(value.get()).handle((header, cause) -> {
                 if (cause != null) {
                     future.completeExceptionally(cause);
                     return null;
