@@ -336,7 +336,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         }
 
         return new ServiceConfig(
-                route.withPrefix(contextPath), mappedRoute == null ? route : mappedRoute,
+                route.withPrefix(contextPath),
+                mappedRoute == null ? route.withPrefix(contextPath) : mappedRoute,
                 service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis,

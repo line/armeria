@@ -257,14 +257,6 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
-    /**
-     * Sets the contextPath of this {@link VirtualHost}.
-     */
-    public VirtualHostBuilder contextPath(String contextPath) {
-        this.contextPath = RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
-        return this;
-    }
-
     @Override
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) {
         return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
