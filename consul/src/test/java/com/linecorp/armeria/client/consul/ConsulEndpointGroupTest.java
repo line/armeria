@@ -30,10 +30,12 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.consul.ConsulTestBase;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListener;
 
+@GenerateNativeImageTrace
 class ConsulEndpointGroupTest extends ConsulTestBase {
 
     private static final List<Server> servers = new ArrayList<>();

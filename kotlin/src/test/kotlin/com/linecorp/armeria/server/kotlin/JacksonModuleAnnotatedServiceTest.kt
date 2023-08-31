@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.kotlin
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.Post
 import com.linecorp.armeria.server.annotation.ProducesJson
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
+@GenerateNativeImageTrace
 class JacksonModuleAnnotatedServiceTest {
 
     @CsvSource(value = ["/echo", "/echo-nullable"])
@@ -68,23 +70,23 @@ class JacksonModuleAnnotatedServiceTest {
             }
         }
     }
-}
 
-class ServiceWithDataClass {
+    class ServiceWithDataClass {
 
-    @ProducesJson
-    @Post("/echo")
-    fun echo(foo: Foo): Foo {
-        return foo
+        @ProducesJson
+        @Post("/echo")
+        fun echo(foo: Foo): Foo {
+            return foo
+        }
+
+        @ProducesJson
+        @Post("/echo-nullable")
+        fun echo(foo: FooWithNullableType): FooWithNullableType {
+            return foo
+        }
     }
 
-    @ProducesJson
-    @Post("/echo-nullable")
-    fun echo(foo: FooWithNullableType): FooWithNullableType {
-        return foo
-    }
+    data class Foo(val x: Int, val y: String)
+
+    data class FooWithNullableType(val x: Int, val y: String?)
 }
-
-data class Foo(val x: Int, val y: String)
-
-data class FooWithNullableType(val x: Int, val y: String?)

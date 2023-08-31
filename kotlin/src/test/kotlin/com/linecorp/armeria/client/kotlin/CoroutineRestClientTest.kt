@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.kotlin
 import com.linecorp.armeria.common.AggregatedHttpRequest
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
@@ -27,7 +28,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 
-class RestClientTest {
+@GenerateNativeImageTrace
+class CoroutineRestClientTest {
 
     @Test
     fun get() {
@@ -82,6 +84,6 @@ class RestClientTest {
             }
         }
     }
-}
 
-data class RestResponse(val id: String, val method: String, val content: String)
+    data class RestResponse(val id: String, val method: String, val content: String)
+}

@@ -29,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +79,8 @@ final class HttpClientFactory implements ClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
-                  .map(p -> Scheme.of(SerializationFormat.NONE, p))
+                  .flatMap(p -> Stream.of(Scheme.of(SerializationFormat.NONE, p),
+                                          Scheme.of(SerializationFormat.WS, p)))
                   .collect(toImmutableSet());
 
     private final EventLoopGroup workerGroup;
@@ -97,6 +99,7 @@ final class HttpClientFactory implements ClientFactory {
     private final int http1MaxHeaderSize;
     private final int http1MaxChunkSize;
     private final long idleTimeoutMillis;
+    private final boolean keepAliveOnPing;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
     private final int maxNumRequestsPerConnection;
@@ -175,6 +178,7 @@ final class HttpClientFactory implements ClientFactory {
         http1MaxHeaderSize = options.http1MaxHeaderSize();
         http1MaxChunkSize = options.http1MaxChunkSize();
         idleTimeoutMillis = options.idleTimeoutMillis();
+        keepAliveOnPing = options.keepAliveOnPing();
         useHttp2Preface = options.useHttp2Preface();
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
@@ -244,6 +248,10 @@ final class HttpClientFactory implements ClientFactory {
 
     long idleTimeoutMillis() {
         return idleTimeoutMillis;
+    }
+
+    boolean keepAliveOnPing() {
+        return keepAliveOnPing;
     }
 
     long pingIntervalMillis() {

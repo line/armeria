@@ -404,7 +404,7 @@ public final class DefaultClientRequestContext
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
-        autoFillSchemeAndAuthority();
+        autoFillSchemeAuthorityAndOrigin();
     }
 
     private void acquireEventLoop(EndpointGroup endpointGroup) {
@@ -428,7 +428,7 @@ public final class DefaultClientRequestContext
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
-            autoFillSchemeAndAuthority();
+            autoFillSchemeAuthorityAndOrigin();
             req.abort(wrapped);
         }
 
@@ -438,7 +438,7 @@ public final class DefaultClientRequestContext
     }
 
     // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
-    private void autoFillSchemeAndAuthority() {
+    private void autoFillSchemeAuthorityAndOrigin() {
         final String authority = authority();
         if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
             // The connection will be established with the IP address but `host` set to the `Endpoint`
@@ -453,7 +453,16 @@ public final class DefaultClientRequestContext
         final HttpHeadersBuilder headersBuilder = internalRequestHeaders.toBuilder();
         headersBuilder.set(HttpHeaderNames.SCHEME, getScheme(sessionProtocol()));
         if (endpoint != null) {
-            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpoint.authority());
+            final String endpointAuthority = endpoint.authority();
+            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpointAuthority);
+            final String origin = origin();
+            if (origin != null) {
+                headersBuilder.set(HttpHeaderNames.ORIGIN, origin);
+            } else if (options().autoFillOriginHeader()) {
+                final String uriText = sessionProtocol().isTls() ? SessionProtocol.HTTPS.uriText()
+                                                                 : SessionProtocol.HTTP.uriText();
+                headersBuilder.set(HttpHeaderNames.ORIGIN, uriText + "://" + endpointAuthority);
+            }
         }
         internalRequestHeaders = headersBuilder.build();
     }
@@ -576,7 +585,6 @@ public final class DefaultClientRequestContext
                                                        protocol, newHeaders.method(), reqTarget);
             }
         }
-
         return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
                                                sessionProtocol(), method(), requestTarget());
     }
@@ -696,6 +704,23 @@ public final class DefaultClientRequestContext
             authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
         }
         return authority;
+    }
+
+    @Nullable
+    private String origin() {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String origin = additionalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        final HttpRequest request = request();
+        if (origin == null && request != null) {
+            origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = defaultRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = internalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        return origin;
     }
 
     @Override

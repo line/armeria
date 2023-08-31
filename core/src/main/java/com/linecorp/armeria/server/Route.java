@@ -19,6 +19,8 @@ package com.linecorp.armeria.server;
 import java.util.List;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 
@@ -128,11 +130,13 @@ public interface Route {
      *   </li>
      * </ul>
      */
+    @JsonProperty
     String patternString();
 
     /**
      * Returns the type of the path which was specified when this is created.
      */
+    @JsonProperty
     RoutePathType pathType();
 
     /**
@@ -209,4 +213,9 @@ public interface Route {
      * </ul>
      */
     Route withPrefix(String prefix);
+
+    /**
+     * Returns whether the current {@link Route} is cacheable when queried from a {@link Router}.
+     */
+    boolean isCacheable();
 }

@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.reactor3.RequestContextHooks.ContextAwareMono;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -39,6 +40,7 @@ import reactor.test.StepVerifier;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 
+@GenerateNativeImageTrace
 class ContextAwareMonoTest {
 
     @BeforeAll
