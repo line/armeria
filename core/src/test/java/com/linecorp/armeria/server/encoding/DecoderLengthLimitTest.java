@@ -60,10 +60,10 @@ class DecoderLengthLimitTest {
         assertThatThrownBy(() -> {
             strictStreamDecoder.decode(httpData);
         }).isInstanceOf(ContentTooLargeException.class)
-          .satisfies(cause -> {
-              final ContentTooLargeException tooLargeException = (ContentTooLargeException) cause;
-              assertThat(tooLargeException.maxContentLength()).isEqualTo(9999);
-          });
+                .satisfies(cause -> {
+                    final ContentTooLargeException tooLargeException = (ContentTooLargeException) cause;
+                    assertThat(tooLargeException.maxContentLength()).isEqualTo(9999);
+                });
     }
 
     @EnumSource(HttpEncodingType.class)
@@ -72,8 +72,8 @@ class DecoderLengthLimitTest {
         // Use non-repeated texts to avoid high compression ratio and each chunk can have a complete text.
         final String originalMessage =
                 IntStream.range(0, 5000)
-                         .mapToObj(x -> String.valueOf(x))
-                         .collect(Collectors.joining());
+                        .mapToObj(x -> String.valueOf(x))
+                        .collect(Collectors.joining());
         final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
         final OutputStream encodingStream =
                 HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
@@ -101,12 +101,12 @@ class DecoderLengthLimitTest {
             strictStreamDecoder.decode(second).close();
             strictStreamDecoder.finish().close();
         }).isInstanceOf(ContentTooLargeException.class)
-          .satisfies(cause -> {
-              final ContentTooLargeException tooLargeException = (ContentTooLargeException) cause;
-              // Make sure the ContentTooLargeException was raised by the custom overflow checker.
-              assertThat(tooLargeException.getCause()).isNull();
-              assertThat(tooLargeException.maxContentLength()).isEqualTo(maxLength);
-          });
+                .satisfies(cause -> {
+                    final ContentTooLargeException tooLargeException = (ContentTooLargeException) cause;
+                    // Make sure the ContentTooLargeException was raised by the custom overflow checker.
+                    assertThat(tooLargeException.getCause()).isNull();
+                    assertThat(tooLargeException.maxContentLength()).isEqualTo(maxLength);
+                });
     }
 
     private static StreamDecoder newStreamDecoder(HttpEncodingType encodingType, int maxLength) {
@@ -117,6 +117,8 @@ class DecoderLengthLimitTest {
                 return StreamDecoderFactory.deflate().newDecoder(ByteBufAllocator.DEFAULT, maxLength);
             case BROTLI:
                 return StreamDecoderFactory.brotli().newDecoder(ByteBufAllocator.DEFAULT, maxLength);
+            case SNAPPY:
+                return StreamDecoderFactory.snappy().newDecoder(ByteBufAllocator.DEFAULT, maxLength);
         }
         // Never reach here.
         throw new Error();

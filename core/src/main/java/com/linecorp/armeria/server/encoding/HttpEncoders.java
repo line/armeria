@@ -113,7 +113,7 @@ final class HttpEncoders {
 
         if (!encodings.isEmpty()) {
             final Entry<HttpEncodingType, Float> entry = Collections.max(encodings.entrySet(),
-                                                                         Entry.comparingByValue());
+                    Entry.comparingByValue());
             if (entry.getValue() > 0.0f) {
                 return entry.getKey();
             }
