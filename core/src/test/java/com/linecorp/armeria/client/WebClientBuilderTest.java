@@ -133,7 +133,7 @@ class WebClientBuilderTest {
     }
 
     @Test
-    void headerDecorator() {
+    void dynamicDefaultHeader() {
         final String path = "/echo-test-header";
         final AtomicInteger counter = new AtomicInteger(0);
         final Supplier<CompletableFuture<Object>> headerSupplier = () -> {
@@ -142,11 +142,19 @@ class WebClientBuilderTest {
             return future;
         };
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .headerDecorator("test", headerSupplier)
+                                          .defaultHeaderDecorator("test", headerSupplier)
                                           .build();
         assertThat(client.get(path).aggregate().join().contentUtf8()).isEqualTo("0");
         assertThat(client.get(path).aggregate().join().contentUtf8()).isEqualTo("1");
         assertThat(client.get(path).aggregate().join().contentUtf8()).isEqualTo("2");
+
+        final RequestHeadersBuilder requestHeadersBuilder =
+                RequestHeaders.builder()
+                              .add("test", "non-default")
+                              .path(path);
+        final AggregatedHttpRequest request = AggregatedHttpRequest.of(
+                requestHeadersBuilder.method(HttpMethod.GET).build());
+        assertThat(client.execute(request).aggregate().join().contentUtf8()).isEqualTo("non-default");
     }
 
     @Test

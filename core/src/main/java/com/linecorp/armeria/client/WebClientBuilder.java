@@ -194,8 +194,8 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
      * @param name  The name of the header.
      * @param value A supplier that provides a future of the value of the header.
      */
-    public WebClientBuilder headerDecorator(CharSequence name,
-                                            Supplier<CompletableFuture<Object>> value) {
+    public WebClientBuilder defaultHeaderDecorator(CharSequence name,
+                                                   Supplier<CompletableFuture<Object>> value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         final DecoratingHttpClientFunction decorator = (client, ctx, req) -> {
@@ -206,8 +206,12 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
                     return null;
                 }
                 try {
-                    final HttpRequest decorated = req.withHeaders(
-                            req.headers().toBuilder().setObject(name, header));
+                    final HttpRequest decorated = req.mapHeaders(headers -> {
+                        if (headers.get("name") != null) {
+                            return headers;
+                        }
+                        return headers.toBuilder().addObject(name, header).build();
+                    });
                     ctx.updateRequest(decorated);
                     future.complete(client.execute(ctx, decorated));
                 } catch (Exception e) {
