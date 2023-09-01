@@ -30,10 +30,11 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * A general builder for {@link Service}s. {@link ServerBuilder} and {@link VirtualHostBuilder}
- * will delegate {@link Service} building logic to this builder.
+ * Builds {@link ServiceConfig}s for a {@link VirtualHostBuilder}. All {@link ServiceConfig}s
+ * built by this builder will be served under a context path.
  *
- * @param <T> the original type which will be returned once this builder is built using {@link #and()}.
+ * @param <T> the original type which will be returned once the {@link ServiceConfig}
+ * is built using {@link #and()}.
  */
 final class ContextPathServicesBuilder<T> implements ServicesConfigBuilder {
 
