@@ -36,7 +36,8 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * @param <T> the original type which will be returned once the {@link ServiceConfig}
  *            is built using {@link #and()}.
  */
-final class ContextPathServicesBuilder<T> implements ServiceConfigsBuilder {
+final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
+        implements ServiceConfigsBuilder {
 
     private final T parent;
     private final VirtualHostBuilder virtualHostBuilder;

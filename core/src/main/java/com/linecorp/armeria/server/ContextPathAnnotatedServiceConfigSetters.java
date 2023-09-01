@@ -38,7 +38,8 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *
  * @param <T> the type of object to be returned once the builder is built
  */
-final class ContextPathAnnotatedServiceConfigSetters<T> extends AbstractAnnotatedServiceConfigSetters {
+final class ContextPathAnnotatedServiceConfigSetters<T extends ServiceConfigsBuilder>
+        extends AbstractAnnotatedServiceConfigSetters {
 
     private final ContextPathServicesBuilder<T> builder;
 
