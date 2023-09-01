@@ -144,11 +144,6 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
         return httpSession = HttpSession.get(channel);
     }
 
-    @Override
-    public boolean needsToDisconnectNow() {
-        return !session().isAcquirable() && !hasUnfinishedResponses();
-    }
-
     static ContentTooLargeException contentTooLargeException(HttpResponseWrapper res, long transferred) {
         final ContentTooLargeExceptionBuilder builder =
                 ContentTooLargeException.builder()
