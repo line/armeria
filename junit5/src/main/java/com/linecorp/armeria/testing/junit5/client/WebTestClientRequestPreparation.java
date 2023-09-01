@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.RequestPreparationSetters;
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpMessageSetters;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
@@ -175,6 +176,12 @@ public final class WebTestClientRequestPreparation implements RequestPreparation
     @Override
     public WebTestClientRequestPreparation content(MediaType contentType, HttpData content) {
         delegate.content(contentType, content);
+        return this;
+    }
+
+    @Override
+    public HttpMessageSetters content(Publisher<? extends HttpData> content) {
+        delegate.content(content);
         return this;
     }
 
