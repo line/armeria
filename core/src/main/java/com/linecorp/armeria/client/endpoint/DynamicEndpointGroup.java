@@ -227,6 +227,12 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         completeInitialEndpointsFuture(newEndpoints);
     }
 
+    @Override
+    protected final List<Endpoint> latestValue() {
+        final List<Endpoint> endpoints = this.endpoints;
+        return endpoints == UNINITIALIZED_ENDPOINTS ? null : endpoints;
+    }
+
     /**
      * Removes the specified {@link Endpoint} from current {@link Endpoint} list.
      */

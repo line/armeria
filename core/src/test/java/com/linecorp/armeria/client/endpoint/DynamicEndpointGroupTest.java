@@ -74,6 +74,20 @@ class DynamicEndpointGroupTest {
     }
 
     @Test
+    void shouldNotifyNestedListener() {
+        DynamicEndpointGroup group = new DynamicEndpointGroup();
+        AtomicInteger invoked = new AtomicInteger();
+        group.addListener(unused0 -> {
+            invoked.incrementAndGet();
+            // Add a listener while notifying the listeners.
+            group.addListener(unused1 -> invoked.incrementAndGet(), true);
+        }, true);
+
+        group.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111)));
+        assertThat(invoked).hasValue(2);
+    }
+
+    @Test
     void removeEndpointWhenAllowEmptyEndpointsIsTrue() {
         final Endpoint endpoint1 = Endpoint.of("127.0.0.1", 1111);
         final Endpoint endpoint2 = Endpoint.of("127.0.0.1", 2222);
