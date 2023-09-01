@@ -55,7 +55,7 @@ final class ContextPathAnnotatedServiceConfigSetters<T extends ServiceConfigsBui
      *                If path prefix is not set then this service is registered to handle requests matching
      *                {@code /}
      */
-    public ContextPathServicesBuilder<T> build(Object service) {
+    ContextPathServicesBuilder<T> build(Object service) {
         requireNonNull(service, "service");
         service(service);
         builder.addServiceConfigSetters(this);
