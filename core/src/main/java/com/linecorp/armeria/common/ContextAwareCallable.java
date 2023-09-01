@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -32,7 +33,19 @@ public interface ContextAwareCallable<T> extends Callable<T>, ContextHolder {
      * before executing an underlying {@link Callable}.
      */
     static <T> ContextAwareCallable<T> of(RequestContext context, Callable<T> callable) {
-        return new DefaultContextAwareCallable<T>(context, callable);
+        return new DefaultContextAwareCallable<>(context, callable);
+    }
+
+    /**
+     * Returns a new {@link ContextAwareCallable} that sets the specified {@link RequestContext}
+     * before executing an underlying {@link Callable}.
+     *
+     * @param exceptionHandler A function that handles exceptions thrown during the execution of the
+     *                         {@code callable}.
+     */
+    static <T> ContextAwareCallable<T> of(RequestContext context, Callable<T> callable,
+                                          Function<Throwable, T> exceptionHandler) {
+        return new DefaultContextAwareCallable<>(context, callable, exceptionHandler);
     }
 
     /**

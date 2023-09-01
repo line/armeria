@@ -102,6 +102,18 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
+     * Returns an {@link Executor} that will execute callbacks in the given {@code executor}, propagating
+     * the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor is only used from a single request then it's better to use
+     * {@link #makeContextAware(Executor)}
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during callback execution.
+     */
+    static Executor makeContextPropagating(Executor executor, Consumer<Throwable> exceptionHandler) {
+        return PropagatingContextAwareExecutor.of(executor, exceptionHandler);
+    }
+
+    /**
      * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, propagating
      * the caller's {@link RequestContext} (if any) into the callback execution.
      * If this executor service is only used from a single request then it's better to use
@@ -193,8 +205,7 @@ public interface RequestContext extends Unwrappable {
      *
      * @see #ownAttr(AttributeKey)
      */
-    @Nullable
-    <V> V attr(AttributeKey<V> key);
+    @Nullable <V> V attr(AttributeKey<V> key);
 
     /**
      * Returns the value associated with the given {@link AttributeKey} or {@code null} if there's no value
@@ -204,8 +215,7 @@ public interface RequestContext extends Unwrappable {
      *
      * @see #attr(AttributeKey)
      */
-    @Nullable
-    <V> V ownAttr(AttributeKey<V> key);
+    @Nullable <V> V ownAttr(AttributeKey<V> key);
 
     /**
      * Returns {@code true} if and only if the value associated with the specified {@link AttributeKey} is
@@ -306,8 +316,7 @@ public interface RequestContext extends Unwrappable {
      * @return the old value that has been replaced if there's a mapping for the specified key in this context
      *         or its {@link #root()}, or {@code null} otherwise.
      */
-    @Nullable
-    <V> V setAttr(AttributeKey<V> key, @Nullable V value);
+    @Nullable <V> V setAttr(AttributeKey<V> key, @Nullable V value);
 
     /**
      * Returns the {@link HttpRequest} associated with this context, or {@code null} if there's no
@@ -596,6 +605,18 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
+     * Returns a {@link ContextAwareExecutor} that will execute callbacks in the given {@code executor},
+     * making sure to propagate the current {@link RequestContext} into the callback execution. It is generally
+     * preferred to use {@link #eventLoop()} to ensure the callback stays on the same thread as well.
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during callback execution.
+     */
+    default ContextAwareExecutor makeContextAware(Executor executor, Consumer<Throwable> exceptionHandler) {
+        requireNonNull(executor, "executor");
+        return ContextAwareExecutor.of(this, executor, exceptionHandler);
+    }
+
+    /**
      * Returns a {@link ContextAwareExecutorService} that will execute callbacks in the given {@code executor},
      * making sure to propagate this {@link RequestContext} into the callback execution.
      * If this executor service will be used for callbacks from several requests, use
@@ -634,11 +655,33 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
+     * Returns a {@link ContextAwareCallable} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code callable}.
+     *
+     * @param exceptionHandler A function that handles exceptions thrown during the execution of the
+     *                         {@code callable}.
+     */
+    default <T> Callable<T> makeContextAware(Callable<T> callable, Function<Throwable, T> exceptionHandler) {
+        return ContextAwareCallable.of(this, callable, exceptionHandler);
+    }
+
+    /**
      * Returns a {@link ContextAwareRunnable} that makes sure the current {@link RequestContext} is
      * set and then invokes the input {@code runnable}.
      */
     default Runnable makeContextAware(Runnable runnable) {
         return ContextAwareRunnable.of(this, runnable);
+    }
+
+    /**
+     * Returns a {@link ContextAwareRunnable} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code runnable}.
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during the execution of the
+     *                         {@code runnable}.
+     */
+    default Runnable makeContextAware(Runnable runnable, Consumer<Throwable> exceptionHandler) {
+        return ContextAwareRunnable.of(this, runnable, exceptionHandler);
     }
 
     /**
@@ -650,11 +693,35 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
+     * Returns a {@link ContextAwareFunction} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code function}.
+     *
+     * @param exceptionHandler A function that handles exceptions thrown during the execution of the
+     *                         {@code function}.
+     */
+    default <T, R> Function<T, R> makeContextAware(Function<T, R> function,
+                                                   Function<Throwable, R> exceptionHandler) {
+        return ContextAwareFunction.of(this, function, exceptionHandler);
+    }
+
+    /**
      * Returns a {@link ContextAwareBiFunction} that makes sure the current {@link RequestContext} is
      * set and then invokes the input {@code function}.
      */
     default <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
         return ContextAwareBiFunction.of(this, function);
+    }
+
+    /**
+     * Returns a {@link ContextAwareBiFunction} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code function}.
+     *
+     * @param exceptionHandler A function that handles exceptions thrown during the execution of the
+     *                         {@code function}.
+     */
+    default <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function,
+                                                           Function<Throwable, V> exceptionHandler) {
+        return ContextAwareBiFunction.of(this, function, exceptionHandler);
     }
 
     /**
@@ -666,11 +733,34 @@ public interface RequestContext extends Unwrappable {
     }
 
     /**
+     * Returns a {@link ContextAwareConsumer} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code action}.
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during the execution of the
+     *                         {@code action}.
+     */
+    default <T> Consumer<T> makeContextAware(Consumer<T> action, Consumer<Throwable> exceptionHandler) {
+        return ContextAwareConsumer.of(this, action, exceptionHandler);
+    }
+
+    /**
      * Returns a {@link ContextAwareBiConsumer} that makes sure the current {@link RequestContext} is
      * set and then invokes the input {@code action}.
      */
     default <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
         return ContextAwareBiConsumer.of(this, action);
+    }
+
+    /**
+     * Returns a {@link ContextAwareBiConsumer} that makes sure the current {@link RequestContext} is
+     * set and then invokes the input {@code action}.
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during the execution of the
+     *                         {@code action}.
+     */
+    default <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action,
+                                                     Consumer<Throwable> exceptionHandler) {
+        return ContextAwareBiConsumer.of(this, action, exceptionHandler);
     }
 
     /**

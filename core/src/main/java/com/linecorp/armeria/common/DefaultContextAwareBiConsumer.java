@@ -19,16 +19,28 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class DefaultContextAwareBiConsumer<T, U> implements ContextAwareBiConsumer<T, U> {
     private final RequestContext context;
     private final BiConsumer<T, U> action;
+    @Nullable
+    private final Consumer<Throwable> exceptionHandler;
 
     DefaultContextAwareBiConsumer(RequestContext context, BiConsumer<T, U> action) {
         this.context = requireNonNull(context, "context");
         this.action = requireNonNull(action, "action");
+        exceptionHandler = null;
+    }
+
+    DefaultContextAwareBiConsumer(RequestContext context, BiConsumer<T, U> action,
+                                  Consumer<Throwable> exceptionHandler) {
+        this.context = requireNonNull(context, "context");
+        this.action = requireNonNull(action, "action");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Override
@@ -45,6 +57,11 @@ final class DefaultContextAwareBiConsumer<T, U> implements ContextAwareBiConsume
     public void accept(T t, U u) {
         try (SafeCloseable ignored = context.push()) {
             action.accept(t, u);
+        } catch (Throwable cause) {
+            if (exceptionHandler == null) {
+                throw cause;
+            }
+            exceptionHandler.accept(cause);
         }
     }
 }

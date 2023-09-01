@@ -18,15 +18,28 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Consumer;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class DefaultContextAwareRunnable implements ContextAwareRunnable {
     private final RequestContext context;
     private final Runnable runnable;
+    @Nullable
+    private final Consumer<Throwable> exceptionHandler;
 
     DefaultContextAwareRunnable(RequestContext context, Runnable runnable) {
         this.context = requireNonNull(context, "context");
         this.runnable = requireNonNull(runnable, "runnable");
+        exceptionHandler = null;
+    }
+
+    DefaultContextAwareRunnable(RequestContext context, Runnable runnable,
+                                Consumer<Throwable> exceptionHandler) {
+        this.context = requireNonNull(context, "context");
+        this.runnable = requireNonNull(runnable, "runnable");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Override
@@ -43,6 +56,11 @@ final class DefaultContextAwareRunnable implements ContextAwareRunnable {
     public void run() {
         try (SafeCloseable ignored = context.push()) {
             runnable.run();
+        } catch (Throwable cause) {
+            if (exceptionHandler == null) {
+                throw cause;
+            }
+            exceptionHandler.accept(cause);
         }
     }
 }

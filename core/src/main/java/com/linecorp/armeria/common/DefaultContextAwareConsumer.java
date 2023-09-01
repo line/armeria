@@ -20,15 +20,26 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class DefaultContextAwareConsumer<T> implements ContextAwareConsumer<T> {
     private final RequestContext context;
     private final Consumer<T> action;
+    @Nullable
+    private final Consumer<Throwable> exceptionHandler;
 
     DefaultContextAwareConsumer(RequestContext context, Consumer<T> action) {
         this.context = requireNonNull(context, "context");
         this.action = requireNonNull(action, "action");
+        exceptionHandler = null;
+    }
+
+    DefaultContextAwareConsumer(RequestContext context, Consumer<T> action,
+                                Consumer<Throwable> exceptionHandler) {
+        this.context = requireNonNull(context, "context");
+        this.action = requireNonNull(action, "action");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Override
@@ -45,6 +56,11 @@ final class DefaultContextAwareConsumer<T> implements ContextAwareConsumer<T> {
     public void accept(T t) {
         try (SafeCloseable ignored = context.push()) {
             action.accept(t);
+        } catch (Throwable cause) {
+            if (exceptionHandler == null) {
+                throw cause;
+            }
+            exceptionHandler.accept(cause);
         }
     }
 }

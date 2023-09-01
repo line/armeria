@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.function.Consumer;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -31,6 +33,18 @@ public interface ContextAwareRunnable extends Runnable, ContextHolder {
      */
     static ContextAwareRunnable of(RequestContext context, Runnable runnable) {
         return new DefaultContextAwareRunnable(context, runnable);
+    }
+
+    /**
+     * Returns a new {@link ContextAwareRunnable} that sets the specified {@link RequestContext}
+     * before executing an underlying {@link Runnable}.
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during the execution of the
+     *                         {@code runnable}.
+     */
+    static ContextAwareRunnable of(RequestContext context, Runnable runnable,
+                                   Consumer<Throwable> exceptionHandler) {
+        return new DefaultContextAwareRunnable(context, runnable, exceptionHandler);
     }
 
     /**

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
@@ -29,6 +30,12 @@ final class DefaultContextAwareExecutor
 
     DefaultContextAwareExecutor(RequestContext context, Executor executor) {
         super(executor);
+        this.context = context;
+    }
+
+    DefaultContextAwareExecutor(RequestContext context, Executor executor,
+                                Consumer<Throwable> exceptionHandler) {
+        super(executor, exceptionHandler);
         this.context = context;
     }
 

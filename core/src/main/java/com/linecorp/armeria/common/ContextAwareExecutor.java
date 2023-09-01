@@ -19,6 +19,7 @@ import static com.linecorp.armeria.internal.common.RequestContextUtil.ensureSame
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 /**
  * A delegating {@link Executor} that makes sure all submitted tasks are
@@ -38,6 +39,24 @@ public interface ContextAwareExecutor extends Executor, ContextHolder {
             return (ContextAwareExecutor) executor;
         }
         return new DefaultContextAwareExecutor(context, executor);
+    }
+
+    /**
+     * Returns a new {@link ContextAwareExecutor} that sets the specified
+     * {@link RequestContext} before executing any submitted tasks.
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during task execution.
+     */
+    static ContextAwareExecutor of(RequestContext context, Executor executor,
+                                   Consumer<Throwable> exceptionHandler) {
+        requireNonNull(context, "context");
+        requireNonNull(executor, "executor");
+        requireNonNull(exceptionHandler, "exceptionHandler");
+        if (executor instanceof ContextAwareExecutor) {
+            ensureSameCtx(context, (ContextAwareExecutor) executor, ContextAwareExecutor.class);
+            return (ContextAwareExecutor) executor;
+        }
+        return new DefaultContextAwareExecutor(context, executor, exceptionHandler);
     }
 
     /**

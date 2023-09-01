@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -31,8 +32,20 @@ public interface ContextAwareBiFunction<T, U, R> extends BiFunction<T, U, R>, Co
      * Returns a new {@link ContextAwareBiFunction} that sets the specified {@link RequestContext}
      * before executing an underlying {@link BiFunction}.
      */
-    static <T, U, R> ContextAwareBiFunction of(RequestContext context, BiFunction<T, U, R> function) {
-        return new DefaultContextAwareBiFunction(context, function);
+    static <T, U, R> ContextAwareBiFunction<T, U, R> of(RequestContext context, BiFunction<T, U, R> function) {
+        return new DefaultContextAwareBiFunction<>(context, function);
+    }
+
+    /**
+     * Returns a new {@link ContextAwareBiFunction} that sets the specified {@link RequestContext}
+     * before executing an underlying {@link BiFunction}.
+     *
+     * @param exceptionHandler A function that handles exceptions thrown during the execution of the
+     *                         {@code function}.
+     */
+    static <T, U, R> ContextAwareBiFunction<T, U, R> of(RequestContext context, BiFunction<T, U, R> function,
+                                               Function<Throwable, R> exceptionHandler) {
+        return new DefaultContextAwareBiFunction<>(context, function, exceptionHandler);
     }
 
     /**

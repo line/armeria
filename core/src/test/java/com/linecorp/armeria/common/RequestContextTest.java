@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Collections;
@@ -35,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -121,6 +125,33 @@ class RequestContextTest {
     }
 
     @Test
+    void makeContextPropagatingExecutorWithExceptionHandler() {
+        final RequestContext context = createContext();
+        final AtomicBoolean errorHandled = new AtomicBoolean(false);
+        final CountDownLatch latch = new CountDownLatch(1);
+        final Executor executor =
+                RequestContext.makeContextPropagating(Executors.newSingleThreadExecutor(), cause -> {
+                    assertThat(cause).isInstanceOf(
+                            IllegalStateException.class);
+                    errorHandled.set(true);
+                    latch.countDown();
+                });
+        try (SafeCloseable ignored = context.push()) {
+            executor.execute(() -> {
+                assertCurrentContext(context);
+                throw new IllegalStateException();
+            });
+        }
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            fail("Waiting for latch was interrupted unexpectedly");
+        }
+        assertThat(errorHandled.get()).isTrue();
+        assertCurrentContext(null);
+    }
+
+    @Test
     void makeContextAwareExecutor() {
         final RequestContext context = createContext();
         final Executor executor = context.makeContextAware(MoreExecutors.directExecutor());
@@ -130,6 +161,29 @@ class RequestContextTest {
             callbackCalled.set(true);
         });
         assertThat(callbackCalled.get()).isTrue();
+        assertCurrentContext(null);
+    }
+
+    @Test
+    void makeContextAwareExecutorWithExceptionHandler() {
+        final RequestContext context = createContext();
+        final AtomicBoolean errorHandled = new AtomicBoolean(false);
+        final CountDownLatch latch = new CountDownLatch(1);
+        final Executor executor = context.makeContextAware(Executors.newSingleThreadExecutor(), cause -> {
+            assertThat(cause).isInstanceOf(IllegalStateException.class);
+            errorHandled.set(true);
+            latch.countDown();
+        });
+        executor.execute(() -> {
+            assertCurrentContext(context);
+            throw new IllegalStateException();
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            fail("Waiting for latch was interrupted unexpectedly");
+        }
+        assertThat(errorHandled.get()).isTrue();
         assertCurrentContext(null);
     }
 
@@ -144,11 +198,44 @@ class RequestContextTest {
     }
 
     @Test
+    void makeContextAwareCallableWithExceptionHandler() throws Exception {
+        final RequestContext context = createContext();
+        final AtomicBoolean errorHandled = new AtomicBoolean(false);
+        final Callable<Void> callable = () -> {
+            assertCurrentContext(context);
+            throw new IllegalStateException();
+        };
+        context.makeContextAware(callable, cause -> {
+            assertThat(cause).isInstanceOf(IllegalStateException.class);
+            errorHandled.set(true);
+            return null;
+        }).call();
+        assertThat(errorHandled.get()).isTrue();
+        assertCurrentContext(null);
+    }
+
+    @Test
     void makeContextAwareRunnable() {
         final RequestContext context = createContext();
         context.makeContextAware(() -> {
             assertCurrentContext(context);
         }).run();
+        assertCurrentContext(null);
+    }
+
+    @Test
+    void makeContextAwareRunnableWithExceptionHandler() throws Exception {
+        final RequestContext context = createContext();
+        final AtomicBoolean errorHandled = new AtomicBoolean(false);
+        final Runnable runnable = () -> {
+            assertCurrentContext(context);
+            throw new IllegalStateException();
+        };
+        context.makeContextAware(runnable, cause -> {
+            assertThat(cause).isInstanceOf(IllegalStateException.class);
+            errorHandled.set(true);
+        }).run();
+        assertThat(errorHandled.get()).isTrue();
         assertCurrentContext(null);
     }
 
@@ -161,6 +248,78 @@ class RequestContextTest {
             assertCurrentContext(context);
         }, 100, TimeUnit.MILLISECONDS);
         future.get();
+        assertCurrentContext(null);
+    }
+
+    @Test
+    void makeContextAwareFunctionWithExceptionHandler() {
+        final RequestContext context = createContext();
+        final AtomicBoolean errorHandled = new AtomicBoolean(false);
+        final Function<String, Integer> parseInt = s -> {
+            assertCurrentContext(context);
+            if ("magic".equals(s)) {
+                throw new IllegalArgumentException("no magic");
+            }
+            return Integer.parseInt(s);
+        };
+        final Function<String, Integer> contextAwareParseInt = context.makeContextAware(parseInt, cause -> {
+            assertThat(cause).isInstanceOf(NumberFormatException.class);
+            errorHandled.set(true);
+            return 42;
+        });
+        assertThat(contextAwareParseInt.apply("abc")).isEqualTo(42);
+        assertThat(errorHandled.get()).isTrue();
+        assertCurrentContext(null);
+    }
+
+    @Test
+    void makeContextAwareBiFunctionWithExceptionHandler() {
+        final RequestContext context = createContext();
+        final AtomicBoolean errorHandled = new AtomicBoolean(false);
+        final BiFunction<Integer, Integer, Integer> divide = (x, y) -> {
+            assertCurrentContext(context);
+            return x / y;
+        };
+        final BiFunction<Integer, Integer, Integer> contextAwareDivide =
+                context.makeContextAware(divide, cause -> {
+                    assertThat(cause).isInstanceOf(ArithmeticException.class);
+                    errorHandled.set(true);
+                    return 0;
+                });
+        assertThat(contextAwareDivide.apply(5, 0)).isEqualTo(0);
+        assertThat(errorHandled.get()).isTrue();
+        assertCurrentContext(null);
+    }
+
+    @Test
+    void makeContextAwareConsumerWithExceptionHandler() {
+        final RequestContext context = createContext();
+        final AtomicBoolean errorHandled = new AtomicBoolean(false);
+        final Consumer<Integer> consumer = i -> {
+            assertCurrentContext(context);
+            throw new IllegalStateException();
+        };
+        context.makeContextAware(consumer, cause -> {
+            assertThat(cause).isInstanceOf(IllegalStateException.class);
+            errorHandled.set(true);
+        }).accept(42);
+        assertThat(errorHandled.get()).isTrue();
+        assertCurrentContext(null);
+    }
+
+    @Test
+    void makeContextAwareBiConsumerWithExceptionHandler() {
+        final RequestContext context = createContext();
+        final AtomicBoolean errorHandled = new AtomicBoolean(false);
+        final BiConsumer<Integer, Integer> biConsumer = (i, j) -> {
+            assertCurrentContext(context);
+            throw new IllegalStateException();
+        };
+        context.makeContextAware(biConsumer, cause -> {
+            assertThat(cause).isInstanceOf(IllegalStateException.class);
+            errorHandled.set(true);
+        }).accept(42, 42);
+        assertThat(errorHandled.get()).isTrue();
         assertCurrentContext(null);
     }
 

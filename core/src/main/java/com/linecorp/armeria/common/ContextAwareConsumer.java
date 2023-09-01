@@ -31,8 +31,20 @@ public interface ContextAwareConsumer<T> extends Consumer<T>, ContextHolder {
      * Returns a new {@link ContextAwareConsumer} that sets the specified {@link RequestContext}
      * before executing an underlying {@link Consumer}.
      */
-    static <T, R> ContextAwareConsumer of(RequestContext context, Consumer<T> action) {
-        return new DefaultContextAwareConsumer(context, action);
+    static <T> ContextAwareConsumer<T> of(RequestContext context, Consumer<T> action) {
+        return new DefaultContextAwareConsumer<>(context, action);
+    }
+
+    /**
+     * Returns a new {@link ContextAwareConsumer} that sets the specified {@link RequestContext}
+     * before executing an underlying {@link Consumer}.
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during the execution of the
+     *                         {@code action}.
+     */
+    static <T> ContextAwareConsumer<T> of(RequestContext context, Consumer<T> action,
+                                          Consumer<Throwable> exceptionHandler) {
+        return new DefaultContextAwareConsumer<>(context, action, exceptionHandler);
     }
 
     /**

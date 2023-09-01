@@ -20,16 +20,27 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class DefaultContextAwareFunction<T, R> implements ContextAwareFunction<T, R> {
 
     private final RequestContext context;
     private final Function<T, R> function;
+    @Nullable
+    private final Function<Throwable, R> exceptionHandler;
 
     DefaultContextAwareFunction(RequestContext context, Function<T, R> function) {
         this.context = requireNonNull(context, "context");
         this.function = requireNonNull(function, "function");
+        exceptionHandler = null;
+    }
+
+    DefaultContextAwareFunction(RequestContext context, Function<T, R> function,
+                                Function<Throwable, R> exceptionHandler) {
+        this.context = requireNonNull(context, "context");
+        this.function = requireNonNull(function, "function");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Override
@@ -46,6 +57,11 @@ final class DefaultContextAwareFunction<T, R> implements ContextAwareFunction<T,
     public R apply(T t) {
         try (SafeCloseable ignored = context.push()) {
             return function.apply(t);
+        } catch (Throwable cause) {
+            if (exceptionHandler == null) {
+                throw cause;
+            }
+            return exceptionHandler.apply(cause);
         }
     }
 }

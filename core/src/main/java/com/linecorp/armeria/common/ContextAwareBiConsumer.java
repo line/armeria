@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -31,8 +32,20 @@ public interface ContextAwareBiConsumer<T, U> extends BiConsumer<T, U>, ContextH
      * Returns a new {@link ContextAwareBiConsumer} that sets the specified {@link RequestContext}
      * before executing an underlying {@link BiConsumer}.
      */
-    static <T, U> ContextAwareBiConsumer of(RequestContext context, BiConsumer<T, U> action) {
-        return new DefaultContextAwareBiConsumer(context, action);
+    static <T, U> ContextAwareBiConsumer<T, U> of(RequestContext context, BiConsumer<T, U> action) {
+        return new DefaultContextAwareBiConsumer<>(context, action);
+    }
+
+    /**
+     * Returns a new {@link ContextAwareBiConsumer} that sets the specified {@link RequestContext}
+     * before executing an underlying {@link BiConsumer}.
+     *
+     * @param exceptionHandler A consumer function that handles exceptions thrown during the execution of the
+     *                         {@code action}.
+     */
+    static <T, U> ContextAwareBiConsumer<T, U> of(RequestContext context, BiConsumer<T, U> action,
+                                            Consumer<Throwable> exceptionHandler) {
+        return new DefaultContextAwareBiConsumer<>(context, action, exceptionHandler);
     }
 
     /**
