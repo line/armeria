@@ -41,7 +41,8 @@ class HttpClientUpgradeTest {
                                                         .useHttp2Preface(false)
                                                         .build()) {
             final WebClient client = WebClient.builder(server.httpUri()).factory(factory).build();
-            // Previously the following exception was raised and caught by DefaultHttp2Connection:
+            // Before https://github.com/line/armeria/pull/5162 is applied,
+            // the following exception was raised and caught by DefaultHttp2Connection:
             //
             // ERROR i.n.h.c.http2.DefaultHttp2Connection - Caught Throwable from listener onStreamClosed.
             // java.lang.AssertionError: null
