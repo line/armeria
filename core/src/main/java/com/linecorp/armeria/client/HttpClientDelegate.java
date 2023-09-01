@@ -119,8 +119,8 @@ final class HttpClientDelegate implements HttpClient {
                     ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
                     final UnprocessedRequestException wrappedCause = UnprocessedRequestException.of(cause);
                     handleEarlyRequestException(ctx, req, wrappedCause);
+                    ctx.cancel(wrappedCause);
                     res.close(wrappedCause);
-                    ctx.cancel(cause);
                 }
             });
         }
