@@ -227,7 +227,7 @@ public interface FlagsProvider {
      * option to enable it.
      *
      * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
-     * {@code false} no matter what you specified the JVM option.
+     * {@code false} no matter what the specified JVM option is.
      */
     @Nullable
     default Boolean dumpOpenSslInfo() {

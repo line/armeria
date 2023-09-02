@@ -58,6 +58,7 @@ class FlagsProviderTest {
 
     @Test
     void overrideDefaultFlagsProvider() throws Throwable {
+        assertFlags("tlsEngineType").equals(TlsEngineType.OPENSSL);
         assertFlags("numCommonBlockingTaskThreads").isEqualTo(100);
     }
 

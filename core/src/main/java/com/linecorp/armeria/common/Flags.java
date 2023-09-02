@@ -188,7 +188,7 @@ public final class Flags {
             getValue(FlagsProvider::transportType, "transportType", TRANSPORT_TYPE_VALIDATOR);
 
     @Nullable
-    private static TlsEngineType TLS_ENGINE_TYPE;
+    private static TlsEngineType tlsEngineType;
 
     @Nullable
     private static Boolean dumpOpenSslInfo;
@@ -547,43 +547,44 @@ public final class Flags {
     /**
      * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
      *
-     * <p>The default value of this flag is "openssl", which means the default {@link TlsEngineType} will
+     * <p>The default value of this flag is "openssl", which means the {@link TlsEngineType#OPENSSL} will
      * be used. Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
-     * the default.</p>
+     * the default value.
      */
     public static TlsEngineType tlsEngineType() {
-        if (TLS_ENGINE_TYPE != null) {
-            return TLS_ENGINE_TYPE;
+        if (tlsEngineType != null) {
+            return tlsEngineType;
         }
         setUseOpenSslAndDumpOpenSslInfo();
-        return TLS_ENGINE_TYPE;
+        return tlsEngineType;
     }
 
     private static void setUseOpenSslAndDumpOpenSslInfo() {
-        final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl");
-        final TlsEngineType tlsEngineType = getUserValue(FlagsProvider::tlsEngineType, "tlsEngineType");
-
-        if (useOpenSsl == null) {
-            TLS_ENGINE_TYPE = tlsEngineType != null ? tlsEngineType : TlsEngineType.OPENSSL;
-        } else if (tlsEngineType == null) {
-            TLS_ENGINE_TYPE = useOpenSsl ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
-        } else {
-            if (useOpenSsl != (tlsEngineType == TlsEngineType.OPENSSL)) {
-                logger.warn("useOpenSsl({}) and tlsEngineType({}) are incompatible, tlsEngineType will be used",
-                            useOpenSsl, tlsEngineType);
-            }
-            TLS_ENGINE_TYPE = tlsEngineType;
-        }
-
-        if (TLS_ENGINE_TYPE != TlsEngineType.OPENSSL) {
-            // OpenSSL explicitly disabled
-            dumpOpenSslInfo = false;
-            return;
-        }
         if (!OpenSsl.isAvailable()) {
             final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
             logger.info("OpenSSL not available: {}", cause.toString());
-            TLS_ENGINE_TYPE = TlsEngineType.JDK;
+            tlsEngineType = TlsEngineType.JDK;
+            dumpOpenSslInfo = false;
+            return;
+        }
+
+        final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl");
+        final TlsEngineType tlsEngineTypeValue = getUserValue(FlagsProvider::tlsEngineType, "tlsEngineType");
+
+        if (useOpenSsl == null) {
+            tlsEngineType = tlsEngineTypeValue != null ? tlsEngineTypeValue : TlsEngineType.OPENSSL;
+        } else if (tlsEngineTypeValue == null) {
+            tlsEngineType = useOpenSsl ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
+        } else {
+            if (useOpenSsl != (tlsEngineTypeValue == TlsEngineType.OPENSSL)) {
+                logger.warn("useOpenSsl({}) and tlsEngineType({}) are incompatible, tlsEngineType will be used",
+                            useOpenSsl, tlsEngineTypeValue);
+            }
+            tlsEngineType = tlsEngineTypeValue;
+        }
+
+        if (tlsEngineType != TlsEngineType.OPENSSL) {
+            // OpenSSL explicitly disabled
             dumpOpenSslInfo = false;
             return;
         }

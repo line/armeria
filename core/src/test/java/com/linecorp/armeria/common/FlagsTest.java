@@ -120,10 +120,9 @@ class FlagsTest {
     }
 
     @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.useOpenSsl", value = "false")
+    @SetSystemProperty(key = "com.linecorp.armeria.tlsEngineType", value = "OPENSSL")
     void tlsEngineTypeIsUsedWhenIncompatibleWithUseOpenSsl() {
-        System.setProperty("com.linecorp.armeria.useOpenSsl", "false");
-        System.setProperty("com.linecorp.armeria.tlsEngineType", "OPENSSL");
-
         assertThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
     }
 

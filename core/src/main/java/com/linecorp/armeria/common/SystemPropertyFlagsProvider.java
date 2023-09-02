@@ -161,7 +161,8 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
             case "openssl":
                 return TlsEngineType.OPENSSL;
             default:
-                throw new IllegalArgumentException(String.format("%s isn't TlsEngineType", strTlsEngineType));
+                throw new IllegalArgumentException(
+                        String.format("%s isn't one of 'jdk' or 'openssl'", strTlsEngineType));
         }
     }
 
