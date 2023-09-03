@@ -26,6 +26,8 @@ import com.linecorp.armeria.common.util.Unwrappable;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeMap;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Listens to the client connection pool events.
  */
@@ -121,5 +123,20 @@ public interface ConnectionPoolListener extends Unwrappable {
     @Override
     default ConnectionPoolListener unwrap() {
         return this;
+    }
+
+    default ConnectionPoolListener doThen(ConnectionPoolListener anotherConnectionPoolListener) {
+        requireNonNull(anotherConnectionPoolListener, "anotherConnectionPoolListener");
+        return new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr, InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                anotherConnectionPoolListener.connectionOpen(protocol, remoteAddr, localAddr, attrs);
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr, InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                anotherConnectionPoolListener.connectionClosed(protocol, remoteAddr, localAddr, attrs);
+            }
+        };
     }
 }
