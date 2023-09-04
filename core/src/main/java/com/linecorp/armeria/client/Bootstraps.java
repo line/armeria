@@ -114,12 +114,15 @@ final class Bootstraps {
     private static void setBootstrap(Bootstrap bootstrap, HttpClientFactory clientFactory, Bootstrap[][] maps,
                                      SessionProtocol p, SslContext sslCtx, boolean webSocket) {
         bootstrap.handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(
-                        new HttpClientPipelineConfigurator(clientFactory, webSocket, p, sslCtx));
-            }
-        });
+                              @Override
+                              protected void initChannel(Channel ch) throws Exception {
+                                  ch.pipeline().addLast(new HttpClientPipelineConfigurator(clientFactory,
+                                          webSocket,
+                                          p,
+                                          sslCtx));
+                              }
+                          }
+        );
         maps[p.ordinal()][toIndex(webSocket)] = bootstrap;
     }
 
@@ -130,5 +133,4 @@ final class Bootstraps {
     private static int toIndex(SerializationFormat serializationFormat) {
         return toIndex(serializationFormat == SerializationFormat.WS);
     }
-
 }
