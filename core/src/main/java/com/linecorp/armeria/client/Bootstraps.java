@@ -43,7 +43,7 @@ final class Bootstraps {
     private final SslContext sslCtxHttp1Or2;
 
     Bootstraps(HttpClientFactory clientFactory, EventLoop eventLoop, SslContext sslCtxHttp1Or2,
-               SslContext sslCtxHttp1Only, Bootstrap inetBaseBootstrap, Bootstrap unixBaseBootstrap) {
+               SslContext sslCtxHttp1Only, Bootstrap inetBaseBootstrap, @Nullable Bootstrap unixBaseBootstrap) {
         this.eventLoop = eventLoop;
         this.sslCtxHttp1Or2 = sslCtxHttp1Or2;
         this.sslCtxHttp1Only = sslCtxHttp1Only;
