@@ -33,12 +33,15 @@ task buildWeb(type: NpmTask) {
 
     inputs.property("node.version", node.version)
     inputs.dir('src').withPathSensitivity(PathSensitivity.RELATIVE)
+            .withPropertyName("sources files")
     inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
                  'webpack.config.ts')
-          .withPathSensitivity(PathSensitivity.RELATIVE)
-          .withPropertyName("npm configuration files")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+            .withPropertyName("npm configuration files")
 
     outputs.dir('build/web')
+
+    // FIXME: consider disabling cacheability once arm actions runners are available
     outputs.cacheIf { true }
 }
 
@@ -58,8 +61,11 @@ if (!rootProject.hasProperty('noLint')) {
         args = ['run', 'lint']
 
         inputs.dir('src')
+                .withPropertyName("sources files")
         inputs.files('package.json', 'package-lock.json', '.prettierrc.js', '.eslintrc.js')
+                .withPropertyName("configuration files")
         inputs.dir('../settings/')
+                .withPropertyName("settings files")
 
         outputs.upToDateWhen { true }
     }
