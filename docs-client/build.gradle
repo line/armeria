@@ -30,8 +30,9 @@ task buildWeb(type: NpmTask) {
 
     args = ['run', 'build']
 
+    // note that node_modules isn't cached due to potential cache misses per architecture
     inputs.property("node.version", node.version)
-    // cache built web per OS type
+    // build per OS type to preserve behavior of packaging jar from linux
     inputs.property("os.familyName", current().getFamilyName())
     inputs.dir('src').withPathSensitivity(PathSensitivity.RELATIVE)
             .withPropertyName("sources files")
@@ -42,7 +43,7 @@ task buildWeb(type: NpmTask) {
 
     outputs.dir('build/web')
 
-    // FIXME: consider disabling cacheability once arm actions runners are available
+    // TODO: consider disabling cacheability once arm actions runners are available
     outputs.cacheIf { true }
 }
 
