@@ -32,6 +32,8 @@ task buildWeb(type: NpmTask) {
     args = ['run', 'build']
 
     inputs.property("node.version", node.version)
+    // cache built web per OS type
+    inputs.property("os.familyName", current().getFamilyName())
     inputs.dir('src').withPathSensitivity(PathSensitivity.RELATIVE)
             .withPropertyName("sources files")
     inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
