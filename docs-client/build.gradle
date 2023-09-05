@@ -1,3 +1,6 @@
+import static org.gradle.internal.os.OperatingSystem.LINUX
+import static org.gradle.internal.os.OperatingSystem.current
+
 plugins {
     id 'base'
     alias(libs.plugins.node.gradle)
@@ -35,7 +38,8 @@ task buildWeb(type: NpmTask) {
                  'webpack.config.ts').withPathSensitivity(PathSensitivity.RELATIVE)
 
     outputs.dir('build/web')
-    outputs.cacheIf { true }
+    // cache the result from linux builds only to preserve previous behavior
+    outputs.cacheIf { current() == LINUX }
 }
 
 task copyWeb(type: Copy) {
