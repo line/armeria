@@ -1,4 +1,3 @@
-import static org.gradle.internal.os.OperatingSystem.LINUX
 import static org.gradle.internal.os.OperatingSystem.current
 
 plugins {
