@@ -341,8 +341,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     @Override
     public String toString() {
-        return toString(unused -> {
-        });
+        return toString(unused -> {});
     }
 
     /**
