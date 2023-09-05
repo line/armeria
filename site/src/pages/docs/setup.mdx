@@ -128,14 +128,14 @@ You might want to use the following build file as a starting point when you set 
         ['armeria',
         'armeria-brave',
         'armeria-grpc',
-        'armeria-jetty9',
+        'armeria-jetty11',
         'armeria-kafka',
-        'armeria-logback',
+        'armeria-logback12',
         'armeria-retrofit2',
         'armeria-rxjava3',
         'armeria-saml',
-        'armeria-thrift0.13',
-        'armeria-tomcat9',
+        'armeria-thrift0.18',
+        'armeria-tomcat10',
         'armeria-zookeeper3'].each {
             implementation "com.linecorp.armeria:\${it}:${versions['com.linecorp.armeria:armeria-bom']}"
         }\n
