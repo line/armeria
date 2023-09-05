@@ -33,7 +33,6 @@ task buildWeb(type: NpmTask) {
 
     inputs.property("node.version", node.version)
     inputs.dir('src').withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir('node_modules').withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
                  'webpack.config.ts')
           .withPathSensitivity(PathSensitivity.RELATIVE)
