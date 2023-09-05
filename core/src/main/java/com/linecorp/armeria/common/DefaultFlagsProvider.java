@@ -26,7 +26,6 @@ import java.util.function.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;

@@ -526,8 +526,8 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns whether to use HTTP/1.1 instead of HTTP/2 . If {@code true}, the client will not attempt to upgrade
-     * to HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
+     * Returns whether to use HTTP/1.1 instead of HTTP/2 . If {@code true}, the client will not attempt to
+     * upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
      */
     @UnstableApi
     public boolean preferHttp1() {
