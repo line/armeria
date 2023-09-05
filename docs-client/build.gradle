@@ -28,12 +28,17 @@ task buildWeb(type: NpmTask) {
 
     args = ['run', 'build']
 
-    inputs.dir('src')
-    inputs.dir('node_modules')
+    inputs.property("node.version", node.version)
+    inputs.dir('src').withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir('node_modules').withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
-                 'webpack.config.ts')
-    outputs.dir('build/web')
+                 'webpack.config.ts').withPathSensitivity(PathSensitivity.RELATIVE)
 
+    // lint options
+    inputs.files('.npmrc', '.prettierrc.js', '.eslintrc.js').withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir('../settings/').withPathSensitivity(PathSensitivity.RELATIVE)
+
+    outputs.dir('build/web')
     outputs.cacheIf { true }
 }
 
