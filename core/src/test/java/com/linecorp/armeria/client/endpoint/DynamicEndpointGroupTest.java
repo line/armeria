@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 
@@ -73,15 +75,16 @@ class DynamicEndpointGroupTest {
                                                               Endpoint.of("127.0.0.1", 3333).withWeight(500));
     }
 
-    @Test
-    void shouldNotifyNestedListener() {
-        DynamicEndpointGroup group = new DynamicEndpointGroup();
-        AtomicInteger invoked = new AtomicInteger();
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void shouldNotifyNestedListener(boolean notifyLatestValue) {
+        final DynamicEndpointGroup group = new DynamicEndpointGroup();
+        final AtomicInteger invoked = new AtomicInteger();
         group.addListener(unused0 -> {
             invoked.incrementAndGet();
             // Add a listener while notifying the listeners.
             group.addListener(unused1 -> invoked.incrementAndGet(), true);
-        }, true);
+        }, notifyLatestValue);
 
         group.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111)));
         assertThat(invoked).hasValue(2);

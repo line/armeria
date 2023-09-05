@@ -29,7 +29,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
@@ -43,7 +42,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
-import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
@@ -65,7 +63,6 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     private final EndpointSelectionStrategy selectionStrategy;
     private final AtomicReference<EndpointSelector> selector = new AtomicReference<>();
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
-    private final Lock endpointsLock = new ReentrantShortLock();
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new InitialEndpointsFuture();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
@@ -213,18 +210,15 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      * Adds the specified {@link Endpoint} to current {@link Endpoint} list.
      */
     protected final void addEndpoint(Endpoint e) {
-        final List<Endpoint> newEndpoints;
-        endpointsLock.lock();
+        lock();
         try {
             final List<Endpoint> newEndpointsUnsorted = Lists.newArrayList(endpoints);
             newEndpointsUnsorted.add(e);
-            endpoints = newEndpoints = ImmutableList.sortedCopyOf(newEndpointsUnsorted);
+            final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(newEndpointsUnsorted);
+            unsafeUpdateEndpoints(newEndpoints);
         } finally {
-            endpointsLock.unlock();
+            unlock();
         }
-
-        notifyListeners(newEndpoints);
-        completeInitialEndpointsFuture(newEndpoints);
     }
 
     @Override
@@ -237,19 +231,18 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
      * Removes the specified {@link Endpoint} from current {@link Endpoint} list.
      */
     protected final void removeEndpoint(Endpoint e) {
-        final List<Endpoint> newEndpoints;
-        endpointsLock.lock();
+        lock();
         try {
             if (!allowEmptyEndpoints && endpoints.size() == 1) {
                 return;
             }
-            endpoints = newEndpoints = endpoints.stream()
+            final List<Endpoint> newEndpoints = endpoints.stream()
                                                 .filter(endpoint -> !endpoint.equals(e))
                                                 .collect(toImmutableList());
+            unsafeUpdateEndpoints(newEndpoints);
         } finally {
-            endpointsLock.unlock();
+            unlock();
         }
-        notifyListeners(newEndpoints);
     }
 
     /**
@@ -266,15 +259,18 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             return;
         }
 
-        endpointsLock.lock();
+        lock();
         try {
-            this.endpoints = newEndpoints;
+            unsafeUpdateEndpoints(newEndpoints);
         } finally {
-            endpointsLock.unlock();
+            unlock();
         }
+    }
 
+    private void unsafeUpdateEndpoints(List<Endpoint> newEndpoints) {
+        endpoints = newEndpoints;
         notifyListeners(newEndpoints);
-        completeInitialEndpointsFuture(newEndpoints);
+        maybeCompleteInitialEndpointsFuture(newEndpoints);
     }
 
     private static boolean hasChanges(List<Endpoint> oldEndpoints, List<Endpoint> newEndpoints) {
@@ -297,7 +293,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return false;
     }
 
-    private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
+    private void maybeCompleteInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
             initialEndpointsFuture.complete(endpoints);
         }
@@ -345,7 +341,8 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     @Override
     public String toString() {
-        return toString(unused -> {});
+        return toString(unused -> {
+        });
     }
 
     /**
