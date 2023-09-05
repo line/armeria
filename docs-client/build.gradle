@@ -29,8 +29,12 @@ task buildWeb(type: NpmTask) {
     args = ['run', 'build']
 
     inputs.dir('src')
-    inputs.files('package.json', 'package-lock.json')
+    inputs.dir('node_modules')
+    inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
+                 'webpack.config.ts')
     outputs.dir('build/web')
+
+    outputs.cacheIf { true }
 }
 
 task copyWeb(type: Copy) {
