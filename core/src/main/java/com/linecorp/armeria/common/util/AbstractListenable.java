@@ -111,14 +111,14 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     }
 
     /**
-     * Acquires the lock that is used to update the listeners.
+     * Acquires the lock that is used to update or notify the listeners.
      */
     protected final void lock() {
         reentrantLock.lock();
     }
 
     /**
-     * Releases the lock that is used to update the listeners.
+     * Releases the lock that is used to update or notify the listeners.
      */
     protected final void unlock() {
         reentrantLock.unlock();
