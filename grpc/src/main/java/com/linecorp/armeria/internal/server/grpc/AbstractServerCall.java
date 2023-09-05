@@ -314,9 +314,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     public void onRequestMessage(DeframedMessage message, boolean endOfStream) {
         try {
-            final I request;
-            final ByteBuf buf = message.buf();
-
             boolean success = false;
             try {
                 // Special case for unary calls.
@@ -339,22 +336,32 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
             }
 
-            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-            request = marshaller.deserializeRequest(message, grpcWebText);
-            maybeLogRequestContent(request);
-
-            if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
-                GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
-            }
-
             if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
+                blockingExecutor.execute(() -> invokeOnMessage(deserializeMessage(message),
+                                                               endOfStream));
             } else {
-                invokeOnMessage(request, endOfStream);
+                invokeOnMessage(deserializeMessage(message), endOfStream);
             }
         } catch (Throwable cause) {
             close(cause);
         }
+    }
+
+    private I deserializeMessage(DeframedMessage message) {
+        final ByteBuf buf = message.buf();
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+        I request;
+        try {
+            request = marshaller.deserializeRequest(message, grpcWebText);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        maybeLogRequestContent(request);
+
+        if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
+            GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
+        }
+        return request;
     }
 
     protected final void onRequestComplete() {
