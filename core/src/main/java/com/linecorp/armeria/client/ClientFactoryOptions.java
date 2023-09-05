@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -210,6 +211,14 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<Boolean> USE_HTTP2_PREFACE =
             ClientFactoryOption.define("USE_HTTP2_PREFACE", Flags.defaultUseHttp2Preface());
+
+    /**
+     * Whether to use HTTP/1.1 instead of HTTP/2. If enabled, the client will not attempt to upgrade to
+     * HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Boolean> PREFER_HTTP1 =
+            ClientFactoryOption.define("PREFER_HTTP1", Flags.defaultPreferHttp1());
 
     /**
      * Whether to use HTTP/2 without ALPN. This is useful if you want to communicate with an HTTP/2
@@ -514,6 +523,15 @@ public final class ClientFactoryOptions
      */
     public boolean useHttp2Preface() {
         return get(USE_HTTP2_PREFACE);
+    }
+
+    /**
+     * Returns whether to use HTTP/1 instead of HTTP/2 . If {@code true}, the client will not attempt to upgrade
+     * to HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
+     */
+    @UnstableApi
+    public boolean preferHttp1() {
+        return get(PREFER_HTTP1);
     }
 
     /**

@@ -300,6 +300,9 @@ public final class Flags {
     private static final boolean DEFAULT_USE_HTTP2_PREFACE =
             getValue(FlagsProvider::defaultUseHttp2Preface, "defaultUseHttp2Preface");
 
+    private static final boolean DEFAULT_PREFER_HTTP1 =
+            getValue(FlagsProvider::defaultPreferHttp1, "defaultPreferHttp1");
+
     private static final boolean DEFAULT_USE_HTTP2_WITHOUT_ALPN =
             getValue(FlagsProvider::defaultUseHttp2WithoutAlpn, "defaultUseHttp2WithoutAlpn");
 
@@ -814,6 +817,22 @@ public final class Flags {
      */
     public static boolean defaultUseHttp2Preface() {
         return DEFAULT_USE_HTTP2_PREFACE;
+    }
+
+    /**
+     * Returns the default value of the {@link ClientFactoryBuilder#preferHttp1(boolean)} option.
+     * If enabled, the client will not attempt to upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and
+     * {@link SessionProtocol#HTTPS}.
+     *
+     * <p>Note that this option has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#preferHttp1(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultPreferHttp1=true} JVM option to enable it.
+     */
+    @UnstableApi
+    public static boolean defaultPreferHttp1() {
+        return DEFAULT_PREFER_HTTP1;
     }
 
     /**

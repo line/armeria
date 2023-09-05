@@ -26,6 +26,7 @@ import java.util.function.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
@@ -250,6 +251,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean defaultUseHttp2Preface() {
         return true;
+    }
+
+    @Override
+    public Boolean defaultPreferHttp1() {
+        return false;
     }
 
     @Override

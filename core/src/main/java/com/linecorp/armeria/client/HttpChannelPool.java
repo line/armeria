@@ -138,7 +138,7 @@ final class HttpChannelPool implements AsyncCloseable {
         // Attempting to access the array with an unallowed protocol will trigger NPE,
         // which will help us find a bug.
         for (SessionProtocol p : sessionProtocols) {
-            final SslContext sslCtx = determineSslContext(p);
+            final SslContext sslCtx = determineSslContext(p, clientFactory.preferHttp1());
             setBootstrap(baseBootstrap.clone(), clientFactory, maps, p, sslCtx, true);
             setBootstrap(baseBootstrap.clone(), clientFactory, maps, p, sslCtx, false);
         }
@@ -165,9 +165,34 @@ final class HttpChannelPool implements AsyncCloseable {
         return toIndex(serializationFormat == SerializationFormat.WS);
     }
 
-    private SslContext determineSslContext(SessionProtocol desiredProtocol) {
-        return desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C ?
-               sslCtxHttp1Only : sslCtxHttp1Or2;
+    private SslContext determineSslContext(SessionProtocol desiredProtocol, boolean preferHttp1) {
+        if (preferHttp1) {
+            switch (desiredProtocol) {
+                case HTTP:
+                case HTTPS:
+                case H1:
+                case H1C:
+                    return sslCtxHttp1Only;
+                case H2:
+                case H2C:
+                    return sslCtxHttp1Or2;
+                default:
+                    throw new Error(); // Should never reach here.
+            }
+        } else {
+            switch (desiredProtocol) {
+                case H1:
+                case H1C:
+                    return sslCtxHttp1Only;
+                case HTTP:
+                case HTTPS:
+                case H2:
+                case H2C:
+                    return sslCtxHttp1Or2;
+                default:
+                    throw new Error(); // Should never reach here.
+            }
+        }
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
@@ -207,7 +232,7 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = determineSslContext(desiredProtocol);
+            final SslContext sslCtx = determineSslContext(desiredProtocol, clientFactory.preferHttp1());
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
         }
     }
