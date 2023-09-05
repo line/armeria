@@ -350,7 +350,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private I deserializeMessage(DeframedMessage message) {
         final ByteBuf buf = message.buf();
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-        I request;
+        final I request;
         try {
             request = marshaller.deserializeRequest(message, grpcWebText);
         } catch (IOException e) {
