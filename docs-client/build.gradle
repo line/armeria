@@ -34,10 +34,6 @@ task buildWeb(type: NpmTask) {
     inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
                  'webpack.config.ts').withPathSensitivity(PathSensitivity.RELATIVE)
 
-    // lint options
-    inputs.files('.npmrc', '.prettierrc.js', '.eslintrc.js').withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir('../settings/').withPathSensitivity(PathSensitivity.RELATIVE)
-
     outputs.dir('build/web')
     outputs.cacheIf { true }
 }
@@ -58,8 +54,9 @@ if (!rootProject.hasProperty('noLint')) {
         args = ['run', 'lint']
 
         inputs.dir('src')
-        inputs.file('package.json')
-        inputs.file('package-lock.json')
+        inputs.files('package.json', 'package-lock.json', '.prettierrc.js', '.eslintrc.js')
+        inputs.dir('../settings/')
+
         outputs.upToDateWhen { true }
     }
 
