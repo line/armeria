@@ -35,11 +35,12 @@ task buildWeb(type: NpmTask) {
     inputs.dir('src').withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir('node_modules').withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
-                 'webpack.config.ts').withPathSensitivity(PathSensitivity.RELATIVE)
+                 'webpack.config.ts')
+          .withPathSensitivity(PathSensitivity.RELATIVE)
+          .withPropertyName("npm configuration files")
 
     outputs.dir('build/web')
-    // cache the result from linux builds only to preserve previous behavior
-    outputs.cacheIf { current() == LINUX }
+    outputs.cacheIf { true }
 }
 
 task copyWeb(type: Copy) {
