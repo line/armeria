@@ -1,0 +1,43 @@
+name: Periodic Gradle Build Cache Check
+on:
+  schedule:
+    - cron: '0 01 * * 1'
+
+env:
+  LC_ALL: "en_US.UTF-8"
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+
+jobs:
+  build-cache-check:
+    if: github.repository == 'line/armeria'
+    runs-on: self-hosted
+    steps:
+      - id: setup-jdk-19
+        name: Set up JDK 19
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '19'
+
+      - name: Download script
+        run: curl -s -L -O https://github.com/gradle/gradle-enterprise-build-validation-scripts/releases/download/v2.5/gradle-enterprise-gradle-build-validation-2.5.zip
+
+      - name: Unzip script
+        run: unzip -q -o gradle-enterprise-gradle-build-validation-2.5.zip
+
+      - name: Run script
+        working-directory: gradle-enterprise-gradle-build-validation
+        run: |
+          ./03-validate-local-build-caching-different-locations.sh -f \
+          -r https://github.com/line/armeria.git -t build \
+          -a --parallel\ -Pretry=true\ -PfailOnPassedAfterRetry=false
+
+      - name: Summarize result
+        if: always()
+        working-directory: gradle-enterprise-gradle-build-validation/.data/03-validate-local-build-caching-different-locations/latest
+        run: |
+          find . -name '*.receipt' -maxdepth 1 -exec cat {} + >> $GITHUB_STEP_SUMMARY
+
+      - name: Clean up result
+        if: always()
+        run: rm -rfv ${{ github.workspace }}/*
