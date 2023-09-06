@@ -7,6 +7,11 @@ env:
   LC_ALL: "en_US.UTF-8"
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
 
+defaults:
+  run:
+    shell: bash
+    working-directory: scripts
+
 jobs:
   build-cache-check:
     if: github.repository == 'line/armeria'
@@ -26,7 +31,7 @@ jobs:
         run: unzip -q -o gradle-enterprise-gradle-build-validation-2.5.zip
 
       - name: Run script
-        working-directory: gradle-enterprise-gradle-build-validation
+        working-directory: scripts/gradle-enterprise-gradle-build-validation
         run: |
           ./03-validate-local-build-caching-different-locations.sh -f \
           -r https://github.com/line/armeria.git -t build \
@@ -34,10 +39,10 @@ jobs:
 
       - name: Summarize result
         if: always()
-        working-directory: gradle-enterprise-gradle-build-validation/.data/03-validate-local-build-caching-different-locations/latest
+        working-directory: scripts/gradle-enterprise-gradle-build-validation/.data/03-validate-local-build-caching-different-locations/latest
         run: |
           find . -name '*.receipt' -maxdepth 1 -exec cat {} + >> $GITHUB_STEP_SUMMARY
 
       - name: Clean up result
         if: always()
-        run: rm -rfv ${{ github.workspace }}/*
+        run: rm -rfv ${{ github.workspace }}/scripts
