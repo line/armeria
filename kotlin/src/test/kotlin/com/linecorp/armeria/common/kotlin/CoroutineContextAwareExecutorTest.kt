@@ -31,17 +31,6 @@ import org.junit.jupiter.api.Test
 class CoroutineContextAwareExecutorTest {
 
     @Test
-    fun foo() {
-        val ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build()
-        runTest(ctx.asCoroutineContext()) {
-            assertThat(ServiceRequestContext.current()).isSameAs(ctx)
-            withContext(Dispatchers.Default) {
-                assertThat(ServiceRequestContext.current()).isSameAs(ctx)
-            }
-        }
-    }
-
-    @Test
     fun serviceRequestContext() {
         val ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build()
         runTest {
