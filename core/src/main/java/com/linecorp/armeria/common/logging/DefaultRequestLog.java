@@ -731,7 +731,19 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.sslSession = sslSession;
         this.sessionProtocol = sessionProtocol;
         this.connectionTimings = connectionTimings;
+        maybeSetScheme();
         updateFlags(RequestLogProperty.SESSION);
+    }
+
+    private void maybeSetScheme() {
+        if (isAvailable(RequestLogProperty.SCHEME) ||
+            serializationFormat == SerializationFormat.NONE) {
+            return;
+        }
+
+        assert sessionProtocol != null;
+        scheme = Scheme.of(serializationFormat, sessionProtocol);
+        updateFlags(RequestLogProperty.SCHEME);
     }
 
     @Override

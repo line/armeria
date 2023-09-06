@@ -57,7 +57,7 @@ final class StreamMessageUtil {
 
         final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>();
         //noinspection unchecked
-        deferred.delegateWhenCompleteStage((CompletionStage<? extends Publisher<T>>) future);
+        deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) future);
         return deferred;
     }
 

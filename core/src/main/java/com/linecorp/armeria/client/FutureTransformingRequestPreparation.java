@@ -275,6 +275,12 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     @Override
+    public FutureTransformingRequestPreparation<T> content(Publisher<? extends HttpData> content) {
+        delegate.content(content);
+        return this;
+    }
+
+    @Override
     public FutureTransformingRequestPreparation<T> content(MediaType contentType,
                                                            Publisher<? extends HttpData> content) {
         delegate.content(contentType, content);

@@ -37,7 +37,7 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
                                  HttpResponseDecoder responseDecoder,
                                  HttpRequest request, DecodedHttpResponse originalRes,
                                  ClientRequestContext ctx, long timeoutMillis) {
-        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty());
+        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty(), true, true);
     }
 
     @Override
