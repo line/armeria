@@ -7,11 +7,6 @@ env:
   LC_ALL: "en_US.UTF-8"
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
 
-defaults:
-  run:
-    shell: bash
-    working-directory: scripts
-
 jobs:
   build-cache-check:
     if: github.repository == 'line/armeria'
@@ -24,13 +19,12 @@ jobs:
           distribution: 'temurin'
           java-version: '19'
 
-      - name: Create the working directory
-        run: mkdir -p ${{ github.workspace }}/scripts
-
       - name: Download script
+        working-directory: scripts
         run: curl -s -L -O https://github.com/gradle/gradle-enterprise-build-validation-scripts/releases/download/v2.5/gradle-enterprise-gradle-build-validation-2.5.zip
 
       - name: Unzip script
+        working-directory: scripts
         run: unzip -q -o gradle-enterprise-gradle-build-validation-2.5.zip
 
       - name: Run script
