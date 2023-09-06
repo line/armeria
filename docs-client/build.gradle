@@ -35,11 +35,11 @@ task buildWeb(type: NpmTask) {
     // build per OS type to preserve behavior of packaging jar from linux
     inputs.property("os.familyName", current().getFamilyName())
     inputs.dir('src').withPathSensitivity(PathSensitivity.RELATIVE)
-            .withPropertyName("sources files")
+          .withPropertyName("sources files")
     inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
                  'webpack.config.ts')
-            .withPathSensitivity(PathSensitivity.RELATIVE)
-            .withPropertyName("npm configuration files")
+          .withPathSensitivity(PathSensitivity.RELATIVE)
+          .withPropertyName("npm configuration files")
 
     outputs.dir('build/web')
 
