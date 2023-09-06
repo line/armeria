@@ -24,6 +24,9 @@ jobs:
           distribution: 'temurin'
           java-version: '19'
 
+      - name: Create the working directory
+        run: mkdir -p ${{ github.workspace }}/scripts
+
       - name: Download script
         run: curl -s -L -O https://github.com/gradle/gradle-enterprise-build-validation-scripts/releases/download/v2.5/gradle-enterprise-gradle-build-validation-2.5.zip
 
