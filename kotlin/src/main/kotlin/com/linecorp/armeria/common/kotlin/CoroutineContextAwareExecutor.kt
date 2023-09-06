@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.kotlin
 
 import com.linecorp.armeria.common.ContextAwareExecutor
-import java.util.concurrent.Executor
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -28,5 +27,5 @@ import kotlinx.coroutines.asCoroutineDispatcher
  * propagates the [ContextAwareExecutor.context] when the coroutine is resumed on a thread.
  */
 fun ContextAwareExecutor.asCoroutineDispatcher(): CoroutineContext {
-    return (this as Executor).asCoroutineDispatcher() + context().asCoroutineContext()
+    return this.withoutContext().asCoroutineDispatcher() + context().asCoroutineContext()
 }
