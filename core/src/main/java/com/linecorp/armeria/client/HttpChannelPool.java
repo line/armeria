@@ -255,7 +255,18 @@ final class HttpChannelPool implements AsyncCloseable {
 
     @Nullable
     private ChannelAcquisitionFuture getPendingAcquisition(SessionProtocol desiredProtocol, PoolKey key) {
-        return pendingAcquisitions[desiredProtocol.ordinal()].get(key);
+        final ChannelAcquisitionFuture future = pendingAcquisitions[desiredProtocol.ordinal()].get(key);
+        if (future == null) {
+            // TODO(ikhoon): Consider perferHttp1 option. https://github.com/line/armeria/pull/5168
+            // Try to find a pending acquisition from the explicit protocols.
+            switch (desiredProtocol) {
+                case HTTP:
+                    return pendingAcquisitions[SessionProtocol.H2C.ordinal()].get(key);
+                case HTTPS:
+                    return pendingAcquisitions[SessionProtocol.H2.ordinal()].get(key);
+            }
+        }
+        return future;
     }
 
     private void setPendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
@@ -860,7 +871,8 @@ final class HttpChannelPool implements AsyncCloseable {
                     final HttpSession session = HttpSession.get(pch.get());
                     if (session.incrementNumUnfinishedResponses()) {
                         result = PiggybackedChannelAcquisitionResult.SUCCESS;
-                    } else if (usePendingAcquisition(actualProtocol, serializationFormat,
+                        // Should use the same protocol used to acquire a new connection.
+                    } else if (usePendingAcquisition(desiredProtocol, serializationFormat,
                                                      key, childPromise, timingsBuilder)) {
                         result = PiggybackedChannelAcquisitionResult.PIGGYBACKED_AGAIN;
                     } else {
