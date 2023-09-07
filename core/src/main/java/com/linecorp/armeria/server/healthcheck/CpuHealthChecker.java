@@ -64,7 +64,7 @@ final class CpuHealthChecker implements HealthChecker {
     static final Method processCpuUsage;
 
     static {
-        operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));;
+        operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
         operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
         systemCpuUsage = detectMethod("getSystemCpuLoad");
         processCpuUsage = detectMethod("getProcessCpuLoad");
@@ -91,7 +91,8 @@ final class CpuHealthChecker implements HealthChecker {
      * @param processCpuLoadThreshold the target process cpu usage
      */
     private CpuHealthChecker(double cpuUsageThreshold, double processCpuLoadThreshold) {
-        this(cpuUsageThreshold, processCpuLoadThreshold, currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
+        this(cpuUsageThreshold, processCpuLoadThreshold,
+                currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
     }
 
     private CpuHealthChecker(double cpuUsageThreshold, double processCpuLoadThreshold,
