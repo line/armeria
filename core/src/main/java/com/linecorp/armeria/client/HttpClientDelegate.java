@@ -172,7 +172,8 @@ final class HttpClientDelegate implements HttpClient {
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
         final SessionProtocol protocol = ctx.sessionProtocol();
         final SerializationFormat serializationFormat = ctx.log().partial().serializationFormat();
-        final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key);
+        final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key,
+                                                            factory.preferHttp1());
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
             doExecute(pooledChannel, ctx, req, res);

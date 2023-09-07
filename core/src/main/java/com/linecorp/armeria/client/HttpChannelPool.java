@@ -166,33 +166,19 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private SslContext determineSslContext(SessionProtocol desiredProtocol, boolean preferHttp1) {
-        if (preferHttp1) {
-            switch (desiredProtocol) {
-                case HTTP:
-                case HTTPS:
-                case H1:
-                case H1C:
-                    return sslCtxHttp1Only;
-                case H2:
-                case H2C:
-                    return sslCtxHttp1Or2;
-                default:
-                    throw new Error(); // Should never reach here.
-            }
-        } else {
             switch (desiredProtocol) {
                 case H1:
                 case H1C:
                     return sslCtxHttp1Only;
                 case HTTP:
                 case HTTPS:
+                    return preferHttp1 ? sslCtxHttp1Only : sslCtxHttp1Or2;
                 case H2:
                 case H2C:
                     return sslCtxHttp1Or2;
                 default:
                     throw new Error(); // Should never reach here.
             }
-        }
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
@@ -302,17 +288,21 @@ final class HttpChannelPool implements AsyncCloseable {
     @Nullable
     @SuppressWarnings("checkstyle:FallThrough")
     PooledChannel acquireNow(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
-                             PoolKey key) {
-        PooledChannel ch;
+                             PoolKey key, boolean preferHttp1) {
+        PooledChannel ch = null;
         switch (desiredProtocol) {
             case HTTP:
-                ch = acquireNowExact(key, SessionProtocol.H2C, serializationFormat);
+                if (!preferHttp1) {
+                    ch = acquireNowExact(key, SessionProtocol.H2C, serializationFormat);
+                }
                 if (ch == null) {
                     ch = acquireNowExact(key, SessionProtocol.H1C, serializationFormat);
                 }
                 break;
             case HTTPS:
-                ch = acquireNowExact(key, SessionProtocol.H2, serializationFormat);
+                if (!preferHttp1) {
+                    ch = acquireNowExact(key, SessionProtocol.H2, serializationFormat);
+                }
                 if (ch == null) {
                     ch = acquireNowExact(key, SessionProtocol.H1, serializationFormat);
                 }
@@ -896,7 +886,8 @@ final class HttpChannelPool implements AsyncCloseable {
                     // We use the exact protocol (H1 or H1C) instead of 'desiredProtocol' so that
                     // we do not waste our time looking for pending acquisitions for the host
                     // that does not support HTTP/2.
-                    final PooledChannel ch = acquireNow(actualProtocol, serializationFormat, key);
+                    final PooledChannel ch = acquireNow(actualProtocol, serializationFormat, key,
+                                                        clientFactory.preferHttp1());
                     if (ch != null) {
                         pch = ch;
                         result = PiggybackedChannelAcquisitionResult.SUCCESS;

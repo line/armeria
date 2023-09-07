@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -65,6 +66,35 @@ class PreferHttp1Test {
                 default:
                     assertThat(log.sessionProtocol()).isEqualTo(protocol);
             }
+        }
+    }
+
+    @Test
+    void reuseH1Pool() throws InterruptedException {
+        final CountingConnectionPoolListener connectionPoolListener = new CountingConnectionPoolListener();
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .preferHttp1(true)
+                                                  .connectionPoolListener(connectionPoolListener)
+                                                  .tlsNoVerify()
+                                                  .build()) {
+            final BlockingWebClient client = WebClient.builder()
+                                                      .factory(factory)
+                                                      .build()
+                                                      .blocking();
+            final AggregatedHttpResponse h2Response = client.get(server.uri(SessionProtocol.H2C).resolve("/")
+                                                                       .toString());
+            assertThat(h2Response.contentUtf8()).isEqualTo("Hello, world!");
+            final RequestLog log0 = server.requestContextCaptor().take().log().whenComplete().join();
+            assertThat(log0.sessionProtocol()).isEqualTo(SessionProtocol.H2C);
+            assertThat(connectionPoolListener.opened()).isEqualTo(1);
+            for (int i = 0; i < 3; i++) {
+                final AggregatedHttpResponse h1Response = client.get(server.uri(SessionProtocol.HTTP).resolve("/")
+                                                                           .toString());
+                assertThat(h1Response.contentUtf8()).isEqualTo("Hello, world!");
+                final RequestLog log1 = server.requestContextCaptor().take().log().whenComplete().join();
+                assertThat(log1.sessionProtocol()).isEqualTo(SessionProtocol.H1C);
+            }
+            assertThat(connectionPoolListener.opened()).isEqualTo(2);
         }
     }
 }
