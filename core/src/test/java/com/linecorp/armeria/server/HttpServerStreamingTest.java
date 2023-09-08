@@ -92,6 +92,7 @@ class HttpServerStreamingTest {
         protected void configure(ServerBuilder sb) throws Exception {
 
             sb.workerGroup(workerGroup, true);
+            sb.serviceWorkerGroup(workerGroup, false);
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
