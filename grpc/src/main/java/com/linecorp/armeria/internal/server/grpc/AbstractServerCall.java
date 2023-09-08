@@ -337,25 +337,30 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             }
 
             if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> invokeOnMessage(deserializeMessage(message),
-                                                               endOfStream));
+                blockingExecutor.execute(() -> deserializeAndInvoke(message, endOfStream));
             } else {
-                invokeOnMessage(deserializeMessage(message), endOfStream);
+                deserializeAndInvoke(message, endOfStream);
             }
         } catch (Throwable cause) {
             close(cause);
         }
     }
 
-    private I deserializeMessage(DeframedMessage message) {
-        final ByteBuf buf = message.buf();
-        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+    private void deserializeAndInvoke(DeframedMessage message, boolean endOfStream) {
         final I request;
         try {
-            request = marshaller.deserializeRequest(message, grpcWebText);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            request = deserializeMessage(message);
+        } catch (Throwable e) {
+            close(e);
+            return;
         }
+        invokeOnMessage(request, endOfStream);
+    }
+
+    private I deserializeMessage(DeframedMessage message) throws IOException {
+        final ByteBuf buf = message.buf();
+        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+        final I request = marshaller.deserializeRequest(message, grpcWebText);
         maybeLogRequestContent(request);
 
         if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
