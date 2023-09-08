@@ -237,8 +237,8 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
                 return;
             }
             final List<Endpoint> newEndpoints = endpoints.stream()
-                                                .filter(endpoint -> !endpoint.equals(e))
-                                                .collect(toImmutableList());
+                                                         .filter(endpoint -> !endpoint.equals(e))
+                                                         .collect(toImmutableList());
             unsafeUpdateEndpoints(newEndpoints);
         } finally {
             unlock();
@@ -252,15 +252,16 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         if (!allowEmptyEndpoints && Iterables.isEmpty(endpoints)) {
             return;
         }
-        final List<Endpoint> oldEndpoints = this.endpoints;
-        final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
-
-        if (!hasChanges(oldEndpoints, newEndpoints)) {
-            return;
-        }
 
         lock();
         try {
+            final List<Endpoint> oldEndpoints = this.endpoints;
+            final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
+
+            if (!hasChanges(oldEndpoints, newEndpoints)) {
+                return;
+            }
+
             unsafeUpdateEndpoints(newEndpoints);
         } finally {
             unlock();
