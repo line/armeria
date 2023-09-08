@@ -1,5 +1,6 @@
 dependencies {
     implementation project(':grpc')
+    implementation project(':protobuf')
 
     // ScalaPB
     api libs.scalapb.json4s.v212

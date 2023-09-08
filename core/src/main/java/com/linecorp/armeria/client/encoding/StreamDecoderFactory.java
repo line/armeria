@@ -16,13 +16,16 @@
 
 package com.linecorp.armeria.client.encoding;
 
-import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpMessage;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
 /**
  * An interface that constructs a new {@link StreamDecoder} for a given Content-Encoding header value.
- * A new decoder is valid for the lifetime of an {@link HttpResponse}.
+ * A new decoder is valid for the lifetime of an {@link HttpMessage}.
  *
  * @deprecated Use {@link com.linecorp.armeria.common.encoding.StreamDecoderFactory} instead.
  */
@@ -33,14 +36,14 @@ public interface StreamDecoderFactory {
      * Returns the {@link StreamDecoderFactory} for {@code "deflate"} content encoding.
      */
     static StreamDecoderFactory deflate() {
-        return StreamDecoderFactories.DEFLATE;
+        return com.linecorp.armeria.common.encoding.StreamDecoderFactory.deflate();
     }
 
     /**
      * Returns the {@link StreamDecoderFactory} for {@code "gzip"} content encoding.
      */
     static StreamDecoderFactory gzip() {
-        return StreamDecoderFactories.GZIP;
+        return com.linecorp.armeria.common.encoding.StreamDecoderFactory.gzip();
     }
 
     /**
@@ -49,7 +52,18 @@ public interface StreamDecoderFactory {
     String encodingHeaderValue();
 
     /**
-     * Construct a new {@link StreamDecoder} to use to decode an {@link HttpResponse}.
+     * Construct a new {@link StreamDecoder} to use to decode an {@link HttpMessage}.
      */
     StreamDecoder newDecoder(ByteBufAllocator alloc);
+
+    /**
+     * Construct a new {@link StreamDecoder} to use to decode an {@link HttpMessage}.
+     *
+     * @param alloc the {@link ByteBufAllocator} to allocate a new {@link ByteBuf} for the decoded
+     *              {@link HttpMessage}.
+     * @param maxLength the maximum allowed length of a decoded content. If the total length of the decoded
+     *                  content exceeds {@code maxLength}, a {@link ContentTooLargeException} will be raised.
+     */
+    @UnstableApi
+    StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength);
 }

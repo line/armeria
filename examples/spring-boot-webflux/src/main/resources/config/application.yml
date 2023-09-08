@@ -12,4 +12,4 @@ armeria:
     - http
     - proxy
   - port: 8080    # Port 8080 will serve only HTTP.
-    protocol: http
+    protocols: http

@@ -2,11 +2,12 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
   pull_request:
+  merge_group:
 
 concurrency:
   # Cancel the previous builds in the same PR.
@@ -16,63 +17,71 @@ concurrency:
 
 env:
   LC_ALL: "en_US.UTF-8"
+  BUILD_JDK_VERSION: "19"
+  # Used by GitHub CLI
+  GH_TOKEN: ${{ github.token }}
+  RUN_ID: ${{ github.run_id }}
+  PR_NUMBER: ${{ github.event.pull_request.number }}
 
 jobs:
   build:
     if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
-    timeout-minutes: 80
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        on: [ self-hosted, macos-latest, windows-latest ]
-        java: [ 17 ]
+        on: [ self-hosted, macos-12, windows-latest ]
+        java: [ 19 ]
         include:
           - java: 8
             on: self-hosted
           - java: 11
             on: self-hosted
-          - java: 16
+          - java: 17
             on: self-hosted
             leak: true
           - java: 17
-            # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
-            #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
-            on: macos-latest
-            coverage: true
+            on: self-hosted
+            min-java: 11
           - java: 17
             on: self-hosted
+            min-java: 17
+            coverage: true
+          - java: 19
+            on: self-hosted
             snapshot: true
+            # blockhound makes the build run about 10 minutes slower
+            blockhound: true
+
+    name: build-${{ matrix.on }}-jdk-${{ matrix.java }}${{ matrix.min-java && format('-min-java-{0}', matrix.min-java) || '' }}${{ matrix.leak && '-leak' || ''}}${{ matrix.coverage && '-coverage' || ''}}${{ matrix.snapshot && '-snapshot' || ''}}${{ matrix.blockhound && '-blockhound' || ''}}
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Set job name
+        run: |
+          JOB_NAME="build-${{ matrix.on }}-jdk-${{ matrix.java }}${{ matrix.min-java && format('-min-java-{0}', matrix.min-java) || '' }}${{ matrix.leak && '-leak' || ''}}${{ matrix.coverage && '-coverage' || ''}}${{ matrix.snapshot && '-snapshot' || ''}}${{ matrix.blockhound && '-blockhound' || ''}}"
+          echo "JOB_NAME=$JOB_NAME" >> $GITHUB_ENV
+        shell: bash
+
+      - uses: actions/checkout@v3
 
       - id: setup-jdk
-        if: ${{ matrix.java != 17 }}
+        if: ${{ matrix.java != env.BUILD_JDK_VERSION }}
         name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
 
-      - id: setup-jdk-17
-        name: Set up JDK 17
-        uses: actions/setup-java@v2
+      - id: setup-build-jdk
+        name: Set up build JDK ${{ env.BUILD_JDK_VERSION }}
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: ${{ env.BUILD_JDK_VERSION }}
 
-      - if: ${{ matrix.on != 'self-hosted' }}
-        name: Restore the cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
-          restore-keys: |
-            build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
-            build-${{ matrix.java }}-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
       # Build the shaded JARs first so that shading process doesn't incur memory pressure
       # on other Gradle tasks such as tests.
@@ -82,9 +91,17 @@ jobs:
           ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           -PnoLint \
-          -PbuildJdkVersion=17 \
+          -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+        shell: bash
+
+      - name: Get job ID
+        id: get-job-id
+        run: |
+          JOB_ID=$(gh run view $RUN_ID --json jobs | jq ".jobs[] | select(.name == \"${JOB_NAME}\") | .databaseId")
+          echo "JOB_ID=$JOB_ID" >> $GITHUB_ENV
         shell: bash
 
       - name: Build with Gradle
@@ -93,14 +110,26 @@ jobs:
           ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           ${{ matrix.leak && '-Pleak' || '' }} \
+          ${{ matrix.blockhound && '-Pblockhound' || '' }} \
           -PnoLint \
           -PflakyTests=false \
-          -PbuildJdkVersion=17 \
+          -Pretry=true \
+          -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
+        env:
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
 
-      - if: ${{ matrix.snapshot && github.ref_name == 'master' }}
+      - name: Upload Gradle build scan
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PR_NUMBER && format('{0}-', env.PR_NUMBER) || '' }}build-scan-${{ env.JOB_NAME }}
+          path: ~/.gradle/build-scan-data
+
+      - if: ${{ matrix.snapshot && github.ref_name == 'main' }}
         name: Publish snapshots
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=1 publish
@@ -120,10 +149,11 @@ jobs:
           ./gradlew --no-daemon --stacktrace --max-workers=1 reportFailedTests \
           -PnoLint \
           -PflakyTests=false \
-          -PbuildJdkVersion=17 \
+          -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jdk.outputs.path }}
-          
+          ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+
           SUMMARY_FILE="build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
             echo '### 🔴 Failed tests' >> $GITHUB_STEP_SUMMARY
@@ -131,37 +161,50 @@ jobs:
           fi
         shell: bash
 
-      - name: Clean up the cache
-        # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
-        # Restoring these files from a GitHub Actions cache might cause problems for future builds.
-        run: |
-          rm -fr ~/.gradle/caches/[0-9]* || true
-          rm -fr ~/.gradle/caches/journal-* || true
-          rm -fr ~/.gradle/caches/transforms-* || true
-          rm -f ~/.gradle/caches/*/*.lock || true
-          rm -f ~/.gradle/caches/*/gc.properties || true
-        shell: bash
-
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
 
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
+
+      - name: Fail the run if any threads were blocked
+        if: ${{ matrix.blockhound }}
+        run: |
+          blockhound_logs=$(find . -name 'blockhound.log' -size +0); \
+          if [[ -z ${blockhound_logs} ]]; then \
+            exit 0; \
+          else \
+             while IFS= read -r log; do \
+               echo "- Detected file: ${log}"; \
+               head --lines=1000 "${log}"; \
+               echo; \
+             done <<< "${blockhound_logs}"; \
+             exit 1; \
+          fi
+        shell: bash
 
       - name: Collect the test reports
         if: failure()
-        run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+        run: |
+          find . '(' \
+          -name 'java_pid*.hprof' -or \
+          -name 'hs_err_*.log' -or \
+          -path '*/build/reports/tests' -or \
+          -path '*/build/test-results' -or \
+          -path '*/javadoc.options' -or \
+          -name 'blockhound.log' ')' \
+          -exec tar rf "reports-${{ env.JOB_NAME }}.tar" {} ';'
         shell: bash
 
       - name: Upload the artifacts
         if: failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: reports-JVM-${{ matrix.java }}
-          path: reports-JVM-${{ matrix.java }}.tar
+          name: reports-${{ env.JOB_NAME }}
+          path: reports-${{ env.JOB_NAME }}.tar
           retention-days: 3
 
   lint:
@@ -169,27 +212,21 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - id: setup-jdk-17
-        name: Set up JDK 17
-        uses: actions/setup-java@v2
+      - id: setup-build-jdk
+        name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: ${{ env.BUILD_JDK_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
       - name: Run the linters
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel lint
-
-      - name: Clean up the cache
-        run: |
-          rm -fr ~/.gradle/caches/[0-9]* || true
-          rm -fr ~/.gradle/caches/journal-* || true
-          rm -fr ~/.gradle/caches/transforms-* || true
-          rm -f ~/.gradle/caches/*/*.lock || true
-          rm -f ~/.gradle/caches/*/gc.properties || true
-        shell: bash
 
   site:
     if: github.repository == 'line/armeria'
@@ -198,43 +235,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install svgbob_cli
         run: |
           sudo apt-get -y install cargo && cargo install svgbob_cli
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - id: setup-jdk-17
-        name: Set up JDK 17
-        uses: actions/setup-java@v2
+      - id: setup-build-jdk
+        name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: ${{ env.BUILD_JDK_VERSION }}
 
-      - name: Restore the cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
-          restore-keys: |
-            build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
-            build-${{ matrix.java }}-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel site
-        shell: bash
-
-      - name: Clean up the cache
-        run: |
-          rm -fr ~/.gradle/caches/[0-9]* || true
-          rm -fr ~/.gradle/caches/journal-* || true
-          rm -fr ~/.gradle/caches/transforms-* || true
-          rm -f ~/.gradle/caches/*/*.lock || true
-          rm -f ~/.gradle/caches/*/gc.properties || true
+          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
         shell: bash
 
   flaky-tests:
@@ -242,24 +262,31 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - id: setup-jdk-17
-        name: Set up JDK 17
-        uses: actions/setup-java@v2
+      - id: setup-build-jdk
+        name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: ${{ env.BUILD_JDK_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
       - name: Run flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check -PnoWeb -PnoLint -PflakyTests=true
+          ./gradlew --no-daemon --stacktrace --max-workers=2 --parallel check \
+          -PnoLint -PflakyTests=true -Pretry=true \
+          -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
+          -PtestJavaVersion=${{ env.BUILD_JDK_VERSION }} \
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }}
 
       - name: Summarize the failed tests
         if: failure()
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=1 -PnoWeb -PnoLint reportFailedTests
-          
+
           SUMMARY_FILE="build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
             echo '#### 🔴 Failed tests' >> $GITHUB_STEP_SUMMARY
@@ -267,16 +294,7 @@ jobs:
           fi
         shell: bash
 
-      - name: Clean up the cache
-        run: |
-          rm -fr ~/.gradle/caches/[0-9]* || true
-          rm -fr ~/.gradle/caches/journal-* || true
-          rm -fr ~/.gradle/caches/transforms-* || true
-          rm -f ~/.gradle/caches/*/*.lock || true
-          rm -f ~/.gradle/caches/*/gc.properties || true
-        shell: bash
-
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash

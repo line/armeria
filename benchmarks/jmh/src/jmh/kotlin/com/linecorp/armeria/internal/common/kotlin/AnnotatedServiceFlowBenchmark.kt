@@ -44,20 +44,23 @@ open class AnnotatedServiceFlowBenchmark {
     @Setup
     open fun setup() {
         server = Server.builder()
-            .annotatedService("/benchmark", object {
-                @Get("/flow")
-                @ProducesJsonSequences
-                fun flowBm(): Flow<String> = flow {
-                    (0 until 1000).forEach {
-                        emit("$it")
+            .annotatedService(
+                "/benchmark",
+                object {
+                    @Get("/flow")
+                    @ProducesJsonSequences
+                    fun flowBm(): Flow<String> = flow {
+                        (0 until 1000).forEach {
+                            emit("$it")
+                        }
                     }
-                }
 
-                @Get("/publisher")
-                @ProducesJsonSequences
-                fun publisherBm(): Publisher<String> =
-                    Flux.fromStream(IntStream.range(0, 1000).mapToObj { it.toString() })
-            })
+                    @Get("/publisher")
+                    @ProducesJsonSequences
+                    fun publisherBm(): Publisher<String> =
+                        Flux.fromStream(IntStream.range(0, 1000).mapToObj { it.toString() })
+                }
+            )
             .build()
             .also { it.start().join() }
 

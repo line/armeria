@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.NetUtil;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -60,7 +61,7 @@ final class DefaultCookieJar implements CookieJar {
         this.cookiePolicy = cookiePolicy;
         store = new Object2LongOpenHashMap<>();
         filter = new HashMap<>();
-        lock = new ReentrantLock();
+        lock = new ReentrantShortLock();
     }
 
     @Override

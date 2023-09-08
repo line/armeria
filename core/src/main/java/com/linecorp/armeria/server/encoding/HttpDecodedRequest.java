@@ -17,7 +17,10 @@
 package com.linecorp.armeria.server.encoding;
 
 import org.reactivestreams.Subscriber;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
@@ -25,6 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
+import com.linecorp.armeria.common.util.CompositeException;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -33,20 +37,22 @@ import io.netty.buffer.ByteBufAllocator;
  */
 final class HttpDecodedRequest extends FilteredHttpRequest {
 
-    private final StreamDecoder responseDecoder;
+    private static final Logger logger = LoggerFactory.getLogger(HttpDecodedRequest.class);
+
+    private final StreamDecoder requestDecoder;
 
     private boolean decoderFinished;
 
     HttpDecodedRequest(HttpRequest delegate, StreamDecoderFactory decoderFactory,
-                       ByteBufAllocator alloc) {
+                       ByteBufAllocator alloc, int maxRequestLength) {
         super(delegate);
-        responseDecoder = decoderFactory.newDecoder(alloc);
+        requestDecoder = decoderFactory.newDecoder(alloc, maxRequestLength);
     }
 
     @Override
     protected HttpObject filter(HttpObject obj) {
         if (obj instanceof HttpData) {
-            return responseDecoder.decode((HttpData) obj);
+            return requestDecoder.decode((HttpData) obj);
         } else {
             return obj;
         }
@@ -54,7 +60,7 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-        final HttpData lastData = closeResponseDecoder();
+        final HttpData lastData = closeRequestDecoder();
         if (lastData == null) {
             return;
         }
@@ -67,27 +73,37 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        final HttpData lastData = closeResponseDecoder();
-        if (lastData != null) {
-            lastData.close();
+        try {
+            final HttpData lastData = closeRequestDecoder();
+            if (lastData != null) {
+                lastData.close();
+            }
+            return cause;
+        } catch (Exception decoderException) {
+            return new CompositeException(cause, decoderException);
         }
-        return cause;
     }
 
     @Override
     protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
-        final HttpData lastData = closeResponseDecoder();
-        if (lastData != null) {
-            lastData.close();
+        try {
+            final HttpData lastData = closeRequestDecoder();
+            if (lastData != null) {
+                lastData.close();
+            }
+        } catch (ContentTooLargeException cause) {
+            // Just warn the cause since a stream is being cancelled.
+            logger.warn("A request content exceeds the maximum allowed request length. headers: {}",
+                        headers(), cause);
         }
     }
 
     @Nullable
-    private HttpData closeResponseDecoder() {
+    private HttpData closeRequestDecoder() {
         if (decoderFinished) {
             return null;
         }
         decoderFinished = true;
-        return responseDecoder.finish();
+        return requestDecoder.finish();
     }
 }

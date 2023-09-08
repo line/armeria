@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
@@ -36,6 +38,12 @@ final class FixedHttpResponse {
         OneElementFixedHttpResponse(ResponseHeaders headers) {
             super(headers);
         }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+            return super.aggregate(options);
+        }
     }
 
     static final class TwoElementFixedHttpResponse
@@ -43,12 +51,24 @@ final class FixedHttpResponse {
         TwoElementFixedHttpResponse(ResponseHeaders headers, HttpObject obj) {
             super(headers, obj);
         }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+            return super.aggregate(options);
+        }
     }
 
     static final class ThreeElementFixedHttpResponse
             extends ThreeElementFixedStreamMessage<HttpObject> implements HttpResponse {
         ThreeElementFixedHttpResponse(ResponseHeaders headers, HttpObject obj1, HttpObject obj2) {
             super(headers, obj1, obj2);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+            return super.aggregate(options);
         }
     }
 
@@ -59,6 +79,12 @@ final class FixedHttpResponse {
             checkArgument(objs.length > 0, "There must be at least one ResponseHeaders.");
             checkArgument(objs[0] instanceof ResponseHeaders,
                           "The first HttpObject must be a ResponseHeaders: %s", objs[0]);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+            return super.aggregate(options);
         }
     }
 

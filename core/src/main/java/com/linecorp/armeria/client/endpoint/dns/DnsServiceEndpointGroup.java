@@ -67,11 +67,12 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
 
     DnsServiceEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
                             long selectionTimeoutMillis, DefaultDnsResolver resolver, EventLoop eventLoop,
-                            Backoff backoff, int minTtl, int maxTtl, String hostname) {
+                            Backoff backoff, int minTtl, int maxTtl, String hostname,
+                            List<DnsQueryListener> dnsQueryListeners) {
 
         super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis, resolver, eventLoop,
               ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.SRV)),
-              backoff, minTtl, maxTtl);
+              backoff, minTtl, maxTtl, dnsQueryListeners);
         start();
     }
 

@@ -112,7 +112,7 @@ class BlogServiceTest {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.delete("/blogs/100").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.BAD_REQUEST);
-        assertThatJson(res.contentUtf8()).isEqualTo("{\"error\":\"The blog post does not exist. id: 100\"}");
+        assertThatJson(res.contentUtf8()).isEqualTo("{\"error\":\"The blog post does not exist. ID: 100\"}");
     }
 
     private static HttpRequest createBlogPostRequest(Map<String, String> content)

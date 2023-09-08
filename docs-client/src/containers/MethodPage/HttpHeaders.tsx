@@ -23,10 +23,9 @@ import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { ChangeEvent } from 'react';
 
-import jsonPrettify from '../../lib/json-prettify';
 import { SelectOption } from '../../lib/types';
 
-const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
+const jsonPlaceHolder = '{ "foo": "bar" }';
 
 interface Props {
   exampleHeaders: SelectOption[];
@@ -69,7 +68,7 @@ const HttpHeaders: React.FunctionComponent<Props> = (props) => (
         <TextField
           multiline
           fullWidth
-          rows={8}
+          minRows={1}
           value={props.additionalHeaders}
           placeholder={jsonPlaceHolder}
           onChange={props.onHeadersFormChange}

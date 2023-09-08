@@ -138,18 +138,15 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                     final Throwable firstCause = first.cause();
                     final Throwable secondCause = second.cause();
 
-                    Throwable combinedCause = null;
-                    if (firstCause != null) {
+                    final Throwable combinedCause;
+                    if (firstCause == null) {
+                        combinedCause = secondCause;
+                    } else {
+                        if (secondCause != null && secondCause != firstCause) {
+                            firstCause.addSuppressed(secondCause);
+                        }
                         combinedCause = firstCause;
                     }
-                    if (secondCause != null) {
-                        if (combinedCause == null) {
-                            combinedCause = secondCause;
-                        } else {
-                            combinedCause.addSuppressed(secondCause);
-                        }
-                    }
-
                     if (combinedCause != null) {
                         promise.setFailure(combinedCause);
                     } else {
@@ -261,7 +258,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 flushPendingWrites(currentPendingWrites);
             }
 
-            final ChannelFuture future = ch.write(obj, promise);
+            final ChannelFuture future = write(obj, promise);
             if (!isPing(id)) {
                 keepAliveHandler().onReadOrWrite();
             }
@@ -307,6 +304,12 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         }
     }
 
+    protected abstract ChannelFuture write(HttpObject obj, ChannelPromise promise);
+
+    protected int currentId() {
+        return currentId;
+    }
+
     private void flushPendingWrites(PendingWrites pendingWrites) {
         for (;;) {
             final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
@@ -314,7 +317,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 break;
             }
 
-            ch.write(e.getKey(), e.getValue());
+            write(e.getKey(), e.getValue());
         }
     }
 
@@ -378,7 +381,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     }
 
     protected final boolean isWritable(int id) {
-        return id < minClosedId;
+        return id < minClosedId && !isClosed();
     }
 
     protected final void updateClosedId(int id) {
@@ -416,7 +419,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     @Override
     public final boolean isClosed() {
-        return closed;
+        return closed || !channel().isActive();
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {

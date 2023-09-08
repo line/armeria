@@ -17,8 +17,11 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -41,6 +44,7 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
     private static final UnmodifiableFuture<?> NIL;
     private static final UnmodifiableFuture<Boolean> TRUE;
     private static final UnmodifiableFuture<Boolean> FALSE;
+    private static final UnmodifiableFuture<List> IMMUTABLE_LIST;
 
     static {
         NIL = new UnmodifiableFuture<>();
@@ -49,6 +53,8 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         TRUE.doComplete(Boolean.TRUE);
         FALSE = new UnmodifiableFuture<>();
         FALSE.doComplete(Boolean.FALSE);
+        IMMUTABLE_LIST = new UnmodifiableFuture<>();
+        IMMUTABLE_LIST.doComplete(ImmutableList.of());
     }
 
     /**
@@ -70,6 +76,12 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         if (value == Boolean.FALSE) {
             @SuppressWarnings("unchecked")
             final UnmodifiableFuture<U> cast = (UnmodifiableFuture<U>) FALSE;
+            return cast;
+        }
+
+        if (value == ImmutableList.of()) {
+            @SuppressWarnings("unchecked")
+            final UnmodifiableFuture<U> cast = (UnmodifiableFuture<U>) IMMUTABLE_LIST;
             return cast;
         }
 

@@ -74,6 +74,8 @@ import io.netty.util.concurrent.EventExecutor;
 final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
     private static final Ticker defaultTicker = Ticker.systemTicker();
+    private static final WeightedRandomDistributionEndpointSelector EMPTY_SELECTOR =
+            new WeightedRandomDistributionEndpointSelector(ImmutableList.of());
 
     static final WeightRampingUpStrategy INSTANCE =
             new WeightRampingUpStrategy(defaultTransition, () -> CommonPools.workerGroup().next(),
@@ -121,7 +123,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
     final class RampingUpEndpointWeightSelector extends AbstractEndpointSelector {
 
         private final EventExecutor executor;
-        private volatile WeightedRandomDistributionEndpointSelector endpointSelector;
+        private volatile WeightedRandomDistributionEndpointSelector endpointSelector = EMPTY_SELECTOR;
 
         private final List<Endpoint> endpointsFinishedRampingUp = new ArrayList<>();
 

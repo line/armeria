@@ -49,7 +49,7 @@ class ClassUtilTest {
     void shouldUnwrapAsyncType(String methodName) throws NoSuchMethodException {
         final Method method = ClassUtilTest.class.getDeclaredMethod(methodName);
         final Type returnType = method.getGenericReturnType();
-        final Type type = ClassUtil.unwrapAsyncType(returnType);
+        final Type type = ClassUtil.unwrapUnaryAsyncType(returnType);
         assertThat((Class<?>) type).isAssignableFrom(String.class);
     }
 

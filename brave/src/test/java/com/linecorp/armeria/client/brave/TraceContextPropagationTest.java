@@ -78,7 +78,7 @@ class TraceContextPropagationTest {
                       .responseTimeoutMillis(0);
                 });
 
-                return HttpResponse.from(CompletableFuture.supplyAsync(() -> {
+                return HttpResponse.of(CompletableFuture.supplyAsync(() -> {
                     // Make sure the current thread is not context-aware.
                     assertThat(ServiceRequestContext.currentOrNull()).isNull();
                     assertThat(currentTraceContext.get()).isNull();

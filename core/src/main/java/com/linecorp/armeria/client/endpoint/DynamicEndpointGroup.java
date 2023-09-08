@@ -24,12 +24,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -41,6 +43,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
@@ -62,9 +65,9 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     private final EndpointSelectionStrategy selectionStrategy;
     private final AtomicReference<EndpointSelector> selector = new AtomicReference<>();
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
-    private final Lock endpointsLock = new ReentrantLock();
+    private final Lock endpointsLock = new ReentrantShortLock();
 
-    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new InitialEndpointsFuture();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
     private final boolean allowEmptyEndpoints;
     private final long selectionTimeoutMillis;
@@ -336,12 +339,52 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("selectionStrategy", selectionStrategy.getClass())
-                          .add("allowsEmptyEndpoints", allowEmptyEndpoints)
-                          .add("endpoints", truncate(endpoints, 10))
-                          .add("numEndpoints", endpoints.size())
-                          .add("initialized", initialEndpointsFuture.isDone())
-                          .toString();
+        return toString(unused -> {});
+    }
+
+    /**
+     * Returns the string representation of this {@link DynamicEndpointGroup}. Specify a {@link Consumer}
+     * to add more fields to the returned string, e.g.
+     * <pre>{@code
+     * > @Override
+     * > public String toString() {
+     * >     return toString(buf -> {
+     * >         buf.append(", foo=").append(foo);
+     * >         buf.append(", bar=").append(bar);
+     * >     });
+     * > }
+     * }</pre>
+     *
+     * @param builderMutator the {@link Consumer} that appends the additional fields into the given
+     *                       {@link StringBuilder}.
+     */
+    @UnstableApi
+    protected final String toString(Consumer<? super StringBuilder> builderMutator) {
+        final StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append("{selectionStrategy=").append(selectionStrategy.getClass());
+        buf.append(", allowsEmptyEndpoints=").append(allowEmptyEndpoints);
+        buf.append(", initialized=").append(initialEndpointsFuture.isDone());
+        buf.append(", numEndpoints=").append(endpoints.size());
+        buf.append(", endpoints=").append(truncate(endpoints, 10));
+        builderMutator.accept(buf);
+        return buf.append('}').toString();
+    }
+
+    private class InitialEndpointsFuture extends EventLoopCheckingFuture<List<Endpoint>> {
+
+        @Override
+        public List<Endpoint> get(long timeout, TimeUnit unit)
+                throws InterruptedException, ExecutionException, TimeoutException {
+            try {
+                return super.get(timeout, unit);
+            } catch (TimeoutException e) {
+                final TimeoutException timeoutException = new TimeoutException(
+                        InitialEndpointsFuture.class.getSimpleName() + " is timed out after " +
+                        unit.toMillis(timeout) + " milliseconds. endpoint group: " + DynamicEndpointGroup.this);
+                timeoutException.initCause(e);
+                throw timeoutException;
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
-namespace java com.linecorp.armeria.service.test.thrift.main
+namespace java testing.thrift.full.camel
 
 
-service SayHelloService {
+service TestService {
     // Test a underscored method name
     string say_hello(1:string name)
 

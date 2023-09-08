@@ -28,9 +28,9 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,16 +44,18 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.server.RoutingTrie.Node;
 import com.linecorp.armeria.server.RoutingTrie.NodeProcessor;
 
 /**
  * A factory that creates a {@link Router} instance.
  */
-public final class Routers {
+final class Routers {
     private static final Logger logger = LoggerFactory.getLogger(Routers.class);
 
     /**
@@ -61,8 +63,8 @@ public final class Routers {
      * It consists of several router implementations which use one of Trie and List. It also includes
      * cache mechanism to improve its performance.
      */
-    public static Router<ServiceConfig> ofVirtualHost(VirtualHost virtualHost, Iterable<ServiceConfig> configs,
-                                                      RejectedRouteHandler rejectionHandler) {
+    static Router<ServiceConfig> ofVirtualHost(VirtualHost virtualHost, Iterable<ServiceConfig> configs,
+                                               RejectedRouteHandler rejectionHandler) {
         requireNonNull(virtualHost, "virtualHost");
         requireNonNull(configs, "configs");
         requireNonNull(rejectionHandler, "rejectionHandler");
@@ -104,31 +106,33 @@ public final class Routers {
                     newServiceConfigs.put(newRoute, newConfig);
                     return newConfig;
                 };
-        final Set<Route> ambiguousRoutes =
-                resolveAmbiguousRoutes(StreamSupport.stream(configs.spliterator(), false)
-                                                    .map(ServiceConfig::route)
-                                                    .collect(toImmutableList()));
+        final Set<Route> dynamicPredicateRoutes =
+                resolveDynamicPredicateRoutes(StreamSupport.stream(configs.spliterator(), false)
+                                                           .map(ServiceConfig::route)
+                                                           .collect(toImmutableList()));
         return wrapVirtualHostRouter(
                 defaultRouter(configs, virtualHost.fallbackServiceConfig(), fallbackValueConfigurator,
                               ServiceConfig::route, rejectionConsumer, false),
-                ambiguousRoutes);
+                dynamicPredicateRoutes);
     }
 
     /**
      * Returns the default implementation of the {@link Router} to find a {@link RouteDecoratingService}.
      */
-    public static Router<RouteDecoratingService> ofRouteDecoratingService(
+    static Router<RouteDecoratingService> ofRouteDecoratingService(
             List<RouteDecoratingService> routeDecoratingServices) {
         return wrapRouteDecoratingServiceRouter(
                 sequentialRouter(routeDecoratingServices, null, null, RouteDecoratingService::route,
                                  (route1, route2) -> {/* noop */}, true),
-                resolveAmbiguousRoutes(routeDecoratingServices.stream()
-                                                              .map(RouteDecoratingService::route)
-                                                              .collect(toImmutableList())));
+                resolveDynamicPredicateRoutes(routeDecoratingServices.stream()
+                                                                     .map(RouteDecoratingService::route)
+                                                                     .collect(toImmutableList())));
     }
 
     /**
-     * Finds the {@link Route}s that are not unique based on the following properties.
+     * Finds {@link Route}s that have dynamic predicates, or {@link Route}s that have
+     * the same properties as those with dynamic predicates.
+     * The list of properties are as follows:
      * <ul>
      *     <li>{@link Route#pathType()}</li>
      *     <li>{@link Route#paths()}</li>
@@ -137,22 +141,33 @@ public final class Routers {
      *     <li>{@link Route#produces()}</li>
      * </ul>
      */
-    private static Set<Route> resolveAmbiguousRoutes(List<Route> allRoutes) {
-        final Map<List<Object>, List<Route>> dup = new HashMap<>();
+    private static Set<Route> resolveDynamicPredicateRoutes(List<Route> allRoutes) {
+        final Set<Route> dynamicRoutes =
+                allRoutes.stream()
+                         .filter(route -> !route.isCacheable())
+                         .collect(toImmutableSet());
+        final Set<List<Object>> dynamicRouteKeys =
+                dynamicRoutes.stream().map(Routers::dynamicRouteKey)
+                             .collect(toImmutableSet());
+
+        final Set<Route> routes = new HashSet<>(dynamicRoutes);
         allRoutes.forEach(route -> {
-            final List<Object> key = ImmutableList.builder()
-                                                  .add(route.pathType())
-                                                  .addAll(route.paths())
-                                                  .addAll(route.methods())
-                                                  .addAll(route.consumes())
-                                                  .addAll(route.produces())
-                                                  .build();
-            dup.computeIfAbsent(key, unused -> new ArrayList<>())
-               .add(route);
+            final List<Object> key = dynamicRouteKey(route);
+            if (dynamicRouteKeys.contains(key)) {
+                routes.add(route);
+            }
         });
-        return dup.values().stream()
-                  .filter(routes -> routes.size() > 1)  // ambiguous routes
-                  .flatMap(Collection::stream).collect(toImmutableSet());
+        return ImmutableSet.copyOf(routes);
+    }
+
+    private static List<Object> dynamicRouteKey(Route route) {
+        return ImmutableList.builder()
+                            .add(route.pathType())
+                            .addAll(route.paths())
+                            .addAll(route.methods())
+                            .addAll(route.consumes())
+                            .addAll(route.produces())
+                            .build();
     }
 
     /**

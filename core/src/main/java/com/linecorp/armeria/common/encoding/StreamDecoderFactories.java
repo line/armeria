@@ -28,8 +28,8 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         }
 
         @Override
-        public StreamDecoder newDecoder(ByteBufAllocator alloc) {
-            return new ZlibStreamDecoder(ZlibWrapper.ZLIB, alloc);
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new ZlibStreamDecoder(ZlibWrapper.ZLIB, alloc, maxLength);
         }
     },
     GZIP {
@@ -39,8 +39,8 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         }
 
         @Override
-        public StreamDecoder newDecoder(ByteBufAllocator alloc) {
-            return new ZlibStreamDecoder(ZlibWrapper.GZIP, alloc);
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new ZlibStreamDecoder(ZlibWrapper.GZIP, alloc, maxLength);
         }
     },
     BROTLI {
@@ -50,8 +50,8 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         }
 
         @Override
-        public StreamDecoder newDecoder(ByteBufAllocator alloc) {
-            return new BrotliStreamDecoder(new BrotliDecoder(), alloc);
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new BrotliStreamDecoder(new BrotliDecoder(), alloc, maxLength);
         }
     }
 }

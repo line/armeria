@@ -38,6 +38,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -54,8 +55,8 @@ class DeferredStreamMessageTest {
     @Test
     void testSetDelegate() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        m.delegate(new DefaultStreamMessage<>());
-        assertThatThrownBy(() -> m.delegate(new DefaultStreamMessage<>()))
+        m.delegate(StreamMessage.streaming());
+        assertThatThrownBy(() -> m.delegate(StreamMessage.streaming()))
                 .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> m.delegate(null)).isInstanceOf(NullPointerException.class);
     }
@@ -91,7 +92,7 @@ class DeferredStreamMessageTest {
         }
         assertAborted(m, cause);
 
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final StreamWriter<Object> d = StreamMessage.streaming();
         m.delegate(d);
         assertAborted(d, cause);
     }
@@ -100,7 +101,7 @@ class DeferredStreamMessageTest {
     @ArgumentsSource(AbortCauseArgumentProvider.class)
     void testLateAbort(@Nullable Throwable cause) {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final StreamWriter<Object> d = StreamMessage.streaming();
 
         m.delegate(d);
         if (cause == null) {
@@ -117,7 +118,7 @@ class DeferredStreamMessageTest {
     @ArgumentsSource(AbortCauseArgumentProvider.class)
     void testLateAbortWithSubscriber(@Nullable Throwable cause) {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final StreamWriter<Object> d = StreamMessage.streaming();
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
@@ -143,7 +144,7 @@ class DeferredStreamMessageTest {
     @Test
     void testEarlySubscription() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final StreamWriter<Object> d = StreamMessage.streaming();
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
@@ -157,7 +158,7 @@ class DeferredStreamMessageTest {
     @Test
     void testLateSubscription() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final StreamWriter<Object> d = StreamMessage.streaming();
 
         m.delegate(d);
 
@@ -168,6 +169,52 @@ class DeferredStreamMessageTest {
         verify(subscriber).onSubscribe(any());
 
         assertFailedSubscription(m, IllegalStateException.class);
+    }
+
+    @Test
+    void setStreamMessageAfterSubscribe() {
+        final CompletableFuture<StreamMessage<String>> future = new CompletableFuture<>();
+        final StreamMessage<String> streamMessage = StreamMessage.of(future);
+        final CompletableFuture<List<String>> collectFuture = streamMessage.collect();
+        // Set StreamMessage.
+        future.complete(StreamMessage.of("foo"));
+        final List<String> collected = collectFuture.join();
+        assertThat(collected).containsExactly("foo");
+    }
+
+    @Test
+    void abortedStreamMessage() {
+        final CompletableFuture<StreamMessage<String>> future = new CompletableFuture<>();
+        final StreamMessage<String> streamMessage = StreamMessage.of(future);
+        final CompletableFuture<List<String>> collectFuture = streamMessage.collect();
+
+        future.complete(StreamMessage.aborted(new AnticipatedException()));
+        assertThatThrownBy(collectFuture::join).hasCauseInstanceOf(AnticipatedException.class);
+    }
+
+    @Test
+    void cancellationPropagatesToUpstream() {
+        final CompletableFuture<StreamMessage<String>> future = new CompletableFuture<>();
+        final StreamMessage<String> streamMessage = StreamMessage.of(future);
+        streamMessage.subscribe(new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.cancel(); // Cancel immediately.
+            }
+
+            @Override
+            public void onNext(String str) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {}
+        }, ImmediateEventExecutor.INSTANCE);
+
+        // Should not cancel the upstream CompletableFuture.
+        // A StreamMessage could be leaked if it is set after completion.
+        assertThat(future).isNotDone();
     }
 
     private static void assertAborted(StreamMessage<?> m, @Nullable Throwable cause) {
@@ -190,7 +237,7 @@ class DeferredStreamMessageTest {
     @Test
     void testStreaming() {
         final DeferredStreamMessage<String> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<String> d = new DefaultStreamMessage<>();
+        final StreamWriter<String> d = StreamMessage.streaming();
         m.delegate(d);
 
         final RecordingSubscriber subscriber = new RecordingSubscriber();
@@ -216,7 +263,7 @@ class DeferredStreamMessageTest {
     @Test
     void testStreamingError() {
         final DeferredStreamMessage<String> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<String> d = new DefaultStreamMessage<>();
+        final StreamWriter<String> d = StreamMessage.streaming();
         m.delegate(d);
 
         final RecordingSubscriber subscriber = new RecordingSubscriber();

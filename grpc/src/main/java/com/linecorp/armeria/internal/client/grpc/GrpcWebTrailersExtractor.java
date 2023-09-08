@@ -37,8 +37,8 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
@@ -73,7 +73,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
 
         final ArmeriaMessageDeframer deframer =
                 new ArmeriaMessageDeframer(maxMessageSizeBytes, alloc, grpcWebText);
-        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
         final StreamMessage<DeframedMessage> deframed = publisher.decode(deframer, alloc);
         deframed.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
 

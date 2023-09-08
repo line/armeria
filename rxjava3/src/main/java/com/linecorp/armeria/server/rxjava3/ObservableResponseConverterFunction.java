@@ -16,7 +16,7 @@
 package com.linecorp.armeria.server.rxjava3;
 
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Type;
@@ -81,7 +81,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
 
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
-        final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+        final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
         if (clazz == null) {
             return null;
         }
@@ -113,18 +113,18 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         if (result instanceof Maybe) {
             @SuppressWarnings("unchecked")
             final CompletionStage<Object> future = ((Maybe<Object>) result).toCompletionStage(null);
-            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
+            return HttpResponse.of(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         if (result instanceof Single) {
             @SuppressWarnings("unchecked")
             final CompletionStage<Object> future = ((Single<Object>) result).toCompletionStage();
-            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
+            return HttpResponse.of(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         if (result instanceof Completable) {
             final CompletionStage<Object> future = ((Completable) result).toCompletionStage(null);
-            return HttpResponse.from(future.handle(handleResult(ctx, headers, trailers)));
+            return HttpResponse.of(future.handle(handleResult(ctx, headers, trailers)));
         }
 
         return ResponseConverterFunction.fallthrough();

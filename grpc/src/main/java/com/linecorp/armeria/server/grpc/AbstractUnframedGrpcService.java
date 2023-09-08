@@ -33,6 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -138,7 +139,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             RequestHeaders grpcHeaders,
             HttpData content,
             CompletableFuture<HttpResponse> res,
-            @Nullable Function<HttpData, HttpData> responseBodyConverter) {
+            @Nullable Function<HttpData, HttpData> responseBodyConverter,
+            MediaType responseContentType) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
@@ -163,18 +165,19 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             return;
         }
 
-        grpcResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(
-                (framedResponse, t) -> {
-                    try (SafeCloseable ignore = ctx.push()) {
-                        if (t != null) {
-                            res.completeExceptionally(t);
-                        } else {
-                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                              responseBodyConverter);
-                        }
-                    }
-                    return null;
-                });
+        grpcResponse.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+                    .handle(
+                            (framedResponse, t) -> {
+                                try (SafeCloseable ignore = ctx.push()) {
+                                    if (t != null) {
+                                        res.completeExceptionally(t);
+                                    } else {
+                                        deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
+                                                          responseBodyConverter, responseContentType);
+                                    }
+                                }
+                                return null;
+                            });
     }
 
     @VisibleForTesting
@@ -182,7 +185,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                   AggregatedHttpResponse grpcResponse,
                                   CompletableFuture<HttpResponse> res,
                                   UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                  @Nullable Function<HttpData, HttpData> responseBodyConverter) {
+                                  @Nullable Function<HttpData, HttpData> responseBodyConverter,
+                                  MediaType responseContentType) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -210,15 +214,15 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
+        if (grpcMediaType == null) {
+            PooledObjects.close(grpcResponse.content());
+            res.completeExceptionally(new NullPointerException("MediaType is undefined"));
+            return;
+        }
+
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
-        if (grpcMediaType != null) {
-            if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
-                unframedHeaders.contentType(MediaType.PROTOBUF);
-            } else if (grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
-                unframedHeaders.contentType(MediaType.JSON_UTF_8);
-            }
-        }
+        unframedHeaders.contentType(responseContentType);
 
         final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.

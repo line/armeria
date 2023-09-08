@@ -8,10 +8,16 @@ configure(projectsWithFlags('publish', 'java')) {
                 suppressPomMetadataWarningsFor('optionalApiElements')
                 suppressPomMetadataWarningsFor('optionalRuntimeElements')
 
-                // Publish resolved versions
+                // Resolved versions are used to publish platform dependencies in pom XML.
                 versionMapping {
-                    allVariants {
+                    usage(Usage.JAVA_RUNTIME) {
                         fromResolutionResult()
+                    }
+                    usage(Usage.JAVA_API) {
+                        // compileOnly dependencies should not be included in the compile scope of POM. If we
+                        // don't exclude them, compileOnly dependencies are also used to resolve the final
+                        // dependency version.
+                        fromResolutionOf("runtimeClasspath")
                     }
                 }
 
@@ -129,8 +135,11 @@ configure(projectsWithFlags('publish')) {
         }
     }
 
-    // For now, disable Gradle metadata generation until verifying it is correctly generated.
-    tasks.withType(GenerateModuleMetadata) {
-        enabled = false
+    // A version catalog need to publish Gradle metadata together to be correctly imported externally.
+    if (!hasFlags('version-catalog')) {
+        // For now, disable Gradle metadata generation until verifying it is correctly generated.
+        tasks.withType(GenerateModuleMetadata) {
+            enabled = false
+        }
     }
 }

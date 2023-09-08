@@ -38,11 +38,13 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@FlakyTest
 class HealthCheckedEndpointGroupLongPollingTest {
 
     private static final Duration RETRY_INTERVAL = Duration.ofSeconds(3);

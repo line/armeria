@@ -52,7 +52,7 @@ class GracefulShutdownSupportTest {
     void setUp() {
         executor = new ThreadPoolExecutor(
                 0, 1, 1, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-                ThreadFactories.newEventLoopThreadFactory("graceful-shutdown-test", true));
+                ThreadFactories.newThreadFactory("graceful-shutdown-test", true));
 
         support = GracefulShutdownSupport.create(Duration.ofNanos(QUIET_PERIOD_NANOS), executor, ticker);
     }

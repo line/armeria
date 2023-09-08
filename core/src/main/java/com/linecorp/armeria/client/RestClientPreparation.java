@@ -28,6 +28,7 @@ import org.reactivestreams.Publisher;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.ExchangeType;
@@ -172,14 +173,15 @@ public final class RestClientPreparation implements RequestPreparationSetters {
 
     @Override
     @FormatMethod
-    public RestClientPreparation content(String format, Object... content) {
+    public RestClientPreparation content(@FormatString String format, Object... content) {
         delegate.content(format, content);
         return this;
     }
 
     @Override
     @FormatMethod
-    public RestClientPreparation content(MediaType contentType, String format, Object... content) {
+    public RestClientPreparation content(MediaType contentType, @FormatString String format,
+                                         Object... content) {
         delegate.content(contentType, format, content);
         return this;
     }
@@ -193,6 +195,12 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     @Override
     public RestClientPreparation content(MediaType contentType, HttpData content) {
         delegate.content(contentType, content);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation content(Publisher<? extends HttpData> content) {
+        delegate.content(content);
         return this;
     }
 
@@ -271,6 +279,18 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     @Override
     public RestClientPreparation maxResponseLength(long maxResponseLength) {
         delegate.maxResponseLength(maxResponseLength);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation requestAutoAbortDelay(Duration delay) {
+        delegate.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation requestAutoAbortDelayMillis(long delayMillis) {
+        delegate.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

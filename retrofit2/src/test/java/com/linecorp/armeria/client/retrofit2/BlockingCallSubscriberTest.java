@@ -21,11 +21,8 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.retrofit2.ArmeriaCallFactory.ArmeriaCall;
@@ -40,7 +37,7 @@ import okhttp3.Callback;
 import okhttp3.Request;
 import okhttp3.Response;
 
-public class BlockingCallSubscriberTest {
+class BlockingCallSubscriberTest {
 
     private static class ManualMockCallback implements Callback {
         private int callbackCallingCount;
@@ -62,9 +59,6 @@ public class BlockingCallSubscriberTest {
         }
     }
 
-    @Rule
-    public final MockitoRule mockingRule = MockitoJUnit.rule();
-
     @Mock
     @Nullable
     ArmeriaCall armeriaCall;
@@ -74,7 +68,7 @@ public class BlockingCallSubscriberTest {
     Subscription subscription;
 
     @Test
-    public void completeNormally() throws Exception {
+    void completeNormally() throws Exception {
         when(armeriaCall.tryFinish()).thenReturn(true);
 
         final ManualMockCallback callback = new ManualMockCallback();
@@ -91,7 +85,7 @@ public class BlockingCallSubscriberTest {
     }
 
     @Test
-    public void dataIsIgnoredAfterTrailers() throws Exception {
+    void dataIsIgnoredAfterTrailers() throws Exception {
         when(armeriaCall.tryFinish()).thenReturn(true);
 
         final ManualMockCallback callback = new ManualMockCallback();
@@ -111,7 +105,7 @@ public class BlockingCallSubscriberTest {
     }
 
     @Test
-    public void cancel() throws Exception {
+    void cancel() throws Exception {
 
         when(armeriaCall.tryFinish()).thenReturn(false);
         when(armeriaCall.isCanceled()).thenReturn(false, false, true);

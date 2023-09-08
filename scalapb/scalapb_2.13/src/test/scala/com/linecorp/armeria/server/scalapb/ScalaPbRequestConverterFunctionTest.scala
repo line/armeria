@@ -18,20 +18,21 @@ package com.linecorp.armeria.server.scalapb
 
 import com.fasterxml.jackson.core.`type`.TypeReference
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet}
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpMethod, HttpRequest, MediaType}
-import com.linecorp.armeria.scalapb.testing.messages.SimpleRequest
+import com.linecorp.armeria.common._
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.FallthroughException
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunctionTest._
-import java.lang.reflect.ParameterizedType
 import org.assertj.core.api.Assertions.{assertThat, assertThatThrownBy}
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.`extension`.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, ArgumentsSource}
+import _root_.scalapb.GeneratedMessage
+import _root_.scalapb.json4s.Printer
+import testing.scalapb.messages.SimpleRequest
+
+import java.lang.reflect.ParameterizedType
 import scala.collection.mutable.ArrayBuffer
-import scalapb.GeneratedMessage
-import scalapb.json4s.Printer
 
 class ScalaPbRequestConverterFunctionTest {
 
@@ -107,6 +108,18 @@ class ScalaPbRequestConverterFunctionTest {
     assertThatThrownBy { () =>
       converter.convertRequest(ctx, req, rawType, parameterizedType)
     }.isInstanceOf(classOf[FallthroughException])
+  }
+
+  @Test
+  def nestedServiceNotThrow(): Unit = {
+    val provider = new ScalaPbRequestConverterFunctionProvider
+    val converter = null
+    for (method <- classOf[NestedProtobufService].getDeclaredMethods) {
+      if (!method.getParameters.isEmpty) {
+        val fn = provider.createRequestConverterFunction(method.getParameters()(0).getParameterizedType, converter)
+        assert(fn == null)
+      }
+    }
   }
 }
 
@@ -194,5 +207,13 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
       buffer += s""""${key}": ${printer.print(req)}"""
     }
     buffer.mkString("{", ",", "}")
+  }
+
+  final private class NestedProtobufService {
+    def nestedList(param: List[List[SimpleRequest]]) = ???
+
+    def nestedMap(param: Map[String, List[SimpleRequest]]) = ???
+
+    def intKeyMap(param: Map[Int, SimpleRequest]) = ???
   }
 }

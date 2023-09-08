@@ -88,9 +88,9 @@ class ContentPreviewingFailureTest {
                 assertThat(log.responseCause()).isNull();
                 break;
             case "/http-status-exception-with-cause":
-                assertThat(log.requestCause())
-                        .isInstanceOf(RuntimeException.class)
-                        .hasMessage("with-status");
+                // The cause of HttpStatusException and HttpResponseException are only propagated to
+                // `log.responseCause()`.
+                assertThat(log.requestCause()).isNull();
                 assertThat(log.responseCause())
                         .isInstanceOf(RuntimeException.class)
                         .hasMessage("with-status");

@@ -21,9 +21,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.AbstractDnsResolverBuilder;
 import com.linecorp.armeria.client.Endpoint;
@@ -33,11 +36,13 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 
 abstract class DnsEndpointGroupBuilder
@@ -49,6 +54,7 @@ abstract class DnsEndpointGroupBuilder
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
     private final DnsDynamicEndpointGroupBuilder dnsDynamicEndpointGroupBuilder;
+    private final List<DnsQueryListener> dnsQueryListeners = new ArrayList<>();
 
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
@@ -61,7 +67,11 @@ abstract class DnsEndpointGroupBuilder
         return hostname;
     }
 
-    final EventLoop eventLoop() {
+    /**
+     * Returns the {@link EventLoop} set via {@link #eventLoop(EventLoop)} or acquires a random
+     * {@link EventLoop} from {@link CommonPools#workerGroup()}.
+     */
+    final EventLoop getOrAcquireEventLoop() {
         if (eventLoop != null) {
             return eventLoop;
         } else {
@@ -138,12 +148,11 @@ abstract class DnsEndpointGroupBuilder
         return dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis();
     }
 
-    final DefaultDnsResolver buildResolver() {
-        return buildResolver(unused -> {});
+    final DefaultDnsResolver buildResolver(EventLoop eventLoop) {
+        return buildResolver(unused -> {}, eventLoop);
     }
 
-    final DefaultDnsResolver buildResolver(Consumer<DnsNameResolverBuilder> customizer) {
-        final EventLoop eventLoop = eventLoop();
+    final DefaultDnsResolver buildResolver(Consumer<DnsNameResolverBuilder> customizer, EventLoop eventLoop) {
         final DnsNameResolverBuilder resolverBuilder = new DnsNameResolverBuilder(eventLoop);
         customizer.accept(resolverBuilder);
         buildConfigurator(eventLoop.parent()).accept(resolverBuilder);
@@ -151,6 +160,34 @@ abstract class DnsEndpointGroupBuilder
         return DefaultDnsResolver.of(resolverBuilder.build(), maybeCreateDnsCache(), eventLoop,
                                      searchDomains(), ndots(), queryTimeoutMillis(),
                                      hostsFileEntriesResolver());
+    }
+
+    /**
+     * Adds the {@link DnsQueryListener}s which listens to the result of {@link DnsRecord} queries.
+     * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default.
+     */
+    @UnstableApi
+    public DnsEndpointGroupBuilder addDnsQueryListeners(
+            Iterable<? extends DnsQueryListener> dnsQueryListeners) {
+        requireNonNull(dnsQueryListeners, "dnsQueryListeners");
+        for (DnsQueryListener listener: dnsQueryListeners) {
+            this.dnsQueryListeners.add(listener);
+        }
+        return this;
+    }
+
+    /**
+     * Adds the {@link DnsQueryListener} that listens to the result of {@link DnsRecord} queries.
+     * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default.
+     */
+    @UnstableApi
+    public DnsEndpointGroupBuilder addDnsQueryListeners(DnsQueryListener... dnsQueryListeners) {
+        requireNonNull(dnsQueryListeners, "dnsQueryListeners");
+        return addDnsQueryListeners(ImmutableList.copyOf(dnsQueryListeners));
+    }
+
+    final List<DnsQueryListener> dnsQueryListeners() {
+        return dnsQueryListeners;
     }
 
     /**

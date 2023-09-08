@@ -29,7 +29,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
@@ -40,9 +39,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -59,8 +58,8 @@ class HttpResponseDecoderTest {
     };
 
     /**
-     * This test would be passed because the {@code cancelAction} method of the {@link HttpResponseWrapper} is
-     * invoked in the event loop of the {@link Channel}.
+     * This test would be passed because the {@code cancelAction} method of the
+     * {@link HttpResponseWrapper} is invoked in the event loop of the {@link Channel}.
      */
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
@@ -114,9 +113,10 @@ class HttpResponseDecoderTest {
         final HttpRequestWriter request = HttpRequest.streaming(RequestHeaders.of(HttpMethod.POST, "/"));
         final AggregatedHttpResponse res = client.execute(request).aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Hello, Armeria!");
-        // The stream is aborted in HttpResponseDecoder.close(...) after the client receives the response.
+        // The stream is aborted with ResponseCompleteException
+        // in HttpResponseDecoder.close(...) after the client receives the response.
         request.whenComplete().handle((unused, cause) -> {
-            assertThat(cause).isExactlyInstanceOf(AbortedStreamException.class);
+            assertThat(cause).isExactlyInstanceOf(ResponseCompleteException.class);
             return null;
         }).join();
     }

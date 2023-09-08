@@ -1,0 +1,28 @@
+---
+date: 2022-11-07
+---
+
+## 🛠️ Bug fixes
+
+- You no longer see `StacklessClosedChannelException` when an incoming HTTP/1.0 or HTTP/1.1 request has
+  a `Connection: close` header. #4508
+- Armeria doesn't send a bad response with non-empty body anymore when a service's <type://ExchangeType> is
+  <type://ExchangeType#UNARY> and the service generates non-empty body for a HEAD request. #4512
+- An <type://HttpRequest> is not failed with <type://AbortedStreamException> anymore
+  when an <type://HttpResponse> is correctly sent. #4494
+- <type://DocService> is correctly generated for a decorated <type://GrpcService> when
+  [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) is enabled. #4490
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'davin111',
+  'hirakida',
+  'ikhoon',
+  'jrhee17',
+  'KarboniteKream',
+  'minwoox',
+  'mscheong01',
+  'policeman-kh',
+  'trustin'
+]} />

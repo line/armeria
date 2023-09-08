@@ -28,7 +28,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
-interface RequestOptionsSetters {
+/**
+ * Provides the setters for building {@link RequestOptions}.
+ */
+@UnstableApi
+public interface RequestOptionsSetters {
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
@@ -61,6 +65,24 @@ interface RequestOptionsSetters {
      * {@code 0} disables the limit.
      */
     RequestOptionsSetters maxResponseLength(long maxResponseLength);
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to send additional data even after the response is complete.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    RequestOptionsSetters requestAutoAbortDelay(Duration delay);
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to send additional data even after the response is complete.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    RequestOptionsSetters requestAutoAbortDelayMillis(long delayMillis);
 
     /**
      * Associates the specified value with the given {@link AttributeKey} in this request.

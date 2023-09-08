@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
@@ -74,8 +75,9 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), exceptionFilter(), false);
-        return build(ruleFilter, decision, responseTrailersFilter() != null);
+                                                    responseTrailersFilter(), grpcTrailersFilter(),
+                                                    exceptionFilter(), false);
+        return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
     static CircuitBreakerRule build(
@@ -129,6 +131,18 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     public CircuitBreakerRuleBuilder onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (CircuitBreakerRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code grpcTrailersFilter} for a {@link CircuitBreakerRule}.
+     * If the specified {@code grpcTrailersFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @Override
+    public CircuitBreakerRuleBuilder onGrpcTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+        return (CircuitBreakerRuleBuilder) super.onGrpcTrailers(grpcTrailersFilter);
     }
 
     /**
@@ -229,6 +243,16 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     @Override
     public CircuitBreakerRuleBuilder onException() {
         return (CircuitBreakerRuleBuilder) super.onException();
+    }
+
+    /**
+     * Reports a {@link Response} as a success or failure to a {@link CircuitBreaker},
+     * or ignores it according to the build methods({@link #thenSuccess()}, {@link #thenFailure()}
+     * and {@link #thenIgnore()}), if a {@link TimeoutException} is raised.
+     */
+    @Override
+    public CircuitBreakerRuleBuilder onTimeoutException() {
+        return (CircuitBreakerRuleBuilder) super.onTimeoutException();
     }
 
     /**

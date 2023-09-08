@@ -36,6 +36,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -73,7 +74,8 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
 
     @Override
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
-                                                      DocServiceFilter filter) {
+                                                      DocServiceFilter filter,
+                                                      DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
 
@@ -83,8 +85,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
             final AbstractGraphqlService service = sc.service().as(AbstractGraphqlService.class);
             if (service != null) {
                 final String className = service.getClass().getName();
-                final String methodName = DEFAULT_METHOD_NAME;
-                if (!filter.test(name(), className, methodName)) {
+                if (!filter.test(name(), className, DEFAULT_METHOD_NAME)) {
                     return;
                 }
                 addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), service, sc.route());
@@ -97,12 +98,11 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
                                       String hostnamePattern, AbstractGraphqlService service, Route route) {
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
-        final String name = DEFAULT_METHOD_NAME;
         final List<FieldInfo> fieldInfos = fieldInfos();
         final Class<?> clazz = service.getClass();
         final MethodInfo methodInfo = new MethodInfo(
-                name, JSON, fieldInfos, ImmutableList.of(), // Ignore exceptions.
-                ImmutableList.of(endpoint), HttpMethod.POST, null);
+                clazz.getName(), DEFAULT_METHOD_NAME, 0, JSON, fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -143,7 +143,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
                 .map(entry -> {
                     final Class<?> service = entry.getKey();
                     return new ServiceInfo(service.getName(), entry.getValue(),
-                                           serviceDescription.get(service));
+                                           serviceDescription.getOrDefault(service, DescriptionInfo.empty()));
                 })
                 .collect(toImmutableSet());
 

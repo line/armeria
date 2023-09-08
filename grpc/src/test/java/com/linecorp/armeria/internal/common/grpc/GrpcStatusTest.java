@@ -37,6 +37,9 @@ import org.junit.jupiter.api.Test;
 
 import com.google.api.gax.grpc.GrpcStatusCode;
 
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.FailFastException;
+
 import io.grpc.Status;
 
 class GrpcStatusTest {
@@ -47,5 +50,12 @@ class GrpcStatusTest {
                     .as("gRPC code: {}", code)
                     .isEqualTo(GrpcStatusCode.of(code).getCode().getHttpStatusCode());
         }
+    }
+
+    @Test
+    void failFastExceptionToUnavailableCode() {
+        assertThat(GrpcStatus.fromThrowable(new FailFastException(CircuitBreaker.ofDefaultName()))
+                             .getCode())
+                .isEqualTo(Status.Code.UNAVAILABLE);
     }
 }

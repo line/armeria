@@ -1,0 +1,41 @@
+#starBegging {
+  transition: transform .25s;
+  transform: scale(0);
+  border-radius: 8px;
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  padding: 20px 40px 16px 20px;
+  background: #fff;
+  box-shadow: 0 1px 20px rgba(0, 0, 0, 0.15);
+  z-index: 998;
+
+  p {
+    font-size: 16px;
+    margin: 0 0 15px;
+  }
+
+  .close {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    height: 40px;
+    width: 40px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-family: arial, sans-serif;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 5px;
+  }
+}
+
+#starBegging.on {
+  transform: scale(1);
+}
+#starBegging.off {
+  transform: translateX(400px);
+}

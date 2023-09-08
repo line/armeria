@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.annotation.decorator;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -27,7 +28,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
 
     /**
-     * Creates a new decorator with the specified {@code parameter}.
+     * Creates a new decorator with the specified {@link LoggingDecorator}.
      */
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(LoggingDecorator parameter) {
@@ -38,9 +39,12 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
                 parameter.failureSamplingRate() >= 0.0f ? parameter.failureSamplingRate()
                                                         : parameter.samplingRate();
         return LoggingService.builder()
-                             .requestLogLevel(parameter.requestLogLevel())
-                             .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
-                             .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                             .logWriter(LogWriter.builder()
+                                                 .requestLogLevel(parameter.requestLogLevel())
+                                                 .successfulResponseLogLevel(
+                                                         parameter.successfulResponseLogLevel())
+                                                 .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                                                 .build())
                              .successSamplingRate(successSamplingRate)
                              .failureSamplingRate(failureSamplingRate)
                              .newDecorator();

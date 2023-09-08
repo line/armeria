@@ -40,7 +40,9 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
+import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -96,7 +98,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
                 new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
-                                       maxRequestMessageLength, grpcWebText)
+                                       maxRequestMessageLength, grpcWebText, true)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(requestDeframer, alloc);
         requestDeframer.setDeframedStreamMessage(deframedRequest);
@@ -121,7 +123,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    void startDeframing() {
+    public void startDeframing() {
         deframedRequest.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
@@ -182,7 +184,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    void doClose(Status status, Metadata metadata, boolean completed) {
+    public void doClose(Status status, Metadata metadata, boolean completed) {
         final boolean trailersOnly;
         if (firstResponse != null) {
             // ResponseHeaders was written successfully.
@@ -204,25 +206,26 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    closeListener(status, false, true);
+                    closeListener(status, metadata, false, true);
                     return;
                 }
             }
         }
 
+        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         // Set responseContent before closing stream to use responseCause in error handling
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
         try {
             if (res.tryWrite(responseTrailers(ctx, status, metadata, trailersOnly))) {
                 res.close();
             }
         } finally {
-            closeListener(status, completed, false);
+            closeListener(statusAndMetadata, completed, false);
         }
     }
 
     @Override
-    @Nullable O firstResponse() {
+    protected @Nullable O firstResponse() {
         return firstResponse;
     }
 
@@ -255,7 +258,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void transportReportStatus(Status status, Metadata unused) {
+    public void transportReportStatus(Status status, Metadata metadata) {
         // A server doesn't see trailers from the client so will never have Metadata here.
 
         if (isCloseCalled()) {
@@ -265,6 +268,6 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(status, false, true);
+        closeListener(status, metadata, false, true);
     }
 }

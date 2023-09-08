@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
@@ -64,6 +66,9 @@ import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
 
 class ServerBuilderTest {
+
+    private static final String RESOURCE_PATH_PREFIX =
+            "/testing/core/" + ServerBuilderTest.class.getSimpleName() + '/';
 
     private static ClientFactory clientFactory;
 
@@ -499,26 +504,26 @@ class ServerBuilderTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
-    void tlsPkcsPrivateKeys(String privateKeyPath) {
+    @CsvSource({ "pkcs5.pem", "pkcs8.pem" })
+    void tlsPkcsPrivateKeys(String privateKeyFileName) {
         final String resourceRoot =
                 '/' + MinifiedBouncyCastleProvider.class.getPackage().getName().replace('.', '/') + '/';
         Server.builder()
-              .tls(getClass().getResourceAsStream("/cert.pem"),
-                   getClass().getResourceAsStream(privateKeyPath))
+              .tls(getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "cert.pem"),
+                   getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + privateKeyFileName))
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
     }
 
     @ParameterizedTest
-    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
-    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyPath) {
+    @CsvSource({ "pkcs5.pem", "pkcs8.pem" })
+    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyFileName) {
         Server.builder()
               .tlsSelfSigned()
               .tlsCustomizer(sslCtxBuilder -> {
                   sslCtxBuilder.keyManager(
-                          getClass().getResourceAsStream("/cert.pem"),
-                          getClass().getResourceAsStream(privateKeyPath));
+                          getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "cert.pem"),
+                          getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + privateKeyFileName));
               })
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
@@ -640,5 +645,64 @@ class ServerBuilderTest {
         assertThat(childChannelOptions)
                 .containsExactly(entry(TCP_USER_TIMEOUT, userDefinedValue),
                                  entry(SO_LINGER, lingerMillis));
+    }
+
+    @Test
+    void exceptionReportInterval() {
+        final Server server1 = Server.builder()
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .unhandledExceptionsReportInterval(Duration.ofMillis(1000))
+                                     .build();
+        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+
+        final Server server2 = Server.builder()
+                                     .unhandledExceptionsReportInterval(Duration.ofMillis(0))
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+
+        assertThrows(IllegalArgumentException.class, () ->
+                Server.builder()
+                      .unhandledExceptionsReportInterval(Duration.ofMillis(-1000))
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .build());
+    }
+
+    @Test
+    void exceptionReportIntervalMilliSeconds() {
+        final Server server1 = Server.builder()
+                                     .unhandledExceptionsReportIntervalMillis(1000)
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+
+        final Server server2 = Server.builder()
+                                     .unhandledExceptionsReportIntervalMillis(0)
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+
+        assertThrows(IllegalArgumentException.class, () ->
+                Server.builder()
+                      .unhandledExceptionsReportIntervalMillis(-1000)
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .build());
+    }
+
+    @Test
+    void multipleDomainSocketAddresses() {
+        final Server server = Server.builder()
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .http(DomainSocketAddress.of("/tmp/foo"))
+                                    .http(DomainSocketAddress.of("/tmp/bar"))
+                                    .https(DomainSocketAddress.of("/tmp/foo"))
+                                    .https(DomainSocketAddress.of("/tmp/bar"))
+                                    .tlsSelfSigned()
+                                    .build();
+        assertThat(server.config().ports()).containsExactly(
+                new ServerPort(DomainSocketAddress.of("/tmp/foo"),
+                               SessionProtocol.HTTP, SessionProtocol.HTTPS),
+                new ServerPort(DomainSocketAddress.of("/tmp/bar"),
+                               SessionProtocol.HTTP, SessionProtocol.HTTPS));
     }
 }

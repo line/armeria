@@ -19,24 +19,23 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.BEAN;
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.INT;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.LONG;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.VOID;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfo;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.newDescriptiveTypeInfo;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.toTypeSignature;
+import static com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest.REQUEST_STRUCT_INFO_PROVIDER;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
-import static com.linecorp.armeria.server.docs.FieldRequirement.OPTIONAL;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -52,7 +51,6 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.RequestBean2.InsideBean;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.Server;
@@ -62,13 +60,17 @@ import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
+import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.docs.TypeSignatureType;
 
 class AnnotatedDocServicePluginTest {
 
@@ -139,12 +141,17 @@ class AnnotatedDocServicePluginTest {
 
         final TypeSignature biFunction =
                 toTypeSignature(FieldContainer.class.getDeclaredField("biFunction").getGenericType());
-        assertThat(biFunction).isEqualTo(TypeSignature.ofContainer("BiFunction",
-                                                                   TypeSignature.ofBase("JsonNode"),
-                                                                   TypeSignature.ofUnresolved(""),
-                                                                   TypeSignature.ofBase("string")));
+        assertThat(biFunction).isEqualTo(TypeSignature.ofContainer(
+                "BiFunction",
+                TypeSignature.ofStruct(JsonNode.class),
+                TypeSignature.ofUnresolved(""),
+                TypeSignature.ofBase("string")));
 
-        assertThat(toTypeSignature(FieldContainer.class)).isEqualTo(TypeSignature.ofBase("FieldContainer"));
+        assertThat(toTypeSignature(FieldContainer.class)).isEqualTo(
+                TypeSignature.ofStruct(FieldContainer.class));
+        final TypeSignature optional =
+                toTypeSignature(FieldContainer.class.getDeclaredField("optional").getGenericType());
+        assertThat(optional).isEqualTo(TypeSignature.ofOptional(TypeSignature.ofBase("string")));
     }
 
     @Test
@@ -352,7 +359,21 @@ class AnnotatedDocServicePluginTest {
                                        .location(QUERY)
                                        .build();
         final List<FieldInfo> fieldInfos = barMethod.parameters();
-        assertFieldInfos(fieldInfos, ImmutableList.of(bar, compositeBean()));
+        assertThat(fieldInfos).hasSize(2);
+        assertThat(fieldInfos).contains(bar);
+        final Optional<FieldInfo> compositeBean =
+                fieldInfos.stream()
+                          .filter(fieldInfo -> "compositeBean".equals(fieldInfo.name()))
+                          .findFirst();
+        assertThat(compositeBean).isPresent();
+        final StructInfo expected = new StructInfo(
+                CompositeBean.class.getName(),
+                ImmutableList.of(createBean("bean1", RequestBean1.class),
+                                 createBean("bean2", RequestBean2.class)));
+        final DescriptiveTypeInfo actual = newDescriptiveTypeInfo(
+                (DescriptiveTypeSignature) compositeBean.get().typeSignature(), REQUEST_STRUCT_INFO_PROVIDER,
+                ImmutableSet.of());
+        assertThat(actual).isEqualTo(expected);
     }
 
     private static Map<String, ServiceInfo> services(Object... services) {
@@ -369,7 +390,7 @@ class AnnotatedDocServicePluginTest {
         final Server server = builder.build();
         final ServiceSpecification specification =
                 plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
-                                             unifyFilter(include, exclude));
+                                             unifyFilter(include, exclude), typeDescriptor -> null);
         return specification.services()
                             .stream()
                             .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
@@ -383,46 +404,18 @@ class AnnotatedDocServicePluginTest {
     }
 
     static FieldInfo compositeBean() {
-        return FieldInfo.builder(CompositeBean.class.getSimpleName(), BEAN,
-                                 createBean1(), createBean2()).build();
+        return FieldInfo.builder("compositeBean",
+                                 new RequestObjectTypeSignature(TypeSignatureType.STRUCT,
+                                                                CompositeBean.class.getName(),
+                                                                CompositeBean.class, ImmutableList.of()))
+                        .requirement(REQUIRED)
+                        .build();
     }
 
-    private static FieldInfo createBean1() {
-        final FieldInfo uid = FieldInfo.builder("uid", STRING)
-                                       .location(HEADER)
-                                       .requirement(REQUIRED)
-                                       .build();
-        final FieldInfo seqNum = FieldInfo.builder("seqNum", LONG)
-                                          .location(QUERY)
-                                          .requirement(OPTIONAL)
-                                          .build();
-        return FieldInfo.builder(RequestBean1.class.getSimpleName(), BEAN, uid, seqNum).build();
-    }
-
-    private static FieldInfo createBean2() {
-        final FieldInfo inside1 = FieldInfo.builder("inside1", LONG)
-                                           .location(QUERY)
-                                           .requirement(REQUIRED)
-                                           .build();
-        final FieldInfo inside2 = FieldInfo.builder("inside2", INT)
-                                           .location(QUERY)
-                                           .requirement(REQUIRED)
-                                           .build();
-        final FieldInfo insideBean = FieldInfo.builder(InsideBean.class.getSimpleName(), BEAN,
-                                                       inside1, inside2).build();
-        return FieldInfo.builder(RequestBean2.class.getSimpleName(), BEAN, insideBean).build();
-    }
-
-    private static void assertFieldInfos(List<FieldInfo> fieldInfos, List<FieldInfo> expected) {
-        final Comparator<List<FieldInfo>> comparator = (o1, o2) -> {
-            assertFieldInfos(o1, o2);
-            // If assertFieldInfos does not throw an exception, it contains same elements.
-            return 0;
-        };
-        assertThat(fieldInfos).usingComparatorForElementFieldsWithNames(
-                comparator,
-                "childFieldInfos").usingFieldByFieldElementComparator().containsExactlyInAnyOrderElementsOf(
-                expected);
+    private static FieldInfo createBean(String name, Class<?> type) {
+        return FieldInfo.builder(name, TypeSignature.ofStruct(type))
+                        .requirement(REQUIRED)
+                        .build();
     }
 
     private static class FieldContainer<T> {
@@ -434,6 +427,7 @@ class AnnotatedDocServicePluginTest {
         CompletableFuture<T> typeVariableFuture;
         List<String>[] genericArray;
         BiFunction<JsonNode, ?, String> biFunction;
+        Optional<String> optional;
     }
 
     private static class FooClass {

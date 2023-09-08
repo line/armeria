@@ -17,12 +17,16 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -52,5 +56,42 @@ class DeferredHttpResponseTest {
         // Should not cancel the upstream CompletableFuture.
         // A HttpResponse could be leaked if it is set after completion.
         assertThat(future).isNotDone();
+    }
+
+    /**
+     * When the given future is already complete, we should not wrap it with {@link DeferredHttpResponse}
+     * but just return the response directly.
+     */
+    @Test
+    void shouldNotDelegateIfCompletedAlready() {
+        final HttpResponse originalRes = HttpResponse.of(200);
+
+        // Because we don't expect users to always use `UnmodifiableFuture`.
+        @SuppressWarnings("checkstyle:PreferUnmodifiableFuture")
+        final CompletableFuture<HttpResponse> completedFuture = CompletableFuture.completedFuture(originalRes);
+
+        final HttpResponse res1 = HttpResponse.of(completedFuture);
+        final HttpResponse res2 = HttpResponse.of((CompletionStage<? extends HttpResponse>) completedFuture);
+        assertThat(res1).isSameAs(originalRes);
+        assertThat(res2).isSameAs(originalRes);
+    }
+
+    /**
+     * When the given future is already complete exceptionally, we should not wrap it with
+     * {@link DeferredHttpResponse} but just return the failed response directly.
+     */
+    @Test
+    void shouldNotDelegateIfCompletedExceptionallyAlready() {
+        final Exception originalCause = new Exception();
+
+        final CompletableFuture<HttpResponse> completedFuture = new CompletableFuture<>();
+        completedFuture.completeExceptionally(originalCause);
+
+        final HttpResponse res1 = HttpResponse.of(completedFuture);
+        final HttpResponse res2 = HttpResponse.of((CompletionStage<? extends HttpResponse>) completedFuture);
+        assertThat(res1).isInstanceOf(AbortedHttpResponse.class);
+        assertThat(res2).isInstanceOf(AbortedHttpResponse.class);
+        assertThatThrownBy(() -> res1.collect().join()).hasCause(originalCause);
+        assertThatThrownBy(() -> res2.collect().join()).hasCause(originalCause);
     }
 }

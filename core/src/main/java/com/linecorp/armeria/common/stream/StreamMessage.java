@@ -18,16 +18,20 @@ package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.createStreamMessageFrom;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -49,11 +53,13 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.EmptyFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil;
 import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
@@ -181,11 +187,53 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     */
+    @UnstableApi
+    static <T> StreamMessage<T> of(CompletionStage<? extends Publisher<? extends T>> stage) {
+        requireNonNull(stage, "stage");
+
+        if (stage instanceof CompletableFuture) {
+            return createStreamMessageFrom((CompletableFuture<? extends Publisher<? extends T>>) stage);
+        } else {
+            final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>();
+            //noinspection unchecked
+            deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) stage);
+            return deferred;
+        }
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link StreamMessage} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    static <T> StreamMessage<T> of(CompletionStage<? extends StreamMessage<? extends T>> stage,
+                                   EventExecutor subscriberExecutor) {
+        requireNonNull(stage, "stage");
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        // Have to use DeferredStreamMessage to use the subscriberExecutor.
+        final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>(subscriberExecutor);
+        //noinspection unchecked
+        deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) stage);
+        return deferred;
+    }
+
+    /**
      * Creates a new {@link StreamMessage} that streams the specified {@link File}.
-     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
      * create a buffer used to read data from the {@link File}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static ByteStreamMessage of(File file) {
         requireNonNull(file, "file");
@@ -194,10 +242,10 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
-     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
      * create a buffer used to read data from the {@link Path}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static ByteStreamMessage of(Path path) {
         requireNonNull(path, "path");
@@ -279,6 +327,96 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamMessage} that streams bytes from the specified {@link InputStream}.
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * create a buffer that is used to read data from the {@link InputStream}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
+     */
+    @UnstableApi
+    static ByteStreamMessage of(InputStream inputStream) {
+        requireNonNull(inputStream, "inputStream");
+        return builder(inputStream).build();
+    }
+
+    /**
+     * Returns a new {@link InputStreamStreamMessageBuilder} with the specified {@link InputStream}.
+     */
+    @UnstableApi
+    static InputStreamStreamMessageBuilder builder(InputStream inputStream) {
+        requireNonNull(inputStream, "inputStream");
+        return new InputStreamStreamMessageBuilder(inputStream);
+    }
+
+    /**
+     * Creates a new {@link ByteStreamMessage} that publishes {@link HttpData}s from the specified
+     * {@linkplain Consumer outputStreamConsumer}.
+     *
+     * <p>For example:<pre>{@code
+     * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
+     *     try {
+     *         for (int i = 0; i < 5; i++) {
+     *             os.write(i);
+     *         }
+     *         os.close();
+     *     } catch (IOException e) {
+     *         throw new UncheckedIOException(e);
+     *     }
+     * });
+     * byte[] result = byteStreamMessage.collectBytes().join();
+     *
+     * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
+     * }</pre>
+     *
+     * <p>Please note that the try-with-resources statement is not used to call {@code os.close()}
+     * automatically. It's because when an exception is raised in the {@link Consumer},
+     * the {@link OutputStream} is closed by the {@link StreamMessage} and the exception is propagated
+     * to the {@link Subscriber} automatically.
+     */
+    static ByteStreamMessage fromOutputStream(Consumer<? super OutputStream> outputStreamConsumer) {
+        final RequestContext ctx = RequestContext.currentOrNull();
+        final ExecutorService blockingTaskExecutor;
+        if (ctx instanceof ServiceRequestContext) {
+            blockingTaskExecutor = ((ServiceRequestContext) ctx).blockingTaskExecutor();
+        } else {
+            blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+        }
+        return fromOutputStream(outputStreamConsumer, blockingTaskExecutor);
+    }
+
+    /**
+     * Creates a new {@link ByteStreamMessage} that publishes {@link HttpData}s from the specified
+     * {@linkplain Consumer outputStreamConsumer}.
+     *
+     * <p>For example:<pre>{@code
+     * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
+     *     try {
+     *         for (int i = 0; i < 5; i++) {
+     *             os.write(i);
+     *         }
+     *         os.close();
+     *     } catch (IOException e) {
+     *         throw new UncheckedIOException(e);
+     *     }
+     * });
+     * byte[] result = byteStreamMessage.collectBytes().join();
+     *
+     * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
+     * }</pre>
+     *
+     * <p>Please note that the try-with-resources statement is not used to call {@code os.close()}
+     * automatically. It's because when an exception is raised in the {@link Consumer},
+     * the {@link OutputStream} is closed by the {@link StreamMessage} and the exception is propagated
+     * to the {@link Subscriber} automatically.
+     *
+     * @param blockingTaskExecutor the blocking task executor to execute {@link OutputStream#write(int)}
+     */
+    static ByteStreamMessage fromOutputStream(Consumer<? super OutputStream> outputStreamConsumer,
+                                              Executor blockingTaskExecutor) {
+        return new ByteStreamMessageOutputStream(outputStreamConsumer, blockingTaskExecutor);
+    }
+
+    /**
      * Returns a concatenated {@link StreamMessage} which relays items of the specified array of
      * {@link Publisher}s in order, non-overlappingly, one after the other finishes.
      */
@@ -321,6 +459,15 @@ public interface StreamMessage<T> extends Publisher<T> {
     static <T> StreamMessage<T> aborted(Throwable cause) {
         requireNonNull(cause, "cause");
         return new AbortedStreamMessage<>(cause);
+    }
+
+    /**
+     * Creates a new {@link StreamWriter} that publishes the objects written via
+     * {@link StreamWriter#write(Object)}.
+     */
+    @UnstableApi
+    static <T> StreamWriter<T> streaming() {
+        return new DefaultStreamMessage<>();
     }
 
     /**
@@ -783,7 +930,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * {@link StreamMessage} when any error occurs.
      *
      * <p>Example:<pre>{@code
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops..."));
@@ -804,7 +951,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * specified {@code causeClass}.
      *
      * <p>Example:<pre>{@code
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops..."));
@@ -813,7 +960,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
      *
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.write(3);
@@ -830,7 +977,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * recoverChain.collect().join();
      *
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(ClosedStreamException.get());

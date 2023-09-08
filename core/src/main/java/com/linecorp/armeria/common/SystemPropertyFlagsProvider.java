@@ -71,20 +71,12 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         if (spec == null) {
             return null;
         }
-        if ("true".equals(spec) || "always".equals(spec)) {
-            return Sampler.always();
-        }
-        if ("false".equals(spec) || "never".equals(spec)) {
-            return Sampler.never();
-        }
-
         try {
             Sampler.of(spec);
         } catch (Exception e) {
             // Invalid sampler specification
             throw new IllegalArgumentException("invalid sampler spec: " + spec, e);
         }
-
         return new ExceptionSampler(spec);
     }
 
@@ -167,7 +159,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer numCommonWorkers() {
+    public Integer numCommonWorkers(TransportType transportType) {
         return getInt("numCommonWorkers");
     }
 
@@ -234,6 +226,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Boolean defaultUseHttp2Preface() {
         return getBoolean("defaultUseHttp2Preface");
+    }
+
+    @Override
+    public Boolean defaultUseHttp2WithoutAlpn() {
+        return getBoolean("defaultUseHttp2WithoutAlpn");
     }
 
     @Override
@@ -304,6 +301,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Integer defaultMaxTotalAttempts() {
         return getInt("defaultMaxTotalAttempts");
+    }
+
+    @Override
+    public @Nullable Long defaultRequestAutoAbortDelayMillis() {
+        return getLong("defaultRequestAutoAbortDelayMillis");
     }
 
     @Override
@@ -434,8 +436,32 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean allowSemicolonInPathComponent() {
+        return getBoolean("allowSemicolonInPathComponent");
+    }
+
+    @Override
     public Path defaultMultipartUploadsLocation() {
         return getAndParse("defaultMultipartUploadsLocation", Paths::get);
+    }
+
+    @Override
+    public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        final String spec = getNormalized("requestContextLeakDetectionSampler");
+        if (spec == null) {
+            return null;
+        }
+        try {
+            return Sampler.of(spec);
+        } catch (Exception e) {
+            // Invalid sampler specification
+            throw new IllegalArgumentException("invalid sampler spec: " + spec, e);
+        }
+    }
+
+    @Override
+    public Long defaultUnhandledExceptionsReportIntervalMillis() {
+        return getLong("defaultUnhandledExceptionsReportIntervalMillis");
     }
 
     @Nullable

@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.internal.client.HttpHeaderUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
@@ -74,10 +73,6 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
 
     private Http2Headers convertHeaders(HttpHeaders inputHeaders) {
         final Http2Headers outputHeaders = ArmeriaHttpUtil.toNettyHttp2ClientHeaders(inputHeaders);
-
-        if (!outputHeaders.contains(HttpHeaderNames.USER_AGENT)) {
-            outputHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
-        }
 
         if (!outputHeaders.contains(HttpHeaderNames.SCHEME)) {
             outputHeaders.add(HttpHeaderNames.SCHEME, protocol.isTls() ? SessionProtocol.HTTPS.uriText()

@@ -52,6 +52,26 @@ class DefaultAggregatedHttpRequestTest {
     }
 
     @Test
+    void toHttpRequestWithHeaders() {
+        final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
+                HttpMethod.POST, "/foo", PLAIN_TEXT_UTF_8, "bar");
+        final RequestHeaders newHeaders = RequestHeaders.of(HttpMethod.POST, "/baz",
+                                                            CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                                            CONTENT_LENGTH, 4);
+        final HttpRequest req = aReq.toHttpRequest(newHeaders);
+
+        final RequestHeaders appliedHeaders = RequestHeaders.of(HttpMethod.POST, "/baz",
+                                                                CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                                                // content length is set correctly.
+                                                                CONTENT_LENGTH, 3);
+        assertThat(req.headers()).isEqualTo(appliedHeaders);
+        StepVerifier.create(req)
+                    .expectNext(HttpData.of(StandardCharsets.UTF_8, "bar"))
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
     void toHttpRequestWithoutContent() {
         final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(HttpMethod.GET, "/bar");
         final HttpRequest req = aReq.toHttpRequest();

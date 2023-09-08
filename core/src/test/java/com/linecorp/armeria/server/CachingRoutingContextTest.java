@@ -16,33 +16,44 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.server.RouteCache.CachingRoutingContext;
 
 class CachingRoutingContextTest {
 
     @Test
     void disableMatchingQueryParamsByCachingRoutingContext() {
+        final VirtualHost virtualHost = virtualHost();
         final Route route = Route.builder()
                                  .exact("/test")
                                  .methods(HttpMethod.GET)
                                  .matchesParams("foo=bar")
                                  .build();
 
-        final RoutingContext context = mock(RoutingContext.class);
-        when(context.path()).thenReturn("/test");
-        when(context.method()).thenReturn(HttpMethod.GET);
-        when(context.params()).thenReturn(QueryParams.of("foo", "qux"));
-        when(context.requiresMatchingParamsPredicates()).thenReturn(true);
+        final RequestTarget reqTarget = RequestTarget.forServer("/test?foo=qux");
+        assertThat(reqTarget).isNotNull();
 
+        final RoutingContext context =
+                new RoutingContextWrapper(DefaultRoutingContext.of(
+                        virtualHost, virtualHost.defaultHostname(),
+                        reqTarget,
+                        RequestHeaders.of(HttpMethod.GET, reqTarget.pathAndQuery()),
+                        RoutingStatus.OK)) {
+                    @Override
+                    public boolean requiresMatchingParamsPredicates() {
+                        return true;
+                    }
+                };
+
+        assertThat(context.params()).isEqualTo(QueryParams.of("foo", "qux"));
         assertThat(route.apply(context, false).isPresent()).isFalse(); // Because of the query parameters.
 
         final CachingRoutingContext cachingContext = new CachingRoutingContext(context);
@@ -51,18 +62,30 @@ class CachingRoutingContextTest {
 
     @Test
     void disableMatchingHeadersByCachingRoutingContext() {
+        final VirtualHost virtualHost = virtualHost();
         final Route route = Route.builder()
                                  .exact("/test")
                                  .methods(HttpMethod.GET)
                                  .matchesHeaders("foo=bar")
                                  .build();
 
-        final RoutingContext context = mock(RoutingContext.class);
-        when(context.path()).thenReturn("/test");
-        when(context.method()).thenReturn(HttpMethod.GET);
-        when(context.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/test", "foo", "qux"));
-        when(context.requiresMatchingHeadersPredicates()).thenReturn(true);
+        final RequestTarget reqTarget = RequestTarget.forServer("/test");
+        assertThat(reqTarget).isNotNull();
 
+        final RoutingContext context =
+                new RoutingContextWrapper(DefaultRoutingContext.of(
+                        virtualHost, virtualHost.defaultHostname(),
+                        reqTarget,
+                        RequestHeaders.of(HttpMethod.GET, reqTarget.pathAndQuery(),
+                                          "foo", "qux"),
+                        RoutingStatus.OK)) {
+                    @Override
+                    public boolean requiresMatchingHeadersPredicates() {
+                        return true;
+                    }
+                };
+
+        assertThat(context.headers().contains("foo", "qux")).isTrue();
         assertThat(route.apply(context, false).isPresent()).isFalse(); // Because of HTTP headers.
 
         final CachingRoutingContext cachingContext = new CachingRoutingContext(context);

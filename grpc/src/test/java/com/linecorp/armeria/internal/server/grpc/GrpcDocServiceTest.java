@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.server.grpc;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
@@ -48,14 +47,10 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -64,19 +59,27 @@ import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
+@GenerateNativeImageTrace
 class GrpcDocServiceTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
-            com.linecorp.armeria.grpc.testing.Test.getDescriptor()
+            testing.grpc.Test.getDescriptor()
                                                   .findServiceByName("TestService");
 
     private static final ServiceDescriptor RECONNECT_SERVICE_DESCRIPTOR =
-            com.linecorp.armeria.grpc.testing.Test.getDescriptor()
+            testing.grpc.Test.getDescriptor()
                                                   .findServiceByName("ReconnectService");
 
     private static final String INJECTED_HEADER_PROVIDER1 =
@@ -120,18 +123,19 @@ class GrpcDocServiceTest {
             sb.serviceUnder("/docs/",
                             DocService.builder()
                                       .exampleRequests(
-                                            TestServiceGrpc.SERVICE_NAME,
-                                            "UnaryCall",
-                                            SimpleRequest.newBuilder()
-                                                         .setPayload(
-                                                             Payload.newBuilder()
-                                                                    .setBody(ByteString.copyFromUtf8("world")))
-                                                         .build())
+                                              TestServiceGrpc.SERVICE_NAME,
+                                              "UnaryCall",
+                                              SimpleRequest.newBuilder()
+                                                           .setPayload(
+                                                                   Payload.newBuilder()
+                                                                          .setBody(ByteString.copyFromUtf8(
+                                                                                  "world")))
+                                                           .build())
                                       .injectedScripts(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
                                       .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
                                       .exclude(DocServiceFilter.ofMethodName(
-                                                        TestServiceGrpc.SERVICE_NAME,
-                                                        "EmptyCall"))
+                                              TestServiceGrpc.SERVICE_NAME,
+                                              "EmptyCall"))
                                       .build()
                                       .decorate(LoggingService.newDecorator()));
             sb.serviceUnder("/excludeAll/",
@@ -140,7 +144,7 @@ class GrpcDocServiceTest {
                                       .build());
             sb.serviceUnder("/",
                             GrpcService.builder()
-                                       .addService(mock(ReconnectServiceImplBase.class))
+                                       .addService(new ReconnectServiceImplBase() {})
                                        .build());
         }
     };
@@ -188,7 +192,8 @@ class GrpcDocServiceTest {
                         (plugin, service, method) -> true,
                         DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall")));
 
-        final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(serviceInfos));
+        final JsonNode expectedJson = mapper.valueToTree(
+                new GrpcDocServicePlugin().generate(serviceInfos, new ProtobufDescriptiveTypeInfoProvider()));
 
         // The specification generated by GrpcDocServicePlugin does not include the examples specified
         // when building a DocService, so we add them manually here.
@@ -203,7 +208,9 @@ class GrpcDocServiceTest {
         // The specification generated by GrpcDocServicePlugin does not include the docstrings
         // because it's injected by the DocService, so we remove them here for easier comparison.
         removeDescriptionInfos(actualJson);
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        removeDescriptionInfos(expectedJson);
+
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
 
         final AggregatedHttpResponse injected = client.get("/docs/injected.js").aggregate().join();
 
@@ -219,11 +226,14 @@ class GrpcDocServiceTest {
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
-        final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of()));
+        final Route docServiceRoute = Route.builder().pathPrefix("/excludeAll").build();
+        final ServiceSpecification emptySpecification = new ServiceSpecification(ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 docServiceRoute);
+        final JsonNode expectedJson = mapper.valueToTree(emptySpecification);
         assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 
@@ -241,21 +251,21 @@ class GrpcDocServiceTest {
     private static void addExamples(JsonNode json) {
         final Map<String, Multimap<String, String>> examplesToAdd =
                 ImmutableMap.<String, Multimap<String, String>>builder()
-                        .put(TestServiceGrpc.SERVICE_NAME,
-                             ImmutableMultimap.<String, String>builder()
-                                     .put("UnaryCall", "{\n" +
-                                                       "  \"responseType\": \"COMPRESSABLE\",\n" +
-                                                       "  \"responseSize\": 0,\n" +
-                                                       "  \"payload\": {\n" +
-                                                       "    \"type\": \"COMPRESSABLE\",\n" +
-                                                       "    \"body\": \"d29ybGQ=\"\n" +
-                                                       "  },\n" +
-                                                       "  \"fillUsername\": false,\n" +
-                                                       "  \"fillOauthScope\": false,\n" +
-                                                       "  \"responseCompression\": \"NONE\"\n" +
-                                                       '}')
-                                     .build())
-                        .build();
+                            .put(TestServiceGrpc.SERVICE_NAME,
+                                 ImmutableMultimap.<String, String>builder()
+                                                  .put("UnaryCall", "{\n" +
+                                                                    "  \"responseType\": \"COMPRESSABLE\",\n" +
+                                                                    "  \"responseSize\": 0,\n" +
+                                                                    "  \"payload\": {\n" +
+                                                                    "    \"type\": \"COMPRESSABLE\",\n" +
+                                                                    "    \"body\": \"d29ybGQ=\"\n" +
+                                                                    "  },\n" +
+                                                                    "  \"fillUsername\": false,\n" +
+                                                                    "  \"fillOauthScope\": false,\n" +
+                                                                    "  \"responseCompression\": \"NONE\"\n" +
+                                                                    '}')
+                                                  .build())
+                            .build();
 
         json.get("services").forEach(service -> {
             final String serviceName = service.get("name").textValue();

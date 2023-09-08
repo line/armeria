@@ -17,7 +17,7 @@
 package com.linecorp.armeria.internal.common.kotlin
 
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider
 import kotlinx.coroutines.flow.Flow
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -26,7 +26,7 @@ import java.lang.reflect.Type
  * Provides [FlowResponseConverterFunction] to annotated services.
  * @see FlowResponseConverterFunction
  */
-class FlowResponseConverterFunctionProvider : ResponseConverterFunctionProvider {
+class FlowResponseConverterFunctionProvider : DelegatingResponseConverterFunctionProvider {
     override fun createResponseConverterFunction(
         returnType: Type,
         responseConverter: ResponseConverterFunction

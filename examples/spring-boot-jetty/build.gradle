@@ -1,0 +1,24 @@
+plugins {
+    alias libs.plugins.spring.boot
+}
+
+dependencies {
+    implementation project(':core')
+    implementation project(':spring:boot3-starter')
+    implementation project(':jetty11')
+
+    implementation libs.slf4j2.api
+    implementation libs.spring.boot3.starter.jetty
+
+    implementation(libs.spring.boot3.starter.web) {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+    }
+    annotationProcessor libs.spring.boot3.configuration.processor
+
+    runtimeOnly project(':spring:boot3-actuator-starter')
+
+    testImplementation libs.assertj
+    testImplementation libs.junit5.jupiter.api
+    testImplementation libs.logback14
+    testImplementation libs.spring.boot3.starter.test
+}

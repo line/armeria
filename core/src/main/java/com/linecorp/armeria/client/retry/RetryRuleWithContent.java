@@ -218,7 +218,7 @@ public interface RetryRuleWithContent<T extends Response> {
     /**
      * Returns a newly created {@link RetryRuleWithContent} that retries with
      * {@linkplain Backoff#ofDefault() default backoff} on any {@link Exception}.
-     * Note that this rule should be used carefully because it reties regardless of
+     * Note that this rule should be used carefully because it retries regardless of
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
      */
     static <T extends Response> RetryRuleWithContent<T> onException() {
@@ -228,7 +228,7 @@ public interface RetryRuleWithContent<T extends Response> {
     /**
      * Returns a newly created {@link RetryRuleWithContent} that retries with the specified {@link Backoff} on
      * any {@link Exception}.
-     * Note that this rule should be used carefully because it reties regardless of
+     * Note that this rule should be used carefully because it retries regardless of
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
      */
     static <T extends Response> RetryRuleWithContent<T> onException(Backoff backoff) {

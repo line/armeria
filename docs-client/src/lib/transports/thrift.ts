@@ -18,7 +18,7 @@ import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
 
-const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
+export const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
 
 export default class ThriftTransport extends Transport {
   private static thriftMethod(endpoint: Endpoint, method: Method) {
@@ -43,6 +43,7 @@ export default class ThriftTransport extends Transport {
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
   ): Promise<Response> {
@@ -59,7 +60,9 @@ export default class ThriftTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    return fetch(endpoint.pathMapping, {
+    const newPath = pathPrefix + (endpointPath ?? endpoint.pathMapping);
+
+    return fetch(newPath, {
       headers: hdrs,
       method: 'POST',
       body: `{"method": "${thriftMethod}", "type": "CALL", "args": ${bodyJson}}`,

@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package com.linecorp.armeria.grpc.reactor;
+package testing.grpc;
 
-service HelloService {
+service TestService {
   rpc LotsOfRepliesWithoutScheduler (HelloRequest) returns (stream HelloReply) {}
   rpc HelloError (HelloRequest) returns (HelloReply) {}
 }

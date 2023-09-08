@@ -43,12 +43,12 @@ class GraphqlUtilTest {
                                            .contentType(MediaType.ANY_TYPE)
                                            .accept(MediaType.ANY_TYPE)
                                            .build(),
-                             MediaType.GRAPHQL_JSON),
+                             MediaType.JSON),
                 Arguments.of(RequestHeaders.builder(HttpMethod.GET, "/graphql")
                                            .contentType(MediaType.ANY_TYPE)
                                            .accept(MediaType.ANY_APPLICATION_TYPE)
                                            .build(),
-                             MediaType.GRAPHQL_JSON),
+                             MediaType.JSON),
                 Arguments.of(RequestHeaders.builder(HttpMethod.GET, "/graphql")
                                            .contentType(MediaType.ANY_TYPE)
                                            .accept(MediaType.JSON)
@@ -63,10 +63,11 @@ class GraphqlUtilTest {
                                            .contentType(MediaType.ANY_TYPE)
                                            // accept is null
                                            .build(),
-                             MediaType.GRAPHQL_JSON),
+                             MediaType.JSON),
                 Arguments.of(RequestHeaders.builder(HttpMethod.GET, "/graphql")
                                            .contentType(MediaType.ANY_TYPE)
-                                           .accept(MediaType.GRAPHQL)
+                                           // https://graphql.org/learn/serving-over-http/#post-request
+                                           .accept(MediaType.GRAPHQL) // Invalid accept type.
                                            .build(),
                              null),
                 Arguments.of(RequestHeaders.builder(HttpMethod.GET, "/graphql")
@@ -88,7 +89,12 @@ class GraphqlUtilTest {
                                            .contentType(MediaType.JSON)
                                            .accept(MediaType.GRAPHQL_JSON)
                                            .build(),
-                             MediaType.GRAPHQL_JSON)
+                             MediaType.GRAPHQL_JSON),
+                Arguments.of(RequestHeaders.builder(HttpMethod.POST, "/graphql")
+                                           .contentType(MediaType.JSON)
+                                           .accept(MediaType.GRAPHQL_RESPONSE_JSON)
+                                           .build(),
+                             MediaType.GRAPHQL_RESPONSE_JSON)
         );
     }
 }

@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.AttributesGetters;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -56,4 +57,9 @@ public interface RequestContextExtension extends RequestContext {
      * set via {@link #setAttr(AttributeKey, Object)}.
      */
     AttributesGetters attributes();
+
+    /**
+     * Returns the original {@link Request} that is specified when this {@link RequestContext} is created.
+     */
+    Request originalRequest();
 }

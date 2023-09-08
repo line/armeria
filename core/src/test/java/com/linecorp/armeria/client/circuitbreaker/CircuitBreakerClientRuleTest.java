@@ -30,12 +30,14 @@ import com.google.common.collect.Maps;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.common.InternalGrpcWebTrailers;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -50,7 +52,20 @@ class CircuitBreakerClientRuleTest {
             sb.service("/slow", (ctx, req) -> HttpResponse.streaming());
             sb.service("/trailers", (ctx, req) -> HttpResponse.of(ResponseHeaders.of(200),
                                                                   HttpData.ofUtf8("oops"),
-                                                                  HttpHeaders.of("grpc-status", 3)));
+                                                                  HttpHeaders.of("x-checksum", 42)));
+            sb.service("/grpc", (ctx, req) -> HttpResponse.of(ResponseHeaders.of(200),
+                                                              HttpData.ofUtf8("oops"),
+                                                              HttpHeaders.of("grpc-status", 3)));
+            sb.service("/grpc-trailers-only", (ctx, req) -> {
+                return HttpResponse.of(ResponseHeaders.builder(200)
+                                                      .addInt("grpc-status", 7)
+                                                      .build());
+            });
+            sb.service("/grpc-web", (ctx, req) -> {
+                // We call InternalGrpcWebTrailers.set(...) to emulate a gRPC Web response,
+                // so we don't really need to do anything on the server side.
+                return HttpResponse.of(200);
+            });
         }
     };
 
@@ -67,7 +82,7 @@ class CircuitBreakerClientRuleTest {
 
         final BlockingWebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .build()
                          .blocking();
 
@@ -83,7 +98,7 @@ class CircuitBreakerClientRuleTest {
 
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .build();
 
         assertThat(client.get("/503").aggregate().join().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
@@ -98,16 +113,16 @@ class CircuitBreakerClientRuleTest {
     void openCircuitWithTrailer() {
         final CircuitBreakerRule rule =
                 CircuitBreakerRule.builder()
-                                  .onResponseTrailers((ctx, trailers) -> trailers.containsInt("grpc-status", 3))
+                                  .onResponseTrailers((ctx, trailers) -> trailers.containsInt("x-checksum", 42))
                                   .thenFailure();
 
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .build();
 
         assertThat(client.get("/trailers").aggregate().join().trailers()).containsExactly(
-                Maps.immutableEntry(HttpHeaderNames.of("grpc-status"), "3"));
+                Maps.immutableEntry(HttpHeaderNames.of("x-checksum"), "42"));
         await().untilAsserted(() -> {
             assertThatThrownBy(() -> client.get("/trailers").aggregate().join())
                     .isInstanceOf(CompletionException.class)
@@ -116,15 +131,84 @@ class CircuitBreakerClientRuleTest {
     }
 
     @Test
+    void openCircuitWithGrpc() {
+        final CircuitBreakerRule rule =
+                CircuitBreakerRule.builder()
+                                  .onGrpcTrailers((ctx, trailers) -> trailers.containsInt("grpc-status", 3))
+                                  .thenFailure();
+
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
+                         .build()
+                         .blocking();
+
+        final AggregatedHttpResponse res = client.get("/grpc");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.trailers()).containsExactly(
+                Maps.immutableEntry(HttpHeaderNames.of("grpc-status"), "3"));
+        await().untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get("/grpc"))
+                    .isInstanceOf(FailFastException.class);
+        });
+    }
+
+    @Test
+    void openCircuitWithGrpcTrailersOnly() {
+        final CircuitBreakerRule rule =
+                CircuitBreakerRule.builder()
+                                  .onGrpcTrailers((ctx, trailers) -> trailers.containsInt("grpc-status", 7))
+                                  .thenFailure();
+
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
+                         .build()
+                         .blocking();
+
+        final AggregatedHttpResponse res = client.get("/grpc-trailers-only");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers()).contains(Maps.immutableEntry(HttpHeaderNames.of("grpc-status"), "7"));
+        await().untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get("/grpc-trailers-only"))
+                    .isInstanceOf(FailFastException.class);
+        });
+    }
+
+    @Test
+    void openCircuitWithGrpcWeb() {
+        final CircuitBreakerRule rule =
+                CircuitBreakerRule.builder()
+                                  .onGrpcTrailers((ctx, trailers) -> trailers.containsInt("grpc-status", 11))
+                                  .thenFailure();
+
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
+                         .decorator((delegate, ctx, req) -> {
+                             InternalGrpcWebTrailers.set(ctx, HttpHeaders.of("grpc-status", 11));
+                             return delegate.execute(ctx, req);
+                         })
+                         .build()
+                         .blocking();
+
+        final AggregatedHttpResponse res = client.get("/grpc-web");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().contains("grpc-status")).isFalse();
+        assertThat(res.trailers().contains("grpc-status")).isFalse();
+
+        await().untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get("/grpc-web"))
+                    .isInstanceOf(FailFastException.class);
+        });
+    }
+
+    @Test
     void openCircuitWithException() {
         final CircuitBreakerRule rule = CircuitBreakerRule.onException(ResponseTimeoutException.class);
-
-        final CircuitBreaker circuitBreaker = CircuitBreaker.builder()
-                                                            .minimumRequestThreshold(0)
-                                                            .build();
         final WebClient client =
                 WebClient.builder(server.httpUri())
-                         .decorator(CircuitBreakerClient.newDecorator(circuitBreaker, rule))
+                         .decorator(CircuitBreakerClient.newDecorator(superSensitiveCircuitBreaker(), rule))
                          .responseTimeoutMillis(2000)
                          .build();
 
@@ -136,5 +220,9 @@ class CircuitBreakerClientRuleTest {
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(FailFastException.class);
         });
+    }
+
+    private static CircuitBreaker superSensitiveCircuitBreaker() {
+        return CircuitBreaker.builder().minimumRequestThreshold(0).build();
     }
 }

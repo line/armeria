@@ -394,6 +394,10 @@ public final class MediaTypeNames {
      */
     public static final String JSON_LINES = "application/x-ndjson";
     /**
+     * {@value #JSON}.
+     */
+    public static final String JWT = "application/jwt";
+    /**
      * {@value #MANIFEST_JSON_UTF_8}.
      */
     public static final String MANIFEST_JSON_UTF_8 = "application/manifest+json; charset=utf-8";
@@ -506,6 +510,14 @@ public final class MediaTypeNames {
      */
     public static final String PROTOBUF = "application/protobuf";
     /**
+     * {@value #X_PROTOBUF}.
+     */
+    public static final String X_PROTOBUF = "application/x-protobuf";
+    /**
+     * {@value #X_GOOGLE_PROTOBUF}.
+     */
+    public static final String X_GOOGLE_PROTOBUF = "application/x-google-protobuf";
+    /**
      * {@value #RDF_XML_UTF_8}.
      */
     public static final String RDF_XML_UTF_8 = "application/rdf+xml; charset=utf-8";
@@ -596,6 +608,10 @@ public final class MediaTypeNames {
      * {@value #GRAPHQL_JSON}.
      */
     public static final String GRAPHQL_JSON = "application/graphql+json";
+    /**
+     * {@value #GRAPHQL_JSON}.
+     */
+    public static final String GRAPHQL_RESPONSE_JSON = "application/graphql-response+json";
 
     private MediaTypeNames() {}
 }

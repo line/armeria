@@ -27,7 +27,6 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
-import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -41,7 +40,6 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
 
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private boolean hasCalledChannelClose;
 
     ServerHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
                              AbstractHttp2ConnectionHandler connectionHandler,
@@ -56,18 +54,12 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     @Override
     public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
                                         boolean isTrailersEmpty) {
-        if (!isStreamPresentAndWritable(streamId)) {
+        if (!isStreamPresentAndWritable(streamId) || isResponseHeadersSent(id, streamId)) {
             // One of the following cases:
             // - Stream has been closed already.
             // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
+            // - Server tried to send a response HEADERS frame twice.
             return newFailedFuture(ClosedStreamException.get());
-        }
-
-        // TODO(alexc-db): decouple this from headers write and do it from inside the KeepAliveHandler.
-        if (!hasCalledChannelClose && keepAliveHandler().needToCloseConnection()) {
-            // Initiates channel close, connection will be closed after all streams are closed.
-            ctx().channel().close();
-            hasCalledChannelClose = true;
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
@@ -89,16 +81,8 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         return encoder().connection().stream(streamId);
     }
 
-    private Http2Headers convertHeaders(ResponseHeaders inputHeaders, boolean isTrailersEmpty) {
+    private static Http2Headers convertHeaders(ResponseHeaders inputHeaders, boolean isTrailersEmpty) {
         final HttpHeadersBuilder builder = inputHeaders.toBuilder();
-        if (enableServerHeader && !inputHeaders.contains(HttpHeaderNames.SERVER)) {
-            builder.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
-        }
-
-        if (enableDateHeader && !inputHeaders.contains(HttpHeaderNames.DATE)) {
-            builder.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
-        }
-
         if (!isTrailersEmpty && inputHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // We don't apply chunked encoding when the content-length header is set, which would
             // prevent the trailers from being sent so we go ahead and remove content-length to force

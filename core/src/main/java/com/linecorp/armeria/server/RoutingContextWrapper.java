@@ -22,14 +22,18 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 class RoutingContextWrapper implements RoutingContext {
 
     private final RoutingContext delegate;
 
+    private final int hashcode;
+
     RoutingContextWrapper(RoutingContext delegate) {
         this.delegate = delegate;
+        hashcode = DefaultRoutingContext.hashCode(this);
     }
 
     @Override
@@ -48,14 +52,19 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public String path() {
-        return delegate.path();
+    public RequestTarget requestTarget() {
+        return delegate.requestTarget();
+    }
+
+    @Override
+    public final String path() {
+        return RoutingContext.super.path();
     }
 
     @Nullable
     @Override
-    public String query() {
-        return delegate.query();
+    public final String query() {
+        return RoutingContext.super.query();
     }
 
     @Override
@@ -95,11 +104,12 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public RoutingContext overridePath(String path) {
-        return delegate.overridePath(path);
+    public RoutingContext withPath(String path) {
+        return delegate.withPath(path);
     }
 
     @Override
+    @Deprecated
     public boolean isCorsPreflight() {
         return delegate.isCorsPreflight();
     }
@@ -131,7 +141,7 @@ class RoutingContextWrapper implements RoutingContext {
 
     @Override
     public int hashCode() {
-        return DefaultRoutingContext.hashCode(this);
+        return hashcode;
     }
 
     @Override

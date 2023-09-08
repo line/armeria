@@ -29,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.AggregatedHttpObject;
 import com.linecorp.armeria.common.ContentDisposition;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 public class MultipartTest {
@@ -158,4 +159,13 @@ public class MultipartTest {
         assertThat(path).isEqualTo(tempDir.resolve("name2"));
         assertThat(path).content().isEqualTo("");
     }
+
+    @Test
+    void emptyMultipart() {
+        final Multipart multipart = Multipart.of();
+        final HttpRequest request = multipart.toHttpRequest("/foo");
+        assertThat(request.isEmpty()).isFalse();
+        assertThat(request.aggregate().join().contentUtf8()).isNotEmpty();
+    }
 }
+

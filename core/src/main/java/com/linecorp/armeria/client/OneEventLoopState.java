@@ -32,19 +32,29 @@ final class OneEventLoopState extends AbstractEventLoopState {
     }
 
     @Override
-    synchronized AbstractEventLoopEntry acquire() {
-        if (entry.isEmpty()) {
-            entry.add(new Entry(this, eventLoops().get(scheduler().acquisitionStartIndex(1))));
+    AbstractEventLoopEntry acquire() {
+        lock();
+        try {
+            if (entry.isEmpty()) {
+                entry.add(new Entry(this, eventLoops().get(scheduler().acquisitionStartIndex(1))));
+            }
+            final AbstractEventLoopEntry e = entry.get(0);
+            allActiveRequests++;
+            return e;
+        } finally {
+            unlock();
         }
-        final AbstractEventLoopEntry e = entry.get(0);
-        allActiveRequests++;
-        return e;
     }
 
     @Override
-    synchronized void release(AbstractEventLoopEntry e) {
-        if (--allActiveRequests == 0) {
-            setLastActivityTimeNanos();
+    void release(AbstractEventLoopEntry e) {
+        lock();
+        try {
+            if (--allActiveRequests == 0) {
+                setLastActivityTimeNanos();
+            }
+        } finally {
+            unlock();
         }
     }
 

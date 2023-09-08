@@ -1,5 +1,0 @@
-dependencies {
-    testImplementation project(':thrift0.16')
-    // Logback
-    api libs.logback
-}

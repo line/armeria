@@ -415,38 +415,86 @@ final class MimeParser {
      * Skips the preamble.
      */
     private void skipPreamble() {
-        // matches boundary
-        boundaryStart = match();
-        if (boundaryStart == -1) {
+        boundaryStart = -1;
+        final int boundaryStartOffset = match();
+        if (boundaryStartOffset == -1) {
             // No boundary is found
             return;
         }
 
         final int length = in.readableBytes();
 
-        // Consider all the whitespace boundary+whitespace+"\r\n"
+        // Three valid cases:
+        // boundary+"--" + "whatever after --" // closing boundary
+        // boundary+whitespace+"\n"
+        // boundary+whitespace+"\r\n"
+
+        // Check the closing boundary first.
+        int followingCharOffset = boundaryStartOffset + boundaryLength;
+        if (followingCharOffset == length) {
+            // Need more data.
+            return;
+        }
+
+        if (in.getByte(followingCharOffset) == '-') {
+            if (followingCharOffset + 1 == length) {
+                // Need more data.
+                return;
+            }
+            if (in.getByte(followingCharOffset + 1) == '-') {
+                in.skipBytes(followingCharOffset + 2);
+                done = true;
+                state = State.END_MESSAGE;
+                return;
+            }
+            throwInvalidBoundaryException(followingCharOffset + 2);
+        }
+
+        // Consider all the whitespace. e.g. boundary+whitespace+"\r\n"
         int linearWhiteSpace = 0;
-        for (int i = boundaryStart + boundaryLength;
+        for (int i = boundaryStartOffset + boundaryLength;
              i < length && (in.getByte(i) == ' ' || in.getByte(i) == '\t'); i++) {
             ++linearWhiteSpace;
         }
 
-        // Check for \n or \r\n
-        if (boundaryStart + boundaryLength + linearWhiteSpace < length &&
-            (in.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\n' ||
-             in.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\r')) {
-
-            if (in.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\n') {
-                in.skipBytes(boundaryStart + boundaryLength + linearWhiteSpace + 1);
-                return;
-            } else if (boundaryStart + boundaryLength + linearWhiteSpace + 1 < length &&
-                       in.getByte(boundaryStart + boundaryLength + linearWhiteSpace + 1) == '\n') {
-                in.skipBytes(boundaryStart + boundaryLength + linearWhiteSpace + 2);
-                return;
-            }
+        // Check the rest.
+        followingCharOffset = boundaryStartOffset + boundaryLength + linearWhiteSpace;
+        if (followingCharOffset == length) {
+            // Need more data.
+            return;
         }
 
-        in.skipBytes(boundaryStart + 1);
+        final byte followingChar = in.getByte(followingCharOffset);
+        if (followingChar == '\n') {
+            in.skipBytes(followingCharOffset + 1);
+            boundaryStart = boundaryStartOffset;
+            return;
+        }
+
+        if (followingChar == '\r') {
+            if (followingCharOffset + 1 == length) {
+                // Need one more character.
+                return;
+            }
+
+            if (in.getByte(followingCharOffset + 1) == '\n') {
+                in.skipBytes(followingCharOffset + 2);
+                boundaryStart = boundaryStartOffset;
+                return;
+            }
+            throwInvalidBoundaryException(followingCharOffset + 2);
+        }
+
+        throwInvalidBoundaryException(followingCharOffset + 1);
+    }
+
+    private void throwInvalidBoundaryException(int length) {
+        final ByteBuf byteBuf = in.readBytes(length);
+        try {
+            throw new MimeParsingException("Invalid boundary: " + new String(ByteBufUtil.getBytes(byteBuf)));
+        } finally {
+            byteBuf.release();
+        }
     }
 
     /**

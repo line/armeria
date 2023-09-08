@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 
 class SelectionTimeoutTest {
 
@@ -273,8 +274,8 @@ class SelectionTimeoutTest {
 
     @Test
     void select_timeout() {
-        try (MockEndpointGroup endpointGroup = new MockEndpointGroup(2000)) {
-            final int expectedTimeout = 2000;
+        final int expectedTimeout = 3000;
+        try (MockEndpointGroup endpointGroup = new MockEndpointGroup(expectedTimeout)) {
             assertSelectionTimeout(endpointGroup).isEqualTo(expectedTimeout);
 
             final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -283,7 +284,7 @@ class SelectionTimeoutTest {
             assertThat(result.join()).isNull();
             assertThat(stopwatch.elapsed())
                     .isGreaterThanOrEqualTo(Duration.ofMillis(expectedTimeout))
-                    .isLessThan(Duration.ofMillis(expectedTimeout + 1000));
+                    .isLessThan(Duration.ofMillis(expectedTimeout + 2000));
         }
     }
 
@@ -308,7 +309,7 @@ class SelectionTimeoutTest {
             try (MockEndpointGroup endpointGroup = new MockEndpointGroup(5000)) {
                 final CompletableFuture<Endpoint> result =
                         endpointGroup.select(ctx, CommonPools.blockingTaskExecutor());
-                assertThat(result.join()).isNull();
+                assertThat(BlockingUtils.blockingRun(result::join)).isNull();
                 assertThat(stopwatch.elapsed())
                         .isGreaterThanOrEqualTo(Duration.ofSeconds(2));
             }

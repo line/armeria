@@ -70,8 +70,10 @@ final class Samplers {
         requireNonNull(specification, "specification");
         switch (specification.trim()) {
             case "always":
+            case "true":
                 return Sampler.always();
             case "never":
+            case "false":
                 return Sampler.never();
         }
 

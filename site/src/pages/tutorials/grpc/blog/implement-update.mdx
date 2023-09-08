@@ -1,0 +1,223 @@
+---
+menuTitle: "Implement UPDATE"
+order: 5
+category: grpc
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing UPDATE operation
+
+Previously, we created and read blog posts. Now, let's implement and make a call to update a blog post. Here, we'll throw a custom exception and add a GrpcExceptionHandler for handling.
+
+<TutorialSteps current={5} />
+
+## What you need
+
+You need to have the files obtained from previous steps:
+
+- [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file)
+- Main.java
+- BlogService.java
+- BlogClient.java
+
+## 1. Implement server-side
+
+1. In `BlogService.java` we've been working on, add a service method for updating a blog post. Leave the exception throwing part empty for now.
+  ```java filename=BlogService.java
+  import example.armeria.blog.grpc.Blog.UpdateBlogPostRequest;
+  
+  public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    @Override
+    public void updateBlogPost(UpdateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+      final BlogPost oldBlogPost = blogPosts.get(request.getId());
+      if (oldBlogPost == null) {
+        // Throw an exception
+      } else {
+          final BlogPost newBlogPost = oldBlogPost.toBuilder()
+                                                  .setTitle(request.getTitle())
+                                                  .setContent(request.getContent())
+                                                  .setModifiedAt(Instant.now().toEpochMilli())
+                                                  .build();
+          blogPosts.put(request.getId(), newBlogPost);
+          responseObserver.onNext(newBlogPost);
+          responseObserver.onCompleted();
+      }
+    }
+  }
+  ```
+2. Add a class for the exception to be thrown when a specified blog post ID doesn't exist.
+  ```java filename=BlogNotFoundException.java
+  package example.armeria.blog.grpc;
+  
+  final class BlogNotFoundException extends IllegalStateException {
+    BlogNotFoundException(String s) {
+        super(s);
+    }
+  }
+  ```
+3. Throw the `BlogNotFoundException` in the part we left empty.
+ ```java filename=BlogService.java
+  public void updateBlogPost(UpdateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+    ...
+    if (oldBlogPost == null) {
+      throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
+    } else {
+      ...
+    }
+  }
+ ```
+3. Add an exception handler class for the blog service.
+  ```java filename=GrpcExceptionHandler.java
+  package example.armeria.blog.grpc;
+
+  import com.linecorp.armeria.common.RequestContext;
+  import com.linecorp.armeria.common.annotation.Nullable;
+  import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+  
+  import io.grpc.Metadata;
+  import io.grpc.Status;
+  
+  public class GrpcExceptionHandler implements GrpcStatusFunction {
+  
+    @Nullable
+    @Override
+    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+      if (cause instanceof IllegalArgumentException) {
+          return Status.INVALID_ARGUMENT.withCause(cause);
+      }
+      if (cause instanceof BlogNotFoundException) {
+          return Status.NOT_FOUND.withCause(cause).withDescription(cause.getMessage());
+      }
+  
+      // The default mapping function will be applied.
+      return null;
+    }
+  }
+  ```
+4. Bind the `GrpcExceptionHandler` to our service.
+  ```java filename=Main.java
+  private static Server newServer(int port) throws Exception {
+    final GrpcService grpcService = 
+       GrpcService.builder()
+                  .addService(new BlogService())
+                  .exceptionMapping(new GrpcExceptionHandler()) // add this
+                  .build();
+  ```
+
+## 2. Implement client-side
+
+Add a method `updateBlogPost()` to send a request to update a blog post.
+
+```java filename=BlogClient.java
+import example.armeria.blog.grpc.Blog.UpdateBlogPostRequest;
+
+class BlogClient {
+  static void updateBlogPost(Integer id, String newTitle, String newContent) {
+    final UpdateBlogPostRequest request = UpdateBlogPostRequest.newBuilder()
+                                                               .setId(id)
+                                                               .setTitle(newTitle)
+                                                               .setContent(newContent)
+                                                               .build();
+    final BlogPost updated = client.updateBlogPost(request);
+  }
+}
+```
+
+## 3. Test run
+
+Let's test updating a blog post. Since we know we are giving an incremental index to blog posts, we'll update the post at index 1.
+
+1. Add a method to test run the update method we just implemented. 
+  ```java filename=BlogClient.java
+  static void testRun() {
+    // This guarantees a blog post with ID equal to 1
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    // Check the existing title and content
+    getBlogPost(1);
+    // Update the blog with the ID, 1
+    updateBlogPost(1, "New title", "New content.");
+    // Check the updated blog detail
+    getBlogPost(1);
+  }
+  ```
+2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service), since we've modified the server-side in [1. Implement service](#1-implement-server-side).
+3. Run the client and check the blog information before updating. Confirm that the ID of the post to update is indeed `1`.
+   ```bash
+   [main] INFO  e.a.client.blog.grpc.BlogClient - [Create response] Title: Another blog post Content: Creating a post via createBlogPost().
+   {id: 1
+   title: "Another blog"
+   content: "Creating a post via createBlogPost()."
+   createdAt: 1649120472799
+   modifiedAt: 1649120472799
+   }
+   ...
+   DEBUG c.l.a.client.logging.LoggingClient - [...][http://127.0.0.1:8080/example.armeria.blog.grpc.BlogService/GetBlogPost#POST] 
+   Response: {startTime=..., content=CompletableRpcResponse{id: 1
+   title: "Another blog"
+   content: "Creating a post via createBlogPost()."
+   createdAt: 1649723835871
+   modifiedAt: 1649723835871
+   }, trailers=[EOS, grpc-status=0]}
+   ```
+4. Check that you see log for the update request followed by the response.
+   ```bash
+   ...
+   Request: {startTime= ... method=UpdateBlogPost, params=[id: 1
+   title: "New title"
+   content: "New content"
+   ]}}
+   ...
+   Response: {startTime=2022 ... content=CompletableRpcResponse{id: 1
+   title: "New title"
+   content: "New content"
+   createdAt: 1649120472799
+   modifiedAt: 1649120472848
+   }, trailers=[EOS, grpc-status=0]}
+   ```
+ 5. Double-check that the updated information is stored properly by checking 
+    the response to the `getBlogPost()`.
+    ```bash
+    ...
+    Request: {startTime= ... method=GetBlogPost, params=[id: 1
+    ]}}
+    ...
+    Response: {startTime= ... content=CompletableRpcResponse{id: 1
+    title: "New title"
+    content: "New content"
+    createdAt: 1649120472799
+    modifiedAt: 1649120472848
+    }, trailers=[EOS, grpc-status=0]}
+    ```
+
+## 4. Test error case
+
+To check that our exception handler is working, let's try updating a post we know for sure does not exist.
+
+1. Add a method to test run the update method we just implemented.
+  ```java filename=BlogClient.java
+  static void testRun() {
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    updateBlogPost(10000, "New title", "New content."); // add this
+  }
+  ```
+2. While the server is running, run the client and see the message that you get. We threw the `BlogNotFoundException` and the exception handler returned the `NOT_FOUND` runtime exception for us.
+  ```bash
+  Exception in thread "main" io.grpc.StatusRuntimeException: NOT_FOUND: The blog post does not exist. ID: 10000
+    at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)
+    at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:243)
+    at io.grpc.stub.ClientCalls.blockingUnaryCall(ClientCalls.java:156)
+    at example.armeria.blog.grpc.BlogServiceGrpc$BlogServiceBlockingStub.updateBlogPost(BlogServiceGrpc.java:390)
+    at example.armeria.client.blog.grpc.BlogClient.updateBlogPost(BlogClient.java:110)
+    at example.armeria.client.blog.grpc.BlogClient.testRun(BlogClient.java:53)
+    at example.armeria.client.blog.grpc.BlogClient.main(BlogClient.java:46)
+  ```
+
+## What's next
+
+Here, we've implemented a service method and client method for updating a 
+blog post. We've also added exception handling. Next, we'll implement a method for [deleting a blog post](/tutorials/grpc/blog/implement-delete).
+
+<TutorialSteps current={5} />

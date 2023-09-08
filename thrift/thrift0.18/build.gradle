@@ -1,0 +1,84 @@
+// This module builds and publishes 'armeria-thrift0.18', which is compiled with
+// the source code of ':thrift0.13', ':thrift0.14.0'.
+
+dependencies {
+    api libs.thrift018
+
+    api libs.javax.annotation
+
+    // thrift api depends on httpclient4
+    testImplementation libs.apache.httpclient4
+
+    // Jetty, for testing TServlet interoperability.
+    testImplementation libs.jetty94.webapp
+    testImplementation libs.jetty94.http2.server
+
+    // Dropwizard and Prometheus, for testing metrics integration
+    testImplementation libs.dropwizard.metrics.core
+    testImplementation libs.micrometer.prometheus
+    testImplementation libs.prometheus
+
+    // micrometer tracing
+    testImplementation (libs.micrometer.tracing.integration.test) {
+        exclude group: "org.mockito"
+    }
+    testImplementation libs.brave.instrumentation.http.tests
+}
+
+// Use the sources from ':thrift0.13' and ':thrift0.14'. ':thrift0.15' is empty so no need to copy anything.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+def thrift013ProjectDir = "${rootProject.projectDir}/thrift/thrift0.13"
+def thrift014ProjectDir = "${rootProject.projectDir}/thrift/thrift0.14"
+def thrift017ProjectDir = "${rootProject.projectDir}/thrift/thrift0.17"
+
+// Copy common files from ':thrift0.13' and ':thrift0.14' to gen-src directory
+// in order to use them as a source set.
+task generateSources(type: Copy) {
+    from("${thrift013ProjectDir}/src/main/java") {
+        exclude '**/TByteBufTransport.java'
+        exclude '**/common/thrift/package-info.java'
+    }
+    from "${thrift014ProjectDir}/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+}
+
+task generateTestSources(type: Copy) {
+    from("${thrift013ProjectDir}/src/test/java") {
+        exclude '**/THttp2Client.java'
+        exclude '**/ThriftDocServicePluginTest.java'
+    }
+    from "${thrift014ProjectDir}/src/test/java"
+    from "${thrift017ProjectDir}/src/test/java"
+    into "${project.ext.genSrcDir}/test/java"
+}
+
+def thriftFullVersion = libs.thrift018.get().versionConstraint.requiredVersion
+ext {
+    thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
+    testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift", "$projectDir/src/test/thrift"]
+}
+
+tasks.generateSources.dependsOn(generateTestSources)
+tasks.compileJava.dependsOn(generateSources)
+tasks.compileTestJava.dependsOn(generateSources)
+
+tasks.processResources.from("${thrift013ProjectDir}/src/main/resources") {
+    exclude '**/thrift-options.properties'
+}
+tasks.processTestResources.from "${thrift013ProjectDir}/src/test/resources"
+tasks.sourcesJar.from "${thrift013ProjectDir}/src/main/resources"
+
+// Keep the original Guava references in ThriftListenableFuture,
+// which is the only place we expose Guava classes in our public API.
+// NB: Keep this same with ':thrift0.13'.
+tasks.shadedJar.exclude 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*'
+tasks.shadedJar.doLast {
+    ant.jar(update: true, destfile: tasks.shadedJar.archivePath) {
+        sourceSets.main.output.classesDirs.each { classesDir ->
+            fileset(dir: "$classesDir",
+                    includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')
+        }
+    }
+}

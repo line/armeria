@@ -1,0 +1,8 @@
+task generateSources(type: Copy) {
+    from "${rootProject.projectDir}/core/src/test/java"
+    into "${project.ext.genSrcDir}/test/java"
+    include '**/ServiceRequestContextTest.java'
+    include '**/ClientRequestContextTest.java'
+}
+
+tasks.compileJava.dependsOn(generateSources)

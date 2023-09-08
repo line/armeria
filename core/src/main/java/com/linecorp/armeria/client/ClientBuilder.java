@@ -180,6 +180,16 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientBuilder requestAutoAbortDelay(Duration delay) {
+        return (ClientBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public ClientBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (ClientBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public ClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (ClientBuilder) super.requestIdGenerator(requestIdGenerator);
     }

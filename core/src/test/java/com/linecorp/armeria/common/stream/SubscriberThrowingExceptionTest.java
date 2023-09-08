@@ -43,10 +43,10 @@ class SubscriberThrowingExceptionTest {
 
     @Test
     void streamCompleteExceptionallyWithCompositeExceptionIfOnErrorThrowsException() {
-        final DefaultStreamMessage<Object> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Object> stream = StreamMessage.streaming();
         final IllegalStateException illegalStateException = new IllegalStateException();
         final AnticipatedException anticipatedException = new AnticipatedException();
-        stream.tryClose(illegalStateException);
+        stream.close(illegalStateException);
         stream.subscribe(new Subscriber<Object>() {
             @Override
             public void onSubscribe(Subscription s) {
@@ -75,7 +75,7 @@ class SubscriberThrowingExceptionTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void streamMessages(boolean throwExceptionOnOnSubscribe) {
-        final DefaultStreamMessage<HttpData> defaultStreamMessage = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> defaultStreamMessage = StreamMessage.streaming();
         ByteBuf data0 = newUnpooledBuffer();
         defaultStreamMessage.write(HttpData.wrap(data0));
         subscribeAndValidate(defaultStreamMessage, throwExceptionOnOnSubscribe);
@@ -106,7 +106,7 @@ class SubscriberThrowingExceptionTest {
         assertThat(data1.refCnt()).isZero();
         assertThat(data2.refCnt()).isZero();
 
-        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> publisher = StreamMessage.streaming();
         final ByteBuf data3 = newUnpooledBuffer();
         publisher.write(HttpData.wrap(data3));
         final PublisherBasedStreamMessage<Object> publisherBasedStreamMessage =

@@ -39,8 +39,12 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 
-@SetSystemProperty(key = "com.linecorp.armeria.requestContextStorageProvider",
-        value = "com.linecorp.armeria.common.Custom2RequestContextStorageProvider")
+import io.micrometer.core.instrument.Metrics;
+
+@SetSystemProperty(
+        key = "com.linecorp.armeria.requestContextStorageProvider",
+        value = "com.linecorp.armeria.common.Custom2RequestContextStorageProvider"
+)
 class FlagsProviderTest {
 
     private Class<?> flags;
@@ -137,6 +141,11 @@ class FlagsProviderTest {
         assertFlags("preferredIpV4Addresses")
                 .usingRecursiveComparison()
                 .isEqualTo(InetAddressPredicates.ofCidr("211.111.111.111"));
+    }
+
+    @Test
+    void testMeterRegistry() {
+        assertThat(Flags.meterRegistry()).isNotSameAs(Metrics.globalRegistry);
     }
 
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {

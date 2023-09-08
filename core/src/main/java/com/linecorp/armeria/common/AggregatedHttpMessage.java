@@ -16,12 +16,15 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A complete HTTP message whose content is readily available as a single {@link HttpData}. It can be an
  * HTTP request or an HTTP response depending on what header values it contains. For example, having a
  * {@link HttpHeaderNames#STATUS} header could mean it is an HTTP response.
  */
-interface AggregatedHttpMessage extends AggregatedHttpObject {
+@UnstableApi
+public interface AggregatedHttpMessage extends AggregatedHttpObject {
 
     /**
      * Returns the HTTP trailers.

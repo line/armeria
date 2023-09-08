@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.HttpResponseUtil.createHttpResponseFrom;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
@@ -55,7 +56,6 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
-import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -85,12 +85,26 @@ public interface HttpResponse extends Response, HttpMessage {
      * closed with the same cause as well.
      *
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
+     *
+     * @deprecated Use {@link #of(CompletionStage)}.
      */
+    @Deprecated
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
-        requireNonNull(stage, "stage");
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        res.delegateWhenComplete(stage);
-        return res;
+        return of(stage);
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned response
+     * will be closed with the same cause as well.
+     *
+     * @param future the {@link CompletableFuture} which will produce the actual {@link HttpResponse}
+     *
+     * @deprecated Use {@link #of(CompletionStage)}.
+     */
+    @Deprecated
+    static HttpResponse from(CompletableFuture<? extends HttpResponse> future) {
+        return of(future);
     }
 
     /**
@@ -102,14 +116,13 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
      *                           the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
      *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     *
+     * @deprecated Use {@link #of(CompletionStage, EventExecutor)}.
      */
+    @Deprecated
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage,
                              EventExecutor subscriberExecutor) {
-        requireNonNull(stage, "stage");
-        requireNonNull(subscriberExecutor, "subscriberExecutor");
-        final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
-        res.delegateWhenComplete(stage);
-        return res;
+        return of(stage, subscriberExecutor);
     }
 
     /**
@@ -117,19 +130,12 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
      * @param executor the {@link Executor} that executes the {@link Supplier}.
+     *
+     * @deprecated Use {@link #of(Supplier, Executor)}.
      */
+    @Deprecated
     static HttpResponse from(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
-        requireNonNull(responseSupplier, "responseSupplier");
-        requireNonNull(executor, "executor");
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        executor.execute(() -> {
-            try {
-                res.delegate(responseSupplier.get());
-            } catch (Throwable ex) {
-                res.abort(ex);
-            }
-        });
-        return res;
+        return of(responseSupplier, executor);
     }
 
     /**
@@ -483,6 +489,82 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Creates a new HTTP response with the specified headers and trailers
+     * whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    static HttpResponse of(ResponseHeaders headers,
+                           Publisher<? extends HttpData> publisher,
+                           HttpHeaders trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailers, "trailers");
+        return PublisherBasedHttpResponse.from(headers, publisher, trailers);
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
+     */
+    static HttpResponse of(CompletionStage<? extends HttpResponse> stage) {
+        requireNonNull(stage, "stage");
+
+        if (stage instanceof CompletableFuture) {
+            return createHttpResponseFrom((CompletableFuture<? extends HttpResponse>) stage);
+        } else {
+            final DeferredHttpResponse res = new DeferredHttpResponse();
+            res.delegateWhenComplete(stage);
+            return res;
+        }
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    static HttpResponse of(CompletionStage<? extends HttpResponse> stage,
+                           EventExecutor subscriberExecutor) {
+        requireNonNull(stage, "stage");
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        // Have to use DeferredHttpResponse to use the subscriberExecutor.
+        final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
+        res.delegateWhenComplete(stage);
+        return res;
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} provided by the {@link Supplier}.
+     *
+     * @param responseSupplier the {@link Supplier} invokes returning the provided {@link HttpResponse}
+     * @param executor the {@link Executor} that executes the {@link Supplier}.
+     */
+    static HttpResponse of(Supplier<? extends HttpResponse> responseSupplier, Executor executor) {
+        requireNonNull(responseSupplier, "responseSupplier");
+        requireNonNull(executor, "executor");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        executor.execute(() -> {
+            try {
+                res.delegate(responseSupplier.get());
+            } catch (Throwable ex) {
+                res.abort(ex);
+            }
+        });
+        return res;
+    }
+
+    /**
      * Creates a new HTTP response with the specified {@code content} that is converted into JSON using the
      * default {@link ObjectMapper}.
      *
@@ -628,8 +710,34 @@ public interface HttpResponse extends Response, HttpMessage {
     CompletableFuture<Void> whenComplete();
 
     /**
+     * Aggregates this response with the specified {@link AggregationOptions}. The returned
+     * {@link CompletableFuture} will be notified when the content and the trailers of the response are
+     * fully received.
+     * <pre>{@code
+     * AggregationOptions options =
+     *     AggregationOptions.builder()
+     *                       .cacheResult(false)
+     *                       .executor(...)
+     *                       .build();
+     * HttpResponse request = ...;
+     * AggregatedHttpResponse aggregated = response.aggregate(options).join();
+     * }</pre>
+     */
+    @UnstableApi
+    CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options);
+
+    /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
+     *
+     * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this
+     * method and get the cached value after the first aggregation.
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * AggregatedHttpResponse aggregated0 = response.aggregate().join();
+     * AggregatedHttpResponse aggregated1 = response.aggregate().join();
+     * assert aggregated0 == aggregated1;
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate() {
         return aggregate(defaultSubscriberExecutor());
@@ -638,9 +746,22 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
+     *
+     * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this
+     * method and get the cached value after the first aggregation.
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * AggregatedHttpResponse aggregated0 = response.aggregate(executor).join();
+     * AggregatedHttpResponse aggregated1 = response.aggregate(executor).join();
+     * assert aggregated0 == aggregated1;
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
-        return HttpMessageAggregator.aggregateResponse(this, executor, null);
+        requireNonNull(executor, "executor");
+        return aggregate(AggregationOptions.builder()
+                                           .executor(executor)
+                                           .cacheResult(true)
+                                           .build());
     }
 
     /**
@@ -649,8 +770,21 @@ public interface HttpResponse extends Response, HttpMessage {
      * {@link AggregatedHttpResponse#content()} will return a pooled object, and the caller must ensure
      * to release it. If you don't know what this means, use {@link #aggregate()}.
      *
+     * <p>The pooled {@link AggregatedHttpResponse} is not cached. So it is NOT allowed to access the
+     * {@link AggregatedHttpResponse} from this method after the first aggregation.
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * AggregatedHttpResponse aggregated = response.aggregateWithPooledObjects(alloc).join();
+     * // An `IllegalStateException` will be raised.
+     * response.aggregateWithPooledObjects(alloc).join();
+     * }</pre>
+     *
      * @see PooledObjects
+     *
+     * @deprecated Use {@link #aggregate(AggregationOptions)} with
+     *             {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
      */
+    @Deprecated
     @UnstableApi
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
@@ -658,15 +792,31 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the request is received fully. {@link AggregatedHttpResponse#content()} will
+     * the trailers of the response is received fully. {@link AggregatedHttpResponse#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
+     *
+     * <p>The pooled {@link AggregatedHttpResponse} is not cached. So it is NOT allowed to access the
+     * {@link AggregatedHttpResponse} from this method after the first aggregation.
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * AggregatedHttpResponse aggregated = response.aggregateWithPooledObjects(executor, alloc).join();
+     * // An `IllegalStateException` will be raised.
+     * response.aggregateWithPooledObjects(executor, alloc).join();
+     * }</pre>
+     *
+     * @deprecated Use {@link #aggregate(AggregationOptions)} with
+     *             {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
      */
+    @Deprecated
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        return HttpMessageAggregator.aggregateResponse(this, executor, alloc);
+        return aggregate(AggregationOptions.builder()
+                                           .executor(executor)
+                                           .usePooledObjects(alloc)
+                                           .build());
     }
 
     @Override

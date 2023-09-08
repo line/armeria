@@ -23,6 +23,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
 /**
  * A builder class for binding a {@code decorator} to a {@link Route} fluently.

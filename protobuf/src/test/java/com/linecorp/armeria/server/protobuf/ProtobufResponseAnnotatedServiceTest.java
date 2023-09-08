@@ -50,7 +50,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -63,7 +63,9 @@ import com.linecorp.armeria.server.annotation.ProducesProtobuf;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
+import testing.protobuf.Messages.SimpleResponse;
 
+@GenerateNativeImageTrace
 class ProtobufResponseAnnotatedServiceTest {
 
     private static final byte RECORD_SEPARATOR = 0x1E;
@@ -218,8 +220,12 @@ class ProtobufResponseAnnotatedServiceTest {
     void protobufStreamResponse(String path) {
         final AggregatedHttpResponse response = client.get(path).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(cause).isInstanceOf(IllegalArgumentException.class)
-                         .hasMessageContaining("Cannot convert a");
+        assertThat(cause).isInstanceOf(IllegalStateException.class)
+                         .hasMessageContaining("cannot convert a result to HttpResponse");
+        assertThat(cause.getCause())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot convert a")
+                .hasMessageContaining("to Protocol Buffers wire format");
     }
 
     @Test

@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
@@ -163,6 +162,14 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
     /**
+     * If the idle timeout is reset when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"}
+     * is received.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Boolean> KEEP_ALIVE_ON_PING =
+            ClientFactoryOption.define("KEEP_ALIVE_ON_PING", Flags.defaultClientKeepAliveOnPing());
+
+    /**
      * The PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
      * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
@@ -205,6 +212,14 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("USE_HTTP2_PREFACE", Flags.defaultUseHttp2Preface());
 
     /**
+     * Whether to use HTTP/2 without ALPN. This is useful if you want to communicate with an HTTP/2
+     * server over TLS but the server does not support ALPN.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Boolean> USE_HTTP2_WITHOUT_ALPN =
+            ClientFactoryOption.define("USE_HTTP2_WITHOUT_ALPN", Flags.defaultUseHttp2WithoutAlpn());
+
+    /**
      * Whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
      * HTTP/1 connections.
      */
@@ -221,7 +236,7 @@ public final class ClientFactoryOptions
      * The {@link MeterRegistry} which collects various stats.
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
-            ClientFactoryOption.define("METER_REGISTRY", Metrics.globalRegistry);
+            ClientFactoryOption.define("METER_REGISTRY", Flags.meterRegistry());
 
     /**
      * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
@@ -458,6 +473,15 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns whether to keep connection alive when an HTTP/2 PING frame or the response of
+     * {@code "OPTIONS * HTTP/1.1"} is received.
+     */
+    @UnstableApi
+    public boolean keepAliveOnPing() {
+        return get(KEEP_ALIVE_ON_PING);
+    }
+
+    /**
      * Returns the PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
      * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
@@ -493,6 +517,14 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns whether to use HTTP/2 over TLS without ALPN.
+     */
+    @UnstableApi
+    public boolean useHttp2WithoutAlpn() {
+        return get(USE_HTTP2_WITHOUT_ALPN);
+    }
+
+    /**
      * Returns whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
      * HTTP/1 connections.
      */
@@ -524,7 +556,7 @@ public final class ClientFactoryOptions
     /**
      * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another header name. This is useful when communicating with a legacy system that only supports
-     * case sensitive HTTP/1 headers.
+     * case-sensitive HTTP/1 headers.
      */
     public Http1HeaderNaming http1HeaderNaming() {
         return get(HTTP1_HEADER_NAMING);

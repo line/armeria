@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.RequestContextUtil.ensureSameCtx;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ExecutorService;
@@ -24,8 +24,12 @@ import java.util.concurrent.ExecutorService;
  * A delegating {@link ExecutorService} that makes sure all submitted tasks are
  * executed within the {@link RequestContext}.
  */
-interface ContextAwareExecutorService extends ExecutorService, ContextHolder {
+public interface ContextAwareExecutorService extends ExecutorService, ContextAwareExecutor {
 
+    /**
+     * Returns a new {@link ContextAwareExecutorService} that sets the specified
+     * {@link RequestContext} before executing any submitted tasks.
+     */
     static ContextAwareExecutorService of(RequestContext context, ExecutorService executor) {
         requireNonNull(context, "context");
         requireNonNull(executor, "executor");
@@ -35,4 +39,18 @@ interface ContextAwareExecutorService extends ExecutorService, ContextHolder {
         }
         return new DefaultContextAwareExecutorService(context, executor);
     }
+
+    /**
+     * Returns the {@link RequestContext} that was specified when creating
+     * this {@link ContextAwareExecutorService}.
+     */
+    @Override
+    RequestContext context();
+
+    /**
+     * Returns the {@link ExecutorService} that executes the submitted tasks without setting
+     * the {@link RequestContext}.
+     */
+    @Override
+    ExecutorService withoutContext();
 }

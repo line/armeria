@@ -22,17 +22,21 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -44,7 +48,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @param <T> the type of element signaled
  */
 @UnstableApi
-public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
+public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, SubscriptionImpl>
@@ -75,6 +79,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private static final CompletableFuture<List<?>> NO_COLLECTING_FUTURE =
             UnmodifiableFuture.completedFuture(null);
     private static final SubscriptionImpl NOOP_SUBSCRIPTION = noopSubscription();
+    @Nullable
+    private final EventExecutor defaultSubscriberExecutor;
 
     @Nullable
     @SuppressWarnings("unused") // Updated only via upstreamUpdater
@@ -107,6 +113,45 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private volatile Throwable abortCause;
 
     /**
+     * Creates a new instance.
+     */
+    public DeferredStreamMessage() {
+        defaultSubscriberExecutor = null;
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public DeferredStreamMessage(EventExecutor defaultSubscriberExecutor) {
+        this.defaultSubscriberExecutor = requireNonNull(defaultSubscriberExecutor, "defaultSubscriberExecutor");
+    }
+
+    @Override
+    public EventExecutor defaultSubscriberExecutor() {
+        if (defaultSubscriberExecutor != null) {
+            return defaultSubscriberExecutor;
+        }
+        return super.defaultSubscriberExecutor();
+    }
+
+    /**
+     * Delegates when the specified {@link CompletionStage} is complete.
+     */
+    protected final void delegateOnCompletion(CompletionStage<? extends Publisher<T>> stage) {
+        requireNonNull(stage, "stage");
+        stage.handle((upstream, thrown) -> {
+            if (thrown != null) {
+                close(Exceptions.peel(thrown));
+            } else if (upstream == null) {
+                close(new NullPointerException("upstream stage produced a null stream message: " + stage));
+            } else {
+                delegate(StreamMessage.of(upstream));
+            }
+            return null;
+        });
+    }
+
+    /**
      * Sets the upstream {@link StreamMessage} which will actually publish the stream.
      *
      * @throws IllegalStateException if the upstream has been set already or
@@ -128,10 +173,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
         if (!collectingFutureUpdater.compareAndSet(this, null, NO_COLLECTING_FUTURE)) {
             upstream.collect(collectingExecutor, collectionOptions).handle((result, cause) -> {
-                if (cause == null) {
-                    collectingFuture.complete(result);
-                } else {
+                final CompletableFuture<List<T>> collectingFuture = this.collectingFuture;
+                assert collectingFuture != null;
+                if (cause != null) {
                     collectingFuture.completeExceptionally(cause);
+                } else {
+                    // `collectingFuture` can be completed exceptionally by `abort()`
+                    if (!collectingFuture.complete(result)) {
+                        for (final T obj : result) {
+                            PooledObjects.close(obj);
+                        }
+                    }
                 }
                 return null;
             });
@@ -323,6 +375,13 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
+        //noinspection unchecked
+        final CompletableFuture<List<?>> collectingFuture =
+                (CompletableFuture<List<?>>) (CompletableFuture<?>) this.collectingFuture;
+        if (collectingFuture != null && collectingFuture != NO_COLLECTING_FUTURE) {
+            collectingFuture.completeExceptionally(cause);
+        }
+
         final CloseEvent closeEvent = newCloseEvent(cause);
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
         assert downstreamSubscription != null;
@@ -356,6 +415,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         collectingExecutor = executor;
         collectionOptions = options;
         if (collectingFutureUpdater.compareAndSet(this, null, collectingFuture)) {
+            final Throwable abortCause = this.abortCause;
+            if (abortCause != null) {
+                collectingFuture.completeExceptionally(abortCause);
+            }
             return collectingFuture;
         } else {
             final StreamMessage<T> upstream0 = this.upstream;

@@ -46,6 +46,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Iterators;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.AttributeKey;
 
@@ -108,7 +109,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             return null;
         }
 
-        synchronized (head) {
+        head.lock();
+        try {
             DefaultAttribute<?> curr = head;
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
@@ -126,6 +128,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
                 }
                 curr = next;
             }
+        } finally {
+            head.unlock();
         }
     }
 
@@ -171,7 +175,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             head = attributes.get(i);
         }
 
-        synchronized (head) {
+        head.lock();
+        try {
             DefaultAttribute<?> curr = head;
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
@@ -190,6 +195,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
 
                 curr = next;
             }
+        } finally {
+            head.unlock();
         }
     }
 
@@ -231,7 +238,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             return false;
         }
 
-        synchronized (head) {
+        head.lock();
+        try {
             DefaultAttribute<?> curr = head;
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
@@ -245,6 +253,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
                 }
                 curr = next;
             }
+        } finally {
+            head.unlock();
         }
     }
 
@@ -368,7 +378,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
     }
 
     @VisibleForTesting
-    static final class DefaultAttribute<T> implements Entry<AttributeKey<T>, T> {
+    static final class DefaultAttribute<T> extends ReentrantShortLock implements Entry<AttributeKey<T>, T> {
 
         @Nullable
         private final AttributeKey<T> key;

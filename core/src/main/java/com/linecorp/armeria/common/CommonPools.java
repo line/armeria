@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.ScheduledExecutorService;
-
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -36,11 +35,18 @@ public final class CommonPools {
     private static final EventLoopGroup WORKER_GROUP =
             EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(), "armeria-common-worker", true);
 
+    static {
+        // Bind EventLoopMetrics for the common worker group.
+        MoreMeterBinders
+                .eventLoopMetrics(WORKER_GROUP, "common")
+                .bindTo(Flags.meterRegistry());
+    }
+
     /**
-     * Returns the default common blocking task {@link ScheduledExecutorService} which is used for
+     * Returns the default common blocking task {@link BlockingTaskExecutor} which is used for
      * potentially long-running tasks which may block I/O threads.
      */
-    public static ScheduledExecutorService blockingTaskExecutor() {
+    public static BlockingTaskExecutor blockingTaskExecutor() {
         return BLOCKING_TASK_EXECUTOR;
     }
 

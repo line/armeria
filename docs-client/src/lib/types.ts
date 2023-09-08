@@ -18,3 +18,9 @@ export interface SelectOption {
   label: string;
   value: string;
 }
+
+export enum SpecLoadingStatus {
+  INITIALIZED,
+  FAILED,
+  SUCCESS,
+}

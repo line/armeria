@@ -111,7 +111,7 @@ class HttpServerAbortingInfiniteStreamTest {
 
             @Override
             public void onNext(HttpObject httpObject) {
-                assert subscription != null;
+                assertThat(subscription).isNotNull();
                 if (++count == 10) {
                     logger.debug("Cancel subscription: count={}", count);
                     subscription.cancel();

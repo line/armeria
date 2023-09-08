@@ -305,6 +305,11 @@ final class DefaultRoute implements Route {
     }
 
     @Override
+    public boolean isCacheable() {
+        return paramPredicates.isEmpty() && headerPredicates.isEmpty() && excludedRoutes().isEmpty();
+    }
+
+    @Override
     public int hashCode() {
         return hashCode;
     }

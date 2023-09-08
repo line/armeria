@@ -18,15 +18,17 @@ package com.linecorp.armeria.internal.client;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -35,7 +37,8 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.client.Client;
+import com.google.common.net.HostAndPort;
+
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -45,7 +48,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ExchangeType;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -54,8 +56,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
@@ -71,8 +74,8 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -80,9 +83,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AttributeKey;
+import io.netty.util.NetUtil;
 
 /**
  * Default {@link ClientRequestContext} implementation.
@@ -113,19 +117,27 @@ public final class DefaultClientRequestContext
     @Nullable
     private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
-    private final String fragment;
+    private Channel channel;
+    @Nullable
+    private InetSocketAddress remoteAddress;
+    @Nullable
+    private InetSocketAddress localAddress;
     @Nullable
     private final ServiceRequestContext root;
 
-    private final boolean hasBaseUri;
     private final ClientOptions options;
     private final RequestLogBuilder log;
     private final CancellationScheduler responseCancellationScheduler;
     private long writeTimeoutMillis;
     private long maxResponseLength;
 
+    private final HttpHeaders defaultRequestHeaders;
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
     private volatile HttpHeaders additionalRequestHeaders;
+
+    private static final HttpHeaders defaultInternalRequestHeaders =
+            HttpHeaders.of(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT.toString());
+    private HttpHeaders internalRequestHeaders = defaultInternalRequestHeaders;
 
     @Nullable
     private String strVal;
@@ -155,13 +167,13 @@ public final class DefaultClientRequestContext
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, requestOptions, serviceRequestContext(),
-             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros, false);
+             id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
+             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -176,36 +188,33 @@ public final class DefaultClientRequestContext
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
-     * @param hasBaseUri whether a {@link Client} which initiates this {@link ClientRequestContext} was
-     *                   created with a base {@link URI}.
      */
     public DefaultClientRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions,
-            long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, requestOptions,
+             id, method, reqTarget, options, req, rpcReq, requestOptions,
              serviceRequestContext(), /* responseCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros, hasBaseUri);
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     private DefaultClientRequestContext(
             @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
-            SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
-            @Nullable String query, @Nullable String fragment, ClientOptions options,
+            SessionProtocol sessionProtocol, RequestId id, HttpMethod method,
+            RequestTarget reqTarget, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
-            long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
-        super(meterRegistry, sessionProtocol, id, method, path, query,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq,
+            long requestStartTimeNanos, long requestStartTimeMicros) {
+        super(meterRegistry, sessionProtocol, id, method, reqTarget,
+              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
+              requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root));
 
         this.eventLoop = eventLoop;
-        this.hasBaseUri = hasBaseUri;
         this.options = requireNonNull(options, "options");
-        this.fragment = fragment;
         this.root = root;
 
         log = RequestLog.builder(this);
@@ -233,12 +242,14 @@ public final class DefaultClientRequestContext
             maxResponseLength = options.maxResponseLength();
         }
         this.maxResponseLength = maxResponseLength;
+
         for (Entry<AttributeKey<?>, Object> attr : requestOptions.attrs().entrySet()) {
             //noinspection unchecked
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
         }
 
-        additionalRequestHeaders = options.get(ClientOptions.HEADERS);
+        defaultRequestHeaders = options.get(ClientOptions.HEADERS);
+        additionalRequestHeaders = HttpHeaders.of();
 
         final Consumer<ClientRequestContext> customizer = options.contextCustomizer();
         final Consumer<ClientRequestContext> threadLocalCustomizer = copyThreadLocalCustomizer();
@@ -249,6 +260,14 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+    }
+
+    private static long requestAutoAbortDelayMillis(ClientOptions options, RequestOptions requestOptions) {
+        final Long requestAutoAbortDelayMillis = requestOptions.requestAutoAbortDelayMillis();
+        if (requestAutoAbortDelayMillis != null) {
+            return requestAutoAbortDelayMillis;
+        }
+        return options.requestAutoAbortDelayMillis();
     }
 
     @Nullable
@@ -283,7 +302,7 @@ public final class DefaultClientRequestContext
             //         an additional authority.
             runContextCustomizer();
 
-            endpointGroup = mapEndpoint(endpointGroup, hasBaseUri);
+            endpointGroup = mapEndpoint(endpointGroup);
             if (endpointGroup instanceof Endpoint) {
                 return initEndpoint((Endpoint) endpointGroup);
             } else {
@@ -296,18 +315,9 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private EndpointGroup mapEndpoint(EndpointGroup endpointGroup, boolean hasBaseUri) {
+    private EndpointGroup mapEndpoint(EndpointGroup endpointGroup) {
         if (endpointGroup instanceof Endpoint) {
-            Endpoint endpoint = (Endpoint) endpointGroup;
-            if (!hasBaseUri) {
-                // If a WebClient was created without a base URI, an authority header could be
-                // the host of an Endpoint.
-                final String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-                if (authority != null) {
-                    endpoint = Endpoint.parse(authority);
-                }
-            }
-            return requireNonNull(options().endpointRemapper().apply(endpoint),
+            return requireNonNull(options().endpointRemapper().apply((Endpoint) endpointGroup),
                                   "endpointRemapper returned null.");
         } else {
             return endpointGroup;
@@ -394,7 +404,7 @@ public final class DefaultClientRequestContext
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
-        autoFillSchemeAndAuthority();
+        autoFillSchemeAuthorityAndOrigin();
     }
 
     private void acquireEventLoop(EndpointGroup endpointGroup) {
@@ -414,19 +424,11 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private long connectTimeoutMillis() {
-        final Integer boxedConnectTimeoutMillis =
-                (Integer) options.factory().options().channelOptions().get(
-                        ChannelOption.CONNECT_TIMEOUT_MILLIS);
-        return boxedConnectTimeoutMillis != null ? boxedConnectTimeoutMillis.longValue()
-                                                 : Flags.defaultConnectTimeoutMillis();
-    }
-
     private void failEarly(Throwable cause) {
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
-            autoFillSchemeAndAuthority();
+            autoFillSchemeAuthorityAndOrigin();
             req.abort(wrapped);
         }
 
@@ -435,27 +437,42 @@ public final class DefaultClientRequestContext
         logBuilder.endResponse(wrapped);
     }
 
-    private void autoFillSchemeAndAuthority() {
-        final HttpRequest req = request();
-        if (req == null) {
-            return;
+    // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
+    private void autoFillSchemeAuthorityAndOrigin() {
+        final String authority = authority();
+        if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
+            // The connection will be established with the IP address but `host` set to the `Endpoint`
+            // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
+            // proxy based on an authority.
+            final String host = HostAndPort.fromString(removeUserInfo(authority)).getHost();
+            if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
+                endpoint = endpoint.withHost(host);
+            }
         }
 
-        final RequestHeaders headers = req.headers();
-        final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
-        if (headers.scheme() == null || !authority.equals(headers.authority())) {
-            final RequestHeadersBuilder headersBuilder =
-                    headers.toBuilder();
-            if (headers.scheme() == null) {
-                headersBuilder.scheme(sessionProtocol());
+        final HttpHeadersBuilder headersBuilder = internalRequestHeaders.toBuilder();
+        headersBuilder.set(HttpHeaderNames.SCHEME, getScheme(sessionProtocol()));
+        if (endpoint != null) {
+            final String endpointAuthority = endpoint.authority();
+            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpointAuthority);
+            final String origin = origin();
+            if (origin != null) {
+                headersBuilder.set(HttpHeaderNames.ORIGIN, origin);
+            } else if (options().autoFillOriginHeader()) {
+                final String uriText = sessionProtocol().isTls() ? SessionProtocol.HTTPS.uriText()
+                                                                 : SessionProtocol.HTTP.uriText();
+                headersBuilder.set(HttpHeaderNames.ORIGIN, uriText + "://" + endpointAuthority);
             }
-            if (headersBuilder.get(HttpHeaderNames.HOST) != null) {
-                headersBuilder.set(HttpHeaderNames.HOST, authority);
-            } else {
-                headersBuilder.authority(authority);
-            }
-            unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
+        internalRequestHeaders = headersBuilder.build();
+    }
+
+    private static String removeUserInfo(String authority) {
+        final int indexOfDelimiter = authority.lastIndexOf('@');
+        if (indexOfDelimiter == -1) {
+            return authority;
+        }
+        return authority.substring(indexOfDelimiter + 1);
     }
 
     /**
@@ -467,9 +484,9 @@ public final class DefaultClientRequestContext
                                         @Nullable RpcRequest rpcReq,
                                         @Nullable Endpoint endpoint, @Nullable EndpointGroup endpointGroup,
                                         SessionProtocol sessionProtocol, HttpMethod method,
-                                        String path, @Nullable String query, @Nullable String fragment) {
-        super(ctx.meterRegistry(), sessionProtocol, id, method, path, query, ctx.exchangeType(),
-              req, rpcReq, getAttributes(ctx.root()));
+                                        RequestTarget reqTarget) {
+        super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
+              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()));
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -481,11 +498,7 @@ public final class DefaultClientRequestContext
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
         eventLoop = ctx.eventLoop().withoutContext();
-        hasBaseUri = ctx.hasBaseUri;
         options = ctx.options();
-        this.endpointGroup = endpointGroup;
-        updateEndpoint(endpoint);
-        this.fragment = fragment;
         root = ctx.root();
 
         log = RequestLog.builder(this);
@@ -494,11 +507,16 @@ public final class DefaultClientRequestContext
                 new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
+
+        defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
+
+        this.endpointGroup = endpointGroup;
+        updateEndpoint(endpoint);
     }
 
     @Nullable
@@ -539,60 +557,84 @@ public final class DefaultClientRequestContext
                                                   @Nullable Endpoint endpoint) {
         if (req != null) {
             final RequestHeaders newHeaders = req.headers();
+            final String oldPath = requestTarget().pathAndQuery();
             final String newPath = newHeaders.path();
-            if (!path().equals(newPath)) {
+            if (!oldPath.equals(newPath)) {
                 // path is changed.
+                final RequestTarget reqTarget = RequestTarget.forClient(newPath);
+                checkArgument(reqTarget != null, "invalid path: %s", newPath);
 
-                if (!isAbsoluteUri(newPath)) {
-                    return newDerivedContext(id, req, rpcReq, newHeaders, sessionProtocol(), endpoint, newPath);
+                if (reqTarget.form() != RequestTargetForm.ABSOLUTE) {
+                    // Not an absolute URI.
+                    return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, null,
+                                                           sessionProtocol(), newHeaders.method(), reqTarget);
                 }
-                final URI uri = URI.create(req.path());
-                final Scheme scheme = Scheme.parse(uri.getScheme());
-                final SessionProtocol protocol = scheme.sessionProtocol();
-                final Endpoint newEndpoint = Endpoint.parse(uri.getAuthority());
-                final String rawQuery = uri.getRawQuery();
-                final String pathWithQuery = pathWithQuery(uri, rawQuery);
-                final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(pathWithQuery));
-                return newDerivedContext(id, newReq, rpcReq, newHeaders, protocol,
-                                         newEndpoint, pathWithQuery);
+
+                // Recalculate protocol and endpoint from the absolute URI.
+                final String scheme = reqTarget.scheme();
+                final String authority = reqTarget.authority();
+                assert scheme != null;
+                assert authority != null;
+
+                final SessionProtocol protocol = Scheme.parse(scheme).sessionProtocol();
+                final Endpoint newEndpoint = Endpoint.parse(authority);
+                final HttpRequest newReq = req.withHeaders(req.headers()
+                                                              .toBuilder()
+                                                              .path(reqTarget.pathAndQuery()));
+                return new DefaultClientRequestContext(this, id, newReq, rpcReq, newEndpoint, null,
+                                                       protocol, newHeaders.method(), reqTarget);
             }
         }
-
         return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
-                                               sessionProtocol(), method(), path(), query(), fragment());
-    }
-
-    private ClientRequestContext newDerivedContext(RequestId id, HttpRequest req, @Nullable RpcRequest rpcReq,
-                                                   RequestHeaders newHeaders, SessionProtocol protocol,
-                                                   @Nullable Endpoint endpoint, String pathWithQuery) {
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(pathWithQuery);
-        if (pathAndQuery == null) {
-            throw new IllegalArgumentException("invalid path: " + req.path());
-        }
-        return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, null,
-                                               protocol, newHeaders.method(), pathAndQuery.path(),
-                                               pathAndQuery.query(), null);
+                                               sessionProtocol(), method(), requestTarget());
     }
 
     @Override
-    protected void validateHeaders(RequestHeaders headers) {
-        // Do not validate if the context is not fully initialized yet,
-        // because init() will trigger this method again via updateEndpoint().
-        if (!initialized) {
-            return;
-        }
-
-        super.validateHeaders(headers);
+    protected RequestTarget validateHeaders(RequestHeaders headers) {
+        // no need to validate since internal headers will contain
+        // the default host and session protocol headers set by endpoints.
+        return RequestTarget.forClient(headers.path());
     }
 
     @Override
     @Nullable
     protected Channel channel() {
-        if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.partial().channel();
-        } else {
+        final Channel channel = this.channel;
+        if (channel != null) {
+            return channel;
+        }
+
+        if (!log.isAvailable(RequestLogProperty.SESSION)) {
             return null;
         }
+
+        final Channel newChannel = log.partial().channel();
+        this.channel = newChannel;
+        return newChannel;
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        final InetSocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress != null) {
+            return remoteAddress;
+        }
+
+        final InetSocketAddress newRemoteAddress = ChannelUtil.remoteAddress(channel());
+        this.remoteAddress = newRemoteAddress;
+        return newRemoteAddress;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        final InetSocketAddress localAddress = this.localAddress;
+        if (localAddress != null) {
+            return localAddress;
+        }
+
+        final InetSocketAddress newLocalAddress = ChannelUtil.localAddress(channel());
+        this.localAddress = newLocalAddress;
+        return newLocalAddress;
     }
 
     @Override
@@ -613,11 +655,8 @@ public final class DefaultClientRequestContext
     @Nullable
     @Override
     public SSLSession sslSession() {
-        if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.partial().sslSession();
-        } else {
-            return null;
-        }
+        final RequestLog requestLog = log.getIfAvailable(RequestLogProperty.SESSION);
+        return requestLog != null ? requestLog.sslSession() : null;
     }
 
     @Override
@@ -638,7 +677,60 @@ public final class DefaultClientRequestContext
     @Override
     @Nullable
     public String fragment() {
-        return fragment;
+        return requestTarget().fragment();
+    }
+
+    @Override
+    public String authority() {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        if (authority == null) {
+            authority = additionalRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        final HttpRequest request = request();
+        if (authority == null && request != null) {
+            authority = request.authority();
+        }
+        if (authority == null) {
+            authority = defaultRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        }
+        if (authority == null) {
+            authority = defaultRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        if (authority == null) {
+            authority = internalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        }
+        if (authority == null) {
+            authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        return authority;
+    }
+
+    @Nullable
+    private String origin() {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String origin = additionalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        final HttpRequest request = request();
+        if (origin == null && request != null) {
+            origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = defaultRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = internalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        return origin;
+    }
+
+    @Override
+    public URI uri() {
+        final String scheme = getScheme(sessionProtocol());
+        try {
+            return new URI(scheme, authority(), path(), query(), fragment());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("not a valid URI", e);
+        }
     }
 
     @Override
@@ -693,8 +785,18 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public HttpHeaders defaultRequestHeaders() {
+        return defaultRequestHeaders;
+    }
+
+    @Override
     public HttpHeaders additionalRequestHeaders() {
         return additionalRequestHeaders;
+    }
+
+    @Override
+    public HttpHeaders internalRequestHeaders() {
+        return internalRequestHeaders;
     }
 
     @Override
@@ -786,13 +888,14 @@ public final class DefaultClientRequestContext
         }
 
         strValAvailabilities = newAvailability;
-        return strVal = toStringSlow(ch, parent);
+        return strVal = toStringSlow(parent);
     }
 
-    private String toStringSlow(@Nullable Channel ch, @Nullable RequestLogAccess parent) {
+    private String toStringSlow(@Nullable RequestLogAccess parent) {
         // Prepare all properties required for building a String, so that we don't have a chance of
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
+        final Channel ch = channel();
         final String creqId = id().shortText();
         final String preqId = parent != null ? parent.context().id().shortText() : null;
         final String sreqId = root() != null ? root().id().shortText() : null;
@@ -813,11 +916,16 @@ public final class DefaultClientRequestContext
                 buf.append(", sreqId=").append(sreqId);
             }
             if (ch != null) {
-                buf.append(", chanId=").append(chanId)
-                   .append(", laddr=");
-                TextFormatter.appendSocketAddress(buf, ch.localAddress());
-                buf.append(", raddr=");
-                TextFormatter.appendSocketAddress(buf, ch.remoteAddress());
+                final InetSocketAddress laddr = localAddress();
+                final InetSocketAddress raddr = remoteAddress();
+
+                buf.append(", chanId=").append(chanId);
+                buf.append(", laddr=");
+                TextFormatter.appendSocketAddress(buf, laddr);
+                if (!Objects.equals(laddr, raddr)) {
+                    buf.append(", raddr=");
+                    TextFormatter.appendSocketAddress(buf, raddr);
+                }
             }
             buf.append("][")
                .append(proto).append("://").append(authority).append(path).append('#').append(method)
@@ -825,5 +933,36 @@ public final class DefaultClientRequestContext
 
             return buf.toString();
         }
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+
+        setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        log().whenRequestComplete().thenAccept(log -> {
+            final Channel ch = log.channel();
+            if (ch == null) {
+                final Throwable ex = log.requestCause();
+                if (ex == null) {
+                    completableFuture.completeExceptionally(new IllegalStateException(
+                            "A request has failed before a connection is established."));
+                } else {
+                    completableFuture.completeExceptionally(ex);
+                }
+            } else {
+                ch.closeFuture().addListener(f -> {
+                    if (f.cause() == null) {
+                        completableFuture.complete(null);
+                    } else {
+                        completableFuture.completeExceptionally(f.cause());
+                    }
+                });
+                // To deactivate the channel when initiateShutdown is called after the RequestHeaders is sent.
+                // The next request will trigger shutdown.
+                HttpSession.get(ch).deactivate();
+            }
+        });
+        return completableFuture;
     }
 }

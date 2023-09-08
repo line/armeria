@@ -75,11 +75,11 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         final boolean hasResponseFilter = responseFilter != null;
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), exceptionFilter(),
-                                                    hasResponseFilter);
+                                                    responseTrailersFilter(), grpcTrailersFilter(),
+                                                    exceptionFilter(), hasResponseFilter);
 
-        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(ruleFilter, decision,
-                                                                         responseTrailersFilter() != null);
+        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
+                ruleFilter, decision, requiresResponseTrailers());
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }
@@ -138,6 +138,19 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     public CircuitBreakerRuleWithContentBuilder<T> onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code grpcTrailersFilter} for a {@link CircuitBreakerRuleWithContent}.
+     * If the specified {@code grpcTrailersFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public CircuitBreakerRuleWithContentBuilder<T> onGrpcTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onGrpcTrailers(grpcTrailersFilter);
     }
 
     /**

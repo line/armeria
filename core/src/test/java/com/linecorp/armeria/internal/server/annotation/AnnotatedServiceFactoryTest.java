@@ -98,7 +98,7 @@ class AnnotatedServiceFactoryTest {
 
         final List<Route> actualRoutes = getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class,
                                                     HttpResponse.class)
-                .map(method -> create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
+                .map(method -> create("/", serviceObject, method, 0, false,
                                       ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
                                       noopDependencyInjector, null))
                 .flatMap(Collection::stream)
@@ -188,7 +188,7 @@ class AnnotatedServiceFactoryTest {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
+                create("/", serviceObject, method, 0, false,
                        ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
                        noopDependencyInjector, null);
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
@@ -228,7 +228,7 @@ class AnnotatedServiceFactoryTest {
                 .filter(method -> method.getName().equals(methodName)).flatMap(
                         method -> {
                             final List<AnnotatedServiceElement> AnnotatedServices = create(
-                                    "/", service, method, /* useBlockingTaskExecutor */ false,
+                                    "/", service, method, 0, false,
                                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
                                     noopDependencyInjector, null);
                             return AnnotatedServices.stream();

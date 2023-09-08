@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -60,7 +61,7 @@ public class HttpClientPipeliningTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     // Consume the request completely so that the connection can be returned to the pool.
-                    return HttpResponse.from(req.aggregate().handle((unused1, unused2) -> {
+                    return HttpResponse.of(req.aggregate().handle((unused1, unused2) -> {
                         // Signal the main thread that the connection has been returned to the pool.
                         // Note that this is true only when pipelining is enabled. The connection is returned
                         // after response is fully sent if pipelining is disabled.
@@ -72,7 +73,7 @@ public class HttpClientPipeliningTest {
                             lock.unlock();
                         }
 
-                        semaphore.acquireUninterruptibly();
+                        BlockingUtils.blockingRun(() -> semaphore.acquireUninterruptibly());
                         try {
                             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
                                                    String.valueOf(ctx.remoteAddress()));

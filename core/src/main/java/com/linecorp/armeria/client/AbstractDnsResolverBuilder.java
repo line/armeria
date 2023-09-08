@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.HostsFileEntriesResolver;
@@ -462,7 +461,7 @@ public abstract class AbstractDnsResolverBuilder {
                     "Cannot set dnsCache() with cacheSpec(), ttl(), or negativeTtl().");
         }
 
-        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
+        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Flags.meterRegistry());
         if (needsToCreateDnsCache) {
             return DnsCache.builder()
                            .cacheSpec(cacheSpec)
@@ -488,7 +487,7 @@ public abstract class AbstractDnsResolverBuilder {
                        queryTimeoutMillis, queryTimeoutMillisForEachAttempt);
         }
 
-        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
+        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Flags.meterRegistry());
 
         final boolean traceEnabled = this.traceEnabled;
         final long queryTimeoutMillis = this.queryTimeoutMillis;
@@ -524,11 +523,11 @@ public abstract class AbstractDnsResolverBuilder {
                    .searchDomains(ImmutableList.of())
                    .decodeIdn(decodeIdn);
 
-            if (queryTimeoutMillisForEachAttempt > 0) {
+            if (queryTimeoutMillisForEachAttempt > 0 && queryTimeoutMillisForEachAttempt < Long.MAX_VALUE) {
                 builder.queryTimeoutMillis(queryTimeoutMillisForEachAttempt);
             } else {
-                if (queryTimeoutMillis == 0) {
-                    builder.queryTimeoutMillis(Long.MAX_VALUE);
+                if (queryTimeoutMillis == 0 || queryTimeoutMillis == Long.MAX_VALUE) {
+                    builder.queryTimeoutMillis(0);
                 } else {
                     builder.queryTimeoutMillis(queryTimeoutMillis);
                 }

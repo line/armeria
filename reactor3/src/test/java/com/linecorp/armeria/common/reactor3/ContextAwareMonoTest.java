@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.reactor3.RequestContextHooks.ContextAwareMono;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -39,6 +40,7 @@ import reactor.test.StepVerifier;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 
+@GenerateNativeImageTrace
 class ContextAwareMonoTest {
 
     @BeforeAll
@@ -236,12 +238,12 @@ class ContextAwareMonoTest {
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
         try (SafeCloseable ignored = ctx.push()) {
-            mono = Mono.subscriberContext().handle((reactorCtx, sink) -> {
+            mono = Mono.deferContextual(Mono::just).handle((reactorCtx, sink) -> {
                 assertThat((String) reactorCtx.get("foo")).isEqualTo("bar");
                 sink.next("baz");
             });
         }
-        final Mono<String> mono1 = mono.subscriberContext(reactorCtx -> reactorCtx.put("foo", "bar"));
+        final Mono<String> mono1 = mono.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
         StepVerifier.create(mono1)
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))

@@ -1,0 +1,87 @@
+---
+type: tutorial
+level: basic
+---
+
+import versions from '/gen-src/versions.json';
+
+# gRPC tutorial introduction
+
+Learn to build a gRPC service with Armeria by writing a blog service in gRPC. This tutorial is based on a [sample service](https://github.com/line/armeria-examples/tree/main/tutorials/grpc), a minimal blog service, with which you can create, read, update, and delete blog posts.
+
+Before we get our hands on the tutorial, let's switfly go over Armeria's gRPC features. Armeria supports features that the upstream (gRPC-Java) does not support.
+
+- Protocol
+  - HTTP/1.1
+  - HTTP/2 (upstream)
+- Serialization format - Framed
+  - gRPC protobuf: application/grpc+proto (upstream)
+  - gRPC JSON: application/grpc+json
+  - gRPC Web: application/grpc-web+proto
+  - gRPC Web JSON: application/grpc-web+json
+  - gRPC Web Text: application/grpc-web-text+proto
+- Serialization format - Unframed
+  - Protobuf: application/protobuf
+  - JSON: application/json
+- [HTTP level decorator](/docs/server-grpc#decorating-a-grpcservice)
+- Richer error handling
+- [HTTP-to-JSON transcoding](https://google.aip.dev/127)
+- Customizing service method paths
+- [gRPC documentation service](/docs/server-docservice)
+- gRPC status monitoring with <type://MetricCollectingService>
+
+To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using database. Try writing a service yourself by following this tutorial or have a go at [running the sample service](#build-and-run-sample-service) right away.
+
+## Assumptions
+
+This tutorial assumes that you have:
+
+- Experience in building services in Java
+- Experience in Java frameworks for server-side programming
+- Understanding of gRPC and experience in implementing gRPC services
+
+## Prerequisites
+
+To run and develop the sample service, you need JDK 11 or higher.
+
+## Build and run sample service
+
+The sample service provides you implementations of CRUD operations with corresponding service methods. Have a go at running the sample gRPC service and see the outcome of this tutorial.
+Using Armeria's [Documentation Service](/docs/server-docservice), you can easily verify a server is running, receiving requests and sending responses.
+
+1. Download the code from [here](https://github.com/line/armeria-examples/tree/main/tutorials/grpc).
+2. Build the sample service using the Gradle Wrapper.
+  ```bash
+  $ ./gradlew build
+  ```
+3. Run the sample service again, using the Gradle Wrapper.
+  ```bash
+  $ ./gradlew run
+  ```
+4. Open the Documentation service page on your web browser at http://127.0.0.1:8080/docs.
+
+## Try writing blog service yourself
+
+Have a go at writing the blog service yourself, starting with [defining the service](/tutorials/grpc/blog/define-service). Use the sample service's build.gradle to start building the service from scratch.
+
+<Tip>
+
+  In this tutorial, we use [gradle](https://gradle.org/) as the build tool and use [protobuf-gradle-plugin](https://github.com/google/protobuf-gradle-plugin) to generate stubs from `proto` files.
+
+</Tip>
+
+<CodeBlock language="groovy" filename="build.gradle">{`
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'eclipse'\n
+repositories {
+  mavenCentral()
+}\n
+dependencies {
+  implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  implementation "com.linecorp.armeria:armeria-grpc:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  // Logging
+  runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"
+}
+`}</CodeBlock>
+

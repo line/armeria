@@ -1,17 +1,17 @@
 import {
   CloseCircleOutlined,
   GithubOutlined,
-  TwitterOutlined,
   MenuOutlined,
-  SlackOutlined,
+  TwitterOutlined,
 } from '@ant-design/icons';
 import { RouteComponentProps } from '@reach/router';
-import { Layout, Menu, Drawer, Button, Typography } from 'antd';
+import { Button, Drawer, Layout, Menu, Typography } from 'antd';
 import Link from 'gatsby-link';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
-import React, { useState, useCallback, useLayoutEffect } from 'react';
+import React, { useCallback, useLayoutEffect, useState } from 'react';
 import StickyBox from 'react-sticky-box';
 
+import DiscordIcon from '../components/discord-icon';
 import Logo from '../components/logo';
 import Mailchimp from '../components/mailchimp';
 
@@ -95,28 +95,30 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
               style={{ verticalAlign: 'top' }}
             />
           </Link>
-          <Menu
-            theme="dark"
-            mode="horizontal"
-            selectedKeys={selectedKeys}
-            className={styles.topMenu}
-          >
-            <Menu.Item key="news">
-              <Link to="/news">News</Link>
-            </Menu.Item>
-            <Menu.Item key="docs">
-              <Link to="/docs">Documentation</Link>
-            </Menu.Item>
-            <Menu.Item key="community">
-              <Link to="/community">Community</Link>
-            </Menu.Item>
-          </Menu>
+          <span className={styles.topMenuWrapper}>
+            <Menu
+              theme="dark"
+              mode="horizontal"
+              selectedKeys={selectedKeys}
+              className={styles.topMenu}
+            >
+              <Menu.Item key="news">
+                <Link to="/news">News</Link>
+              </Menu.Item>
+              <Menu.Item key="docs">
+                <Link to="/docs">Documentation</Link>
+              </Menu.Item>
+              <Menu.Item key="community">
+                <Link to="/community">Community</Link>
+              </Menu.Item>
+            </Menu>
+          </span>
           <div className={styles.topMenuIcons}>
             <OutboundLink href="https://github.com/line/armeria">
               <GithubOutlined />
             </OutboundLink>
-            <Link to="/s/slack">
-              <SlackOutlined />
+            <Link to="/s/discord">
+              <DiscordIcon />
             </Link>
             <OutboundLink href="https://twitter.com/armeria_project">
               <TwitterOutlined />
@@ -155,8 +157,8 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
                   <OutboundLink href="https://github.com/line/armeria">
                     <GithubOutlined />
                   </OutboundLink>
-                  <Link to="/s/slack">
-                    <SlackOutlined />
+                  <Link to="/s/discord">
+                    <DiscordIcon />
                   </Link>
                   <OutboundLink href="https://twitter.com/armeria_project">
                     <TwitterOutlined />

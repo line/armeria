@@ -1,0 +1,124 @@
+---
+menuTitle: "Implement DELETE"
+order: 6
+category: grpc
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing DELETE operation
+
+So far, we've created, read, and updated a blog post. Now, let's implement 
+and make a call to finally delete a blog post.
+
+<TutorialSteps current={6} />
+
+## What you need
+
+You need to have the files obtained from previous steps:
+
+- [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file)
+- Main.java
+- BlogService.java
+- BlogClient.java
+
+## 1. Implement server-side
+
+Let's implement a service method `deleteBlogPost()` in `BlogService.java` we've been working on.
+
+1. Add a service method, `deleteBlogPost()`.
+
+  ```java filename=BlogService.java
+  import example.armeria.blog.grpc.Blog.DeleteBlogPostRequest;
+
+  public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    @Override
+    public void deleteBlogPost(DeleteBlogPostRequest request, StreamObserver<Empty> responseObserver) {
+      try {
+        // Simulate a blocking API call.
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+
+      final BlogPost removed = blogPosts.remove(request.getId());
+      if (removed == null) {
+        responseObserver.onError(
+          new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+      } else {
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+      }
+   }
+  }
+  ```
+2. Add Armeria's <type://GrpcServiceBuilder>'s blocking task executor to make all gRPC methods executed in the blocking task executor's thread pool.
+
+  By default, service methods are executed on the event loop and are expected to be implemented asynchronously. To implement blocking logic, call `useBlockingTaskExecutor(true)`.
+
+  ```java filename=Main.java
+  private static Server newServer(int port) throws Exception {
+    final GrpcService grpcService =
+            GrpcService.builder().addService(new BlogService())
+                                 .exceptionMapping(new GrpcExceptionHandler())
+                                 .useBlockingTaskExecutor(true)
+                                 .build();
+  }
+  ```
+
+## 2. Implement client-side
+
+Add a method `deleteBlogPost()` to send a request to update a blog post.
+
+```java filename=BlogClient.java
+import example.armeria.blog.grpc.Blog.DeleteBlogPostRequest;
+
+class BlogClient {
+  static void deleteBlogPost(int id) {
+    final DeleteBlogPostRequest request = DeleteBlogPostRequest.newBuilder().setId(id).build();
+    try {
+      client.deleteBlogPost(request);
+    } catch (StatusRuntimeException statusException) {
+      // Handle exception
+    }
+  }
+}
+```
+
+## 3. Test run
+
+Let's test deleting a blog. We know that our client creates a blog post by default when it's executed and that the ID of the first one has been `0` always.
+
+1. Call the delete method we just implemented followed by `listBlogPosts()` to see that no post with the ID `0` exists after deleting the post.
+  ```java filename=BlogClient.java
+  static void testRun() {
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    deleteBlogPost(0);
+    listBlogPosts();
+  }
+  ```
+2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service). Your server is running if you see the following message.
+  ```bash
+  [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
+  ```
+3. Run the client. The number of blog posts in the log depends on how you've tested so far. Anyhow, since we are attempting to delete the first post, you won't have a problem, unless you've deleted it already. You can check that the list of posts retrieved start from `1`, which is the second post.
+   ```bash
+   [armeria-common-worker-nio-2-1] DEBUG c.l.a.client.logging.LoggingClient - [creqId=8573ef34, ... 
+   [http://127.0.0.1:8080/example.armeria.blog.grpc.BlogService/ListBlogPosts#POST] 
+   Response: ..., content=CompletableRpcResponse{blogs {
+   id: 1
+   ```
+4. Now, while keeping the server running, run the client again, attempting to delete the post with the ID `0`, which does not exist any longer.
+   
+   You should see the exception logged as the following.
+   ```bash
+   io.grpc.StatusException: NOT_FOUND: The blog post does not exist. ID: 0
+   ```
+
+## What's next
+
+Here, we've implemented a service method and client method for deleting a blog post. Next, we'll finally [add](/tutorials/grpc/blog/add-docservice) Armeria's [Documentation service](/docs/server-docservice) to our service.
+
+<TutorialSteps current={6} />

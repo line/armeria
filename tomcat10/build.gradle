@@ -1,0 +1,9 @@
+dependencies {
+    // Tomcat
+    api libs.tomcat10.core
+
+    // Replace commons-logging (Tomcat's logging API) with SLF4J.
+    runtimeOnly libs.slf4j.jcl.over.slf4j
+
+    testImplementation libs.tomcat10.jasper
+}

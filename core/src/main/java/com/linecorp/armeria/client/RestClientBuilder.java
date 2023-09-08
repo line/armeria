@@ -151,6 +151,16 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public RestClientBuilder requestAutoAbortDelay(Duration delay) {
+        return (RestClientBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public RestClientBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (RestClientBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public RestClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (RestClientBuilder) super.requestIdGenerator(requestIdGenerator);
     }

@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import io.netty.channel.EventLoop;
 
 final class HeapBasedEventLoopState extends AbstractEventLoopState {
+
     /**
      * A binary heap of Entry. Ordered by:
      * <ul>
@@ -77,32 +78,42 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     @Override
-    synchronized AbstractEventLoopEntry acquire() {
-        if (acquisitionStartIndex == -1) {
-            init(scheduler().acquisitionStartIndex(maxNumEventLoops));
-        }
-        AbstractEventLoopEntry e = entries.get(0);
-        if (e.activeRequests() > 0) {
-            // All event loops are handling connections; try to add an unused event loop.
-            if (addUnusedEventLoop()) {
-                e = entries.get(0);
-                assert e.activeRequests() == 0;
+    AbstractEventLoopEntry acquire() {
+        lock();
+        try {
+            if (acquisitionStartIndex == -1) {
+                init(scheduler().acquisitionStartIndex(maxNumEventLoops));
             }
-        }
+            AbstractEventLoopEntry e = entries.get(0);
+            if (e.activeRequests() > 0) {
+                // All event loops are handling connections; try to add an unused event loop.
+                if (addUnusedEventLoop()) {
+                    e = entries.get(0);
+                    assert e.activeRequests() == 0;
+                }
+            }
 
-        assert e.index() == 0;
-        e.incrementActiveRequests();
-        allActiveRequests++;
-        bubbleDown();
-        return e;
+            assert e.index() == 0;
+            e.incrementActiveRequests();
+            allActiveRequests++;
+            bubbleDown();
+            return e;
+        } finally {
+            unlock();
+        }
     }
 
     @Override
-    synchronized void release(AbstractEventLoopEntry e) {
-        e.decrementActiveRequests();
-        bubbleUp(e.index());
-        if (--allActiveRequests == 0) {
-            setLastActivityTimeNanos();
+    void release(AbstractEventLoopEntry e) {
+        lock();
+        try {
+            e.decrementActiveRequests();
+            bubbleUp(e.index());
+            if (--allActiveRequests == 0) {
+                setLastActivityTimeNanos();
+            }
+        } finally {
+            unlock();
         }
     }
 
