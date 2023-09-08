@@ -153,11 +153,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         this.webSocket = webSocket;
 
         if (sessionProtocol == HTTP || sessionProtocol == HTTPS) {
-            if (clientFactory.preferHttp1()) {
-                httpPreference = HttpPreference.HTTP1_REQUIRED;
-            } else {
-                httpPreference = HttpPreference.HTTP2_PREFERRED;
-            }
+            httpPreference = HttpPreference.HTTP2_PREFERRED;
         } else if (sessionProtocol == H1 || sessionProtocol == H1C) {
             httpPreference = HttpPreference.HTTP1_REQUIRED;
         } else if (sessionProtocol == H2 || sessionProtocol == H2C) {

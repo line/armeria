@@ -170,10 +170,9 @@ final class HttpClientDelegate implements HttpClient {
                                               ProxyConfig proxyConfig) {
         final PoolKey key = new PoolKey(endpoint, proxyConfig);
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
-        final SessionProtocol protocol = ctx.sessionProtocol();
+        final SessionProtocol protocol = desiredSessionProtocol(ctx);
         final SerializationFormat serializationFormat = ctx.log().partial().serializationFormat();
-        final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key,
-                                                            factory.preferHttp1());
+        final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
             doExecute(pooledChannel, ctx, req, res);
@@ -190,6 +189,21 @@ final class HttpClientDelegate implements HttpClient {
                     }
                     return null;
                 });
+        }
+    }
+
+    private SessionProtocol desiredSessionProtocol(ClientRequestContext ctx) {
+        final SessionProtocol protocol = ctx.sessionProtocol();
+        if (!factory.preferHttp1()) {
+            return protocol;
+        }
+        switch (protocol) {
+            case HTTP:
+                return SessionProtocol.H1C;
+            case HTTPS:
+                return SessionProtocol.H1;
+            default:
+                return protocol;
         }
     }
 
