@@ -88,8 +88,8 @@ class PreferHttp1Test {
             assertThat(log0.sessionProtocol()).isEqualTo(SessionProtocol.H2C);
             assertThat(connectionPoolListener.opened()).isEqualTo(1);
             for (int i = 0; i < 3; i++) {
-                final AggregatedHttpResponse h1Response = client.get(server.uri(SessionProtocol.HTTP).resolve("/")
-                                                                           .toString());
+                final AggregatedHttpResponse h1Response = client.get(server.uri(SessionProtocol.HTTP)
+                                                                           .resolve("/").toString());
                 assertThat(h1Response.contentUtf8()).isEqualTo("Hello, world!");
                 final RequestLog log1 = server.requestContextCaptor().take().log().whenComplete().join();
                 assertThat(log1.sessionProtocol()).isEqualTo(SessionProtocol.H1C);

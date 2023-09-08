@@ -118,7 +118,6 @@ public final class DefaultClientRequestContext
         }
     }
 
-
     private static final short STR_CHANNEL_AVAILABILITY = 1;
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
