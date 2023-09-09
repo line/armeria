@@ -1,4 +1,4 @@
-Visit [the official web site](https://armeria.dev/) for more information.
+Visit [the official website](https://armeria.dev/) for more information.
 
 # Armeria
 
@@ -12,7 +12,7 @@ Visit [the official web site](https://armeria.dev/) for more information.
 
 > Build a reactive microservice **at your pace**, not theirs.
 
-_Armeria_ is your go-to microservice framework for any situation. You can build any type of
+_Armeria_ is your go-to microservice framework for any situation. You can build any 
 microservice leveraging your favorite technologies, including [gRPC](https://grpc.io/),
 [Thrift](https://thrift.apache.org/), [Kotlin](https://kotlinlang.org/),
 [Retrofit](https://square.github.io/retrofit/), [Reactive Streams](https://www.reactive-streams.org/),
@@ -28,7 +28,7 @@ It is open-sourced by the creator of [Netty](https://netty.io/) and his colleagu
 
 ## How to reach us — chat, questions and newsletters
 
-Visit [the community](https://armeria.dev/community/) to chat with us, ask questions and learn how to contribute.
+Visit [the community](https://armeria.dev/community/) to chat with us, ask questions, and learn how to contribute.
 
 ## Hall of fame
 
