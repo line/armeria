@@ -268,19 +268,16 @@ public final class ServerListenerBuilder {
 
     /**
      * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
-     * is stopping. It will wait indefinitely for the {@link ExecutorService} to terminate during shutdown.
-     */
-    @UnstableApi
-    public ServerListenerBuilder shutdownWhenStopping(ExecutorService executorService) {
-        requireNonNull(executorService, "executorService");
-        serverStoppingCallbacks.add(s -> ShutdownSupport.of(executorService).shutdown());
-        return this;
-    }
-
-    /**
-     * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
-     * is stopping. It allows a maximum duration of {@code terminationTimeout} for the {@link ExecutorService}
-     * to terminate gracefully before it is forcefully terminated.
+     * is stopping.
+     *
+     * <p>Depending on the value of {@code terminationTimeoutMillis}, the behavior is as follows:
+     * <ul>
+     * <li>If the {@code terminationTimeoutMillis} is positive, it allows a maximum duration of
+     * {@code terminationTimeoutMillis} for the {@link ExecutorService} to terminate.
+     * <li>If the {@code terminationTimeoutMillis} is zero, it will wait indefinitely for the
+     * {@link ExecutorService} to terminate during shutdown.
+     * <li>If the {@code terminationTimeoutMillis} is negative, throws {@link IllegalArgumentException}.
+     * </ul>
      */
     @UnstableApi
     public ServerListenerBuilder shutdownWhenStopping(ExecutorService executorService,
@@ -299,15 +296,31 @@ public final class ServerListenerBuilder {
 
     /**
      * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
-     * is stopping. It allows a maximum duration of {@code terminationTimeoutMillis} for the
-     * {@link ExecutorService} to terminate gracefully before it is forcefully terminated.
+     * is stopping.
+     *
+     * <p>Depending on the value of {@code terminationTimeoutMillis}, the behavior is as follows:
+     * <ul>
+     * <li>If the {@code terminationTimeoutMillis} is positive, it allows a maximum duration of
+     * {@code terminationTimeoutMillis} for the {@link ExecutorService} to terminate.
+     * <li>If the {@code terminationTimeoutMillis} is zero, it will wait indefinitely for the
+     * {@link ExecutorService} to terminate during shutdown.
+     * <li>If the {@code terminationTimeoutMillis} is negative, throws {@link IllegalArgumentException}.
+     * </ul>
      */
     @UnstableApi
     public ServerListenerBuilder shutdownWhenStopping(ExecutorService executorService,
                                                       long terminationTimeoutMillis) {
         requireNonNull(executorService, "executorService");
-        serverStoppingCallbacks.add(
-                s -> ShutdownSupport.of(executorService, terminationTimeoutMillis).shutdown());
+        if (terminationTimeoutMillis < 0) {
+            throw new IllegalArgumentException("terminationTimeout must be greater than or equal to 0.");
+        }
+
+        if (terminationTimeoutMillis == 0) {
+            serverStoppingCallbacks.add(s -> ShutdownSupport.of(executorService).shutdown());
+        } else {
+            serverStoppingCallbacks.add(
+                    s -> ShutdownSupport.of(executorService, terminationTimeoutMillis).shutdown());
+        }
         return this;
     }
 

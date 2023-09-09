@@ -119,7 +119,7 @@ class ServerListenerTest {
             final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
             periodic.scheduleAtFixedRate(task, 0, 1000, TimeUnit.MILLISECONDS);
             final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(periodic)
+                                                    .shutdownWhenStopping(periodic, 0)
                                                     .build();
 
             final Server server = Server.builder()
@@ -149,7 +149,7 @@ class ServerListenerTest {
             final ExecutorService interruptible = Executors.newSingleThreadExecutor();
             interruptible.submit(task);
             final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(interruptible)
+                                                    .shutdownWhenStopping(interruptible, 0)
                                                     .build();
 
             final Server server = Server.builder()
@@ -179,7 +179,7 @@ class ServerListenerTest {
             final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
             unstoppable.submit(task);
             final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(unstoppable)
+                                                    .shutdownWhenStopping(unstoppable, 0)
                                                     .build();
 
             final Server server = Server.builder()
