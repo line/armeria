@@ -446,3 +446,14 @@ gradleEnterprise {
         }
     }
 }
+
+allprojects {
+    normalization {
+        runtimeClasspath {
+            metaInf {
+                ignoreAttribute("Ant-Version")
+                ignoreAttribute("Created-By")
+            }
+        }
+    }
+}
