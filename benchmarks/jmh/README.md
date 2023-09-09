@@ -2,10 +2,6 @@
 
 A collection of JMH benchmarks which may be useful for measuring Armeria performance.
 
-## Limitation
-
-- MacOS profiling is limited to user space code only, thus this guide does not cover profiling on MacOS.
-
 ## Options
 
 - `-Pjmh.includes=<pattern>`
@@ -37,28 +33,34 @@ A collection of JMH benchmarks which may be useful for measuring Armeria perform
 
 ## Retrieving flame graph using async-profiler
 
-Allow running `perf` as a normal user:
+- Allow running `perf` as a normal user on Linux:
+  - MacOS profiling is limited to user space code only, thus this does not work with MacOS.
 
-```
-# echo 1 > /proc/sys/kernel/perf_event_paranoid
-# echo 0 > /proc/sys/kernel/kptr_restrict
-```
+  ```
+  # echo 1 > /proc/sys/kernel/perf_event_paranoid
+  # echo 0 > /proc/sys/kernel/kptr_restrict
+  ```
 
-Install [async-profiler](https://github.com/jvm-profiling-tools/async-profiler):
+- Install [async-profiler](https://github.com/jvm-profiling-tools/async-profiler):
 
-```
-$ cd "$HOME"
-$ git clone https://github.com/jvm-profiling-tools/async-profiler.git
-$ cd async-profiler
-$ make
-```
+  ```
+  $ cd "$HOME"
+  $ git clone https://github.com/jvm-profiling-tools/async-profiler.git
+  $ cd async-profiler
+  $ make
+  ```
 
-When running a benchmark, specify `-Pjmh.profilers` option:
-
-```
-$ ./gradlew :benchmarks:jmh:jmh \
-  "-Pjmh.profilers=async:libPath=$HOME/async-profiler/build/lib/libasyncProfiler.so;output=flamegraph;dir=$HOME/result"
-```
+- When running a benchmark, specify `-Pjmh.profilers` option:
+  - On Linux
+    ```
+    $ ./gradlew :benchmarks:jmh:jmh \
+      "-Pjmh.profilers=async:libPath=$HOME/async-profiler/build/lib/libasyncProfiler.so;output=flamegraph;dir=$HOME/result"
+    ```
+  - On MacOS
+    ```
+    $ ./gradlew :benchmarks:jmh:jmh \
+      "-Pjmh.profilers=async:libPath=$HOME/async-profiler/build/lib/libasyncProfiler.dylib;output=flamegraph;dir=$HOME/result"
+    ```
 
 ## Notes
 
