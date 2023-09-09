@@ -39,15 +39,21 @@ interface ShutdownSupport {
         requireNonNull(executor, "executor");
         return () -> {
             executor.shutdown();
+            boolean interrupted = false;
             try {
                 while (!executor.isTerminated()) {
-                    executor.awaitTermination(1, TimeUnit.HOURS);
+                    try {
+                        executor.awaitTermination(1, TimeUnit.HOURS);
+                    } catch (InterruptedException ignore) {
+                        interrupted = true;
+                    }
                 }
-            } catch (InterruptedException cause) {
-                logger.warn("During the termination wait, an interrupt occurs, attempting to forcefully " +
-                            "terminate the {}:", executor, cause);
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
+            } catch (Exception cause) {
+                logger.warn("Failed to shutdown the {}:", executor, cause);
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
             return UnmodifiableFuture.completedFuture(null);
         };
