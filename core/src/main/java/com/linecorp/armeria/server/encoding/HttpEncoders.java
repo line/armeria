@@ -25,6 +25,8 @@ import java.util.Map.Entry;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.xerial.snappy.SnappyFramedOutputStream;
+
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
 import com.aayushatharva.brotli4j.encoder.Encoder;
 
@@ -33,7 +35,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.handler.codec.compression.Brotli;
-import org.xerial.snappy.SnappyOutputStream;
 
 /**
  * Support utilities for dealing with HTTP encoding (e.g., gzip).
@@ -78,7 +79,11 @@ final class HttpEncoders {
                             "Error writing brotli header. This should not happen with byte arrays.", e);
                 }
             case SNAPPY:
-                return new SnappyOutputStream(out);
+                try {
+                    return new SnappyFramedOutputStream(out);
+                } catch (IOException e) {
+                    throw new IllegalStateException("Error writing Snappy header.", e);
+                }
             default:
                 throw new IllegalArgumentException("Unexpected zlib type, this is a programming bug.");
         }
@@ -108,12 +113,14 @@ final class HttpEncoders {
                 encodings.put(HttpEncodingType.GZIP, q);
             } else if (encoding.contains("deflate")) {
                 encodings.put(HttpEncodingType.DEFLATE, q);
+            } else if (encoding.contains("snappy")) {
+                encodings.put(HttpEncodingType.SNAPPY, q);
             }
         }
 
         if (!encodings.isEmpty()) {
             final Entry<HttpEncodingType, Float> entry = Collections.max(encodings.entrySet(),
-                    Entry.comparingByValue());
+                                                                         Entry.comparingByValue());
             if (entry.getValue() > 0.0f) {
                 return entry.getKey();
             }
@@ -127,6 +134,9 @@ final class HttpEncoders {
             }
             if (!encodings.containsKey(HttpEncodingType.DEFLATE)) {
                 return HttpEncodingType.DEFLATE;
+            }
+            if (!encodings.containsKey(HttpEncodingType.SNAPPY)) {
+                return HttpEncodingType.SNAPPY;
             }
         }
         return null;
