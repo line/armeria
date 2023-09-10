@@ -273,10 +273,10 @@ public final class ServerListenerBuilder {
      * <p>Depending on the value of {@code terminationTimeoutMillis}, the behavior is as follows:
      * <ul>
      * <li>If the {@code terminationTimeoutMillis} is positive, it allows a maximum duration of
-     * {@code terminationTimeoutMillis} for the {@link ExecutorService} to terminate.
+     * {@code terminationTimeoutMillis} for the {@link ExecutorService} to terminate.</li>
      * <li>If the {@code terminationTimeoutMillis} is zero, it will wait indefinitely for the
-     * {@link ExecutorService} to terminate during shutdown.
-     * <li>If the {@code terminationTimeoutMillis} is negative, throws {@link IllegalArgumentException}.
+     * {@link ExecutorService} to terminate during shutdown.</li>
+     * <li>If the {@code terminationTimeoutMillis} is negative, throws {@link IllegalArgumentException}.</li>
      * </ul>
      */
     @UnstableApi
@@ -301,10 +301,10 @@ public final class ServerListenerBuilder {
      * <p>Depending on the value of {@code terminationTimeoutMillis}, the behavior is as follows:
      * <ul>
      * <li>If the {@code terminationTimeoutMillis} is positive, it allows a maximum duration of
-     * {@code terminationTimeoutMillis} for the {@link ExecutorService} to terminate.
+     * {@code terminationTimeoutMillis} for the {@link ExecutorService} to terminate.</li>
      * <li>If the {@code terminationTimeoutMillis} is zero, it will wait indefinitely for the
-     * {@link ExecutorService} to terminate during shutdown.
-     * <li>If the {@code terminationTimeoutMillis} is negative, throws {@link IllegalArgumentException}.
+     * {@link ExecutorService} to terminate during shutdown.</li>
+     * <li>If the {@code terminationTimeoutMillis} is negative, throws {@link IllegalArgumentException}.</li>
      * </ul>
      */
     @UnstableApi
