@@ -51,9 +51,7 @@ final class Bootstraps {
 
         final Bootstrap inetBaseBootstrap = clientFactory.newInetBootstrap();
         final Bootstrap unixBaseBootstrap = clientFactory.newUnixBootstrap();
-
         inetBootstraps = newBootstrapMap(inetBaseBootstrap, clientFactory, eventLoop);
-
         if (unixBaseBootstrap != null) {
             unixBootstraps = newBootstrapMap(unixBaseBootstrap, clientFactory, eventLoop);
         } else {

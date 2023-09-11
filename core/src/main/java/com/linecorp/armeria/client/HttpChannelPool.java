@@ -99,16 +99,15 @@ final class HttpChannelPool implements AsyncCloseable {
                     ConnectionPoolListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
+        this.listener = listener;
+
         pool = newEnumMap(ImmutableSet.of(SessionProtocol.H1, SessionProtocol.H1C,
                                           SessionProtocol.H2, SessionProtocol.H2C));
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
-        this.listener = listener;
-
         connectTimeoutMillis = (Integer) clientFactory.options()
                 .channelOptions()
                 .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
-
         bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
     }
 
