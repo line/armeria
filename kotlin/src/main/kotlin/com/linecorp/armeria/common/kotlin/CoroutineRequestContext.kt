@@ -34,7 +34,7 @@ fun RequestContext.asCoroutineContext(): ArmeriaRequestCoroutineContext {
 /**
  * Propagates [RequestContext] over coroutines.
  */
-class ArmeriaRequestCoroutineContext internal constructor (
+class ArmeriaRequestCoroutineContext internal constructor(
     private val requestContext: RequestContext
 ) : ThreadContextElement<SafeCloseable>, AbstractCoroutineContextElement(Key) {
 
