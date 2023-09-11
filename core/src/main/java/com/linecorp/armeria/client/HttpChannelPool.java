@@ -105,14 +105,11 @@ final class HttpChannelPool implements AsyncCloseable {
         allChannels = new IdentityHashMap<>();
         this.listener = listener;
 
-        final Bootstrap inetBaseBootstrap = clientFactory.newInetBootstrap();
-        final Bootstrap unixBaseBootstrap = clientFactory.newUnixBootstrap();
+        connectTimeoutMillis = (Integer) clientFactory.options()
+                .channelOptions()
+                .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
 
-        connectTimeoutMillis = (Integer) inetBaseBootstrap.config().options()
-                                                          .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
-
-        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only,
-                                    inetBaseBootstrap, unixBaseBootstrap);
+        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
