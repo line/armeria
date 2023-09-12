@@ -60,7 +60,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 class LoggingServiceTest {
 
-    private static final HttpService delegate = (ctx, req) -> {
+    static final HttpService delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
         return HttpResponse.of(200);

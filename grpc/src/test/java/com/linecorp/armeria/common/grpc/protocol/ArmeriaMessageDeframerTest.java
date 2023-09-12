@@ -49,8 +49,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 
@@ -58,6 +56,8 @@ import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import reactor.test.StepVerifier;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
 
 class ArmeriaMessageDeframerTest {
 

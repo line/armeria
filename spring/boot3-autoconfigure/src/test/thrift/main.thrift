@@ -1,6 +1,6 @@
-namespace java com.linecorp.armeria.spring.test.thrift.main
+namespace java testing.spring.thrift
 
 // Tests a non-oneway method with a return value.
-service HelloService {
+service TestService {
     string hello(1:string name)
 }

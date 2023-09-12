@@ -252,7 +252,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final HttpResponse res;
         if (method.getMethodDescriptor().getType() == MethodType.UNARY) {
             final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-            res = HttpResponse.from(resFuture);
+            res = HttpResponse.of(resFuture);
             startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
                       resFuture, serializationFormat);
         } else {

@@ -1,5 +1,5 @@
-namespace java com.linecorp.armeria.common.brave
+namespace java testing.brave
 
-service HelloService {
+service TestService {
     string hello(1:string name)
 }

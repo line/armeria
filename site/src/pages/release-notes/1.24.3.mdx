@@ -1,0 +1,31 @@
+---
+date: 2023-07-25
+---
+
+## 🔒 Security fixes
+
+- Armeria server now strips [matrix variables](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/matrix-variables.html)
+  from a request path before finding a matching route. [CVE-2023-38493](https://github.com/line/armeria/security/advisories/GHSA-wvp2-9ppw-337j)
+  - Previously, when an Armeria decorator is used to decorate a Spring controller served
+    using <type://TomcatService> or <type://JettyService>, the request bypassed the
+    decorator if the request path contains matrix variables.
+  - You can use a regex for the decorator as a workaround before you upgrade Armeria.
+    - For example, `sb.decoratorUnder("regex:^/prefix.*", decorator)` instead of `sb.decoratorUnder("/prefix", decorator)`.
+
+## 🛠️ Bug fixes
+
+- Fixed a regression where the logger names of <type://LoggingService> and <type://LoggingClient> have
+  changed since [1.24.0](/release-notes/1.24.0). #5056
+- You can now specify a Unix domain socket path in abstract namespace. #5014 #5036
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'lishiki',
+  'minwoox',
+  'nao0811ta',
+  'ta7uw',
+  'trustin'
+]} />

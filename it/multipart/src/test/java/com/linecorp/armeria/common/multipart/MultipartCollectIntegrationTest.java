@@ -62,7 +62,7 @@ class MultipartCollectIntegrationTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/multipart/file", (ctx, req) -> HttpResponse.from(
+            sb.service("/multipart/file", (ctx, req) -> HttpResponse.of(
                       Multipart.from(req)
                                .collect(bodyPart -> {
                                    if (bodyPart.filename() != null) {
@@ -111,7 +111,7 @@ class MultipartCollectIntegrationTest {
                                        throw new UncheckedIOException(e);
                                    }
                                }, ctx.blockingTaskExecutor())))
-              .service("/multipart/large-file", (ctx, req) -> HttpResponse.from(
+              .service("/multipart/large-file", (ctx, req) -> HttpResponse.of(
                       Multipart.from(req).collect(bodyPart -> {
                                    final Path path = tempDir.resolve(bodyPart.name());
                                    return bodyPart.writeTo(path)
@@ -151,7 +151,7 @@ class MultipartCollectIntegrationTest {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-        final ClassPathResource file = new ClassPathResource("test.txt");
+        final ClassPathResource file = new ClassPathResource("testing/multipart/test.txt");
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file1", file);
         body.add("file2", file);

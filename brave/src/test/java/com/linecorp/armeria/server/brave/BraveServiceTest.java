@@ -42,9 +42,8 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.brave.SpanCollector;
+import com.linecorp.armeria.common.brave.TestSpanCollector;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -61,6 +60,7 @@ import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
+import testing.brave.TestService;
 
 class BraveServiceTest {
 
@@ -93,7 +93,7 @@ class BraveServiceTest {
 
     @Test
     void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
         final RequestLog requestLog = testServiceInvocation(collector,
                                                             RequestContextCurrentTraceContext.ofDefault(),
                                                             1.0f);
@@ -124,7 +124,7 @@ class BraveServiceTest {
 
     @Test
     void shouldNotSubmitSpanWhenRequestIsNotSampled() throws Exception {
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
         testServiceInvocation(collector, RequestContextCurrentTraceContext.ofDefault(), 0.0f);
 
         // don't submit any spans
@@ -142,7 +142,7 @@ class BraveServiceTest {
                 RequestContextCurrentTraceContext.builder()
                                                  .addScopeDecorator(scopeDecorator)
                                                  .build();
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
         testServiceInvocation(collector, traceContext, 1.0f);
 
         // check span name
@@ -159,7 +159,7 @@ class BraveServiceTest {
 
     @Test
     void transientService() throws Exception {
-        final SpanCollector collector = new SpanCollector();
+        final TestSpanCollector collector = new TestSpanCollector();
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
                                        .addSpanHandler(collector)
@@ -221,7 +221,7 @@ class BraveServiceTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
         final ServiceRequestContext ctx = ServiceRequestContext.builder(req).build();
-        final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
+        final RpcRequest rpcReq = RpcRequest.of(TestService.Iface.class, "hello", "trustin");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, trustin!");
         final RequestLogBuilder logBuilder = ctx.logBuilder();

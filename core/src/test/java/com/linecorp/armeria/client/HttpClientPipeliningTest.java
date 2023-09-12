@@ -61,7 +61,7 @@ public class HttpClientPipeliningTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     // Consume the request completely so that the connection can be returned to the pool.
-                    return HttpResponse.from(req.aggregate().handle((unused1, unused2) -> {
+                    return HttpResponse.of(req.aggregate().handle((unused1, unused2) -> {
                         // Signal the main thread that the connection has been returned to the pool.
                         // Note that this is true only when pipelining is enabled. The connection is returned
                         // after response is fully sent if pipelining is disabled.

@@ -71,7 +71,7 @@ class MainService(private val backendClient: WebClient) : HttpService {
                     .collect(Collectors.joining("\n"))
             )
         }
-        return HttpResponse.from(response)
+        return HttpResponse.of(response)
     }
 
     private suspend fun fetchFromRequest(ctx: ServiceRequestContext, req: HttpRequest): List<Long> {

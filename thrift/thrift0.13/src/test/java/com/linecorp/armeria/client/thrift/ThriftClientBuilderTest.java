@@ -37,7 +37,8 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
+
+import testing.thrift.main.HelloService;
 
 class ThriftClientBuilderTest {
 

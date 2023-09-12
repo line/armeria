@@ -43,7 +43,7 @@ class ArmeriaServerSettingsTest {
     private Server server;
 
     @Test
-    public void buildServerBasedOnProperties() {
+    void buildServerBasedOnProperties() {
         assertThat(server).isNotNull();
         final ServerConfig config = server.config();
 

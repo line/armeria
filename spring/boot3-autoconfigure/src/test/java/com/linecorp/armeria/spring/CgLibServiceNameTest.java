@@ -23,14 +23,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.validation.annotation.Validated;
 
 import com.linecorp.armeria.client.BlockingWebClient;
@@ -46,10 +44,9 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.spring.CgLibServiceNameTest.TestConfiguration;
 import com.linecorp.armeria.spring.CgLibServiceNameTest.TestConfiguration.MyAnnotatedService;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
-public class CgLibServiceNameTest {
+class CgLibServiceNameTest {
 
     private static final AtomicReference<RequestLogAccess> logRef = new AtomicReference<>();
 
@@ -92,7 +89,7 @@ public class CgLibServiceNameTest {
      * Spring 5 and MyAnnotatedService$$SpringCGLIB$$1a2b3c4d for Spring 6 will be injected instead.
      */
     @Test
-    public void normalizedServiceName() {
+    void normalizedServiceName() {
         final BlockingWebClient client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort() + '/')
                                                   .blocking();
         client.get("/hello");
@@ -105,7 +102,7 @@ public class CgLibServiceNameTest {
     }
 
     @Test
-    public void normalizedServiceNameInDocService() {
+    void normalizedServiceNameInDocService() {
         final BlockingWebClient client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort() + '/')
                                                   .blocking();
         final AggregatedHttpResponse response = client.get("/internal/docs/specification.json");

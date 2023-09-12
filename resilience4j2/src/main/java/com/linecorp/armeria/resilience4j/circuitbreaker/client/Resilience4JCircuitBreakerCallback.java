@@ -48,10 +48,8 @@ final class Resilience4JCircuitBreakerCallback implements CircuitBreakerCallback
         final long duration = circuitBreaker.getCurrentTimestamp() - startTimestamp;
 
         if (cause == null) {
-            final RequestLog log = ctx.log().partial();
-            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-                cause = log.responseCause();
-            }
+            final RequestLog requestLog = ctx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+            cause = requestLog != null ? requestLog.responseCause() : null;
         }
         if (cause == null) {
             cause = FailedCircuitBreakerDecisionException.of();

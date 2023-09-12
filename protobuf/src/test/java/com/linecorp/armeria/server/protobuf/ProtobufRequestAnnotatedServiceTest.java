@@ -38,12 +38,13 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.protobuf.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.ConsumesProtobuf;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.protobuf.Messages.SimpleRequest;
 
 class ProtobufRequestAnnotatedServiceTest {
 

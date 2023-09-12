@@ -54,12 +54,12 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.prometheus.client.CollectorRegistry;
+import testing.thrift.main.HelloService.Iface;
 
 public class PrometheusMetricsIntegrationTest {
 

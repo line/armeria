@@ -63,6 +63,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private ScheduledFuture<?> connectionIdleTimeout;
     private final long connectionIdleTimeNanos;
     private long lastConnectionIdleTime;
+    private final boolean keepAliveOnPing;
 
     @Nullable
     private ScheduledFuture<?> pingIdleTimeout;
@@ -87,12 +88,14 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection) {
+                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
+                                       boolean keepAliveOnPing) {
         this.channel = channel;
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
+        this.keepAliveOnPing = keepAliveOnPing;
 
         if (idleTimeoutMillis <= 0) {
             connectionIdleTimeNanos = 0;
@@ -192,6 +195,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     public final void onPing() {
         if (pingState == PingState.SHUTDOWN) {
             return;
+        }
+
+        if (connectionIdleTimeNanos > 0 && keepAliveOnPing) {
+            lastConnectionIdleTime = System.nanoTime();
         }
 
         if (pingIdleTimeNanos > 0) {

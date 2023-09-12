@@ -68,7 +68,7 @@ public class HttpClientMaxConcurrentStreamTest {
             sb.service(PATH, (ctx, req) -> {
                 final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
                 responses.add(f);
-                return HttpResponse.from(f);
+                return HttpResponse.of(f);
             });
             sb.http2MaxStreamsPerConnection(MAX_CONCURRENT_STREAMS);
             sb.maxNumConnections(MAX_NUM_CONNECTIONS);
@@ -83,7 +83,7 @@ public class HttpClientMaxConcurrentStreamTest {
             sb.service(PATH, (ctx, req) -> {
                 final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
                 responses.add(f);
-                return HttpResponse.from(f);
+                return HttpResponse.of(f);
             });
             sb.http2MaxStreamsPerConnection(1);
             sb.maxNumConnections(MAX_NUM_CONNECTIONS);

@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -310,16 +311,11 @@ public final class ChannelUtil {
             return null;
         }
 
-        final InetSocketAddress addr = findAddress(ch.localAddress());
-        if (addr != null) {
-            return addr;
-        }
-
         if (ch instanceof DomainSocketChannel) {
-            return findAddress(ch.remoteAddress());
+            return findAddress((DomainSocketChannel) ch);
+        } else {
+            return (InetSocketAddress) ch.localAddress();
         }
-
-        return null;
     }
 
     @Nullable
@@ -327,20 +323,42 @@ public final class ChannelUtil {
         if (ch == null) {
             return null;
         }
-        return findAddress(ch.remoteAddress());
+
+        if (ch instanceof DomainSocketChannel) {
+            return findAddress((DomainSocketChannel) ch);
+        } else {
+            return (InetSocketAddress) ch.remoteAddress();
+        }
     }
 
     @Nullable
-    private static InetSocketAddress findAddress(@Nullable SocketAddress addr) {
-        if (addr instanceof InetSocketAddress) {
-            return (InetSocketAddress) addr;
+    private static DomainSocketAddress findAddress(DomainSocketChannel ch) {
+        final Channel parent = ch.parent();
+        if (parent != null) {
+            final DomainSocketAddress addr = toArmeriaDomainSocketAddress(
+                    (io.netty.channel.unix.DomainSocketAddress) parent.localAddress());
+            if (addr != null) {
+                return addr;
+            }
         }
 
-        if (addr instanceof io.netty.channel.unix.DomainSocketAddress) {
-            return DomainSocketAddress.of((io.netty.channel.unix.DomainSocketAddress) addr);
+        final DomainSocketAddress laddr = toArmeriaDomainSocketAddress(ch.localAddress());
+        if (laddr != null) {
+            return laddr;
         }
 
-        assert addr == null : addr;
+        return toArmeriaDomainSocketAddress(ch.remoteAddress());
+    }
+
+    @Nullable
+    private static DomainSocketAddress toArmeriaDomainSocketAddress(
+            @Nullable io.netty.channel.unix.DomainSocketAddress addr) {
+        if (addr != null) {
+            final String path = addr.path();
+            if (!Strings.isNullOrEmpty(path)) {
+                return DomainSocketAddress.of(path);
+            }
+        }
         return null;
     }
 

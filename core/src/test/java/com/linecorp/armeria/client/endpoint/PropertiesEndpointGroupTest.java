@@ -43,6 +43,9 @@ import com.linecorp.armeria.client.Endpoint;
 
 class PropertiesEndpointGroupTest {
 
+    private static final String RESOURCE_PATH =
+            "testing/core/" + PropertiesEndpointGroupTest.class.getSimpleName() + "/server-list.properties";
+
     private static final Properties PROPS = new Properties();
 
     @BeforeAll
@@ -99,7 +102,7 @@ class PropertiesEndpointGroupTest {
     @Test
     void resourceWithoutDefaultPort() {
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverA.hosts");
+                getClass().getClassLoader(), RESOURCE_PATH, "serverA.hosts");
 
         assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                         Endpoint.parse("127.0.0.1:8081"),
@@ -110,14 +113,14 @@ class PropertiesEndpointGroupTest {
     void resourceWithDefaultPort() {
         final PropertiesEndpointGroup endpointGroupA =
                 PropertiesEndpointGroup.builder(getClass().getClassLoader(),
-                                                "server-list.properties",
+                                                RESOURCE_PATH,
                                                 "serverA.hosts")
                                        .defaultPort(80)
                                        .build();
 
         final PropertiesEndpointGroup endpointGroupB =
                 PropertiesEndpointGroup.builder(getClass().getClassLoader(),
-                                                "server-list.properties",
+                                                RESOURCE_PATH,
                                                 "serverB.hosts")
                                        .defaultPort(8080)
                                        .build();
@@ -131,7 +134,7 @@ class PropertiesEndpointGroupTest {
 
     @Test
     void pathWithDefaultPort() throws Exception {
-        final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
+        final URL resourceUrl = getClass().getClassLoader().getResource(RESOURCE_PATH);
         assertThat(resourceUrl).isNotNull();
         final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.builder(
@@ -144,7 +147,7 @@ class PropertiesEndpointGroupTest {
 
     @Test
     void pathWithoutDefaultPort() throws URISyntaxException {
-        final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
+        final URL resourceUrl = getClass().getClassLoader().getResource(RESOURCE_PATH);
         assertThat(resourceUrl).isNotNull();
         final Path resourcePath = new File(resourceUrl.toURI().getPath()).toPath();
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
@@ -158,7 +161,7 @@ class PropertiesEndpointGroupTest {
     @Test
     void testWithPrefixThatEndsWithDot() {
         final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverA.hosts.");
+                getClass().getClassLoader(), RESOURCE_PATH, "serverA.hosts.");
 
         assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                         Endpoint.parse("127.0.0.1:8081"),
@@ -168,7 +171,7 @@ class PropertiesEndpointGroupTest {
     @Test
     void containsNoHosts() {
         assertThat(PropertiesEndpointGroup.builder(getClass().getClassLoader(),
-                                                   "server-list.properties", "serverC.hosts")
+                                                   RESOURCE_PATH, "serverC.hosts")
                                           .defaultPort(8080)
                                           .build()
                                           .endpoints()).isEmpty();
@@ -177,14 +180,15 @@ class PropertiesEndpointGroupTest {
     @Test
     void illegalDefaultPort() {
         assertThatThrownBy(() -> PropertiesEndpointGroup.builder(getClass().getClassLoader(),
-                                                                 "server-list.properties", "serverA.hosts")
+                                                                 RESOURCE_PATH, "serverA.hosts")
                                                         .defaultPort(0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("defaultPort");
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
+    @EnabledForJreRange(min = JRE.JAVA_17)
+    // NIO.2 WatchService doesn't work reliably on older Java.
     void propertiesFileUpdatesCorrectly() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 
@@ -224,7 +228,8 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
+    @EnabledForJreRange(min = JRE.JAVA_17)
+    // NIO.2 WatchService doesn't work reliably on older Java.
     void propertiesFileRestart() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 
@@ -255,7 +260,8 @@ class PropertiesEndpointGroupTest {
     }
 
     @Test
-    @EnabledForJreRange(min = JRE.JAVA_17) // NIO.2 WatchService doesn't work reliably on older Java.
+    @EnabledForJreRange(min = JRE.JAVA_17)
+    // NIO.2 WatchService doesn't work reliably on older Java.
     void endpointChangePropagatesToListeners() throws Exception {
         final Path file = folder.resolve("temp-file.properties");
 

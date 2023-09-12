@@ -20,7 +20,7 @@
  * Authors:
  * "Alex Roetter" <aroetter@twitter.com>
  */
-namespace java com.linecorp.armeria.common.thrift.text
+namespace java testing.thrift.text
 
 enum Letter {
   ALPHA   = 1,

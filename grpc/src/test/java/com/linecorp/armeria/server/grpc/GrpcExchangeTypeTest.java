@@ -32,11 +32,11 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.MethodDescriptor;
+import testing.grpc.TestServiceGrpc;
 
 class GrpcExchangeTypeTest {
 

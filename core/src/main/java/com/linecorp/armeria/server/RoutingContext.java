@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.DefaultRequestTarget.removeMatrixVariables;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -146,6 +147,7 @@ public interface RoutingContext {
                         oldReqTarget.form(),
                         oldReqTarget.scheme(),
                         oldReqTarget.authority(),
+                        removeMatrixVariables(path),
                         path,
                         oldReqTarget.query(),
                         oldReqTarget.fragment());

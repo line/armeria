@@ -34,11 +34,12 @@ import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.SayHelloService;
-import com.linecorp.armeria.service.test.thrift.main.SayHelloService.AsyncIface;
+
+import testing.thrift.full.camel.TestService;
+import testing.thrift.full.camel.TestService.AsyncIface;
 
 class ThriftDocServicePluginTest {
-    private static final String SAY_HELLO_NAME = SayHelloService.class.getName();
+    private static final String SERVICE_NAME = TestService.class.getName();
     private static final ThriftDocServicePlugin GENERATOR = new ThriftDocServicePlugin();
     private static final ThriftDescriptiveTypeInfoProvider DESCRIPTIVE_TYPE_INFO_PROVIDER =
             new ThriftDescriptiveTypeInfoProvider();
@@ -47,8 +48,8 @@ class ThriftDocServicePluginTest {
     void servicesTest() {
         final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
                                                            (plugin, service, method) -> false);
-        assertThat(services).containsKey(SAY_HELLO_NAME);
-        final ServiceInfo serviceInfo = services.get(SAY_HELLO_NAME);
+        assertThat(services).containsKey(SERVICE_NAME);
+        final ServiceInfo serviceInfo = services.get(SERVICE_NAME);
         final Map<String, MethodInfo> methods =
                 serviceInfo.methods().stream()
                            .collect(toImmutableMap(MethodInfo::name, Function.identity()));

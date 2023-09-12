@@ -47,12 +47,14 @@ class ClientFactoryBuilderTest {
     void addressResolverGroupFactoryAndDomainNameResolverCustomizerAreMutuallyExclusive() {
         final ClientFactoryBuilder builder1 = ClientFactory.builder();
         builder1.addressResolverGroupFactory(eventLoopGroup -> null);
-        assertThatThrownBy(() -> builder1.domainNameResolverCustomizer(b -> {}))
+        assertThatThrownBy(() -> builder1.domainNameResolverCustomizer(b -> {
+        }))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("mutually exclusive");
 
         final ClientFactoryBuilder builder2 = ClientFactory.builder();
-        builder2.domainNameResolverCustomizer(b -> {});
+        builder2.domainNameResolverCustomizer(b -> {
+        });
         assertThatThrownBy(() -> builder2.addressResolverGroupFactory(eventLoopGroup -> null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("mutually exclusive");
@@ -284,6 +286,17 @@ class ClientFactoryBuilderTest {
             assertThat(factory.options().channelOptions()).containsOnly(
                     entry(TCP_USER_TIMEOUT, userDefinedValue), entry(SO_LINGER, lingerMillis),
                     entry(CONNECT_TIMEOUT_MILLIS, (int) Flags.defaultConnectTimeoutMillis()));
+        }
+    }
+
+    @Test
+    void defaultKeepAliveOnPingSet() {
+        try (ClientFactory factory = ClientFactory.builder().build()) {
+            assertThat(factory.options().keepAliveOnPing()).isFalse();
+        }
+
+        try (ClientFactory factory = ClientFactory.builder().idleTimeoutMillis(1000, true).build()) {
+            assertThat(factory.options().keepAliveOnPing()).isTrue();
         }
     }
 }

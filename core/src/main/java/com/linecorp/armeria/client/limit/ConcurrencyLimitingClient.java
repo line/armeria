@@ -93,6 +93,6 @@ public final class ConcurrencyLimitingClient
     @Override
     protected HttpResponse newDeferredResponse(ClientRequestContext ctx,
                                                CompletionStage<HttpResponse> resFuture) throws Exception {
-        return HttpResponse.from(resFuture, ctx.eventLoop());
+        return HttpResponse.of(resFuture, ctx.eventLoop());
     }
 }

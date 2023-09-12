@@ -20,23 +20,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Collection;
-import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
@@ -72,25 +66,25 @@ import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
-import com.linecorp.armeria.spring.test.grpc.main.Hello.HelloReply;
-import com.linecorp.armeria.spring.test.grpc.main.Hello.HelloRequest;
-import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc;
-import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc.HelloServiceBlockingStub;
-import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc.HelloServiceImplBase;
-import com.linecorp.armeria.spring.test.thrift.main.HelloService;
-import com.linecorp.armeria.spring.test.thrift.main.HelloService.hello_args;
 
 import io.grpc.stub.StreamObserver;
+import testing.spring.grpc.Hello.HelloReply;
+import testing.spring.grpc.Hello.HelloRequest;
+import testing.spring.grpc.TestServiceGrpc;
+import testing.spring.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.spring.grpc.TestServiceGrpc.TestServiceImplBase;
+import testing.spring.thrift.TestService;
+import testing.spring.thrift.TestService.hello_args;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-public class ArmeriaAutoConfigurationTest {
+@Timeout(10)
+class ArmeriaAutoConfigurationTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
@@ -124,15 +118,15 @@ public class ArmeriaAutoConfigurationTest {
                            .path("/thrift")
                            .defaultServiceName("helloThriftService")
                            .decorators(LoggingService.newDecorator())
-                           .build(THttpService.of((HelloService.Iface) name -> "hello " + name));
+                           .build(THttpService.of((TestService.Iface) name -> "hello " + name));
         }
 
         @Bean
         public DocServiceConfigurator helloThriftServiceExamples() {
             return dsb -> dsb.exampleRequests(ImmutableList.of(new hello_args("nameVal")))
-                             .exampleHeaders(HelloService.class,
+                             .exampleHeaders(TestService.class,
                                              HttpHeaders.of("x-additional-header", "headerVal"))
-                             .exampleHeaders(HelloService.class, "hello",
+                             .exampleHeaders(TestService.class, "hello",
                                              HttpHeaders.of("x-additional-header", "headerVal"));
         }
 
@@ -150,11 +144,11 @@ public class ArmeriaAutoConfigurationTest {
 
         @Bean
         public DocServiceConfigurator helloGrpcServiceExamples() {
-            return dsb -> dsb.exampleRequests(HelloServiceGrpc.SERVICE_NAME, "Hello",
+            return dsb -> dsb.exampleRequests(TestServiceGrpc.SERVICE_NAME, "Hello",
                                               HelloRequest.newBuilder().setName("Armeria").build())
-                             .exampleHeaders(HelloServiceGrpc.SERVICE_NAME,
+                             .exampleHeaders(TestServiceGrpc.SERVICE_NAME,
                                              HttpHeaders.of("x-additional-header", "headerVal"))
-                             .exampleHeaders(HelloServiceGrpc.SERVICE_NAME, "Hello",
+                             .exampleHeaders(TestServiceGrpc.SERVICE_NAME, "Hello",
                                              HttpHeaders.of("x-additional-header", "headerVal"));
         }
 
@@ -229,7 +223,7 @@ public class ArmeriaAutoConfigurationTest {
         }
     }
 
-    public static class HelloGrpcService extends HelloServiceImplBase {
+    public static class HelloGrpcService extends TestServiceImplBase {
         @Override
         public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
             final HelloReply reply = HelloReply.newBuilder()
@@ -240,9 +234,6 @@ public class ArmeriaAutoConfigurationTest {
         }
     }
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
-
     @Inject
     private Server server;
 
@@ -252,7 +243,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testHttpService() throws Exception {
+    void testHttpService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         final HttpResponse response = client.get("/ok");
@@ -263,7 +254,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testAnnotatedService() throws Exception {
+    void testAnnotatedService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/annotated/get");
@@ -301,9 +292,9 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testThriftService() throws Exception {
-        final HelloService.Iface client = ThriftClients.newClient(newUrl("h1c") + "/thrift",
-                                                                  HelloService.Iface.class);
+    void testThriftService() throws Exception {
+        final TestService.Iface client = ThriftClients.newClient(newUrl("h1c") + "/thrift",
+                                                                  TestService.Iface.class);
         assertThat(client.hello("world")).isEqualTo("hello world");
 
         final WebClient webClient = WebClient.of(newUrl("h1c"));
@@ -312,7 +303,7 @@ public class ArmeriaAutoConfigurationTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(res.contentUtf8()).node("services[2].name").isStringEqualTo(
-                "com.linecorp.armeria.spring.test.thrift.main.HelloService");
+                "testing.spring.thrift.TestService");
         assertThatJson(res.contentUtf8())
                 .node("services[2].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
@@ -321,9 +312,9 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testGrpcService() throws Exception {
-        final HelloServiceBlockingStub client = GrpcClients.newClient(newUrl("h2c") + '/',
-                                                                      HelloServiceBlockingStub.class);
+    void testGrpcService() throws Exception {
+        final TestServiceBlockingStub client = GrpcClients.newClient(newUrl("h2c") + '/',
+                                                                      TestServiceBlockingStub.class);
         final HelloRequest request = HelloRequest.newBuilder()
                                                  .setName("world")
                                                  .build();
@@ -335,7 +326,7 @@ public class ArmeriaAutoConfigurationTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
-                "com.linecorp.armeria.spring.test.grpc.main.HelloService");
+                "testing.spring.grpc.TestService");
         assertThatJson(res.contentUtf8())
                 .node("services[1].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
@@ -344,7 +335,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testPortConfiguration() {
+    void testPortConfiguration() {
         final Collection<ServerPort> ports = server.activePorts().values();
         assertThat(ports.stream().filter(ServerPort::hasHttp)).hasSize(3);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
@@ -352,8 +343,8 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testMetrics() {
-        assertThat(GrpcClients.newClient(newUrl("h2c") + '/', HelloServiceBlockingStub.class)
+    void testMetrics() {
+        assertThat(GrpcClients.newClient(newUrl("h2c") + '/', TestServiceBlockingStub.class)
                               .hello(HelloRequest.getDefaultInstance())
                               .getMessage()).isNotNull();
 
@@ -367,7 +358,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testCustomSuccessMetrics() throws Exception {
+    void testCustomSuccessMetrics() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
         final HttpResponse response = client.get("/annotated/error");
         final String expectedSuccess =
@@ -392,7 +383,7 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     @Test
-    public void testHealthCheckService() throws Exception {
+    void testHealthCheckService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/internal/healthcheck");

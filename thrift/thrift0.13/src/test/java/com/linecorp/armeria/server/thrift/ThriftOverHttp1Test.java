@@ -40,9 +40,9 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
-import com.linecorp.armeria.service.test.thrift.main.SleepService;
 
 import io.netty.util.AsciiString;
+import testing.thrift.main.SleepService;
 
 public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
     @Override

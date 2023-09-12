@@ -85,10 +85,12 @@ public final class DnsCacheBuilder {
      * respectively.
      * The default value is {@code 1} and {@link Integer#MAX_VALUE}, which practically tells this resolver to
      * respect the TTL from the DNS server.
+     *
+     * <p>Note that if {@code maxTtl} is set to {@code 0}, the resolved DNS records are not cached.
      */
     public DnsCacheBuilder ttl(int minTtl, int maxTtl) {
-        checkArgument(minTtl > 0 && minTtl <= maxTtl,
-                      "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
+        checkArgument(minTtl >= 0 && minTtl <= maxTtl,
+                      "minTtl: %s, maxTtl: %s (expected: 0 <= minTtl <= maxTtl)", minTtl, maxTtl);
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         return this;

@@ -46,7 +46,7 @@ class InvalidPathWithDataTest {
             sb.requestTimeoutMillis(0);
             sb.decorator(LoggingService.newDecorator());
             sb.service("/foo", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(agg -> HttpResponse.of(agg.contentUtf8())));
+                return HttpResponse.of(req.aggregate().thenApply(agg -> HttpResponse.of(agg.contentUtf8())));
             });
         }
     };
