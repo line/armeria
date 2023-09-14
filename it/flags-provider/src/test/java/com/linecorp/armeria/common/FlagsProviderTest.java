@@ -22,10 +22,6 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodHandles.Lookup;
-import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
@@ -58,7 +54,7 @@ class FlagsProviderTest {
 
     @Test
     void overrideDefaultFlagsProvider() throws Throwable {
-        assertFlags("tlsEngineType").equals(TlsEngineType.OPENSSL);
+        assertFlags("tlsEngineType").isNotEqualTo(TlsEngineType.OPENSSL);
         assertFlags("numCommonBlockingTaskThreads").isEqualTo(100);
     }
 
@@ -158,11 +154,8 @@ class FlagsProviderTest {
     }
 
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
-        final Lookup lookup = MethodHandles.publicLookup();
-        final MethodHandle method =
-                lookup.findStatic(flags, flagsMethod, MethodType.methodType(
-                        Flags.class.getMethod(flagsMethod).getReturnType()));
-        return assertThat(method.invoke());
+        final Method method = flags.getDeclaredMethod(flagsMethod);
+        return assertThat(method.invoke(null));
     }
 
     private static class FlagsClassLoader extends ClassLoader {
