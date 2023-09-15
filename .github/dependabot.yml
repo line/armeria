@@ -1,0 +1,31 @@
+version: 2
+registries:
+    gradle-plugin-portal:
+        type: maven-repository
+        url: https://plugins.gradle.org/m2
+        username: dummy # Required by dependabot
+        password: dummy # Required by dependabot
+updates:
+    - package-ecosystem: "gradle"
+      directory: "/"
+      registries:
+          - gradle-plugin-portal
+      schedule:
+          interval: "daily"
+          time: "02:00"
+          # Use Korea Standard Time (UTC +09:00)
+          timezone: "Asia/Seoul"
+      open-pull-requests-limit: 10
+      allow:
+          - dependency-name: "com.gradle.enterprise"
+            dependency-type: "production"
+          - dependency-name: "com.gradle.common-custom-user-data-gradle-plugin"
+            dependency-type: "production"
+
+    - package-ecosystem: "github-actions"
+      directory: "/"
+      schedule:
+          interval: "daily"
+          time: "02:00"
+          # Use Korea Standard Time (UTC +09:00)
+          timezone: "Asia/Seoul"
