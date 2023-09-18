@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -190,7 +191,7 @@ public class ThriftDocServiceTest {
         removeDescriptionInfos(actualJson);
         removeDescriptionInfos(expectedJson);
 
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
     }
 
     private static void addExamples(JsonNode json) {
@@ -244,12 +245,13 @@ public class ThriftDocServiceTest {
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
-
+        final Route docServiceRoute = Route.builder().pathPrefix("/excludeAll").build();
         final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
                                                                                   ImmutableList.of(),
                                                                                   ImmutableList.of(),
                                                                                   ImmutableList.of(),
-                                                                                  ImmutableList.of()));
+                                                                                  ImmutableList.of(),
+                                                                                  docServiceRoute));
         assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 

@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -114,7 +115,7 @@ class WebSocketFrameEncoderAndDecoderTest {
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
         final WebSocketFrameDecoder decoder =
-                new WebSocketFrameDecoder(ctx, maxPayloadLength, false, true);
+                new TestWebSocketFrameDecoder(ctx, maxPayloadLength, false, true);
         final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(whenComplete));
 
@@ -140,8 +141,8 @@ class WebSocketFrameEncoderAndDecoderTest {
         final HttpResponseWriter httpResponseWriter = HttpResponse.streaming();
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(maskPayload);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
-        final WebSocketFrameDecoder decoder = new WebSocketFrameDecoder(ctx, 1024 * 1024, allowMaskMismatch,
-                                                                        maskPayload);
+        final WebSocketFrameDecoder decoder = new TestWebSocketFrameDecoder(
+                ctx, 1024 * 1024, allowMaskMismatch, maskPayload);
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(new CompletableFuture<>()));
         executeTests(encoder, requestWriter);
         httpResponseWriter.abort();
@@ -228,5 +229,24 @@ class WebSocketFrameEncoderAndDecoderTest {
                 whenComplete.complete(null);
             }
         };
+    }
+
+    private static class TestWebSocketFrameDecoder extends WebSocketFrameDecoder {
+
+        private final boolean expectMaskedFrames;
+
+        TestWebSocketFrameDecoder(RequestContext ctx, int maxFramePayloadLength,
+                                  boolean allowMaskMismatch, boolean expectMaskedFrames) {
+            super(ctx, maxFramePayloadLength, allowMaskMismatch);
+            this.expectMaskedFrames = expectMaskedFrames;
+        }
+
+        @Override
+        protected boolean expectMaskedFrames() {
+            return expectMaskedFrames;
+        }
+
+        @Override
+        protected void onCloseFrameRead() {}
     }
 }

@@ -8,10 +8,16 @@ configure(projectsWithFlags('publish', 'java')) {
                 suppressPomMetadataWarningsFor('optionalApiElements')
                 suppressPomMetadataWarningsFor('optionalRuntimeElements')
 
-                // Publish resolved versions
+                // Resolved versions are used to publish platform dependencies in pom XML.
                 versionMapping {
-                    allVariants {
+                    usage(Usage.JAVA_RUNTIME) {
                         fromResolutionResult()
+                    }
+                    usage(Usage.JAVA_API) {
+                        // compileOnly dependencies should not be included in the compile scope of POM. If we
+                        // don't exclude them, compileOnly dependencies are also used to resolve the final
+                        // dependency version.
+                        fromResolutionOf("runtimeClasspath")
                     }
                 }
 
