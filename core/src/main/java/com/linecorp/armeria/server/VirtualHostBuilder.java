@@ -123,7 +123,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Nullable
     private String hostnamePattern;
     private int port = -1;
-    private String contextPath = "/";
+    private String baseContextPath = "/";
     @Nullable
     private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
@@ -209,12 +209,12 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the context path for this {@link VirtualHost}.
+     * Sets the base context path for this {@link VirtualHost}.
      * Services and decorators added to this {@link VirtualHost} will
-     * be prefixed by the specified {@code contextPath}.
+     * be prefixed by the specified {@code baseContextPath}.
      */
-    public VirtualHostBuilder baseContextPath(String contextPath) {
-        this.contextPath = RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
+    public VirtualHostBuilder baseContextPath(String baseContextPath) {
+        this.baseContextPath = RouteUtil.ensureAbsolutePath(baseContextPath, "baseContextPath");
         return this;
     }
 
@@ -706,7 +706,7 @@ public final class VirtualHostBuilder implements TlsSetters {
 
     @Nullable
     private Function<? super HttpService, ? extends HttpService> getRouteDecoratingService(
-            @Nullable VirtualHostBuilder defaultVirtualHostBuilder, String contextPath) {
+            @Nullable VirtualHostBuilder defaultVirtualHostBuilder, String baseContextPath) {
         final List<RouteDecoratingService> routeDecoratingServices;
         if (defaultVirtualHostBuilder != null) {
             routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
@@ -719,7 +719,7 @@ public final class VirtualHostBuilder implements TlsSetters {
 
         if (!routeDecoratingServices.isEmpty()) {
             final List<RouteDecoratingService> prefixed = routeDecoratingServices.stream()
-                    .map(service -> service.withRoutePrefix(contextPath))
+                    .map(service -> service.withRoutePrefix(baseContextPath))
                     .collect(Collectors.toList());
             return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
         } else {
@@ -1309,7 +1309,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                                             successFunction, requestAutoAbortDelayMillis,
                                             multipartUploadsLocation, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
-                                            unhandledExceptionsReporter, contextPath);
+                                            unhandledExceptionsReporter, baseContextPath);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
@@ -1333,7 +1333,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                                 builder.build(), requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
-                getRouteDecoratingService(template, contextPath);
+                getRouteDecoratingService(template, baseContextPath);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 

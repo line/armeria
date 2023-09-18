@@ -1436,15 +1436,15 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the context path for this {@link ServerBuilder}.
+     * Sets the base context path for this {@link ServerBuilder}.
      * Services and decorators added to this {@link ServerBuilder} will
      * be prefixed by the specified {@code contextPath}.
-     * Note that the {@code contextPath} won't be applied to {@link VirtualHost}s
+     * Note that the {@code baseContextPath} won't be applied to {@link VirtualHost}s
      * added to this {@link Server}. To configure the context path for individual
      * {@link VirtualHost}s, use {@link VirtualHostBuilder#baseContextPath(String)} instead.
      */
-    public ServerBuilder baseContextPath(String contextPath) {
-        defaultVirtualHostBuilder.baseContextPath(contextPath);
+    public ServerBuilder baseContextPath(String baseContextPath) {
+        defaultVirtualHostBuilder.baseContextPath(baseContextPath);
         return this;
     }
 

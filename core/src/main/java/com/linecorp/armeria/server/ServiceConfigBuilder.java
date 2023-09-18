@@ -297,7 +297,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
                         @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
-                        String contextPath) {
+                        String baseContextPath) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
@@ -336,8 +336,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         }
 
         return new ServiceConfig(
-                route.withPrefix(contextPath),
-                mappedRoute == null ? route.withPrefix(contextPath) : mappedRoute,
+                route.withPrefix(baseContextPath),
+                mappedRoute == null ? route.withPrefix(baseContextPath) : mappedRoute,
                 service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis,
