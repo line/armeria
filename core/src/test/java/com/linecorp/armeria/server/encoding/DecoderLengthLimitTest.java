@@ -72,8 +72,8 @@ class DecoderLengthLimitTest {
         // Use non-repeated texts to avoid high compression ratio and each chunk can have a complete text.
         final String originalMessage =
                 IntStream.range(0, 5000)
-                          .mapToObj(x -> String.valueOf(x))
-                          .collect(Collectors.joining());
+                         .mapToObj(x -> String.valueOf(x))
+                         .collect(Collectors.joining());
         final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
         final OutputStream encodingStream =
                 HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
