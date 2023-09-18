@@ -19,30 +19,13 @@ jobs:
           distribution: 'temurin'
           java-version: '19'
 
-      - name: Create working directory
-        run: mkdir scripts
+      - uses: gradle/gradle-enterprise-build-validation-scripts/.github/actions/gradle/download@actions-stable
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download script
-        working-directory: scripts
-        run: curl -s -L -O https://github.com/gradle/gradle-enterprise-build-validation-scripts/releases/download/v2.5/gradle-enterprise-gradle-build-validation-2.5.zip
-
-      - name: Unzip script
-        working-directory: scripts
-        run: unzip -q -o gradle-enterprise-gradle-build-validation-2.5.zip
-
-      - name: Run script
-        working-directory: scripts/gradle-enterprise-gradle-build-validation
-        run: |
-          ./03-validate-local-build-caching-different-locations.sh -f \
-          -r https://github.com/line/armeria.git -t build \
-          -a --parallel\ -Pretry=true\ -PfailOnPassedAfterRetry=false
-
-      - name: Summarize result
-        if: always()
-        working-directory: scripts/gradle-enterprise-gradle-build-validation/.data/03-validate-local-build-caching-different-locations/latest
-        run: |
-          find . -name '*.receipt' -maxdepth 1 -exec cat {} + >> $GITHUB_STEP_SUMMARY
-
-      - name: Clean up result
-        if: always()
-        run: rm -rfv ${{ github.workspace }}/scripts
+      - uses: gradle/gradle-enterprise-build-validation-scripts/.github/actions/gradle/experiment-3@actions-stable
+        with:
+          gitRepo: https://github.com/line/armeria.git
+          gitBranch: main
+          tasks: build
+          args: --parallel -Pretry=true -PfailOnPassedAfterRetry=false
