@@ -123,7 +123,6 @@ public class BaseContextPathTest {
         assertThat(fooClient.get("/api/v2/bad").aggregate().join().status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
-
         final WebClient barClient = WebClient.builder("http://bar.com:" + barHostPort)
                                              .factory(clientFactory)
                                              .build();
