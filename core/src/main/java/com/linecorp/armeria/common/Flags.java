@@ -568,8 +568,10 @@ public final class Flags {
             return;
         }
 
-        final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl");
-        final TlsEngineType tlsEngineTypeValue = getUserValue(FlagsProvider::tlsEngineType, "tlsEngineType");
+        final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl",
+                                                ignored -> true);
+        final TlsEngineType tlsEngineTypeValue = getUserValue(FlagsProvider::tlsEngineType,
+                                                              "tlsEngineType", ignored -> true);
 
         if (useOpenSsl == null) {
             tlsEngineType = tlsEngineTypeValue != null ? tlsEngineTypeValue : TlsEngineType.OPENSSL;
@@ -615,7 +617,7 @@ public final class Flags {
      * option to enable it.
      *
      * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
-     * {@code false} no matter you specified the JVM option.
+     * {@code false} no matter what the specified JVM option is.
      */
     public static boolean dumpOpenSslInfo() {
         if (dumpOpenSslInfo != null) {
@@ -1589,28 +1591,17 @@ public final class Flags {
 
     private static <T> T getValue(Function<FlagsProvider, @Nullable T> method,
                                   String flagName, Predicate<T> validator) {
-        for (FlagsProvider provider : FLAGS_PROVIDERS) {
-            try {
-                final T value = method.apply(provider);
-                if (value == null) {
-                    continue;
-                }
-                if (!validator.test(value)) {
-                    logger.warn("{}: {} ({}, validation failed)", flagName, value, provider.name());
-                    continue;
-                }
-                logger.info("{}: {} ({})", flagName, value, provider.name());
-                return value;
-            } catch (Exception ex) {
-                logger.warn("{}: ({}, {})", flagName, provider.name(), ex.getMessage());
-            }
+        final T t = getUserValue(method, flagName, validator);
+        if (t != null) {
+            return t;
         }
-        // Should never reach here because DefaultFlagsProvider always returns a normal value.
-        throw new Error();
+
+        return method.apply(DefaultFlagsProvider.INSTANCE);
     }
 
     @Nullable
-    private static <T> T getUserValue(Function<FlagsProvider, @Nullable T> method, String flagName) {
+    private static <T> T getUserValue(Function<FlagsProvider, @Nullable T> method, String flagName,
+                                      Predicate<T> validator) {
         for (FlagsProvider provider : FLAGS_PROVIDERS) {
             if (provider instanceof DefaultFlagsProvider) {
                 continue;
@@ -1619,6 +1610,11 @@ public final class Flags {
             try {
                 final T value = method.apply(provider);
                 if (value == null) {
+                    continue;
+                }
+
+                if (!validator.test(value)) {
+                    logger.warn("{}: {} ({}, validation failed)", flagName, value, provider.name());
                     continue;
                 }
 
