@@ -54,10 +54,11 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     @Override
     public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
                                         boolean isTrailersEmpty) {
-        if (!isStreamPresentAndWritable(streamId)) {
+        if (!isStreamPresentAndWritable(streamId) || isResponseHeadersSent(id, streamId)) {
             // One of the following cases:
             // - Stream has been closed already.
             // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
+            // - Server tried to send a response HEADERS frame twice.
             return newFailedFuture(ClosedStreamException.get());
         }
 

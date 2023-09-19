@@ -3904,7 +3904,6 @@ k12.ca.us
 k12.co.us
 k12.ct.us
 k12.dc.us
-k12.de.us
 k12.ec
 k12.fl.us
 k12.ga.us
@@ -5690,7 +5689,6 @@ nordre-land.no
 nordreisa.no
 nore-og-uvdal.no
 north-kazakhstan.su
-northwesternmutual
 norton
 nose.osaka.jp
 nosegawa.nara.jp
@@ -8418,7 +8416,9 @@ witd.gov.pl
 withgoogle.com
 withyoutube.com
 wiw.gov.pl
+wix.run
 wixsite.com
+wixstudio.io
 wkz.gov.pl
 wlocl.pl
 wloclawek.pl

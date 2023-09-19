@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -35,6 +36,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import testing.thrift.uuid.TestUuidService;
 import testing.thrift.uuid.UuidMessage;
 
+@GenerateNativeImageTrace
 class UuidMessageTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {

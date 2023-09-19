@@ -75,6 +75,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final int maxNumConnections;
 
     private final long idleTimeoutMillis;
+    private final boolean keepAliveOnPing;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
     private final long connectionDrainDurationMicros;
@@ -126,7 +127,8 @@ final class DefaultServerConfig implements ServerConfig {
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
-            int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
+            int maxNumConnections, long idleTimeoutMillis, boolean keepAliveOnPing, long pingIntervalMillis,
+            long maxConnectionAgeMillis,
             int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
@@ -160,6 +162,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
+        this.keepAliveOnPing = keepAliveOnPing;
         this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
         this.maxNumRequestsPerConnection =
                 validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
@@ -502,6 +505,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public long idleTimeoutMillis() {
         return idleTimeoutMillis;
+    }
+
+    @Override
+    public boolean keepAliveOnPing() {
+        return keepAliveOnPing;
     }
 
     @Override

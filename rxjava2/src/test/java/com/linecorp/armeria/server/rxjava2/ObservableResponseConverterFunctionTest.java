@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
@@ -66,7 +67,8 @@ import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.subscribers.DefaultSubscriber;
 
-public class ObservableResponseConverterFunctionTest {
+@GenerateNativeImageTrace
+class ObservableResponseConverterFunctionTest {
 
     private static class CheckCtxConverter implements ResponseConverterFunction {
         @Override

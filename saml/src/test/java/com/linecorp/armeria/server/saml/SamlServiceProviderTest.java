@@ -47,8 +47,8 @@ import org.joda.time.DateTime;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.opensaml.core.criterion.EntityIdCriterion;
 import org.opensaml.core.xml.util.XMLObjectSupport;
 import org.opensaml.messaging.context.MessageContext;
@@ -101,13 +101,15 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.auth.Authorizer;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class SamlServiceProviderTest {
+@GenerateNativeImageTrace
+class SamlServiceProviderTest {
 
     private static final String signatureAlgorithm = SignatureConstants.ALGO_ID_SIGNATURE_RSA;
 
@@ -162,8 +164,8 @@ public class SamlServiceProviderTest {
         }
     }
 
-    @ClassRule
-    public static ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final SamlIdentityProviderConfigSelector configSelector =
@@ -296,10 +298,10 @@ public class SamlServiceProviderTest {
         }
     }
 
-    final WebClient client = WebClient.of(rule.httpUri());
+    final WebClient client = WebClient.of(server.httpUri());
 
     @Test
-    public void shouldRespondAuthnRequest_HttpRedirect() throws Exception {
+    void shouldRespondAuthnRequest_HttpRedirect() throws Exception {
         final AggregatedHttpResponse resp = client.get("/redirect").aggregate().join();
         assertThat(resp.status()).isEqualTo(HttpStatus.FOUND);
 
@@ -316,7 +318,7 @@ public class SamlServiceProviderTest {
     }
 
     @Test
-    public void shouldRespondAuthnRequest_HttpPost() throws Exception {
+    void shouldRespondAuthnRequest_HttpPost() throws Exception {
         final AggregatedHttpResponse resp = client.get("/post").aggregate().join();
         assertThat(resp.status()).isEqualTo(HttpStatus.OK);
         assertThat(resp.contentType()).isEqualTo(MediaType.HTML_UTF_8);
@@ -333,7 +335,7 @@ public class SamlServiceProviderTest {
     }
 
     @Test
-    public void shouldBeAlreadyAuthenticated() throws Exception {
+    void shouldBeAlreadyAuthenticated() throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/redirect",
                                                      HttpHeaderNames.COOKIE, "test=test");
         final AggregatedHttpResponse resp = client.execute(req).aggregate().join();
@@ -342,7 +344,7 @@ public class SamlServiceProviderTest {
     }
 
     @Test
-    public void shouldRespondMetadataWithoutAuthentication() throws Exception {
+    void shouldRespondMetadataWithoutAuthentication() throws Exception {
         final AggregatedHttpResponse resp = client.get("/saml/metadata").aggregate().join();
         assertThat(resp.status()).isEqualTo(HttpStatus.OK);
         assertThat(resp.contentType()).isEqualTo(CONTENT_TYPE_SAML_METADATA);
@@ -361,10 +363,10 @@ public class SamlServiceProviderTest {
 
         final List<SingleLogoutService> slo = sp.getSingleLogoutServices();
         assertThat(slo.get(0).getLocation())
-                .isEqualTo("http://" + spHostname + ':' + rule.httpPort() + "/saml/slo/post");
+                .isEqualTo("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/post");
         assertThat(slo.get(0).getBinding()).isEqualTo(SAMLConstants.SAML2_POST_BINDING_URI);
         assertThat(slo.get(1).getLocation())
-                .isEqualTo("http://" + spHostname + ':' + rule.httpPort() + "/saml/slo/redirect");
+                .isEqualTo("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/redirect");
         assertThat(slo.get(1).getBinding()).isEqualTo(SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 
         final List<AssertionConsumerService> acs = sp.getAssertionConsumerServices();
@@ -372,20 +374,20 @@ public class SamlServiceProviderTest {
         assertThat(acs.get(0).getIndex()).isEqualTo(0);
         assertThat(acs.get(0).isDefault()).isTrue();
         assertThat(acs.get(0).getLocation())
-                .isEqualTo("http://" + spHostname + ':' + rule.httpPort() + "/saml/acs/post");
+                .isEqualTo("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/post");
         assertThat(acs.get(0).getBinding()).isEqualTo(SAMLConstants.SAML2_POST_BINDING_URI);
         // index 1
         assertThat(acs.get(1).getIndex()).isEqualTo(1);
         assertThat(acs.get(1).isDefault()).isFalse();
         assertThat(acs.get(1).getLocation())
-                .isEqualTo("http://" + spHostname + ':' + rule.httpPort() + "/saml/acs/redirect");
+                .isEqualTo("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/redirect");
         assertThat(acs.get(1).getBinding()).isEqualTo(SAMLConstants.SAML2_REDIRECT_BINDING_URI);
     }
 
     @Test
-    public void shouldConsumeAssertion_HttpPost() throws Exception {
+    void shouldConsumeAssertion_HttpPost() throws Exception {
         final Response response =
-                getAuthResponse("http://" + spHostname + ':' + rule.httpPort() + "/saml/acs/post");
+                getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/post");
         final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/acs/post",
                                                                           SAML_RESPONSE, response);
 
@@ -394,9 +396,9 @@ public class SamlServiceProviderTest {
     }
 
     @Test
-    public void shouldConsumeAssertion_HttpRedirect() throws Exception {
+    void shouldConsumeAssertion_HttpRedirect() throws Exception {
         final Response response =
-                getAuthResponse("http://" + spHostname + ':' + rule.httpPort() + "/saml/acs/redirect");
+                getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/redirect");
         final AggregatedHttpResponse res = sendViaHttpRedirectBindingProtocol("/saml/acs/redirect",
                                                                               SAML_RESPONSE, response);
 
@@ -465,9 +467,9 @@ public class SamlServiceProviderTest {
     }
 
     @Test
-    public void shouldConsumeLogoutRequest_HttpPost() throws Exception {
+    void shouldConsumeLogoutRequest_HttpPost() throws Exception {
         final LogoutRequest logoutRequest =
-                getLogoutRequest("http://" + spHostname + ':' + rule.httpPort() + "/saml/slo/post",
+                getLogoutRequest("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/post",
                                  "http://idp.example.com/post");
 
         final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/slo/post",
@@ -487,9 +489,9 @@ public class SamlServiceProviderTest {
     }
 
     @Test
-    public void shouldConsumeLogoutRequest_HttpRedirect() throws Exception {
+    void shouldConsumeLogoutRequest_HttpRedirect() throws Exception {
         final LogoutRequest logoutRequest =
-                getLogoutRequest("http://" + spHostname + ':' + rule.httpPort() + "/saml/slo/redirect",
+                getLogoutRequest("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/redirect",
                                  "http://idp.example.com/redirect");
 
         final AggregatedHttpResponse res =

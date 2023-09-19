@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.MediaType.OCTET_STREAM;
 import static com.linecorp.armeria.common.MediaType.create;
 import static java.util.Objects.requireNonNull;
 
@@ -39,6 +40,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Serialization format of a remote procedure call and its reply.
@@ -56,6 +58,12 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     public static final SerializationFormat NONE;
 
     /**
+     * Serialization format for WebSocket.
+     */
+    @UnstableApi
+    public static final SerializationFormat WS;
+
+    /**
      * Unknown serialization format. Used when some serialization format is desired but the server
      * failed to understand or recognize it.
      */
@@ -69,6 +77,10 @@ public final class SerializationFormat implements Comparable<SerializationFormat
         // Register the core formats first.
         NONE = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
                         new SerializationFormatProvider.Entry("none", create("application", "x-none")));
+        // WebSocket does not use media type but set it with the application/octet-stream which represents
+        // for arbitrary binary data.
+        WS = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
+                      new SerializationFormatProvider.Entry("ws", OCTET_STREAM));
         UNKNOWN = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
                            new SerializationFormatProvider.Entry(
                                    "unknown", create("application", "x-unknown")));
@@ -200,6 +212,14 @@ public final class SerializationFormat implements Comparable<SerializationFormat
      */
     public MediaTypeSet mediaTypes() {
         return mediaTypes;
+    }
+
+    /**
+     * Returns whether this {@link SessionProtocol} needs to establish a new connection instead of acquiring it
+     * from the connection pool.
+     */
+    public boolean requiresNewConnection(SessionProtocol protocol) {
+        return this == WS && !protocol.isMultiplex();
     }
 
     /**

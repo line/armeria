@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.ResponseHeaders
 import com.linecorp.armeria.common.sse.ServerSentEvent
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.Route
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -50,6 +51,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.coroutineContext
 
+@GenerateNativeImageTrace
 internal class FlowAnnotatedServiceTest {
     @Test
     fun test_byteStreaming() = runBlocking {
@@ -125,6 +127,8 @@ internal class FlowAnnotatedServiceTest {
     }
 
     companion object {
+        private val cancelled = AtomicBoolean()
+
         @JvmField
         @RegisterExtension
         val server = object : ServerExtension() {
@@ -249,32 +253,30 @@ internal class FlowAnnotatedServiceTest {
             client = WebClient.of(server.httpUri())
         }
     }
-}
 
-private val cancelled = AtomicBoolean()
+    private data class Member(
+        val name: String,
+        val age: Int
+    )
 
-private data class Member(
-    val name: String,
-    val age: Int
-)
-
-private data class User(
-    val name: String,
-    val role: String
-) : AbstractCoroutineContextElement(User) {
-    companion object Key : CoroutineContext.Key<User>
-}
-
-internal infix fun HttpResponse.shouldProduce(expected: List<String>) {
-    val pub = this.map {
-        when (it) {
-            is ResponseHeaders -> it.status()
-            is HttpData -> it.toStringUtf8()
-            else -> throw IllegalStateException()
-        }
+    private data class User(
+        val name: String,
+        val role: String
+    ) : AbstractCoroutineContextElement(User) {
+        companion object Key : CoroutineContext.Key<User>
     }
-    StepVerifier.create(pub)
-        .expectNext(HttpStatus.OK)
-        .expectNextSequence(expected)
-        .verifyComplete()
+
+    private infix fun HttpResponse.shouldProduce(expected: List<String>) {
+        val pub = this.map {
+            when (it) {
+                is ResponseHeaders -> it.status()
+                is HttpData -> it.toStringUtf8()
+                else -> throw IllegalStateException()
+            }
+        }
+        StepVerifier.create(pub)
+            .expectNext(HttpStatus.OK)
+            .expectNextSequence(expected)
+            .verifyComplete()
+    }
 }

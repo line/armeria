@@ -38,8 +38,10 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.jaxrs.samples.JaxRsApp;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.resteasy.CustomRequestContext;
+import testing.resteasy.jaxrs.samples.JaxRsApp;
 
 public class CalculatorServiceServerTest {
 

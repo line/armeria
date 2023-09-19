@@ -157,6 +157,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public boolean keepAliveOnPing() {
+        return delegate.keepAliveOnPing();
+    }
+
+    @Override
     public long pingIntervalMillis() {
         return delegate.pingIntervalMillis();
     }
