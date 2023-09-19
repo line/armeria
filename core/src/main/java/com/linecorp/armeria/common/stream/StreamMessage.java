@@ -999,8 +999,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     @UnstableApi
-    default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
-                                                                    Function<? super E, ? extends StreamMessage<T>> function) {
+    default <E extends Throwable> StreamMessage<T> recoverAndResume(
+            Class<E> causeClass, Function<? super E, ? extends StreamMessage<T>> function) {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         return recoverAndResume(cause -> {
