@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
@@ -819,14 +820,32 @@ public final class GrpcServiceBuilder {
      * to a gRPC {@link Status}.
      *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
-     *
      */
+    @UnstableApi
     public GrpcServiceBuilder exceptionMapping(GrpcExceptionHandlerFunction grpcExceptionHandlerFunction) {
         requireNonNull(grpcExceptionHandlerFunction, "grpcExceptionHandlerFunction");
         checkState(exceptionMappings == null,
                    "exceptionMapping() and addExceptionMapping() are mutually exclusive.");
 
         this.grpcExceptionHandlerFunction = grpcExceptionHandlerFunction;
+        return this;
+    }
+
+    /**
+     * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
+     * to a gRPC {@link Status}.
+     *
+     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
+     *
+     * @deprecated Use {@link #exceptionMapping(GrpcExceptionHandlerFunction)} instead.
+     */
+    @Deprecated
+    public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
+        requireNonNull(statusFunction, "statusFunction");
+        checkState(exceptionMappings == null,
+                   "exceptionMapping() and addExceptionMapping() are mutually exclusive.");
+
+        grpcExceptionHandlerFunction = statusFunction::apply;
         return this;
     }
 
@@ -857,7 +876,10 @@ public final class GrpcServiceBuilder {
      *
      * <p>Note that this method and {@link #exceptionMapping(GrpcExceptionHandlerFunction)} are
      * mutually exclusive.
+     *
+     * @deprecated Use {@link #addExceptionMapping(Class, GrpcExceptionHandlerFunction)} instead.
      */
+    @Deprecated
     public <T extends Throwable> GrpcServiceBuilder addExceptionMapping(
             Class<T> exceptionType, BiFunction<T, Metadata, Status> grpcExceptionHandlerFunction) {
         requireNonNull(exceptionType, "exceptionType");

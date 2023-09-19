@@ -162,7 +162,7 @@ final class HandlerRegistry {
         if (!grpcExceptionHandlers.containsKey(methodDef)) {
             return after;
         }
-        return grpcExceptionHandlers.get(methodDef).next(after);
+        return grpcExceptionHandlers.get(methodDef).orElse(after);
     }
 
     Map<ServerMethodDefinition<?, ?>, HttpService> applyDecorators(
@@ -258,7 +258,7 @@ final class HandlerRegistry {
                                                          GrpcExceptionHandler.class,
                                                          GrpcExceptionHandlerFunction.class,
                                                          dependencyInjector).build();
-                    return grpcExceptionHandlerFunctions.stream().reduce(GrpcExceptionHandlerFunction::next);
+                    return grpcExceptionHandlerFunctions.stream().reduce(GrpcExceptionHandlerFunction::orElse);
         }
 
         List<Entry> entries() {
