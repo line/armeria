@@ -23,7 +23,7 @@ if (!projectsWithFlags('java').isEmpty()) {
         if (!managedVersions.containsKey('com.google.protobuf:protobuf-gradle-plugin')) {
             throw new IllegalStateException(
                     "com.google.protobuf:protobuf-gradle-plugin must be specified in dependencies.(toml|yml) " +
-                            "to compile .proto files.")
+                    "to compile .proto files.")
         }
         apply from: "${libDir}/java-rpc-proto.gradle"
     }
