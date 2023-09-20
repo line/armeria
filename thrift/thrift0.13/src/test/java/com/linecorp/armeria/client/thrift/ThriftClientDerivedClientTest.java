@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.thrift;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientDecoration;
@@ -31,27 +30,15 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.client.limit.ConcurrencyLimitingClient;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import testing.thrift.main.HelloService;
 
 class ThriftClientDerivedClientTest {
 
-    @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.service("/", THttpService.of((HelloService.AsyncIface) (name, resultHandler)
-                    -> resultHandler.onComplete("Hello, " + name + '!')));
-        }
-    };
-
     @Test
     void shouldPreserveOriginalDecorators() {
         final HelloService.Iface client =
-                ThriftClients.builder(server.httpUri())
+                ThriftClients.builder("http://127.0.0.1:8080/")
                              .rpcDecorator(LoggingRpcClient.newDecorator())
                              .rpcDecorator(
                                      CircuitBreakerRpcClient.newDecorator(
