@@ -159,6 +159,20 @@ configure(projectsWithFlags('java')) {
         }
     }
 
+    configurations.create("internal") {
+        visible = false
+        canBeConsumed = false
+        canBeResolved = false
+    }
+    configurations.configureEach {
+        if (it.name.endsWith("Classpath")) {
+            it.extendsFrom(configurations.internal)
+        }
+    }
+    dependencies {
+        internal(platform(dependencyManagementProject))
+    }
+
     // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
     // canBeConsumed are set otherwise.
     afterEvaluate {
@@ -171,15 +185,6 @@ configure(projectsWithFlags('java')) {
         def productionRuntimeClasspathConfig = configurations.findByName('productionRuntimeClasspath')
         if (springBootGradlePlugin != null && bootJarTask != null && productionRuntimeClasspathConfig != null) {
             productionRuntimeClasspathConfig.canBeConsumed(false)
-        }
-
-        dependencies {
-            configurations.configureEach { configuration ->
-                // Add to resolvable configurations
-                if (!configuration.canBeResolved && !configuration.canBeConsumed) {
-                    add(configuration.name, platform(dependencyManagementProject))
-                }
-            }
         }
     }
 }
