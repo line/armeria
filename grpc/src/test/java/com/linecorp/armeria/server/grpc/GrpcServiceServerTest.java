@@ -88,7 +88,6 @@ import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Codec;
@@ -406,14 +405,10 @@ class GrpcServiceServerTest {
     private static final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
 
     @RegisterExtension
-    static final EventLoopGroupExtension eventLoopGroup = new EventLoopGroupExtension(1);
-
-    @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(eventLoopGroup.get(), false);
-            sb.serviceWorkerGroup(eventLoopGroup.get(), false);
+            sb.workerGroup(1);
             sb.maxRequestLength(0);
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);

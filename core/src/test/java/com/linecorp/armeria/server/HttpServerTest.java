@@ -128,7 +128,6 @@ class HttpServerTest {
             sb.tlsSelfSigned();
             sb.requestTimeoutMillis(0);
             sb.idleTimeoutMillis(0);
-            sb.serviceWorkerGroup(workerGroup, false);
 
             sb.service("/delay/{delay}", new AbstractHttpService() {
                 @Override

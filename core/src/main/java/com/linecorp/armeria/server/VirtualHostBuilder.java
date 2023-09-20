@@ -1294,8 +1294,10 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         final EventLoopGroup serviceWorkerGroup;
         if (this.serviceWorkerGroup != null) {
             serviceWorkerGroup = this.serviceWorkerGroup;
-        } else {
+        } else if (template.serviceWorkerGroup != null) {
             serviceWorkerGroup = template.serviceWorkerGroup;
+        } else {
+            serviceWorkerGroup = serverBuilder.workerGroup;
         }
 
         assert defaultServiceNaming != null;

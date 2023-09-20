@@ -247,7 +247,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.requestAutoAbortDelayMillis(0);
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
-        virtualHostTemplate.serviceWorkerGroup(CommonPools.workerGroup(), false);
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
 
