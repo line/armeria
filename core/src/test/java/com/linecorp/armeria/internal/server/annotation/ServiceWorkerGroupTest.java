@@ -73,7 +73,9 @@ class ServiceWorkerGroupTest {
             sb.annotatedService(new MyAnnotatedServiceDefault());
             sb.service("/ctxLog", (ctx, req) -> {
                 for (RequestLogProperty property: RequestLogProperty.values()) {
-                    ctx.log().whenAvailable(property).thenRun(() -> threadQueue.add(Thread.currentThread()));
+                    ctx.log().whenAvailable(property).thenRun(() -> {
+                        threadQueue.add(Thread.currentThread());
+                    });
                 }
                 return HttpResponse.of(200);
             });
@@ -140,18 +142,19 @@ class ServiceWorkerGroupTest {
         }
     }
 
-    @Test
-    void contextLogExecutedByServiceWorkerThread() {
-        final AggregatedHttpResponse aggRes = server.blockingWebClient().get("/ctxLog");
+    @ParameterizedTest
+    @ValueSource(strings = {"/ctxLog", "/aggregatedCtxLog"})
+    void contextLogExecutedByServiceWorkerThread(String path) {
+        final AggregatedHttpResponse aggRes = server.blockingWebClient().get(path);
         assertThat(aggRes.status().code()).isEqualTo(200);
 
         await().untilAsserted(() -> assertThat(threadQueue).hasSize(RequestLogProperty.values().length));
-        assertThat(threadQueue).allSatisfy(defaultExecutor::inEventLoop);
+        assertThat(threadQueue).allSatisfy(t -> assertThat(defaultExecutor.inEventLoop(t)).isTrue());
     }
 
     static class MyAnnotatedServiceA {
         @Get("/a")
-        public HttpResponse a() {
+        public HttpResponse httpResponse() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
@@ -165,6 +168,16 @@ class ServiceWorkerGroupTest {
         @Get("/default")
         public HttpResponse httpResponse(ServiceRequestContext ctx) {
             return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/aggregatedCtxLog")
+        public String aggregated(ServiceRequestContext ctx) {
+            for (RequestLogProperty property: RequestLogProperty.values()) {
+                ctx.log().whenAvailable(property).thenRun(() -> {
+                    threadQueue.add(Thread.currentThread());
+                });
+            }
+            return "aggregated";
         }
     }
 }
