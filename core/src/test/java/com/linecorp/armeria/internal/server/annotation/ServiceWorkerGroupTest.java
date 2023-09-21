@@ -26,6 +26,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
@@ -92,10 +94,11 @@ class ServiceWorkerGroupTest {
         workerExecutor.shutdownGracefully();
     }
 
-    @Test
-    void testServiceWorkerGroup() throws InterruptedException {
+    @ParameterizedTest
+    @ValueSource(strings = {"/a", "/aggregated"})
+    void testServiceWorkerGroup(String path) throws InterruptedException {
         final AggregatedHttpResponse res = server.webClient().blocking()
-                                                 .execute(RequestHeaders.of(HttpMethod.GET, "/a"));
+                                                 .execute(RequestHeaders.of(HttpMethod.GET, path));
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
         final EventLoop ctxEventLoop = server.requestContextCaptor().poll().eventLoop().withoutContext();
@@ -148,8 +151,13 @@ class ServiceWorkerGroupTest {
 
     static class MyAnnotatedServiceA {
         @Get("/a")
-        public HttpResponse httpResponse(ServiceRequestContext ctx) {
+        public HttpResponse a() {
             return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/aggregated")
+        public String aggregated() {
+            return "aggregated";
         }
     }
 
