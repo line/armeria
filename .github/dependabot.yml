@@ -26,6 +26,6 @@ updates:
       directory: "/"
       schedule:
           interval: "daily"
-          time: "02:00"
+          time: "10:00"
           # Use Korea Standard Time (UTC +09:00)
           timezone: "Asia/Seoul"
