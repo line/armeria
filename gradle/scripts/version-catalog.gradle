@@ -20,7 +20,7 @@ if (dependenciesYamlFile.exists()) {
 def dependenciesTomlFile = new File("${rootProject.projectDir}/dependencies.toml")
 if (!dependenciesTomlFile.exists()) {
     throw new IllegalStateException(
-            "No 'dependencies.toml' file found. Please create one at the root of the project.")
+            "'dependencies.toml' file is not found. Please create one at the root of the project.")
 }
 
 def dependenciesToml = Collections.unmodifiableMap(Toml.parse(dependenciesTomlFile.text).toMap())
