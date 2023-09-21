@@ -241,7 +241,7 @@ abstract class AbstractHttpResponseHandler {
      */
     final void scheduleTimeout() {
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().init(ctx.channel().eventLoop(), newCancellationTask(),
+        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(),
                                                    0, /* server */ true);
     }
 

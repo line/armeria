@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -410,6 +411,7 @@ public final class VirtualHost {
      *
      * @see ServiceConfig#serviceWorkerGroup()
      */
+    @UnstableApi
     public EventLoopGroup serviceWorkerGroup() {
         return serviceWorkerGroup;
     }

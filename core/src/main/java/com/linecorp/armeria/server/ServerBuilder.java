@@ -2133,7 +2133,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
         final BlockingTaskExecutor blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
-        final EventLoopGroup serviceWorkerGroup = defaultVirtualHost.serviceWorkerGroup();
 
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
@@ -2144,7 +2143,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceWorkerGroup,
+                blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,

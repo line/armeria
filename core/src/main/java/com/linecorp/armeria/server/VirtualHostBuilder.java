@@ -1307,7 +1307,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         assert blockingTaskExecutor != null;
         assert successFunction != null;
         assert multipartUploadsLocation != null;
-        assert serviceWorkerGroup != null;
         assert requestIdGenerator != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)

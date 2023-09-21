@@ -446,6 +446,7 @@ public final class ServiceConfig {
     /**
      * Returns the {@link EventLoopGroup} dedicated to the execution of services' methods.
      */
+    @UnstableApi
     public EventLoopGroup serviceWorkerGroup() {
         return serviceWorkerGroup;
     }

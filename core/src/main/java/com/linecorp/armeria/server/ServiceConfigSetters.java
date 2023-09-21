@@ -228,6 +228,7 @@ interface ServiceConfigSetters {
       *
       * @param numThreads the number of threads in the executor
       */
+     @UnstableApi
      ServiceConfigSetters serviceWorkerGroup(int numThreads);
 
     /**
