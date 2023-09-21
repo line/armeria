@@ -154,7 +154,7 @@ class ServiceWorkerGroupTest {
 
     static class MyAnnotatedServiceA {
         @Get("/a")
-        public HttpResponse httpResponse() {
+        public HttpResponse httpResponseLoggingServiceTest() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
