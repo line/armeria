@@ -165,8 +165,8 @@ configure(projectsWithFlags('java')) {
         canBeResolved = false
     }
     configurations.configureEach {
-        ["Classpath", "AnnotationProcessor", "kapt"].each { suffix ->
-            if (it.name.containsIgnoreCase(suffix)) {
+        ["Classpath", "AnnotationProcessor", "kapt"].each { name ->
+            if (it.name.containsIgnoreCase(name)) {
                 it.extendsFrom(configurations.internal)
             }
         }
