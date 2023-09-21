@@ -1153,6 +1153,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * @param shutdownOnStop whether to shut down the {@link EventLoopGroup} when the
      *                       {@link Server} stops
      */
+    @UnstableApi
     public VirtualHostBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
                                                  boolean shutdownOnStop) {
         this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
@@ -1169,6 +1170,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      *
      * @param numThreads the number of threads in the executor
      */
+    @UnstableApi
     public VirtualHostBuilder serviceWorkerGroup(int numThreads) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
