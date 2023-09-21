@@ -165,7 +165,7 @@ configure(projectsWithFlags('java')) {
         canBeResolved = false
     }
     configurations.configureEach {
-        if (it.name.endsWith("Classpath")) {
+        if (it.name.endsWith("Classpath") || it.name.toLowerCase().endsWith("annotationprocessor")) {
             it.extendsFrom(configurations.internal)
         }
     }
