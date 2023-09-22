@@ -32,16 +32,16 @@ class FlowResponseConverterFunctionProvider : DelegatingResponseConverterFunctio
         responseConverter: ResponseConverterFunction
     ): ResponseConverterFunction? =
         returnType
-            .toClass()
+            .toClassOrNull()
             ?.let {
-                if (Flow::class.java.isAssignableFrom(it)) {
+                if (Flow::class.java.isAssignableFrom(clazz)) {
                     FlowResponseConverterFunction(responseConverter)
                 } else {
                     null
                 }
             }
 
-    private fun Type.toClass(): Class<*>? =
+    private fun Type.toClassOrNull(): Class<*>? =
         when (this) {
             is ParameterizedType -> this.rawType as Class<*>
             is Class<*> -> this
