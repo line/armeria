@@ -38,7 +38,6 @@ import com.google.errorprone.annotations.MustBeClosed;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
-import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -678,12 +677,4 @@ public interface ServiceRequestContext extends RequestContext {
     default ServiceRequestContext unwrapAll() {
         return (ServiceRequestContext) RequestContext.super.unwrapAll();
     }
-
-    /**
-     * Returns the {@link ContextAwareEventLoop} that handles I/O for the current {@link Request}.
-     * Note that {@link #ioEventLoop()} is pooled from {@link ServerConfig#workerGroup()}
-     * whereas {@link #eventLoop()} is pooled from {@link ServiceConfig#serviceWorkerGroup()}.
-     * For this reason, {@link #ioEventLoop()} may or may not be equal to {@link #eventLoop()}.
-     */
-    ContextAwareEventLoop ioEventLoop();
 }

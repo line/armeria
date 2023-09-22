@@ -26,7 +26,6 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.common.ContextAwareBlockingTaskExecutor;
-import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -256,10 +255,5 @@ public class ServiceRequestContextWrapper
     @Override
     public ServiceRequestContext unwrapAll() {
         return (ServiceRequestContext) super.unwrapAll();
-    }
-
-    @Override
-    public ContextAwareEventLoop ioEventLoop() {
-        return unwrap().ioEventLoop();
     }
 }

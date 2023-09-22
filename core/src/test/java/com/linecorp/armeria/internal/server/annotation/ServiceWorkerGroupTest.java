@@ -144,15 +144,12 @@ class ServiceWorkerGroupTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"/ctxLog", "/aggregatedCtxLog"})
-    void contextLogExecutedByServiceWorkerThread(String path) throws Exception {
+    void contextLogExecutedByServiceWorkerThread(String path) {
         final AggregatedHttpResponse aggRes = server.blockingWebClient().get(path);
         assertThat(aggRes.status().code()).isEqualTo(200);
 
         await().untilAsserted(() -> assertThat(threadQueue).hasSize(RequestLogProperty.values().length));
-        final EventLoop ctxEventLoop = server.requestContextCaptor().poll().ioEventLoop();
-        assertThat(threadQueue).allSatisfy(t -> assertThat(t)
-                .satisfiesAnyOf(t0 -> assertThat(defaultExecutor.inEventLoop(t0)).isTrue(),
-                                t0 -> assertThat(ctxEventLoop.inEventLoop(t0)).isTrue()));
+        assertThat(threadQueue).allSatisfy(t -> assertThat(defaultExecutor.inEventLoop(t)).isTrue());
     }
 
     static class MyAnnotatedServiceA {

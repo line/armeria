@@ -35,7 +35,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
-import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -426,12 +425,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private static void completeSatisfiedFutures(RequestLogFuture[] satisfiedFutures, RequestLog log,
                                                  RequestContext ctx) {
-        if (ctx instanceof ServiceRequestContext) {
-            final ContextAwareEventLoop ioEventLoop = ((ServiceRequestContext) ctx).ioEventLoop();
-            if (!ioEventLoop.inEventLoop()) {
-                ioEventLoop.execute(() -> completeSatisfiedFutures(satisfiedFutures, log, ctx));
-                return;
-            }
+        if (!ctx.eventLoop().inEventLoop()) {
+            ctx.eventLoop().execute(() -> completeSatisfiedFutures(satisfiedFutures, log, ctx));
+            return;
         }
         for (RequestLogFuture f : satisfiedFutures) {
             if (f == null) {
