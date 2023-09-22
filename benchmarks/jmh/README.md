@@ -40,10 +40,10 @@ A collection of JMH benchmarks which may be useful for measuring Armeria perform
   ```
   - MacOS profiling is limited to user space code only, thus this does not work with MacOS.
 
-- Install [async-profiler](https://github.com/jvm-profiling-tools/async-profiler):
+- Install [async-profiler](https://github.com/async-profiler/async-profiler):
   ```
   $ cd "$HOME"
-  $ git clone https://github.com/jvm-profiling-tools/async-profiler.git
+  $ git clone https://github.com/async-profiler/async-profiler.git
   $ cd async-profiler
   $ make
   ```
@@ -64,4 +64,4 @@ A collection of JMH benchmarks which may be useful for measuring Armeria perform
 
 - Do not forget to wrap `-Pjmh.params` and `-Pjmh.profilers` option with double quotes, because otherwise your
   shell will interpret `;` as the end of the command.
-- Run `$ ./gradlew :benchmarks:jmh:jmh "-Pjmh.profilers=async"` for more profiler options.
+- Run `$ ./gradlew :benchmarks:jmh:jmh "-Pjmh.profilers=async:help"` for more profiler options.
