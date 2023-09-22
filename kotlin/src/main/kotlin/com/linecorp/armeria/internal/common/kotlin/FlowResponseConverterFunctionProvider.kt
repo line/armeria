@@ -34,7 +34,7 @@ class FlowResponseConverterFunctionProvider : DelegatingResponseConverterFunctio
         returnType
             .toClassOrNull()
             ?.let {
-                if (Flow::class.java.isAssignableFrom(clazz)) {
+                if (Flow::class.java.isAssignableFrom(it)) {
                     FlowResponseConverterFunction(responseConverter)
                 } else {
                     null
