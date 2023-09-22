@@ -111,6 +111,8 @@ public final class DefaultServiceRequestContext
     @Nullable
     private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
+    private ContextAwareEventLoop contextAwareIOEventLoop;
+    @Nullable
     private ContextAwareBlockingTaskExecutor blockingTaskExecutor;
     private long maxRequestLength;
 
@@ -303,6 +305,14 @@ public final class DefaultServiceRequestContext
             return contextAwareEventLoop;
         }
         return contextAwareEventLoop = ContextAwareEventLoop.of(this, eventLoop);
+    }
+
+    @Override
+    public ContextAwareEventLoop ioEventLoop() {
+        if (contextAwareIOEventLoop != null) {
+            return contextAwareIOEventLoop;
+        }
+        return contextAwareIOEventLoop = ContextAwareEventLoop.of(this, ch.eventLoop());
     }
 
     @Override
