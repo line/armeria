@@ -28,14 +28,13 @@ import io.grpc.Status;
  */
 @UnstableApi
 @FunctionalInterface
-public interface GrpcExceptionHandlerFunction extends GrpcStatusFunction {
+public interface GrpcExceptionHandlerFunction {
 
     /**
      * Maps the specified {@link Throwable} to a gRPC {@link Status},
      * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
-    @Override
     @Nullable
     Status apply(RequestContext ctx, Throwable throwable, Metadata metadata);
 

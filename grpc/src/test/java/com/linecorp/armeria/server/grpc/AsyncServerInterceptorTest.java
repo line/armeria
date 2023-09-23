@@ -55,7 +55,7 @@ class AsyncServerInterceptorTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final GrpcExceptionHandlerFunction grpcExceptionHandlerFunction = (ctx, throwable, metadata) -> {
+            final GrpcExceptionHandlerFunction exceptionHandler = (ctx, throwable, metadata) -> {
                 exceptionCounter.getAndIncrement();
                 if (throwable instanceof AnticipatedException &&
                     "Invalid access".equals(throwable.getMessage())) {
@@ -66,13 +66,13 @@ class AsyncServerInterceptorTest {
             };
             final AuthInterceptor authInterceptor = new AuthInterceptor();
             sb.serviceUnder("/non-blocking", GrpcService.builder()
-                                                        .exceptionMapping(grpcExceptionHandlerFunction)
+                                                        .exceptionHandler(exceptionHandler)
                                                         .intercept(authInterceptor)
                                                         .addService(new TestService())
                                                         .build());
             sb.serviceUnder("/blocking", GrpcService.builder()
                                                     .addService(new TestService())
-                                                    .exceptionMapping(grpcExceptionHandlerFunction)
+                                                    .exceptionHandler(exceptionHandler)
                                                     .intercept(authInterceptor)
                                                     .useBlockingTaskExecutor(true)
                                                     .build());

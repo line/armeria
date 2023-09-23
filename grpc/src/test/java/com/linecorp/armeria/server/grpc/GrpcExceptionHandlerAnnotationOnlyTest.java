@@ -130,7 +130,7 @@ class GrpcExceptionHandlerAnnotationOnlyTest {
         assertThat(exceptionHandler).isEmpty();
     }
 
-    private static class FirstGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+    private static class FirstGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
         @Override
         public @Nullable Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
@@ -142,7 +142,7 @@ class GrpcExceptionHandlerAnnotationOnlyTest {
         }
     }
 
-    private static class SecondGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+    private static class SecondGrpcExceptionHandler  implements GrpcExceptionHandlerFunction {
 
         @Override
         public @Nullable Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
@@ -154,10 +154,10 @@ class GrpcExceptionHandlerAnnotationOnlyTest {
         }
     }
 
-    @GrpcExceptionHandler(FirstGrpcExceptionHandlerFunction.class)
+    @GrpcExceptionHandler(FirstGrpcExceptionHandler.class)
     private static class UnitTestFooServiceImpl extends UnitTestFooServiceImplBase {
 
-        @GrpcExceptionHandler(SecondGrpcExceptionHandlerFunction.class)
+        @GrpcExceptionHandler(SecondGrpcExceptionHandler.class)
         @Override
         public void staticUnaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             checkArgument(request);

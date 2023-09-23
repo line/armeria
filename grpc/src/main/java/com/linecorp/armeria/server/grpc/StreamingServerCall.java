@@ -84,11 +84,11 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                         ServiceRequestContext ctx, SerializationFormat serializationFormat,
                         @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
                         ResponseHeaders defaultHeaders,
-                        @Nullable GrpcExceptionHandlerFunction grpcExceptionHandlerFunction,
+                        @Nullable GrpcExceptionHandlerFunction exceptionHandler,
                         @Nullable Executor blockingExecutor, boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              defaultHeaders, grpcExceptionHandlerFunction, blockingExecutor, autoCompress);
+              defaultHeaders, exceptionHandler, blockingExecutor, autoCompress);
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -99,8 +99,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
                 new HttpStreamDeframer(decompressorRegistry, ctx, this,
-                                       grpcExceptionHandlerFunction,
-                                       maxRequestMessageLength, grpcWebText, true)
+                                       exceptionHandler, maxRequestMessageLength, grpcWebText, true)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(requestDeframer, alloc);
         requestDeframer.setDeframedStreamMessage(deframedRequest);

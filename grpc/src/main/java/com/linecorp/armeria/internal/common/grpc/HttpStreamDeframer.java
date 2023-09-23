@@ -45,7 +45,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
     @Nullable
-    private final GrpcExceptionHandlerFunction grpcExceptionHandlerFunction;
+    private final GrpcExceptionHandlerFunction exceptionHandler;
 
     @Nullable
     private StreamMessage<DeframedMessage> deframedStreamMessage;
@@ -56,13 +56,13 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             DecompressorRegistry decompressorRegistry,
             RequestContext ctx,
             TransportStatusListener transportStatusListener,
-            @Nullable GrpcExceptionHandlerFunction grpcExceptionHandlerFunction,
+            @Nullable GrpcExceptionHandlerFunction exceptionHandler,
             int maxMessageLength, boolean grpcWebText, boolean server) {
         super(maxMessageLength, ctx.alloc(), grpcWebText);
         this.ctx = requireNonNull(ctx, "ctx");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
-        this.grpcExceptionHandlerFunction = grpcExceptionHandlerFunction;
+        this.exceptionHandler = exceptionHandler;
         this.server = server;
     }
 
@@ -122,7 +122,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             } catch (Throwable t) {
                 final Metadata metadata = new Metadata();
                 transportStatusListener.transportReportStatus(
-                        GrpcStatus.fromThrowable(grpcExceptionHandlerFunction, ctx, t, metadata),
+                        GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata),
                         metadata);
                 return;
             }
@@ -151,7 +151,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     public void processOnError(Throwable cause) {
         final Metadata metadata = new Metadata();
         transportStatusListener.transportReportStatus(
-                GrpcStatus.fromThrowable(grpcExceptionHandlerFunction, ctx, cause, metadata), metadata);
+                GrpcStatus.fromThrowable(exceptionHandler, ctx, cause, metadata), metadata);
     }
 
     @Override

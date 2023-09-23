@@ -217,7 +217,7 @@ internal class CoroutineServerInterceptorTest {
         @RegisterExtension
         val server: ServerExtension = object : ServerExtension() {
             override fun configure(sb: ServerBuilder) {
-                val statusFunction =
+                val exceptionHandler =
                     GrpcExceptionHandlerFunction { _: RequestContext, throwable: Throwable, _: Metadata ->
                         if (throwable is AnticipatedException && throwable.message == "Invalid access") {
                             return@GrpcExceptionHandlerFunction Status.UNAUTHENTICATED
@@ -231,7 +231,7 @@ internal class CoroutineServerInterceptorTest {
                 sb.serviceUnder(
                     "/non-blocking",
                     GrpcService.builder()
-                        .exceptionMapping(statusFunction)
+                        .exceptionHandler(exceptionHandler)
                         // applying order is "MyAsyncInterceptor -> coroutineNameInterceptor ->
                         // authInterceptor -> threadLocalInterceptor -> MyAsyncInterceptor"
                         .intercept(
@@ -248,7 +248,7 @@ internal class CoroutineServerInterceptorTest {
                     "/blocking",
                     GrpcService.builder()
                         .addService(TestService())
-                        .exceptionMapping(statusFunction)
+                        .exceptionHandler(exceptionHandler)
                         // applying order is "MyAsyncInterceptor -> coroutineNameInterceptor ->
                         // authInterceptor -> threadLocalInterceptor -> MyAsyncInterceptor"
                         .intercept(

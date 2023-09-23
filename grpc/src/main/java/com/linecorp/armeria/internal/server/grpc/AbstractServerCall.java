@@ -114,7 +114,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     @Nullable
     private final Executor blockingExecutor;
     @Nullable
-    private final GrpcExceptionHandlerFunction grpcExceptionHandlerFunction;
+    private final GrpcExceptionHandlerFunction exceptionHandler;
 
     // Only set once.
     @Nullable
@@ -149,7 +149,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                  @Nullable GrpcJsonMarshaller jsonMarshaller,
                                  boolean unsafeWrapRequestBuffers,
                                  ResponseHeaders defaultHeaders,
-                                 @Nullable GrpcExceptionHandlerFunction grpcExceptionHandlerFunction,
+                                 @Nullable GrpcExceptionHandlerFunction exceptionHandler,
                                  @Nullable Executor blockingExecutor,
                                  boolean autoCompression) {
         requireNonNull(req, "req");
@@ -174,7 +174,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.blockingExecutor = blockingExecutor;
         defaultResponseHeaders = defaultHeaders;
-        this.grpcExceptionHandlerFunction = grpcExceptionHandlerFunction;
+        this.exceptionHandler = exceptionHandler;
 
         res.whenComplete().handle((unused, t) -> {
             final EventLoop eventLoop = ctx.eventLoop();
@@ -209,13 +209,13 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        close(GrpcStatus.fromThrowable(grpcExceptionHandlerFunction, ctx, exception, metadata),
+        close(GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata),
               metadata, exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
-        close(GrpcStatus.fromStatusFunction(grpcExceptionHandlerFunction, ctx, status, metadata),
+        close(GrpcStatus.fromStatusFunction(exceptionHandler, ctx, status, metadata),
               metadata, null);
     }
 
