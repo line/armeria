@@ -120,7 +120,7 @@ configure(relocatedProjects) {
                 if (!p.hasFlags('no_aggregation')) {
                     def configName = "proguardLibraryJars_${p.path.replace(':', '_')}"
                     def proguardLibraryJars = configurations.create(configName) {
-                        extendsFrom(p.configurations.internal)
+                        extendsFrom(p.configurations.dependencyManagement)
                     }
 
                     proguardLibraryConfigs.add(proguardLibraryJars)
@@ -233,7 +233,7 @@ configure(relocatedProjects) {
         canBeResolved = true
         canBeConsumed = false
         extendsFrom(project.configurations.shadedJarTestImplementation)
-        extendsFrom(project.configurations.internal)
+        extendsFrom(project.configurations.dependencyManagement)
     }
 
     // Update the classpath of the 'shadedTest' task after all shaded projects are evaluated

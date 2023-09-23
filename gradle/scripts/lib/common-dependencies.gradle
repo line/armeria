@@ -159,7 +159,7 @@ configure(projectsWithFlags('java')) {
         }
     }
 
-    configurations.create("internal") {
+    configurations.create("dependencyManagement") {
         visible = false
         canBeConsumed = false
         canBeResolved = false
@@ -167,12 +167,12 @@ configure(projectsWithFlags('java')) {
     configurations.configureEach {
         ["Classpath", "AnnotationProcessor", "kapt"].each { name ->
             if (it.name.containsIgnoreCase(name)) {
-                it.extendsFrom(configurations.internal)
+                it.extendsFrom(configurations.dependencyManagement)
             }
         }
     }
     dependencies {
-        internal(platform(dependencyManagementProject))
+        dependencyManagement(platform(dependencyManagementProject))
     }
 
     // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
