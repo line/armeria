@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -45,13 +47,11 @@ public interface GrpcExceptionHandlerFunction {
      * of the specified {@link GrpcExceptionHandlerFunction}.
      */
     default GrpcExceptionHandlerFunction orElse(GrpcExceptionHandlerFunction next) {
+        requireNonNull(next, "next");
         return (ctx, throwable, metadata) -> {
             final Status status = apply(ctx, throwable, metadata);
             if (status != null) {
                 return status;
-            }
-            if (next == null) {
-                return null;
             }
             return next.apply(ctx, throwable, metadata);
         };

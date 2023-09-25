@@ -264,14 +264,27 @@ final class HandlerRegistry {
                    AnnotationUtil.findFirst(clazz, Blocking.class) != null;
         }
 
-        private static Optional<GrpcExceptionHandlerFunction> findGrpcExceptionHandler(
-                Class<?> clazz, Method method, DependencyInjector dependencyInjector) {
+        private static void putGrpcExceptionHandlerIfPresent(
+                Class<?> clazz, Method method, DependencyInjector dependencyInjector,
+                ServerMethodDefinition<?, ?> methodDefinition,
+                final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
+                        grpcExceptionHandlersBuilder,
+                @Nullable GrpcExceptionHandlerFunction defaultExceptionHandler) {
             final List<GrpcExceptionHandlerFunction> exceptionHandlers =
                     AnnotationUtil.getAnnotatedInstances(method, clazz,
                                                          GrpcExceptionHandler.class,
                                                          GrpcExceptionHandlerFunction.class,
                                                          dependencyInjector).build();
-                    return exceptionHandlers.stream().reduce(GrpcExceptionHandlerFunction::orElse);
+            final Optional<GrpcExceptionHandlerFunction> grpcExceptionHandler =
+                    exceptionHandlers.stream().reduce(GrpcExceptionHandlerFunction::orElse);
+
+            grpcExceptionHandler.ifPresent(exceptionHandler -> {
+                GrpcExceptionHandlerFunction grpcExceptionHandler0 = exceptionHandler;
+                if (defaultExceptionHandler != null) {
+                    grpcExceptionHandler0 = exceptionHandler.orElse(defaultExceptionHandler);
+                }
+                grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler0);
+            });
         }
 
         List<Entry> entries() {
@@ -339,15 +352,9 @@ final class HandlerRegistry {
                             if (needToUseBlockingTaskExecutor(type, method)) {
                                 blockingMethods.add(methodDefinition);
                             }
-                            final Optional<GrpcExceptionHandlerFunction> grpcExceptionHandler =
-                                    findGrpcExceptionHandler(type, method, dependencyInjector);
-                            grpcExceptionHandler.ifPresent(exceptionHandler -> {
-                                GrpcExceptionHandlerFunction grpcExceptionHandler0 = exceptionHandler;
-                                if (defaultExceptionHandler != null) {
-                                    grpcExceptionHandler0 = exceptionHandler.orElse(defaultExceptionHandler);
-                                }
-                                grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler0);
-                            });
+                            putGrpcExceptionHandlerIfPresent(type, method, dependencyInjector,
+                                                             methodDefinition, grpcExceptionHandlersBuilder,
+                                                             defaultExceptionHandler);
                         }
                     }
                 } else {
@@ -382,15 +389,9 @@ final class HandlerRegistry {
                             if (needToUseBlockingTaskExecutor(type, method0)) {
                                 blockingMethods.add(methodDefinition);
                             }
-                            final Optional<GrpcExceptionHandlerFunction> grpcExceptionHandler =
-                                    findGrpcExceptionHandler(type, method0, dependencyInjector);
-                            grpcExceptionHandler.ifPresent(exceptionHandler -> {
-                                GrpcExceptionHandlerFunction grpcExceptionHandler0 = exceptionHandler;
-                                if (defaultExceptionHandler != null) {
-                                    grpcExceptionHandler0 = exceptionHandler.orElse(defaultExceptionHandler);
-                                }
-                                grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler0);
-                            });
+                            putGrpcExceptionHandlerIfPresent(type, method0, dependencyInjector,
+                                                             methodDefinition, grpcExceptionHandlersBuilder,
+                                                             defaultExceptionHandler);
                         }
                     }
                 }
