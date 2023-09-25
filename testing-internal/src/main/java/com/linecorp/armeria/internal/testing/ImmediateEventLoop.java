@@ -16,12 +16,23 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import java.util.Collection;
+import java.util.concurrent.TimeUnit;
+
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
 
+/**
+ * A simple {@link EventLoop} implementation which executes tasks immediately
+ * from the caller thread. Note that {@link #invokeAny(Collection)},
+ * {@link #invokeAll(Collection, long, TimeUnit)} and other variants have been
+ * omitted for simplicity.
+ */
 public final class ImmediateEventLoop extends DefaultEventLoop {
 
     public static final EventLoop INSTANCE = new ImmediateEventLoop();
+
+    private ImmediateEventLoop() {}
 
     @Override
     public void execute(Runnable command) {

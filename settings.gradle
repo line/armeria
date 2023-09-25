@@ -61,11 +61,13 @@ gradleEnterprise {
 
 buildCache {
     local {
-        enabled = false
+        enabled = true
     }
     remote(gradleEnterprise.buildCache) {
         enabled = true
-        push = isCi
+        // also check access key to avoid warning logs
+        def accessKey = System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY")
+        push = isCi && accessKey != null && !accessKey.isEmpty()
     }
 }
 
