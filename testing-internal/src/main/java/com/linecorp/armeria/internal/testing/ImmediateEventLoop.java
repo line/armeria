@@ -30,10 +30,9 @@ import io.netty.channel.EventLoop;
  */
 public final class ImmediateEventLoop extends DefaultEventLoop {
 
-    private ImmediateEventLoop() {
-    }
-
     public static final EventLoop INSTANCE = new ImmediateEventLoop();
+
+    private ImmediateEventLoop() {}
 
     @Override
     public void execute(Runnable command) {
