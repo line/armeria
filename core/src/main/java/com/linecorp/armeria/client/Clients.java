@@ -22,6 +22,7 @@ import java.net.URI;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -259,11 +260,8 @@ public final class Clients {
      *                    additional options are merged when a derived client is created.
      */
     public static <T> T newDerivedClient(T client, ClientOptionValue<?>... additionalOptions) {
-        final ClientBuilderParams params = builderParams(client);
-        final ClientBuilder builder = newDerivedBuilder(params);
-        builder.options(additionalOptions);
-
-        return newDerivedClient(builder, params.clientType());
+        requireNonNull(additionalOptions, "additionalOptions");
+        return newDerivedClient(client, ImmutableList.copyOf(additionalOptions));
     }
 
     /**
@@ -275,7 +273,7 @@ public final class Clients {
      */
     public static <T> T newDerivedClient(T client, Iterable<ClientOptionValue<?>> additionalOptions) {
         final ClientBuilderParams params = builderParams(client);
-        final ClientBuilder builder = newDerivedBuilder(params);
+        final ClientBuilder builder = newDerivedBuilder(params, true);
         builder.options(additionalOptions);
 
         return newDerivedClient(builder, params.clientType());
@@ -305,7 +303,7 @@ public final class Clients {
     public static <T> T newDerivedClient(
             T client, Function<? super ClientOptions, ClientOptions> configurator) {
         final ClientBuilderParams params = builderParams(client);
-        final ClientBuilder builder = newDerivedBuilder(params);
+        final ClientBuilder builder = newDerivedBuilder(params, false);
         builder.options(configurator.apply(params.options()));
 
         return newDerivedClient(builder, params.clientType());
@@ -316,10 +314,12 @@ public final class Clients {
         return builder.build((Class<T>) clientType);
     }
 
-    private static ClientBuilder newDerivedBuilder(ClientBuilderParams params) {
+    private static ClientBuilder newDerivedBuilder(ClientBuilderParams params, boolean setOptions) {
         final ClientBuilder builder = builder(params.scheme(), params.endpointGroup(),
                                               params.absolutePathRef());
-        builder.options(params.options());
+        if (setOptions) {
+            builder.options(params.options());
+        }
         return builder;
     }
 

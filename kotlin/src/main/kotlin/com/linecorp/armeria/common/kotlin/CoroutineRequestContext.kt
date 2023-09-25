@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,20 +14,28 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.kotlin
+package com.linecorp.armeria.common.kotlin
 
+import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.util.SafeCloseable
-import com.linecorp.armeria.server.ServiceRequestContext
-import kotlinx.coroutines.ThreadContextElement
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.ThreadContextElement
 
 /**
- * Propagates [ServiceRequestContext] over coroutines.
+ * Converts an instance of [RequestContext] to an implementation of [CoroutineContext] that automatically
+ * propagates the [RequestContext]. The propagation is done by [RequestContext.push] when the coroutine is
+ * resumed on a thread.
  */
-@Deprecated("Use RequestContext.asCoroutineContext() instead.", ReplaceWith("RequestContext.asCoroutineContext()"))
-class ArmeriaRequestCoroutineContext(
-    private val requestContext: ServiceRequestContext
+fun RequestContext.asCoroutineContext(): ArmeriaRequestCoroutineContext {
+    return ArmeriaRequestCoroutineContext(this)
+}
+
+/**
+ * Propagates [RequestContext] over coroutines.
+ */
+class ArmeriaRequestCoroutineContext internal constructor(
+    private val requestContext: RequestContext
 ) : ThreadContextElement<SafeCloseable>, AbstractCoroutineContextElement(Key) {
 
     companion object Key : CoroutineContext.Key<ArmeriaRequestCoroutineContext>
