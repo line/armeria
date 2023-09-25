@@ -44,7 +44,7 @@ public interface GrpcExceptionHandlerFunction {
      * when this function returns {@code null}, returns a {@link GrpcExceptionHandlerFunction} that the result
      * of the specified {@link GrpcExceptionHandlerFunction}.
      */
-    default GrpcExceptionHandlerFunction orElse(@Nullable GrpcExceptionHandlerFunction next) {
+    default GrpcExceptionHandlerFunction orElse(GrpcExceptionHandlerFunction next) {
         return (ctx, throwable, metadata) -> {
             final Status status = apply(ctx, throwable, metadata);
             if (status != null) {

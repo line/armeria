@@ -842,11 +842,7 @@ public final class GrpcServiceBuilder {
     @Deprecated
     public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
         requireNonNull(statusFunction, "statusFunction");
-        checkState(exceptionMappings == null,
-                   "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
-
-        exceptionHandler = statusFunction::apply;
-        return this;
+        return exceptionHandler(statusFunction::apply);
     }
 
     /**
@@ -1037,7 +1033,7 @@ public final class GrpcServiceBuilder {
         }
 
         if (grpcExceptionHandler != null) {
-            registryBuilder.addGlobalExceptionHandler(grpcExceptionHandler);
+            registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
         }
 
         if (interceptors != null) {
@@ -1051,7 +1047,7 @@ public final class GrpcServiceBuilder {
                                               entry.additionalDecorators());
             }
             if (grpcExceptionHandler != null) {
-                newRegistryBuilder.addGlobalExceptionHandler(grpcExceptionHandler);
+                newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
             }
             handlerRegistry = newRegistryBuilder.build();
         } else {

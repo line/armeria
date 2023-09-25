@@ -103,7 +103,7 @@ final class HandlerRegistry {
     private final Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction> grpcExceptionHandlers;
 
     @Nullable
-    private final GrpcExceptionHandlerFunction globalExceptionHandler;
+    private final GrpcExceptionHandlerFunction defaultExceptionHandler;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods,
@@ -115,7 +115,7 @@ final class HandlerRegistry {
                             Set<ServerMethodDefinition<?, ?>> blockingMethods,
                             Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                                     grpcExceptionHandlers,
-                            GrpcExceptionHandlerFunction globalExceptionHandler) {
+                            @Nullable GrpcExceptionHandlerFunction defaultExceptionHandler) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
@@ -124,7 +124,7 @@ final class HandlerRegistry {
         this.additionalDecorators = requireNonNull(additionalDecorators, "additionalDecorators");
         this.blockingMethods = requireNonNull(blockingMethods, "blockingMethods");
         this.grpcExceptionHandlers = requireNonNull(grpcExceptionHandlers, "grpcExceptionHandlers");
-        this.globalExceptionHandler = globalExceptionHandler;
+        this.defaultExceptionHandler = defaultExceptionHandler;
     }
 
     @Nullable
@@ -164,7 +164,7 @@ final class HandlerRegistry {
     @Nullable
     GrpcExceptionHandlerFunction getExceptionHandler(ServerMethodDefinition<?, ?> methodDef) {
         if (!grpcExceptionHandlers.containsKey(methodDef)) {
-            return globalExceptionHandler;
+            return defaultExceptionHandler;
         }
         return grpcExceptionHandlers.get(methodDef);
     }
@@ -206,7 +206,7 @@ final class HandlerRegistry {
         private final List<Entry> entries = new ArrayList<>();
 
         @Nullable
-        private GrpcExceptionHandlerFunction globalExceptionHandler;
+        private GrpcExceptionHandlerFunction defaultExceptionHandler;
 
         Builder addService(ServerServiceDefinition service, @Nullable Class<?> type,
                            List<? extends Function<? super HttpService,
@@ -231,9 +231,9 @@ final class HandlerRegistry {
             return this;
         }
 
-        Builder addGlobalExceptionHandler(GrpcExceptionHandlerFunction globalExceptionHandler) {
-            requireNonNull(globalExceptionHandler, "globalExceptionHandler");
-            this.globalExceptionHandler = globalExceptionHandler;
+        Builder setDefaultExceptionHandler(GrpcExceptionHandlerFunction defaultExceptionHandler) {
+            requireNonNull(defaultExceptionHandler, "defaultExceptionHandler");
+            this.defaultExceptionHandler = defaultExceptionHandler;
             return this;
         }
 
@@ -342,8 +342,11 @@ final class HandlerRegistry {
                             final Optional<GrpcExceptionHandlerFunction> grpcExceptionHandler =
                                     findGrpcExceptionHandler(type, method, dependencyInjector);
                             grpcExceptionHandler.ifPresent(exceptionHandler -> {
-                                grpcExceptionHandlersBuilder
-                                        .put(methodDefinition, exceptionHandler.orElse(globalExceptionHandler));
+                                GrpcExceptionHandlerFunction grpcExceptionHandler0 = exceptionHandler;
+                                if (defaultExceptionHandler != null) {
+                                    grpcExceptionHandler0 = exceptionHandler.orElse(defaultExceptionHandler);
+                                }
+                                grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler0);
                             });
                         }
                     }
@@ -382,8 +385,11 @@ final class HandlerRegistry {
                             final Optional<GrpcExceptionHandlerFunction> grpcExceptionHandler =
                                     findGrpcExceptionHandler(type, method0, dependencyInjector);
                             grpcExceptionHandler.ifPresent(exceptionHandler -> {
-                                grpcExceptionHandlersBuilder
-                                        .put(methodDefinition, exceptionHandler.orElse(globalExceptionHandler));
+                                GrpcExceptionHandlerFunction grpcExceptionHandler0 = exceptionHandler;
+                                if (defaultExceptionHandler != null) {
+                                    grpcExceptionHandler0 = exceptionHandler.orElse(defaultExceptionHandler);
+                                }
+                                grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler0);
                             });
                         }
                     }
@@ -398,7 +404,7 @@ final class HandlerRegistry {
                                        additionalDecoratorsBuilder.build(),
                                        blockingMethods.build(),
                                        grpcExceptionHandlersBuilder.build(),
-                                       globalExceptionHandler);
+                                       defaultExceptionHandler);
         }
     }
 

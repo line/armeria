@@ -109,7 +109,7 @@ public final class GrpcStatus {
 
     /**
      * Converts the {@link Throwable} to a {@link Status}.
-     * If the specified {@link  GrpcExceptionHandlerFunction} returns {@code null},
+     * If the specified {@link GrpcExceptionHandlerFunction} returns {@code null},
      * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
      * and the protocol package, is used by default.
      */
@@ -169,25 +169,15 @@ public final class GrpcStatus {
      * using the specified {@link GrpcStatusFunction}.
      * Returns the given {@link Status} as is if the {@link GrpcStatusFunction} returns {@code null}.
      *
-     * @deprecated Use {@link #fromStatusFunction(GrpcExceptionHandlerFunction, RequestContext,
+     * @deprecated Use {@link #fromExceptionHandler(GrpcExceptionHandlerFunction, RequestContext,
      * Status, Metadata)} instead.
      */
     @Deprecated
     public static Status fromStatusFunction(@Nullable GrpcStatusFunction statusFunction,
                                             RequestContext ctx, Status status, Metadata metadata) {
-        requireNonNull(status, "status");
-
-        if (statusFunction != null) {
-            final Throwable cause = status.getCause();
-            if (cause != null) {
-                final Throwable unwrapped = peelAndUnwrap(cause);
-                final Status newStatus = statusFunction.apply(ctx, unwrapped, metadata);
-                if (newStatus != null) {
-                    return newStatus;
-                }
-            }
-        }
-        return status;
+        final GrpcExceptionHandlerFunction exceptionHandler =
+                statusFunction != null ? statusFunction::apply : null;
+        return fromExceptionHandler(exceptionHandler, ctx, status, metadata);
     }
 
     /**
