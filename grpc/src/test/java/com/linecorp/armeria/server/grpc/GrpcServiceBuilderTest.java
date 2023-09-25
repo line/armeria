@@ -84,7 +84,7 @@ class GrpcServiceBuilderTest {
                                             .exceptionHandler(
                                                     (ctx, cause, metadata) -> Status.PERMISSION_DENIED))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("exceptionMapping() and exceptionHandler() are mutually exclusive.");
+                .hasMessageContaining("addExceptionMapping() and exceptionHandler() are mutually exclusive.");
 
         assertThatThrownBy(() -> GrpcService.builder()
                                             .exceptionHandler(
@@ -187,8 +187,7 @@ class GrpcServiceBuilderTest {
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
             final Status status = Status.UNKNOWN.withCause(ex);
             final Metadata metadata = new Metadata();
-            final Status newStatus = GrpcStatus.fromStatusFunction(exceptionHandler, ctx,
-                                                                   status, metadata);
+            final Status newStatus = GrpcStatus.fromExceptionHandler(exceptionHandler, ctx, status, metadata);
             assertThat(newStatus.getCode()).isEqualTo(Code.PERMISSION_DENIED);
             assertThat(newStatus.getCause()).isEqualTo(ex);
             assertThat(metadata.keys()).isEmpty();
@@ -196,8 +195,7 @@ class GrpcServiceBuilderTest {
 
         final Status status = Status.DEADLINE_EXCEEDED.withCause(new A1Exception());
         final Metadata metadata = new Metadata();
-        final Status newStatus = GrpcStatus.fromStatusFunction(exceptionHandler, ctx,
-                                                               status, metadata);
+        final Status newStatus = GrpcStatus.fromExceptionHandler(exceptionHandler, ctx, status, metadata);
         assertThat(newStatus).isSameAs(status);
         assertThat(metadata.keys()).isEmpty();
     }
@@ -211,22 +209,20 @@ class GrpcServiceBuilderTest {
                                                    metadata.put(TEST_KEY, throwable.getClass().getSimpleName());
                                                    return Status.ABORTED;
                                                });
-        final GrpcExceptionHandlerFunction grpcExceptionHandlerFunction =
+        final GrpcExceptionHandlerFunction exceptionHandler =
                 toGrpcExceptionHandler(exceptionMappings);
 
         final Status status = Status.UNKNOWN.withCause(new B1Exception());
 
         final Metadata metadata1 = new Metadata();
-        final Status newStatus1 = GrpcStatus.fromStatusFunction(grpcExceptionHandlerFunction, ctx,
-                                                                status, metadata1);
+        final Status newStatus1 = GrpcStatus.fromExceptionHandler(exceptionHandler, ctx, status, metadata1);
         assertThat(newStatus1.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata1.get(TEST_KEY)).isEqualTo("B1Exception");
         assertThat(metadata1.keys()).containsOnly(TEST_KEY.name());
 
         final Metadata metadata2 = new Metadata();
         metadata2.put(TEST_KEY2, "test");
-        final Status newStatus2 = GrpcStatus.fromStatusFunction(grpcExceptionHandlerFunction, ctx,
-                                                                status, metadata2);
+        final Status newStatus2 = GrpcStatus.fromExceptionHandler(exceptionHandler, ctx, status, metadata2);
         assertThat(newStatus2.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata2.get(TEST_KEY)).isEqualTo("B1Exception");
         assertThat(metadata2.keys()).containsOnly(TEST_KEY.name(), TEST_KEY2.name());

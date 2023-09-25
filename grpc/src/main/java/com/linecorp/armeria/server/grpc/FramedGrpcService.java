@@ -234,12 +234,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     }
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
-                    final GrpcExceptionHandlerFunction grpcExceptionHandler = registry.getExceptionHandler(
-                            method);
+                    final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(method);
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(grpcExceptionHandler, ctx, e, metadata),
+                                    GrpcStatus.fromThrowable(exceptionHandler, ctx, e, metadata),
                                     metadata));
                 }
             }
@@ -326,7 +325,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             HttpResponse res, @Nullable CompletableFuture<HttpResponse> resFuture,
             SerializationFormat serializationFormat, @Nullable Executor blockingExecutor) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
-        final GrpcExceptionHandlerFunction grpcExceptionHandler = registry.getExceptionHandler(
+        final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(
                 methodDef);
         if (methodDescriptor.getType() == MethodType.UNARY) {
             assert resFuture != null;
@@ -345,7 +344,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     jsonMarshallers.get(methodDescriptor.getServiceName()),
                     unsafeWrapRequestBuffers,
                     defaultHeaders.get(serializationFormat),
-                    grpcExceptionHandler,
+                    exceptionHandler,
                     blockingExecutor,
                     autoCompression);
         } else {
@@ -363,7 +362,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     jsonMarshallers.get(methodDescriptor.getServiceName()),
                     unsafeWrapRequestBuffers,
                     defaultHeaders.get(serializationFormat),
-                    grpcExceptionHandler,
+                    exceptionHandler,
                     blockingExecutor,
                     autoCompression);
         }

@@ -209,14 +209,12 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        close(GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata),
-              metadata, exception);
+        close(GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata), metadata, exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
-        close(GrpcStatus.fromStatusFunction(exceptionHandler, ctx, status, metadata),
-              metadata, null);
+        close(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx, status, metadata), metadata, null);
     }
 
     private void close(Status status, Metadata metadata, @Nullable Throwable exception) {

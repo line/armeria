@@ -195,8 +195,8 @@ public final class GrpcStatus {
      * using the specified {@link GrpcExceptionHandlerFunction}.
      * Returns the given {@link Status} as is if the {@link GrpcExceptionHandlerFunction} returns {@code null}.
      */
-    public static Status fromStatusFunction(@Nullable GrpcExceptionHandlerFunction exceptionHandler,
-                                            RequestContext ctx, Status status, Metadata metadata) {
+    public static Status fromExceptionHandler(@Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                                              RequestContext ctx, Status status, Metadata metadata) {
         requireNonNull(status, "status");
 
         if (exceptionHandler != null) {

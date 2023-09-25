@@ -825,7 +825,7 @@ public final class GrpcServiceBuilder {
     public GrpcServiceBuilder exceptionHandler(GrpcExceptionHandlerFunction exceptionHandler) {
         requireNonNull(exceptionHandler, "exceptionHandler");
         checkState(exceptionMappings == null,
-                   "exceptionMapping() and exceptionHandler() are mutually exclusive.");
+                   "addExceptionMapping() and exceptionHandler() are mutually exclusive.");
 
         this.exceptionHandler = exceptionHandler;
         return this;
