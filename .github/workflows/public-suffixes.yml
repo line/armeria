@@ -11,7 +11,7 @@ jobs:
     if: github.repository == 'line/armeria'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-jdk-19
         name: Set up JDK 19
