@@ -86,7 +86,7 @@ includeWithFlags ':brave',                               'java', 'publish', 'rel
 includeWithFlags ':core',                                'java', 'publish', 'shade', 'trim', 'native'
 includeWithFlags ':eureka',                              'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
-includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin', 'native'
+includeWithFlags ':grpc-kotlin',                         'java', 'publish', 'relocate', 'kotlin-grpc', 'kotlin1.6', 'native'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate', 'native'
 includeWithFlags ':graphql',                             'java', 'publish', 'relocate', 'native'
 includeWithFlags ':graphql-protocol',                    'java', 'publish', 'relocate', 'native'
@@ -99,7 +99,7 @@ project(':jetty11').projectDir = file('jetty/jetty11')
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
-includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
+includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin1.6', 'native'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate', 'no_aggregation'
 project(':logback').projectDir = file('logback/logback')
 includeWithFlags ':logback12',                           'java', 'publish', 'relocate', 'native'
