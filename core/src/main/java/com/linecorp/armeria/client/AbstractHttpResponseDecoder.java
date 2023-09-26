@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -65,10 +64,7 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
                 new HttpResponseWrapper(res, eventLoop, ctx,
                                         ctx.responseTimeoutMillis(), ctx.maxResponseLength());
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.increaseNumRequests();
-        }
+        keepAliveHandler().increaseNumRequests();
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + ctx + "): " + oldRes;
         onResponseAdded(id, eventLoop, newRes);
@@ -142,11 +138,6 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
             return httpSession;
         }
         return httpSession = HttpSession.get(channel);
-    }
-
-    @Override
-    public boolean needsToDisconnectNow() {
-        return !session().isAcquirable() && !hasUnfinishedResponses();
     }
 
     static ContentTooLargeException contentTooLargeException(HttpResponseWrapper res, long transferred) {
