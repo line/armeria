@@ -85,6 +85,18 @@ class GrpcClientTimeoutTest {
         }
     };
 
+    @RegisterExtension
+    static ServerExtension serverWithNoClientTimeout = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(2000);
+            sb.service(GrpcService.builder()
+                                  .useClientTimeoutHeader(false)
+                                  .addService(new SlowService())
+                                  .build());
+        }
+    };
+
     @Test
     void clientTimeout() throws InterruptedException {
         final TestServiceBlockingStub client =
@@ -119,7 +131,7 @@ class GrpcClientTimeoutTest {
 
     @Test
     void serverTimeout() throws InterruptedException {
-        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+        final TestServiceBlockingStub client = GrpcClients.builder(serverWithNoClientTimeout.httpUri())
                                                           .responseTimeoutMillis(0)
                                                           .build(TestServiceBlockingStub.class);
 
