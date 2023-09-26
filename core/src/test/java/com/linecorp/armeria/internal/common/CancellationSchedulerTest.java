@@ -28,11 +28,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.CommonPools;
@@ -56,6 +59,21 @@ class CancellationSchedulerTest {
         @Override
         public void run(Throwable cause) {}
     };
+
+    static final class StatefulCancellationTask implements CancellationTask {
+
+        AtomicReference<Throwable> thrownRef = new AtomicReference<>();
+
+        @Override
+        public boolean canSchedule() {
+            return true;
+        }
+
+        @Override
+        public void run(Throwable cause) {
+            thrownRef.set(cause);
+        }
+    }
 
     private static void executeInEventLoop(long initTimeoutNanos, Consumer<CancellationScheduler> task) {
         final AtomicBoolean completed = new AtomicBoolean();
@@ -439,6 +457,44 @@ class CancellationSchedulerTest {
         });
 
         await().untilTrue(completed);
+    }
+
+    @Test
+    void immediateFinishTriggersCompletion() {
+        final CancellationScheduler scheduler = new CancellationScheduler(0);
+        final Throwable throwable = new Throwable();
+
+        assertThat(scheduler.whenCancelling()).isNotCompleted();
+        assertThat(scheduler.state()).isEqualTo(State.INIT);
+
+        scheduler.finishNow(throwable);
+
+        assertThat(scheduler.whenCancelling()).isNotDone();
+        assertThat(scheduler.whenCancelled()).isCompleted();
+        assertThat(scheduler.state()).isEqualTo(State.FINISHED);
+        assertThat(scheduler.cause()).isSameAs(throwable);
+    }
+
+    @Test
+    void finishAfterInitNotComplete() {
+        final CancellationScheduler scheduler = new CancellationScheduler(0);
+        final Throwable throwable = new Throwable();
+
+        assertThat(scheduler.whenCancelling()).isNotCompleted();
+        assertThat(scheduler.state()).isEqualTo(State.INIT);
+
+        final StatefulCancellationTask task = new StatefulCancellationTask();
+        scheduler.init(eventExecutor, task, 0, false);
+        scheduler.finishNow(throwable);
+
+        await().untilAsserted(() -> assertThat(scheduler.whenCancelled()).isDone());
+
+        assertThat(scheduler.whenCancelled()).isCompleted();
+        assertThat(scheduler.state()).isEqualTo(State.FINISHED);
+
+        // verify the task was actually executed
+        assertThat(scheduler.whenCancelling()).isCompleted();
+        assertThat(task.thrownRef.get()).isSameAs(throwable);
     }
 
     static void assertTimeoutWithTolerance(long actualNanos, long expectedNanos) {
