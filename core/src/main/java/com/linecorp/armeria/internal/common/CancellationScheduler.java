@@ -34,24 +34,39 @@ public interface CancellationScheduler {
     }
 
     void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server);
+
     void init(EventExecutor eventLoop, boolean server);
+
     void start(CancellationTask task, long timeoutNanos);
 
     void setTimeoutNanos(TimeoutMode mode, long timeoutNanos);
+
     boolean isFinished();
+
     @Nullable
+
     Throwable cause();
+
     long timeoutNanos();
+
     long startTimeNanos();
+
     CompletableFuture<Throwable> whenCancelling();
+
     CompletableFuture<Throwable> whenCancelled();
+
     void clearTimeout();
+
     void clearTimeout(boolean reset);
+
     void finishNow();
+
     void finishNow(@Nullable Throwable cause);
 
     CompletableFuture<Void> whenTimingOut();
+
     CompletableFuture<Void> whenTimedOut();
+
     /**
      * A cancellation task invoked by the scheduler when its timeout exceeds or invoke by the user.
      */

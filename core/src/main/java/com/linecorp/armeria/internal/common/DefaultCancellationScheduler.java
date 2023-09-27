@@ -94,7 +94,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     @Nullable
     private Throwable cause;
 
-    public DefaultCancellationScheduler(long timeoutNanos) {
+    DefaultCancellationScheduler(long timeoutNanos) {
         this.timeoutNanos = timeoutNanos;
         pendingTimeoutNanos = timeoutNanos;
     }
@@ -102,6 +102,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     /**
      * Initializes this {@link CancellationScheduler}.
      */
+    @Override
     public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
         if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
             return;
@@ -117,6 +118,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
     }
 
+    @Override
     public void init(EventExecutor eventLoop, boolean server) {
         if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
             return;
@@ -135,6 +137,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         this.server = server;
     }
 
+    @Override
     public void start(CancellationTask task, long timeoutNanos) {
         assert eventLoop != null;
         assert eventLoop.inEventLoop();
@@ -171,10 +174,12 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
     }
 
+    @Override
     public void clearTimeout() {
         clearTimeout(true);
     }
 
+    @Override
     public void clearTimeout(boolean resetTimeout) {
         if (timeoutNanos() == 0) {
             return;
@@ -210,6 +215,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         return cancelled;
     }
 
+    @Override
     public void setTimeoutNanos(TimeoutMode mode, long timeoutNanos) {
         switch (mode) {
             case SET_FROM_NOW:
@@ -329,10 +335,12 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         scheduledFuture = eventLoop.schedule(() -> invokeTask(null), newTimeoutNanos, NANOSECONDS);
     }
 
+    @Override
     public void finishNow() {
         finishNow(null);
     }
 
+    @Override
     public void finishNow(@Nullable Throwable cause) {
         if (isFinishing()) {
             return;
@@ -370,6 +378,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
     }
 
+    @Override
     public boolean isFinished() {
         return state == State.FINISHED;
     }
@@ -378,19 +387,23 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         return state == State.FINISHED || state == State.FINISHING;
     }
 
+    @Override
     @Nullable
     public Throwable cause() {
         return cause;
     }
 
+    @Override
     public long timeoutNanos() {
         return isInitialized() ? timeoutNanos : pendingTimeoutNanos;
     }
 
+    @Override
     public long startTimeNanos() {
         return startTimeNanos;
     }
 
+    @Override
     public CompletableFuture<Throwable> whenCancelling() {
         final CancellationFuture whenCancelling = this.whenCancelling;
         if (whenCancelling != null) {
@@ -404,6 +417,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
     }
 
+    @Override
     public CompletableFuture<Throwable> whenCancelled() {
         final CancellationFuture whenCancelled = this.whenCancelled;
         if (whenCancelled != null) {
@@ -417,6 +431,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
     }
 
+    @Override
     @Deprecated
     public CompletableFuture<Void> whenTimingOut() {
         final TimeoutFuture whenTimingOut = this.whenTimingOut;
@@ -436,6 +451,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
     }
 
+    @Override
     @Deprecated
     public CompletableFuture<Void> whenTimedOut() {
         final TimeoutFuture whenTimedOut = this.whenTimedOut;

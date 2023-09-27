@@ -31,27 +31,24 @@ class NoopCancellationScheduler implements CancellationScheduler {
 
     static final CancellationScheduler INSTANCE = new NoopCancellationScheduler();
 
-    static final CompletableFuture<Throwable> THROWABLE_FUTURE = UnmodifiableFuture.wrap(new CompletableFuture<>());
+    static final CompletableFuture<Throwable> THROWABLE_FUTURE =
+            UnmodifiableFuture.wrap(new CompletableFuture<>());
     static final CompletableFuture<Void> VOID_FUTURE = UnmodifiableFuture.wrap(new CompletableFuture<>());
 
     @Override
     public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
-
     }
 
     @Override
     public void init(EventExecutor eventLoop, boolean server) {
-
     }
 
     @Override
     public void start(CancellationTask task, long timeoutNanos) {
-
     }
 
     @Override
     public void setTimeoutNanos(TimeoutMode mode, long timeoutNanos) {
-
     }
 
     @Override
@@ -86,22 +83,18 @@ class NoopCancellationScheduler implements CancellationScheduler {
 
     @Override
     public void clearTimeout() {
-
     }
 
     @Override
     public void clearTimeout(boolean reset) {
-
     }
 
     @Override
     public void finishNow() {
-
     }
 
     @Override
     public void finishNow(@Nullable Throwable cause) {
-
     }
 
     @Override
