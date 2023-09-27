@@ -127,7 +127,9 @@ public final class CancellationScheduler {
     }
 
     public void start(CancellationTask task, long timeoutNanos) {
-        assert state == State.INIT;
+        if (state != State.INIT) {
+            return;
+        }
         assert eventLoop != null;
         this.task = task;
         if (timeoutNanos > 0) {
