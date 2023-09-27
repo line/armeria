@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -309,5 +310,12 @@ final class ContextPathAnnotatedServiceConfigSetters<T extends ServiceConfigsBui
     public ContextPathAnnotatedServiceConfigSetters<T> errorHandler(
             ServiceErrorHandler serviceErrorHandler) {
         return (ContextPathAnnotatedServiceConfigSetters<T>)  super.errorHandler(serviceErrorHandler);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public ContextPathAnnotatedServiceConfigSetters<T> contextHook(
+            Supplier<? extends AutoCloseable> contextHook) {
+        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.contextHook(contextHook);
     }
 }

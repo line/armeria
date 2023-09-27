@@ -257,8 +257,7 @@ public final class AnnotatedServiceBindingBuilder extends AbstractAnnotatedServi
 
     @Override
     public AnnotatedServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
-        defaultServiceConfigSetters.contextHook(contextHook);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     /**

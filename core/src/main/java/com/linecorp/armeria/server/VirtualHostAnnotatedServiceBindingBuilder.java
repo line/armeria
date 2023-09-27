@@ -265,8 +265,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder extends AbstractAnn
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder contextHook(
             Supplier<? extends AutoCloseable> contextHook) {
-        defaultServiceConfigSetters.contextHook(contextHook);
-        return this;
+        return (VirtualHostAnnotatedServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     /**
