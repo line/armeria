@@ -320,7 +320,15 @@ public final class CancellationScheduler {
         if (isFinishing()) {
             return;
         }
-        if (isInitialized()) {
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> finishNow(cause));
+            return;
+        }
+        if (state == State.INIT) {
+            state = State.FINISHED;
+            this.cause = getThrowable(server, cause);
+            ((CancellationFuture) whenCancelled()).doComplete(cause);
+        } else if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
                 finishNow0(cause);
             } else {
@@ -482,13 +490,7 @@ public final class CancellationScheduler {
             return;
         }
 
-        if (cause == null) {
-            if (server) {
-                cause = RequestTimeoutException.get();
-            } else {
-                cause = ResponseTimeoutException.get();
-            }
-        }
+        cause = getThrowable(server, cause);
 
         // Set FINISHING to preclude executing other timeout operations from the callbacks of `whenCancelling()`
         state = State.FINISHING;
@@ -506,9 +508,27 @@ public final class CancellationScheduler {
         ((CancellationFuture) whenCancelled()).doComplete(cause);
     }
 
+    private static Throwable getThrowable(boolean server, @Nullable Throwable cause) {
+        if (cause != null) {
+            return cause;
+        }
+        if (server) {
+            cause = RequestTimeoutException.get();
+        } else {
+            cause = ResponseTimeoutException.get();
+        }
+        return cause;
+    }
+
     @VisibleForTesting
     State state() {
         return state;
+    }
+
+    @Nullable
+    @VisibleForTesting
+    EventExecutor eventLoop() {
+        return eventLoop;
     }
 
     enum State {

@@ -33,6 +33,7 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.CommonPools;
@@ -439,6 +440,48 @@ class CancellationSchedulerTest {
         });
 
         await().untilTrue(completed);
+    }
+
+    @Test
+    void immediateFinishTriggersCompletion() {
+        final CancellationScheduler scheduler = new CancellationScheduler(0);
+        scheduler.init(eventExecutor, true);
+        await().untilAsserted(() -> assertThat(scheduler.eventLoop()).isNotNull());
+
+        final Throwable throwable = new Throwable();
+
+        assertThat(scheduler.whenCancelling()).isNotCompleted();
+        assertThat(scheduler.state()).isEqualTo(State.INIT);
+
+        scheduler.finishNow(throwable);
+
+        await().untilAsserted(() -> assertThat(scheduler.state()).isEqualTo(State.FINISHED));
+        assertThat(scheduler.whenCancelling()).isNotDone();
+        assertThat(scheduler.whenCancelled()).isCompleted();
+        assertThat(scheduler.cause()).isSameAs(throwable);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void immediateFinishWithoutCause(boolean server) {
+        final CancellationScheduler scheduler = new CancellationScheduler(0);
+
+        scheduler.init(eventExecutor, server);
+        await().untilAsserted(() -> assertThat(scheduler.eventLoop()).isNotNull());
+
+        assertThat(scheduler.whenCancelling()).isNotCompleted();
+        assertThat(scheduler.state()).isEqualTo(State.INIT);
+
+        scheduler.finishNow();
+
+        await().untilAsserted(() -> assertThat(scheduler.state()).isEqualTo(State.FINISHED));
+        assertThat(scheduler.whenCancelling()).isNotDone();
+        assertThat(scheduler.whenCancelled()).isCompleted();
+        if (server) {
+            assertThat(scheduler.cause()).isInstanceOf(RequestTimeoutException.class);
+        } else {
+            assertThat(scheduler.cause()).isInstanceOf(ResponseTimeoutException.class);
+        }
     }
 
     static void assertTimeoutWithTolerance(long actualNanos, long expectedNanos) {
