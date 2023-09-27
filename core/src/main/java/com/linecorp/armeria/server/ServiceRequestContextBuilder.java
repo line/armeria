@@ -84,7 +84,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     /**
      * A cancellation scheduler that has been finished.
      */
-    private static final CancellationScheduler noopRequestCancellationScheduler = new CancellationScheduler(0);
+    private static final CancellationScheduler noopRequestCancellationScheduler = CancellationScheduler.of(0);
 
     static {
         noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask,
@@ -256,7 +256,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         if (timedOut()) {
             requestCancellationScheduler = noopRequestCancellationScheduler;
         } else {
-            requestCancellationScheduler = new CancellationScheduler(0);
+            requestCancellationScheduler = CancellationScheduler.of(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
                 requestCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ true);
