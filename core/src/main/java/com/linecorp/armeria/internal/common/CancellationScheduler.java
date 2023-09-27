@@ -62,9 +62,6 @@ public final class CancellationScheduler {
     private static final AtomicLongFieldUpdater<CancellationScheduler> pendingTimeoutNanosUpdater =
             AtomicLongFieldUpdater.newUpdater(CancellationScheduler.class, "pendingTimeoutNanos");
 
-    private static final AtomicLongFieldUpdater<CancellationScheduler> initializeTriggeredUpdater =
-            AtomicLongFieldUpdater.newUpdater(CancellationScheduler.class, "initializeTriggered");
-
     private static final Runnable noopPendingTask = () -> {
     };
 
@@ -89,7 +86,6 @@ public final class CancellationScheduler {
     private volatile TimeoutFuture whenTimedOut;
     @SuppressWarnings("FieldMayBeFinal")
     private volatile long pendingTimeoutNanos;
-    private volatile long initializeTriggered;
     private boolean server;
     @Nullable
     private Throwable cause;
@@ -103,10 +99,6 @@ public final class CancellationScheduler {
      * Initializes this {@link CancellationScheduler}.
      */
     public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
-        if (!initializeTriggeredUpdater.compareAndSet(this, 0, 1)) {
-            // already cancelled or initialized
-            return;
-        }
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> init0(eventLoop, task, timeoutNanos, server));
         } else {
@@ -309,15 +301,6 @@ public final class CancellationScheduler {
         if (isFinishing()) {
             return;
         }
-
-        if (initializeTriggeredUpdater.compareAndSet(this, 0, 1)) {
-            // finish immediately since init hasn't been called yet
-            state = State.FINISHED;
-            this.cause = cause;
-            ((CancellationFuture) whenCancelled()).doComplete(cause);
-            return;
-        }
-
         if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
                 finishNow0(cause);
