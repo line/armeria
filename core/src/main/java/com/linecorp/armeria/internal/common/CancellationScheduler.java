@@ -100,22 +100,39 @@ public final class CancellationScheduler {
      */
     public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> init0(eventLoop, task, timeoutNanos, server));
+            eventLoop.execute(() -> {
+                init0(eventLoop, server);
+                start(task, timeoutNanos);
+            });
         } else {
-            init0(eventLoop, task, timeoutNanos, server);
+            init0(eventLoop, server);
+            start(task, timeoutNanos);
         }
     }
 
-    private void init0(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
+    public void init(EventExecutor eventLoop, boolean server) {
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> init0(eventLoop, server));
+        } else {
+            init0(eventLoop, server);
+        }
+    }
+
+    private void init0(EventExecutor eventLoop, boolean server) {
         if (state != State.INIT) {
             return;
         }
         this.eventLoop = eventLoop;
+        this.server = server;
+    }
+
+    public void start(CancellationTask task, long timeoutNanos) {
+        assert state == State.INIT;
+        assert eventLoop != null;
         this.task = task;
         if (timeoutNanos > 0) {
             this.timeoutNanos = timeoutNanos;
         }
-        this.server = server;
         startTimeNanos = System.nanoTime();
         if (this.timeoutNanos != 0) {
             state = State.SCHEDULED;
