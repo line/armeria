@@ -62,6 +62,10 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private static final AtomicLongFieldUpdater<DefaultCancellationScheduler> pendingTimeoutNanosUpdater =
             AtomicLongFieldUpdater.newUpdater(DefaultCancellationScheduler.class, "pendingTimeoutNanos");
 
+    private static final AtomicReferenceFieldUpdater<DefaultCancellationScheduler, EventExecutor>
+            eventLoopUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            DefaultCancellationScheduler.class, EventExecutor.class, "eventLoop");
+
     private static final Runnable noopPendingTask = () -> {
     };
 
@@ -69,7 +73,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private long timeoutNanos;
     private long startTimeNanos;
     @Nullable
-    private EventExecutor eventLoop;
+    private volatile EventExecutor eventLoop;
     @Nullable
     private CancellationTask task;
     @Nullable
@@ -99,6 +103,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
      * Initializes this {@link CancellationScheduler}.
      */
     public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
+        if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
+            return;
+        }
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> {
                 init0(eventLoop, server);
@@ -111,6 +118,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     public void init(EventExecutor eventLoop, boolean server) {
+        if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
+            return;
+        }
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> init0(eventLoop, server));
         } else {
@@ -122,12 +132,19 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (state != State.INIT) {
             return;
         }
-        this.eventLoop = eventLoop;
         this.server = server;
     }
 
     public void start(CancellationTask task, long timeoutNanos) {
-        if (state != State.INIT) {
+        assert eventLoop != null;
+        assert eventLoop.inEventLoop();
+        if (isFinished()) {
+            assert cause != null;
+            task.run(cause);
+        }
+        if (this.task != null) {
+            // just replace the task, there is already a pending timeout schedule running
+            this.task = task;
             return;
         }
         assert eventLoop != null;

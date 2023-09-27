@@ -29,12 +29,17 @@ public interface CancellationScheduler {
         return new DefaultCancellationScheduler(timeoutNanos);
     }
 
+    static CancellationScheduler noop() {
+        return NoopCancellationScheduler.INSTANCE;
+    }
+
     void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server);
     void init(EventExecutor eventLoop, boolean server);
     void start(CancellationTask task, long timeoutNanos);
 
     void setTimeoutNanos(TimeoutMode mode, long timeoutNanos);
     boolean isFinished();
+    @Nullable
     Throwable cause();
     long timeoutNanos();
     long startTimeNanos();

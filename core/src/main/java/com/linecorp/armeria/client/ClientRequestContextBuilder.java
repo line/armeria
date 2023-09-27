@@ -62,7 +62,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     /**
      * A cancellation scheduler that has been finished.
      */
-    static final CancellationScheduler noopResponseCancellationScheduler = CancellationScheduler.of(0);
+    private static final CancellationScheduler noopResponseCancellationScheduler = CancellationScheduler.of(0);
 
     static {
         noopResponseCancellationScheduler
