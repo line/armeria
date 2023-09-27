@@ -213,7 +213,6 @@ public final class DefaultClientRequestContext
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root));
 
-        this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
         this.root = root;
 
@@ -229,6 +228,9 @@ public final class DefaultClientRequestContext
                     new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
+        }
+        if (eventLoop != null) {
+            updateEventLoop(eventLoop);
         }
 
         long writeTimeoutMillis = requestOptions.writeTimeoutMillis();
@@ -407,11 +409,16 @@ public final class DefaultClientRequestContext
         autoFillSchemeAuthorityAndOrigin();
     }
 
+    private void updateEventLoop(EventLoop eventLoop) {
+        this.eventLoop = eventLoop;
+        responseCancellationScheduler.init(eventLoop, false);
+    }
+
     private void acquireEventLoop(EndpointGroup endpointGroup) {
         if (eventLoop == null) {
             final ReleasableHolder<EventLoop> releasableEventLoop =
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
-            eventLoop = releasableEventLoop.get();
+            updateEventLoop(releasableEventLoop.get());
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
         }
     }
@@ -497,7 +504,6 @@ public final class DefaultClientRequestContext
         // So we don't check the nullness of rpcRequest unlike request.
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
-        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         root = ctx.root();
 
@@ -505,6 +511,7 @@ public final class DefaultClientRequestContext
         log.startRequest();
         responseCancellationScheduler =
                 new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+        updateEventLoop(ctx.eventLoop().withoutContext());
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
