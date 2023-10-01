@@ -22,7 +22,7 @@ jobs:
     if: github.repository == 'line/armeria'
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-jdk-19
         name: Set up JDK 19
@@ -115,7 +115,7 @@ jobs:
       matrix:
         on: [ self-hosted, macos-12, windows-latest ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.COMMIT_SHA }}
 

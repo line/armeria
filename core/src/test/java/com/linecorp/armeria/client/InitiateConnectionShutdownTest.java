@@ -106,6 +106,7 @@ class InitiateConnectionShutdownTest {
             }
 
             assertNoOpenedConnectionNow(countingListener);
+            await().untilAsserted(() -> assertThat(completedResult.get().completed).isTrue());
             assertThat(completedResult.get().exception).isInstanceOf(UnprocessedRequestException.class);
             assertThat(completedResult.get().exception.getCause()).isSameAs(notAcquiredCause);
         }

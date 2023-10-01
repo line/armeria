@@ -418,6 +418,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         }
 
+        // Do not call fireUserEventTriggered right away because it triggers completing a session promise
+        // in HttpSessionHandler that will make the client to send a request.
+        // However, the HTTP/2 settings frame from the server may not be handled yet at this point.
+        // We need to put the task in the queue so that the promise is complete after the settings
+        // frame is handled.
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
     }
 
