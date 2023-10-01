@@ -1076,8 +1076,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Emits the last value depending on whether this {@link StreamMessage}
-     * completes successfully or exceptionally.
+     * Emits the last value whether this {@link StreamMessage} completes successfully or exceptionally.
      *
      * <p>For example:<pre>{@code
      * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);

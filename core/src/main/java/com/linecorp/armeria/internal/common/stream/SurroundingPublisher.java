@@ -400,7 +400,7 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
                 downstream.onNext(finalizer.apply(cause));
                 close0(null);
             } else {
-                close(cause);
+                close0(cause);
             }
         }
 
