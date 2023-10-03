@@ -66,7 +66,7 @@ class SpanPropagationTest {
                    .thenAcceptAsync(log -> {
                        serviceMdcContextRef.set(MDC.getCopyOfContextMap());
                    }, ctx.eventLoop());
-                return HttpResponse.from(
+                return HttpResponse.of(
                         server.webClient(cb -> cb.decorator(BraveClient.newDecorator(tracing)))
                               .get("/bar").aggregate().thenApply(res -> {
                                   return HttpResponse.of("OK");

@@ -172,7 +172,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                     return HttpResponse.of(trailers);
                 });
 
-        return HttpResponse.from(responseFuture);
+        return HttpResponse.of(responseFuture);
     }
 
     private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {

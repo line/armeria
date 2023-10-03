@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":kotlin"))
     runtimeOnly(libs.slf4j.simple)
 
     implementation(kotlin("stdlib-jdk8"))

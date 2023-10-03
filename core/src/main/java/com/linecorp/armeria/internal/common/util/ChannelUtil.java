@@ -333,22 +333,32 @@ public final class ChannelUtil {
 
     @Nullable
     private static DomainSocketAddress findAddress(DomainSocketChannel ch) {
-        final io.netty.channel.unix.DomainSocketAddress laddr = ch.localAddress();
+        final Channel parent = ch.parent();
+        if (parent != null) {
+            final DomainSocketAddress addr = toArmeriaDomainSocketAddress(
+                    (io.netty.channel.unix.DomainSocketAddress) parent.localAddress());
+            if (addr != null) {
+                return addr;
+            }
+        }
+
+        final DomainSocketAddress laddr = toArmeriaDomainSocketAddress(ch.localAddress());
         if (laddr != null) {
-            final String path = laddr.path();
+            return laddr;
+        }
+
+        return toArmeriaDomainSocketAddress(ch.remoteAddress());
+    }
+
+    @Nullable
+    private static DomainSocketAddress toArmeriaDomainSocketAddress(
+            @Nullable io.netty.channel.unix.DomainSocketAddress addr) {
+        if (addr != null) {
+            final String path = addr.path();
             if (!Strings.isNullOrEmpty(path)) {
                 return DomainSocketAddress.of(path);
             }
         }
-
-        final io.netty.channel.unix.DomainSocketAddress raddr = ch.remoteAddress();
-        if (raddr != null) {
-            final String path = raddr.path();
-            if (!Strings.isNullOrEmpty(path)) {
-                return DomainSocketAddress.of(path);
-            }
-        }
-
         return null;
     }
 

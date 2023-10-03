@@ -369,7 +369,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         }
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture);
+        final HttpResponse res = HttpResponse.of(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
         req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))

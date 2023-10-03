@@ -72,6 +72,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -99,6 +100,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Mono;
 
+@GenerateNativeImageTrace
 class AnnotatedServiceTest {
 
     @RegisterExtension

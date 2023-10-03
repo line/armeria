@@ -111,7 +111,7 @@ class GrpcWebTextTest {
                                 return streaming;
                             });
 
-            return HttpResponse.from(responseFuture);
+            return HttpResponse.of(responseFuture);
         }
 
         private static void writeEncodedMessageAcrossFrames(

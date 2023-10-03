@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.reactor3.RequestContextHooks.ContextAwareMono;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.ConnectableFlux;
@@ -41,6 +42,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
+@GenerateNativeImageTrace
 class ContextAwareFluxTest {
 
     @BeforeAll

@@ -23,6 +23,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.util.Deque;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -119,7 +120,13 @@ public final class RequestScopedMdc {
             final Field mdcAdapterField = MDC.class.getDeclaredField("mdcAdapter");
             mdcAdapterField.setAccessible(true);
             oldAdapter = (MDCAdapter) mdcAdapterField.get(null);
-            mdcAdapterField.set(null, new Adapter(oldAdapter));
+            final MDCAdapter newAdapter = new Adapter(oldAdapter);
+            mdcAdapterField.set(null, newAdapter);
+
+            if ("ch.qos.logback.classic.util.LogbackMDCAdapter".equals(oldAdapter.getClass().getName())) {
+                // Since Logback 1.4.8, LoggingEvent does not directly use MDC.getMDCAdapter().
+                DelegatingLogbackMDCAdapter.maybeUpdateMdcAdapter(newAdapter);
+            }
         } catch (Throwable t) {
             oldAdapter = null;
             logger.warn(ERROR_MESSAGE, t);
@@ -446,6 +453,24 @@ public final class RequestScopedMdc {
         @Override
         public void setContextMap(Map<String, String> contextMap) {
             delegate.setContextMap(contextMap);
+        }
+
+        // Methods added in SLF4J 2.0.0
+
+        public void pushByKey(String key, String value) {
+            delegate.pushByKey(key, value);
+        }
+
+        public String popByKey(String key) {
+            return delegate.popByKey(key);
+        }
+
+        public Deque<String> getCopyOfDequeByKey(String key) {
+            return delegate.getCopyOfDequeByKey(key);
+        }
+
+        public void clearDequeByKey(String key) {
+            delegate.clearDequeByKey(key);
         }
     }
 }

@@ -47,7 +47,7 @@ class JavaHttpClientUpgradeTest {
             sb.maxRequestLength(maxRequestLength);
             sb.decorator(LoggingService.newDecorator());
             sb.service("/echo", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(agg -> {
+                return HttpResponse.of(req.aggregate().thenApply(agg -> {
                     return HttpResponse.of(ResponseHeaders.of(200), agg.content());
                 }));
             });

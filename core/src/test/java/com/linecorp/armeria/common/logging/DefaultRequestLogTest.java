@@ -25,14 +25,18 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -46,9 +50,11 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.channel.Channel;
 
@@ -68,6 +74,9 @@ class DefaultRequestLogTest {
     private Channel channel;
 
     private DefaultRequestLog log;
+
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
 
     @BeforeEach
     void setUp() {
@@ -172,6 +181,7 @@ class DefaultRequestLogTest {
     @Test
     void addChild() {
         when(ctx.method()).thenReturn(HttpMethod.GET);
+        when(ctx.eventLoop()).thenReturn(ContextAwareEventLoop.of(ctx, ImmediateEventLoop.INSTANCE));
         final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
         child.startRequest();
@@ -253,6 +263,7 @@ class DefaultRequestLogTest {
     void deferContent_setContentAfterEndResponse() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
         when(ctx.method()).thenReturn(HttpMethod.GET);
+        when(ctx.eventLoop()).thenReturn(ContextAwareEventLoop.of(ctx, ImmediateEventLoop.INSTANCE));
         final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
         assertThat(completeFuture.isDone()).isFalse();
 
@@ -277,6 +288,7 @@ class DefaultRequestLogTest {
     void deferContent_setContentBeforeEndResponse() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
         when(ctx.method()).thenReturn(HttpMethod.GET);
+        when(ctx.eventLoop()).thenReturn(ContextAwareEventLoop.of(ctx, ImmediateEventLoop.INSTANCE));
         final CompletableFuture<RequestLog> completeFuture = log.whenComplete();
         assertThat(completeFuture.isDone()).isFalse();
 
@@ -492,5 +504,44 @@ class DefaultRequestLogTest {
         assertThat(lines[1]).matches("^Children:$");
         assertThat(lines[2]).matches("^\\t\\{Request: \\{.*}, Response: \\{.*}}$");
         assertThat(lines[3]).matches("^\\t\\{Request: \\{.*}, Response: \\{.*}}$");
+    }
+
+    @Test
+    void testGetIfAvailable() {
+        // Given
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final RequestLogAccess log = ctx.log();
+
+        // When
+        assertThat(log.isAvailable(RequestLogProperty.REQUEST_HEADERS)).isTrue();
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+
+        // Then
+        assertThat(log.getIfAvailable(RequestLogProperty.REQUEST_HEADERS)).isEqualTo(log);
+        assertThat(log.getIfAvailable(RequestLogProperty.NAME)).isNull();
+    }
+
+    @Test
+    void testPendingLogsAlwaysInEventLoop() {
+        // Given
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final Thread testThread = Thread.currentThread();
+
+        final BlockingQueue<Thread> queue = new ArrayBlockingQueue<>(32);
+        final RequestLogAccess log = ctx.log();
+        for (RequestLogProperty property: RequestLogProperty.values()) {
+            log.whenAvailable(property).thenRun(() -> queue.add(Thread.currentThread()));
+        }
+
+        // schedule log completion from a different thread
+        eventLoop.get().execute(() -> {
+            ctx.logBuilder().endRequest();
+            ctx.logBuilder().endResponse();
+        });
+        await().untilAsserted(() -> assertThat(queue.size()).isEqualTo(RequestLogProperty.values().length));
+
+        assertThat(queue).allSatisfy(t -> assertThat(t)
+                .satisfiesAnyOf(t0 -> assertThat(t0).isEqualTo(testThread),
+                                t0 -> assertThat(ctx.eventLoop().inEventLoop(t0)).isTrue()));
     }
 }

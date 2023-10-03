@@ -33,8 +33,14 @@ const useStyles = makeStyles({
   hidden: {
     display: 'none',
   },
+  description: {
+    margin: 0,
+  },
   expand: {
     textAlign: 'end',
+    '& svg': {
+      verticalAlign: 'middle',
+    },
   },
 });
 
@@ -123,9 +129,9 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
             {specification.getTypeSignatureHtml(variable.typeSignature)}
           </code>
         </TableCell>
-        <TableCell>
+        <TableCell colSpan={hasChildren ? 1 : 2}>
           {variable.descriptionInfo && (
-            <pre>
+            <pre className={styles.description}>
               <Description descriptionInfo={variable.descriptionInfo} />
             </pre>
           )}
@@ -237,7 +243,6 @@ export default ({ title, variables, specification }: Props) => {
           </TableBody>
         </Table>
       </TableContainer>
-      <Typography variant="body2" paragraph />
     </>
   );
 };

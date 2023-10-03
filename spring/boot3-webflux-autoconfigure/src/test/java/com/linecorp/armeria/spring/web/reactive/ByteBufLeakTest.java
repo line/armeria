@@ -23,26 +23,19 @@ import java.net.Socket;
 import java.time.Duration;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -54,9 +47,9 @@ import io.netty.util.NetUtil;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-public class ByteBufLeakTest {
+@Timeout(10)
+class ByteBufLeakTest {
 
     private static final AtomicInteger completed = new AtomicInteger();
     private static final Queue<NettyDataBuffer> allocatedBuffers = new ConcurrentLinkedQueue<>();
@@ -64,7 +57,6 @@ public class ByteBufLeakTest {
     private static final AtomicBoolean requestReceived = new AtomicBoolean();
 
     @SpringBootApplication
-    @Configuration
     static class TestConfiguration {
         @Bean
         public DataBufferFactory dataBufferFactory() {
@@ -104,20 +96,19 @@ public class ByteBufLeakTest {
 
             private static void addListenerForCountingCompletedRequests() {
                 ServiceRequestContext.current().log().whenComplete()
-                                     .thenAccept(log -> completed.incrementAndGet());
-                requestReceived.set(true);
+                                     .thenAccept(log -> {
+                                         completed.incrementAndGet();
+                                         requestReceived.set(true);
+                                     });
             }
         }
     }
-
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @LocalServerPort
     int port;
 
     @Test
-    public void confirmNoBufferLeak() throws Exception {
+    void confirmNoBufferLeak() throws Exception {
         assertThat(allocatedBuffers).isEmpty();
         final WebClient client = WebClient.of("http://127.0.0.1:" + port);
         for (int i = 0; i < 2; i++) {
@@ -135,7 +126,7 @@ public class ByteBufLeakTest {
     }
 
     @Test
-    public void confirmNoBufferLeak_resetConnection() throws Exception {
+    void confirmNoBufferLeak_resetConnection() throws Exception {
         completed.set(0);
         assertThat(allocatedBuffers).isEmpty();
 
