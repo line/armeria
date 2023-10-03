@@ -186,15 +186,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
     const urlParams = new URLSearchParams(location.search);
 
     let urlRequestBody = '';
-    let urlDebugFormIsOpen = false;
-    if (useRequestBody) {
-      if (urlParams.has('request_body')) {
-        urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-      }
+    if (useRequestBody && urlParams.has('request_body')) {
+      urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
+    }
 
-      if (urlParams.has('debug_form_is_open')) {
-        urlDebugFormIsOpen = urlParams.get('debug_form_is_open') === 'true';
-      }
+    let urlDebugFormIsOpen = false;
+    if (urlParams.has('debug_form_is_open')) {
+      urlDebugFormIsOpen = urlParams.get('debug_form_is_open') === 'true';
     }
 
     let urlPath;
