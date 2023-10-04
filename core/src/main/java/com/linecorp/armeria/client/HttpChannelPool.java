@@ -168,11 +168,6 @@ final class HttpChannelPool implements AsyncCloseable {
         return maps;
     }
 
-    private Bootstrap getBootstrap(SessionProtocol desiredProtocol, SocketAddress remoteAddress,
-                                   SerializationFormat serializationFormat) {
-        return bootstraps.get(remoteAddress, desiredProtocol, serializationFormat);
-    }
-
     @Nullable
     private Deque<PooledChannel> getPool(SessionProtocol protocol, PoolKey key) {
         return pool[protocol.ordinal()].get(key);
@@ -367,7 +362,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         final Bootstrap bootstrap;
         try {
-            bootstrap = getBootstrap(desiredProtocol, remoteAddress, serializationFormat);
+            bootstrap = bootstraps.get(remoteAddress, desiredProtocol, serializationFormat);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;

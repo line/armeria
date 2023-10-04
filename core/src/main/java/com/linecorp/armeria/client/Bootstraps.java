@@ -37,8 +37,7 @@ import io.netty.handler.ssl.SslContext;
 final class Bootstraps {
 
     private final Bootstrap[][] inetBootstraps;
-    @Nullable
-    private final Bootstrap[][] unixBootstraps;
+    private final Bootstrap @Nullable [][] unixBootstraps;
     private final EventLoop eventLoop;
     private final SslContext sslCtxHttp1Only;
     private final SslContext sslCtxHttp1Or2;
@@ -118,10 +117,8 @@ final class Bootstraps {
         bootstrap.handler(new ChannelInitializer<Channel>() {
                               @Override
                               protected void initChannel(Channel ch) throws Exception {
-                                  ch.pipeline().addLast(new HttpClientPipelineConfigurator(clientFactory,
-                                          webSocket,
-                                          p,
-                                          sslCtx));
+                                  ch.pipeline().addLast(new HttpClientPipelineConfigurator(
+                                          clientFactory, webSocket, p, sslCtx));
                               }
                           }
         );
