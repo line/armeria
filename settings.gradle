@@ -6,17 +6,18 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.enterprise' version '3.14.1'
+    id 'com.gradle.enterprise' version '3.15'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.11.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.11.3'
 }
 
 import com.gradle.scan.plugin.PublishedBuildScan
 
+def isCi = System.getenv("CI") != null
+
 gradleEnterprise {
     server = "https://ge.armeria.dev"
     buildScan {
-        def isCi = System.getenv("CI") != null
         publishIfAuthenticated()
         publishAlways()
         uploadInBackground = !isCi
@@ -55,6 +56,18 @@ gradleEnterprise {
         capture {
             taskInputFiles = true
         }
+    }
+}
+
+buildCache {
+    local {
+        enabled = true
+    }
+    remote(gradleEnterprise.buildCache) {
+        enabled = true
+        // also check access key to avoid warning logs
+        def accessKey = System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY")
+        push = isCi && accessKey != null && !accessKey.isEmpty()
     }
 }
 

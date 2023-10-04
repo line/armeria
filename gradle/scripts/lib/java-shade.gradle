@@ -115,22 +115,29 @@ configure(relocatedProjects) {
                 }
             }
 
-            def dependencyJars = new LinkedHashSet<File>()
+            def proguardLibraryConfigs = []
             relocatedProjects.each { p ->
-                // NB: ProGuardTask picks the dependencies added *after* evaluation correctly
-                //     because libraryjar() intentionally keeps the specified dependencies as-is.
-                //     See ProGuardTask.libraryjar() for more information.
                 if (!p.hasFlags('no_aggregation')) {
-                    doFirst {
-                        p.configurations.testRuntimeClasspath.collect().each { File file ->
-                            if (!file.path.startsWith("${rootProject.projectDir}")) {
-                                dependencyJars.add(file)
-                            }
+                    def configName = "proguardLibraryJars_${p.path.replace(':', '_')}"
+                    def proguardLibraryJars = configurations.create(configName)
+
+                    proguardLibraryConfigs.add(proguardLibraryJars)
+                    dependencies.add(proguardLibraryJars.getName(), dependencies.project([path: p.path]))
+                }
+            }
+
+            // Filtering the libraryjars needs to be deferred to ensure all configurations are fully populated.
+            doFirst {
+                def dependencyJars = new LinkedHashSet<File>()
+                proguardLibraryConfigs.each { config ->
+                    config.each { File file ->
+                        if (!file.path.startsWith("${rootProject.projectDir}")) {
+                            dependencyJars.add(file)
                         }
                     }
                 }
+                libraryjars files(dependencyJars)
             }
-            libraryjars files(dependencyJars)
 
             // Add JDK. Use modules instead of rt.jar if possible.
             File jmodDir = file("${System.getProperty('java.home')}/jmods")
@@ -236,7 +243,7 @@ configure(relocatedProjects) {
             relocatedProjects.each { p ->
                 p.testing.suites.shadedTest.targets.configureEach {
                     testTask.configure {
-                        classpath += p.files(p.configurations.getByName('shadedJarTestRuntime').resolve())
+                        classpath += p.configurations.getByName('shadedJarTestRuntime')
                     }
                 }
             }
