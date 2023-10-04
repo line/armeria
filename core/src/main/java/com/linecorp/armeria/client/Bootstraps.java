@@ -103,8 +103,7 @@ final class Bootstraps {
      * Determine {@link SslContext} by the specified {@link SessionProtocol}.
      */
     SslContext determineSslContext(SessionProtocol desiredProtocol) {
-        return desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C ?
-               sslCtxHttp1Only : sslCtxHttp1Or2;
+        return desiredProtocol.isExplicitHttp1() ? sslCtxHttp1Only : sslCtxHttp1Or2;
     }
 
     private static Bootstrap select(Bootstrap[][] bootstraps, SessionProtocol desiredProtocol,
