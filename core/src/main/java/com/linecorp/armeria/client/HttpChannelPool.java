@@ -258,7 +258,6 @@ final class HttpChannelPool implements AsyncCloseable {
         assert !desiredProtocol.isExplicitHttp1() : "desiredProtocol: " + desiredProtocol;
         final ChannelAcquisitionFuture future = pendingAcquisitions[desiredProtocol.ordinal()].get(key);
         if (future == null) {
-            // TODO(ikhoon): Consider perferHttp1 option. https://github.com/line/armeria/pull/5168
             // Try to find a pending acquisition from the explicit protocols.
             switch (desiredProtocol) {
                 case HTTP:
