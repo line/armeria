@@ -181,7 +181,6 @@ final class HttpClientFactory implements ClientFactory {
         idleTimeoutMillis = options.idleTimeoutMillis();
         keepAliveOnPing = options.keepAliveOnPing();
         useHttp2Preface = options.useHttp2Preface();
-        preferHttp1 = options.preferHttp1();
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
@@ -270,10 +269,6 @@ final class HttpClientFactory implements ClientFactory {
 
     boolean useHttp2Preface() {
         return useHttp2Preface;
-    }
-
-    boolean preferHttp1() {
-        return preferHttp1;
     }
 
     boolean useHttp2WithoutAlpn() {
