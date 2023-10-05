@@ -51,10 +51,13 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -190,28 +193,32 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
-        derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
-            if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-                final Throwable cause = log.responseCause();
-                if (cause != null) {
-                    abortResponse(response, derivedCtx, cause);
-                    handleException(ctx, reqDuplicator, responseFuture, cause, false);
-                    return;
+        // Use split() to allow other decorators to access the response headers via `.mapHeaders()` or
+        // `peekHeaders()`.
+        final SplitHttpResponse splitResponse = response.split(ctx.eventLoop());
+        splitResponse.headers().handle((responseHeaders, cause) -> {
+            final RequestLogAccess log = ctx.log();
+            if (cause != null || log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                if (cause == null) {
+                    cause = log.ensureAvailable(RequestLogProperty.RESPONSE_CAUSE).responseCause();
                 }
+                abortResponse(splitResponse, derivedCtx, cause);
+                handleException(ctx, reqDuplicator, responseFuture, cause, false);
+                return null;
             }
 
-            final ResponseHeaders responseHeaders = log.responseHeaders();
             if (!redirectStatuses.contains(responseHeaders.status())) {
-                endRedirect(ctx, reqDuplicator, responseFuture, response);
-                return;
+                endRedirect(ctx, reqDuplicator, responseFuture,
+                            HttpResponse.of(responseHeaders, splitResponse.body()));
+                return null;
             }
             final String location = responseHeaders.get(HttpHeaderNames.LOCATION);
             if (isNullOrEmpty(location)) {
                 endRedirect(ctx, reqDuplicator, responseFuture, response);
-                return;
+                return null;
             }
 
-            final RequestHeaders requestHeaders = log.requestHeaders();
+            final RequestHeaders requestHeaders = ctx.request().headers();
             final URI redirectUri;
             try {
                 redirectUri = URI.create(requestHeaders.path()).resolve(location);
@@ -219,21 +226,21 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                     final SessionProtocol redirectProtocol = Scheme.parse(redirectUri.getScheme())
                                                                    .sessionProtocol();
                     if (!allowedProtocols.contains(redirectProtocol)) {
-                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, splitResponse,
                                         UnexpectedProtocolRedirectException.of(
                                                 redirectProtocol, allowedProtocols));
-                        return;
+                        return null;
                     }
 
                     if (!domainFilter.test(ctx, redirectUri.getHost())) {
-                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, splitResponse,
                                         UnexpectedDomainRedirectException.of(redirectUri.getHost()));
-                        return;
+                        return null;
                     }
                 }
             } catch (Throwable t) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
-                return;
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, splitResponse, t);
+                return null;
             }
 
             final HttpRequestDuplicator newReqDuplicator =
@@ -243,27 +250,30 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             try {
                 redirectFullUri = buildFullUri(ctx, redirectUri, newReqDuplicator.headers());
             } catch (Throwable t) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
-                return;
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, splitResponse, t);
+                return null;
             }
 
             if (isCyclicRedirects(redirectCtx, redirectFullUri, newReqDuplicator.headers())) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, splitResponse,
                                 CyclicRedirectsException.of(redirectCtx.originalUri(),
                                                             redirectCtx.redirectUris().values()));
-                return;
+                return null;
             }
 
             final Multimap<HttpMethod, String> redirectUris = redirectCtx.redirectUris();
             if (redirectUris.size() > maxRedirects) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
-                                response, TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
-                                                                       redirectUris.values()));
-                return;
+                                splitResponse,
+                                TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
+                                                             redirectUris.values()));
+                return null;
             }
 
-            abortResponse(response, derivedCtx, null);
+            // Cancel the subscription of the response body since we don't need it anymore.
+            abortResponse(splitResponse, derivedCtx, CancelledSubscriptionException.get());
             ctx.eventLoop().execute(() -> execute0(ctx, redirectCtx, newReqDuplicator, false));
+            return null;
         });
     }
 
@@ -303,7 +313,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     private static void handleException(ClientRequestContext ctx, ClientRequestContext derivedCtx,
                                         HttpRequestDuplicator reqDuplicator,
-                                        CompletableFuture<HttpResponse> future, HttpResponse originalRes,
+                                        CompletableFuture<HttpResponse> future, SplitHttpResponse originalRes,
                                         Throwable cause) {
         abortResponse(originalRes, derivedCtx, cause);
         handleException(ctx, reqDuplicator, future, cause, false);
@@ -322,7 +332,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         ctx.logBuilder().endResponse(cause);
     }
 
-    private static void abortResponse(HttpResponse originalRes, ClientRequestContext derivedCtx,
+    private static void abortResponse(SplitHttpResponse originalRes, ClientRequestContext derivedCtx,
                                       @Nullable Throwable cause) {
         // Set response content with null to make sure that the log is complete.
         final RequestLogBuilder logBuilder = derivedCtx.logBuilder();
@@ -330,9 +340,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         logBuilder.responseContentPreview(null);
 
         if (cause != null) {
-            originalRes.abort(cause);
+            originalRes.body().abort(cause);
         } else {
-            originalRes.abort();
+            originalRes.body().abort();
         }
     }
 
