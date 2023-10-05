@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedStreamException;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -26,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatusClass;
@@ -266,7 +266,7 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         }
 
         if (!res.tryWriteData(HttpData.wrap(data.retain()).withEndOfStream(endOfStream))) {
-            throw connectionError(INTERNAL_ERROR, ClosedSessionException.get(),
+            throw connectionError(INTERNAL_ERROR, newClosedSessionException(ctx),
                                   "failed to consume a DATA frame");
         }
 
