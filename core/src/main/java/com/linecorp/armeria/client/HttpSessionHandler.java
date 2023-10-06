@@ -117,6 +117,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Nullable
     private SessionProtocol retryProtocol;
 
+    /**
+     * {@code true} if an {@link Http2Settings} has been received from the remote endpoint.
+     */
+    private boolean isSettingsFrameReceived;
+
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
                        SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
@@ -324,6 +329,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             } else {
                 maxUnfinishedResponses = Integer.MAX_VALUE;
             }
+            isSettingsFrameReceived = true;
+            tryCompleteSessionPromise(ctx);
             return;
         }
 
@@ -384,14 +391,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT) {
-                if (proxyDestinationAddress != null) {
-                    // ProxyConnectionEvent was already triggered.
-                    tryCompleteSessionPromise(ctx);
-                }
-            } else {
-                tryCompleteSessionPromise(ctx);
-            }
+            tryCompleteSessionPromise(ctx);
             return;
         }
 
@@ -430,10 +430,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
         if (evt instanceof ProxyConnectionEvent) {
             proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
-            if (protocol != null) {
-                // SessionProtocol event was already triggered.
-                tryCompleteSessionPromise(ctx);
-            }
+            tryCompleteSessionPromise(ctx);
             return;
         }
 
@@ -441,7 +438,21 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     private void tryCompleteSessionPromise(ChannelHandlerContext ctx) {
-        if (!sessionPromise.trySuccess(channel)) {
+        if (protocol == null) {
+            // SessionProtocol has not been received.
+            return;
+        }
+        if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT && proxyDestinationAddress == null) {
+            // ProxyConnectionEvent is necessary for a proxied connection.
+            return;
+        }
+
+        if (protocol.isExplicitHttp2() && !isSettingsFrameReceived) {
+            // Http2Settings should be received for HTTP/2.
+            return;
+        }
+
+        if (!sessionPromise.trySuccess(channel) && !sessionPromise.isSuccess()) {
             // Session creation has been failed already; close the connection.
             ctx.close();
         }
