@@ -121,6 +121,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      * {@code true} if an {@link Http2Settings} has been received from the remote endpoint.
      */
     private boolean isSettingsFrameReceived;
+    private boolean isChannelActive;
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
@@ -315,7 +316,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        isChannelActive = true;
         isAcquirable = true;
+        tryCompleteSessionPromise(ctx);
     }
 
     @Override
@@ -353,8 +356,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (evt instanceof SessionProtocol) {
             assert protocol == null;
             assert responseDecoder == null;
-
-            sessionTimeoutFuture.cancel(false);
 
             // Set the current protocol and its associated WaitsHolder implementation.
             final SessionProtocol protocol = (SessionProtocol) evt;
@@ -438,20 +439,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     private void tryCompleteSessionPromise(ChannelHandlerContext ctx) {
-        if (protocol == null) {
-            // SessionProtocol has not been received.
+        if (protocol == null || !isChannelActive) {
             return;
         }
         if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT && proxyDestinationAddress == null) {
             // ProxyConnectionEvent is necessary for a proxied connection.
             return;
         }
-
         if (protocol.isExplicitHttp2() && !isSettingsFrameReceived) {
             // Http2Settings should be received for HTTP/2.
             return;
         }
 
+        sessionTimeoutFuture.cancel(false);
         if (!sessionPromise.trySuccess(channel) && !sessionPromise.isSuccess()) {
             // Session creation has been failed already; close the connection.
             ctx.close();
