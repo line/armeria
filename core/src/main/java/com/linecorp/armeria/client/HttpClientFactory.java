@@ -107,7 +107,6 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp2WithoutAlpn;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
-    private final boolean preferHttp1;
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
     private final Http1HeaderNaming http1HeaderNaming;
