@@ -41,69 +41,6 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
     }
 
     /**
-     * Asserts that the actual byte array of {@link HttpData} contains the given values, in any order.
-     * The {@code expected} cannot be null.
-     */
-    public TestHttpResponse arrayContains(byte... expected) {
-        requireNonNull(expected, "expected");
-        assertTrue(bytesContains(actual().array(), expected));
-        return response();
-    }
-
-    /**
-     * Asserts that the actual byte array of {@link HttpData} contains the given values, in any order.
-     * The {@code expected} cannot be null.
-     */
-    public TestHttpResponse arrayContains(Byte[] expected) {
-        requireNonNull(expected, "expected");
-        assertTrue(bytesContains(actual().array(), toPrimitiveByteArray(expected)));
-        return response();
-    }
-
-    /**
-     * Asserts that the actual byte array of {@link HttpData} contains the given values, in any order.
-     * The {@code expected} cannot be null.
-     */
-    public TestHttpResponse arrayContains(int... expected) {
-        requireNonNull(expected, "expected");
-        assertTrue(bytesContains(actual().array(), toByteArray(expected)));
-        return response();
-    }
-
-    /**
-     * Asserts that the actual byte array of {@link HttpData} contains only the given values and nothing else,
-     * in order.
-     * The {@code expected} cannot be null.
-     */
-    public TestHttpResponse arrayContainsExactly(byte... expected) {
-        requireNonNull(expected, "expected");
-        assertTrue(bytesContainsExactly(actual().array(), expected));
-        return response();
-    }
-
-    /**
-     * Asserts that the actual byte array of {@link HttpData} contains only the given values and nothing else,
-     * in order.
-     * The {@code expected} cannot be null.
-     */
-    public TestHttpResponse arrayContainsExactly(Byte[] expected) {
-        requireNonNull(expected, "expected");
-        assertTrue(bytesContainsExactly(actual().array(), toPrimitiveByteArray(expected)));
-        return response();
-    }
-
-    /**
-     * Asserts that the actual byte array of {@link HttpData} contains only the given values and nothing else,
-     * in order.
-     * The {@code expected} cannot be null.
-     */
-    public TestHttpResponse arrayContainsExactly(int... expected) {
-        requireNonNull(expected, "expected");
-        assertTrue(bytesContainsExactly(actual().array(), toByteArray(expected)));
-        return response();
-    }
-
-    /**
      * Asserts that the length of actual {@link HttpData} is equal to the given one.
      */
     public TestHttpResponse lengthIsEqualTo(int expected) {
@@ -171,47 +108,4 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
         return response();
     }
 
-    private boolean bytesContains(byte[] bytes, byte[] expected) {
-        for (byte e : expected) {
-            boolean contains = false;
-            for (byte b : bytes) {
-                if (b == e) {
-                    contains = true;
-                    break;
-                }
-            }
-            if (!contains) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean bytesContainsExactly(byte[] bytes, byte[] expected) {
-        for (int i = 0; i < bytes.length; i++) {
-            if (bytes[i] != expected[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private byte[] toByteArray(int[] ints) {
-        if (ints == null) {
-            return null;
-        }
-        final byte[] bytes = new byte[ints.length];
-        for (int i = 0; i < bytes.length; i++) {
-            bytes[i] = (byte) ints[i];
-        }
-        return bytes;
-    }
-
-    private static byte[] toPrimitiveByteArray(Byte[] bytes) {
-        final byte[] primitives = new byte[bytes.length];
-        for (int i = 0; i < primitives.length; i++) {
-            primitives[i] = bytes[i];
-        }
-        return primitives;
-    }
 }
