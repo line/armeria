@@ -56,7 +56,7 @@ import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class WebTestClientTest {
+class TestBlockingWebClientTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -67,7 +67,7 @@ class WebTestClientTest {
 
     @Test
     void restApi() {
-        final WebTestClientRequestPreparation preparation = server.webTestClient().prepare();
+        final TestBlockingWebClientRequestPreparation preparation = server.testBlockingWebClient().prepare();
         // HTTP methods used for REST APIs
         // See: https://restfulapi.net/http-methods/
         for (HttpMethod method : ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
@@ -114,7 +114,7 @@ class WebTestClientTest {
                 BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
 
         );
-        server.webTestClient()
+        server.testBlockingWebClient()
               .execute(multipart.toHttpRequest("/uploadWithMultipartObject"))
               .assertStatus().isOk()
               .assertHeaders().contentLengthIsEqualTo(110)
@@ -141,14 +141,14 @@ class WebTestClientTest {
                         "content-type:application/octet-stream\n" +
                         '\n' +
                         "foo\n"));
-        server.webTestClient().execute(request)
+        server.testBlockingWebClient().execute(request)
               .assertStatus().isBadRequest()
               .assertContent().stringUtf8Contains("No closing MIME boundary");
     }
 
     @Test
     void testAbortedResponse() {
-        final WebTestClient client = WebTestClient.of();
+        final TestBlockingWebClient client = TestBlockingWebClient.of();
         client.get("/error")
               .assertCause()
               .isInstanceOf(IllegalArgumentException.class);

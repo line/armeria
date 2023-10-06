@@ -40,11 +40,8 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.WebClientUtil;
-
-import io.netty.channel.EventLoop;
 
 /**
  * This is a web client created for testing purposes. It uses an internal {@link BlockingWebClient},
@@ -57,8 +54,8 @@ import io.netty.channel.EventLoop;
  * static ServerExtension server = ...;
  *
  * @Test
- * void usingWebTestClient() {
- *     final WebTestClient client = server.webTestClient();
+ * void usingTestBlockingWebClient() {
+ *     final TestBlockingWebClient client = server.testBlockingWebClient();
  *
  *     client.get("/rest/1")
  *           .assertStatus().isOk()
@@ -67,24 +64,21 @@ import io.netty.channel.EventLoop;
  *           .assertTrailers().isEmpty();
  * }
  * }</pre>
- *
- * <p>Note that you should never use this client in an {@link EventLoop} thread.
- * Use it from a non-{@link EventLoop} thread such as {@link BlockingTaskExecutor}.
  */
-public interface WebTestClient extends ClientBuilderParams, Unwrappable {
+public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable {
 
     /**
-     * Returns a {@link WebTestClient} without a base URI using the default {@link ClientFactory} and
+     * Returns a {@link TestBlockingWebClient} without a base URI using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      */
-    static WebTestClient of() {
-        return DefaultWebTestClient.DEFAULT;
+    static TestBlockingWebClient of() {
+        return DefaultTestBlockingWebClient.DEFAULT;
     }
 
     /**
-     * Returns a new {@link WebTestClient} with the specified {@link WebClient}.
+     * Returns a new {@link TestBlockingWebClient} with the specified {@link WebClient}.
      */
-    static WebTestClient of(WebClient webClient) {
+    static TestBlockingWebClient of(WebClient webClient) {
         requireNonNull(webClient, "webClient");
 
         if (webClient == WebClient.of()) {
@@ -94,19 +88,19 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link WebTestClient} with the specified {@link BlockingWebClient}.
+     * Returns a new {@link TestBlockingWebClient} with the specified {@link BlockingWebClient}.
      */
-    static WebTestClient of(BlockingWebClient blockingWebClient) {
+    static TestBlockingWebClient of(BlockingWebClient blockingWebClient) {
         requireNonNull(blockingWebClient, "blockingWebClient");
 
         if (blockingWebClient == BlockingWebClient.of()) {
             return of();
         }
-        return new DefaultWebTestClient(blockingWebClient);
+        return new DefaultTestBlockingWebClient(blockingWebClient);
     }
 
     /**
-     * Returns a new {@link WebTestClient} that connects to the specified {@code uri} using the default options.
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@code uri} using the default options.
      *
      * @param uri the URI of the server endpoint
      *
@@ -114,12 +108,12 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  in {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClient of(String uri) {
+    static TestBlockingWebClient of(String uri) {
         return builder(uri).build();
     }
 
     /**
-     * Returns a new {@link WebTestClient} that connects to the specified {@link URI} using the default options.
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link URI} using the default options.
      *
      * @param uri the {@link URI} of the server endpoint
      *
@@ -127,12 +121,12 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  in {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClient of(URI uri) {
+    static TestBlockingWebClient of(URI uri) {
         return builder(uri).build();
     }
 
     /**
-     * Returns a new {@link WebTestClient} that connects to the specified {@link EndpointGroup} with
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@code protocol} using the default {@link ClientFactory} and the default
      * {@link ClientOptions}.
      *
@@ -143,12 +137,12 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClient of(String protocol, EndpointGroup endpointGroup) {
+    static TestBlockingWebClient of(String protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
     }
 
     /**
-     * Returns a new {@link WebTestClient} that connects to the specified {@link EndpointGroup} with
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@link SessionProtocol} using the default {@link ClientFactory} and the default
      * {@link ClientOptions}.
      *
@@ -159,12 +153,12 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
+    static TestBlockingWebClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
     }
 
     /**
-     * Returns a new {@link WebTestClient} that connects to the specified {@link EndpointGroup} with
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@code protocol} and {@code path} using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      *
@@ -176,12 +170,12 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClient of(String protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClient of(String protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
     }
 
     /**
-     * Returns a new {@link WebTestClient} that connects to the specified {@link EndpointGroup} with
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@link SessionProtocol} and {@code path} using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      *
@@ -193,19 +187,19 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClient of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClient of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
     }
 
     /**
-     * Returns a new {@link WebTestClientBuilder} created without a base {@link URI}.
+     * Returns a new {@link TestBlockingWebClientBuilder} created without a base {@link URI}.
      */
-    static WebTestClientBuilder builder() {
-        return new WebTestClientBuilder();
+    static TestBlockingWebClientBuilder builder() {
+        return new TestBlockingWebClientBuilder();
     }
 
     /**
-     * Returns a new {@link WebTestClientBuilder} created with the specified base {@code uri}.
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified base {@code uri}.
      *
      * @param uri the URI of the server endpoint
      *
@@ -213,12 +207,12 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  in {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClientBuilder builder(String uri) {
+    static TestBlockingWebClientBuilder builder(String uri) {
         return builder(URI.create(requireNonNull(uri, "uri")));
     }
 
     /**
-     * Returns a new {@link WebTestClientBuilder} created with the specified base {@link URI}.
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified base {@link URI}.
      *
      * @param uri the {@link URI} of the server endpoint
      *
@@ -226,12 +220,12 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  in {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClientBuilder builder(URI uri) {
-        return new WebTestClientBuilder(uri);
+    static TestBlockingWebClientBuilder builder(URI uri) {
+        return new TestBlockingWebClientBuilder(uri);
     }
 
     /**
-     * Returns a new {@link WebTestClientBuilder} created with the specified {@code protocol}
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified {@code protocol}
      * and base {@link EndpointGroup}.
      *
      * @param protocol the session protocol of the {@link EndpointGroup}
@@ -241,12 +235,12 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClientBuilder builder(String protocol, EndpointGroup endpointGroup) {
+    static TestBlockingWebClientBuilder builder(String protocol, EndpointGroup endpointGroup) {
         return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")), endpointGroup);
     }
 
     /**
-     * Returns a new {@link WebTestClientBuilder} created with the specified {@link SessionProtocol}
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified {@link SessionProtocol}
      * and base {@link EndpointGroup}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
@@ -256,14 +250,14 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
+    static TestBlockingWebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
-        return new WebTestClientBuilder(protocol, endpointGroup, null);
+        return new TestBlockingWebClientBuilder(protocol, endpointGroup, null);
     }
 
     /**
-     * Returns a new {@link WebTestClientBuilder} created with the specified {@code protocol}.
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified {@code protocol}.
      * base {@link EndpointGroup} and path.
      *
      * @param protocol the session protocol of the {@link EndpointGroup}
@@ -274,7 +268,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClientBuilder builder(String protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClientBuilder builder(String protocol, EndpointGroup endpointGroup, String path) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(path, "path");
@@ -282,7 +276,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link WebTestClientBuilder} created with the specified {@link SessionProtocol},
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified {@link SessionProtocol},
      * base {@link EndpointGroup} and path.
      *
      * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
@@ -293,11 +287,11 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                                  {@link SessionProtocol#httpValues()} or
      *                                  {@link SessionProtocol#httpsValues()}.
      */
-    static WebTestClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(path, "path");
-        return new WebTestClientBuilder(protocol, endpointGroup, path);
+        return new TestBlockingWebClientBuilder(protocol, endpointGroup, path);
     }
 
     /**
@@ -366,7 +360,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
     /**
      * Prepares to send an {@link HttpRequest} using fluent builder.
      * <pre>{@code
-     * WebTestClient client = WebTestClient.of(...);
+     * TestBlockingWebClient client = TestBlockingWebClient.of(...);
      * TestHttpResponse response = client.prepare()
      *                               .post("/foo")
      *                               .header(HttpHeaderNames.AUTHORIZATION, ...)
@@ -374,7 +368,7 @@ public interface WebTestClient extends ClientBuilderParams, Unwrappable {
      *                               .execute();
      * }</pre>
      */
-    WebTestClientRequestPreparation prepare();
+    TestBlockingWebClientRequestPreparation prepare();
 
     /**
      * Sends an HTTP OPTIONS request.

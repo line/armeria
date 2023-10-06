@@ -39,17 +39,20 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestMethodSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
 /**
- * Prepares and executes a new {@link HttpRequest} for {@link WebTestClient}.
+ * Prepares and executes a new {@link HttpRequest} for {@link TestBlockingWebClient}.
  */
-public final class WebTestClientRequestPreparation implements RequestPreparationSetters, RequestMethodSetters {
+@UnstableApi
+public final class TestBlockingWebClientRequestPreparation
+        implements RequestPreparationSetters, RequestMethodSetters {
 
     private final BlockingWebClientRequestPreparation delegate;
 
-    WebTestClientRequestPreparation(BlockingWebClientRequestPreparation delegate) {
+    TestBlockingWebClientRequestPreparation(BlockingWebClientRequestPreparation delegate) {
         requireNonNull(delegate, "delegate");
         this.delegate = delegate;
     }
@@ -62,91 +65,91 @@ public final class WebTestClientRequestPreparation implements RequestPreparation
     }
 
     @Override
-    public WebTestClientRequestPreparation exchangeType(ExchangeType exchangeType) {
+    public TestBlockingWebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
         delegate.exchangeType(exchangeType);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation requestOptions(RequestOptions requestOptions) {
+    public TestBlockingWebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation get(String path) {
+    public TestBlockingWebClientRequestPreparation get(String path) {
         delegate.get(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation post(String path) {
+    public TestBlockingWebClientRequestPreparation post(String path) {
         delegate.post(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation put(String path) {
+    public TestBlockingWebClientRequestPreparation put(String path) {
         delegate.put(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation delete(String path) {
+    public TestBlockingWebClientRequestPreparation delete(String path) {
         delegate.delete(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation patch(String path) {
+    public TestBlockingWebClientRequestPreparation patch(String path) {
         delegate.patch(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation options(String path) {
+    public TestBlockingWebClientRequestPreparation options(String path) {
         delegate.options(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation head(String path) {
+    public TestBlockingWebClientRequestPreparation head(String path) {
         delegate.head(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation trace(String path) {
+    public TestBlockingWebClientRequestPreparation trace(String path) {
         delegate.trace(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation method(HttpMethod method) {
+    public TestBlockingWebClientRequestPreparation method(HttpMethod method) {
         delegate.method(method);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation path(String path) {
+    public TestBlockingWebClientRequestPreparation path(String path) {
         delegate.path(path);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation content(String content) {
+    public TestBlockingWebClientRequestPreparation content(String content) {
         delegate.content(content);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation content(MediaType contentType, CharSequence content) {
+    public TestBlockingWebClientRequestPreparation content(MediaType contentType, CharSequence content) {
         delegate.content(contentType, content);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation content(MediaType contentType, String content) {
+    public TestBlockingWebClientRequestPreparation content(MediaType contentType, String content) {
         delegate.content(contentType, content);
         return this;
     }
@@ -154,27 +157,27 @@ public final class WebTestClientRequestPreparation implements RequestPreparation
     @Override
     @FormatMethod
     @SuppressWarnings("FormatStringAnnotation")
-    public WebTestClientRequestPreparation content(@FormatString String format, Object... content) {
+    public TestBlockingWebClientRequestPreparation content(@FormatString String format, Object... content) {
         delegate.content(format, content);
         return this;
     }
 
     @Override
     @SuppressWarnings("FormatStringAnnotation")
-    public WebTestClientRequestPreparation content(MediaType contentType, @FormatString String format,
-                                                   Object... content) {
+    public TestBlockingWebClientRequestPreparation content(MediaType contentType, @FormatString String format,
+                                                           Object... content) {
         delegate.content(contentType, format, content);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation content(MediaType contentType, byte[] content) {
+    public TestBlockingWebClientRequestPreparation content(MediaType contentType, byte[] content) {
         delegate.content(contentType, content);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation content(MediaType contentType, HttpData content) {
+    public TestBlockingWebClientRequestPreparation content(MediaType contentType, HttpData content) {
         delegate.content(contentType, content);
         return this;
     }
@@ -186,131 +189,131 @@ public final class WebTestClientRequestPreparation implements RequestPreparation
     }
 
     @Override
-    public WebTestClientRequestPreparation content(MediaType contentType,
-                                                   Publisher<? extends HttpData> content) {
+    public TestBlockingWebClientRequestPreparation content(MediaType contentType,
+                                                           Publisher<? extends HttpData> content) {
         delegate.content(contentType, content);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation contentJson(Object content) {
+    public TestBlockingWebClientRequestPreparation contentJson(Object content) {
         delegate.contentJson(content);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation header(CharSequence name, Object value) {
+    public TestBlockingWebClientRequestPreparation header(CharSequence name, Object value) {
         delegate.header(name, value);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation headers(
+    public TestBlockingWebClientRequestPreparation headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         delegate.headers(headers);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation trailer(CharSequence name, Object value) {
+    public TestBlockingWebClientRequestPreparation trailer(CharSequence name, Object value) {
         delegate.trailer(name, value);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation trailers(
+    public TestBlockingWebClientRequestPreparation trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
         delegate.trailers(trailers);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation pathParam(String name, Object value) {
+    public TestBlockingWebClientRequestPreparation pathParam(String name, Object value) {
         delegate.pathParam(name, value);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation pathParams(Map<String, ?> pathParams) {
+    public TestBlockingWebClientRequestPreparation pathParams(Map<String, ?> pathParams) {
         delegate.pathParams(pathParams);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation disablePathParams() {
+    public TestBlockingWebClientRequestPreparation disablePathParams() {
         delegate.disablePathParams();
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation queryParam(String name, Object value) {
+    public TestBlockingWebClientRequestPreparation queryParam(String name, Object value) {
         delegate.queryParam(name, value);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation queryParams(
+    public TestBlockingWebClientRequestPreparation queryParams(
             Iterable<? extends Entry<? extends String, String>> queryParams) {
         delegate.queryParams(queryParams);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation cookie(Cookie cookie) {
+    public TestBlockingWebClientRequestPreparation cookie(Cookie cookie) {
         delegate.cookie(cookie);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation cookies(Iterable<? extends Cookie> cookies) {
+    public TestBlockingWebClientRequestPreparation cookies(Iterable<? extends Cookie> cookies) {
         delegate.cookies(cookies);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation responseTimeout(Duration responseTimeout) {
+    public TestBlockingWebClientRequestPreparation responseTimeout(Duration responseTimeout) {
         delegate.responseTimeout(responseTimeout);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
+    public TestBlockingWebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
         delegate.responseTimeoutMillis(responseTimeoutMillis);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation writeTimeout(Duration writeTimeout) {
+    public TestBlockingWebClientRequestPreparation writeTimeout(Duration writeTimeout) {
         delegate.writeTimeout(writeTimeout);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation writeTimeoutMillis(long writeTimeoutMillis) {
+    public TestBlockingWebClientRequestPreparation writeTimeoutMillis(long writeTimeoutMillis) {
         delegate.writeTimeoutMillis(writeTimeoutMillis);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation maxResponseLength(long maxResponseLength) {
+    public TestBlockingWebClientRequestPreparation maxResponseLength(long maxResponseLength) {
         delegate.maxResponseLength(maxResponseLength);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation requestAutoAbortDelay(Duration delay) {
+    public TestBlockingWebClientRequestPreparation requestAutoAbortDelay(Duration delay) {
         delegate.requestAutoAbortDelay(delay);
         return this;
     }
 
     @Override
-    public WebTestClientRequestPreparation requestAutoAbortDelayMillis(long delayMillis) {
+    public TestBlockingWebClientRequestPreparation requestAutoAbortDelayMillis(long delayMillis) {
         delegate.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 
     @Override
-    public <V> WebTestClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
+    public <V> TestBlockingWebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
         return this;
     }

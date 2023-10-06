@@ -28,13 +28,13 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
 
-final class DefaultWebTestClient implements WebTestClient {
+final class DefaultTestBlockingWebClient implements TestBlockingWebClient {
 
-    static final WebTestClient DEFAULT = new DefaultWebTestClient(BlockingWebClient.of());
+    static final TestBlockingWebClient DEFAULT = new DefaultTestBlockingWebClient(BlockingWebClient.of());
 
     private final BlockingWebClient delegate;
 
-    DefaultWebTestClient(BlockingWebClient delegate) {
+    DefaultTestBlockingWebClient(BlockingWebClient delegate) {
         requireNonNull(delegate, "delegate");
         this.delegate = delegate;
     }
@@ -51,8 +51,8 @@ final class DefaultWebTestClient implements WebTestClient {
     }
 
     @Override
-    public WebTestClientRequestPreparation prepare() {
-        return new WebTestClientRequestPreparation(delegate.prepare());
+    public TestBlockingWebClientRequestPreparation prepare() {
+        return new TestBlockingWebClientRequestPreparation(delegate.prepare());
     }
 
     @Override
@@ -77,7 +77,7 @@ final class DefaultWebTestClient implements WebTestClient {
 
     @Override
     public Class<?> clientType() {
-        return WebTestClient.class;
+        return TestBlockingWebClient.class;
     }
 
     @Override
