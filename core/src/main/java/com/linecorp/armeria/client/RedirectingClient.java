@@ -263,7 +263,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             // Drain the response to release the pooled objects.
-            response.subscribe().handleAsync((unused, cause) -> {
+            response.subscribe(ctx.eventLoop()).handleAsync((unused, cause) -> {
                 if (cause != null) {
                     handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, cause);
                     return null;
