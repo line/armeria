@@ -20,8 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.util.stream.Stream;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -37,18 +37,18 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-public class JsonTextSequencesTest {
+class JsonTextSequencesTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    @ClassRule
-    public static ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/seq/publisher",
@@ -68,8 +68,8 @@ public class JsonTextSequencesTest {
     };
 
     @Test
-    public void fromPublisherOrStream() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/seq");
+    void fromPublisherOrStream() {
+        final WebClient client = WebClient.of(server.httpUri() + "/seq");
         for (final String path : ImmutableList.of("/publisher", "/stream", "/custom-mapper")) {
             final HttpResponse response = client.get(path);
             StepVerifier.create(response)
@@ -86,9 +86,9 @@ public class JsonTextSequencesTest {
     }
 
     @Test
-    public void singleSequence() {
+    void singleSequence() {
         final AggregatedHttpResponse response =
-                WebClient.of(rule.httpUri() + "/seq").get("/single").aggregate().join();
+                WebClient.of(server.httpUri() + "/seq").get("/single").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.JSON_SEQ);
         // Check whether the content is serialized as a JSON Text Sequence format.

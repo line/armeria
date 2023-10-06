@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.brave.TestSpanCollector;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 import brave.Span.Kind;
 import brave.Tracing;
@@ -241,7 +242,9 @@ class BraveClientTest {
         final RpcRequest rpcReq = RpcRequest.of(TestService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
-        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
+        final ClientRequestContext ctx = ClientRequestContext.builder(req)
+                                                             .eventLoop(ImmediateEventLoop.INSTANCE)
+                                                             .build();
         // the authority is extracted even when the request doesn't declare an authority
         final RequestHeaders headersWithoutAuthority =
                 req.headers().toBuilder().removeAndThen(HttpHeaderNames.AUTHORITY).build();
