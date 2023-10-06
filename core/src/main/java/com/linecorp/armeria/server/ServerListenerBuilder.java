@@ -49,27 +49,27 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Server server = ...
  * server.serverListener(sl);
  * }</pre>
- * */
+ */
 public final class ServerListenerBuilder {
 
     /**
      * {@link Consumer}s invoked when the {@link Server} is starting.
-     * */
+     */
     private final List<Consumer<? super Server>> serverStartingCallbacks = new ArrayList<>();
 
     /**
      * {@link Consumer}s invoked when the {@link Server} is started.
-     * */
+     */
     private final List<Consumer<? super Server>> serverStartedCallbacks = new ArrayList<>();
 
     /**
      * {@link Consumer}s invoked when the {@link Server} is stopping.
-     * */
+     */
     private final List<Consumer<? super Server>> serverStoppingCallbacks = new ArrayList<>();
 
     /**
      * {@link Consumer}s invoked when the {@link Server} is stopped.
-     * */
+     */
     private final List<Consumer<? super Server>> serverStoppedCallbacks = new ArrayList<>();
 
     ServerListenerBuilder() {}
@@ -77,22 +77,22 @@ public final class ServerListenerBuilder {
     private static class CallbackServerListener implements ServerListener {
         /**
          * {@link Consumer}s invoked when the {@link Server} is starting.
-         * */
+         */
         private final List<Consumer<? super Server>> serverStartingCallbacks;
 
         /**
          * {@link Consumer}s invoked when the {@link Server} is started.
-         * */
+         */
         private final List<Consumer<? super Server>> serverStartedCallbacks;
 
         /**
          * {@link Consumer}s invoked when the {@link Server} is stopping.
-         * */
+         */
         private final List<Consumer<? super Server>> serverStoppingCallbacks;
 
         /**
          * {@link Consumer}s invoked when the {@link Server} is stopped.
-         * */
+         */
         private final List<Consumer<? super Server>> serverStoppedCallbacks;
 
         CallbackServerListener(List<Consumer<? super Server>> serverStartingCallbacks,
@@ -319,6 +319,64 @@ public final class ServerListenerBuilder {
             serverStoppingCallbacks.add(s -> ShutdownSupport.of(executorService).shutdown());
         } else {
             serverStoppingCallbacks.add(
+                    s -> ShutdownSupport.of(executorService, terminationTimeoutMillis).shutdown());
+        }
+        return this;
+    }
+
+    /**
+     * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
+     * is stopped.
+     *
+     * <p>Depending on the value of {@code terminationTimeoutMillis}, the behavior is as follows:
+     * <ul>
+     * <li>If the {@code terminationTimeoutMillis} is positive, it allows a maximum duration of
+     * {@code terminationTimeoutMillis} for the {@link ExecutorService} to terminate.</li>
+     * <li>If the {@code terminationTimeoutMillis} is zero, it will wait indefinitely for the
+     * {@link ExecutorService} to terminate during shutdown.</li>
+     * <li>If the {@code terminationTimeoutMillis} is negative, throws {@link IllegalArgumentException}.</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerListenerBuilder shutdownWhenStopped(ExecutorService executorService,
+                                                     Duration terminationTimeout) {
+        requireNonNull(executorService, "executorService");
+        requireNonNull(terminationTimeout, "terminationTimeout");
+        long millis;
+        try {
+            millis = terminationTimeout.toMillis();
+        } catch (ArithmeticException ignore) {
+            millis = terminationTimeout.isNegative() ? Long.MIN_VALUE : Long.MAX_VALUE;
+        }
+        shutdownWhenStopped(executorService, millis);
+        return this;
+    }
+
+    /**
+     * Add a callback that gracefully shuts down the given {@link ExecutorService} when the {@link Server}
+     * is stopped.
+     *
+     * <p>Depending on the value of {@code terminationTimeoutMillis}, the behavior is as follows:
+     * <ul>
+     * <li>If the {@code terminationTimeoutMillis} is positive, it allows a maximum duration of
+     * {@code terminationTimeoutMillis} for the {@link ExecutorService} to terminate.</li>
+     * <li>If the {@code terminationTimeoutMillis} is zero, it will wait indefinitely for the
+     * {@link ExecutorService} to terminate during shutdown.</li>
+     * <li>If the {@code terminationTimeoutMillis} is negative, throws {@link IllegalArgumentException}.</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerListenerBuilder shutdownWhenStopped(ExecutorService executorService,
+                                                     long terminationTimeoutMillis) {
+        requireNonNull(executorService, "executorService");
+        if (terminationTimeoutMillis < 0) {
+            throw new IllegalArgumentException("terminationTimeout must be greater than or equal to 0.");
+        }
+
+        if (terminationTimeoutMillis == 0) {
+            serverStoppedCallbacks.add(s -> ShutdownSupport.of(executorService).shutdown());
+        } else {
+            serverStoppedCallbacks.add(
                     s -> ShutdownSupport.of(executorService, terminationTimeoutMillis).shutdown());
         }
         return this;
