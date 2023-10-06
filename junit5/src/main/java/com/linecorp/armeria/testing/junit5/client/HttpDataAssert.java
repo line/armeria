@@ -107,5 +107,4 @@ public final class HttpDataAssert extends AbstractResponseAssert<HttpData> {
         assertTrue(actual().toStringAscii().contains(expected));
         return response();
     }
-
 }

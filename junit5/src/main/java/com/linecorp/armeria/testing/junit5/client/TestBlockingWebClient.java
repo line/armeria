@@ -100,26 +100,26 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
     }
 
     /**
-     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@code uri} using the default options.
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@code uri} using the default
+     * options.
      *
      * @param uri the URI of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClient of(String uri) {
         return builder(uri).build();
     }
 
     /**
-     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link URI} using the default options.
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link URI} using the default
+     * options.
      *
      * @param uri the {@link URI} of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClient of(URI uri) {
         return builder(uri).build();
@@ -134,8 +134,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param endpointGroup the server {@link EndpointGroup}
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClient of(String protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
@@ -150,8 +149,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param endpointGroup the server {@link EndpointGroup}
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
@@ -167,8 +165,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param path the path to the endpoint
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClient of(String protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
@@ -184,8 +181,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param path the path to the endpoint
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClient of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
@@ -204,8 +200,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param uri the URI of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClientBuilder builder(String uri) {
         return builder(URI.create(requireNonNull(uri, "uri")));
@@ -217,8 +212,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param uri the {@link URI} of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClientBuilder builder(URI uri) {
         return new TestBlockingWebClientBuilder(uri);
@@ -232,8 +226,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param endpointGroup the server {@link EndpointGroup}
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClientBuilder builder(String protocol, EndpointGroup endpointGroup) {
         return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")), endpointGroup);
@@ -247,8 +240,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param endpointGroup the server {@link EndpointGroup}
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
         requireNonNull(protocol, "protocol");
@@ -265,8 +257,7 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param path the path to the endpoint
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
     static TestBlockingWebClientBuilder builder(String protocol, EndpointGroup endpointGroup, String path) {
         requireNonNull(protocol, "protocol");
@@ -284,10 +275,10 @@ public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable 
      * @param path the path to the endpoint
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static TestBlockingWebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup,
+                                                String path) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(path, "path");

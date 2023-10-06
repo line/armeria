@@ -61,8 +61,8 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
     /**
      * Creates a new instance.
      *
-     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
-     *                                  in {@link SessionProtocol}
+     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields in
+     *     {@link SessionProtocol}
      */
     TestBlockingWebClientBuilder(URI uri) {
         super(uri);
@@ -72,9 +72,10 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
      * Creates a new instance.
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
-     *                                  in {@link SessionProtocol}
+     *     in {@link SessionProtocol}
      */
-    TestBlockingWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
+    TestBlockingWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
+                                 @Nullable String path) {
         super(sessionProtocol, endpointGroup, path);
     }
 
@@ -82,8 +83,8 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
      * Returns a newly-created web test client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
-     *                                  {@link TestBlockingWebClient#builder(String)} or
-     *                                  {@link TestBlockingWebClient#builder(URI)} is not an HTTP scheme
+     *     {@link TestBlockingWebClient#builder(String)} or {@link TestBlockingWebClient#builder(URI)} is not
+     *     an HTTP scheme
      */
     public TestBlockingWebClient build() {
         return TestBlockingWebClient.of(buildWebClient().blocking());
@@ -93,7 +94,8 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
 
     @Deprecated
     @Override
-    public TestBlockingWebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
+    public TestBlockingWebClientBuilder rpcDecorator(
+            Function<? super RpcClient, ? extends RpcClient> decorator) {
         return (TestBlockingWebClientBuilder) super.rpcDecorator(decorator);
     }
 

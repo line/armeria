@@ -30,7 +30,8 @@ public final class HttpStatusAssert extends AbstractResponseAssert<HttpStatus> {
     }
 
     /**
-     * Asserts that the class of actual {@link HttpStatus} is equal to the {@link HttpStatusClass#INFORMATIONAL}.
+     * Asserts that the class of actual {@link HttpStatus} is equal to the
+     * {@link HttpStatusClass#INFORMATIONAL}.
      */
     public TestHttpResponse is1xxInformational() {
         assertEquals(HttpStatusClass.INFORMATIONAL, actual().codeClass());
