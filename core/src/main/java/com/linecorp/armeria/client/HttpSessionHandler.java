@@ -86,7 +86,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     /**
      * Whether a new request can acquire this channel from {@link HttpChannelPool}.
      */
-    private volatile boolean isAcquirable;
+    @Nullable
+    private volatile Boolean isAcquirable;
 
     /**
      * The current negotiated {@link SessionProtocol}.
@@ -296,7 +297,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean isAcquirable(KeepAliveHandler keepAliveHandler) {
-        if (!isAcquirable) {
+        final Boolean isAcquirable = this.isAcquirable;
+        if (isAcquirable == null || !isAcquirable) {
             return false;
         }
         return !keepAliveHandler.needsDisconnection();
@@ -304,20 +306,26 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void deactivate() {
-        if (isAcquirable) {
-            isAcquirable = false;
-        }
+        isAcquirable = false;
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        isAcquirable = channel.isActive();
+        isChannelActive = channel.isActive();
+        if (isAcquirable == null) {
+            isAcquirable = isChannelActive;
+        }
+        tryCompleteSessionPromise(ctx);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         isChannelActive = true;
-        isAcquirable = true;
+        // deactivate() may be called before channelActive() event if the first request contains
+        // "connection:close" or triggers initiateConnectionShutdown().
+        if (isAcquirable == null) {
+            isAcquirable = true;
+        }
         tryCompleteSessionPromise(ctx);
     }
 

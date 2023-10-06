@@ -176,7 +176,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise connectionPromise) throws Exception {
 
         // Remember the requested remote address for later use.
         this.remoteAddress = remoteAddress;
@@ -193,10 +193,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (isHttps()) {
                 configureAsHttps(ch, remoteAddress);
             } else {
-                configureAsHttp(ch);
+                configureAsHttp(ch, connectionPromise);
             }
         } catch (Throwable t) {
-            promise.tryFailure(t);
+            connectionPromise.tryFailure(t);
             ctx.close();
             return;
         } finally {
@@ -205,7 +205,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         }
 
-        ctx.connect(remoteAddress, localAddress, promise);
+        ctx.connect(remoteAddress, localAddress, connectionPromise);
     }
 
     /**
@@ -377,7 +377,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     // refer https://http2.github.io/http2-spec/#discover-http
-    private void configureAsHttp(Channel ch) {
+    private void configureAsHttp(Channel ch, ChannelPromise connectionPromise) {
         final ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast(TrafficLoggingHandler.CLIENT);
 
@@ -390,14 +390,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     clientFactory.http1MaxChunkSize()));
 
             // NB: We do not call finishSuccessfully() immediately here
-            //     because it triggers a userEvent that must be received by HttpSessionHandler,
-            //     which is only added after the connection attempt is successful.
-            pipeline.addLast(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                    ctx.pipeline().remove(this);
+            //     because HttpSessionHandler is added when connectionPromise completes.
+            connectionPromise.addListener(future -> {
+                if (future.isSuccess()) {
                     finishSuccessfully(pipeline, H1C);
-                    ctx.fireChannelActive();
                 }
             });
         }

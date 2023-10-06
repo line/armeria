@@ -64,6 +64,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyConnectException;
@@ -392,7 +393,10 @@ final class HttpChannelPool implements AsyncCloseable {
                 // should be invoked right before channel.connect() is invoked as defined in javadocs
                 clientFactory.channelPipelineCustomizer().accept(channel.pipeline());
 
-                channel.connect(remoteAddress).addListener((ChannelFuture connectFuture) -> {
+                final ChannelPromise connectionPromise = channel.newPromise();
+                // Add a listener in advance so that the HTTP/1 pipeline can deliver the SessionProtocol event
+                // to HttpSessionHandler.
+                connectionPromise.addListener((ChannelFuture connectFuture) -> {
                     if (connectFuture.isSuccess()) {
                         initSession(desiredProtocol, serializationFormat,
                                     poolKey, connectFuture, sessionPromise);
@@ -401,6 +405,7 @@ final class HttpChannelPool implements AsyncCloseable {
                         sessionPromise.tryFailure(connectFuture.cause());
                     }
                 });
+                channel.connect(remoteAddress, connectionPromise);
             } catch (Throwable cause) {
                 maybeHandleProxyFailure(desiredProtocol, poolKey, cause);
                 sessionPromise.tryFailure(cause);
@@ -439,6 +444,11 @@ final class HttpChannelPool implements AsyncCloseable {
         final EventLoop eventLoop = ch.eventLoop();
         assert eventLoop.inEventLoop();
 
+        int connectTimeoutMillis = this.connectTimeoutMillis;
+        if (poolKey.proxyConfig != ProxyConfig.direct()) {
+            // Add a bit more timeout to prevent a race between the proxy timeout and session timeout.
+            connectTimeoutMillis += 100;
+        }
         final ScheduledFuture<?> timeoutFuture = eventLoop.schedule(() -> {
             if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
                     desiredProtocol, "connection established, but session creation timed out: " + ch))) {
