@@ -32,8 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -73,13 +73,13 @@ import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.file.HttpFile;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-public class AnnotatedServiceResponseConverterTest {
+class AnnotatedServiceResponseConverterTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final String STRING = "₩";
@@ -96,8 +96,8 @@ public class AnnotatedServiceResponseConverterTest {
         }
     }
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/type", new Object() {
@@ -524,8 +524,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void customizedClassLevelResponse() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/custom-classlevel");
+    void customizedClassLevelResponse() {
+        final WebClient client = WebClient.of(server.httpUri() + "/custom-classlevel");
         AggregatedHttpResponse res;
 
         res = aggregated(client.get("/expect-class"));
@@ -569,13 +569,13 @@ public class AnnotatedServiceResponseConverterTest {
     @interface UserProduceBinary {}
 
     @Test
-    public void typeBasedDefaultResponseConverter() throws Exception {
-        shouldBeConvertedByDefaultResponseConverter(WebClient.of(rule.httpUri() + "/type"));
+    void typeBasedDefaultResponseConverter() throws Exception {
+        shouldBeConvertedByDefaultResponseConverter(WebClient.of(server.httpUri() + "/type"));
     }
 
     @Test
-    public void publisherBasedResponseConverter() throws Exception {
-        shouldBeConvertedByDefaultResponseConverter(WebClient.of(rule.httpUri() + "/publish/single"));
+    void publisherBasedResponseConverter() throws Exception {
+        shouldBeConvertedByDefaultResponseConverter(WebClient.of(server.httpUri() + "/publish/single"));
     }
 
     private static void shouldBeConvertedByDefaultResponseConverter(WebClient client) throws Exception {
@@ -604,8 +604,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void multipleObjectPublisherBasedResponseConverter() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri() + "/publish/multi");
+    void multipleObjectPublisherBasedResponseConverter() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri() + "/publish/multi");
 
         AggregatedHttpResponse res;
 
@@ -622,8 +622,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void publisherBasedResponseConversionFailure() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri() + "/publish/failure");
+    void publisherBasedResponseConversionFailure() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri() + "/publish/failure");
 
         AggregatedHttpResponse res;
 
@@ -635,8 +635,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri() + "/produce");
+    void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri() + "/produce");
 
         AggregatedHttpResponse res;
 
@@ -674,8 +674,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void customizedHttpResponse() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/custom-response");
+    void customizedHttpResponse() {
+        final WebClient client = WebClient.of(server.httpUri() + "/custom-response");
 
         AggregatedHttpResponse res;
 
@@ -741,8 +741,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void httpResultWithPublisher() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/publish/http-result");
+    void httpResultWithPublisher() {
+        final WebClient client = WebClient.of(server.httpUri() + "/publish/http-result");
 
         AggregatedHttpResponse res;
 
@@ -761,8 +761,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void httpFileResponseConverter() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/http-file");
+    void httpFileResponseConverter() {
+        final WebClient client = WebClient.of(server.httpUri() + "/http-file");
 
         AggregatedHttpResponse res;
 
@@ -795,7 +795,7 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void charset() {
+    void charset() {
         assertThat(StandardCharsets.UTF_8.contains(StandardCharsets.UTF_8)).isTrue();
         assertThat(StandardCharsets.UTF_8.contains(StandardCharsets.UTF_16)).isTrue();
         assertThat(StandardCharsets.UTF_16.contains(StandardCharsets.UTF_8)).isTrue();
@@ -807,17 +807,17 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void defaultNullHandling() throws JsonProcessingException {
+    void defaultNullHandling() throws JsonProcessingException {
         assertThat(new ObjectMapper().writeValueAsString(null)).isEqualTo("null");
     }
 
     @Test
-    public void jsonTextSequences_stream() {
+    void jsonTextSequences_stream() {
         testJsonTextSequences("/stream");
     }
 
     @Test
-    public void jsonTextSequences_publisher() {
+    void jsonTextSequences_publisher() {
         testJsonTextSequences("/publisher");
     }
 
@@ -834,7 +834,7 @@ public class AnnotatedServiceResponseConverterTest {
             }
         };
 
-        StepVerifier.create(WebClient.of(rule.httpUri() + "/json-seq").get(path))
+        StepVerifier.create(WebClient.of(server.httpUri() + "/json-seq").get(path))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "foo"))
@@ -847,17 +847,17 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void eventStream_stream() {
+    void eventStream_stream() {
         testEventStream("/stream");
     }
 
     @Test
-    public void eventStream_publisher() {
+    void eventStream_publisher() {
         testEventStream("/publisher");
     }
 
     private static void testEventStream(String path) {
-        StepVerifier.create(WebClient.of(rule.httpUri() + "/event-stream").get(path))
+        StepVerifier.create(WebClient.of(server.httpUri() + "/event-stream").get(path))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))
                     .expectNext(HttpData.ofUtf8("data:foo\n\n"))
