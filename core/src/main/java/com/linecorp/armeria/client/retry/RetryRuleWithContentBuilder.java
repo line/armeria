@@ -92,7 +92,7 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), responseDurationFilter(),
+                                                    exceptionFilter(), totalDurationFilter(),
                                                     hasResponseFilter);
         final RetryRule first = RetryRuleBuilder.build(
                 ruleFilter, decision, requiresResponseTrailers());
@@ -261,8 +261,8 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
      */
     @SuppressWarnings("unchecked")
     @Override
-    public RetryRuleWithContentBuilder<T> onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onResponseDuration(responseDurationFilter);
+    public RetryRuleWithContentBuilder<T> onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onTotalDuration(totalDurationFilter);
     }
 }

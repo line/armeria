@@ -77,7 +77,7 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), responseDurationFilter(),
+                                                    exceptionFilter(), totalDurationFilter(),
                                                     hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
                 ruleFilter, decision, requiresResponseTrailers());
@@ -276,15 +276,15 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     /**
-     * Adds the specified {@code responseDurationFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code responseDurationFilter} returns {@code true},
+     * Adds the specified {@code totalDurationFilter} for a {@link CircuitBreakerRuleWithContent}.
+     * If the specified {@code totalDurationFilter} returns {@code true},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @SuppressWarnings("unchecked")
     @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseDuration(responseDurationFilter);
+    public CircuitBreakerRuleWithContentBuilder<T> onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onTotalDuration(totalDurationFilter);
     }
 }

@@ -59,7 +59,7 @@ public abstract class AbstractRuleBuilder {
     @Nullable
     private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
     @Nullable
-    private BiPredicate<ClientRequestContext, Duration> responseDurationFilter;
+    private BiPredicate<ClientRequestContext, Duration> totalDurationFilter;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -216,12 +216,11 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code responseDurationFilter}.
+     * Adds the specified {@code totalDurationFilter}.
      */
-    public AbstractRuleBuilder onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
-        this.responseDurationFilter = combinePredicates(this.responseDurationFilter, responseDurationFilter,
-                                                        "responseDurationFilter");
+    public AbstractRuleBuilder onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        this.totalDurationFilter = combinePredicates(this.totalDurationFilter, totalDurationFilter, "totalDurationFilter");
         return this;
     }
 
@@ -265,11 +264,11 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Returns then {@link Predicate} of a response duration.
+     * Returns then {@link Predicate} of total duration.
      */
     @Nullable
-    protected final BiPredicate<ClientRequestContext, Duration> responseDurationFilter() {
-        return responseDurationFilter;
+    protected final BiPredicate<ClientRequestContext, Duration> totalDurationFilter() {
+        return totalDurationFilter;
     }
 
     /**
@@ -278,6 +277,6 @@ public abstract class AbstractRuleBuilder {
     protected final boolean requiresResponseTrailers() {
         return responseTrailersFilter != null ||
                grpcTrailersFilter != null ||
-               responseDurationFilter != null;
+               totalDurationFilter != null;
     }
 }

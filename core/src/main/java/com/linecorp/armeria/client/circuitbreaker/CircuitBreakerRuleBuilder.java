@@ -76,8 +76,8 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     private CircuitBreakerRule build(CircuitBreakerDecision decision) {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                        responseTrailersFilter(), grpcTrailersFilter(),
-                        exceptionFilter(), responseDurationFilter(), false);
+                                                    responseTrailersFilter(), grpcTrailersFilter(),
+                                                    exceptionFilter(), totalDurationFilter(), false);
         return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
@@ -110,7 +110,6 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     // Override the return type and Javadoc of chaining methods in superclass.
-
     /**
      * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRule}.
      * If the specified {@code responseHeadersFilter} returns {@code true},
@@ -269,14 +268,14 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code responseDurationFilter} for a {@link CircuitBreakerRule}.
-     * If the specified {@code responseDurationFilter} returns {@code true},
+     * Adds the specified {@code totalDurationFilter} for a {@link CircuitBreakerRule}.
+     * If the specified {@code totalDurationFilter} returns {@code true},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
      * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
      */
     @Override
-    public CircuitBreakerRuleBuilder onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
-        return (CircuitBreakerRuleBuilder) super.onResponseDuration(responseDurationFilter);
+    public CircuitBreakerRuleBuilder onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (CircuitBreakerRuleBuilder) super.onTotalDuration(totalDurationFilter);
     }
 }

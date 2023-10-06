@@ -74,13 +74,13 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
         if (decision != RetryDecision.noRetry() &&
             exceptionFilter() == null && responseHeadersFilter() == null &&
             responseTrailersFilter() == null && grpcTrailersFilter() == null &&
-            responseDurationFilter() == null) {
+            totalDurationFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), responseDurationFilter(), false);
+                                                    exceptionFilter(), totalDurationFilter(), false);
         return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
@@ -242,12 +242,12 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code responseDurationFilter} for a {@link RetryRule} which will retry
-     * if the {@code responseDurationFilter} returns {@code true}.
+     * Adds the specified {@code totalDurationFilter} for a {@link RetryRule} which will retry
+     * if the {@code totalDurationFilter} returns {@code true}.
      */
     @Override
-    public RetryRuleBuilder onResponseDuration(
-            BiPredicate<? super ClientRequestContext, ? super Duration> responseDurationFilter) {
-        return (RetryRuleBuilder) super.onResponseDuration(responseDurationFilter);
+    public RetryRuleBuilder onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (RetryRuleBuilder) super.onTotalDuration(totalDurationFilter);
     }
 }
