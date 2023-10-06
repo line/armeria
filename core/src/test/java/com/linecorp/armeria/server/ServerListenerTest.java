@@ -141,7 +141,7 @@ class ServerListenerTest {
         try (CloseableRunnable task = new CloseableRunnable() {
             @Override
             public void run() {
-                while (!isClose() && !Thread.currentThread().isInterrupted()) {
+                while (!isClosed() && !Thread.currentThread().isInterrupted()) {
                     final int foo = 42;
                 }
             }
@@ -171,7 +171,7 @@ class ServerListenerTest {
         try (CloseableRunnable task = new CloseableRunnable() {
             @Override
             public void run() {
-                while (!isClose()) {
+                while (!isClosed()) {
                     final int foo = 42;
                 }
             }
@@ -233,7 +233,7 @@ class ServerListenerTest {
         try (CloseableRunnable task = new CloseableRunnable() {
             @Override
             public void run() {
-                while (!isClose() && !Thread.currentThread().isInterrupted()) {
+                while (!isClosed() && !Thread.currentThread().isInterrupted()) {
                     final int foo = 42;
                 }
             }
@@ -263,7 +263,7 @@ class ServerListenerTest {
         try (CloseableRunnable task = new CloseableRunnable() {
             @Override
             public void run() {
-                while (!isClose()) {
+                while (!isClosed()) {
                     final int foo = 42;
                 }
             }
@@ -325,7 +325,7 @@ class ServerListenerTest {
         try (CloseableRunnable task = new CloseableRunnable() {
             @Override
             public void run() {
-                while (!isClose() && !Thread.currentThread().isInterrupted()) {
+                while (!isClosed() && !Thread.currentThread().isInterrupted()) {
                     final int foo = 42;
                 }
             }
@@ -355,7 +355,7 @@ class ServerListenerTest {
         try (CloseableRunnable task = new CloseableRunnable() {
             @Override
             public void run() {
-                while (!isClose()) {
+                while (!isClosed()) {
                     final int foo = 42;
                 }
             }
@@ -417,7 +417,7 @@ class ServerListenerTest {
         try (CloseableRunnable task = new CloseableRunnable() {
             @Override
             public void run() {
-                while (!isClose() && !Thread.currentThread().isInterrupted()) {
+                while (!isClosed() && !Thread.currentThread().isInterrupted()) {
                     final int foo = 42;
                 }
             }
@@ -447,7 +447,7 @@ class ServerListenerTest {
         try (CloseableRunnable task = new CloseableRunnable() {
             @Override
             public void run() {
-                while (!isClose()) {
+                while (!isClosed()) {
                     final int foo = 42;
                 }
             }
@@ -472,19 +472,19 @@ class ServerListenerTest {
     }
 
     private abstract static class CloseableRunnable implements SafeCloseable, Runnable {
-        private volatile boolean close;
+        private volatile boolean closed;
 
         CloseableRunnable() {
-            close = false;
+            closed = false;
         }
 
-        boolean isClose() {
-            return close;
+        boolean isClosed() {
+            return closed;
         }
 
         @Override
         public void close() {
-            close = true;
+            closed = true;
         }
     }
 }
