@@ -394,10 +394,10 @@ class GrpcServiceBuilderTest {
 
     @Test
     void enableHttpJsonTranscodingWithoutJsonSupport() {
-        GrpcServiceBuilder builder = GrpcService.builder()
-                                                .enableHttpJsonTranscoding(true)
-                                                .supportedSerializationFormats(GrpcSerializationFormats.PROTO);
-        assertThatThrownBy(builder::build)
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .enableHttpJsonTranscoding(true)
+                                            .supportedSerializationFormats(GrpcSerializationFormats.PROTO)
+                                            .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("GrpcSerializationFormats.JSON")
                 .hasMessageContaining("must be set")
