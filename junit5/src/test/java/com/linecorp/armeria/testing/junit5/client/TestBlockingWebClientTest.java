@@ -19,15 +19,23 @@ package com.linecorp.armeria.testing.junit5.client;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.reflections.ReflectionUtils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
@@ -179,6 +187,25 @@ class TestBlockingWebClientTest {
                .isInstanceOf(RuntimeException.class)
                .hasMessage("Runtime exception.")
                .hasNoCause();
+    }
+
+    @Test
+    void apiConsistency() {
+        final Set<Method> overriddenMethods =
+                ReflectionUtils.getMethods(TestBlockingWebClient.class,
+                                           method -> Modifier.isPublic(method.getModifiers()) &&
+                                                     method.getReturnType().equals(TestHttpResponse.class));
+        final Set<Method> superMethods =
+                ReflectionUtils.getMethods(WebClient.class,
+                                           method -> Modifier.isPublic(method.getModifiers()) &&
+                                                     method.getReturnType().equals(HttpResponse.class));
+        for (final Method method : superMethods) {
+            final Optional<Method> found = overriddenMethods.stream().filter(method0 -> {
+                return method.getName().equals(method0.getName()) &&
+                       Arrays.equals(method.getParameterTypes(), method0.getParameterTypes());
+            }).findFirst();
+            assertTrue(found.isPresent(), method + " has not been overriden");
+        }
     }
 
     private static class MyAnnotatedService {

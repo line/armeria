@@ -71,8 +71,8 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
     /**
      * Creates a new instance.
      *
-     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
-     *     in {@link SessionProtocol}
+     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields in
+     *     {@link SessionProtocol}
      */
     TestBlockingWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                  @Nullable String path) {
@@ -158,6 +158,16 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
     @Override
     public TestBlockingWebClientBuilder maxResponseLength(long maxResponseLength) {
         return (TestBlockingWebClientBuilder) super.maxResponseLength(maxResponseLength);
+    }
+
+    @Override
+    public TestBlockingWebClientBuilder requestAutoAbortDelay(Duration delay) {
+        return (TestBlockingWebClientBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public TestBlockingWebClientBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (TestBlockingWebClientBuilder) super.requestAutoAbortDelayMillis(delayMillis);
     }
 
     @Override
