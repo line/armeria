@@ -52,7 +52,7 @@ interface DecodedHttpRequest extends HttpRequest {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,
-                            requestStartTimeNanos, requestStartTimeMicros, false);
+                            requestStartTimeNanos, requestStartTimeMicros, false, false);
                 } else {
                     return new AggregatingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,
@@ -72,6 +72,8 @@ interface DecodedHttpRequest extends HttpRequest {
     boolean isKeepAlive();
 
     void init(ServiceRequestContext ctx);
+
+    boolean isInitialized();
 
     RoutingContext routingContext();
 
@@ -126,6 +128,23 @@ interface DecodedHttpRequest extends HttpRequest {
      * Returns whether the request is an HTTP/1.1 webSocket request.
      */
     default boolean isHttp1WebSocket() {
+        return false;
+    }
+
+    /**
+     * Returns a new {@link StreamingDecodedHttpRequest} whose corresponding response is aborted using the
+     * specified {@link Throwable}. This is called when an {@link AggregatingDecodedHttpRequest}
+     * needs to be passed to a service before it's closed.
+     */
+    default StreamingDecodedHttpRequest toAbortedStreaming(InboundTrafficController inboundTrafficController,
+                                                           Throwable cause, boolean resetAfterResponseSent) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Tells whether to send an RST_STREAM after the response is sent.
+     */
+    default boolean resetAfterResponseSent() {
         return false;
     }
 }

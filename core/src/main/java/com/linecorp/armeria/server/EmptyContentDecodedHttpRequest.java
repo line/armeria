@@ -84,6 +84,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
+    public boolean isInitialized() {
+        return ctx != null;
+    }
+
+    @Override
     public RoutingContext routingContext() {
         return routingContext;
     }

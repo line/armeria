@@ -68,6 +68,13 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     private void apply0(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
         clearTimeout();
+        if (failIfStreamOrSessionClosed()) {
+            if (response != null) {
+                response.content().close();
+            }
+            return;
+        }
+
         if (cause != null) {
             cause = Exceptions.peel(cause);
             recoverAndWrite(cause);
@@ -75,11 +82,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         }
 
         assert response != null;
-        if (failIfStreamOrSessionClosed()) {
-            response.content().close();
-            return;
-        }
-
         logBuilder().startResponse();
         write(response, null);
     }

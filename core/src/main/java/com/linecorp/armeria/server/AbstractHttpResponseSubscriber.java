@@ -384,6 +384,9 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
                 try (SafeCloseable ignored = RequestContextUtil.pop()) {
                     if (f.isSuccess() && !isReset) {
                         maybeLogFirstResponseBytesTransferred();
+                        if (req.resetAfterResponseSent()) {
+                            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL);
+                        }
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
                     fail(cause);

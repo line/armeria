@@ -211,13 +211,15 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
                 decodedReq.write(trailers);
-                if (req.needsAggregation()) {
+                if (!req.isInitialized()) {
+                    assert req.needsAggregation();
                     // An aggregated request can be fired now.
                     ctx.fireChannelRead(req);
                 }
             } catch (Throwable t) {
                 decodedReq.close(t);
-                throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
+                throw Http2Exception.streamError(streamId, INTERNAL_ERROR, t,
+                                                 "failed to consume a HEADERS frame");
             }
         }
     }
@@ -296,7 +298,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Received an empty DATA frame
             if (endOfStream) {
                 req.close();
-                if (req.needsAggregation()) {
+                if (!req.isInitialized()) {
+                    assert req.needsAggregation();
                     ctx.fireChannelRead(req);
                 }
             }
@@ -319,9 +322,17 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                                 .transferred(transferredLength)
                                                 .build();
 
-                writeErrorResponse(streamId, req.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
-                decodedReq.abortResponse(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
-                                         true);
+                final HttpStatusException httpStatusException =
+                        HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
+                if (decodedReq.isInitialized()) {
+                    decodedReq.abortResponse(httpStatusException, true);
+                } else {
+                    assert decodedReq.needsAggregation();
+                    final StreamingDecodedHttpRequest streamingReq =
+                            decodedReq.toAbortedStreaming(inboundTrafficController, httpStatusException, true);
+                    requests.put(streamId, streamingReq);
+                    ctx.fireChannelRead(streamingReq);
+                }
             } else {
                 // The response has been started already. Abort the request and let the response continue.
                 decodedReq.abort();
@@ -330,13 +341,15 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-                if (endOfStream && decodedReq.needsAggregation()) {
+                if (endOfStream && !req.isInitialized()) {
+                    assert decodedReq.needsAggregation();
                     // An aggregated request is now ready to be fired.
                     ctx.fireChannelRead(req);
                 }
             } catch (Throwable t) {
                 decodedReq.close(t);
-                throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");
+                throw Http2Exception.streamError(streamId, INTERNAL_ERROR, t,
+                                                 "failed to consume a DATA frame");
             }
         }
 
@@ -394,7 +407,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         final ClosedStreamException cause =
                 new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode));
-        req.abortResponse(cause, /* cancel */ true);
+        if (req.needsAggregation() && !req.isInitialized()) {
+            // Call fireChannelRead so that the cause is logged by LoggingService.
+            ctx.fireChannelRead(req.toAbortedStreaming(inboundTrafficController, cause, false));
+        } else {
+            req.abortResponse(cause, /* cancel */ true);
+        }
     }
 
     @Override

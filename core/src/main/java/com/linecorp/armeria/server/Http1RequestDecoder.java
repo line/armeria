@@ -244,7 +244,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                             eventLoop, id, 1, headers, false, inboundTrafficController,
                                             serviceConfig.maxRequestLength(), routingCtx,
                                             ExchangeType.BIDI_STREAMING,
-                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true);
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true, false);
                             assert encoder instanceof ServerHttp1ObjectEncoder;
                             ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
                             final ChannelPipeline pipeline = ctx.pipeline();
@@ -306,12 +306,22 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                         .contentLength(req.headers())
                                                         .transferred(transferredLength)
                                                         .build();
-                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
+                        discarding = true;
+                        req = null;
+                        keepAliveHandler.disconnectWhenFinished();
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
-                        decodedReq.abortResponse(
-                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
-                                true);
+                        final HttpStatusException httpStatusException =
+                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
+                        if (decodedReq.isInitialized()) {
+                            decodedReq.abortResponse(httpStatusException, true);
+                            return;
+                        }
+
+                        assert decodedReq.needsAggregation();
+                        final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
+                                inboundTrafficController, httpStatusException, false);
+                        ctx.fireChannelRead(streamingReq);
                         return;
                     }
 
@@ -326,7 +336,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
                     decodedReq.close();
-                    if (decodedReq.needsAggregation()) {
+                    if (!decodedReq.isInitialized()) {
+                        assert decodedReq.needsAggregation();
                         // An aggregated request is now ready to be fired.
                         ctx.fireChannelRead(decodedReq);
                     }
