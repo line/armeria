@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.ThreeElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -502,7 +503,24 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         requireNonNull(trailers, "trailers");
-        return PublisherBasedHttpResponse.from(headers, publisher, trailers);
+        return of(headers, publisher, ignored -> trailers);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified headers and trailers function
+     * whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    static HttpResponse of(ResponseHeaders headers,
+                           Publisher<? extends HttpData> publisher,
+                           Function<@Nullable Throwable, HttpHeaders> trailersFunction) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailersFunction, "trailersFunction");
+        return PublisherBasedHttpResponse.from(headers, publisher, trailersFunction);
     }
 
     /**

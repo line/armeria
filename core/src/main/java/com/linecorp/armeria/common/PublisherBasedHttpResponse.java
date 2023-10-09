@@ -17,9 +17,11 @@
 package com.linecorp.armeria.common;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 
@@ -36,6 +38,12 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
             return from(headers, publisher);
         }
         return new PublisherBasedHttpResponse(new SurroundingPublisher<>(headers, publisher, trailers));
+    }
+
+    static PublisherBasedHttpResponse from(ResponseHeaders headers,
+                                           Publisher<? extends HttpData> publisher,
+                                           Function<@Nullable Throwable, HttpHeaders> trailersFunction) {
+        return new PublisherBasedHttpResponse(SurroundingPublisher.from(headers, publisher, trailersFunction));
     }
 
     PublisherBasedHttpResponse(Publisher<? extends HttpObject> publisher) {
