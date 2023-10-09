@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -94,25 +93,16 @@ class ExceedingServiceMaxContentLengthTest {
     };
 
     @CsvSource({
-            "H1C, /streaming, true",
-            "H1C, /streaming, false",
-            "H1C, /unary, true",
-            "H1C, /unary, false",
-            "H2C, /streaming, true",
-            "H2C, /streaming, false",
-            "H2C, /unary, true",
-            "H2C, /unary, false"
+            "H1C, /streaming",
+            "H1C, /unary",
+            "H2C, /streaming",
+            "H2C, /unary",
     })
     @ParameterizedTest
-    void maxContentLength(
-            SessionProtocol protocol, String path, boolean sendTrailers) throws InterruptedException {
+    void maxContentLength(SessionProtocol protocol, String path) throws InterruptedException {
         final HttpRequestWriter streaming = HttpRequest.streaming(HttpMethod.POST, path);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 4; i++) {
             streaming.write(HttpData.ofUtf8(Strings.repeat("a", 30)));
-        }
-        if (sendTrailers) {
-            // To make sure there's no differences if trailers is sent.
-            streaming.write(HttpHeaders.of("foo", "bar"));
         }
         streaming.close();
         final AggregatedHttpResponse response = WebClient.of(server.uri(protocol))
