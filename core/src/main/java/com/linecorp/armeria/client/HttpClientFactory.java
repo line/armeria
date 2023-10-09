@@ -88,8 +88,8 @@ final class HttpClientFactory implements ClientFactory {
     private final Bootstrap inetBaseBootstrap;
     @Nullable
     private final Bootstrap unixBaseBootstrap;
-    private final SslContext sslCtxHttp1Or2;
-    private final SslContext sslCtxHttp1Only;
+    private SslContext sslCtxHttp1Or2;
+    private SslContext sslCtxHttp1Only;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -467,5 +467,18 @@ final class HttpClientFactory implements ClientFactory {
                                      e -> new HttpChannelPool(this, eventLoop,
                                                               sslCtxHttp1Or2, sslCtxHttp1Only,
                                                               connectionPoolListener()));
+    }
+
+    void tls(TlsKeyPair tlsKeyPair) {
+        final Consumer<? super SslContextBuilder> tlsCustomizer =
+                    customizer -> customizer.keyManager(tlsKeyPair.privateKey(), tlsKeyPair.keyCertChain());
+        final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
+                    ImmutableList.of(tlsCustomizer);
+
+        final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
+        sslCtxHttp1Or2 = SslContextUtil
+                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers);
+        sslCtxHttp1Only = SslContextUtil
+                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers);
     }
 }

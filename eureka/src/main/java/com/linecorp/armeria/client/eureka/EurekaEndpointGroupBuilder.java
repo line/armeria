@@ -43,6 +43,7 @@ import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.TlsProvider;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroupSetters;
@@ -346,6 +347,11 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
     public EurekaEndpointGroupBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (EurekaEndpointGroupBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (EurekaEndpointGroupBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override

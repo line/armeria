@@ -53,6 +53,7 @@ import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.TlsProvider;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestContext;
@@ -489,6 +490,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     public GrpcClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (GrpcClientBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public GrpcClientBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (GrpcClientBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override

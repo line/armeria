@@ -173,6 +173,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (WebClientBuilder) super.tlsProvider(tlsProvider);
+    }
+
+    @Override
     public WebClientBuilder decorator(
             Function<? super HttpClient, ? extends HttpClient> decorator) {
         return (WebClientBuilder) super.decorator(decorator);

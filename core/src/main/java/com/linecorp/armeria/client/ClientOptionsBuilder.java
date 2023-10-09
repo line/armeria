@@ -183,6 +183,11 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientOptionsBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (ClientOptionsBuilder) super.tlsProvider(tlsProvider);
+    }
+
+    @Override
     public ClientOptionsBuilder auth(BasicToken token) {
         return (ClientOptionsBuilder) super.auth(token);
     }

@@ -169,7 +169,13 @@ final class HttpClientDelegate implements HttpClient {
                                               ClientConnectionTimingsBuilder timingsBuilder,
                                               ProxyConfig proxyConfig) {
         final PoolKey key = new PoolKey(endpoint, proxyConfig);
+
+        final TlsProvider tlsProvider = ctx.options().tlsProvider();
+        if (tlsProvider != TlsProvider.empty() && tlsProvider.containsHostname(endpoint.host())) {
+            factory.tls(tlsProvider.provide(endpoint.host()));
+        }
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
+
         final SessionProtocol protocol = ctx.sessionProtocol();
         final SerializationFormat serializationFormat = ctx.log().partial().serializationFormat();
         final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key);

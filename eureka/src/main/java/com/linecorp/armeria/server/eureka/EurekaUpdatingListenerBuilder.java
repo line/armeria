@@ -42,6 +42,7 @@ import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.TlsProvider;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.RetryRule;
@@ -449,6 +450,11 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     public EurekaUpdatingListenerBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (EurekaUpdatingListenerBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (EurekaUpdatingListenerBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override

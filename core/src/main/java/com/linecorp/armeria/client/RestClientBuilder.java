@@ -177,6 +177,11 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public RestClientBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (RestClientBuilder) super.tlsProvider(tlsProvider);
+    }
+
+    @Override
     public RestClientBuilder decorator(
             Function<? super HttpClient, ? extends HttpClient> decorator) {
         return (RestClientBuilder) super.decorator(decorator);

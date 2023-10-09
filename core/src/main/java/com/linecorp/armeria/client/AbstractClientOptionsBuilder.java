@@ -260,6 +260,11 @@ public class AbstractClientOptionsBuilder {
         return option(ClientOptions.ENDPOINT_REMAPPER, endpointRemapper);
     }
 
+    @UnstableApi
+    public AbstractClientOptionsBuilder tlsProvider(TlsProvider tlsProvider) {
+        return option(ClientOptions.TLS_PROVIDER, tlsProvider);
+    }
+
     /**
      * Adds the specified HTTP-level {@code decorator}.
      *

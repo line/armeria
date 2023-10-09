@@ -207,6 +207,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (ClientBuilder) super.tlsProvider(tlsProvider);
+    }
+
+    @Override
     public ClientBuilder decorator(
             Function<? super HttpClient, ? extends HttpClient> decorator) {
         return (ClientBuilder) super.decorator(decorator);

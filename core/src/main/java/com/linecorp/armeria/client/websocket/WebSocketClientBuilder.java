@@ -46,6 +46,7 @@ import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.TlsProvider;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
@@ -296,6 +297,11 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     public WebSocketClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (WebSocketClientBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public WebSocketClientBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (WebSocketClientBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override

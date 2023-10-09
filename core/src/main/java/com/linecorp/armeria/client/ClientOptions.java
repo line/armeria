@@ -149,6 +149,9 @@ public final class ClientOptions
     public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
+    public static final ClientOption<TlsProvider> TLS_PROVIDER =
+            ClientOption.define("TLS_PROVIDER", TlsProvider.empty());
+
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
@@ -369,6 +372,10 @@ public final class ClientOptions
      */
     public Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper() {
         return get(ENDPOINT_REMAPPER);
+    }
+
+    public TlsProvider tlsProvider() {
+        return get(TLS_PROVIDER);
     }
 
     /**

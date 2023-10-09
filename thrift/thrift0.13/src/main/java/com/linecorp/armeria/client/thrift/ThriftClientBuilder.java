@@ -43,6 +43,7 @@ import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.TlsProvider;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
@@ -285,6 +286,11 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     public ThriftClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (ThriftClientBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public ThriftClientBuilder tlsProvider(TlsProvider tlsProvider) {
+        return (ThriftClientBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override
