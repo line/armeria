@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -56,7 +57,7 @@ class ExceedingServiceMaxContentLengthTest {
 
     private static final AtomicReference<Throwable> responseCause = new AtomicReference<>();
 
-    private static final Queue<ByteBuf> byteBufs = new ArrayBlockingQueue<>(4);
+    private static final Queue<ByteBuf> byteBufs = new ArrayBlockingQueue<>(8);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -142,7 +143,9 @@ class ExceedingServiceMaxContentLengthTest {
         final RequestLog log = sctx.log().whenComplete().join();
         // Make sure that the response was correctly logged.
         assertThat(log.responseStatus()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
-        assertThat(responseCause.get()).isExactlyInstanceOf(ContentTooLargeException.class);
+        // Make sure that LoggingService is called.
+        await().untilAsserted(
+                () -> assertThat(responseCause.get()).isExactlyInstanceOf(ContentTooLargeException.class));
 
         assertThat(byteBufs).allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
     }
