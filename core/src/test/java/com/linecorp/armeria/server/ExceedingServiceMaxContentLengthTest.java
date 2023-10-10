@@ -17,9 +17,13 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -44,14 +48,31 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+
 class ExceedingServiceMaxContentLengthTest {
 
     private static final AtomicReference<Throwable> responseCause = new AtomicReference<>();
+
+    private static final Queue<ByteBuf> byteBufs = new ArrayBlockingQueue<>(4);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.childChannelPipelineCustomizer(pipeline -> {
+                pipeline.addFirst(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(@NotNull ChannelHandlerContext ctx, @NotNull Object msg)
+                            throws Exception {
+                        assert msg instanceof ByteBuf;
+                        super.channelRead(ctx, msg);
+                        byteBufs.add((ByteBuf) msg);
+                    }
+                });
+            });
             sb.maxRequestLength(100);
             final LogWriter logWriter = LogWriter.builder().logFormatter(new LogFormatter() {
                 @Override
@@ -92,6 +113,11 @@ class ExceedingServiceMaxContentLengthTest {
         }
     };
 
+    @BeforeEach
+    void setUp() {
+        byteBufs.clear();
+    }
+
     @CsvSource({
             "H1C, /streaming",
             "H1C, /unary",
@@ -117,5 +143,7 @@ class ExceedingServiceMaxContentLengthTest {
         // Make sure that the response was correctly logged.
         assertThat(log.responseStatus()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         assertThat(responseCause.get()).isExactlyInstanceOf(ContentTooLargeException.class);
+
+        assertThat(byteBufs).allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
     }
 }
