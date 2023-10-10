@@ -67,29 +67,26 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
 
     @SuppressWarnings("unchecked")
     public SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail) {
-        requireNonNull(publisher, "publisher");
-        this.head = head;
-        if (publisher instanceof StreamMessage) {
-            this.publisher = (StreamMessage<T>) publisher;
-        } else {
-            this.publisher = new PublisherBasedStreamMessage<>(publisher);
-        }
-        this.tail = tail;
-        finalizer = null;
+        this(head, publisher, tail, null);
     }
 
     @SuppressWarnings("unchecked")
     private SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher,
                                  Function<@Nullable Throwable, ? extends T> finalizer) {
+        this(head, publisher, null, requireNonNull(finalizer, "finalizer"));
+    }
+
+    private SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail,
+                                 @Nullable Function<@Nullable Throwable, ? extends T> finalizer) {
         requireNonNull(publisher, "publisher");
-        requireNonNull(finalizer, "finalizer");
         this.head = head;
         if (publisher instanceof StreamMessage) {
+            //noinspection unchecked
             this.publisher = (StreamMessage<T>) publisher;
         } else {
             this.publisher = new PublisherBasedStreamMessage<>(publisher);
         }
-        tail = null;
+        this.tail = tail;
         this.finalizer = finalizer;
     }
 
