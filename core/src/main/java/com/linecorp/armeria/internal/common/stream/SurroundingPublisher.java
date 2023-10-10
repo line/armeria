@@ -65,12 +65,10 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
     @Nullable
     private volatile SurroundingSubscriber<T> surroundingSubscriber;
 
-    @SuppressWarnings("unchecked")
     public SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher, @Nullable T tail) {
         this(head, publisher, tail, null);
     }
 
-    @SuppressWarnings("unchecked")
     private SurroundingPublisher(@Nullable T head, Publisher<? extends T> publisher,
                                  Function<@Nullable Throwable, ? extends T> finalizer) {
         this(head, publisher, null, requireNonNull(finalizer, "finalizer"));
