@@ -95,6 +95,8 @@ okhttp3 = { strictly = "3.14.9" }
 okhttp4 = "4.11.0"
 opensaml = "3.4.6"
 osdetector = "1.7.3"
+# Used for kubernetes-chaos-tests
+picocli = "4.7.5"
 proguard = "7.3.1"
 prometheus = "0.16.0"
 protobuf = "3.24.0"
@@ -877,6 +879,10 @@ module = 'io.netty:netty-tcnative-boringssl-static'
 [libraries.netty-io_uring]
 module = "io.netty.incubator:netty-incubator-transport-native-io_uring"
 version.ref = "netty-incubator-transport-native-io_uring"
+
+[libraries.picocli]
+module = "info.picocli:picocli"
+version.ref = "picocli"
 
 [libraries.prometheus]
 module = "io.prometheus:simpleclient_common"
