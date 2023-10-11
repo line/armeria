@@ -66,6 +66,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     private final VirtualHostBuilder virtualHostBuilder;
 
     VirtualHostServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
     }
 

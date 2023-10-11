@@ -53,6 +53,7 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     private final VirtualHostBuilder virtualHostBuilder;
 
     VirtualHostDecoratingServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
     }
 

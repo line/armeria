@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -60,11 +59,10 @@ public final class ContextPathServiceBindingBuilder<T extends ServiceConfigsBuil
         extends AbstractServiceBindingBuilder {
 
     private final ContextPathServicesBuilder<T> contextPathServicesBuilder;
-    private final Set<String> contextPaths;
 
     ContextPathServiceBindingBuilder(ContextPathServicesBuilder<T> builder) {
+        super(builder.contextPaths());
         this.contextPathServicesBuilder = builder;
-        this.contextPaths = builder.contextPaths();
     }
 
     @SuppressWarnings("unchecked")
@@ -403,9 +401,7 @@ public final class ContextPathServiceBindingBuilder<T extends ServiceConfigsBuil
      * {@link ContextPathServiceBindingBuilder} was created from.
      */
     public ContextPathServicesBuilder<T> build(HttpService service) {
-        for (String contextPath: contextPaths) {
-            build0(service, contextPath);
-        }
+        build0(service);
         return contextPathServicesBuilder;
     }
 }

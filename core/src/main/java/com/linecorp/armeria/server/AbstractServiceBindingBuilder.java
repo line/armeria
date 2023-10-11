@@ -44,6 +44,10 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
 
+    AbstractServiceBindingBuilder(Set<String> contextPaths) {
+        super(contextPaths);
+    }
+
     @Override
     public AbstractServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
@@ -212,10 +216,6 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
-        build0(service, "/");
-    }
-
-    final void build0(HttpService service, String contextPath) {
         final ServiceWithRoutes<?, ?> serviceWithRoutes = service.as(ServiceWithRoutes.class);
         final Set<Route> fallbackRoutes =
                 firstNonNull(serviceWithRoutes != null ? serviceWithRoutes.routes() : null,
@@ -223,11 +223,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
         final List<Route> routes = buildRouteList(fallbackRoutes);
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
-        for (Route route : routes) {
-            final ServiceConfigBuilder serviceConfigBuilder =
-                    defaultServiceConfigSetters.toServiceConfigBuilder(
-                            route, contextPath, decoratedService);
-            serviceConfigBuilder(serviceConfigBuilder);
+        for (String contextPath: contextPaths()) {
+            for (Route route : routes) {
+                final ServiceConfigBuilder serviceConfigBuilder =
+                        defaultServiceConfigSetters.toServiceConfigBuilder(
+                                route, contextPath, decoratedService);
+                serviceConfigBuilder(serviceConfigBuilder);
+            }
         }
     }
 

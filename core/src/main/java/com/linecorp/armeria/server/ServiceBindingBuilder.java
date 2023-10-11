@@ -68,6 +68,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     private Route mappedRoute;
 
     ServiceBindingBuilder(ServerBuilder serverBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
     }
 

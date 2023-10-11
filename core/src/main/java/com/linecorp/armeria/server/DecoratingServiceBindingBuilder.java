@@ -52,6 +52,7 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     private final ServerBuilder serverBuilder;
 
     DecoratingServiceBindingBuilder(ServerBuilder serverBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
     }
 

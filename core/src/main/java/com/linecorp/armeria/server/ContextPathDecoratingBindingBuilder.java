@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -48,11 +47,10 @@ public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsB
         extends AbstractBindingBuilder {
 
     private final ContextPathServicesBuilder<T> builder;
-    private final Set<String> contextPaths;
 
     ContextPathDecoratingBindingBuilder(ContextPathServicesBuilder<T> builder) {
+        super(builder.contextPaths());
         this.builder = builder;
-        this.contextPaths = builder.contextPaths();
     }
 
     @SuppressWarnings("unchecked")
@@ -223,7 +221,7 @@ public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsB
             Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         buildRouteList().forEach(
-                route -> contextPaths.forEach(contextPath -> builder.addRouteDecoratingService(
+                route -> contextPaths().forEach(contextPath -> builder.addRouteDecoratingService(
                         new RouteDecoratingService(route, contextPath, decorator))));
         return builder;
     }

@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.reflections.ReflectionUtils;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -39,7 +40,7 @@ class AbstractBindingBuilderTest {
 
     @Test
     void multiRouteBuilder() {
-        final List<Route> routes = new AbstractBindingBuilder() {}
+        final List<Route> routes = new AbstractBindingBuilder(ImmutableSet.of("/")) {}
                 .path("/foo")
                 .pathPrefix("/bar")
                 .get("/baz")
@@ -80,15 +81,15 @@ class AbstractBindingBuilderTest {
 
     @Test
     void shouldSetPath() {
-        assertThatThrownBy(() -> new AbstractBindingBuilder() {}.buildRouteList())
+        assertThatThrownBy(() -> new AbstractBindingBuilder(ImmutableSet.of("/")) {}.buildRouteList())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should set at least");
     }
 
     @Test
     void shouldHaveKnownMethods() {
-        final List<Route> routes = new AbstractBindingBuilder() {}.path("/foo")
-                                                                  .buildRouteList();
+        final List<Route> routes = new AbstractBindingBuilder(ImmutableSet.of("/")) {}.path("/foo")
+                                                                                      .buildRouteList();
         assertThat(routes.size()).isEqualTo(1);
         assertThat(routes.get(0).methods()).isEqualTo(HttpMethod.knownMethods());
     }
@@ -96,30 +97,31 @@ class AbstractBindingBuilderTest {
     @Test
     void shouldFailOnMethodWithoutPath() {
         // empty route path
-        assertThatThrownBy(() -> new AbstractBindingBuilder() {}.methods(HttpMethod.GET)
-                                                                .buildRouteList())
+        assertThatThrownBy(() -> new AbstractBindingBuilder(ImmutableSet.of("/")) {}.methods(HttpMethod.GET)
+                                                                                    .buildRouteList())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should set at least");
 
         // only method without calling path
-        assertThatThrownBy(() -> new AbstractBindingBuilder() {}.get("/foo")
-                                                                .methods(HttpMethod.POST)
-                                                                .buildRouteList())
+        assertThatThrownBy(() -> new AbstractBindingBuilder(ImmutableSet.of("/")) {}.get("/foo")
+                                                                                    .methods(HttpMethod.POST)
+                                                                                    .buildRouteList())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Should set a path");
     }
 
     @Test
     void shouldFailOnDuplicatedMethod() {
-        assertThatThrownBy(() -> new AbstractBindingBuilder() {}.get("/foo")
-                                                                .get("/foo"))
+        assertThatThrownBy(() -> new AbstractBindingBuilder(ImmutableSet.of("/")) {}.get("/foo")
+                                                                                    .get("/foo"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("duplicate HTTP method");
     }
 
     @Test
     void nonEmptyMethod() {
-        assertThatThrownBy(() -> new AbstractBindingBuilder() {}.methods(ImmutableList.of()))
+        assertThatThrownBy(
+                () -> new AbstractBindingBuilder(ImmutableSet.of("/")) {}.methods(ImmutableList.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("methods can't be empty.");
     }
