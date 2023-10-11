@@ -144,6 +144,7 @@ class FallbackServiceTest {
         // allowed length.
         final AggregatedHttpResponse agg = response.aggregate().join();
         assertThat(agg.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(agg.contentUtf8()).startsWith("Status: 404\n");
         final ServiceRequestContext sctx = lengthLimitServer.requestContextCaptor().take();
         final RequestLog log = sctx.log().whenComplete().join();
         // Make sure that the response was correctly logged.
@@ -167,6 +168,7 @@ class FallbackServiceTest {
         // response instead.
         final AggregatedHttpResponse agg = response.aggregate().join();
         assertThat(agg.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+        assertThat(agg.contentUtf8()).startsWith("Status: 413\n");
         final ServiceRequestContext sctx = lengthLimitServerWithDecorator.requestContextCaptor().take();
         final RequestLog log = sctx.log().whenComplete().join();
         // Make sure that the response was correctly logged.

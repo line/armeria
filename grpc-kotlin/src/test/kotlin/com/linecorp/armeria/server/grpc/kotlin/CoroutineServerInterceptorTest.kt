@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.auth.AuthToken
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction
 import com.linecorp.armeria.internal.testing.AnticipatedException
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.auth.Authorizer
@@ -71,6 +72,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
+@GenerateNativeImageTrace
 internal class CoroutineServerInterceptorTest {
 
     @OptIn(ExperimentalCoroutinesApi::class)

@@ -31,10 +31,12 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.zookeeper.ZooKeeperRegistrationSpec;
 
 import zookeeperjunit.CloseableZooKeeper;
 
+@GenerateNativeImageTrace
 class ServerSetDiscoveryTest {
 
     private static final String Z_NODE = "/testEndPoints";

@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.server.grpc;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,7 +48,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -70,6 +71,7 @@ import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import testing.grpc.TestServiceGrpc;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
+@GenerateNativeImageTrace
 class GrpcDocServiceTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
@@ -142,7 +144,7 @@ class GrpcDocServiceTest {
                                       .build());
             sb.serviceUnder("/",
                             GrpcService.builder()
-                                       .addService(mock(ReconnectServiceImplBase.class))
+                                       .addService(new ReconnectServiceImplBase() {})
                                        .build());
         }
     };
@@ -208,7 +210,7 @@ class GrpcDocServiceTest {
         removeDescriptionInfos(actualJson);
         removeDescriptionInfos(expectedJson);
 
-        assertThatJson(actualJson).isEqualTo(expectedJson);
+        assertThatJson(actualJson).whenIgnoringPaths("docServiceRoute").isEqualTo(expectedJson);
 
         final AggregatedHttpResponse injected = client.get("/docs/injected.js").aggregate().join();
 
@@ -224,11 +226,14 @@ class GrpcDocServiceTest {
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
-        final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of()));
+        final Route docServiceRoute = Route.builder().pathPrefix("/excludeAll").build();
+        final ServiceSpecification emptySpecification = new ServiceSpecification(ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 docServiceRoute);
+        final JsonNode expectedJson = mapper.valueToTree(emptySpecification);
         assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 

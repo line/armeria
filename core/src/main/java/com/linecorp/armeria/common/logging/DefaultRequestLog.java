@@ -369,7 +369,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 lock.unlock();
             }
             if (satisfiedFutures != null) {
-                completeSatisfiedFutures(satisfiedFutures, partial(flags));
+                completeSatisfiedFutures(satisfiedFutures, partial(flags), ctx);
             }
 
             future = newFuture;
@@ -416,14 +416,19 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 }
                 if (satisfiedFutures != null) {
                     final RequestLog log = partial(newFlags);
-                    completeSatisfiedFutures(satisfiedFutures, log);
+                    completeSatisfiedFutures(satisfiedFutures, log, ctx);
                 }
                 break;
             }
         }
     }
 
-    private static void completeSatisfiedFutures(RequestLogFuture[] satisfiedFutures, RequestLog log) {
+    private static void completeSatisfiedFutures(RequestLogFuture[] satisfiedFutures, RequestLog log,
+                                                 RequestContext ctx) {
+        if (!ctx.eventLoop().inEventLoop()) {
+            ctx.eventLoop().execute(() -> completeSatisfiedFutures(satisfiedFutures, log, ctx));
+            return;
+        }
         for (RequestLogFuture f : satisfiedFutures) {
             if (f == null) {
                 break;
@@ -731,7 +736,19 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.sslSession = sslSession;
         this.sessionProtocol = sessionProtocol;
         this.connectionTimings = connectionTimings;
+        maybeSetScheme();
         updateFlags(RequestLogProperty.SESSION);
+    }
+
+    private void maybeSetScheme() {
+        if (isAvailable(RequestLogProperty.SCHEME) ||
+            serializationFormat == SerializationFormat.NONE) {
+            return;
+        }
+
+        assert sessionProtocol != null;
+        scheme = Scheme.of(serializationFormat, sessionProtocol);
+        updateFlags(RequestLogProperty.SCHEME);
     }
 
     @Override

@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -64,6 +65,7 @@ import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
+@GenerateNativeImageTrace
 class AbstractUnaryGrpcServiceTest {
     private static final String METHOD_NAME = "/armeria.grpc.testing.TestService/UnaryCall";
     private static final String PAYLOAD_BODY = "hello";

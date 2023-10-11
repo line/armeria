@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.common.ResponseHeaders
 import com.linecorp.armeria.common.stream.AbortedStreamException
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.Blocking
@@ -58,6 +59,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.coroutineContext
 
+@GenerateNativeImageTrace
 @Suppress("RedundantSuspendModifier", "unused")
 class SuspendingAnnotatedServiceTest {
 
@@ -339,41 +341,41 @@ class SuspendingAnnotatedServiceTest {
 
         private data class MyResponse(val a: String, val b: Int)
     }
-}
 
-internal class BarResponseConverterFunctionProvider : DelegatingResponseConverterFunctionProvider {
-    override fun createResponseConverterFunction(
-        returnType: Type,
-        responseConverter: ResponseConverterFunction
-    ): ResponseConverterFunction? =
-        returnType.toClass()?.let {
-            when {
-                Bar::class.java.isAssignableFrom(it) -> BarResponseConverterFunction(responseConverter)
+    internal class BarResponseConverterFunctionProvider : DelegatingResponseConverterFunctionProvider {
+        override fun createResponseConverterFunction(
+            returnType: Type,
+            responseConverter: ResponseConverterFunction
+        ): ResponseConverterFunction? =
+            returnType.toClass()?.let {
+                when {
+                    Bar::class.java.isAssignableFrom(it) -> BarResponseConverterFunction(responseConverter)
+                    else -> null
+                }
+            }
+
+        private fun Type.toClass(): Class<*>? =
+            when (this) {
+                is ParameterizedType -> this.rawType as Class<*>
+                is Class<*> -> this
                 else -> null
             }
-        }
+    }
 
-    private fun Type.toClass(): Class<*>? =
-        when (this) {
-            is ParameterizedType -> this.rawType as Class<*>
-            is Class<*> -> this
-            else -> null
-        }
+    private class BarResponseConverterFunction(
+        private val responseConverter: ResponseConverterFunction
+    ) : ResponseConverterFunction {
+        override fun convertResponse(
+            ctx: ServiceRequestContext,
+            headers: ResponseHeaders,
+            result: Any?,
+            trailers: HttpHeaders
+        ): HttpResponse =
+            when (result) {
+                is Bar -> responseConverter.convertResponse(ctx, headers, "hello, bar!", trailers)
+                else -> ResponseConverterFunction.fallthrough()
+            }
+    }
+
+    private class Bar
 }
-
-private class BarResponseConverterFunction(
-    private val responseConverter: ResponseConverterFunction
-) : ResponseConverterFunction {
-    override fun convertResponse(
-        ctx: ServiceRequestContext,
-        headers: ResponseHeaders,
-        result: Any?,
-        trailers: HttpHeaders
-    ): HttpResponse =
-        when (result) {
-            is Bar -> responseConverter.convertResponse(ctx, headers, "hello, bar!", trailers)
-            else -> ResponseConverterFunction.fallthrough()
-        }
-}
-
-private class Bar

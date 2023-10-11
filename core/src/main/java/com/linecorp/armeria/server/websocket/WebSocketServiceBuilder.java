@@ -37,9 +37,9 @@ import com.linecorp.armeria.server.ServiceConfig;
  * This service has the different default configs from a normal {@link HttpService}. Here are the differences:
  * <ul>
  *   <li>{@link ServiceConfig#requestTimeoutMillis()} is
- *       {@value WebSocketUtil#DEFAULT_REQUEST_TIMEOUT_MILLIS}.</li>
+ *       {@value WebSocketUtil#DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS}.</li>
  *   <li>{@link ServiceConfig#maxRequestLength()} is
- *       {@value WebSocketUtil#DEFAULT_MAX_REQUEST_LENGTH}.</li>
+ *       {@value WebSocketUtil#DEFAULT_MAX_REQUEST_RESPONSE_LENGTH}.</li>
  *   <li>{@link ServiceConfig#requestAutoAbortDelayMillis()} is
  *       {@value WebSocketUtil#DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS}.</li>
  * </ul>
