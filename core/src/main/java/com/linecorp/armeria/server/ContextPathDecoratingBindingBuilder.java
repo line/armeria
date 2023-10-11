@@ -50,10 +50,9 @@ public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsB
     private final ContextPathServicesBuilder<T> builder;
     private final Set<String> contextPaths;
 
-    ContextPathDecoratingBindingBuilder(ContextPathServicesBuilder<T> builder,
-                                        Set<String> contextPaths) {
+    ContextPathDecoratingBindingBuilder(ContextPathServicesBuilder<T> builder) {
         this.builder = builder;
-        this.contextPaths = contextPaths;
+        this.contextPaths = builder.contextPaths();
     }
 
     @SuppressWarnings("unchecked")
@@ -215,7 +214,7 @@ public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsB
     }
 
     /**
-     * Sets the {@code decorator} and returns the (ContextPathDecoratingBindingBuilder)
+     * Sets the {@code decorator} and returns the (ContextPathServicesBuilder)
      * that this {@link ContextPathDecoratingBindingBuilder} was created from.
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}

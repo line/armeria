@@ -77,7 +77,7 @@ public final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
      */
     public ContextPathServicesBuilder<T> withRoute(
             Consumer<? super ContextPathServiceBindingBuilder<T>> customizer) {
-        customizer.accept(new ContextPathServiceBindingBuilder<>(this, contextPaths));
+        customizer.accept(new ContextPathServiceBindingBuilder<>(this));
         return this;
     }
 
@@ -86,7 +86,7 @@ public final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
      */
     @Override
     public ContextPathServiceBindingBuilder<T> route() {
-        return new ContextPathServiceBindingBuilder<>(this, contextPaths);
+        return new ContextPathServiceBindingBuilder<>(this);
     }
 
     /**
@@ -95,7 +95,7 @@ public final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
      */
     @Override
     public ContextPathDecoratingBindingBuilder<T> routeDecorator() {
-        return new ContextPathDecoratingBindingBuilder<>(this, contextPaths);
+        return new ContextPathDecoratingBindingBuilder<>(this);
     }
 
     /**
@@ -357,7 +357,7 @@ public final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
      */
     @Override
     public ContextPathAnnotatedServiceConfigSetters<T> annotatedService() {
-        return new ContextPathAnnotatedServiceConfigSetters<>(this, contextPaths);
+        return new ContextPathAnnotatedServiceConfigSetters<>(this);
     }
 
     /**
@@ -478,5 +478,12 @@ public final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
      */
     public T and() {
         return parent;
+    }
+
+    /**
+     * Returns the context paths that will prefix all services and decorators.
+     */
+    public Set<String> contextPaths() {
+        return contextPaths;
     }
 }

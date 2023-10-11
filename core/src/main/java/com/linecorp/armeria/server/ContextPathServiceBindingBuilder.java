@@ -62,10 +62,9 @@ public final class ContextPathServiceBindingBuilder<T extends ServiceConfigsBuil
     private final ContextPathServicesBuilder<T> contextPathServicesBuilder;
     private final Set<String> contextPaths;
 
-    ContextPathServiceBindingBuilder(ContextPathServicesBuilder<T> contextPathServicesBuilder,
-                                     Set<String> contextPaths) {
-        this.contextPathServicesBuilder = contextPathServicesBuilder;
-        this.contextPaths = contextPaths;
+    ContextPathServiceBindingBuilder(ContextPathServicesBuilder<T> builder) {
+        this.contextPathServicesBuilder = builder;
+        this.contextPaths = builder.contextPaths();
     }
 
     @SuppressWarnings("unchecked")
