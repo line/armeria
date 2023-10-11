@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -54,15 +55,6 @@ class MaxResetFramesTest {
         }
     };
 
-    @RegisterExtension
-    static final ServerExtension unlimitedServer = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.http2MaxResetFramesPerWindow(0, 0);
-            sb.service("/", (ctx, req) -> HttpResponse.of(200));
-        }
-    };
-
     @Test
     void shouldCloseConnectionWhenExceedingMaxResetFrames() {
         final CountingConnectionPoolListener listener = new CountingConnectionPoolListener();
@@ -83,7 +75,7 @@ class MaxResetFramesTest {
 
             CompletableFutures.successfulAsList(futures, cause -> null).join();
             assertThat(listener.opened()).isEqualTo(1);
-            assertThat(listener.closed()).isEqualTo(1);
+            await().untilAsserted(() -> assertThat(listener.closed()).isEqualTo(1));
         }
     }
 
