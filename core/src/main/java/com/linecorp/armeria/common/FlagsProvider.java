@@ -695,6 +695,22 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default maximum number RST frames that are allowed per window before the connection is
+     * closed. This allows to protect against the remote peer flooding us with such frames and so use up a lot
+     * of CPU. Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * to override the default value. {@code 0} means no protection should be applied.
+     */
+    @Nullable
+    default Integer defaultHttp2MaxResetFramesPerMinute() {
+        return null;
+    }
+
+    /**
      * Returns the {@linkplain Backoff#of(String) Backoff specification string} of the default {@link Backoff}
      * returned by {@link Backoff#ofDefault()}. Note that this flag has no effect if a user specified the
      * {@link Backoff} explicitly.

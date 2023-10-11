@@ -294,6 +294,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Integer defaultHttp2MaxResetFramesPerMinute() {
+        return getInt("defaultHttp2MaxResetFramesPerMinute");
+    }
+
+    @Override
     public String defaultBackoffSpec() {
         return getNormalized("defaultBackoffSpec");
     }

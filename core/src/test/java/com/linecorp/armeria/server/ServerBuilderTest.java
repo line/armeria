@@ -705,4 +705,15 @@ class ServerBuilderTest {
                 new ServerPort(DomainSocketAddress.of("/tmp/bar"),
                                SessionProtocol.HTTP, SessionProtocol.HTTPS));
     }
+
+    @Test
+    void httpMaxResetFramesPerMinute() {
+        final ServerConfig config = Server.builder()
+                                          .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                          .http2MaxResetFramesPerWindow(99, 2)
+                                          .build()
+                                          .config();
+        assertThat(config.http2MaxResetFramesPerWindow()).isEqualTo(99);
+        assertThat(config.http2MaxResetFramesWindowSeconds()).isEqualTo(2);
+    }
 }
