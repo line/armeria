@@ -36,7 +36,6 @@ import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.netty.util.concurrent.EventExecutor;
 
-@SuppressWarnings("UnstableApiUsage")
 final class DefaultCancellationScheduler implements CancellationScheduler {
 
     private static final AtomicReferenceFieldUpdater<DefaultCancellationScheduler, CancellationFuture>

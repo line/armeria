@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.internal.common.DefaultCancellationScheduler.noopCancellationTask;
-
 import java.util.concurrent.CompletableFuture;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -34,14 +32,20 @@ public interface CancellationScheduler {
         return new DefaultCancellationScheduler(timeoutNanos);
     }
 
+    /**
+     * A {@link CancellationScheduler} that has already completed.
+     */
     static CancellationScheduler finished(boolean server) {
-        final CancellationScheduler cancellationScheduler = CancellationScheduler.of(0);
+        final CancellationScheduler cancellationScheduler = of(0);
         cancellationScheduler
                 .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, server);
         cancellationScheduler.finishNow();
         return cancellationScheduler;
     }
 
+    /**
+     * A {@link CancellationScheduler} that never completes.
+     */
     static CancellationScheduler noop() {
         return NoopCancellationScheduler.INSTANCE;
     }

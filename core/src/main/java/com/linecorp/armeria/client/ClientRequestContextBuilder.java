@@ -51,7 +51,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     /**
      * A cancellation scheduler that has been finished.
      */
-    static final CancellationScheduler
+    private static final CancellationScheduler
             finishedResponseCancellationScheduler = CancellationScheduler.finished(false);
 
     @Nullable

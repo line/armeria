@@ -28,9 +28,10 @@ final class NoopCancellationScheduler implements CancellationScheduler {
 
     static final CancellationScheduler INSTANCE = new NoopCancellationScheduler();
 
-    static final CompletableFuture<Throwable> THROWABLE_FUTURE =
+    private static final CompletableFuture<Throwable> THROWABLE_FUTURE =
             UnmodifiableFuture.wrap(new CompletableFuture<>());
-    static final CompletableFuture<Void> VOID_FUTURE = UnmodifiableFuture.wrap(new CompletableFuture<>());
+    private static final CompletableFuture<Void> VOID_FUTURE =
+            UnmodifiableFuture.wrap(new CompletableFuture<>());
 
     private NoopCancellationScheduler() {
     }
