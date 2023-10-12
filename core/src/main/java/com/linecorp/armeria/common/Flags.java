@@ -1037,7 +1037,7 @@ public final class Flags {
     }
 
     /**
-     * Returns the default maximum number RST frames that are allowed per window before the connection is
+     * Returns the default maximum number of RST frames that are allowed per window before the connection is
      * closed. This allows to protect against the remote peer flooding us with such frames and so use up a lot
      * of CPU. Note that this flag has no effect if a user specified the value explicitly via
      * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
