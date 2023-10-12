@@ -556,7 +556,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @UnstableApi
     public ServerBuilder serviceWorkerGroup(int numThreads) {
-        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         virtualHostTemplate.serviceWorkerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
         return this;
     }

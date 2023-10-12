@@ -245,7 +245,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigSetters serviceWorkerGroup(int numThreads) {
-        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
         return serviceWorkerGroup(workerGroup, true);
     }
@@ -364,6 +363,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (serviceWorkerGroup != null) {
             serviceConfigBuilder.serviceWorkerGroup(serviceWorkerGroup, false);
+            // Set the serviceWorkerGroup as false because it's shut down in ShutdownSupport.
         }
         if (requestIdGenerator != null) {
             serviceConfigBuilder.requestIdGenerator(requestIdGenerator);

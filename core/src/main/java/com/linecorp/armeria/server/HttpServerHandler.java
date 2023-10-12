@@ -370,19 +370,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
         final EventLoop serviceEventLoop;
+        final boolean needsDirectExecution;
         final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
         if (serviceWorkerGroup == config.workerGroup()) {
             serviceEventLoop = channelEventLoop;
+            needsDirectExecution = true;
         } else {
             serviceEventLoop = serviceWorkerGroup.next();
+            needsDirectExecution = serviceEventLoop == channelEventLoop;
         }
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceEventLoop, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros());
-
-        final boolean needsDirectExecution = serviceEventLoop == channelEventLoop;
 
         final HttpResponse res;
         req.init(reqCtx);

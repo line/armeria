@@ -1172,7 +1172,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      */
     @UnstableApi
     public VirtualHostBuilder serviceWorkerGroup(int numThreads) {
-        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
         return serviceWorkerGroup(workerGroup, true);
     }

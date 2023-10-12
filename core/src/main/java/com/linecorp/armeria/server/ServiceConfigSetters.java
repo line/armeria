@@ -211,9 +211,9 @@ interface ServiceConfigSetters {
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
 
      /**
-      * Sets a {@link EventLoopGroup worker group} to be used when serving a {@link Service}.
+      * Sets a {@linkplain EventLoopGroup worker group} to be used when serving a {@link Service}.
       *
-      * @param serviceWorkerGroup the {@link ScheduledExecutorService executor} to be used.
+      * @param serviceWorkerGroup the {@linkplain ScheduledExecutorService executor} to be used.
       * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the {@link Server}
       *                       stops.
       */

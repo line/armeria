@@ -291,7 +291,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigBuilder serviceWorkerGroup(int numThreads) {
-        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
         return serviceWorkerGroup(workerGroup, true);
     }
