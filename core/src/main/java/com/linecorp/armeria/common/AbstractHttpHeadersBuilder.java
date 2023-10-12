@@ -51,8 +51,8 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
         return getters != null ? getters.contentLength() : -1;
     }
 
-    public final SELF isContentLengthUnknown(boolean contentLengthUnknown) {
-        setters().contentLengthUnknown(contentLengthUnknown);
+    public final SELF contentLengthUnknown() {
+        setters().contentLengthUnknown();
         return self();
     }
 

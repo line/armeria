@@ -70,7 +70,7 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder contentLength(long contentLength);
 
     @Override
-    ResponseHeadersBuilder isContentLengthUnknown(boolean contentLengthUnknown);
+    ResponseHeadersBuilder contentLengthUnknown();
 
     @Override
     ResponseHeadersBuilder contentType(MediaType contentType);

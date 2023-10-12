@@ -579,7 +579,7 @@ public final class ArmeriaHttpUtil {
         if (!builder.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // `isContentLengthUnknown` is set to true so as not to automatically fill the content-length when
             // the HTTP objects are aggregated.
-            builder.isContentLengthUnknown(true);
+            builder.contentLengthUnknown();
         }
         // A CONNECT request might not have ":scheme". See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
@@ -759,7 +759,7 @@ public final class ArmeriaHttpUtil {
         if (!isContentAlwaysEmpty) {
             // Set isContentLengthUnknown to true not to override the content-length when the HTTP objects are
             // aggregated.
-            out.isContentLengthUnknown(true);
+            out.contentLengthUnknown();
         }
     }
 

@@ -140,7 +140,7 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     RequestHeadersBuilder contentType(MediaType contentType);
 
     @Override
-    RequestHeadersBuilder isContentLengthUnknown(boolean contentLengthUnknown);
+    RequestHeadersBuilder contentLengthUnknown();
 
     @Override
     RequestHeadersBuilder contentDisposition(ContentDisposition contentDisposition);

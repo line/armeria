@@ -57,9 +57,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
 
     /**
      * Sets whether the <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a>
-     * is unknown. If {@code true}, {@code content-length} header is not automatically updated.
+     * is unknown. Thus, {@code content-length} header is not automatically updated.
      */
-    HttpHeadersBuilder isContentLengthUnknown(boolean contentLengthUnknown);
+    HttpHeadersBuilder contentLengthUnknown();
 
     /**
      * Sets the {@code "content-type"} header.

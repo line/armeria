@@ -92,10 +92,10 @@ class HttpHeadersBase
     private final Map<AsciiString, Object> cache;
 
     /**
-     * {@code true} if {@link #contentLengthUnknown(boolean)} was explicitly called with {@code true}.
-     * The value is set to {@code false} if {@link HttpHeaderNames#CONTENT_LENGTH} is set.
+     * {@code true} if {@link #contentLengthUnknown()} was explicitly called.
+     * The value may be {@code false} if {@link HttpHeaderNames#CONTENT_LENGTH} is set.
      */
-    private boolean contentLengthUnknown;
+    private boolean contentLengthMayBeUnknown;
     private boolean endOfStream;
 
     HttpHeadersBase(int sizeHint) {
@@ -108,7 +108,7 @@ class HttpHeadersBase
      */
     HttpHeadersBase(HttpHeadersBase parent, boolean shallowCopy) {
         super(parent, shallowCopy);
-        contentLengthUnknown = parent.contentLengthUnknown;
+        contentLengthMayBeUnknown = parent.contentLengthMayBeUnknown;
         endOfStream = parent.endOfStream;
         cache = new HashMap<>(parent.cache);
     }
@@ -119,17 +119,13 @@ class HttpHeadersBase
     HttpHeadersBase(HttpHeaderGetters parent) {
         super(parent);
         assert !(parent instanceof HttpHeadersBase);
-        contentLengthUnknown = parent.isContentLengthUnknown();
+        contentLengthMayBeUnknown = parent.isContentLengthUnknown();
         endOfStream = parent.isEndOfStream();
         cache = new HashMap<>(4);
     }
 
     @Override
-    void onChange(@Nullable AsciiString name, boolean add) {
-        if (HttpHeaderNames.CONTENT_LENGTH.equals(name) && add) {
-            contentLengthUnknown = false;
-        }
-
+    void onChange(@Nullable AsciiString name) {
         // This method could be called before the 'cache' field is initialized.
         //noinspection ConstantValue
         if (cache == null || cache.isEmpty()) {
@@ -141,7 +137,7 @@ class HttpHeadersBase
 
     @Override
     void onClear() {
-        contentLengthUnknown = false;
+        contentLengthMayBeUnknown = false;
         if (cache == null || cache.isEmpty()) {
             return;
         }
@@ -475,7 +471,7 @@ class HttpHeadersBase
     final void contentLength(long contentLength) {
         checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
         cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
-        contentLengthUnknown = false;
+        contentLengthMayBeUnknown = false;
         final String contentLengthString = StringUtil.toString(contentLength);
         setWithoutNotifying(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
     }
@@ -498,16 +494,22 @@ class HttpHeadersBase
         }
     }
 
-    public void contentLengthUnknown(boolean contentLengthUnknown) {
-        if (contentLengthUnknown) {
-            remove(HttpHeaderNames.CONTENT_LENGTH);
-        }
-        this.contentLengthUnknown = contentLengthUnknown;
+    public void contentLengthUnknown() {
+        remove(HttpHeaderNames.CONTENT_LENGTH);
+        contentLengthMayBeUnknown = true;
     }
 
     @Override
     public boolean isContentLengthUnknown() {
-        return contentLengthUnknown;
+        if (contentLengthMayBeUnknown) {
+            if (contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                return contentLengthMayBeUnknown = false;
+            } else {
+                return true;
+            }
+        } else {
+            return false;
+        }
     }
 
     List<MediaType> accept() {

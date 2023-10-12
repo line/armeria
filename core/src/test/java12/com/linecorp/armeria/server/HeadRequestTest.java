@@ -108,7 +108,7 @@ class HeadRequestTest {
                                                .status(200)
                                                // Indicate that content-length should not be filled
                                                // automatically.
-                                               .isContentLengthUnknown(true)
+                                               .contentLengthUnknown()
                                                .build();
                         return HttpResponse.of(headers);
                     } else {

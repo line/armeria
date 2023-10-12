@@ -644,7 +644,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, v, false);
         }
-        onChange(normalizedName, true);
+        onChange(normalizedName);
     }
 
     final void add(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
@@ -659,7 +659,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     /**
      * Only adds the specified {@code name} and {@code values}, and do not notify the changes via
-     * {@link #onChange(CharSequence, boolean)}.
+     * {@link #onChange(CharSequence)}.
      */
     final void addWithoutNotifying(IN_NAME name, Iterable<String> values) {
         addAndNotify(name, values, false);
@@ -675,7 +675,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             addAndNotify(h, i, normalizedName, v, false);
         }
         if (notifyChange) {
-            onChange(normalizedName, true);
+            onChange(normalizedName);
         }
     }
 
@@ -685,7 +685,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         entries[i] = new Entry(h, name, value, entries[i]);
         ++size;
         if (notifyChange) {
-            onChange(name, true);
+            onChange(name);
         }
     }
 
@@ -704,7 +704,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             addObjectAndNotify(normalizedName, v, false);
         }
         if (notifyChange) {
-            onChange(normalizedName, true);
+            onChange(normalizedName);
         }
     }
 
@@ -729,7 +729,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addObjectAndNotify(normalizedName, v, false);
         }
-        onChange(normalizedName, true);
+        onChange(normalizedName);
     }
 
     void addObject(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {
@@ -778,7 +778,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, v, false);
         }
-        onChange(normalizedName, true);
+        onChange(normalizedName);
     }
 
     final void set(IN_NAME name, String... values) {
@@ -793,7 +793,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, v, false);
         }
-        onChange(normalizedName, true);
+        onChange(normalizedName);
     }
 
     final void set(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
@@ -813,7 +813,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     /**
      * Only sets the specified {@code name} and {@code value}, and do not notify the change via
-     * {@link #onChange(CharSequence, boolean)}.
+     * {@link #onChange(CharSequence)}.
      */
     final void setWithoutNotifying(IN_NAME name, String value) {
         setAndNotify(name, value, false);
@@ -841,7 +841,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     /**
      * Invoked when a value associated with the specified {@code name} is added or removed.
      */
-    void onChange(NAME name, boolean add) {}
+    void onChange(NAME name) {}
 
     /**
      * Invoked when all values are cleared.
@@ -901,7 +901,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, fromObject(v), false);
         }
-        onChange(normalizedName, true);
+        onChange(normalizedName);
     }
 
     final void setObject(IN_NAME name, Object... values) {
@@ -916,7 +916,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, fromObject(v), false);
         }
-        onChange(normalizedName, true);
+        onChange(normalizedName);
     }
 
     final void setObject(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {
@@ -1034,7 +1034,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
                     next.remove();
                     --size;
                     if (notifyChange) {
-                        onChange(currentName, false);
+                        onChange(currentName);
                     }
                 } else {
                     e = next;
@@ -1057,7 +1057,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
                 e.remove();
                 --size;
                 if (notifyChange) {
-                    onChange(currentName, false);
+                    onChange(currentName);
                 }
             }
         }

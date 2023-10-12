@@ -108,8 +108,15 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
             // Validate the method.
             final CharSequence methodText = nettyHeaders.method();
-            if (methodText == null) {
-                writeErrorResponse(streamId, null, HttpStatus.BAD_REQUEST, "Missing method", null);
+            final HttpMethod method;
+            if (methodText != null) {
+                method = HttpMethod.tryParse(methodText.toString());
+            } else {
+                method = null;
+            }
+            if (method == null) {
+                final String message = methodText == null ? "Missing method" : "Invalid method: " + methodText;
+                writeErrorResponse(streamId, null, HttpStatus.BAD_REQUEST, message, null);
                 return;
             }
 
@@ -125,7 +132,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
             // This is because removing a header from RequestHeaders is more expensive due to its
             // immutability.
-            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders, methodText);
+            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders, method);
 
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
@@ -133,7 +140,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                                             scheme, cfg, reqTarget);
 
             // Reject a request with an unsupported method.
-            final HttpMethod method = headers.method();
             switch (method) {
                 case CONNECT:
                     // Accept a CONNECT request only when it has a :protocol header, as defined in:
@@ -230,7 +236,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
-    private boolean handle100Continue(int streamId, Http2Headers headers, CharSequence methodText) {
+    private boolean handle100Continue(int streamId, Http2Headers headers, HttpMethod method) {
         final CharSequence expectValue = headers.get(HttpHeaderNames.EXPECT);
         if (expectValue == null) {
             // No 'expect' header.
@@ -244,10 +250,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         // Send a '100 Continue' response.
         assert encoder != null;
-        final HttpMethod method = HttpMethod.tryParse(methodText.toString());
-        if (method == null) {
-            return false;
-        }
         encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false, method);
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.

@@ -26,7 +26,7 @@ class ContentLengthTest {
     @Test
     void shouldAllowMinusOne() {
         final HttpHeaders headers = HttpHeaders.builder()
-                                               .isContentLengthUnknown(true)
+                                               .contentLengthUnknown()
                                                .build();
         assertThat(headers.isContentLengthUnknown()).isTrue();
         assertThat(headers.contentLength()).isEqualTo(-1);
@@ -52,7 +52,7 @@ class ContentLengthTest {
         final RequestHeaders headers = RequestHeaders.builder()
                                                      .method(HttpMethod.POST)
                                                      .path("/")
-                                                     .isContentLengthUnknown(true)
+                                                     .contentLengthUnknown()
                                                      .contentType(MediaType.PLAIN_TEXT)
                                                      .build();
         final HttpRequest request = HttpRequest.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
@@ -67,7 +67,7 @@ class ContentLengthTest {
     void shouldPreserveExplicitNullContentLengthWhenAggregated_response() {
         final ResponseHeaders headers = ResponseHeaders.builder()
                                                        .status(HttpStatus.OK)
-                                                       .isContentLengthUnknown(true)
+                                                       .contentLengthUnknown()
                                                        .contentType(MediaType.PLAIN_TEXT)
                                                        .build();
         final HttpResponse response = HttpResponse.of(headers, StreamMessage.of(HttpData.ofUtf8("foo")));
