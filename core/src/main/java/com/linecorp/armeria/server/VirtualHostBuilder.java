@@ -162,8 +162,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
     @Nullable
     private ServiceErrorHandler errorHandler;
-    private final ContextPathServicesBuilder<VirtualHostBuilder> servicesBuilder =
-            new ContextPathServicesBuilder<>(this, this, ImmutableSet.of("/"));
+    private final VirtualHostContextPathServicesBuilder servicesBuilder =
+            new VirtualHostContextPathServicesBuilder(this, this, ImmutableSet.of("/"));
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -401,26 +401,26 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
-     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * Returns a {@link VirtualHostContextPathServicesBuilder} which binds {@link HttpService}s under the
      * specified context paths.
      *
-     * @see ContextPathServicesBuilder
+     * @see VirtualHostContextPathServicesBuilder
      */
     @UnstableApi
-    public ContextPathServicesBuilder<VirtualHostBuilder> contextPath(String... contextPaths) {
+    public VirtualHostContextPathServicesBuilder contextPath(String... contextPaths) {
         return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
     }
 
     /**
-     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * Returns a {@link VirtualHostContextPathServicesBuilder} which binds {@link HttpService}s under the
      * specified context paths.
      *
-     * @see ContextPathServicesBuilder
+     * @see VirtualHostContextPathServicesBuilder
      */
     @UnstableApi
-    public ContextPathServicesBuilder<VirtualHostBuilder> contextPath(Iterable<String> contextPaths) {
+    public VirtualHostContextPathServicesBuilder contextPath(Iterable<String> contextPaths) {
         requireNonNull(contextPaths, "contextPaths");
-        return new ContextPathServicesBuilder<>(this, this, ImmutableSet.copyOf(contextPaths));
+        return new VirtualHostContextPathServicesBuilder(this, this, ImmutableSet.copyOf(contextPaths));
     }
 
     /**
