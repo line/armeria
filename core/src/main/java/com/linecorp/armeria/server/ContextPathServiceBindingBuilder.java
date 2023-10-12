@@ -54,8 +54,8 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *       .build(service2); // served under "/v3/service2"
  * }</pre>
  *
- * @see VirtualHostServiceBindingBuilder
  * @param <T> the type this service will be added to.
+ * @see VirtualHostServiceBindingBuilder
  */
 @UnstableApi
 public final class ContextPathServiceBindingBuilder<T extends ServiceConfigsBuilder>
