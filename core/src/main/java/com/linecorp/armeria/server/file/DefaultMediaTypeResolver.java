@@ -72,6 +72,9 @@ enum DefaultMediaTypeResolver implements MediaTypeResolver {
         add(map, MediaType.create("application", "xml-dtd"), "dtd");
         add(map, MediaType.MANIFEST_JSON_UTF_8, "webmanifest");
 
+        // Compression formats
+        add(map, MediaType.create("application", "x-snappy-framed"), "sz");
+
         EXTENSION_TO_MEDIA_TYPE = Collections.unmodifiableMap(map);
     }
 

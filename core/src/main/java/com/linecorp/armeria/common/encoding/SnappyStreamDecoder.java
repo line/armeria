@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.compression.SnappyFrameDecoder;
 
 /**
- * A {@link StreamDecoder} that decompresses data encoded with the snappy format ('snappy').
+ * A {@link StreamDecoder} that decompresses data encoded with the snappy framing format ('x-snappy-framed').
  */
 final class SnappyStreamDecoder extends AbstractStreamDecoder {
 

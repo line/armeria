@@ -72,7 +72,7 @@ final class HttpEncoders {
                 encodings.put(StreamEncoderFactories.GZIP, q);
             } else if (encoding.contains("deflate")) {
                 encodings.put(StreamEncoderFactories.DEFLATE, q);
-            } else if (encoding.contains("snappy")) {
+            } else if (encoding.contains("x-snappy-framed")) {
                 encodings.put(StreamEncoderFactories.SNAPPY, q);
             }
         }
