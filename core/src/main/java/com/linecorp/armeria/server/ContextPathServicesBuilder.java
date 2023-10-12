@@ -77,6 +77,7 @@ public final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
      */
     public ContextPathServicesBuilder<T> withRoute(
             Consumer<? super ContextPathServiceBindingBuilder<T>> customizer) {
+        requireNonNull(customizer, "customizer");
         customizer.accept(new ContextPathServiceBindingBuilder<>(this));
         return this;
     }
@@ -480,10 +481,7 @@ public final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
         return parent;
     }
 
-    /**
-     * Returns the context paths that will prefix all services and decorators.
-     */
-    public Set<String> contextPaths() {
+    Set<String> contextPaths() {
         return contextPaths;
     }
 }

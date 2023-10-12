@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
@@ -411,9 +412,22 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<VirtualHostBuilder> contextPath(Iterable<String> contextPaths) {
+        return new ContextPathServicesBuilder<>(
+                this, this, Iterables.toArray(ImmutableList.copyOf(contextPaths), String.class));
+    }
+
+    /**
      * Configures an {@link HttpService} of the {@link VirtualHost} with the {@code customizer}.
      */
     public VirtualHostBuilder withRoute(Consumer<? super VirtualHostServiceBindingBuilder> customizer) {
+        requireNonNull(customizer, "customizer");
         final VirtualHostServiceBindingBuilder builder = new VirtualHostServiceBindingBuilder(this);
         customizer.accept(builder);
         return this;

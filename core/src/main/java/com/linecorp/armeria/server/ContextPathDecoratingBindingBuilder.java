@@ -212,7 +212,7 @@ public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsB
     }
 
     /**
-     * Sets the {@code decorator} and returns the (ContextPathServicesBuilder)
+     * Sets the {@code decorator} and returns the {@link ContextPathServicesBuilder}
      * that this {@link ContextPathDecoratingBindingBuilder} was created from.
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}

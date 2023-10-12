@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map.Entry;
@@ -62,7 +64,7 @@ public final class ContextPathServiceBindingBuilder<T extends ServiceConfigsBuil
 
     ContextPathServiceBindingBuilder(ContextPathServicesBuilder<T> builder) {
         super(builder.contextPaths());
-        this.contextPathServicesBuilder = builder;
+        contextPathServicesBuilder = builder;
     }
 
     @SuppressWarnings("unchecked")
@@ -401,6 +403,7 @@ public final class ContextPathServiceBindingBuilder<T extends ServiceConfigsBuil
      * {@link ContextPathServiceBindingBuilder} was created from.
      */
     public ContextPathServicesBuilder<T> build(HttpService service) {
+        requireNonNull(service, "service");
         build0(service);
         return contextPathServicesBuilder;
     }

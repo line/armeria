@@ -72,7 +72,7 @@ abstract class AbstractBindingBuilder {
         this.contextPaths = contextPaths;
     }
 
-    protected Set<String> contextPaths() {
+    Set<String> contextPaths() {
         return contextPaths;
     }
 

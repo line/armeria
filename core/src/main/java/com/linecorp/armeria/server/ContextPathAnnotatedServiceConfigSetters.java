@@ -50,7 +50,7 @@ public final class ContextPathAnnotatedServiceConfigSetters<T extends ServiceCon
 
     ContextPathAnnotatedServiceConfigSetters(ContextPathServicesBuilder<T> builder) {
         this.builder = builder;
-        this.contextPaths = builder.contextPaths();
+        contextPaths = builder.contextPaths();
     }
 
     /**
