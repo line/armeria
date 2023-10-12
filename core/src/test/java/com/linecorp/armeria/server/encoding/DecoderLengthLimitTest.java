@@ -34,29 +34,29 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
+import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 
 import io.netty.buffer.ByteBufAllocator;
 
 class DecoderLengthLimitTest {
 
-    @EnumSource(HttpEncodingType.class)
+    @EnumSource(StreamEncoderFactories.class)
     @ParameterizedTest
-    void decodedDataShouldNotExceedLengthLimit(HttpEncodingType encodingType) throws IOException {
+    void decodedDataShouldNotExceedLengthLimit(StreamEncoderFactories factory) throws IOException {
         final String originalMessage = Strings.repeat("1", 10000);
         final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
-        final OutputStream encodingStream =
-                HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
+        final OutputStream encodingStream = factory.newEncoder(encodedStream);
         encodingStream.write(originalMessage.getBytes());
         encodingStream.flush();
         final HttpData httpData = HttpData.wrap(encodedStream.toByteArray());
-        final StreamDecoder lenientStreamDecoder = newStreamDecoder(encodingType, 10001);
+        final StreamDecoder lenientStreamDecoder = newStreamDecoder(factory, 10001);
         final HttpData decode0 = lenientStreamDecoder.decode(httpData);
         final HttpData decode1 = lenientStreamDecoder.finish();
         assertThat(decode0.toStringUtf8() + decode1.toStringUtf8()).isEqualTo(originalMessage);
         decode0.close();
         decode1.close();
 
-        final StreamDecoder strictStreamDecoder = newStreamDecoder(encodingType, 9999);
+        final StreamDecoder strictStreamDecoder = newStreamDecoder(factory, 9999);
         assertThatThrownBy(() -> {
             strictStreamDecoder.decode(httpData);
         }).isInstanceOf(ContentTooLargeException.class)
@@ -66,17 +66,16 @@ class DecoderLengthLimitTest {
           });
     }
 
-    @EnumSource(HttpEncodingType.class)
+    @EnumSource(StreamEncoderFactories.class)
     @ParameterizedTest
-    void chunkedDataShouldNotExceedLengthLimit(HttpEncodingType encodingType) throws IOException {
+    void chunkedDataShouldNotExceedLengthLimit(StreamEncoderFactories factory) throws IOException {
         // Use non-repeated texts to avoid high compression ratio and each chunk can have a complete text.
         final String originalMessage =
                 IntStream.range(0, 5000)
                          .mapToObj(x -> String.valueOf(x))
                          .collect(Collectors.joining());
         final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
-        final OutputStream encodingStream =
-                HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
+        final OutputStream encodingStream = factory.newEncoder(encodedStream);
         encodingStream.write(originalMessage.getBytes());
         encodingStream.flush();
         final byte[] compressed = encodedStream.toByteArray();
@@ -84,7 +83,7 @@ class DecoderLengthLimitTest {
         final HttpData first = HttpData.copyOf(compressed, 0, middle);
         final HttpData second = HttpData.copyOf(compressed, middle, compressed.length - middle);
 
-        final StreamDecoder lenientStreamDecoder = newStreamDecoder(encodingType, originalMessage.length());
+        final StreamDecoder lenientStreamDecoder = newStreamDecoder(factory, originalMessage.length());
         final HttpData decode0 = lenientStreamDecoder.decode(first);
         final HttpData decode1 = lenientStreamDecoder.decode(second);
         final HttpData decode2 = lenientStreamDecoder.finish();
@@ -95,7 +94,7 @@ class DecoderLengthLimitTest {
         decode2.close();
 
         final int maxLength = originalMessage.length() - 1;
-        final StreamDecoder strictStreamDecoder = newStreamDecoder(encodingType, maxLength);
+        final StreamDecoder strictStreamDecoder = newStreamDecoder(factory, maxLength);
         strictStreamDecoder.decode(first).close();
         assertThatThrownBy(() -> {
             strictStreamDecoder.decode(second).close();
@@ -109,7 +108,7 @@ class DecoderLengthLimitTest {
           });
     }
 
-    private static StreamDecoder newStreamDecoder(HttpEncodingType encodingType, int maxLength) {
+    private static StreamDecoder newStreamDecoder(StreamEncoderFactories encodingType, int maxLength) {
         switch (encodingType) {
             case GZIP:
                 return StreamDecoderFactory.gzip().newDecoder(ByteBufAllocator.DEFAULT, maxLength);

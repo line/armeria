@@ -208,7 +208,7 @@ configure(projectsWithFlags('java')) {
         compileOnly libs.jetty.alpn.api
 
         // Snappy
-        implementation 'org.xerial.snappy:snappy-java:1.1.10.3'
+        implementation libs.snappy
 
         // Logging
         implementation libs.slf4j.api

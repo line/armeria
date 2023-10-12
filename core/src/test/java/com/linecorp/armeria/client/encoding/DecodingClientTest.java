@@ -89,48 +89,21 @@ class DecodingClientTest {
     };
 
     @Test
-    void httpGzipDecodingTest() {
-        final BlockingWebClient client =
-                server.blockingWebClient(cb -> {
-                    cb.decorator(DecodingClient.newDecorator(
-                            com.linecorp.armeria.common.encoding.StreamDecoderFactory.gzip()));
-                });
+    void httpDecodingTest() {
+        for (com.linecorp.armeria.common.encoding.StreamDecoderFactory factory
+                : com.linecorp.armeria.common.encoding.StreamDecoderFactory.all()) {
+            final BlockingWebClient client =
+                    server.blockingWebClient(cb -> {
+                        cb.decorator(DecodingClient.newDecorator(factory));
+                    });
 
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse response =
-                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test"));
-            assertContentEncoding(captor.get().log(), response, "gzip");
-            assertThat(response.contentUtf8()).isEqualTo("some content to compress more content to compress");
-        }
-    }
-
-    @Test
-    void httpDeflateDecodingTest() {
-        final BlockingWebClient client = server.blockingWebClient(cb -> {
-            cb.decorator(DecodingClient.newDecorator(
-                    com.linecorp.armeria.common.encoding.StreamDecoderFactory.deflate()));
-        });
-
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse response =
-                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test"));
-            assertContentEncoding(captor.get().log(), response, "deflate");
-            assertThat(response.contentUtf8()).isEqualTo("some content to compress more content to compress");
-        }
-    }
-
-    @Test
-    void httpBrotliDecodingTest() {
-        final BlockingWebClient client = server.blockingWebClient(cb -> {
-            cb.decorator(DecodingClient.newDecorator(
-                    com.linecorp.armeria.common.encoding.StreamDecoderFactory.brotli()));
-        });
-
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse response =
-                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test"));
-            assertContentEncoding(captor.get().log(), response, "br");
-            assertThat(response.contentUtf8()).isEqualTo("some content to compress more content to compress");
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                final AggregatedHttpResponse response =
+                        client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test"));
+                assertContentEncoding(captor.get().log(), response, factory.encodingHeaderValue());
+                assertThat(response.contentUtf8())
+                        .isEqualTo("some content to compress more content to compress");
+            }
         }
     }
 

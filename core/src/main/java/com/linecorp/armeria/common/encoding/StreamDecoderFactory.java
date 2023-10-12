@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.encoding;
 
+import java.util.List;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -28,6 +30,14 @@ import io.netty.buffer.ByteBufAllocator;
  * A new decoder is valid for the lifetime of an {@link HttpMessage}.
  */
 public interface StreamDecoderFactory extends com.linecorp.armeria.client.encoding.StreamDecoderFactory {
+
+    /**
+     * Returns all available {@link StreamDecoderFactory}s.
+     */
+    @UnstableApi
+    static List<StreamDecoderFactory> all() {
+        return StreamDecoderFactories.ALL;
+    }
 
     /**
      * Returns the {@link StreamDecoderFactory} for {@code "deflate"} content encoding.
@@ -51,7 +61,9 @@ public interface StreamDecoderFactory extends com.linecorp.armeria.client.encodi
     }
 
     /**
-     * Returns the {@link StreamDecoderFactory} for {@code "snappy"} content encoding.
+     * Returns the {@link StreamDecoderFactory} for
+     * <a href="https://github.com/google/snappy/blob/27f34a580be4a3becf5f8c0cba13433f53c21337/framing_format.txt">"x-snappy-framed"</a>
+     * content encoding.
      */
     static StreamDecoderFactory snappy() {
         return StreamDecoderFactories.SNAPPY;

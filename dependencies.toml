@@ -955,7 +955,6 @@ javadocs = "http://reactivex.io/RxJava/3.x/javadoc/"
 module = "net.shibboleth.utilities:java-support"
 version.ref = "shibboleth-utilities"
 
-# snappy-java is only used for testing zookeeper3 module.
 [libraries.snappy]
 module = "org.xerial.snappy:snappy-java"
 version.ref = "snappy"
