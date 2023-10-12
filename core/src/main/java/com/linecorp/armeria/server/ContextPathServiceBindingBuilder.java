@@ -55,6 +55,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * }</pre>
  *
  * @see VirtualHostServiceBindingBuilder
+ * @param <T> the type this service will be added to.
  */
 @UnstableApi
 public final class ContextPathServiceBindingBuilder<T extends ServiceConfigsBuilder>

@@ -41,6 +41,8 @@ import com.linecorp.armeria.internal.server.RouteDecoratingService;
  *       .path("/decorated")
  *       .build(myDecorator) // decorator under /v1/api/decorated, /v2/api/decorated
  * }</pre>
+ *
+ * @param <T> the type this decorator will be added to.
  */
 @UnstableApi
 public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsBuilder>

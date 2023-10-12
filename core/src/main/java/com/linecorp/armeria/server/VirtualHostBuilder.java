@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
@@ -163,7 +163,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Nullable
     private ServiceErrorHandler errorHandler;
     private final ContextPathServicesBuilder<VirtualHostBuilder> servicesBuilder =
-            new ContextPathServicesBuilder<>(this, this, "/");
+            new ContextPathServicesBuilder<>(this, this, ImmutableSet.of("/"));
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -408,7 +408,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      */
     @UnstableApi
     public ContextPathServicesBuilder<VirtualHostBuilder> contextPath(String... contextPaths) {
-        return new ContextPathServicesBuilder<>(this, this, contextPaths);
+        return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
     }
 
     /**
@@ -419,8 +419,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      */
     @UnstableApi
     public ContextPathServicesBuilder<VirtualHostBuilder> contextPath(Iterable<String> contextPaths) {
-        return new ContextPathServicesBuilder<>(
-                this, this, Iterables.toArray(ImmutableList.copyOf(contextPaths), String.class));
+        requireNonNull(contextPaths, "contextPaths");
+        return new ContextPathServicesBuilder<>(this, this, ImmutableSet.copyOf(contextPaths));
     }
 
     /**

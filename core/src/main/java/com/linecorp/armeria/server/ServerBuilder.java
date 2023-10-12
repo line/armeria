@@ -63,7 +63,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
@@ -1133,7 +1133,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @UnstableApi
     public ContextPathServicesBuilder<ServerBuilder> contextPath(String... contextPaths) {
-        return new ContextPathServicesBuilder<>(this, defaultVirtualHostBuilder, contextPaths);
+        return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
     }
 
     /**
@@ -1144,9 +1144,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @UnstableApi
     public ContextPathServicesBuilder<ServerBuilder> contextPath(Iterable<String> contextPaths) {
+        requireNonNull(contextPaths, "contextPaths");
         return new ContextPathServicesBuilder<>(
-                this, defaultVirtualHostBuilder,
-                Iterables.toArray(ImmutableList.copyOf(contextPaths), String.class));
+                this, defaultVirtualHostBuilder, ImmutableSet.copyOf(contextPaths));
     }
 
     /**
