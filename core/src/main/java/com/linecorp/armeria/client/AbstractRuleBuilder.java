@@ -220,7 +220,8 @@ public abstract class AbstractRuleBuilder {
      */
     public AbstractRuleBuilder onTotalDuration(
             BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
-        this.totalDurationFilter = combinePredicates(this.totalDurationFilter, totalDurationFilter, "totalDurationFilter");
+        this.totalDurationFilter = combinePredicates(this.totalDurationFilter, totalDurationFilter,
+                                                     "totalDurationFilter");
         return this;
     }
 
