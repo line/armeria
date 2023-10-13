@@ -1450,6 +1450,35 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Sets the base context path for this {@link ServerBuilder}. Services and decorators added to this
+     * {@link ServerBuilder} will be prefixed by the specified {@code baseContextPath}. If a service is bound
+     * to a scoped {@link #contextPath(String...)}, the {@code baseContextPath} will be prepended to the
+     * {@code contextPath}.
+     *
+     * <pre>{@code
+     * Server
+     *   .builder()
+     *   .baseContextPath("/api")
+     *   // The following service will be served at '/api/v1/items'.
+     *   .service("/v1/items", itemService)
+     *   .contextPath("/v2")
+     *   // The following service will be served at '/api/v2/users'.
+     *   .service("/users", usersService)
+     *   .and() // end of the "/v2" contextPath
+     *   .build();
+     * }
+     * </pre>
+     *
+     * <p>Note that the {@code baseContextPath} won't be applied to {@link VirtualHost}s
+     * added to this {@link Server}. To configure the context path for individual
+     * {@link VirtualHost}s, use {@link VirtualHostBuilder#baseContextPath(String)} instead.
+     */
+    public ServerBuilder baseContextPath(String baseContextPath) {
+        defaultVirtualHostBuilder.baseContextPath(baseContextPath);
+        return this;
+    }
+
+    /**
      * Configures the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withDefaultVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {

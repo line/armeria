@@ -296,7 +296,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
-                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
+                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
+                        String baseContextPath) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
@@ -334,8 +335,10 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
             requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
         }
 
+        final Route routeWithBaseContextPath = route.withPrefix(baseContextPath);
         return new ServiceConfig(
-                route, mappedRoute == null ? route : mappedRoute,
+                routeWithBaseContextPath,
+                mappedRoute == null ? routeWithBaseContextPath : mappedRoute,
                 service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis,
