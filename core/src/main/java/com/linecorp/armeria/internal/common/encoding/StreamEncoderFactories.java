@@ -30,15 +30,23 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.compression.Brotli;
 
 public enum StreamEncoderFactories implements StreamEncoderFactory {
-    DEFLATE {
+    BROTLI {
         @Override
         public String encodingHeaderValue() {
-            return StreamDecoderFactory.deflate().encodingHeaderValue();
+            return StreamDecoderFactory.brotli().encodingHeaderValue();
         }
 
         @Override
         public OutputStream newEncoder(ByteBufOutputStream os) {
-            return new DeflaterOutputStream(os, true);
+            try {
+                // We use 4 as the default level because it would save more bytes
+                // than GZIP's default setting and compress data faster.
+                // See: https://blogs.akamai.com/2016/02/understanding-brotlis-potential.html
+                return new BrotliOutputStream(os, BROTLI_PARAMETERS);
+            } catch (IOException e) {
+                throw new IllegalStateException(
+                        "Error writing brotli header. This should not happen with byte arrays.", e);
+            }
         }
     },
     GZIP {
@@ -57,23 +65,15 @@ public enum StreamEncoderFactories implements StreamEncoderFactory {
             }
         }
     },
-    BROTLI {
+    DEFLATE {
         @Override
         public String encodingHeaderValue() {
-            return StreamDecoderFactory.brotli().encodingHeaderValue();
+            return StreamDecoderFactory.deflate().encodingHeaderValue();
         }
 
         @Override
         public OutputStream newEncoder(ByteBufOutputStream os) {
-            try {
-                // We use 4 as the default level because it would save more bytes
-                // than GZIP's default setting and compress data faster.
-                // See: https://blogs.akamai.com/2016/02/understanding-brotlis-potential.html
-                return new BrotliOutputStream(os, BROTLI_PARAMETERS);
-            } catch (IOException e) {
-                throw new IllegalStateException(
-                        "Error writing brotli header. This should not happen with byte arrays.", e);
-            }
+            return new DeflaterOutputStream(os, true);
         }
     },
     SNAPPY {

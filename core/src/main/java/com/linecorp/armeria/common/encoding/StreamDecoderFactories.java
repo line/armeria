@@ -27,15 +27,15 @@ import io.netty.handler.codec.compression.SnappyFrameDecoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 enum StreamDecoderFactories implements StreamDecoderFactory {
-    DEFLATE {
+    BROTLI {
         @Override
         public String encodingHeaderValue() {
-            return "deflate";
+            return "br";
         }
 
         @Override
         public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
-            return new ZlibStreamDecoder(ZlibWrapper.ZLIB, alloc, maxLength);
+            return new BrotliStreamDecoder(new BrotliDecoder(), alloc, maxLength);
         }
     },
     GZIP {
@@ -49,15 +49,15 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
             return new ZlibStreamDecoder(ZlibWrapper.GZIP, alloc, maxLength);
         }
     },
-    BROTLI {
+    DEFLATE {
         @Override
         public String encodingHeaderValue() {
-            return "br";
+            return "deflate";
         }
 
         @Override
         public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
-            return new BrotliStreamDecoder(new BrotliDecoder(), alloc, maxLength);
+            return new ZlibStreamDecoder(ZlibWrapper.ZLIB, alloc, maxLength);
         }
     },
     SNAPPY {
@@ -78,7 +78,7 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         if (Brotli.isAvailable()) {
             ALL = ImmutableList.copyOf(values());
         } else {
-            ALL = ImmutableList.of(DEFLATE, GZIP, SNAPPY);
+            ALL = ImmutableList.of(GZIP, DEFLATE, SNAPPY);
         }
     }
 }
