@@ -753,7 +753,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets whether to use HTTP/1.1 instead of HTTP/2. If enabled, the client will not attempt to upgrade to
-     * HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
+     * HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}. However, the client will use
+     * HTTP/2 if {@link SessionProtocol#H2} or {@link SessionProtocol#H2C} is used.
      * This option is disabled by default.
      */
     @UnstableApi

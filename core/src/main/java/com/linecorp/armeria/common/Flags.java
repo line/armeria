@@ -822,7 +822,8 @@ public final class Flags {
     /**
      * Returns the default value of the {@link ClientFactoryBuilder#preferHttp1(boolean)} option.
      * If enabled, the client will not attempt to upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and
-     * {@link SessionProtocol#HTTPS}.
+     * {@link SessionProtocol#HTTPS}. However, the client will use HTTP/2 if {@link SessionProtocol#H2} or
+     * {@link SessionProtocol#H2C} is used.
      *
      * <p>Note that this option has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#preferHttp1(boolean)}.
