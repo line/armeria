@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -285,6 +286,7 @@ class RequestMetricSupportTest {
                                     .meterRegistry(registry)
                                     .endpoint(Endpoint.of("example.com", 8080))
                                     .connectionTimings(newConnectionTimings())
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
@@ -316,6 +318,7 @@ class RequestMetricSupportTest {
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
+                                     .eventLoop(ImmediateEventLoop.INSTANCE)
                                      .build();
         final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
@@ -354,6 +357,7 @@ class RequestMetricSupportTest {
         final ClientRequestContext ctx =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/bar"))
                                     .meterRegistry(registry)
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
                                     .endpoint(Endpoint.of("example.com", 8080))
                                     .build();
 
@@ -373,6 +377,7 @@ class RequestMetricSupportTest {
         final ServiceRequestContext sctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
+                                     .eventLoop(ImmediateEventLoop.INSTANCE)
                                      .build();
         final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
@@ -384,6 +389,7 @@ class RequestMetricSupportTest {
             final ClientRequestContext cctx =
                     ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                         .meterRegistry(registry)
+                                        .eventLoop(ImmediateEventLoop.INSTANCE)
                                         .endpoint(Endpoint.of("example.com", 8080))
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
@@ -430,12 +436,14 @@ class RequestMetricSupportTest {
                                     .meterRegistry(registry)
                                     .endpoint(Endpoint.of("example.com", 8080))
                                     .connectionTimings(newConnectionTimings())
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
                                     .build();
         final ClientRequestContext ctx2 =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/bar"))
                                     .meterRegistry(registry)
                                     .endpoint(Endpoint.of("example.com", 8080))
                                     .connectionTimings(newConnectionTimings())
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");

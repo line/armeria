@@ -73,7 +73,8 @@ class DeferredHttpResponseTest {
         final HttpResponse res1 = HttpResponse.of(completedFuture);
         final HttpResponse res2 = HttpResponse.of((CompletionStage<? extends HttpResponse>) completedFuture);
         assertThat(res1).isSameAs(originalRes);
-        assertThat(res2).isSameAs(originalRes);
+        // CompletionStage does not provide the current state.
+        assertThat(res2).isNotSameAs(originalRes);
     }
 
     /**
@@ -90,7 +91,8 @@ class DeferredHttpResponseTest {
         final HttpResponse res1 = HttpResponse.of(completedFuture);
         final HttpResponse res2 = HttpResponse.of((CompletionStage<? extends HttpResponse>) completedFuture);
         assertThat(res1).isInstanceOf(AbortedHttpResponse.class);
-        assertThat(res2).isInstanceOf(AbortedHttpResponse.class);
+        // CompletionStage does not provide the current state.
+        assertThat(res2).isNotInstanceOf(AbortedHttpResponse.class);
         assertThatThrownBy(() -> res1.collect().join()).hasCause(originalCause);
         assertThatThrownBy(() -> res2.collect().join()).hasCause(originalCause);
     }

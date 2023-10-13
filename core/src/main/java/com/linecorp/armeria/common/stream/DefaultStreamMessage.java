@@ -480,7 +480,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
                 continue;
             }
 
-            if (e instanceof CompletableFuture) {
+            if (e instanceof AwaitDemandFuture) {
                 if (cause == null) {
                     cause = ClosedStreamException.get();
                 }
