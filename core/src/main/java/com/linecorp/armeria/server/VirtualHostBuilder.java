@@ -49,7 +49,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -720,7 +719,7 @@ public final class VirtualHostBuilder implements TlsSetters {
         if (!routeDecoratingServices.isEmpty()) {
             final List<RouteDecoratingService> prefixed = routeDecoratingServices.stream()
                     .map(service -> service.withRoutePrefix(baseContextPath))
-                    .collect(Collectors.toList());
+                    .collect(toImmutableList());
             return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
         } else {
             return null;

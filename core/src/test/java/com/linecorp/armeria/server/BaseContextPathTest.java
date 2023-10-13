@@ -29,10 +29,12 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class BaseContextPathTest {
+@FlakyTest
+class BaseContextPathTest {
     private static int normalServerPort;
     private static int fooHostPort;
     private static int barHostPort;

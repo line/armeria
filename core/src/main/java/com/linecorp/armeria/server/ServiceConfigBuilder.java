@@ -335,9 +335,10 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
             requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
         }
 
+        Route withPrefix = route.withPrefix(baseContextPath);
         return new ServiceConfig(
-                route.withPrefix(baseContextPath),
-                mappedRoute == null ? route.withPrefix(baseContextPath) : mappedRoute,
+                withPrefix,
+                mappedRoute == null ? withPrefix : mappedRoute,
                 service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis,
