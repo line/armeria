@@ -542,7 +542,27 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     default CompletableFuture<Void> subscribe() {
-        subscribe(NoopSubscriber.get());
+        return subscribe(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Drains and discards all objects in this {@link StreamMessage}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * CompletableFuture<Void> future = source.peek(collected::add).subscribe();
+     * future.join();
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert future.isDone();
+     * }</pre>
+     *
+     * @param executor the executor to subscribe
+     */
+    @UnstableApi
+    default CompletableFuture<Void> subscribe(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        subscribe(NoopSubscriber.get(), executor);
         return whenComplete();
     }
 
