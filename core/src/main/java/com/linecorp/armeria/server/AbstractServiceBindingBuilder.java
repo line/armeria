@@ -45,6 +45,10 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
 
+    AbstractServiceBindingBuilder(Set<String> contextPaths) {
+        super(contextPaths);
+    }
+
     @Override
     public AbstractServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
@@ -226,10 +230,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
         final List<Route> routes = buildRouteList(fallbackRoutes);
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
-        for (Route route : routes) {
-            final ServiceConfigBuilder serviceConfigBuilder =
-                    defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
-            serviceConfigBuilder(serviceConfigBuilder);
+        for (String contextPath: contextPaths()) {
+            for (Route route : routes) {
+                final ServiceConfigBuilder serviceConfigBuilder =
+                        defaultServiceConfigSetters.toServiceConfigBuilder(
+                                route, contextPath, decoratedService);
+                serviceConfigBuilder(serviceConfigBuilder);
+            }
         }
     }
 
@@ -238,7 +245,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         assert routes.size() == 1; // Only one route is set via addRoute().
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
         final ServiceConfigBuilder serviceConfigBuilder =
-                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), decoratedService);
+                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), "/", decoratedService);
         serviceConfigBuilder.addMappedRoute(mappedRoute);
         serviceConfigBuilder(serviceConfigBuilder);
     }

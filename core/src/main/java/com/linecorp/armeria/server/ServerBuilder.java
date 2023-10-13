@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
@@ -1128,9 +1129,34 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<ServerBuilder> contextPath(String... contextPaths) {
+        return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
+    }
+
+    /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<ServerBuilder> contextPath(Iterable<String> contextPaths) {
+        requireNonNull(contextPaths, "contextPaths");
+        return new ContextPathServicesBuilder<>(
+                this, defaultVirtualHostBuilder, ImmutableSet.copyOf(contextPaths));
+    }
+
+    /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {
+        requireNonNull(customizer, "customizer");
         final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(this);
         customizer.accept(serviceBindingBuilder);
         return this;
@@ -1423,6 +1449,35 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     public ServerBuilder defaultHostname(String defaultHostname) {
         defaultVirtualHostBuilder.defaultHostname(defaultHostname);
+        return this;
+    }
+
+    /**
+     * Sets the base context path for this {@link ServerBuilder}. Services and decorators added to this
+     * {@link ServerBuilder} will be prefixed by the specified {@code baseContextPath}. If a service is bound
+     * to a scoped {@link #contextPath(String...)}, the {@code baseContextPath} will be prepended to the
+     * {@code contextPath}.
+     *
+     * <pre>{@code
+     * Server
+     *   .builder()
+     *   .baseContextPath("/api")
+     *   // The following service will be served at '/api/v1/items'.
+     *   .service("/v1/items", itemService)
+     *   .contextPath("/v2")
+     *   // The following service will be served at '/api/v2/users'.
+     *   .service("/users", usersService)
+     *   .and() // end of the "/v2" contextPath
+     *   .build();
+     * }
+     * </pre>
+     *
+     * <p>Note that the {@code baseContextPath} won't be applied to {@link VirtualHost}s
+     * added to this {@link Server}. To configure the context path for individual
+     * {@link VirtualHost}s, use {@link VirtualHostBuilder#baseContextPath(String)} instead.
+     */
+    public ServerBuilder baseContextPath(String baseContextPath) {
+        defaultVirtualHostBuilder.baseContextPath(baseContextPath);
         return this;
     }
 

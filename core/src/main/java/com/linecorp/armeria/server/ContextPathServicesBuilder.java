@@ -16,45 +16,87 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.ServerBuilder.decorate;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
+import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * Builds {@link ServiceConfig}s for a {@link VirtualHostBuilder}. All {@link ServiceConfig}s
- * built by this builder will be served under a context path.
+ * Builds {@link ServiceConfig}s for a {@link ServerBuilder} or {@link VirtualHostBuilder}.
+ * All {@link ServiceConfig}s built by this builder will be served under the specified context paths.
+ *
+ * <pre>{@code
+ * Server.builder()
+ *       .contextPath("/v1", "/v2")
+ *       .service(myService) // served under "/v1" and "/v2"
+ *       .and()
+ *       .virtualHost("foo.com")
+ *       .contextPath("/v3")
+ *       .service(myService) // served by virtual host "foo.com" under "/v3"
+ * }</pre>
  *
  * @param <T> the original type which will be returned once the {@link ServiceConfig}
  *            is built using {@link #and()}.
  */
-final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
+@UnstableApi
+public final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
         implements ServiceConfigsBuilder {
 
+    private final Set<String> contextPaths;
     private final T parent;
     private final VirtualHostBuilder virtualHostBuilder;
 
-    ContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder) {
+    ContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder,
+                               Set<String> contextPaths) {
+        checkArgument(!contextPaths.isEmpty(), "At least one context path is required");
+        for (String contextPath: contextPaths) {
+            RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
+        }
+
         this.parent = parent;
+        this.contextPaths = ImmutableSet.copyOf(contextPaths);
         this.virtualHostBuilder = virtualHostBuilder;
     }
 
-    @Override
-    public AbstractServiceBindingBuilder route() {
-        throw new UnsupportedOperationException("Not supported yet");
+    /**
+     * Configures an {@link HttpService} under the context path with the {@code customizer}.
+     */
+    public ContextPathServicesBuilder<T> withRoute(
+            Consumer<? super ContextPathServiceBindingBuilder<T>> customizer) {
+        requireNonNull(customizer, "customizer");
+        customizer.accept(new ContextPathServiceBindingBuilder<>(this));
+        return this;
     }
 
+    /**
+     * Returns a {@link ContextPathServiceBindingBuilder} which is for binding an {@link HttpService} fluently.
+     */
     @Override
-    public AbstractBindingBuilder routeDecorator() {
-        throw new UnsupportedOperationException("Not supported yet");
+    public ContextPathServiceBindingBuilder<T> route() {
+        return new ContextPathServiceBindingBuilder<>(this);
+    }
+
+    /**
+     * Returns a {@link ContextPathDecoratingBindingBuilder} which is for binding a {@code decorator} fluently.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
+     */
+    @Override
+    public ContextPathDecoratingBindingBuilder<T> routeDecorator() {
+        return new ContextPathDecoratingBindingBuilder<>(this);
     }
 
     /**
@@ -88,10 +130,12 @@ final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
         final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
         if (serviceWithRoutes != null) {
             serviceWithRoutes.routes().forEach(route -> {
-                final ServiceConfigBuilder serviceConfigBuilder =
-                        new ServiceConfigBuilder(route.withPrefix(pathPrefix), service);
-                serviceConfigBuilder.addMappedRoute(route);
-                addServiceConfigSetters(serviceConfigBuilder);
+                for (String contextPath: contextPaths) {
+                    final ServiceConfigBuilder serviceConfigBuilder =
+                            new ServiceConfigBuilder(route.withPrefix(pathPrefix), contextPath, service);
+                    serviceConfigBuilder.addMappedRoute(route);
+                    addServiceConfigSetters(serviceConfigBuilder);
+                }
             });
         } else {
             service(Route.builder().pathPrefix(pathPrefix).build(), service);
@@ -124,7 +168,10 @@ final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
      */
     @Override
     public ContextPathServicesBuilder<T> service(Route route, HttpService service) {
-        return addServiceConfigSetters(new ServiceConfigBuilder(route, service));
+        for (String contextPath: contextPaths) {
+            addServiceConfigSetters(new ServiceConfigBuilder(route, contextPath, service));
+        }
+        return this;
     }
 
     /**
@@ -306,7 +353,7 @@ final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
     }
 
     /**
-     * Returns a new instance of {@link VirtualHostAnnotatedServiceBindingBuilder} to build
+     * Returns a new instance of {@link ContextPathAnnotatedServiceConfigSetters} to build
      * an annotated service fluently.
      */
     @Override
@@ -371,7 +418,10 @@ final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
             Route route, Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(route, "route");
         requireNonNull(decorator, "decorator");
-        return addRouteDecoratingService(new RouteDecoratingService(route, decorator));
+        for (String contextPath: contextPaths) {
+            addRouteDecoratingService(new RouteDecoratingService(route, contextPath, decorator));
+        }
+        return this;
     }
 
     /**
@@ -429,5 +479,9 @@ final class ContextPathServicesBuilder<T extends ServiceConfigsBuilder>
      */
     public T and() {
         return parent;
+    }
+
+    Set<String> contextPaths() {
+        return contextPaths;
     }
 }

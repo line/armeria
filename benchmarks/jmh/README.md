@@ -2,15 +2,6 @@
 
 A collection of JMH benchmarks which may be useful for measuring Armeria performance.
 
-## Always prepend `--no-daemon` and `clean`
-
-You must prepend `--no-daemon` and `clean` to your benchmark command due to
-[a known bug in jmh-gradle-plugin](https://github.com/melix/jmh-gradle-plugin/issues/132):
-
-```
-$ ./gradlew --no-daemon :benchmarks:jmh:clean :benchmarks:jmh:jmh ...
-```
-
 ## Options
 
 - `-Pjmh.includes=<pattern>`
@@ -29,7 +20,7 @@ $ ./gradlew --no-daemon :benchmarks:jmh:clean :benchmarks:jmh:jmh ...
   - The number of iterations. Uses the value of `jmh.iterations` if unspecified.
 - `-Pjmh.profilers=<spec>`
   - The profiler settings. Profiler disabled if unspecified.
-    - `jmh.extras.Async:asyncProfilerDir=...;flameGraphDir=...`
+    - `async:libPath=...;output=flamegraph`
 - `-Pjmh.threads=<integer>`
   - The number of threads. JMH default if unspecified.
 - `-Pjmh.verbose`
@@ -42,33 +33,35 @@ $ ./gradlew --no-daemon :benchmarks:jmh:clean :benchmarks:jmh:jmh ...
 
 ## Retrieving flame graph using async-profiler
 
-Allow running `perf` as a normal user:
+- Allow running `perf` as a normal user on Linux:
+  ```
+  # echo 1 > /proc/sys/kernel/perf_event_paranoid
+  # echo 0 > /proc/sys/kernel/kptr_restrict
+  ```
+  - MacOS profiling is limited to user space code only, thus this does not work with MacOS.
 
-```
-# echo 1 > /proc/sys/kernel/perf_event_paranoid
-# echo 0 > /proc/sys/kernel/kptr_restrict
-```
+- Install [async-profiler](https://github.com/async-profiler/async-profiler):
+  ```
+  $ cd "$HOME"
+  $ git clone https://github.com/async-profiler/async-profiler.git
+  $ cd async-profiler
+  $ make
+  ```
 
-Install [async-profiler](https://github.com/jvm-profiling-tools/async-profiler) and
-[FlameGraph](https://github.com/brendangregg/FlameGraph):
-
-```
-$ cd "$HOME"
-$ git clone https://github.com/jvm-profiling-tools/async-profiler.git
-$ git clone https://github.com/brendangregg/FlameGraph.git
-$ cd async-profiler
-$ make
-```
-
-When running a benchmark, specify `-Pjmh.profilers` option:
-
-```
-$ ./gradlew --no-daemon :benchmarks:jmh:clean :benchmarks:jmh:jmh \
-  "-Pjmh.profilers=jmh.extras.Async:asyncProfilerDir=$HOME/async-profiler;flameGraphDir=$HOME/FlameGraph"
-```
+- When running a benchmark, specify `-Pjmh.profilers` option:
+  - On Linux
+    ```
+    $ ./gradlew :benchmarks:jmh:jmh \
+      "-Pjmh.profilers=async:libPath=$HOME/async-profiler/build/lib/libasyncProfiler.so;output=flamegraph;dir=$HOME/result"
+    ```
+  - On MacOS
+    ```
+    $ ./gradlew :benchmarks:jmh:jmh \
+      "-Pjmh.profilers=async:libPath=$HOME/async-profiler/build/lib/libasyncProfiler.dylib;output=flamegraph;dir=$HOME/result"
+    ```
 
 ## Notes
 
 - Do not forget to wrap `-Pjmh.params` and `-Pjmh.profilers` option with double quotes, because otherwise your
   shell will interpret `;` as the end of the command.
-- See [sbt-jmh documentation](https://github.com/ktoso/sbt-jmh#using-async-profiler) for more profiler options.
+- Run `$ ./gradlew :benchmarks:jmh:jmh "-Pjmh.profilers=async:help"` for more profiler options.
