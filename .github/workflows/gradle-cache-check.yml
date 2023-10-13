@@ -23,6 +23,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: gradle/gradle-enterprise-build-validation-scripts/.github/actions/gradle/experiment-1@actions-stable
+        with:
+          gitRepo: https://github.com/line/armeria.git
+          gitBranch: main
+          tasks: build
+          args: --parallel -Pretry=true -PfailOnPassedAfterRetry=false
+
       - uses: gradle/gradle-enterprise-build-validation-scripts/.github/actions/gradle/experiment-3@actions-stable
         with:
           gitRepo: https://github.com/line/armeria.git
