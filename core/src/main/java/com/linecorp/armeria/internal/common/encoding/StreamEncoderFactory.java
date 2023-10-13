@@ -18,11 +18,13 @@ package com.linecorp.armeria.internal.common.encoding;
 
 import java.io.OutputStream;
 
+import io.netty.buffer.ByteBufOutputStream;
+
 public interface StreamEncoderFactory {
 
     // TODO(ikhoon): Consider making this interface the public API.
 
     String encodingHeaderValue();
 
-    OutputStream newEncoder(OutputStream os);
+    OutputStream newEncoder(ByteBufOutputStream os);
 }

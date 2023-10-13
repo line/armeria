@@ -21,13 +21,12 @@ import java.io.OutputStream;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
-import org.xerial.snappy.SnappyFramedOutputStream;
-
 import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
 import com.aayushatharva.brotli4j.encoder.Encoder;
 
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.handler.codec.compression.Brotli;
 
 public enum StreamEncoderFactories implements StreamEncoderFactory {
@@ -38,7 +37,7 @@ public enum StreamEncoderFactories implements StreamEncoderFactory {
         }
 
         @Override
-        public OutputStream newEncoder(OutputStream os) {
+        public OutputStream newEncoder(ByteBufOutputStream os) {
             return new DeflaterOutputStream(os, true);
         }
     },
@@ -49,7 +48,7 @@ public enum StreamEncoderFactories implements StreamEncoderFactory {
         }
 
         @Override
-        public OutputStream newEncoder(OutputStream os) {
+        public OutputStream newEncoder(ByteBufOutputStream os) {
             try {
                 return new GZIPOutputStream(os, true);
             } catch (IOException e) {
@@ -65,7 +64,7 @@ public enum StreamEncoderFactories implements StreamEncoderFactory {
         }
 
         @Override
-        public OutputStream newEncoder(OutputStream os) {
+        public OutputStream newEncoder(ByteBufOutputStream os) {
             try {
                 // We use 4 as the default level because it would save more bytes
                 // than GZIP's default setting and compress data faster.
@@ -84,12 +83,8 @@ public enum StreamEncoderFactories implements StreamEncoderFactory {
         }
 
         @Override
-        public OutputStream newEncoder(OutputStream os) {
-            try {
-                return new SnappyFramedOutputStream(os);
-            } catch (IOException e) {
-                throw new IllegalStateException("Error writing Snappy header.", e);
-            }
+        public OutputStream newEncoder(ByteBufOutputStream os) {
+            return new SnappyFramedOutputStream(os.buffer());
         }
     };
 

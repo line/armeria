@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -48,6 +47,10 @@ import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.compression.Brotli;
 
 class DecodingServiceTest {
@@ -89,16 +92,17 @@ class DecodingServiceTest {
         final RequestHeaders headers =
                 RequestHeaders.of(HttpMethod.POST, "/decodeTest",
                                   HttpHeaderNames.CONTENT_ENCODING, factory.encodingHeaderValue());
-        final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
-        final OutputStream encodingStream = factory.newEncoder(encodedStream);
+        final ByteBuf buf = Unpooled.buffer();
+        final OutputStream encodingStream = factory.newEncoder(new ByteBufOutputStream(buf));
 
         final String testString = "Armeria " + factory.encodingHeaderValue() + " Test";
         final byte[] testByteArray = testString.getBytes(StandardCharsets.UTF_8);
         encodingStream.write(testByteArray);
         encodingStream.flush();
 
-        assertThat(client.execute(headers, HttpData.wrap(encodedStream.toByteArray())).aggregate().join()
+        assertThat(client.execute(headers, HttpData.wrap(ByteBufUtil.getBytes(buf))).aggregate().join()
                          .contentUtf8()).isEqualTo("Hello " + testString + '!');
+        buf.release();
     }
 
     @ArgumentsSource(HighlyCompressedOutputStreamProvider.class)
@@ -117,16 +121,17 @@ class DecodingServiceTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             final byte[] original = Strings.repeat("1", ORIGINAL_MESSAGE_LENGTH).getBytes();
             return Arrays.stream(StreamEncoderFactories.values()).map(factory -> {
-                final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
-                final OutputStream encodingStream = factory.newEncoder(encodedStream);
+                final ByteBuf buf = Unpooled.buffer();
+                final OutputStream encodingStream = factory.newEncoder(new ByteBufOutputStream(buf));
                 try {
                     encodingStream.write(original);
                     encodingStream.flush();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-                final byte[] compressed = encodedStream.toByteArray();
+                final byte[] compressed = ByteBufUtil.getBytes(buf);
                 assertThat(compressed.length).isLessThan(original.length);
+                buf.release();
                 return Arguments.of(factory.encodingHeaderValue(), compressed);
             });
         }

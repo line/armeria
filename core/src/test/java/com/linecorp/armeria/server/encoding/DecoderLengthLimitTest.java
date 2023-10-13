@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.encoding;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.stream.Collectors;
@@ -36,7 +35,11 @@ import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 
 class DecoderLengthLimitTest {
 
@@ -44,11 +47,12 @@ class DecoderLengthLimitTest {
     @ParameterizedTest
     void decodedDataShouldNotExceedLengthLimit(StreamEncoderFactories factory) throws IOException {
         final String originalMessage = Strings.repeat("1", 10000);
-        final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
-        final OutputStream encodingStream = factory.newEncoder(encodedStream);
+        final ByteBuf buf = Unpooled.buffer();
+        final OutputStream encodingStream = factory.newEncoder(new ByteBufOutputStream(buf));
         encodingStream.write(originalMessage.getBytes());
         encodingStream.flush();
-        final HttpData httpData = HttpData.wrap(encodedStream.toByteArray());
+        final HttpData httpData = HttpData.wrap(ByteBufUtil.getBytes(buf));
+        buf.release();
         final StreamDecoder lenientStreamDecoder = newStreamDecoder(factory, 10001);
         final HttpData decode0 = lenientStreamDecoder.decode(httpData);
         final HttpData decode1 = lenientStreamDecoder.finish();
@@ -74,11 +78,13 @@ class DecoderLengthLimitTest {
                 IntStream.range(0, 5000)
                          .mapToObj(x -> String.valueOf(x))
                          .collect(Collectors.joining());
-        final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
-        final OutputStream encodingStream = factory.newEncoder(encodedStream);
+
+        final ByteBuf buf = Unpooled.buffer();
+        final OutputStream encodingStream = factory.newEncoder(new ByteBufOutputStream(buf));
         encodingStream.write(originalMessage.getBytes());
         encodingStream.flush();
-        final byte[] compressed = encodedStream.toByteArray();
+        final byte[] compressed = ByteBufUtil.getBytes(buf);
+        buf.release();
         final int middle = compressed.length / 2;
         final HttpData first = HttpData.copyOf(compressed, 0, middle);
         final HttpData second = HttpData.copyOf(compressed, middle, compressed.length - middle);
