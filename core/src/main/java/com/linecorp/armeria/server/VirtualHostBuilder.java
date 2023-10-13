@@ -1222,8 +1222,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      */
     public VirtualHostBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
-        //noinspection unchecked
-        this.contextHook = (Supplier<AutoCloseable>) contextHook;
+        this.contextHook = mergeHooks(this.contextHook, contextHook);
         return this;
     }
 

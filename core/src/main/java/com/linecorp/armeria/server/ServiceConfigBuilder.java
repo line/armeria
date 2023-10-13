@@ -266,8 +266,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Override
     public ServiceConfigBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
-        //noinspection unchecked
-        this.contextHook = (Supplier<AutoCloseable>) contextHook;
+        this.contextHook = mergeHooks(this.contextHook, contextHook);
         return this;
     }
 

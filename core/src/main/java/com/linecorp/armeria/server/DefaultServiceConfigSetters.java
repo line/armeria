@@ -362,9 +362,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         if (serviceErrorHandler != null) {
             serviceConfigBuilder.errorHandler(serviceErrorHandler);
         }
-        if (contextHook != null) {
-            serviceConfigBuilder.contextHook(contextHook);
-        }
+        serviceConfigBuilder.contextHook(contextHook);
         return serviceConfigBuilder;
     }
 }
