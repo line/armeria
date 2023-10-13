@@ -87,7 +87,7 @@ public final class RequestContextUtil {
     /**
      * Returns the {@link SafeCloseable} which doesn't do anything.
      */
-    @MustBeClosed
+    @SuppressWarnings("MustBeClosedChecker")
     public static SafeCloseable noopSafeCloseable() {
         return noopSafeCloseable;
     }
