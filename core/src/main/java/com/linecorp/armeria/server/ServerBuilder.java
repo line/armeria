@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
@@ -1125,9 +1126,34 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<ServerBuilder> contextPath(String... contextPaths) {
+        return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
+    }
+
+    /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<ServerBuilder> contextPath(Iterable<String> contextPaths) {
+        requireNonNull(contextPaths, "contextPaths");
+        return new ContextPathServicesBuilder<>(
+                this, defaultVirtualHostBuilder, ImmutableSet.copyOf(contextPaths));
+    }
+
+    /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {
+        requireNonNull(customizer, "customizer");
         final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(this);
         customizer.accept(serviceBindingBuilder);
         return this;

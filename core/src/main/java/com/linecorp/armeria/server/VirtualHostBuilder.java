@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
@@ -162,7 +163,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Nullable
     private ServiceErrorHandler errorHandler;
     private final ContextPathServicesBuilder<VirtualHostBuilder> servicesBuilder =
-            new ContextPathServicesBuilder<>(this, this);
+            new ContextPathServicesBuilder<>(this, this, ImmutableSet.of("/"));
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -400,9 +401,33 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<VirtualHostBuilder> contextPath(String... contextPaths) {
+        return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
+    }
+
+    /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder<VirtualHostBuilder> contextPath(Iterable<String> contextPaths) {
+        requireNonNull(contextPaths, "contextPaths");
+        return new ContextPathServicesBuilder<>(this, this, ImmutableSet.copyOf(contextPaths));
+    }
+
+    /**
      * Configures an {@link HttpService} of the {@link VirtualHost} with the {@code customizer}.
      */
     public VirtualHostBuilder withRoute(Consumer<? super VirtualHostServiceBindingBuilder> customizer) {
+        requireNonNull(customizer, "customizer");
         final VirtualHostServiceBindingBuilder builder = new VirtualHostServiceBindingBuilder(this);
         customizer.accept(builder);
         return this;
@@ -1291,7 +1316,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
-                new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
+                new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, "/", FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
                                requestAutoAbortDelayMillis, multipartUploadsLocation,
