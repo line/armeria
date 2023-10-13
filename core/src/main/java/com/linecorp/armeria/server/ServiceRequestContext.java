@@ -233,7 +233,7 @@ public interface ServiceRequestContext extends RequestContext {
         }
 
         if (oldCtx.unwrapAll() == unwrapAll()) {
-            // Reentrance, invoke only the hooks because new hooks could be added.
+            // Reentrance, invoke only the hooks because some new hooks may have been added after the last push.
             final SafeCloseable closeable = invokeHook(this);
             return firstNonNull(closeable, noopSafeCloseable());
         }
