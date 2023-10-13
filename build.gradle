@@ -121,7 +121,7 @@ allprojects {
         retry {
             if (rootProject.findProperty('retry') == 'true') {
                 maxRetries = 3
-                failOnPassedAfterRetry = true
+                failOnPassedAfterRetry = rootProject.findProperty('failOnPassedAfterRetry') != 'false'
             }
         }
     }
@@ -426,6 +426,33 @@ configure(relocatedProjects) {
                         classpath += p.files(p.configurations.getByName('shadedJarTestRuntime').resolve())
                     }
                 }
+            }
+        }
+    }
+}
+
+// additional configuration that can't be done at settings.gradle
+gradleEnterprise {
+    buildScan {
+        // maintain a allowList so that sensitive information (credentials) aren't accidentally published.
+        Set<String> allowList = ['coverage', 'leak', 'blockhound', 'noLint', 'flakyTests', 'buildJdkVersion',
+                                 'testJavaVersion', 'minimumJavaVersion', 'retry', 'noWeb']
+        def self = owner
+        allowList.each { property ->
+            def provider = rootProject.providers.gradleProperty(property)
+            if (provider.isPresent()) {
+                self.value(property, provider.getOrElse(""))
+            }
+        }
+    }
+}
+
+allprojects {
+    normalization {
+        runtimeClasspath {
+            metaInf {
+                ignoreAttribute("Ant-Version")
+                ignoreAttribute("Created-By")
             }
         }
     }
