@@ -16,6 +16,8 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientOptions.REDIRECT_CONFIG;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -57,6 +59,7 @@ public class AbstractClientOptionsBuilder {
 
     @Nullable
     private Consumer<ClientRequestContext> contextCustomizer;
+    private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
 
     /**
      * Creates a new instance.
@@ -270,7 +273,8 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
-        return option(ClientOptions.CONTEXT_HOOK, contextHook);
+        this.contextHook = mergeHooks(this.contextHook, contextHook);
+        return this;
     }
 
     /**
@@ -516,12 +520,13 @@ public class AbstractClientOptionsBuilder {
     protected final ClientOptions buildOptions(@Nullable ClientOptions baseOptions) {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
-        final int extra = contextCustomizer == null ? 2 : 3;
+        final int extra = contextCustomizer == null ? 3 : 4;
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + extra]);
         optValArray[numOpts] = ClientOptions.DECORATION.newValue(decoration.build());
         optValArray[numOpts + 1] = ClientOptions.HEADERS.newValue(headers.build());
+        optValArray[numOpts + 2] = ClientOptions.CONTEXT_HOOK.newValue(contextHook);
         if (contextCustomizer != null) {
-            optValArray[numOpts + 2] = ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer);
+            optValArray[numOpts + 3] = ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer);
         }
 
         if (baseOptions != null) {
