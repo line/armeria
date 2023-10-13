@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
@@ -332,11 +333,15 @@ class AccessLogFormatsTest {
         final String fullName = AccessLogFormatsTest.class.getSimpleName() + "/rpcMethod";
         final String expectedLogMessage = "\"GET /armeria/log#" + fullName + " h2c\" 200 1024";
 
-        final ServiceRequestContext ctx = ServiceRequestContext.builder(
-                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
-                                                 HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
-                                                 HttpHeaderNames.REFERER, "http://log.example.com",
-                                                 HttpHeaderNames.COOKIE, "a=1;b=2"))).build();
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
+                                                                 HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
+                                                                 HttpHeaderNames.REFERER,
+                                                                 "http://log.example.com",
+                                                                 HttpHeaderNames.COOKIE, "a=1;b=2"));
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.builder(req)
+                                     .eventLoop(ImmediateEventLoop.INSTANCE)
+                                     .build();
         final RequestLog log = ctx.log().partial();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
 

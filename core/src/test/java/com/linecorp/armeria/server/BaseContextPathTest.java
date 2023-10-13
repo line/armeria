@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
@@ -63,25 +64,31 @@ class BaseContextPathTest {
               .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .service("/api/v1/bar", (ctx, req) -> HttpResponse.of(HttpStatus.ACCEPTED))
               .decorator("/deco", ((delegate, ctx, req) -> HttpResponse.of(HttpStatus.OK)))
+              .contextPath("/admin")
+              .service("/foo", (ctx, req) -> HttpResponse.of(ctx.path()))
+              .and()
               .baseContextPath("/home")
               // 2
               .virtualHost("*.foo.com:" + fooHostPort)
-                  .baseContextPath("/api/v1")
-                  .decorator("/deco", ((delegate, ctx, req) -> HttpResponse.of(HttpStatus.OK)))
-                  .service("/good", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                  .service("/bar", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .baseContextPath("/api/v1")
+              .decorator("/deco", ((delegate, ctx, req) -> HttpResponse.of(HttpStatus.OK)))
+              .service("/good", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .service("/bar", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .contextPath("/admin")
+              .service("/foo", (ctx, req) -> HttpResponse.of(ctx.path()))
+              .and()
               .and()
               // 3
               .virtualHost("*.bar.com:" + barHostPort)
-                .baseContextPath("/api/v2")
-                .service("/world", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .service("/bad", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .baseContextPath("/api/v2")
+              .service("/world", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .service("/bad", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .and()
               // 4
               .virtualHost("*.hostmap.com")
-                  .baseContextPath("/api/v3")
-                  .service("/me", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                  .service("/you", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .baseContextPath("/api/v3")
+              .service("/me", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .service("/you", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .and()
               .build();
         }
@@ -100,7 +107,7 @@ class BaseContextPathTest {
     }
 
     @Test
-    public void defaultVirtualHost() {
+    void defaultVirtualHost() {
         final WebClient defaultClient = WebClient.of("http://127.0.0.1:" + normalServerPort);
         assertThat(defaultClient.get("/home/foo").aggregate().join().status())
                 .isEqualTo(HttpStatus.OK);
@@ -113,7 +120,7 @@ class BaseContextPathTest {
     }
 
     @Test
-    public void portBasedVirtualHost() {
+    void portBasedVirtualHost() {
         final WebClient fooClient = WebClient.builder("http://foo.com:" + fooHostPort)
                                              .factory(clientFactory)
                                              .build();
@@ -140,7 +147,7 @@ class BaseContextPathTest {
     }
 
     @Test
-    public void pathBasedVirtualHost() {
+    void pathBasedVirtualHost() {
         final WebClient testClient = WebClient.builder("http://hostmap.com" + ":" + normalServerPort)
                                               .factory(clientFactory)
                                               .build();
@@ -148,5 +155,22 @@ class BaseContextPathTest {
                 .isEqualTo(HttpStatus.OK);
         assertThat(testClient.get("/api/v3/you").aggregate().join().status())
                 .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void baseContextPathWithScopedContextPath() {
+        final BlockingWebClient client = BlockingWebClient.of(
+                "http://127.0.0.1:" + normalServerPort);
+        assertThat(client.get("/home/admin/foo")
+                         .contentUtf8()).isEqualTo("/home/admin/foo");
+        assertThat(client.get("/home/admin/foo")
+                         .contentUtf8()).isEqualTo("/home/admin/foo");
+
+        final BlockingWebClient fooClient = WebClient.builder("http://foo.com:" + fooHostPort)
+                                                     .factory(clientFactory)
+                                                     .build()
+                                                     .blocking();
+        assertThat(fooClient.get("/api/v1/admin/foo").contentUtf8())
+                .isEqualTo("/api/v1/admin/foo");
     }
 }

@@ -79,8 +79,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
-    ServiceConfigBuilder(Route route, HttpService service) {
-        this.route = requireNonNull(route, "route");
+    ServiceConfigBuilder(Route route, String contextPath, HttpService service) {
+        this.route = requireNonNull(route, "route").withPrefix(contextPath);
         this.service = requireNonNull(service, "service");
     }
 
@@ -335,10 +335,10 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
             requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
         }
 
-        Route withPrefix = route.withPrefix(baseContextPath);
+        final Route routeWithBaseContextPath = route.withPrefix(baseContextPath);
         return new ServiceConfig(
-                withPrefix,
-                mappedRoute == null ? withPrefix : mappedRoute,
+                routeWithBaseContextPath,
+                mappedRoute == null ? routeWithBaseContextPath : mappedRoute,
                 service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis,

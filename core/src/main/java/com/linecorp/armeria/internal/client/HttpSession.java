@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -84,6 +85,11 @@ public interface HttpSession {
         }
 
         @Override
+        public boolean isAcquirable(KeepAliveHandler keepAliveHandler) {
+            return false;
+        }
+
+        @Override
         public void deactivate() {}
 
         @Override
@@ -115,6 +121,14 @@ public interface HttpSession {
      * session from {@code com.linecorp.armeria.client.HttpChannelPool}.
      */
     boolean isAcquirable();
+
+    /**
+     * Returns whether this {@link HttpSession} is healthy using the {@link KeepAliveHandler}.
+     * {@code true} if a new request can acquire this session from
+     * {@code com.linecorp.armeria.client.HttpChannelPool}. {@link KeepAliveHandler#needsDisconnection()}
+     * is also used to determine whether this {@link HttpSession} is healthy.
+     */
+    boolean isAcquirable(KeepAliveHandler keepAliveHandler);
 
     /**
      * Deactivates this {@link HttpSession} to prevent new requests from acquiring this {@link HttpSession}.
