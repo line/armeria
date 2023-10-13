@@ -193,7 +193,8 @@ public interface FlagsProvider {
     /**
      * Returns whether the JNI-based TLS support with OpenSSL is enabled. When enabled, Armeria uses OpenSSL
      * for processing TLS connections. When disabled, the current JVM's default {@link SSLEngine} is used
-     * instead.
+     * instead. Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#useOpenSsl(boolean)}.
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.

@@ -36,12 +36,17 @@ class HttpClientFactoryTest {
     public static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.http(0);
+            sb.https(0);
+            sb.tlsSelfSigned();
+
             sb.service("/", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     return HttpResponse.streaming();
                 }
             });
+            sb.service("/hello", (ctx, req) -> HttpResponse.of("hello"));
         }
     };
 

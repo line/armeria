@@ -241,6 +241,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
         virtualHostTemplate.tlsAllowUnsafeCiphers(false);
+        virtualHostTemplate.useOpenSsl(Flags.useOpenSsl());
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
@@ -1121,6 +1122,15 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         virtualHostTemplate.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers);
+        return this;
+    }
+
+    /**
+     * Allow the use of JNI-based TLS support with OpenSSL.
+     * @param useOpenSsl Whether to allow the use of JNI-based TLS support with OpenSSL
+     */
+    public ServerBuilder useOpenSsl(boolean useOpenSsl) {
+        virtualHostTemplate.useOpenSsl(useOpenSsl);
         return this;
     }
 

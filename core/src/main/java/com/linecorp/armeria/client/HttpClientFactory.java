@@ -164,10 +164,11 @@ final class HttpClientFactory implements ClientFactory {
         final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
                 ImmutableList.of(options.tlsCustomizer());
         final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
-        sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers);
-        sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers);
+        final boolean useOpenSsl = options.useOpenSsl();
+        sslCtxHttp1Or2 = SslContextUtil.createSslContext(SslContextBuilder::forClient, false,
+                                  tlsAllowUnsafeCiphers, useOpenSsl, tlsCustomizers);
+        sslCtxHttp1Only = SslContextUtil.createSslContext(SslContextBuilder::forClient, true,
+                                  tlsAllowUnsafeCiphers, useOpenSsl, tlsCustomizers);
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
