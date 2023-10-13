@@ -189,16 +189,12 @@ public final class RequestContextUtil {
     public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
 
-        final AutoCloseable closeable = invokeHook(current);
+        final SafeCloseable closeable = invokeHook(current);
         if (closeable == null) {
             return () -> requestContextStorage.pop(current, toRestore);
         } else {
             return () -> {
-                try {
-                    closeable.close();
-                } catch (Throwable t) {
-                    logger.warn("{} Unexpected exception while closing RequestContext.hook().", current, t);
-                }
+                closeable.close();
                 requestContextStorage.pop(current, toRestore);
             };
         }
@@ -212,7 +208,7 @@ public final class RequestContextUtil {
     }
 
     @Nullable
-    private static AutoCloseable invokeHook(RequestContext ctx) {
+    public static SafeCloseable invokeHook(RequestContext ctx) {
         final Supplier<AutoCloseable> hook = ctx.hook();
 
         if (hook == NOOP_CONTEXT_HOOK) {
@@ -232,7 +228,13 @@ public final class RequestContextUtil {
             return null;
         }
 
-        return closeable;
+        return () -> {
+            try {
+                closeable.close();
+            } catch (Throwable t) {
+                logger.warn("{} Unexpected exception while closing RequestContext.hook().", ctx, t);
+            }
+        };
     }
 
     public static Supplier<AutoCloseable> mergeHooks(Supplier<? extends AutoCloseable> hook1,
