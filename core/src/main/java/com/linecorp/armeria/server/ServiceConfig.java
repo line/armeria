@@ -83,7 +83,7 @@ public final class ServiceConfig {
     private final HttpHeaders defaultHeaders;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
     private final ServiceErrorHandler serviceErrorHandler;
-    private final Supplier<? extends AutoCloseable> contextHook;
+    private final Supplier<AutoCloseable> contextHook;
 
     /**
      * Creates a new instance.
@@ -146,7 +146,8 @@ public final class ServiceConfig {
                 (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
         this.serviceErrorHandler = requireNonNull(serviceErrorHandler, "serviceErrorHandler");
-        this.contextHook = requireNonNull(contextHook, "contextHook");
+        //noinspection unchecked
+        this.contextHook = (Supplier<AutoCloseable>) requireNonNull(contextHook, "contextHook");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -442,7 +443,8 @@ public final class ServiceConfig {
      * Returns the {@link Supplier}  which provides an {@link AutoCloseable} and will be called whenever this
      * {@link RequestContext} is popped from the {@link RequestContextStorage}.
      */
-    public Supplier<? extends AutoCloseable> contextHook() {
+    @UnstableApi
+    public Supplier<AutoCloseable> contextHook() {
         return contextHook;
     }
 

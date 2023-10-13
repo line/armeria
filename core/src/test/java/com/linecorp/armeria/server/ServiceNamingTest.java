@@ -16,11 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import java.util.function.Supplier;
 
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
@@ -37,8 +36,6 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 class ServiceNamingTest {
-
-    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     @Test
     void fullTypeName_topClass() {

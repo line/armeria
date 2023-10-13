@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static com.linecorp.armeria.server.VirtualHostBuilder.ensureNoPseudoHeader;
@@ -39,6 +40,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -75,8 +77,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Path multipartUploadsLocation;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
-    @Nullable
-    private Supplier<? extends AutoCloseable> contextHook;
+    private Supplier<? extends AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
     @Nullable
@@ -284,21 +285,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
-
-        if (this.contextHook == null) {
-            this.contextHook = contextHook;
-            return this;
-        }
-
-        final Supplier<? extends AutoCloseable> oldContextHook = this.contextHook;
-        this.contextHook = () -> {
-            final AutoCloseable oldHook = oldContextHook.get();
-            final AutoCloseable newHook = contextHook.get();
-            return () -> {
-                oldHook.close();
-                newHook.close();
-            };
-        };
+        this.contextHook = RequestContextUtil.mergeHooks(this.contextHook, contextHook);
         return this;
     }
 

@@ -106,7 +106,10 @@ class ServerBuilderTest {
                           mutator -> mutator.add("virtualhost_decorator", "true"));
                   return delegate.serve(ctx, req);
               });
-            sb.route().path("/hook_route").contextHook(contextHookRouter).contextHook(contextHookRouter2)
+            sb.route()
+              .path("/hook_route")
+              .contextHook(contextHookRouter)
+              .contextHook(contextHookRouter2)
               .build((ctx, req) -> HttpResponse.of("hook_route"));
         }
     };
@@ -733,8 +736,8 @@ class ServerBuilderTest {
     void contextHook() {
         assertThat(poppedCnt.get()).isEqualTo(0);
 
-        final WebClient client =  WebClient.builder(server1.httpUri()).build();
-        final AggregatedHttpResponse response =  client.get("/hook").aggregate().join();
+        final WebClient client = WebClient.builder(server1.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/hook").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook");
         assertThat(poppedCnt.get()).isEqualTo(1);
@@ -745,8 +748,8 @@ class ServerBuilderTest {
         assertThat(poppedRouterCnt.get()).isEqualTo(0);
         assertThat(poppedRouterCnt2.get()).isEqualTo(0);
 
-        final WebClient client =  WebClient.builder(server.httpUri()).build();
-        final AggregatedHttpResponse response =  client.get("/hook_route").aggregate().join();
+        final WebClient client = WebClient.builder(server.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/hook_route").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook_route");
         assertThat(poppedRouterCnt.get()).isEqualTo(1);
@@ -757,8 +760,8 @@ class ServerBuilderTest {
     void contextHook_otherRoute() {
         assertThat(poppedRouterCnt.get()).isEqualTo(0);
 
-        final WebClient client =  WebClient.builder(server.httpUri()).build();
-        final AggregatedHttpResponse response =  client.get("/").aggregate().join();
+        final WebClient client = WebClient.builder(server.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/").aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(poppedRouterCnt.get()).isEqualTo(0);

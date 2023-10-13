@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
 import static com.linecorp.armeria.server.VirtualHostBuilder.ensureNoPseudoHeader;
 import static com.linecorp.armeria.server.VirtualHostBuilder.mergeDefaultHeaders;
 import static java.util.Objects.requireNonNull;
@@ -45,8 +47,6 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
-
-    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     private final Route route;
     private final HttpService service;
@@ -77,8 +77,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private Path multipartUploadsLocation;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
-    @Nullable
-    private Supplier<? extends AutoCloseable> contextHook;
+    private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
     @Nullable
@@ -267,7 +266,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Override
     public ServiceConfigBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
-        this.contextHook = contextHook;
+        //noinspection unchecked
+        this.contextHook = (Supplier<AutoCloseable>) contextHook;
         return this;
     }
 
@@ -309,7 +309,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
                         @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
-                        String baseContextPath) {
+                        String baseContextPath, Supplier<AutoCloseable> contextHook) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
@@ -347,6 +347,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
             requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
         }
 
+        final Supplier<AutoCloseable> mergedContextHook = mergeHooks(contextHook, this.contextHook);
+
         final Route routeWithBaseContextPath = route.withPrefix(baseContextPath);
         return new ServiceConfig(
                 routeWithBaseContextPath,
@@ -364,7 +366,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
                 requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler,
-                contextHook != null ? contextHook : NOOP_CONTEXT_HOOK);
+                mergedContextHook);
     }
 
     @Override
@@ -383,6 +385,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("shutdownSupports", shutdownSupports)
                           .add("defaultHeaders", defaultHeaders)
                           .add("serviceErrorHandler", serviceErrorHandler)
+                          .add("contextHook", contextHook)
                           .toString();
     }
 }

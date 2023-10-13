@@ -172,7 +172,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
     private static final Consumer<ChannelPipeline> DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER =
             v -> { /* no-op */ };
-    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
@@ -226,7 +225,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    private Supplier<? extends AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
     @Nullable
     private DependencyInjector dependencyInjector;
     private Function<? super String, String> absoluteUriTransformer = Function.identity();
@@ -1960,6 +1958,18 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Sets the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
+     * from the {@link RequestContextStorage}.
+     *
+     * @param contextHook the {@link Supplier} that provides the {@link AutoCloseable}
+     */
+    public ServerBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        virtualHostTemplate.contextHook(contextHook);
+        return this;
+    }
+
+    /**
      * Sets the {@link DependencyInjector} to inject dependencies in annotated services.
      *
      * @param dependencyInjector the {@link DependencyInjector} to inject dependencies
@@ -2007,18 +2017,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public ServerBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.http1HeaderNaming = http1HeaderNaming;
-        return this;
-    }
-
-    /**
-     * Sets the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
-     * from the {@link RequestContextStorage}.
-     *
-     * @param contextHook the {@link Supplier} that provides the {@link AutoCloseable}
-     */
-    public ServerBuilder contextHook(Supplier<? extends  AutoCloseable> contextHook) {
-        requireNonNull(contextHook, "contextHook");
-        this.contextHook = contextHook;
         return this;
     }
 
@@ -2190,7 +2188,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
-                http1HeaderNaming, contextHook, dependencyInjector, absoluteUriTransformer,
+                http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
                 unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
     }
 

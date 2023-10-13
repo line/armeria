@@ -19,6 +19,8 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
 import static com.linecorp.armeria.server.ServerSslContextUtil.buildSslContext;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
@@ -70,6 +72,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -166,6 +169,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private ServiceErrorHandler errorHandler;
     private final ContextPathServicesBuilder<VirtualHostBuilder> servicesBuilder =
             new ContextPathServicesBuilder<>(this, this, ImmutableSet.of("/"));
+    private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -726,9 +730,10 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         }
 
         if (!routeDecoratingServices.isEmpty()) {
-            final List<RouteDecoratingService> prefixed = routeDecoratingServices.stream()
-                    .map(service -> service.withRoutePrefix(baseContextPath))
-                    .collect(toImmutableList());
+            final List<RouteDecoratingService> prefixed =
+                    routeDecoratingServices.stream()
+                                           .map(service -> service.withRoutePrefix(baseContextPath))
+                                           .collect(toImmutableList());
             return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
         } else {
             return null;
@@ -1210,6 +1215,19 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Sets the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
+     * from the {@link RequestContextStorage}.
+     *
+     * @param contextHook the {@link Supplier} that provides the {@link AutoCloseable}
+     */
+    public VirtualHostBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        //noinspection unchecked
+        this.contextHook = (Supplier<AutoCloseable>) contextHook;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
@@ -1298,6 +1316,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         final ServiceErrorHandler defaultErrorHandler =
                 errorHandler != null ? errorHandler.orElse(serverErrorHandler) : serverErrorHandler;
 
+        final Supplier<AutoCloseable> contextHook = mergeHooks(template.contextHook, this.contextHook);
+
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
@@ -1326,7 +1346,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                             successFunction, requestAutoAbortDelayMillis,
                                             multipartUploadsLocation, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
-                                            unhandledExceptionsReporter, baseContextPath);
+                                            unhandledExceptionsReporter, baseContextPath, contextHook);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
@@ -1335,7 +1355,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                accessLogWriter, blockingTaskExecutor, successFunction,
                                requestAutoAbortDelayMillis, multipartUploadsLocation,
                                defaultHeaders, requestIdGenerator,
-                               defaultErrorHandler, unhandledExceptionsReporter, "/");
+                               defaultErrorHandler, unhandledExceptionsReporter, "/", contextHook);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);

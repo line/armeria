@@ -25,13 +25,10 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -329,10 +326,4 @@ public interface ServerConfig {
      * Returns the interval between reporting unhandled exceptions in milliseconds.
      */
     long unhandledExceptionsReportIntervalMillis();
-
-    /**
-     * Returns the {@link Supplier}  which provides an {@link AutoCloseable} and will be called whenever this
-     * {@link RequestContext} is popped from the {@link RequestContextStorage}.
-     */
-    Supplier<? extends AutoCloseable> contextHook();
 }

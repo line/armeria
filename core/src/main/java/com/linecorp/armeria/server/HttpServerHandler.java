@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -30,7 +31,6 @@ import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -92,8 +92,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
     private static final InetSocketAddress UNKNOWN_ADDR;
-
-    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     static {
         InetAddress unknownAddr;
@@ -349,7 +347,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
-            final DefaultServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
+            final ServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
                     channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx);
 
             // Handle 'OPTIONS * HTTP/1.1'.
@@ -374,7 +372,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
-                req.requestStartTimeNanos(), req.requestStartTimeMicros(), config.contextHook());
+                req.requestStartTimeNanos(), req.requestStartTimeMicros(), serviceCfg.contextHook());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
@@ -609,8 +607,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private DefaultServiceRequestContext newEarlyRespondingRequestContext(Channel channel,
-                                                                   DecodedHttpRequest req,
+    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
                                                                    InetSocketAddress remoteAddress,

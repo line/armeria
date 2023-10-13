@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+
 import java.nio.file.Path;
 import java.util.List;
-import java.util.function.Supplier;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.slf4j.helpers.NOPLogger;
@@ -51,7 +52,6 @@ public class RoutersBenchmark {
             RequestHeaders.of(HttpMethod.POST, "/grpc.package.Service/Method1");
 
     private static final RequestTarget METHOD1_REQ_TARGET = RequestTarget.forServer(METHOD1_HEADERS.path());
-    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     static {
         final String defaultLogName = "log";
@@ -61,27 +61,26 @@ public class RoutersBenchmark {
         final Route route2 = Route.builder().exact("/grpc.package.Service/Method2").build();
         final Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
         final ServiceErrorHandler serviceErrorHandler = ServerErrorHandler.ofDefault().asServiceErrorHandler();
-        final Supplier<? extends AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
         SERVICES = ImmutableList.of(
                 new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(), 0, multipartUploadsLocation, ImmutableList.of(),
                                   HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler,
-                                  contextHook),
+                                  NOOP_CONTEXT_HOOK),
                 new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(), 0, multipartUploadsLocation, ImmutableList.of(),
                                   HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler,
-                                  contextHook));
+                                  NOOP_CONTEXT_HOOK));
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
                                              defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              CommonPools.blockingTaskExecutor(),
                                              SuccessFunction.always(), 0, multipartUploadsLocation,
                                              ImmutableList.of(), HttpHeaders.of(), ctx -> RequestId.random(),
-                                             serviceErrorHandler, contextHook);
+                                             serviceErrorHandler, NOOP_CONTEXT_HOOK);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, defaultLogName, 0, 0, false,

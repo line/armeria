@@ -167,7 +167,7 @@ public final class DefaultServiceRequestContext
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(),
               routingContext.requestTarget(), exchangeType, cfg.requestAutoAbortDelayMillis(),
-              requireNonNull(req, "req"), null, null);
+              requireNonNull(req, "req"), null, null, contextHook);
 
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
@@ -198,9 +198,6 @@ public final class DefaultServiceRequestContext
         maxRequestLength = cfg.maxRequestLength();
         this.additionalResponseHeaders = additionalResponseHeaders;
         this.additionalResponseTrailers = additionalResponseTrailers;
-
-        hook(contextHook);
-        hook(this.cfg.contextHook());
     }
 
     @Override

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -151,7 +152,6 @@ public final class ClientOptions
     public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
-    private static final Supplier<? extends AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
     @UnstableApi
     public static final ClientOption<Supplier<? extends AutoCloseable>> CONTEXT_HOOK =
             ClientOption.define("CONTEXT_HOOK", NOOP_CONTEXT_HOOK);
@@ -390,8 +390,9 @@ public final class ClientOptions
      * {@link RequestContext} is popped from the {@link RequestContextStorage}.
      */
     @UnstableApi
-    public Supplier<? extends AutoCloseable> contextHook() {
-        return get(CONTEXT_HOOK);
+    @SuppressWarnings("unchecked")
+    public Supplier<AutoCloseable> contextHook() {
+        return (Supplier<AutoCloseable>) get(CONTEXT_HOOK);
     }
 
     /**
