@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,29 +38,28 @@ class DefaultConditionalResponseAs<T, R, V> implements ConditionalResponseAs<T, 
 
     DefaultConditionalResponseAs(
             ResponseAs<T, R> originalResponseAs, ResponseAs<R, V> responseAs, Predicate<R> predicate) {
+        requireNonNull(predicate, "predicate");
         this.originalResponseAs = originalResponseAs;
         andThen(responseAs, predicate);
     }
 
     @Override
     public DefaultConditionalResponseAs<T, R, V> andThen(ResponseAs<R, V> responseAs, Predicate<R> predicate) {
+        requireNonNull(predicate, "predicate");
         predicateMappingList.add(new SimpleEntry<>(responseAs, predicate));
         return this;
     }
 
     @Override
     public ResponseAs<T, V> orElse(ResponseAs<R, V> responseAs) {
-        return new ResponseAs<T, V>() {
-            @Override
-            public V as(T response) {
-                final R r = originalResponseAs.as(response);
-                for (Entry<ResponseAs<R, V>, Predicate<R>> entry: predicateMappingList) {
-                    if (entry.getValue().test(r)) {
-                        return entry.getKey().as(r);
-                    }
+        return response -> {
+            final R r = originalResponseAs.as(response);
+            for (Entry<ResponseAs<R, V>, Predicate<R>> entry: predicateMappingList) {
+                if (entry.getValue().test(r)) {
+                    return entry.getKey().as(r);
                 }
-                return responseAs.as(r);
             }
+            return responseAs.as(r);
         };
     }
 }
