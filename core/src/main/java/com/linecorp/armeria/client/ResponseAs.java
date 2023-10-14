@@ -169,7 +169,7 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
-     * into the specified Java type using the default {@link ObjectMapper, Predicate} if the
+     * into the specified Java type using the default {@link ObjectMapper} if the
      * {@link Predicate} is satisfied.
      *
      * @see JacksonObjectMapperProvider
