@@ -147,16 +147,34 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
-     * into the specified non-container type using the default {@link ObjectMapper} if the
-     * {@link Predicate} is satisfied.
+     * into the specified non-container type using the default {@link ObjectMapper}.
      *
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
-     * {@link Map}. Use {@link #json(TypeReference, Predicate)} for the container type.
+     * {@link Map}. Use {@link #blockingJson(TypeReference)} for the container type.
      *
      * @see JacksonObjectMapperProvider
      */
     @UnstableApi
-    static <V> BlockingConditionalResponseAs<V> json(
+    static <V> BlockingConditionalResponseAs<V> blockingJson(Class<? extends V> clazz) {
+        requireNonNull(clazz, "clazz");
+        return new BlockingConditionalResponseAs<>(blocking(),
+                                                   AggregatedResponseAs.json(
+                                                           clazz, ResponseAsUtil.TRUE_PREDICATE),
+                                                   ResponseAsUtil.SUCCESS_PREDICATE);
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the default {@link ObjectMapper} if the
+     * {@link Predicate} is satisfied.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
+     * {@link Map}. Use {@link #blockingJson(TypeReference, Predicate)} for the container type.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    static <V> BlockingConditionalResponseAs<V> blockingJson(
             Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(predicate, "predicate");
@@ -168,14 +186,30 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the specified {@link ObjectMapper}.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
+     * {@link Map}. Use {@link #blockingJson(TypeReference, ObjectMapper)} for the container type.
+     */
+    @UnstableApi
+    static <V> BlockingConditionalResponseAs<V> blockingJson(Class<? extends V> clazz, ObjectMapper mapper) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        return new BlockingConditionalResponseAs<>(
+                blocking(), AggregatedResponseAs.json(clazz, mapper, ResponseAsUtil.TRUE_PREDICATE),
+                ResponseAsUtil.SUCCESS_PREDICATE);
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
      * into the specified non-container type using the specified {@link ObjectMapper} if the
      * {@link Predicate} is satisfied.
      *
      * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
-     * {@link Map}. Use {@link #json(TypeReference, ObjectMapper, Predicate)} for the container type.
+     * {@link Map}. Use {@link #blockingJson(TypeReference, ObjectMapper, Predicate)} for the container type.
      */
     @UnstableApi
-    static <V> BlockingConditionalResponseAs<V> json(
+    static <V> BlockingConditionalResponseAs<V> blockingJson(
             Class<? extends V> clazz, ObjectMapper mapper, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
@@ -193,7 +227,22 @@ public interface ResponseAs<T, R> {
      * @see JacksonObjectMapperProvider
      */
     @UnstableApi
-    static <V> BlockingConditionalResponseAs<V> json(
+    static <V> BlockingConditionalResponseAs<V> blockingJson(TypeReference<? extends V> typeRef) {
+        requireNonNull(typeRef, "typeRef");
+        return new BlockingConditionalResponseAs<>(blocking(),
+                                                   AggregatedResponseAs.json(
+                                                           typeRef, ResponseAsUtil.TRUE_PREDICATE),
+                                                   ResponseAsUtil.SUCCESS_PREDICATE);
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the default {@link ObjectMapper}.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    static <V> BlockingConditionalResponseAs<V> blockingJson(
             TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(predicate, "predicate");
@@ -205,11 +254,25 @@ public interface ResponseAs<T, R> {
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the specified {@link ObjectMapper}.
+     */
+    @UnstableApi
+    static <V> BlockingConditionalResponseAs<V> blockingJson(
+            TypeReference<? extends V> typeRef, ObjectMapper mapper) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        return new BlockingConditionalResponseAs<>(
+                blocking(), AggregatedResponseAs.json(typeRef, mapper, ResponseAsUtil.TRUE_PREDICATE),
+                ResponseAsUtil.SUCCESS_PREDICATE);
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
      * into the specified Java type using the specified {@link ObjectMapper} if the {@link Predicate}
      * is satisfied.
      */
     @UnstableApi
-    static <V> BlockingConditionalResponseAs<V> json(
+    static <V> BlockingConditionalResponseAs<V> blockingJson(
             TypeReference<? extends V> typeRef, ObjectMapper mapper,
             Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(typeRef, "typeRef");
