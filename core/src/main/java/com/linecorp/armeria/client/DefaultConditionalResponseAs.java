@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * {@link Predicate} is evaluated as true.
  */
 @UnstableApi
-class DefaultConditionalResponseAs<T, R, V> implements ConditionalResponseAs<T, R, V> {
+public class DefaultConditionalResponseAs<T, R, V> implements ConditionalResponseAs<T, R, V> {
 
     private final ResponseAs<T, R> originalResponseAs;
     private final List<Entry<ResponseAs<R, V>, Predicate<R>>> predicateMappingList = new ArrayList<>();

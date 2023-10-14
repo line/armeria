@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class BlockingConditionalResponseAs<V>
         extends DefaultConditionalResponseAs<HttpResponse, AggregatedHttpResponse, ResponseEntity<V>> {
-    private static final Predicate<AggregatedHttpResponse> TRUE_PREDICATE = unused -> true;
 
     BlockingConditionalResponseAs(ResponseAs<HttpResponse, AggregatedHttpResponse> originalResponseAs,
                                   ResponseAs<AggregatedHttpResponse, ResponseEntity<V>> responseAs,
@@ -95,7 +94,7 @@ public final class BlockingConditionalResponseAs<V>
      * to the specified {@link Class}.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(Class<? extends V> clazz) {
-        return orElse(AggregatedResponseAs.json(clazz, TRUE_PREDICATE));
+        return orElse(AggregatedResponseAs.json(clazz, ResponseAsUtil.TRUE_PREDICATE));
     }
 
     /**
@@ -105,7 +104,7 @@ public final class BlockingConditionalResponseAs<V>
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(
             Class<? extends V> clazz, ObjectMapper objectMapper) {
-        return orElse(AggregatedResponseAs.json(clazz, objectMapper, TRUE_PREDICATE));
+        return orElse(AggregatedResponseAs.json(clazz, objectMapper, ResponseAsUtil.TRUE_PREDICATE));
     }
 
     /**
@@ -114,7 +113,7 @@ public final class BlockingConditionalResponseAs<V>
      * using the specified {@link TypeReference}.
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(TypeReference<? extends V> typeRef) {
-        return orElse(AggregatedResponseAs.json(typeRef, TRUE_PREDICATE));
+        return orElse(AggregatedResponseAs.json(typeRef, ResponseAsUtil.TRUE_PREDICATE));
     }
 
     /**
@@ -124,7 +123,7 @@ public final class BlockingConditionalResponseAs<V>
      */
     public ResponseAs<HttpResponse, ResponseEntity<V>> orElseJson(
             TypeReference<? extends V> typeRef, ObjectMapper objectMapper) {
-        return orElse(AggregatedResponseAs.json(typeRef, objectMapper, TRUE_PREDICATE));
+        return orElse(AggregatedResponseAs.json(typeRef, objectMapper, ResponseAsUtil.TRUE_PREDICATE));
     }
 
     @Override
