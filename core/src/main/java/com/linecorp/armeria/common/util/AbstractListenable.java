@@ -17,48 +17,35 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
-import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
-
-import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
 
 /**
  * A skeletal {@link Listenable} implementation.
  */
 public abstract class AbstractListenable<T> implements Listenable<T> {
 
+    private static final Map<?, Boolean> EMPTY_LISTENERS = new IdentityHashMap<>();
+
     @SuppressWarnings("rawtypes")
-    private static final Consumer[] EMPTY_LISTENERS = new Consumer[0];
+    private static final AtomicReferenceFieldUpdater<AbstractListenable, Map> listenersUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(AbstractListenable.class, Map.class, "listeners");
 
-    @GuardedBy("reentrantLock")
-    private final Set<Consumer<? super T>> updateListeners =
-            new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
-
-    private final ReentrantLock reentrantLock = new ReentrantShortLock();
+    // Updated via updateListenersUpdater
+    @SuppressWarnings("unchecked")
+    private volatile Map<Consumer<? super T>, Boolean> listeners =
+            (Map<Consumer<? super T>, Boolean>) EMPTY_LISTENERS;
 
     /**
      * Notify the new value changes to the listeners added via {@link #addListener(Consumer)}.
      */
     protected final void notifyListeners(T latestValue) {
-        final Consumer<? super T>[] updateListeners;
-        reentrantLock.lock();
-        try {
-            //noinspection unchecked
-            updateListeners = this.updateListeners.toArray((Consumer<? super T>[]) EMPTY_LISTENERS);
-        } finally {
-            reentrantLock.unlock();
-        }
-
-        for (Consumer<? super T> listener : updateListeners) {
-            listener.accept(latestValue);
-        }
+        final Map<Consumer<? super T>, Boolean> listeners = this.listeners;
+        listeners.forEach((listener, unused) -> listener.accept(latestValue));
     }
 
     /**
@@ -85,42 +72,32 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
      */
     public final void addListener(Consumer<? super T> listener, boolean notifyLatestValue) {
         requireNonNull(listener, "listener");
-        reentrantLock.lock();
-        try {
-            if (notifyLatestValue) {
-                final T latest = latestValue();
-                if (latest != null) {
-                    listener.accept(latest);
-                }
+        if (notifyLatestValue) {
+            final T latest = latestValue();
+            if (latest != null) {
+                listener.accept(latest);
             }
-            updateListeners.add(listener);
-        } finally {
-            reentrantLock.unlock();
+        }
+        for (;;) {
+            final Map<Consumer<? super T>, Boolean> listeners = this.listeners;
+            final Map<Consumer<? super T>, Boolean> newListeners = new IdentityHashMap<>(listeners);
+            newListeners.put(listener, true);
+            if (listenersUpdater.compareAndSet(this, listeners, newListeners)) {
+                break;
+            }
         }
     }
 
     @Override
     public final void removeListener(Consumer<?> listener) {
         requireNonNull(listener, "listener");
-        reentrantLock.lock();
-        try {
-            updateListeners.remove(listener);
-        } finally {
-            reentrantLock.unlock();
+        for (;;) {
+            final Map<Consumer<? super T>, Boolean> listeners = this.listeners;
+            final Map<Consumer<? super T>, Boolean> newListeners = new IdentityHashMap<>(listeners);
+            newListeners.remove(listener);
+            if (listenersUpdater.compareAndSet(this, listeners, newListeners)) {
+                break;
+            }
         }
-    }
-
-    /**
-     * Acquires the lock that is used to update or notify the listeners.
-     */
-    protected final void lock() {
-        reentrantLock.lock();
-    }
-
-    /**
-     * Releases the lock that is used to update or notify the listeners.
-     */
-    protected final void unlock() {
-        reentrantLock.unlock();
     }
 }
