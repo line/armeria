@@ -1,0 +1,31 @@
+dependencies {
+    testImplementation project(':thrift0.18')
+    api libs.logback14
+}
+
+def logback12Dir = "${rootProject.projectDir}/logback/logback12"
+def logback13Dir = "${rootProject.projectDir}/logback/logback13"
+
+// Copy common files from logback.
+task generateSources(type: Copy) {
+    from("${logback12Dir}/src/main/java") {
+        exclude "**/LoggingEventWrapper.java"
+        exclude "**/package-info.java"
+    }
+    from "${logback13Dir}/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+}
+
+task generateTestSources(type: Copy) {
+    from("${logback12Dir}/src/test/java")
+    into "${project.ext.genSrcDir}/test/java"
+}
+
+ext {
+    testThriftSrcDirs = ["$logback12Dir/src/test/thrift"]
+}
+
+tasks.compileJava.dependsOn(generateSources)
+tasks.generateSources.dependsOn(generateTestSources)
+tasks.compileTestJava.dependsOn(generateSources)
+tasks.processTestResources.from "${logback12Dir}/src/test/resources"

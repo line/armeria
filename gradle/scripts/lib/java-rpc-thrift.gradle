@@ -17,8 +17,8 @@ configure(projectsWithFlags('java')) {
         // Create the task assuming the source directory exists
         // so that subprojects can refer to the task.
         def task = project.tasks.register(
-            (sourceSet.getTaskName('compile', 'thrift')) as String,
-            CompileThriftTask,
+                (sourceSet.getTaskName('compile', 'thrift')) as String,
+                CompileThriftTask,
         )
 
         def sourcesJarTask = project.tasks.findByName(sourceSet.getTaskName('sources', 'jar'))
@@ -131,9 +131,9 @@ class CompileThriftTask extends DefaultTask {
             actualThriftPath = thriftBinary.path
         } else {
             actualThriftPath =
-                "${libDir}/thrift" +
-                    "/${thriftVersion?: '0.18'}" +
-                    "/thrift.${project.rootProject.osdetector.classifier}"
+                    "${libDir}/thrift" +
+                            "/${thriftVersion?: '0.18'}" +
+                            "/thrift.${project.rootProject.osdetector.classifier}"
         }
 
         srcDirs.each { srcDir ->

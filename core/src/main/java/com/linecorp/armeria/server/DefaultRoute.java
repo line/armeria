@@ -300,8 +300,16 @@ final class DefaultRoute implements Route {
     @Override
     public Route withPrefix(String prefix) {
         requireNonNull(prefix, "prefix");
+        if ("/".equals(prefix)) {
+            return this;
+        }
         return new DefaultRoute(pathMapping.withPrefix(prefix), methods, consumes, produces, paramPredicates,
                                 headerPredicates, isFallback, excludedRoutes);
+    }
+
+    @Override
+    public boolean isCacheable() {
+        return paramPredicates.isEmpty() && headerPredicates.isEmpty() && excludedRoutes().isEmpty();
     }
 
     @Override

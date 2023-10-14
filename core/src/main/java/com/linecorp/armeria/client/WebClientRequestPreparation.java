@@ -492,6 +492,11 @@ public final class WebClientRequestPreparation
     }
 
     @Override
+    public WebClientRequestPreparation content(Publisher<? extends HttpData> publisher) {
+        return (WebClientRequestPreparation) super.content(publisher);
+    }
+
+    @Override
     public WebClientRequestPreparation content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         return (WebClientRequestPreparation) super.content(contentType, publisher);
     }

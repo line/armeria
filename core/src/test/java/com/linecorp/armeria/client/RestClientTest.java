@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Delete;
@@ -86,6 +87,7 @@ class RestClientTest {
 
     @ArgumentsSource(RestClientProvider.class)
     @ParameterizedTest
+    @GenerateNativeImageTrace
     void restApi(RestClient restClient) {
         RestClientPreparation preparation = null;
         // HTTP methods used for REST APIs
@@ -215,4 +217,3 @@ class RestClientTest {
         }
     }
 }
-

@@ -489,6 +489,35 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Creates a new HTTP response with the specified headers and trailers
+     * whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    static HttpResponse of(ResponseHeaders headers,
+                           Publisher<? extends HttpData> publisher,
+                           HttpHeaders trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailers, "trailers");
+        return PublisherBasedHttpResponse.from(headers, publisher, trailers);
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned response will
+     * be closed with the same cause as well.
+     *
+     * @param future the {@link CompletableFuture} which will produce the actual {@link HttpResponse}
+     */
+    static HttpResponse of(CompletableFuture<? extends HttpResponse> future) {
+        requireNonNull(future, "future");
+        return createHttpResponseFrom(future);
+    }
+
+    /**
      * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
      * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
      * closed with the same cause as well.
@@ -497,14 +526,9 @@ public interface HttpResponse extends Response, HttpMessage {
      */
     static HttpResponse of(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
-
-        if (stage instanceof CompletableFuture) {
-            return createHttpResponseFrom((CompletableFuture<? extends HttpResponse>) stage);
-        } else {
-            final DeferredHttpResponse res = new DeferredHttpResponse();
-            res.delegateWhenComplete(stage);
-            return res;
-        }
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        res.delegateWhenComplete(stage);
+        return res;
     }
 
     /**
