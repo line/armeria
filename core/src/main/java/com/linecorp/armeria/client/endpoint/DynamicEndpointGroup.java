@@ -290,6 +290,16 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return false;
     }
 
+    @Override
+    protected List<Endpoint> latestValue() {
+        final List<Endpoint> endpoints = this.endpoints;
+        if (endpoints == UNINITIALIZED_ENDPOINTS) {
+            return null;
+        } else {
+            return endpoints;
+        }
+    }
+
     private void maybeCompleteInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
             initialEndpointsFuture.complete(endpoints);
