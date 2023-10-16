@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class BlockingConditionalResponseAsTest {
+class JsonConditionalResponseAsTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -154,37 +154,37 @@ class BlockingConditionalResponseAsTest {
     }
 
     @Test
-    void jsonObject_andThenJson_orElseJson() {
+    void jsonObject_orElseJson() {
         final MyMessage myServerErrorMessage = new MyMessage("ServerError");
         final ResponseEntity<MyResponse> errorResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_server_error")
-                         .as(ResponseAs.<MyResponse>blockingJson(MyMessage.class,
+                         .as(ResponseAs.<MyResponse>json(MyMessage.class,
                                                          res -> res.status().isServerError())
-                                       .andThenJson(MyMessage.class, res -> res.status().isClientError())
-                                       .orElseJson(MyMessage.class)).execute();
+                                       .orElseJson(MyMessage.class, res -> res.status().isClientError())
+                                       .orElseJson(MyMessage.class)).execute().join();
         assertThat(errorResponseEntity.content()).isEqualTo(myServerErrorMessage);
 
         final MyMessage myBadRequestMessage = new MyMessage("BadRequest");
         final ResponseEntity<MyResponse> badRequestResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_bad_request")
-                         .as(ResponseAs.<MyResponse>blockingJson(MyMessage.class,
+                         .as(ResponseAs.<MyResponse>json(MyMessage.class,
                                                          res -> res.status().isServerError())
-                                       .andThenJson(MyMessage.class, res -> res.status().isClientError())
-                                       .orElseJson(MyMessage.class)).execute();
+                                       .orElseJson(MyMessage.class, res -> res.status().isClientError())
+                                       .orElseJson(MyMessage.class)).execute().join();
         assertThat(badRequestResponseEntity.content()).isEqualTo(myBadRequestMessage);
 
         final MyMessage myOkMessage = new MyMessage("OK");
         final ResponseEntity<MyResponse> okResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json")
-                         .as(ResponseAs.<MyResponse>blockingJson(MyMessage.class,
+                         .as(ResponseAs.<MyResponse>json(MyMessage.class,
                                                          res -> res.status().isServerError())
-                                       .andThenJson(MyMessage.class, res -> res.status().isClientError())
-                                       .orElseJson(MyMessage.class)).execute();
+                                       .orElseJson(MyMessage.class, res -> res.status().isClientError())
+                                       .orElseJson(MyMessage.class)).execute().join();
         assertThat(okResponseEntity.content()).isEqualTo(myOkMessage);
     }
 
     @Test
-    void jsonObject_customMapper_andThenJson_orElseJson() {
+    void jsonObject_customMapper_orElseJson() {
         final JsonMapper mapper = JsonMapper.builder()
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
@@ -193,35 +193,35 @@ class BlockingConditionalResponseAsTest {
         myServerErrorObject.setId(500);
         final ResponseEntity<MyResponse> errorResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_mapper_server_error")
-                         .as(ResponseAs.<MyResponse>blockingJson(MyObject.class, mapper,
+                         .as(ResponseAs.<MyResponse>json(MyObject.class, mapper,
                                                          res -> res.status().isServerError())
-                                       .andThenJson(MyObject.class, mapper, res -> res.status().isClientError())
-                                       .orElseJson(MyObject.class, mapper)).execute();
+                                       .orElseJson(MyObject.class, mapper, res -> res.status().isClientError())
+                                       .orElseJson(MyObject.class, mapper)).execute().join();
         assertThat(errorResponseEntity.content()).isEqualTo(myServerErrorObject);
 
         final MyObject myBadRequestObject = new MyObject();
         myBadRequestObject.setId(400);
         final ResponseEntity<MyResponse> badRequestResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_mapper_bad_request")
-                         .as(ResponseAs.<MyResponse>blockingJson(MyObject.class, mapper,
+                         .as(ResponseAs.<MyResponse>json(MyObject.class, mapper,
                                                          res -> res.status().isServerError())
-                                       .andThenJson(MyObject.class, mapper, res -> res.status().isClientError())
-                                       .orElseJson(MyObject.class, mapper)).execute();
+                                       .orElseJson(MyObject.class, mapper, res -> res.status().isClientError())
+                                       .orElseJson(MyObject.class, mapper)).execute().join();
         assertThat(badRequestResponseEntity.content()).isEqualTo(myBadRequestObject);
 
         final MyObject myOkObject = new MyObject();
         myOkObject.setId(200);
         final ResponseEntity<MyResponse> okResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_mapper")
-                         .as(ResponseAs.<MyResponse>blockingJson(MyObject.class, mapper,
+                         .as(ResponseAs.<MyResponse>json(MyObject.class, mapper,
                                                          res -> res.status().isServerError())
-                                       .andThenJson(MyObject.class, mapper, res -> res.status().isClientError())
-                                       .orElseJson(MyObject.class, mapper)).execute();
+                                       .orElseJson(MyObject.class, mapper, res -> res.status().isClientError())
+                                       .orElseJson(MyObject.class, mapper)).execute().join();
         assertThat(okResponseEntity.content()).isEqualTo(myOkObject);
     }
 
     @Test
-    void jsonGeneric_andThenJson_orElseJson() {
+    void jsonGeneric_orElseJson() {
         final JsonMapper mapper = JsonMapper.builder()
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
@@ -230,69 +230,75 @@ class BlockingConditionalResponseAsTest {
         myServerErrorObject.setId(500);
         final ResponseEntity<List<MyObject>> ServerErrorResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_mapper_server_error")
-                         .as(ResponseAs.blockingJson(new TypeReference<List<MyObject>>() {}, mapper,
+                         .as(ResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
                                              res -> res.status().isServerError())
-                                       .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isClientError())
-                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper)).execute();
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper))
+                         .execute().join();
         assertThat(ServerErrorResponseEntity.content()).isEqualTo(ImmutableList.of(myServerErrorObject));
 
         final MyObject myBadRequestObject = new MyObject();
         myBadRequestObject.setId(400);
         final ResponseEntity<List<MyObject>> BadRequestResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_mapper_bad_request")
-                         .as(ResponseAs.blockingJson(new TypeReference<List<MyObject>>() {}, mapper,
+                         .as(ResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
                                              res -> res.status().isServerError())
-                                       .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isClientError())
-                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper)).execute();
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper))
+                         .execute().join();
         assertThat(BadRequestResponseEntity.content()).isEqualTo(ImmutableList.of(myBadRequestObject));
 
         final MyObject myOkObject = new MyObject();
         myOkObject.setId(200);
         final ResponseEntity<List<MyObject>> OkResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_mapper")
-                         .as(ResponseAs.blockingJson(new TypeReference<List<MyObject>>() {}, mapper,
+                         .as(ResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
                                              res -> res.status().isServerError())
-                                       .andThenJson(new TypeReference<List<MyObject>>() {}, mapper,
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper,
                                                     res -> res.status().isClientError())
-                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper)).execute();
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}, mapper))
+                         .execute().join();
         assertThat(OkResponseEntity.content()).isEqualTo(ImmutableList.of(myOkObject));
     }
 
     @Test
-    void jsonGeneric_customMapper_andThenJson_orElseJson() {
+    void jsonGeneric_customMapper_orElseJson() {
         final MyObject myServerErrorObject = new MyObject();
         myServerErrorObject.setId(500);
         final ResponseEntity<List<MyObject>> ServerErrorResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_server_error")
-                         .as(ResponseAs.blockingJson(new TypeReference<List<MyObject>>() {},
+                         .as(ResponseAs.json(new TypeReference<List<MyObject>>() {},
                                              res -> res.status().isServerError())
-                                       .andThenJson(new TypeReference<List<MyObject>>() {},
+                                       .orElseJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isClientError())
-                                       .orElseJson(new TypeReference<List<MyObject>>() {})).execute();
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}))
+                         .execute().join();
         assertThat(ServerErrorResponseEntity.content()).isEqualTo(ImmutableList.of(myServerErrorObject));
 
         final MyObject myBadRequestObject = new MyObject();
         myBadRequestObject.setId(400);
         final ResponseEntity<List<MyObject>> BadRequestResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic_bad_request")
-                         .as(ResponseAs.blockingJson(new TypeReference<List<MyObject>>() {},
+                         .as(ResponseAs.json(new TypeReference<List<MyObject>>() {},
                                              res -> res.status().isServerError())
-                                       .andThenJson(new TypeReference<List<MyObject>>() {},
+                                       .orElseJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isClientError())
-                                       .orElseJson(new TypeReference<List<MyObject>>() {})).execute();
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}))
+                         .execute().join();
         assertThat(BadRequestResponseEntity.content()).isEqualTo(ImmutableList.of(myBadRequestObject));
 
         final MyObject myOkObject = new MyObject();
         myOkObject.setId(200);
         final ResponseEntity<List<MyObject>> OkResponseEntity =
                 WebClient.of(server.httpUri()).prepare().get("/json_generic")
-                         .as(ResponseAs.blockingJson(new TypeReference<List<MyObject>>() {},
+                         .as(ResponseAs.json(new TypeReference<List<MyObject>>() {},
                                              res -> res.status().isServerError())
-                                       .andThenJson(new TypeReference<List<MyObject>>() {},
+                                       .orElseJson(new TypeReference<List<MyObject>>() {},
                                                     res -> res.status().isClientError())
-                                       .orElseJson(new TypeReference<List<MyObject>>() {})).execute();
+                                       .orElseJson(new TypeReference<List<MyObject>>() {}))
+                         .execute().join();
         assertThat(OkResponseEntity.content()).isEqualTo(ImmutableList.of(myOkObject));
     }
 
@@ -300,11 +306,11 @@ class BlockingConditionalResponseAsTest {
     void json_restClient() {
         final ResponseEntity<MyResponse> responseEntity =
                 RestClient.of(server.httpUri()).get("/json_server_error")
-                          .execute(ResponseAs.<MyResponse>blockingJson(
+                          .execute(ResponseAs.<MyResponse>json(
                                                      MyMessage.class, res -> res.status().isError())
-                                             .andThenJson(
+                                             .orElseJson(
                                                      EmptyMessage.class, res -> res.status().isInformational())
-                                             .orElseJson(MyError.class));
+                                             .orElseJson(MyError.class)).join();
         assertThat(responseEntity.content()).isEqualTo(new MyMessage("ServerError"));
     }
 }

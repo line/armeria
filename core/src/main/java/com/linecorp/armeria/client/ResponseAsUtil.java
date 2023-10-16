@@ -21,14 +21,18 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 final class ResponseAsUtil {
 
+    static final ObjectMapper OBJECT_MAPPER = JacksonUtil.newDefaultObjectMapper();
+
     static final Predicate<AggregatedHttpResponse> SUCCESS_PREDICATE = res -> res.status().isSuccess();
-    static final Predicate<AggregatedHttpResponse> TRUE_PREDICATE = unused -> true;
 
     static final ResponseAs<HttpResponse, AggregatedHttpResponse> BLOCKING =
             new ResponseAs<HttpResponse, AggregatedHttpResponse>() {
