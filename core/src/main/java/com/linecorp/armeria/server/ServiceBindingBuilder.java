@@ -70,6 +70,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     private Route mappedRoute;
 
     ServiceBindingBuilder(ServerBuilder serverBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
     }
 
@@ -366,6 +367,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
      * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
     public ServerBuilder build(HttpService service) {
+        requireNonNull(service, "service");
         if (mappedRoute != null) {
             // mappedRoute is only set when the service is an HttpServiceWithRoutes
             assert service.as(HttpServiceWithRoutes.class) != null;
