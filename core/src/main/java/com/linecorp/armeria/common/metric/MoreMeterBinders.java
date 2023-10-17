@@ -71,12 +71,12 @@ public final class MoreMeterBinders {
      * Returns a new {@link MeterBinder} to observe the specified {@link X509Certificate}'s validity.
      * The following stats are currently exported per registered {@link MeterIdPrefix}.
      *
-     *  <ul>
-     *    <li>"tls.certificate.validity" (gauge) - 1 if TLS certificate is in validity period, 0 if certificate
-     *        is not in validity period</li>
-     *    <li>"tls.certificate.validity.days" (gauge) - Duration in days before TLS certificate expires, which
-     *        becomes -1 if certificate is expired</li>
-     *  </ul>
+     * <ul>
+     *   <li>"tls.certificate.validity" (gauge) - 1 if TLS certificate is in validity period, 0 if certificate
+     *       is not in validity period</li>
+     *   <li>"tls.certificate.validity.days" (gauge) - Duration in days before TLS certificate expires, which
+     *       becomes -1 if certificate is expired</li>
+     * </ul>
      * @param certificate the certificate to monitor
      * @param meterIdPrefix the prefix to use for all metrics
      */
