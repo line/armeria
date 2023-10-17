@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 
 public interface CancellationScheduler {
 
@@ -36,11 +35,11 @@ public interface CancellationScheduler {
      * A {@link CancellationScheduler} that has already completed.
      */
     static CancellationScheduler finished(boolean server) {
-        final CancellationScheduler cancellationScheduler = of(0);
-        cancellationScheduler
-                .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, server);
-        cancellationScheduler.finishNow();
-        return cancellationScheduler;
+        if (server) {
+            return DefaultCancellationScheduler.serverFinishedCancellationScheduler;
+        } else {
+            return DefaultCancellationScheduler.clientFinishedCancellationScheduler;
+        }
     }
 
     /**

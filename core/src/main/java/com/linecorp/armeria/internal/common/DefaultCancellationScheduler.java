@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 final class DefaultCancellationScheduler implements CancellationScheduler {
 
@@ -63,6 +64,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
 
     private static final Runnable noopPendingTask = () -> {
     };
+
+    static final CancellationScheduler serverFinishedCancellationScheduler = finished0(true);
+    static final CancellationScheduler clientFinishedCancellationScheduler = finished0(false);
 
     private State state = State.INIT;
     private long timeoutNanos;
@@ -517,5 +521,13 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         void doComplete() {
             doComplete(null);
         }
+    }
+
+    private static CancellationScheduler finished0(boolean server) {
+        final CancellationScheduler cancellationScheduler = CancellationScheduler.of(0);
+        cancellationScheduler
+                .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, server);
+        cancellationScheduler.finishNow();
+        return cancellationScheduler;
     }
 }

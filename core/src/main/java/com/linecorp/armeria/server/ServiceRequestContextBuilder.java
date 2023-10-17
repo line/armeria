@@ -70,12 +70,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
     };
 
-    /**
-     * A cancellation scheduler that has been finished.
-     */
-    private static final CancellationScheduler
-            finishedRequestCancellationScheduler = CancellationScheduler.finished(true);
-
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
 
     private HttpService service = fakeService;
@@ -238,7 +232,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
         final CancellationScheduler requestCancellationScheduler;
         if (timedOut()) {
-            requestCancellationScheduler = finishedRequestCancellationScheduler;
+            requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
             requestCancellationScheduler = CancellationScheduler.of(0);
             final CountDownLatch latch = new CountDownLatch(1);

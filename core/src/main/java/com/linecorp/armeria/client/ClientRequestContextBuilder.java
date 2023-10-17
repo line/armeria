@@ -48,12 +48,6 @@ import io.netty.channel.EventLoop;
  */
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
-    /**
-     * A cancellation scheduler that has been finished.
-     */
-    private static final CancellationScheduler
-            finishedResponseCancellationScheduler = CancellationScheduler.finished(false);
-
     @Nullable
     private Endpoint endpoint;
     private ClientOptions options = ClientOptions.of();
@@ -120,7 +114,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final CancellationScheduler responseCancellationScheduler;
         if (timedOut()) {
-            responseCancellationScheduler = finishedResponseCancellationScheduler;
+            responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
             responseCancellationScheduler = CancellationScheduler.of(0);
             final CountDownLatch latch = new CountDownLatch(1);
