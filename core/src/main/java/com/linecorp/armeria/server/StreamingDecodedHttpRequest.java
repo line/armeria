@@ -201,6 +201,11 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
+    public boolean abortedResponse() {
+        return abortResponseCause != null;
+    }
+
+    @Override
     public boolean needsAggregation() {
         return false;
     }

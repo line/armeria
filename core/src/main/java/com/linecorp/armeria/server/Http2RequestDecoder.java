@@ -282,6 +282,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 logInvalidStream = true;
             }
         } else {
+            if (req.abortedResponse()) {
+                // Additional DATA frame can be sent after the response has been aborted.
+                return dataLength + padding;
+            }
+
             // Silently ignore the following DATA Frames of non-DecodedHttpRequestWriter.
             // The request stream is closed when receiving the HEADERS frame, but the client might send
             // more frames before realizing it.
@@ -313,29 +318,23 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         final long transferredLength = decodedReq.transferredBytes();
         if (maxContentLength > 0 && transferredLength > maxContentLength) {
             assert encoder != null;
-            final Http2Stream stream = encoder.findStream(streamId);
-            if (isWritable(stream)) {
-                final ContentTooLargeException cause =
-                        ContentTooLargeException.builder()
-                                                .maxContentLength(maxContentLength)
-                                                .contentLength(req.headers())
-                                                .transferred(transferredLength)
-                                                .build();
+            final ContentTooLargeException cause =
+                    ContentTooLargeException.builder()
+                                            .maxContentLength(maxContentLength)
+                                            .contentLength(req.headers())
+                                            .transferred(transferredLength)
+                                            .build();
 
-                final HttpStatusException httpStatusException =
-                        HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-                if (decodedReq.isInitialized()) {
-                    decodedReq.abortResponse(httpStatusException, true);
-                } else {
-                    assert decodedReq.needsAggregation();
-                    final StreamingDecodedHttpRequest streamingReq =
-                            decodedReq.toAbortedStreaming(inboundTrafficController, httpStatusException, true);
-                    requests.put(streamId, streamingReq);
-                    ctx.fireChannelRead(streamingReq);
-                }
+            final HttpStatusException httpStatusException =
+                    HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
+            if (decodedReq.isInitialized()) {
+                decodedReq.abortResponse(httpStatusException, true);
             } else {
-                // The response has been started already. Abort the request and let the response continue.
-                decodedReq.abort();
+                assert decodedReq.needsAggregation();
+                final StreamingDecodedHttpRequest streamingReq =
+                        decodedReq.toAbortedStreaming(inboundTrafficController, httpStatusException, true);
+                requests.put(streamId, streamingReq);
+                ctx.fireChannelRead(streamingReq);
             }
         } else if (decodedReq.isOpen()) {
             try {

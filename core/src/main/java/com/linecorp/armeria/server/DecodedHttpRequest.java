@@ -103,6 +103,11 @@ interface DecodedHttpRequest extends HttpRequest {
     void abortResponse(Throwable cause, boolean cancel);
 
     /**
+     * Tells whether {@link #abortResponse(Throwable, boolean)} was called or not.
+     */
+    boolean abortedResponse();
+
+    /**
      * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
      */
     boolean needsAggregation();

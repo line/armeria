@@ -196,6 +196,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
+    public boolean abortedResponse() {
+        return abortResponseCause != null;
+    }
+
+    @Override
     public boolean needsAggregation() {
         return true;
     }

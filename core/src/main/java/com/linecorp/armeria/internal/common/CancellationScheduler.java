@@ -32,6 +32,8 @@ import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -461,6 +463,11 @@ public final class CancellationScheduler {
     private void invokeTask(@Nullable Throwable cause) {
         if (task == null) {
             return;
+        }
+
+        if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+            // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
+            cause = cause.getCause();
         }
 
         if (cause == null) {
