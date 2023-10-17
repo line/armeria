@@ -69,7 +69,7 @@ public final class MoreMeterBinders {
 
     /**
      * Returns a new {@link MeterBinder} to observe the specified {@link X509Certificate}'s validity.
-     *  The following stats are currently exported per registered {@link MeterIdPrefix}.
+     * The following stats are currently exported per registered {@link MeterIdPrefix}.
      *
      *  <ul>
      *    <li>"tls.certificate.validity" (gauge) - 1 if TLS certificate is in validity period, 0 if certificate
