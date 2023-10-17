@@ -53,7 +53,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
@@ -95,11 +94,7 @@ public final class GrpcStatus {
      * If the specified {@code statusFunction} returns {@code null},
      * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
      * and the protocol package, is used by default.
-     *
-     * @deprecated Use {@link #fromThrowable(GrpcExceptionHandlerFunction, RequestContext,
-     * Throwable, Metadata)} instead.
      */
-    @Deprecated
     public static Status fromThrowable(@Nullable GrpcStatusFunction statusFunction, RequestContext ctx,
                                        Throwable t, Metadata metadata) {
         final GrpcExceptionHandlerFunction exceptionHandler =
@@ -113,7 +108,6 @@ public final class GrpcStatus {
      * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
      * and the protocol package, is used by default.
      */
-    @UnstableApi
     public static Status fromThrowable(@Nullable GrpcExceptionHandlerFunction exceptionHandler,
                                        RequestContext ctx, Throwable t, Metadata metadata) {
         t = peelAndUnwrap(requireNonNull(t, "t"));
@@ -168,11 +162,7 @@ public final class GrpcStatus {
      * Converts the specified {@link Status} to a new user-specified {@link Status}
      * using the specified {@link GrpcStatusFunction}.
      * Returns the given {@link Status} as is if the {@link GrpcStatusFunction} returns {@code null}.
-     *
-     * @deprecated Use {@link #fromExceptionHandler(GrpcExceptionHandlerFunction, RequestContext,
-     * Status, Metadata)} instead.
      */
-    @Deprecated
     public static Status fromStatusFunction(@Nullable GrpcStatusFunction statusFunction,
                                             RequestContext ctx, Status status, Metadata metadata) {
         final GrpcExceptionHandlerFunction exceptionHandler =
