@@ -64,7 +64,7 @@ jobs:
           echo "JOB_NAME=$JOB_NAME" >> $GITHUB_ENV
         shell: bash
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-jdk
         if: ${{ matrix.java != env.BUILD_JDK_VERSION }}
@@ -213,7 +213,7 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
@@ -236,7 +236,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install svgbob_cli
         run: |
@@ -263,7 +263,7 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}

@@ -55,6 +55,7 @@ import com.linecorp.armeria.server.annotation.MatchesParam;
  * An abstract builder class for binding something to a {@link Route} fluently.
  */
 abstract class AbstractBindingBuilder {
+    static final Set<String> EMPTY_CONTEXT_PATHS = ImmutableSet.of("/");
 
     private Set<HttpMethod> methods = ImmutableSet.of();
     private Set<MediaType> consumeTypes = ImmutableSet.of();
@@ -65,6 +66,15 @@ abstract class AbstractBindingBuilder {
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
     private final List<Route> additionalRoutes = new ArrayList<>();
     private final List<Route> excludedRoutes = new ArrayList<>();
+    private final Set<String> contextPaths;
+
+    AbstractBindingBuilder(Set<String> contextPaths) {
+        this.contextPaths = contextPaths;
+    }
+
+    Set<String> contextPaths() {
+        return contextPaths;
+    }
 
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to.

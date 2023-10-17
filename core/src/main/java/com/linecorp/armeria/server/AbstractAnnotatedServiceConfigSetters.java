@@ -22,8 +22,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -58,14 +60,14 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
     private String pathPrefix = "/";
     @Nullable
     private Object service;
-
-    final Object service() {
-        return service;
-    }
+    private Set<String> contextPaths = Collections.singleton("/");
 
     final void service(Object service) {
-        requireNonNull(service, "service");
-        this.service = service;
+        this.service = requireNonNull(service, "service");
+    }
+
+    final void contextPaths(Set<String> contextPaths) {
+        this.contextPaths = requireNonNull(contextPaths, "contextPaths");
     }
 
     @Override
@@ -338,10 +340,14 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
                 AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor,
                                              requestConverterFunctions, responseConverterFunctions,
                                              exceptionHandlerFunctions, dependencyInjector, queryDelimiter);
-        return elements.stream().map(element -> {
+        return elements.stream().flatMap(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());
-            return defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
+            assert !contextPaths.isEmpty() : "contextPaths shouldn't be empty";
+            return contextPaths.stream().map(contextPath -> {
+                return defaultServiceConfigSetters.toServiceConfigBuilder(
+                        element.route(), contextPath, decoratedService);
+            });
         }).collect(toImmutableList());
     }
 }

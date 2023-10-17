@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map.Entry;
@@ -26,6 +24,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -34,280 +33,241 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * An {@link AbstractAnnotatedServiceConfigSetters} builder which configures an {@link AnnotatedService}.
- *
- * @param <T> the type of object to be returned once the builder is built
+ * A {@link ContextPathAnnotatedServiceConfigSetters} builder which configures an {@link AnnotatedService}
+ * under a set of context paths.
  */
-final class ContextPathAnnotatedServiceConfigSetters<T extends ServiceConfigsBuilder>
-        extends AbstractAnnotatedServiceConfigSetters {
+@UnstableApi
+public final class ContextPathAnnotatedServiceConfigSetters
+        extends AbstractContextPathAnnotatedServiceConfigSetters<ServerBuilder> {
 
-    private final ContextPathServicesBuilder<T> builder;
-
-    ContextPathAnnotatedServiceConfigSetters(ContextPathServicesBuilder<T> builder) {
-        this.builder = builder;
+    ContextPathAnnotatedServiceConfigSetters(AbstractContextPathServicesBuilder<ServerBuilder> builder) {
+        super(builder);
     }
 
     /**
-     * Registers the given service to {@link T} and returns the parent object.
+     * Registers the given service to {@link ContextPathServicesBuilder} and returns the parent object.
      *
      * @param service annotated service object to handle incoming requests matching path prefix, which
      *                can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
      *                If path prefix is not set then this service is registered to handle requests matching
      *                {@code /}
      */
-    ContextPathServicesBuilder<T> build(Object service) {
-        requireNonNull(service, "service");
-        service(service);
-        builder.addServiceConfigSetters(this);
-        return builder;
+    @Override
+    public ContextPathServicesBuilder build(Object service) {
+        return (ContextPathServicesBuilder) super.build(service);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> pathPrefix(String pathPrefix) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>) super.pathPrefix(pathPrefix);
+    public ContextPathAnnotatedServiceConfigSetters pathPrefix(String pathPrefix) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.pathPrefix(pathPrefix);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> exceptionHandlers(
+    public ContextPathAnnotatedServiceConfigSetters exceptionHandlers(
             ExceptionHandlerFunction... exceptionHandlerFunctions) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.exceptionHandlers(exceptionHandlerFunctions);
+        return (ContextPathAnnotatedServiceConfigSetters) super.exceptionHandlers(exceptionHandlerFunctions);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> exceptionHandlers(
+    public ContextPathAnnotatedServiceConfigSetters exceptionHandlers(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.exceptionHandlers(exceptionHandlerFunctions);
+        return (ContextPathAnnotatedServiceConfigSetters) super.exceptionHandlers(exceptionHandlerFunctions);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> responseConverters(
+    public ContextPathAnnotatedServiceConfigSetters responseConverters(
             ResponseConverterFunction... responseConverterFunctions) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.responseConverters(responseConverterFunctions);
+        return (ContextPathAnnotatedServiceConfigSetters) super.responseConverters(responseConverterFunctions);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> responseConverters(
+    public ContextPathAnnotatedServiceConfigSetters responseConverters(
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.responseConverters(responseConverterFunctions);
+        return (ContextPathAnnotatedServiceConfigSetters) super.responseConverters(responseConverterFunctions);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> requestConverters(
+    public ContextPathAnnotatedServiceConfigSetters requestConverters(
             RequestConverterFunction... requestConverterFunctions) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.requestConverters(requestConverterFunctions);
+        return (ContextPathAnnotatedServiceConfigSetters) super.requestConverters(requestConverterFunctions);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> requestConverters(
+    public ContextPathAnnotatedServiceConfigSetters requestConverters(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.requestConverters(requestConverterFunctions);
+        return (ContextPathAnnotatedServiceConfigSetters) super.requestConverters(requestConverterFunctions);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> useBlockingTaskExecutor(
+    public ContextPathAnnotatedServiceConfigSetters useBlockingTaskExecutor(
             boolean useBlockingTaskExecutor) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
+        return (ContextPathAnnotatedServiceConfigSetters)
                 super.useBlockingTaskExecutor(useBlockingTaskExecutor);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> queryDelimiter(String delimiter) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.queryDelimiter(delimiter);
+    public ContextPathAnnotatedServiceConfigSetters queryDelimiter(String delimiter) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.queryDelimiter(delimiter);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> requestTimeout(Duration requestTimeout) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.requestTimeout(requestTimeout);
+    public ContextPathAnnotatedServiceConfigSetters requestTimeout(
+            Duration requestTimeout) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.requestTimeout(requestTimeout);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> requestTimeoutMillis(long requestTimeoutMillis) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.requestTimeoutMillis(requestTimeoutMillis);
+    public ContextPathAnnotatedServiceConfigSetters requestTimeoutMillis(
+            long requestTimeoutMillis) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.requestTimeoutMillis(requestTimeoutMillis);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> maxRequestLength(long maxRequestLength) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.maxRequestLength(maxRequestLength);
+    public ContextPathAnnotatedServiceConfigSetters maxRequestLength(
+            long maxRequestLength) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.maxRequestLength(maxRequestLength);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> verboseResponses(boolean verboseResponses) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.verboseResponses(verboseResponses);
+    public ContextPathAnnotatedServiceConfigSetters verboseResponses(
+            boolean verboseResponses) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.verboseResponses(verboseResponses);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> accessLogFormat(String accessLogFormat) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.accessLogFormat(accessLogFormat);
+    public ContextPathAnnotatedServiceConfigSetters accessLogFormat(
+            String accessLogFormat) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.accessLogFormat(accessLogFormat);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> accessLogWriter(AccessLogWriter accessLogWriter,
-                                                                       boolean shutdownOnStop) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
+    public ContextPathAnnotatedServiceConfigSetters accessLogWriter(
+            AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
+        return (ContextPathAnnotatedServiceConfigSetters)
                 super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> decorator(
+    public ContextPathAnnotatedServiceConfigSetters decorator(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.decorator(decoratingHttpServiceFunction);
+        return (ContextPathAnnotatedServiceConfigSetters) super.decorator(decoratingHttpServiceFunction);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> decorator(
+    public ContextPathAnnotatedServiceConfigSetters decorator(
             Function<? super HttpService, ? extends HttpService> decorator) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.decorator(decorator);
+        return (ContextPathAnnotatedServiceConfigSetters) super.decorator(decorator);
     }
 
-    @SuppressWarnings("unchecked")
     @SafeVarargs
     @Override
-    public final ContextPathAnnotatedServiceConfigSetters<T> decorators(
+    public final ContextPathAnnotatedServiceConfigSetters decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>) super.decorators(decorators);
+        return (ContextPathAnnotatedServiceConfigSetters) super.decorators(decorators);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> decorators(
+    public ContextPathAnnotatedServiceConfigSetters decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.decorators(decorators);
+        return (ContextPathAnnotatedServiceConfigSetters) super.decorators(decorators);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> defaultServiceName(String defaultServiceName) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.defaultServiceName(defaultServiceName);
+    public ContextPathAnnotatedServiceConfigSetters defaultServiceName(
+            String defaultServiceName) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.defaultServiceName(defaultServiceName);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> defaultServiceNaming(
+    public ContextPathAnnotatedServiceConfigSetters defaultServiceNaming(
             ServiceNaming defaultServiceNaming) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.defaultServiceNaming(defaultServiceNaming);
+        return (ContextPathAnnotatedServiceConfigSetters) super.defaultServiceNaming(defaultServiceNaming);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> defaultLogName(String defaultLogName) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.defaultLogName(defaultLogName);
+    public ContextPathAnnotatedServiceConfigSetters defaultLogName(
+            String defaultLogName) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.defaultLogName(defaultLogName);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> blockingTaskExecutor(
+    public ContextPathAnnotatedServiceConfigSetters blockingTaskExecutor(
             ScheduledExecutorService blockingTaskExecutor, boolean shutdownOnStop) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
+        return (ContextPathAnnotatedServiceConfigSetters)
                 super.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> blockingTaskExecutor(
+    public ContextPathAnnotatedServiceConfigSetters blockingTaskExecutor(
             BlockingTaskExecutor blockingTaskExecutor, boolean shutdownOnStop) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
+        return (ContextPathAnnotatedServiceConfigSetters)
                 super.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> blockingTaskExecutor(int numThreads) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.blockingTaskExecutor(numThreads);
+    public ContextPathAnnotatedServiceConfigSetters blockingTaskExecutor(
+            int numThreads) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.blockingTaskExecutor(numThreads);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> successFunction(
+    public ContextPathAnnotatedServiceConfigSetters successFunction(
             SuccessFunction successFunction) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.successFunction(successFunction);
+        return (ContextPathAnnotatedServiceConfigSetters) super.successFunction(successFunction);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> requestAutoAbortDelay(Duration delay) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.requestAutoAbortDelay(delay);
+    public ContextPathAnnotatedServiceConfigSetters requestAutoAbortDelay(
+            Duration delay) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.requestAutoAbortDelay(delay);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> requestAutoAbortDelayMillis(long delayMillis) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.requestAutoAbortDelayMillis(delayMillis);
+    public ContextPathAnnotatedServiceConfigSetters requestAutoAbortDelayMillis(
+            long delayMillis) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.requestAutoAbortDelayMillis(delayMillis);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> multipartUploadsLocation(
+    public ContextPathAnnotatedServiceConfigSetters multipartUploadsLocation(
             Path multipartUploadsLocation) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
+        return (ContextPathAnnotatedServiceConfigSetters)
                 super.multipartUploadsLocation(multipartUploadsLocation);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> requestIdGenerator(
+    public ContextPathAnnotatedServiceConfigSetters requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)
-                super.requestIdGenerator(requestIdGenerator);
+        return (ContextPathAnnotatedServiceConfigSetters) super.requestIdGenerator(requestIdGenerator);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> addHeader(CharSequence name, Object value) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.addHeader(name, value);
+    public ContextPathAnnotatedServiceConfigSetters addHeader(CharSequence name,
+                                                              Object value) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.addHeader(name, value);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> addHeaders(
+    public ContextPathAnnotatedServiceConfigSetters addHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.addHeaders(defaultHeaders);
+        return (ContextPathAnnotatedServiceConfigSetters) super.addHeaders(defaultHeaders);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> setHeader(CharSequence name, Object value) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.setHeader(name, value);
+    public ContextPathAnnotatedServiceConfigSetters setHeader(CharSequence name,
+                                                              Object value) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.setHeader(name, value);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> setHeaders(
+    public ContextPathAnnotatedServiceConfigSetters setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.setHeaders(defaultHeaders);
+        return (ContextPathAnnotatedServiceConfigSetters) super.setHeaders(defaultHeaders);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathAnnotatedServiceConfigSetters<T> errorHandler(
+    public ContextPathAnnotatedServiceConfigSetters errorHandler(
             ServiceErrorHandler serviceErrorHandler) {
-        return (ContextPathAnnotatedServiceConfigSetters<T>)  super.errorHandler(serviceErrorHandler);
+        return (ContextPathAnnotatedServiceConfigSetters) super.errorHandler(serviceErrorHandler);
     }
 }
