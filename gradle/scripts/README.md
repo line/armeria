@@ -665,7 +665,7 @@ Java 11 will be upgraded to Java 11.
 
 ## Setting a Kotlin target version with the `kotlin(\\d+\\.\\d+)` flag.
 
-By default, `kotlin` flag compile a Kotlin module with the [language version and API version](https://kotlinlang.org/docs/compatibility-modes.html)
+By default, `kotlin` flag compiles a Kotlin module with the [language and API version](https://kotlinlang.org/docs/compatibility-modes.html)
 specified by [Kotlin Gradle plugin](https://plugins.gradle.org/plugin/org.jetbrains.kotlin.jvm).
 However, if you want to compile a Kotlin module with a different language version and API version, you can use
 `kotlin(\\d+\\.\\d)` flag.
