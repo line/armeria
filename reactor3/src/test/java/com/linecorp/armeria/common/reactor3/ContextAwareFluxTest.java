@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -375,20 +375,19 @@ class ContextAwareFluxTest {
     void connectableFlux_dispose() throws InterruptedException {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CompletableFuture<Disposable> future = new CompletableFuture<>();
         try (SafeCloseable ignored = ctx.push()) {
             final ConnectableFlux<String> connectableFlux = Flux.just("foo").publish();
             flux = addCallbacks(connectableFlux.autoConnect(2, disposable -> {
                 assertThat(ctxExists(ctx)).isTrue();
-                disposable.dispose();
-                latch.countDown();
-            }).publishOn(Schedulers.single()), ctx);
+                future.complete(disposable);
+            }).publishOn(Schedulers.newSingle("aaa")), ctx);
         }
         final Disposable disposable1 = flux.subscribe();
         final Disposable disposable2 = flux.subscribe();
         assertThat(disposable1.isDisposed()).isFalse();
         assertThat(disposable2.isDisposed()).isFalse();
-        latch.await();
+        future.join().dispose();
         await().untilAsserted(() -> {
             assertThat(disposable1.isDisposed()).isTrue();
             assertThat(disposable2.isDisposed()).isTrue();
