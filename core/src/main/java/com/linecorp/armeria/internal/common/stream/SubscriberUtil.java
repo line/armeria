@@ -22,8 +22,6 @@ import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
 import io.netty.util.concurrent.EventExecutor;
 
 public final class SubscriberUtil {
@@ -52,7 +50,7 @@ public final class SubscriberUtil {
         }
     }
 
-    public static Throwable abortedOrLate(@Nullable Subscriber<?> oldSubscriber) {
+    public static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
         if (oldSubscriber instanceof AbortingSubscriber) {
             return ((AbortingSubscriber<?>) oldSubscriber).cause();
         }

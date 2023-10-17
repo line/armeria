@@ -211,8 +211,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
                 decodedReq.write(trailers);
-                if (!req.isInitialized()) {
-                    assert req.needsAggregation();
+                if (req.needsAggregation()) {
+                    assert !req.isInitialized();
                     // An aggregated request can be fired now.
                     ctx.fireChannelRead(req);
                 }
@@ -303,8 +303,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Received an empty DATA frame
             if (endOfStream) {
                 req.close();
-                if (!req.isInitialized()) {
-                    assert req.needsAggregation();
+                if (req.needsAggregation()) {
+                    assert !req.isInitialized();
                     ctx.fireChannelRead(req);
                 }
             }
@@ -327,21 +327,21 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
             final HttpStatusException httpStatusException =
                     HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-            if (decodedReq.isInitialized()) {
-                decodedReq.abortResponse(httpStatusException, true);
-            } else {
-                assert decodedReq.needsAggregation();
+            if (req.needsAggregation()) {
+                assert !req.isInitialized();
                 final StreamingDecodedHttpRequest streamingReq =
                         decodedReq.toAbortedStreaming(inboundTrafficController, httpStatusException, true);
                 requests.put(streamId, streamingReq);
                 ctx.fireChannelRead(streamingReq);
+            } else {
+                decodedReq.abortResponse(httpStatusException, true);
             }
         } else if (decodedReq.isOpen()) {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-                if (endOfStream && !req.isInitialized()) {
-                    assert decodedReq.needsAggregation();
+                if (endOfStream && req.needsAggregation()) {
+                    assert !req.isInitialized();
                     // An aggregated request is now ready to be fired.
                     ctx.fireChannelRead(req);
                 }
@@ -354,19 +354,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         // All bytes have been processed.
         return dataLength + padding;
-    }
-
-    private static boolean isWritable(@Nullable Http2Stream stream) {
-        if (stream == null) {
-            return false;
-        }
-        switch (stream.state()) {
-            case OPEN:
-            case HALF_CLOSED_REMOTE:
-                return !stream.isHeadersSent();
-            default:
-                return false;
-        }
     }
 
     private void writeInvalidRequestPathResponse(int streamId, @Nullable RequestHeaders headers) {
