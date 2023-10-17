@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.noopSubs
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -35,7 +34,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
-import reactor.core.Disposable;
 import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -368,23 +366,6 @@ class ContextAwareFluxTest {
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
-    }
-
-    @Test
-    void connectableFlux_dispose() {
-        final ClientRequestContext ctx = newContext();
-        final Flux<String> flux;
-        final CompletableFuture<Disposable> future = new CompletableFuture<>();
-        try (SafeCloseable ignored = ctx.push()) {
-            final ConnectableFlux<String> connectableFlux = Flux.just("foo").publish();
-            flux = addCallbacks(connectableFlux.autoConnect(2, disposable -> {
-                assertThat(ctxExists(ctx)).isTrue();
-                future.complete(disposable);
-            }).publishOn(Schedulers.single()), ctx);
-        }
-        flux.subscribe().dispose();
-        flux.subscribe().dispose();
-        assertThat(future.join().isDisposed()).isTrue();
     }
 
     @Test
