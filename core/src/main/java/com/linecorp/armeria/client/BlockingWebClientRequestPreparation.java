@@ -135,8 +135,7 @@ public final class BlockingWebClientRequestPreparation
     @UnstableApi
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             Class<? extends T> clazz) {
-        requireNonNull(clazz, "clazz");
-        return as(AggregatedResponseAs.json(clazz, OBJECT_MAPPER, SUCCESS_PREDICATE));
+        return asJson(clazz, OBJECT_MAPPER);
     }
 
     /**
@@ -189,8 +188,7 @@ public final class BlockingWebClientRequestPreparation
     @UnstableApi
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef) {
-        requireNonNull(typeRef, "typeRef");
-        return as(AggregatedResponseAs.json(typeRef, OBJECT_MAPPER, SUCCESS_PREDICATE));
+        return asJson(typeRef, OBJECT_MAPPER);
     }
 
     /**
