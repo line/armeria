@@ -19,8 +19,10 @@ import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.ctxExist
 import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.newContext;
 import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.noopSubscription;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -34,6 +36,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
+import reactor.core.Disposable;
 import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -366,6 +369,30 @@ class ContextAwareFluxTest {
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
+    }
+
+    @Test
+    void connectableFlux_dispose() throws InterruptedException {
+        final ClientRequestContext ctx = newContext();
+        final Flux<String> flux;
+        final CountDownLatch latch = new CountDownLatch(1);
+        try (SafeCloseable ignored = ctx.push()) {
+            final ConnectableFlux<String> connectableFlux = Flux.just("foo").publish();
+            flux = addCallbacks(connectableFlux.autoConnect(2, disposable -> {
+                assertThat(ctxExists(ctx)).isTrue();
+                disposable.dispose();
+                latch.countDown();
+            }).publishOn(Schedulers.single()), ctx);
+        }
+        final Disposable disposable1 = flux.subscribe();
+        final Disposable disposable2 = flux.subscribe();
+        assertThat(disposable1.isDisposed()).isFalse();
+        assertThat(disposable2.isDisposed()).isFalse();
+        latch.await();
+        await().untilAsserted(() -> {
+            assertThat(disposable1.isDisposed()).isTrue();
+            assertThat(disposable2.isDisposed()).isTrue();
+        });
     }
 
     @Test
