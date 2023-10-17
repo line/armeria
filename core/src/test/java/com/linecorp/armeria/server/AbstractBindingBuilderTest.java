@@ -129,7 +129,9 @@ class AbstractBindingBuilderTest {
     @ParameterizedTest
     @ValueSource(classes = {
             ContextPathDecoratingBindingBuilder.class,
+            VirtualHostContextPathDecoratingBindingBuilder.class,
             ContextPathServiceBindingBuilder.class,
+            VirtualHostContextPathServiceBindingBuilder.class,
             DecoratingServiceBindingBuilder.class,
             ServiceBindingBuilder.class,
             VirtualHostDecoratingServiceBindingBuilder.class,
