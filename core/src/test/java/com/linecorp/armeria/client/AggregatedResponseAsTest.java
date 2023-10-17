@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ResponseAsUtil.OBJECT_MAPPER;
+import static com.linecorp.armeria.client.ResponseAsUtil.SUCCESS_PREDICATE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
-import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +41,6 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 class AggregatedResponseAsTest {
 
     private final ResponseHeaders headers = ResponseHeaders.of(200);
-    private static final Predicate<AggregatedHttpResponse> SUCCESS_PREDICATE = res -> res.status().isSuccess();
 
     @Test
     void bytes() {
@@ -66,7 +66,7 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers, HttpData.wrap(content));
 
         final ResponseEntity<MyObject> entity =
-                AggregatedResponseAs.json(MyObject.class, SUCCESS_PREDICATE).as(response);
+                AggregatedResponseAs.json(MyObject.class, OBJECT_MAPPER, SUCCESS_PREDICATE).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
@@ -78,7 +78,8 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(ResponseHeaders.of(500), HttpData.wrap(content));
 
-        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, SUCCESS_PREDICATE).as(response))
+        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, OBJECT_MAPPER, SUCCESS_PREDICATE)
+                                                     .as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
                 .hasMessageContaining("status: 500 Internal Server Error");
     }
@@ -88,7 +89,8 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
 
-        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, SUCCESS_PREDICATE).as(response))
+        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, OBJECT_MAPPER, SUCCESS_PREDICATE)
+                                                     .as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
                 .hasCauseInstanceOf(JsonProcessingException.class);
     }
@@ -116,7 +118,8 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers, HttpData.wrap(content));
 
         final ResponseEntity<List<MyObject>> entity =
-                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, SUCCESS_PREDICATE)
+                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {},
+                                          OBJECT_MAPPER, SUCCESS_PREDICATE)
                                     .as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);

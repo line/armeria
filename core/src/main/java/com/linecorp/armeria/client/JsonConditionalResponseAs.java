@@ -62,9 +62,8 @@ public final class JsonConditionalResponseAs<T> {
     }
 
     /**
-     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
-     * mappings. If none of the {@link Predicate}s are satisfied, the content will be deserialized
-     * to the specified {@link Class}.
+     * Sets the {@link Predicate} and {@link Class} that the content is deserialized into the {@link Class}
+     * when the {@link AggregatedHttpResponse} passes the {@link Predicate}.
      */
     public JsonConditionalResponseAs<T> orElseJson(
             Class<? extends T> clazz, Predicate<AggregatedHttpResponse> predicate) {
@@ -72,9 +71,8 @@ public final class JsonConditionalResponseAs<T> {
     }
 
     /**
-     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
-     * mappings. If none of the {@link Predicate}s are satisfied, the content will be deserialized
-     * to the specified {@link Class} using the {@link ObjectMapper}.
+     * Sets the {@link Predicate} and {@link Class} that the content is deserialized into the {@link Class}
+     * using the {@link ObjectMapper} when the {@link AggregatedHttpResponse} passes the {@link Predicate}.
      */
     public JsonConditionalResponseAs<T> orElseJson(
             Class<? extends T> clazz, ObjectMapper objectMapper, Predicate<AggregatedHttpResponse> predicate) {
@@ -86,9 +84,8 @@ public final class JsonConditionalResponseAs<T> {
     }
 
     /**
-     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
-     * mappings. If none of the {@link Predicate}s are satisfied, the content will be deserialized
-     * using the specified {@link TypeReference}.
+     * Sets the {@link Predicate} and {@link TypeReference} that the content is deserialized into the
+     * {@link TypeReference} when the {@link AggregatedHttpResponse} passes the {@link Predicate}.
      */
     public JsonConditionalResponseAs<T> orElseJson(
             TypeReference<? extends T> typeRef, Predicate<AggregatedHttpResponse> predicate) {
@@ -96,9 +93,9 @@ public final class JsonConditionalResponseAs<T> {
     }
 
     /**
-     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
-     * mappings. If none of the {@link Predicate}s are satisfied, the content will be deserialized
-     * using the specified {@link TypeReference} and {@link ObjectMapper}.
+     * Sets the {@link Predicate} and {@link TypeReference} that the content is deserialized into the
+     * {@link TypeReference} using the {@link ObjectMapper} when the {@link AggregatedHttpResponse} passes
+     * the {@link Predicate}.
      */
     public JsonConditionalResponseAs<T> orElseJson(
             TypeReference<? extends T> typeRef, ObjectMapper objectMapper,
@@ -112,18 +109,18 @@ public final class JsonConditionalResponseAs<T> {
     }
 
     /**
-     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
-     * mappings. If none of the {@link Predicate}s are satisfied, the content will be deserialized
-     * to the specified {@link Class}.
+     * Returns {@link FutureResponseAs} that deserializes the {@link HttpResponse} based on the configured
+     * deserializers so far and deserializes to the {@link Class} lastly if none of the {@link Predicate} of
+     * configured deserializers pass.
      */
     public FutureResponseAs<ResponseEntity<T>> orElseJson(Class<? extends T> clazz) {
-        return orElse(AggregatedResponseAs.json(clazz));
+        return orElseJson(clazz, OBJECT_MAPPER);
     }
 
     /**
-     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
-     * mappings. If none of the {@link Predicate}s are satisfied, the content will be deserialized
-     * to the specified {@link Class} using the {@link ObjectMapper}.
+     * Returns {@link FutureResponseAs} that deserializes the {@link HttpResponse} based on the configured
+     * deserializers so far and deserializes to the {@link Class} lastly using the {@link ObjectMapper}
+     * if none of the {@link Predicate} of configured deserializers pass.
      */
     public FutureResponseAs<ResponseEntity<T>> orElseJson(
             Class<? extends T> clazz, ObjectMapper objectMapper) {
@@ -131,18 +128,18 @@ public final class JsonConditionalResponseAs<T> {
     }
 
     /**
-     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
-     * mappings. If none of the {@link Predicate}s are satisfied, the content will be deserialized
-     * using the specified {@link TypeReference}.
+     * Returns {@link FutureResponseAs} that deserializes the {@link HttpResponse} based on the configured
+     * deserializers so far and deserializes to the {@link TypeReference} lastly if none of the
+     * {@link Predicate} of configured deserializers pass.
      */
     public FutureResponseAs<ResponseEntity<T>> orElseJson(TypeReference<? extends T> typeRef) {
-        return orElse(AggregatedResponseAs.json(typeRef));
+        return orElseJson(typeRef, OBJECT_MAPPER);
     }
 
     /**
-     * Returns {@link ResponseAs} based on the configured {@link ResponseAs} to {@link Predicate}
-     * mappings. If none of the {@link Predicate}s are satisfied, the content will be deserialized
-     * using the specified {@link TypeReference} and {@link ObjectMapper}.
+     * Returns {@link FutureResponseAs} that deserializes the {@link HttpResponse} based on the configured
+     * deserializers so far and deserializes to the {@link TypeReference} lastly using the {@link ObjectMapper}
+     * if none of the {@link Predicate} of configured deserializers pass.
      */
     public FutureResponseAs<ResponseEntity<T>> orElseJson(
             TypeReference<? extends T> typeRef, ObjectMapper objectMapper) {

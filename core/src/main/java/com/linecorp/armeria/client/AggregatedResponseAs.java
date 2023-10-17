@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.JacksonUtil;
 
 final class AggregatedResponseAs {
 
@@ -38,20 +37,9 @@ final class AggregatedResponseAs {
         return response -> ResponseEntity.of(response.headers(), response.contentUtf8(), response.trailers());
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz) {
-        return response -> newJsonResponseEntity(
-                response, bytes -> JacksonUtil.readValue(bytes, clazz));
-    }
-
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
             Class<? extends T> clazz, ObjectMapper mapper) {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz));
-    }
-
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
-            TypeReference<? extends T> typeRef) {
-        return response -> newJsonResponseEntity(
-                response, bytes -> JacksonUtil.readValue(bytes, typeRef));
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
@@ -61,20 +49,8 @@ final class AggregatedResponseAs {
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
-            Class<? extends T> clazz, Predicate<AggregatedHttpResponse> predicate) {
-        return response -> newJsonResponseEntity(
-                response, bytes -> JacksonUtil.readValue(bytes, clazz), predicate);
-    }
-
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
             Class<? extends T> clazz, ObjectMapper mapper, Predicate<AggregatedHttpResponse> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz), predicate);
-    }
-
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
-            TypeReference<? extends T> typeRef, Predicate<AggregatedHttpResponse> predicate) {
-        return response -> newJsonResponseEntity(
-                response, bytes -> JacksonUtil.readValue(bytes, typeRef), predicate);
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
