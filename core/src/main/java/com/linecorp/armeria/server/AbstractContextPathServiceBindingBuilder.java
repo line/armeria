@@ -29,7 +29,7 @@ abstract class AbstractContextPathServiceBindingBuilder<T extends ServiceConfigs
     }
 
     @Override
-    void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
+    final void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
         contextPathServicesBuilder.addServiceConfigSetters(serviceConfigBuilder);
     }
 
