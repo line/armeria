@@ -424,7 +424,7 @@ abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilde
         return parent;
     }
 
-    Set<String> contextPaths() {
+    final Set<String> contextPaths() {
         return contextPaths;
     }
 }
