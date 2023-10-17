@@ -651,8 +651,8 @@ public final class GrpcServiceBuilder {
      *     </li>
      * </ul>
      *
-     * <p>{@link GrpcSerializationFormats#JSON} must be supported via
-     * {@link #supportedSerializationFormats(SerializationFormat...)} to enable HTTP/JSON transcoding.
+     * <p>When custom {@link #supportedSerializationFormats(SerializationFormat...)} are used,
+     * {@link GrpcSerializationFormats#JSON} must be included to enable HTTP/JSON transcoding.
      * Otherwise, service builder will throw {@link IllegalStateException} when building the service.
      *
      * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
