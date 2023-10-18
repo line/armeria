@@ -22,11 +22,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
@@ -37,7 +32,6 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -50,6 +44,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunctionBuilder;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -117,7 +112,7 @@ public final class GrpcServiceBuilder {
     private ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
 
     @Nullable
-    private LinkedList<Map.Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction>> exceptionMappings;
+    private GrpcExceptionHandlerFunctionBuilder exceptionMappingsBuilder;
 
     @Nullable
     private GrpcExceptionHandlerFunction exceptionHandler;
@@ -816,6 +811,16 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether the gRPC response is compressed automatically when a client sends the
+     * {@code grpc-accept-encoding} header with the encoding registered in the {@link CompressorRegistry}.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder autoCompression(boolean autoCompression) {
+        this.autoCompression = autoCompression;
+        return this;
+    }
+
+    /**
      * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
      * to a gRPC {@link Status}.
      *
@@ -824,10 +829,14 @@ public final class GrpcServiceBuilder {
     @UnstableApi
     public GrpcServiceBuilder exceptionHandler(GrpcExceptionHandlerFunction exceptionHandler) {
         requireNonNull(exceptionHandler, "exceptionHandler");
-        checkState(exceptionMappings == null,
+        checkState(exceptionMappingsBuilder == null,
                    "addExceptionMapping() and exceptionHandler() are mutually exclusive.");
 
-        this.exceptionHandler = exceptionHandler;
+        if (this.exceptionHandler == null) {
+            this.exceptionHandler = exceptionHandler;
+        } else {
+            this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
+        }
         return this;
     }
 
@@ -846,28 +855,23 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets whether the gRPC response is compressed automatically when a client sends the
-     * {@code grpc-accept-encoding} header with the encoding registered in the {@link CompressorRegistry}.
-     */
-    @UnstableApi
-    public GrpcServiceBuilder autoCompression(boolean autoCompression) {
-        this.autoCompression = autoCompression;
-        return this;
-    }
-
-    /**
      * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
      * <p>Note that this method and {@link #exceptionHandler(GrpcExceptionHandlerFunction)}
      * are mutually exclusive.
+     *
+     * @deprecated Use {@link GrpcExceptionHandlerFunctionBuilder#on(Class, Status)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
         requireNonNull(exceptionType, "exceptionType");
         requireNonNull(status, "status");
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionHandler() are mutually exclusive.");
-        return addExceptionHandler(exceptionType, (ctx, throwable, meta) -> status);
+
+        exceptionMappingsBuilder().on(exceptionType, status);
+        return this;
     }
 
     /**
@@ -877,7 +881,8 @@ public final class GrpcServiceBuilder {
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are
      * mutually exclusive.
      *
-     * @deprecated Use {@link #addExceptionHandler(Class, GrpcExceptionHandlerFunction)} instead.
+     * @deprecated Use {@link GrpcExceptionHandlerFunctionBuilder#on(Class, GrpcExceptionHandlerFunction)}
+     *             instead.
      */
     @Deprecated
     public <T extends Throwable> GrpcServiceBuilder addExceptionMapping(
@@ -888,13 +893,7 @@ public final class GrpcServiceBuilder {
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
-        if (exceptionMappings == null) {
-            exceptionMappings = new LinkedList<>();
-        }
-
-        //noinspection unchecked
-        addExceptionHandler(exceptionMappings, exceptionType,
-                            (ctx, throwable, metadata) -> statusFunction.apply((T) throwable, metadata));
+        exceptionMappingsBuilder().on(exceptionType, statusFunction);
         return this;
     }
 
@@ -905,87 +904,27 @@ public final class GrpcServiceBuilder {
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)}
      * are mutually exclusive.
      *
-     * @deprecated Use {@link #addExceptionHandler(Class, GrpcExceptionHandlerFunction)} instead.
+     * @deprecated Use {@link GrpcExceptionHandlerFunctionBuilder#on(Class, GrpcExceptionHandlerFunction)}
+     *             instead.
      */
     @Deprecated
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType,
                                                   GrpcStatusFunction statusFunction) {
         requireNonNull(exceptionType, "exceptionType");
         requireNonNull(statusFunction, "statusFunction");
-        addExceptionHandler(exceptionMappings, exceptionType, statusFunction::apply);
+
+        checkState(exceptionHandler == null,
+                   "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
+
+        exceptionMappingsBuilder().on(exceptionType, statusFunction::apply);
         return this;
     }
 
-    /**
-     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
-     * The mapping is used to handle a {@link Throwable} when it is raised.
-     *
-     * <p>Note that this method and {@link #exceptionHandler(GrpcExceptionHandlerFunction)}
-     * are mutually exclusive.
-     */
-    @UnstableApi
-    public GrpcServiceBuilder addExceptionHandler(Class<? extends Throwable> exceptionType,
-                                                  GrpcExceptionHandlerFunction exceptionHandler) {
-        requireNonNull(exceptionType, "exceptionType");
-        requireNonNull(exceptionHandler, "statusFunction");
-
-        checkState(this.exceptionHandler == null,
-                   "addExceptionHandler() and exceptionHandler() are mutually exclusive.");
-
-        if (exceptionMappings == null) {
-            exceptionMappings = new LinkedList<>();
+    private GrpcExceptionHandlerFunctionBuilder exceptionMappingsBuilder() {
+        if (exceptionMappingsBuilder == null) {
+            exceptionMappingsBuilder = GrpcExceptionHandlerFunction.builder();
         }
-
-        addExceptionHandler(exceptionMappings, exceptionType, exceptionHandler);
-        return this;
-    }
-
-    @VisibleForTesting
-    static <T extends Throwable> void addExceptionHandler(
-            LinkedList<Map.Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction>> exceptionMappings,
-            Class<T> exceptionType, GrpcExceptionHandlerFunction exceptionHandler) {
-        requireNonNull(exceptionMappings, "exceptionMappings");
-        requireNonNull(exceptionType, "exceptionType");
-        requireNonNull(exceptionHandler, "exceptionHandler");
-
-        final ListIterator<Map.Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction>> it =
-                exceptionMappings.listIterator();
-
-        while (it.hasNext()) {
-            final Map.Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction> next = it.next();
-            final Class<? extends Throwable> oldExceptionType = next.getKey();
-            checkArgument(oldExceptionType != exceptionType, "%s is already added with %s",
-                          oldExceptionType, next.getValue());
-
-            if (oldExceptionType.isAssignableFrom(exceptionType)) {
-                // exceptionType is a subtype of oldExceptionType. exceptionType needs a higher priority.
-                it.previous();
-                it.add(new SimpleImmutableEntry<>(exceptionType, exceptionHandler));
-                return;
-            }
-        }
-
-        exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, exceptionHandler));
-    }
-
-    /**
-     * Converts the specified exception mappings to {@link GrpcExceptionHandlerFunction}.
-     */
-    @VisibleForTesting
-    static GrpcExceptionHandlerFunction toGrpcExceptionHandler(
-            List<Map.Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction>> exceptionMappings) {
-        final List<Map.Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction>> mappings =
-                ImmutableList.copyOf(exceptionMappings);
-
-        return (ctx, throwable, metadata) -> {
-            for (Map.Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction> mapping : mappings) {
-                if (mapping.getKey().isInstance(throwable)) {
-                    final Status status = mapping.getValue().apply(ctx, throwable, metadata);
-                    return status == null ? null : status.withCause(throwable);
-                }
-            }
-            return null;
-        };
+        return exceptionMappingsBuilder;
     }
 
     private ImmutableList.Builder<ServerInterceptor> interceptors() {
@@ -1026,8 +965,8 @@ public final class GrpcServiceBuilder {
         }
 
         final GrpcExceptionHandlerFunction grpcExceptionHandler;
-        if (exceptionMappings != null) {
-            grpcExceptionHandler = toGrpcExceptionHandler(exceptionMappings);
+        if (exceptionMappingsBuilder != null) {
+            grpcExceptionHandler = exceptionMappingsBuilder.build();
         } else {
             grpcExceptionHandler = exceptionHandler;
         }

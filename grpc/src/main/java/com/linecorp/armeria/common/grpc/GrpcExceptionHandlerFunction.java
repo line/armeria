@@ -33,12 +33,19 @@ import io.grpc.Status;
 public interface GrpcExceptionHandlerFunction {
 
     /**
+     * Returns a newly created {@link GrpcExceptionHandlerFunctionBuilder}.
+     */
+    static GrpcExceptionHandlerFunctionBuilder builder() {
+        return new GrpcExceptionHandlerFunctionBuilder();
+    }
+
+    /**
      * Maps the specified {@link Throwable} to a gRPC {@link Status},
      * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
     @Nullable
-    Status apply(RequestContext ctx, Throwable throwable, Metadata metadata);
+    Status apply(RequestContext ctx, Throwable cause, Metadata metadata);
 
     /**
      * Returns a {@link GrpcExceptionHandlerFunction} that returns the result of this function
@@ -48,12 +55,12 @@ public interface GrpcExceptionHandlerFunction {
      */
     default GrpcExceptionHandlerFunction orElse(GrpcExceptionHandlerFunction next) {
         requireNonNull(next, "next");
-        return (ctx, throwable, metadata) -> {
-            final Status status = apply(ctx, throwable, metadata);
+        return (ctx, cause, metadata) -> {
+            final Status status = apply(ctx, cause, metadata);
             if (status != null) {
                 return status;
             }
-            return next.apply(ctx, throwable, metadata);
+            return next.apply(ctx, cause, metadata);
         };
     }
 }
