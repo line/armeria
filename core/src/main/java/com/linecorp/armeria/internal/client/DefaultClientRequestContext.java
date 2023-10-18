@@ -104,6 +104,20 @@ public final class DefaultClientRequestContext
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
 
+    private static SessionProtocol desiredSessionProtocol(SessionProtocol protocol, ClientOptions options) {
+        if (!options.factory().options().preferHttp1()) {
+            return protocol;
+        }
+        switch (protocol) {
+            case HTTP:
+                return SessionProtocol.H1C;
+            case HTTPS:
+                return SessionProtocol.H1;
+            default:
+                return protocol;
+        }
+    }
+
     private static final short STR_CHANNEL_AVAILABILITY = 1;
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
@@ -208,7 +222,7 @@ public final class DefaultClientRequestContext
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        super(meterRegistry, sessionProtocol, id, method, reqTarget,
+        super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root));
