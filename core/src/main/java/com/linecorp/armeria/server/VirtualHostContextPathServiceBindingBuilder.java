@@ -31,6 +31,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
  * {@link VirtualHostBuilder#contextPath(String...)}.
@@ -175,6 +177,18 @@ public final class VirtualHostContextPathServiceBindingBuilder
             Path multipartUploadsLocation) {
         return (VirtualHostContextPathServiceBindingBuilder)
                 super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public VirtualHostContextPathServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                                          boolean shutdownOnStop) {
+        return (VirtualHostContextPathServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup,
+                                                                                      shutdownOnStop);
+    }
+
+    @Override
+    public VirtualHostContextPathServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (VirtualHostContextPathServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     @Override

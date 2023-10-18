@@ -31,6 +31,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
  * {@link ServerBuilder#contextPath(String...)}.
@@ -167,6 +169,17 @@ public final class ContextPathServiceBindingBuilder
     public ContextPathServiceBindingBuilder multipartUploadsLocation(
             Path multipartUploadsLocation) {
         return (ContextPathServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public ContextPathServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                               boolean shutdownOnStop) {
+        return (ContextPathServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public ContextPathServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (ContextPathServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     @Override
