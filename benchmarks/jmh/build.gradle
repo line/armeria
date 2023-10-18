@@ -20,8 +20,6 @@ dependencies {
     implementation libs.awaitility
     implementation libs.kotlin.coroutines.core
 
-    jmh libs.jmh.extras
-
     implementation project(':testing-internal')
 }
 

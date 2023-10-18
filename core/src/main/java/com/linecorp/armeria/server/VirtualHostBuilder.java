@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
@@ -81,6 +82,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
+import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -120,6 +122,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Nullable
     private String hostnamePattern;
     private int port = -1;
+    private String baseContextPath = "/";
     @Nullable
     private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
@@ -161,8 +164,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
     @Nullable
     private ServiceErrorHandler errorHandler;
-    private final ContextPathServicesBuilder<VirtualHostBuilder> servicesBuilder =
-            new ContextPathServicesBuilder<>(this, this);
+    private final VirtualHostContextPathServicesBuilder servicesBuilder =
+            new VirtualHostContextPathServicesBuilder(this, this, ImmutableSet.of("/"));
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -203,6 +206,16 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      */
     public VirtualHostBuilder defaultHostname(String defaultHostname) {
         this.defaultHostname = normalizeDefaultHostname(defaultHostname);
+        return this;
+    }
+
+    /**
+     * Sets the base context path for this {@link VirtualHost}.
+     * Services and decorators added to this {@link VirtualHost} will
+     * be prefixed by the specified {@code baseContextPath}.
+     */
+    public VirtualHostBuilder baseContextPath(String baseContextPath) {
+        this.baseContextPath = RouteUtil.ensureAbsolutePath(baseContextPath, "baseContextPath");
         return this;
     }
 
@@ -400,9 +413,33 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Returns a {@link VirtualHostContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see VirtualHostContextPathServicesBuilder
+     */
+    @UnstableApi
+    public VirtualHostContextPathServicesBuilder contextPath(String... contextPaths) {
+        return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
+    }
+
+    /**
+     * Returns a {@link VirtualHostContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see VirtualHostContextPathServicesBuilder
+     */
+    @UnstableApi
+    public VirtualHostContextPathServicesBuilder contextPath(Iterable<String> contextPaths) {
+        requireNonNull(contextPaths, "contextPaths");
+        return new VirtualHostContextPathServicesBuilder(this, this, ImmutableSet.copyOf(contextPaths));
+    }
+
+    /**
      * Configures an {@link HttpService} of the {@link VirtualHost} with the {@code customizer}.
      */
     public VirtualHostBuilder withRoute(Consumer<? super VirtualHostServiceBindingBuilder> customizer) {
+        requireNonNull(customizer, "customizer");
         final VirtualHostServiceBindingBuilder builder = new VirtualHostServiceBindingBuilder(this);
         customizer.accept(builder);
         return this;
@@ -677,7 +714,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
     @Nullable
     private Function<? super HttpService, ? extends HttpService> getRouteDecoratingService(
-            @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
+            @Nullable VirtualHostBuilder defaultVirtualHostBuilder, String baseContextPath) {
         final List<RouteDecoratingService> routeDecoratingServices;
         if (defaultVirtualHostBuilder != null) {
             routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
@@ -689,8 +726,10 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         }
 
         if (!routeDecoratingServices.isEmpty()) {
-            return RouteDecoratingService.newDecorator(
-                    Routers.ofRouteDecoratingService(routeDecoratingServices));
+            final List<RouteDecoratingService> prefixed = routeDecoratingServices.stream()
+                    .map(service -> service.withRoutePrefix(baseContextPath))
+                    .collect(toImmutableList());
+            return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
         } else {
             return null;
         }
@@ -1287,16 +1326,16 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                             successFunction, requestAutoAbortDelayMillis,
                                             multipartUploadsLocation, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
-                                            unhandledExceptionsReporter);
+                                            unhandledExceptionsReporter, baseContextPath);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
-                new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
+                new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, "/", FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
                                requestAutoAbortDelayMillis, multipartUploadsLocation,
                                defaultHeaders, requestIdGenerator,
-                               defaultErrorHandler, unhandledExceptionsReporter);
+                               defaultErrorHandler, unhandledExceptionsReporter, "/");
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);
@@ -1311,7 +1350,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                 builder.build(), requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
-                getRouteDecoratingService(template);
+                getRouteDecoratingService(template, baseContextPath);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
