@@ -16,15 +16,12 @@
 
 package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
 /**
  * A builder class for binding a {@code decorator} with {@link Route} fluently
@@ -41,176 +38,150 @@ import com.linecorp.armeria.internal.server.RouteDecoratingService;
  *       .path("/decorated")
  *       .build(myDecorator) // decorator under /v1/api/decorated, /v2/api/decorated
  * }</pre>
- *
- * @param <T> the type this decorator will be added to.
  */
 @UnstableApi
-public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsBuilder>
-        extends AbstractBindingBuilder {
+public final class ContextPathDecoratingBindingBuilder
+        extends AbstractContextPathDecoratingBindingBuilder<ServerBuilder> {
 
-    private final ContextPathServicesBuilder<T> builder;
-
-    ContextPathDecoratingBindingBuilder(ContextPathServicesBuilder<T> builder) {
-        super(builder.contextPaths());
-        this.builder = builder;
+    ContextPathDecoratingBindingBuilder(AbstractContextPathServicesBuilder<ServerBuilder> builder) {
+        super(builder);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> path(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.path(pathPattern);
+    public ContextPathDecoratingBindingBuilder path(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.path(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> pathPrefix(String prefix) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.pathPrefix(prefix);
+    public ContextPathDecoratingBindingBuilder pathPrefix(String prefix) {
+        return (ContextPathDecoratingBindingBuilder) super.pathPrefix(prefix);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> get(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.get(pathPattern);
+    public ContextPathDecoratingBindingBuilder get(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.get(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> post(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.post(pathPattern);
+    public ContextPathDecoratingBindingBuilder post(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.post(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> put(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.put(pathPattern);
+    public ContextPathDecoratingBindingBuilder put(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.put(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> patch(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.patch(pathPattern);
+    public ContextPathDecoratingBindingBuilder patch(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.patch(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> delete(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.delete(pathPattern);
+    public ContextPathDecoratingBindingBuilder delete(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.delete(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> options(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.options(pathPattern);
+    public ContextPathDecoratingBindingBuilder options(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.options(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> head(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.head(pathPattern);
+    public ContextPathDecoratingBindingBuilder head(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.head(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> trace(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.trace(pathPattern);
+    public ContextPathDecoratingBindingBuilder trace(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.trace(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> connect(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.connect(pathPattern);
+    public ContextPathDecoratingBindingBuilder connect(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.connect(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> methods(HttpMethod... methods) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.methods(methods);
+    public ContextPathDecoratingBindingBuilder methods(HttpMethod... methods) {
+        return (ContextPathDecoratingBindingBuilder) super.methods(methods);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> methods(Iterable<HttpMethod> methods) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.methods(methods);
+    public ContextPathDecoratingBindingBuilder methods(Iterable<HttpMethod> methods) {
+        return (ContextPathDecoratingBindingBuilder) super.methods(methods);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> consumes(MediaType... consumeTypes) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.consumes(consumeTypes);
+    public ContextPathDecoratingBindingBuilder consumes(MediaType... consumeTypes) {
+        return (ContextPathDecoratingBindingBuilder) super.consumes(consumeTypes);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> consumes(Iterable<MediaType> consumeTypes) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.consumes(consumeTypes);
+    public ContextPathDecoratingBindingBuilder consumes(
+            Iterable<MediaType> consumeTypes) {
+        return (ContextPathDecoratingBindingBuilder) super.consumes(consumeTypes);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> produces(MediaType... produceTypes) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.produces(produceTypes);
+    public ContextPathDecoratingBindingBuilder produces(MediaType... produceTypes) {
+        return (ContextPathDecoratingBindingBuilder) super.produces(produceTypes);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> produces(Iterable<MediaType> produceTypes) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.produces(produceTypes);
+    public ContextPathDecoratingBindingBuilder produces(
+            Iterable<MediaType> produceTypes) {
+        return (ContextPathDecoratingBindingBuilder) super.produces(produceTypes);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> matchesParams(String... paramPredicates) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.matchesParams(paramPredicates);
+    public ContextPathDecoratingBindingBuilder matchesParams(String... paramPredicates) {
+        return (ContextPathDecoratingBindingBuilder) super.matchesParams(paramPredicates);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> matchesParams(Iterable<String> paramPredicates) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.matchesParams(paramPredicates);
+    public ContextPathDecoratingBindingBuilder matchesParams(
+            Iterable<String> paramPredicates) {
+        return (ContextPathDecoratingBindingBuilder) super.matchesParams(paramPredicates);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> matchesParams(
-            String paramName, Predicate<? super String> valuePredicate) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.matchesParams(paramName, valuePredicate);
+    public ContextPathDecoratingBindingBuilder matchesParams(String paramName,
+                                                             Predicate<? super String> valuePredicate) {
+        return (ContextPathDecoratingBindingBuilder) super.matchesParams(paramName, valuePredicate);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> matchesHeaders(String... headerPredicates) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.matchesHeaders(headerPredicates);
+    public ContextPathDecoratingBindingBuilder matchesHeaders(
+            String... headerPredicates) {
+        return (ContextPathDecoratingBindingBuilder) super.matchesHeaders(headerPredicates);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> matchesHeaders(Iterable<String> headerPredicates) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.matchesHeaders(headerPredicates);
+    public ContextPathDecoratingBindingBuilder matchesHeaders(
+            Iterable<String> headerPredicates) {
+        return (ContextPathDecoratingBindingBuilder) super.matchesHeaders(headerPredicates);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> matchesHeaders(CharSequence headerName,
-                                                                 Predicate<? super String> valuePredicate) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.matchesHeaders(headerName, valuePredicate);
+    public ContextPathDecoratingBindingBuilder matchesHeaders(CharSequence headerName,
+                                                              Predicate<? super String> valuePredicate) {
+        return (ContextPathDecoratingBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> addRoute(Route route) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.addRoute(route);
+    public ContextPathDecoratingBindingBuilder addRoute(Route route) {
+        return (ContextPathDecoratingBindingBuilder) super.addRoute(route);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> exclude(String pathPattern) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.exclude(pathPattern);
+    public ContextPathDecoratingBindingBuilder exclude(String pathPattern) {
+        return (ContextPathDecoratingBindingBuilder) super.exclude(pathPattern);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public ContextPathDecoratingBindingBuilder<T> exclude(Route excludedRoute) {
-        return (ContextPathDecoratingBindingBuilder<T>) super.exclude(excludedRoute);
+    public ContextPathDecoratingBindingBuilder exclude(Route excludedRoute) {
+        return (ContextPathDecoratingBindingBuilder) super.exclude(excludedRoute);
     }
 
     /**
@@ -219,13 +190,10 @@ public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsB
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}
      */
-    public ContextPathServicesBuilder<T> build(
+    @Override
+    public ContextPathServicesBuilder build(
             Function<? super HttpService, ? extends HttpService> decorator) {
-        requireNonNull(decorator, "decorator");
-        buildRouteList().forEach(
-                route -> contextPaths().forEach(contextPath -> builder.addRouteDecoratingService(
-                        new RouteDecoratingService(route, contextPath, decorator))));
-        return builder;
+        return (ContextPathServicesBuilder) super.build(decorator);
     }
 
     /**
@@ -235,9 +203,9 @@ public final class ContextPathDecoratingBindingBuilder<T extends ServiceConfigsB
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}
      */
-    public ContextPathServicesBuilder<T> build(
+    @Override
+    public ContextPathServicesBuilder build(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
-        return build(delegate -> new FunctionalDecoratingHttpService(delegate, decoratingHttpServiceFunction));
+        return (ContextPathServicesBuilder) super.build(decoratingHttpServiceFunction);
     }
 }

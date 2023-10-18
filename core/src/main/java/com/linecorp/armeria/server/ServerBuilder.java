@@ -1133,7 +1133,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @see ContextPathServicesBuilder
      */
     @UnstableApi
-    public ContextPathServicesBuilder<ServerBuilder> contextPath(String... contextPaths) {
+    public ContextPathServicesBuilder contextPath(String... contextPaths) {
         return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
     }
 
@@ -1144,9 +1144,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @see ContextPathServicesBuilder
      */
     @UnstableApi
-    public ContextPathServicesBuilder<ServerBuilder> contextPath(Iterable<String> contextPaths) {
+    public ContextPathServicesBuilder contextPath(Iterable<String> contextPaths) {
         requireNonNull(contextPaths, "contextPaths");
-        return new ContextPathServicesBuilder<>(
+        return new ContextPathServicesBuilder(
                 this, defaultVirtualHostBuilder, ImmutableSet.copyOf(contextPaths));
     }
 
