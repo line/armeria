@@ -774,7 +774,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
 
     /**
      * Sets the maximum number of RST frames that are allowed per window before the connection is closed. This
-     * allows to protect against the remote peer flooding us with such frames and so use up a lot of CPU.
+     * allows to protect against the remote peer flooding us with such frames and using up a lot of CPU.
      * Defaults to {@link Flags#defaultHttp2MaxResetFramesPerMinute()}.
      *
      * <p>Note that {@code 0} for any of the parameters means no protection should be applied.
