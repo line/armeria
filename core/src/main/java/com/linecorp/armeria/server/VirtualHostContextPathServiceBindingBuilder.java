@@ -215,7 +215,8 @@ public final class VirtualHostContextPathServiceBindingBuilder
     }
 
     @Override
-    public VirtualHostContextPathServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+    public VirtualHostContextPathServiceBindingBuilder contextHook(
+            Supplier<? extends AutoCloseable> contextHook) {
         return (VirtualHostContextPathServiceBindingBuilder) super.contextHook(contextHook);
     }
 
