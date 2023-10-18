@@ -285,6 +285,10 @@ public final class Flags {
             getValue(FlagsProvider::defaultHttp2MaxHeaderListSize, "defaultHttp2MaxHeaderListSize",
                      value -> value > 0 && value <= 0xFFFFFFFFL);
 
+    private static final int DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE =
+            getValue(FlagsProvider::defaultHttp2MaxResetFramesPerMinute,
+                     "defaultHttp2MaxResetFramesPerMinute", value -> value >= 0);
+
     private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
             getValue(FlagsProvider::defaultHttp1MaxInitialLineLength, "defaultHttp1MaxInitialLineLength",
                      value -> value >= 0);
@@ -1050,6 +1054,22 @@ public final class Flags {
      */
     public static long defaultHttp2MaxHeaderListSize() {
         return DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE;
+    }
+
+    /**
+     * Returns the default maximum number of RST frames that are allowed per window before the connection is
+     * closed. This allows to protect against the remote peer flooding us with such frames and using up a lot
+     * of CPU. Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * to override the default value. {@code 0} means no protection should be applied.
+     */
+    @UnstableApi
+    public static int defaultHttp2MaxResetFramesPerMinute() {
+        return DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
     }
 
     /**
