@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -211,6 +212,11 @@ public final class VirtualHostContextPathServiceBindingBuilder
     public VirtualHostContextPathServiceBindingBuilder errorHandler(
             ServiceErrorHandler serviceErrorHandler) {
         return (VirtualHostContextPathServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public VirtualHostContextPathServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (VirtualHostContextPathServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     @Override
