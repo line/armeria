@@ -214,7 +214,8 @@ public interface ServerConfig {
     long http2MaxHeaderListSize();
 
     /**
-     * Returns the maximum number of RST frames that are allowed per {@link #http2MaxResetFramesWindowSeconds()}.
+     * Returns the maximum number of RST frames that are allowed per
+     * {@link #http2MaxResetFramesWindowSeconds()}.
      */
     @UnstableApi
     int http2MaxResetFramesPerWindow();
