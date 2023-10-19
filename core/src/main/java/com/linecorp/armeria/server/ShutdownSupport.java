@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.Server.logger;
 import static java.util.Objects.requireNonNull;
 
@@ -61,12 +62,17 @@ interface ShutdownSupport {
 
     static ShutdownSupport of(ExecutorService executor, long terminationTimeoutMillis) {
         requireNonNull(executor, "executor");
+        checkArgument(terminationTimeoutMillis >= 0, "terminationTimeoutMillis: %s (expected: >= 0)",
+                      terminationTimeoutMillis);
+        if (terminationTimeoutMillis == 0 || terminationTimeoutMillis == Long.MAX_VALUE) {
+            return of(executor);
+        }
         return () -> {
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(terminationTimeoutMillis, TimeUnit.MILLISECONDS)) {
-                    logger.warn("As the termination does not complete within the specified timeout, an " +
-                                "attempt is made to forcefully terminate the {}:", executor);
+                    logger.warn("Failed to terminate {} in {} millis. Shutdown it forcefully.", executor,
+                                terminationTimeoutMillis);
                     executor.shutdownNow();
                     if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
                         logger.warn("The forced termination of the {} could not be completed within 60 " +

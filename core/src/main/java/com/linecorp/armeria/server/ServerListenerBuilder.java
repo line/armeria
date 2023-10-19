@@ -284,13 +284,7 @@ public final class ServerListenerBuilder {
                                                       Duration terminationTimeout) {
         requireNonNull(executorService, "executorService");
         requireNonNull(terminationTimeout, "terminationTimeout");
-        long millis;
-        try {
-            millis = terminationTimeout.toMillis();
-        } catch (ArithmeticException ignore) {
-            millis = terminationTimeout.isNegative() ? Long.MIN_VALUE : Long.MAX_VALUE;
-        }
-        shutdownWhenStopping(executorService, millis);
+        shutdownWhenStopping(executorService, terminationTimeout.toMillis());
         return this;
     }
 
@@ -311,16 +305,8 @@ public final class ServerListenerBuilder {
     public ServerListenerBuilder shutdownWhenStopping(ExecutorService executorService,
                                                       long terminationTimeoutMillis) {
         requireNonNull(executorService, "executorService");
-        if (terminationTimeoutMillis < 0) {
-            throw new IllegalArgumentException("terminationTimeout must be greater than or equal to 0.");
-        }
-
-        if (terminationTimeoutMillis == 0) {
-            serverStoppingCallbacks.add(s -> ShutdownSupport.of(executorService).shutdown());
-        } else {
-            serverStoppingCallbacks.add(
-                    s -> ShutdownSupport.of(executorService, terminationTimeoutMillis).shutdown());
-        }
+        serverStoppingCallbacks.add(
+                s -> ShutdownSupport.of(executorService, terminationTimeoutMillis).shutdown());
         return this;
     }
 
@@ -342,13 +328,7 @@ public final class ServerListenerBuilder {
                                                      Duration terminationTimeout) {
         requireNonNull(executorService, "executorService");
         requireNonNull(terminationTimeout, "terminationTimeout");
-        long millis;
-        try {
-            millis = terminationTimeout.toMillis();
-        } catch (ArithmeticException ignore) {
-            millis = terminationTimeout.isNegative() ? Long.MIN_VALUE : Long.MAX_VALUE;
-        }
-        shutdownWhenStopped(executorService, millis);
+        shutdownWhenStopped(executorService, terminationTimeout.toMillis());
         return this;
     }
 
@@ -369,16 +349,8 @@ public final class ServerListenerBuilder {
     public ServerListenerBuilder shutdownWhenStopped(ExecutorService executorService,
                                                      long terminationTimeoutMillis) {
         requireNonNull(executorService, "executorService");
-        if (terminationTimeoutMillis < 0) {
-            throw new IllegalArgumentException("terminationTimeout must be greater than or equal to 0.");
-        }
-
-        if (terminationTimeoutMillis == 0) {
-            serverStoppedCallbacks.add(s -> ShutdownSupport.of(executorService).shutdown());
-        } else {
-            serverStoppedCallbacks.add(
-                    s -> ShutdownSupport.of(executorService, terminationTimeoutMillis).shutdown());
-        }
+        serverStoppedCallbacks.add(
+                s -> ShutdownSupport.of(executorService, terminationTimeoutMillis).shutdown());
         return this;
     }
 
