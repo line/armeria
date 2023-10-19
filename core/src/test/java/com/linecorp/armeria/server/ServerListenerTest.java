@@ -22,8 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
@@ -31,7 +29,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ServerListenerTest {
@@ -104,9 +101,126 @@ class ServerListenerTest {
     }
 
     @Test
-    void testGracefulShutdownPeriodicExecutorWaitIndefinitelyOnServerStopping() throws Exception {
+    void testGracefulShutdownExecutor() throws Exception {
         final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
+        final CancellableExecutors executors = new CancellableExecutors();
+        final ServerListener sl = ServerListener
+                .builder()
+                .shutdownWhenStopping(executors.periodicExecutors(0), 0)
+                .shutdownWhenStopping(executors.interruptibleExecutors(0), 0)
+                .shutdownWhenStopping(executors.uninterruptibleExecutors(0), 0)
+                .shutdownWhenStopping(executors.periodicExecutors(1), 1000)
+                .shutdownWhenStopping(executors.interruptibleExecutors(1), 1000)
+                .shutdownWhenStopping(executors.uninterruptibleExecutors(1), 1000)
+                .shutdownWhenStopped(executors.periodicExecutors(2), 0)
+                .shutdownWhenStopped(executors.interruptibleExecutors(2), 0)
+                .shutdownWhenStopped(executors.uninterruptibleExecutors(2), 0)
+                .shutdownWhenStopped(executors.periodicExecutors(3), 1000)
+                .shutdownWhenStopped(executors.interruptibleExecutors(3), 1000)
+                .shutdownWhenStopped(executors.uninterruptibleExecutors(3), 1000)
+                .build();
+
+        final Server server = Server.builder()
+                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                    .serverListener(sl)
+                                    .build();
+        server.start().get();
+        stopFuture = server.stop();
+        Thread.sleep(1000);
+
+        for (int i = 0; i < 2; i++) {
+            assertThat(executors.periodicExecutors(2 * i).isTerminated()).isEqualTo(true);
+            executors.periodicTasks(2 * i).cancel();
+            Thread.sleep(1000);
+
+            assertThat(executors.interruptibleExecutors(2 * i).isTerminated()).isEqualTo(false);
+            executors.interruptibleTasks(2 * i).cancel();
+            Thread.sleep(1000);
+
+            assertThat(executors.uninterruptibleExecutors(2 * i).isTerminated()).isEqualTo(false);
+            executors.uninterruptibleTasks(2 * i).cancel();
+            Thread.sleep(1000);
+
+            assertThat(executors.periodicExecutors(2 * i + 1).isTerminated()).isEqualTo(true);
+            executors.periodicTasks(2 * i + 1).cancel();
+            Thread.sleep(1000);
+
+            assertThat(executors.interruptibleExecutors(2 * i + 1).isTerminated()).isEqualTo(true);
+            executors.interruptibleTasks(2 * i + 1).cancel();
+            Thread.sleep(1000);
+
+            assertThat(executors.uninterruptibleExecutors(2 * i + 1).isTerminated()).isEqualTo(false);
+            executors.uninterruptibleTasks(2 * i + 1).cancel();
+            Thread.sleep(4000);
+        }
+        stopFuture.get();
+    }
+
+    private abstract class CancellableRunnable implements Runnable {
+        private volatile boolean canceled;
+
+        protected CancellableRunnable() {
+            canceled = false;
+        }
+
+        public boolean isCanceled() {
+            return canceled;
+        }
+
+        void cancel() {
+            canceled = true;
+        }
+    }
+
+    private final class CancellableExecutors {
+        private static final int SIZE = 4;
+        private final CancellableRunnable[] periodicTasks = new CancellableRunnable[SIZE];
+        private final ExecutorService[] periodicExecutors = new ExecutorService[SIZE];
+        private final CancellableRunnable[] interruptibleTasks = new CancellableRunnable[SIZE];
+        private final ExecutorService[] interruptibleExecutors = new ExecutorService[SIZE];
+        private final CancellableRunnable[] uninterruptibleTasks = new CancellableRunnable[SIZE];
+        private final ExecutorService[] uninterruptibleExecutors = new ExecutorService[SIZE];
+
+        CancellableExecutors() {
+            for (int i = 0; i < SIZE; i++) {
+                periodicTasks[i] = new Simple();
+                interruptibleTasks[i] = new InterruptibleInfiniteLoop();
+                uninterruptibleTasks[i] = new UninterruptibleInfiniteLoop();
+
+                periodicExecutors[i] = Executors.newSingleThreadScheduledExecutor();
+                periodicExecutors[i].submit(periodicTasks[i]);
+                interruptibleExecutors[i] = Executors.newSingleThreadExecutor();
+                interruptibleExecutors[i].submit(interruptibleTasks[i]);
+                uninterruptibleExecutors[i] = Executors.newSingleThreadExecutor();
+                uninterruptibleExecutors[i].submit(uninterruptibleTasks[i]);
+            }
+        }
+
+        CancellableRunnable periodicTasks(int index) {
+            return periodicTasks[index];
+        }
+
+        ExecutorService periodicExecutors(int index) {
+            return periodicExecutors[index];
+        }
+
+        CancellableRunnable interruptibleTasks(int index) {
+            return interruptibleTasks[index];
+        }
+
+        ExecutorService interruptibleExecutors(int index) {
+            return interruptibleExecutors[index];
+        }
+
+        CancellableRunnable uninterruptibleTasks(int index) {
+            return uninterruptibleTasks[index];
+        }
+
+        ExecutorService uninterruptibleExecutors(int index) {
+            return uninterruptibleExecutors[index];
+        }
+
+        private final class Simple extends CancellableRunnable {
             @Override
             public void run() {
                 try {
@@ -115,376 +229,24 @@ class ServerListenerTest {
                     Thread.currentThread().interrupt();
                 }
             }
-        }) {
-            final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
-            periodic.scheduleAtFixedRate(task, 0, 1000, TimeUnit.MILLISECONDS);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(periodic, 0)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(periodic.isTerminated()).isEqualTo(true);
         }
-        stopFuture.get();
-    }
 
-    @Test
-    void testGracefulShutdownInterruptibleExecutorWaitIndefinitelyOnServerStopping() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
+        private final class InterruptibleInfiniteLoop extends CancellableRunnable {
             @Override
             public void run() {
-                while (!isClosed() && !Thread.currentThread().isInterrupted()) {
+                while (!isCanceled() && !Thread.currentThread().isInterrupted()) {
                     final int foo = 42;
                 }
             }
-        }) {
-            final ExecutorService interruptible = Executors.newSingleThreadExecutor();
-            interruptible.submit(task);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(interruptible, 0)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(interruptible.isTerminated()).isEqualTo(false);
         }
-        stopFuture.get();
-    }
 
-    @Test
-    void testGracefulShutdownUnstoppableExecutorWaitIndefinitelyOnServerStopping() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
+        private final class UninterruptibleInfiniteLoop extends CancellableRunnable {
             @Override
             public void run() {
-                while (!isClosed()) {
+                while (!isCanceled()) {
                     final int foo = 42;
                 }
             }
-        }) {
-            final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
-            unstoppable.submit(task);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(unstoppable, 0)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(unstoppable.isTerminated()).isEqualTo(false);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownPeriodicExecutorWaitWithTimeoutOnServerStopping() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }) {
-            final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
-            periodic.scheduleAtFixedRate(task, 0, 1000, TimeUnit.MILLISECONDS);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(periodic, 1000)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(periodic.isTerminated()).isEqualTo(true);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownInterruptibleExecutorWaitWithTimeoutOnServerStopping() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                while (!isClosed() && !Thread.currentThread().isInterrupted()) {
-                    final int foo = 42;
-                }
-            }
-        }) {
-            final ExecutorService interruptible = Executors.newSingleThreadExecutor();
-            interruptible.submit(task);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(interruptible, 1000)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(interruptible.isTerminated()).isEqualTo(true);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownUnstoppableExecutorWaitWithTimeoutOnServerStopping() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                while (!isClosed()) {
-                    final int foo = 42;
-                }
-            }
-        }) {
-            final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
-            unstoppable.submit(task);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopping(unstoppable, 1000)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(unstoppable.isTerminated()).isEqualTo(false);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownPeriodicExecutorWaitIndefinitelyOnServerStopped() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }) {
-            final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
-            periodic.scheduleAtFixedRate(task, 0, 1000, TimeUnit.MILLISECONDS);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopped(periodic, 0)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(periodic.isTerminated()).isEqualTo(true);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownInterruptibleExecutorWaitIndefinitelyOnServerStopped() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                while (!isClosed() && !Thread.currentThread().isInterrupted()) {
-                    final int foo = 42;
-                }
-            }
-        }) {
-            final ExecutorService interruptible = Executors.newSingleThreadExecutor();
-            interruptible.submit(task);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopped(interruptible, 0)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(interruptible.isTerminated()).isEqualTo(false);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownUnstoppableExecutorWaitIndefinitelyOnServerStopped() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                while (!isClosed()) {
-                    final int foo = 42;
-                }
-            }
-        }) {
-            final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
-            unstoppable.submit(task);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopped(unstoppable, 0)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(unstoppable.isTerminated()).isEqualTo(false);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownPeriodicExecutorWaitWithTimeoutOnServerStopped() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }) {
-            final ScheduledExecutorService periodic = Executors.newSingleThreadScheduledExecutor();
-            periodic.scheduleAtFixedRate(task, 0, 1000, TimeUnit.MILLISECONDS);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopped(periodic, 1000)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(periodic.isTerminated()).isEqualTo(true);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownInterruptibleExecutorWaitWithTimeoutOnServerStopped() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                while (!isClosed() && !Thread.currentThread().isInterrupted()) {
-                    final int foo = 42;
-                }
-            }
-        }) {
-            final ExecutorService interruptible = Executors.newSingleThreadExecutor();
-            interruptible.submit(task);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopped(interruptible, 1000)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(interruptible.isTerminated()).isEqualTo(true);
-        }
-        stopFuture.get();
-    }
-
-    @Test
-    void testGracefulShutdownUnstoppableExecutorWaitWithTimeoutOnServerStopped() throws Exception {
-        final CompletableFuture<Void> stopFuture;
-        try (CloseableRunnable task = new CloseableRunnable() {
-            @Override
-            public void run() {
-                while (!isClosed()) {
-                    final int foo = 42;
-                }
-            }
-        }) {
-            final ExecutorService unstoppable = Executors.newSingleThreadExecutor();
-            unstoppable.submit(task);
-            final ServerListener sl = ServerListener.builder()
-                                                    .shutdownWhenStopped(unstoppable, 1000)
-                                                    .build();
-
-            final Server server = Server.builder()
-                                        .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
-                                        .serverListener(sl)
-                                        .build();
-            server.start().get();
-            stopFuture = server.stop();
-            Thread.sleep(5000);
-
-            assertThat(unstoppable.isTerminated()).isEqualTo(false);
-        }
-        stopFuture.get();
-    }
-
-    private abstract static class CloseableRunnable implements SafeCloseable, Runnable {
-        private volatile boolean closed;
-
-        CloseableRunnable() {
-            closed = false;
-        }
-
-        boolean isClosed() {
-            return closed;
-        }
-
-        @Override
-        public void close() {
-            closed = true;
         }
     }
 }
