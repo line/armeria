@@ -85,10 +85,22 @@ public final class RouteDecoratingService implements HttpService {
     private final Route route;
     private final HttpService decorator;
 
-    public RouteDecoratingService(Route route,
+    public RouteDecoratingService(Route route, String contextPath,
                                   Function<? super HttpService, ? extends HttpService> decoratorFunction) {
-        this.route = requireNonNull(route, "route");
+        this.route = requireNonNull(route, "route").withPrefix(contextPath);
         decorator = requireNonNull(decoratorFunction, "decoratorFunction").apply(this);
+    }
+
+    private RouteDecoratingService(Route route, HttpService decorator) {
+        this.route = requireNonNull(route, "route");
+        this.decorator = requireNonNull(decorator, "decorator");
+    }
+
+    /**
+     * Adds the specified {@code prefix} to this {@code decorator}.
+     */
+    public RouteDecoratingService withRoutePrefix(String prefix) {
+        return new RouteDecoratingService(route.withPrefix(prefix), decorator);
     }
 
     @Override

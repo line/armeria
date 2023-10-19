@@ -1,12 +1,7 @@
 def libDir = new File(buildscript.sourceFile.parentFile, 'lib')
 
 apply from: "${libDir}/prerequisite.gradle"
-if (rootProject.ext.hasDependenciesToml) {
-    apply from: "${libDir}/common-dependencies.gradle"
-} else {
-    // 'dependencies.yml' is deprecated in favor of 'dependencies.toml'
-    apply from: "${libDir}/common-dependencies-legacy.gradle"
-}
+apply from: "${libDir}/common-dependencies.gradle"
 apply from: "${libDir}/common-git.gradle"
 apply from: "${libDir}/common-info.gradle"
 apply from: "${libDir}/common-publish.gradle"
