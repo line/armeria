@@ -19,16 +19,28 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class DefaultContextAwareCallable<T> implements ContextAwareCallable<T> {
     private final RequestContext context;
     private final Callable<T> callable;
+    @Nullable
+    private final Function<Throwable, T> exceptionHandler;
 
     DefaultContextAwareCallable(RequestContext context, Callable<T> callable) {
         this.context = requireNonNull(context, "context");
         this.callable = requireNonNull(callable, "callable");
+        exceptionHandler = null;
+    }
+
+    DefaultContextAwareCallable(RequestContext context, Callable<T> callable,
+                                Function<Throwable, T> exceptionHandler) {
+        this.context = requireNonNull(context, "context");
+        this.callable = requireNonNull(callable, "callable");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Override
@@ -45,6 +57,11 @@ final class DefaultContextAwareCallable<T> implements ContextAwareCallable<T> {
     public T call() throws Exception {
         try (SafeCloseable ignored = context.push()) {
             return callable.call();
+        } catch (Throwable cause) {
+            if (exceptionHandler == null) {
+                throw cause;
+            }
+            return exceptionHandler.apply(cause);
         }
     }
 }

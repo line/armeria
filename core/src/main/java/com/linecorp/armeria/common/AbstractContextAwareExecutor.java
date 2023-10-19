@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -59,9 +60,17 @@ abstract class AbstractContextAwareExecutor<E extends Executor> implements Execu
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractContextAwareExecutor.class);
     private final E executor;
+    @Nullable
+    private final Consumer<Throwable> exceptionHandler;
 
     AbstractContextAwareExecutor(E executor) {
         this.executor = requireNonNull(executor, "executor");
+        exceptionHandler = null;
+    }
+
+    AbstractContextAwareExecutor(E executor, Consumer<Throwable> exceptionHandler) {
+        this.executor = requireNonNull(executor, "executor");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Nullable
@@ -73,7 +82,13 @@ abstract class AbstractContextAwareExecutor<E extends Executor> implements Execu
 
     final Runnable makeContextAware(Runnable task) {
         final RequestContext context = contextOrNull();
-        return context == null ? task : context.makeContextAware(task);
+        if (context == null) {
+            return task;
+        }
+        if (exceptionHandler == null) {
+            return context.makeContextAware(task);
+        }
+        return context.makeContextAware(task, exceptionHandler);
     }
 
     @Override

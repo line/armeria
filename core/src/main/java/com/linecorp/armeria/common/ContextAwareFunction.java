@@ -31,8 +31,20 @@ public interface ContextAwareFunction<T, R> extends Function<T, R>, ContextHolde
      * Returns a new {@link ContextAwareFuture} that sets the specified {@link RequestContext}
      * before executing an underlying {@link Function}.
      */
-    static <T, R> ContextAwareFunction of(RequestContext context, Function<T, R> function) {
-        return new DefaultContextAwareFunction(context, function);
+    static <T, R> ContextAwareFunction<T, R> of(RequestContext context, Function<T, R> function) {
+        return new DefaultContextAwareFunction<>(context, function);
+    }
+
+    /**
+     * Returns a new {@link ContextAwareFuture} that sets the specified {@link RequestContext}
+     * before executing an underlying {@link Function}.
+     *
+     * @param exceptionHandler A function that handles exceptions thrown during the execution of the
+     *                         {@code function}.
+     */
+    static <T, R> ContextAwareFunction<T, R> of(RequestContext context, Function<T, R> function,
+                                          Function<Throwable, R> exceptionHandler) {
+        return new DefaultContextAwareFunction<>(context, function, exceptionHandler);
     }
 
     /**

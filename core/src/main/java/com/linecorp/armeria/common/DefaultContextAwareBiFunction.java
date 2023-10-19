@@ -19,17 +19,29 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class DefaultContextAwareBiFunction<T, U, R> implements ContextAwareBiFunction<T, U, R> {
 
     private final RequestContext context;
     private final BiFunction<T, U, R> function;
+    @Nullable
+    private final Function<Throwable, R> exceptionHandler;
 
     DefaultContextAwareBiFunction(RequestContext context, BiFunction<T, U, R> function) {
         this.context = requireNonNull(context, "context");
         this.function = requireNonNull(function, "function");
+        exceptionHandler = null;
+    }
+
+    DefaultContextAwareBiFunction(RequestContext context, BiFunction<T, U, R> function,
+                                  Function<Throwable, R> exceptionHandler) {
+        this.context = requireNonNull(context, "context");
+        this.function = requireNonNull(function, "function");
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     @Override
@@ -46,6 +58,11 @@ final class DefaultContextAwareBiFunction<T, U, R> implements ContextAwareBiFunc
     public R apply(T t, U u) {
         try (SafeCloseable ignored = context.push()) {
             return function.apply(t, u);
+        } catch (Throwable cause) {
+            if (exceptionHandler == null) {
+                throw cause;
+            }
+            return exceptionHandler.apply(cause);
         }
     }
 }
