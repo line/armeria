@@ -47,15 +47,8 @@ final class UnaryMessageDeframer extends AbstractMessageDeframer {
     }
 
     DeframedMessage deframe(HttpData data) {
-        ByteBuf buf = data.byteBuf();
-        if (base64Decoder != null) {
-            buf = base64Decoder.decode(buf);
-        }
-
-        try (UnaryDecoderInput input = new UnaryDecoderInput(buf)) {
-            readHeader(input);
-            return readBody(input);
-        }
+        System.out.println("Exception in deframe");
+        throw new IndexOutOfBoundsException("OH NO!");
     }
 
     DeframedMessage deframe(List<HttpObject> objects) {

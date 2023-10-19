@@ -44,6 +44,7 @@ object Main {
             // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
             // methods in the blockingTaskExecutor thread pool.
             .useBlockingTaskExecutor(useBlockingTaskExecutor)
+            .intercept(MyInterceptor())
             .build()
         return Server.builder()
             .http(httpPort)
