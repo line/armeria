@@ -251,9 +251,9 @@ public final class RequestContextUtil {
                 final AutoCloseable closeable2 = hook2.get();
                 return () -> {
                     try {
-                        closeable1.close();
-                    } finally {
                         closeable2.close();
+                    } finally {
+                        closeable1.close();
                     }
                 };
             };

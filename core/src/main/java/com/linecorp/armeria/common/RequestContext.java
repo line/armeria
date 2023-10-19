@@ -553,6 +553,7 @@ public interface RequestContext extends Unwrappable {
      *       time-consuming task.</li>
      * </ul>
      */
+    @UnstableApi
     void hook(Supplier<? extends AutoCloseable> contextHook);
 
     /**
@@ -560,6 +561,7 @@ public interface RequestContext extends Unwrappable {
      * {@link RequestContextStorage}. The {@link SafeCloseable} returned by the {@link Supplier} will be
      * called whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
      */
+    @UnstableApi
     Supplier<AutoCloseable> hook();
 
     @Override

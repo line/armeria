@@ -271,6 +271,7 @@ public class AbstractClientOptionsBuilder {
      *
      * @param contextHook the {@link Supplier} that provides an {@link AutoCloseable}
      */
+    @UnstableApi
     public AbstractClientOptionsBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         this.contextHook = mergeHooks(this.contextHook, contextHook);

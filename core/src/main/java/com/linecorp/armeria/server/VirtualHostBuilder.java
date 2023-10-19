@@ -1220,6 +1220,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      *
      * @param contextHook the {@link Supplier} that provides the {@link AutoCloseable}
      */
+    @UnstableApi
     public VirtualHostBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         this.contextHook = mergeHooks(this.contextHook, contextHook);

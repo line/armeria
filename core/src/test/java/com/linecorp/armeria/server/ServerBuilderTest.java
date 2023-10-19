@@ -766,4 +766,15 @@ class ServerBuilderTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(poppedRouterCnt.get()).isEqualTo(0);
     }
+
+    @Test
+    void httpMaxResetFramesPerMinute() {
+        final ServerConfig config = Server.builder()
+                                          .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                          .http2MaxResetFramesPerWindow(99, 2)
+                                          .build()
+                                          .config();
+        assertThat(config.http2MaxResetFramesPerWindow()).isEqualTo(99);
+        assertThat(config.http2MaxResetFramesWindowSeconds()).isEqualTo(2);
+    }
 }
