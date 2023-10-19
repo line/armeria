@@ -17,6 +17,14 @@ configure(projectsWithFlags('kotlin')) {
             task.kotlinOptions.jvmTarget = target
             task.kotlinOptions.freeCompilerArgs = compilerArgs
         }
+
+        // Add the generated source directories to the source sets.
+        project.sourceSets.configureEach { sourceSet ->
+            def kotlinSrcDir = file("${project.ext.genSrcDir}/${sourceSet.name}/kotlin")
+            if (!sourceSet.kotlin.srcDirs.contains(kotlinSrcDir)) {
+                sourceSet.kotlin.srcDir kotlinSrcDir
+            }
+        }
     }
 
     if (!rootProject.hasProperty('noLint')) {

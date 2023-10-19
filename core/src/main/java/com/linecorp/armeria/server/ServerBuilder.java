@@ -230,6 +230,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private long unhandledExceptionsReportIntervalMillis =
             Flags.defaultUnhandledExceptionsReportIntervalMillis();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
+    private int http2MaxResetFramesPerWindow = Flags.defaultHttp2MaxResetFramesPerMinute();
+    private int http2MaxResetFramesWindowSeconds = 60;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -772,6 +774,26 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Sets the maximum number of RST frames that are allowed per window before the connection is closed. This
+     * allows to protect against the remote peer flooding us with such frames and using up a lot of CPU.
+     * Defaults to {@link Flags#defaultHttp2MaxResetFramesPerMinute()}.
+     *
+     * <p>Note that {@code 0} for any of the parameters means no protection should be applied.
+     */
+    @UnstableApi
+    public ServerBuilder http2MaxResetFramesPerWindow(int http2MaxResetFramesPerWindow,
+                                                      int http2MaxResetFramesWindowSeconds) {
+        checkArgument(http2MaxResetFramesPerWindow >= 0, "http2MaxResetFramesPerWindow: %s (expected: >= 0)",
+                      http2MaxResetFramesPerWindow);
+        checkArgument(http2MaxResetFramesWindowSeconds >= 0,
+                      "http2MaxResetFramesWindowSeconds: %s (expected: >= 0)",
+                      http2MaxResetFramesWindowSeconds);
+        this.http2MaxResetFramesPerWindow = http2MaxResetFramesPerWindow;
+        this.http2MaxResetFramesWindowSeconds = http2MaxResetFramesWindowSeconds;
+        return this;
+    }
+
+    /**
      * Sets the maximum size of HTTP/2 frame that can be received. Defaults to
      * {@link Flags#defaultHttp2MaxFrameSize()}.
      */
@@ -1132,7 +1154,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @see ContextPathServicesBuilder
      */
     @UnstableApi
-    public ContextPathServicesBuilder<ServerBuilder> contextPath(String... contextPaths) {
+    public ContextPathServicesBuilder contextPath(String... contextPaths) {
         return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
     }
 
@@ -1143,9 +1165,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @see ContextPathServicesBuilder
      */
     @UnstableApi
-    public ContextPathServicesBuilder<ServerBuilder> contextPath(Iterable<String> contextPaths) {
+    public ContextPathServicesBuilder contextPath(Iterable<String> contextPaths) {
         requireNonNull(contextPaths, "contextPaths");
-        return new ContextPathServicesBuilder<>(
+        return new ContextPathServicesBuilder(
                 this, defaultVirtualHostBuilder, ImmutableSet.copyOf(contextPaths));
     }
 
@@ -2168,7 +2190,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
-                http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
+                http2MaxFrameSize, http2MaxHeaderListSize,
+                http2MaxResetFramesPerWindow, http2MaxResetFramesWindowSeconds,
+                http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,

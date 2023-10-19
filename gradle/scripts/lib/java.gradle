@@ -90,7 +90,7 @@ configure(projectsWithFlags('java')) {
     targetJavaVersion = Integer.valueOf(JavaVersion.toVersion(javaTargetCompatibility).majorVersion)
     project.ext.set('targetJavaVersion', targetJavaVersion)
 
-    def testJavaVersion = targetJavaVersion
+    def testJavaVersion = buildJdkVersion
     if (project.hasProperty('testJavaVersion')) {
         def testVersion = Integer.parseInt(String.valueOf(project.findProperty('testJavaVersion')))
         if (testJavaVersion != testVersion) {
