@@ -132,26 +132,29 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
         @Nullable
         private Set<EndpointAndStep> unhandledNewEndpoints;
+        private final AtomicBoolean initialized = new AtomicBoolean();
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
             this.executor = executor;
 
-            final AtomicBoolean initialized = new AtomicBoolean();
-            endpointGroup.addListener(newEndpoints -> {
-                if (initialized.compareAndSet(false, true)) {
-                    final List<Endpoint> dedupEndpoints =
-                            new ArrayList<>(deduplicateEndpoints(newEndpoints).values());
-                    endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
-                    endpointsFinishedRampingUp.addAll(dedupEndpoints);
-                } else {
-                    // Use the executor so the order of endpoints change is guaranteed.
-                    executor.execute(() -> updateEndpoints(newEndpoints));
-                }
-            }, true);
-
+            endpointGroup.whenReady().thenAccept(this::maybeUpdateEndpoints);
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
+            }
+        }
+
+        private void maybeUpdateEndpoints(List<Endpoint> endpoints) {
+            if (initialized.compareAndSet(false, true)) {
+                final List<Endpoint> dedupEndpoints =
+                        new ArrayList<>(deduplicateEndpoints(endpoints).values());
+                endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
+                endpointsFinishedRampingUp.addAll(dedupEndpoints);
+
+                endpointGroup.addListener(this::maybeUpdateEndpoints);
+            } else {
+                // Use the executor so the order of endpoints change is guaranteed.
+                executor.execute(() -> updateEndpoints(endpoints));
             }
         }
 
@@ -262,7 +265,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             final Map<Endpoint, Endpoint> newEndpointsMap = deduplicateEndpoints(newEndpoints);
 
             final List<Endpoint> replacedEndpoints = new ArrayList<>();
-            for (final Iterator<Endpoint> i = endpointsFinishedRampingUp.iterator(); i.hasNext();) {
+            for (final Iterator<Endpoint> i = endpointsFinishedRampingUp.iterator(); i.hasNext(); ) {
                 final Endpoint endpointFinishedRampingUp = i.next();
                 final Endpoint newEndpoint = newEndpointsMap.remove(endpointFinishedRampingUp);
                 if (newEndpoint == null) {
@@ -290,7 +293,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             }
 
             for (final Iterator<EndpointsRampingUpEntry> i = endpointsRampingUp.iterator();
-                 i.hasNext();) {
+                 i.hasNext(); ) {
                 final EndpointsRampingUpEntry endpointsRampingUpEntry = i.next();
 
                 final Set<EndpointAndStep> endpointAndSteps = endpointsRampingUpEntry.endpointAndSteps();
@@ -315,7 +318,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         private void filterOldEndpoints(Set<EndpointAndStep> endpointAndSteps,
                                         Map<Endpoint, Endpoint> newEndpointsMap) {
             final List<EndpointAndStep> replacedEndpoints = new ArrayList<>();
-            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
+            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext(); ) {
                 final EndpointAndStep endpointAndStep = i.next();
                 final Endpoint rampingUpEndpoint = endpointAndStep.endpoint();
                 final Endpoint newEndpoint = newEndpointsMap.remove(rampingUpEndpoint);
@@ -370,7 +373,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         private void updateWeightAndStep(Set<EndpointAndStep> endpointAndSteps) {
-            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
+            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext(); ) {
                 final EndpointAndStep endpointAndStep = i.next();
                 final int step = endpointAndStep.incrementAndGetStep();
                 final Endpoint endpoint = endpointAndStep.endpoint();

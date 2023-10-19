@@ -22,6 +22,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
@@ -39,6 +42,8 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new WeightedRoundRobinSelector(endpointGroup);
     }
+
+    private static final Logger logger = LoggerFactory.getLogger(WeightedRoundRobinStrategy.class);
 
     /**
      * A weighted round robin select strategy.
@@ -58,10 +63,18 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints),
-                                      true);
+            endpointGroup.whenReady().thenAccept(this::maybeUpdateEndpoints);
         }
 
+        private void maybeUpdateEndpoints(List<Endpoint> endpoints) {
+            final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
+            if (endpointsAndWeights == null || endpointsAndWeights.endpoints != endpoints) {
+                if (endpointsAndWeights == null) {
+                    endpointGroup.addListener(this::maybeUpdateEndpoints);
+                }
+                this.endpointsAndWeights = new EndpointsAndWeights(endpoints);
+            }
+        }
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
             final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
