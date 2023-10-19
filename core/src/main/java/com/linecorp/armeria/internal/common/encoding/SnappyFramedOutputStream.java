@@ -35,8 +35,8 @@ final class SnappyFramedOutputStream extends OutputStream {
 
     @Override
     public void write(int b) throws IOException {
-        // We do not optimize this since it is not used internally.
-        write(new byte[] { (byte) b });
+        // It is not used internally.
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -54,7 +54,7 @@ final class SnappyFramedOutputStream extends OutputStream {
 
     /**
      * A {@link SnappyFrameEncoder} that does not require a {@link ChannelHandlerContext}.
-     * This is a workaround for accessing the projected
+     * This is a workaround for accessing the protected
      * {@link SnappyFrameEncoder#encode(ChannelHandlerContext, ByteBuf, ByteBuf)}.
      */
     private static class SimpleSnappyFrameEncoder extends SnappyFrameEncoder {

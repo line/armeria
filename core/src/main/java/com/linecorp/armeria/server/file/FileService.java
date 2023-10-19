@@ -343,7 +343,7 @@ public final class FileService extends AbstractHttpService {
                         // The compressed data will be decompressed while being served.
                         final MediaType contentType =
                                 config.mediaTypeResolver()
-                                      .guessFromPath(path, encoding.decoderFactory.encodingHeaderValue());
+                                      .guessFromPath(path, contentEncoding);
                         return new DecompressingHttpFile(uncachedFile, encoding, contentType);
                     } else {
                         return uncachedFile;
