@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
-import graphql.execution.instrumentation.SimpleInstrumentation;
+import graphql.execution.instrumentation.SimplePerformantInstrumentation;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLTypeVisitor;
 import graphql.schema.GraphQLTypeVisitorStub;
@@ -134,7 +134,7 @@ class GraphqlServiceBuilderTest {
                 new File(getClass().getResource("/testing/graphql/test.graphqls").toURI());
         final GraphqlServiceBuilder builder = new GraphqlServiceBuilder();
         final GraphqlService service = builder.schemaFile(graphqlSchemaFile)
-                                              .instrumentation(SimpleInstrumentation.INSTANCE)
+                                              .instrumentation(SimplePerformantInstrumentation.INSTANCE)
                                               .runtimeWiring(it -> {
                                                   // noop
                                               })

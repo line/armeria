@@ -24,7 +24,7 @@ public final class CustomJacksonObjectMapperProvider implements JacksonObjectMap
     @Override
     public ObjectMapper newObjectMapper() {
         return JsonMapper.builder()
-                         .addModules(new KotlinModule())
+                         .addModules(new KotlinModule.Builder().build())
                          .build();
     }
 }
