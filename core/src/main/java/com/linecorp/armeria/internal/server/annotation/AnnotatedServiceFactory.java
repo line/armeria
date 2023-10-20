@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.server.annotation.AnnotationUtil.getAnnotatedInstances;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
@@ -256,16 +257,16 @@ public final class AnnotatedServiceFactory {
         final List<Route> routes = routes(method, clazz, pathPrefix);
 
         final List<RequestConverterFunction> req =
-                AnnotationUtil.getAnnotatedInstances(method, clazz, RequestConverter.class,
-                                                     RequestConverterFunction.class, dependencyInjector)
+                getAnnotatedInstances(method, clazz, RequestConverter.class,
+                                      RequestConverterFunction.class, dependencyInjector)
                         .addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
-                AnnotationUtil.getAnnotatedInstances(method, clazz, ResponseConverter.class,
-                                                     ResponseConverterFunction.class, dependencyInjector)
+                getAnnotatedInstances(method, clazz, ResponseConverter.class,
+                                      ResponseConverterFunction.class, dependencyInjector)
                         .addAll(baseResponseConverters).build();
         final List<ExceptionHandlerFunction> eh =
-                AnnotationUtil.getAnnotatedInstances(method, clazz, ExceptionHandler.class,
-                                                     ExceptionHandlerFunction.class, dependencyInjector)
+                getAnnotatedInstances(method, clazz, ExceptionHandler.class,
+                                      ExceptionHandlerFunction.class, dependencyInjector)
                         .addAll(baseExceptionHandlers).build();
 
         final String classAlias = clazz.getName();
