@@ -71,7 +71,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
             if (endpointsAndWeights == null || endpointsAndWeights.endpoints != endpoints) {
                 this.endpointsAndWeights = new EndpointsAndWeights(endpoints);
                 if (endpointsAndWeights == null) {
-                    endpointGroup.addListener(this::maybeUpdateEndpoints);
+                    group().addListener(this::maybeUpdateEndpoints);
                 }
             }
         }

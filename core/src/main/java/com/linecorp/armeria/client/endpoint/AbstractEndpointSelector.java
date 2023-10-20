@@ -40,7 +40,7 @@ import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
  */
 public abstract class AbstractEndpointSelector implements EndpointSelector {
 
-    final EndpointGroup endpointGroup;
+    private final EndpointGroup endpointGroup;
 
     /**
      * Creates a new instance that selects an {@link Endpoint} from the specified {@link EndpointGroup}.
