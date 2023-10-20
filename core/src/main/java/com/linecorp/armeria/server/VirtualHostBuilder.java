@@ -726,9 +726,10 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         }
 
         if (!routeDecoratingServices.isEmpty()) {
-            final List<RouteDecoratingService> prefixed = routeDecoratingServices.stream()
-                    .map(service -> service.withRoutePrefix(baseContextPath))
-                    .collect(toImmutableList());
+            final List<RouteDecoratingService> prefixed =
+                    routeDecoratingServices.stream()
+                                           .map(service -> service.withRoutePrefix(baseContextPath))
+                                           .collect(toImmutableList());
             return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
         } else {
             return null;
@@ -869,7 +870,12 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * Sets the {@link ServiceErrorHandler} that handles exceptions thrown in this virtual host.
      */
     public VirtualHostBuilder errorHandler(ServiceErrorHandler errorHandler) {
-        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        requireNonNull(errorHandler, "errorHandler");
+        if (this.errorHandler == null) {
+            this.errorHandler = errorHandler;
+        } else {
+            this.errorHandler = this.errorHandler.orElse(errorHandler);
+        }
         return this;
     }
 
@@ -1214,7 +1220,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * added to this builder.
      */
     VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
-                      @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
+                      @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
+                      ServerErrorHandler serverErrorHandler) {
         requireNonNull(template, "template");
 
         if (defaultHostname == null) {
@@ -1294,9 +1301,9 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         final Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
                 this.requestIdGenerator != null ?
                 this.requestIdGenerator : template.requestIdGenerator;
-        final ServiceErrorHandler serverErrorHandler = serverBuilder.errorHandler().asServiceErrorHandler();
+        final ServiceErrorHandler serviceErrorHandler = serverErrorHandler.asServiceErrorHandler();
         final ServiceErrorHandler defaultErrorHandler =
-                errorHandler != null ? errorHandler.orElse(serverErrorHandler) : serverErrorHandler;
+                errorHandler != null ? errorHandler.orElse(serviceErrorHandler) : serviceErrorHandler;
 
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;

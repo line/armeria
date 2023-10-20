@@ -215,7 +215,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private MeterRegistry meterRegistry = Flags.meterRegistry();
-    private ServerErrorHandler errorHandler = ServerErrorHandler.ofDefault();
+    @Nullable
+    private ServerErrorHandler errorHandler;
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -1698,16 +1699,12 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @UnstableApi
     public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
         requireNonNull(errorHandler, "errorHandler");
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
+        if (this.errorHandler == null) {
+            this.errorHandler = errorHandler;
+        } else {
+            this.errorHandler = this.errorHandler.orElse(errorHandler);
         }
-        this.errorHandler = errorHandler;
         return this;
-    }
-
-    ServerErrorHandler errorHandler() {
-        return errorHandler;
     }
 
     /**
@@ -2087,13 +2084,20 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
             unhandledExceptionsReporter = null;
         }
 
+        final ServerErrorHandler errorHandler;
+        if (this.errorHandler == null) {
+            errorHandler = ServerErrorHandler.ofDefault();
+        } else {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
+            errorHandler = this.errorHandler.orElse(ServerErrorHandler.ofDefault());
+        }
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
-                                                unhandledExceptionsReporter);
+                                                unhandledExceptionsReporter, errorHandler);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
-                                                         unhandledExceptionsReporter))
+                                                         unhandledExceptionsReporter, errorHandler))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;

@@ -255,7 +255,11 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Override
     public ServiceConfigBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         requireNonNull(serviceErrorHandler, "serviceErrorHandler");
-        this.serviceErrorHandler = serviceErrorHandler;
+        if (this.serviceErrorHandler == null) {
+            this.serviceErrorHandler = serviceErrorHandler;
+        } else {
+            this.serviceErrorHandler = this.serviceErrorHandler.orElse(serviceErrorHandler);
+        }
         return this;
     }
 
