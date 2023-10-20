@@ -4,18 +4,21 @@ date: 2023-10-20
 
 ## 🌟 New features
 
-- You can now add an `EventLoopGroup` to a server, a virtual host and a service to run a service with it.
+- **Configure EventLoopGroup for services.**: You can now set an `EventLoopGroup` for a server,
+  a virtual host and a service to run a service with it.
   #4099 #5233
   ```java
-  final EventLoopGroup serviceEventLoopGroup =
+  final EventLoopGroup serviceWorkerGroup =
     EventLoopGroups.newEventLoopGroup(8, "service-worker");
   Server.builder()
-        .eventLoopGroup(serviceEventLoopGroup)
+        .route()
+        ...
+        .serviceWorkerGroup(serviceWorkerGroup)
         .service(myService) // myService is run with serviceEventLoopGroup.
         ...
         .build();
   ```
-- You can now set services/decorators under a context path fluently. #3591 #4802 #5037 #5157
+- **Context Path Support**: You can now set services/decorators under a context path fluently. #3591 #4802 #5037 #5157
   ```java
   Server.builder()
         .contextPath("/v1", "/v2")
@@ -26,13 +29,35 @@ date: 2023-10-20
         .service(myService) // served by virtual host "foo.com" under "/v3"
         .build();
   ```
-- You can now easily propagate an Armeria <type://RequestContext> in Kotlin using
+- **Easier Request Scoping for Kotlin**: You can now easily propagate an Armeria <type://RequestContext> in Kotlin using
   <type://ContextAwareExecutor#asCoroutineDispatcher()>. #5171
   ```kotlin
   withContext(ctx.eventLoop().asCoroutineDispatcher()) {
     assert RequestContext.current() == ctx
+    ...
+  }
   ```
-- You can now produce the last value for a <type://StreamMessage> when it completes exceptionally using
+- **gRPC exception handler Annotation**: You can now easily handle an exception that is raised from a gRPC service using
+  <type://@GrpcExceptionHandler> annotation. #5046
+  ```java
+  @GrpcExceptionHandler(MyGrpcExceptionHandlerFunction.class)
+  @Override
+  public void unaryCall(SimpleRequest request,
+                        StreamObserver<SimpleResponse> responseObserver) {
+    ...
+  }
+
+  private static class MyGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+    @Override
+    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+      if (unauthenticatedExcpetion(cause)) {
+        return Status.UNAUTHENTICATED;
+      }
+      ...
+    }
+  }
+  ```
+- **StreamMessage finalizer**: You can now produce the last value for a <type://StreamMessage> when it completes exceptionally using
   <type://StreamMessage#endWith(Function)>. #4816 #5198
   ```java
   StreamMessage<Integer> message =
@@ -43,19 +68,19 @@ date: 2023-10-20
         return -1;
     });
   ```
-- You can now disable HTTP/2 protocol when sending HTTP or HTTPS requests. #5168
+- **Disable HTTP/2 for requests.**: You can now disable HTTP/2 protocol when sending HTTP or HTTPS requests. #5168
   ```java
   ClientFactory
     .builder()
     .preferHttp1(true)
     .build();
   ```
-- You can now monitor client certificates with the following metrics. #5155
+- **Client Certificate Metrics**: You can now monitor client certificates with the following metrics. #5155
   - `armeria.client.tls.certificates.validity`: `1` if valid, `0` otherwise.
   - `armeria.client.tls.certificates.validity.days`: The number of days until the certificate expires.
 - You can now add a hook that is invoked when a <type://RequestContext> is pushed and popped. #4991 #5107
   ```java
-  Supplier<? extends AutoCloseable> contextHook = () -> {
+  Supplier<AutoCloseable> contextHook = () -> {
     System.out.println("Context is pushed.");
     return () -> {
       System.out.println("Context is popped.");
@@ -75,7 +100,7 @@ date: 2023-10-20
     ...
     .build();
   ```
-- You can now report a failure to a circuit breaking when the total duration exceeds a certain threshold.
+- **Notify CircuitBreak on Duration Exceed**: You can now report a failure to a circuit breaking when the total duration exceeds a certain threshold.
   #4782 #4827
   ```java
   final CircuitBreakerRuleWithContent<HttpResponse> rule =
@@ -85,7 +110,10 @@ date: 2023-10-20
                     (ctx, duration) -> duration.toMillis() > 10000)
                 .thenFailure();
   ```
-- You can now protect your server against [DDoS caused by RST floods](https://www.securityweek.com/rapid-reset-zero-day-exploited-to-launch-largest-ddos-attacks-in-history/). #5232
+- **RST Floods Attack Prevention**: You can now protect your server against
+  [DDoS caused by RST floods](https://www.securityweek.com/rapid-reset-zero-day-exploited-to-launch-largest-ddos-attacks-in-history/)
+  using <type://ServerBuilder#http2MaxResetFramesPerWindow(int,int)>. #5232
+  - The default maximum number of allowed RST frames for an HTTP/2 connection is 400 per minute.
   ```java
   Server
     .builder()
@@ -130,7 +158,9 @@ date: 2023-10-20
 
 ## 🏚️ Deprecations
 
-- TBW about gRPC service builder#5046
+- <type://GrpcStatusFunction> is deprecated. Use <type://GrpcExceptionHandlerFunction> instead. #5046
+  - `exceptionMapping` methods on <type://GrpcServiceBuilder> are deprecated.
+    Use <type://GrpcExceptionHandlerFunctionBuilder> instead.
 
 ## ☢️ Breaking changes
 
