@@ -85,6 +85,8 @@ final class DefaultServerConfig implements ServerConfig {
     private final long http2MaxStreamsPerConnection;
     private final int http2MaxFrameSize;
     private final long http2MaxHeaderListSize;
+    private final int http2MaxResetFramesPerWindow;
+    private final int http2MaxResetFramesWindowSeconds;
     private final int http1MaxInitialLineLength;
     private final int http1MaxHeaderSize;
     private final int http1MaxChunkSize;
@@ -129,8 +131,9 @@ final class DefaultServerConfig implements ServerConfig {
             long maxConnectionAgeMillis,
             int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
-            long http2MaxStreamsPerConnection, int http2MaxFrameSize,
-            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
+            long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
+            int http2MaxResetFramesPerWindow, int http2MaxResetFramesWindowSeconds,
+            int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             BlockingTaskExecutor blockingTaskExecutor,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
@@ -171,6 +174,8 @@ final class DefaultServerConfig implements ServerConfig {
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
         this.http2MaxFrameSize = http2MaxFrameSize;
         this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+        this.http2MaxResetFramesPerWindow = http2MaxResetFramesPerWindow;
+        this.http2MaxResetFramesWindowSeconds = http2MaxResetFramesWindowSeconds;
         this.http1MaxInitialLineLength = validateNonNegative(
                 http1MaxInitialLineLength, "http1MaxInitialLineLength");
         this.http1MaxHeaderSize = validateNonNegative(
@@ -566,6 +571,16 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public long http2MaxHeaderListSize() {
         return http2MaxHeaderListSize;
+    }
+
+    @Override
+    public int http2MaxResetFramesPerWindow() {
+        return http2MaxResetFramesPerWindow;
+    }
+
+    @Override
+    public int http2MaxResetFramesWindowSeconds() {
+        return http2MaxResetFramesWindowSeconds;
     }
 
     @Override

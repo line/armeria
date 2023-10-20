@@ -61,7 +61,6 @@ jetty93 = "9.3.30.v20211001"
 jetty94 = "9.4.51.v20230217"
 jetty-alpn-api = "1.1.3.v20160715"
 jmh-core = "1.37"
-jmh-extras = "0.3.7"
 jmh-gradle-plugin = "0.7.1"
 joor = "0.9.14"
 json-unit = "2.38.0"
@@ -85,7 +84,7 @@ micrometer13 = "1.3.20"
 mockito = "4.11.0"
 monix = "3.4.1"
 munit = "0.7.29"
-netty = "4.1.96.Final"
+netty = "4.1.100.Final"
 netty-incubator-transport-native-io_uring = "0.0.21.Final"
 nexus-publish = "1.3.0"
 node-gradle-plugin = "5.0.0"
@@ -669,10 +668,6 @@ version.ref = "jetty94"
 [libraries.jetty-alpn-api]
 module = "org.eclipse.jetty.alpn:alpn-api"
 version.ref = "jetty-alpn-api"
-
-[libraries.jmh-extras]
-module = "pl.project13.scala:sbt-jmh-extras"
-version.ref = "jmh-extras"
 
 [libraries.joor]
 module = "org.jooq:joor"

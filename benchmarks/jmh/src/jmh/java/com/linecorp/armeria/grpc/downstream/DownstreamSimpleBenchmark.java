@@ -19,6 +19,7 @@ package com.linecorp.armeria.grpc.downstream;
 import java.time.Duration;
 
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
@@ -41,6 +42,9 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
     private GithubServiceBlockingStub githubApiClient;
     private GithubServiceFutureStub githubApiFutureClient;
 
+    @Param(value = {"false"})
+    private Boolean useBlockingTaskExecutor;
+
     @Override
     protected int port() {
         return server.activeLocalPort(SessionProtocol.HTTP);
@@ -61,6 +65,7 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
         server = Server.builder()
                        .serviceUnder("/",
                                      GrpcService.builder()
+                                                .useBlockingTaskExecutor(useBlockingTaskExecutor)
                                                 .addService(new GithubApiService()).build())
                                                 .requestTimeout(Duration.ZERO)
                                                 .meterRegistry(NoopMeterRegistry.get())

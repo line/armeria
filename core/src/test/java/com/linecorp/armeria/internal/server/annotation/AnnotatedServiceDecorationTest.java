@@ -18,8 +18,8 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -39,12 +39,12 @@ import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class AnnotatedServiceDecorationTest {
+class AnnotatedServiceDecorationTest {
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/1", new MyDecorationService1());
@@ -56,7 +56,7 @@ public class AnnotatedServiceDecorationTest {
 
     @LoggingDecorator(requestLogLevel = LogLevel.INFO, successfulResponseLogLevel = LogLevel.INFO)
     @ResponseConverter(UnformattedStringConverterFunction.class)
-    public static class MyDecorationService1 {
+    static class MyDecorationService1 {
 
         @Get("/tooManyRequests")
         @Decorator(AlwaysTooManyRequestsDecorator.class)
@@ -83,7 +83,7 @@ public class AnnotatedServiceDecorationTest {
 
     @LoggingDecorator
     @ResponseConverter(UnformattedStringConverterFunction.class)
-    public static class MyDecorationService2 extends MyDecorationService1 {
+    static class MyDecorationService2 extends MyDecorationService1 {
 
         @Override
         @Get("/override")
@@ -104,7 +104,7 @@ public class AnnotatedServiceDecorationTest {
     @LoggingDecorator
     @ResponseConverter(UnformattedStringConverterFunction.class)
     @Decorator(AlwaysTooManyRequestsDecorator.class)
-    public static class MyDecorationService3 {
+    static class MyDecorationService3 {
 
         @Get("/tooManyRequests")
         @Decorator(AlwaysLockedDecorator.class)
@@ -117,7 +117,7 @@ public class AnnotatedServiceDecorationTest {
     @LoggingDecorator
     @ResponseConverter(UnformattedStringConverterFunction.class)
     @Decorator(FallThroughDecorator.class)
-    public static class MyDecorationService4 {
+    static class MyDecorationService4 {
 
         @Get("/tooManyRequests")
         @Decorator(AlwaysTooManyRequestsDecorator.class)
@@ -127,7 +127,7 @@ public class AnnotatedServiceDecorationTest {
         }
     }
 
-    public static final class AlwaysTooManyRequestsDecorator implements DecoratingHttpServiceFunction {
+    static final class AlwaysTooManyRequestsDecorator implements DecoratingHttpServiceFunction {
 
         @Override
         public HttpResponse serve(
@@ -158,8 +158,8 @@ public class AnnotatedServiceDecorationTest {
     }
 
     @Test
-    public void testDecoratingAnnotatedService() throws Exception {
-        final BlockingWebClient client = BlockingWebClient.of(rule.httpUri());
+    void testDecoratingAnnotatedService() throws Exception {
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         AggregatedHttpResponse response;
 

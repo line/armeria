@@ -151,10 +151,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return sessionProtocol;
     }
 
-    protected void sessionProtocol(SessionProtocol sessionProtocol) {
-        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
-    }
-
     /**
      * Returns the {@link Channel} that is handling this request, or {@code null} if the connection is not
      * established yet.

@@ -466,6 +466,23 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default value of the {@link ClientFactoryBuilder#preferHttp1(boolean)} option.
+     * If enabled, the client will not attempt to upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and
+     * {@link SessionProtocol#HTTPS}.
+     *
+     * <p>Note that this option has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#preferHttp1(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultPreferHttp1=true} JVM option to enable it.
+     */
+    @UnstableApi
+    @Nullable
+    default Boolean defaultPreferHttp1() {
+        return null;
+    }
+
+    /**
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)} option.
      * If enabled, even when ALPN negotiation fails client will try to attempt upgrade to HTTP/2 when needed.
      * This will be either HTTP/2 connection preface or HTTP/1-to-2 upgrade request,
@@ -691,6 +708,22 @@ public interface FlagsProvider {
      */
     @Nullable
     default Long defaultHttp2MaxHeaderListSize() {
+        return null;
+    }
+
+    /**
+     * Returns the default maximum number of RST frames that are allowed per window before the connection is
+     * closed. This allows to protect against the remote peer flooding us with such frames and using up a lot
+     * of CPU. Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * to override the default value. {@code 0} means no protection should be applied.
+     */
+    @Nullable
+    default Integer defaultHttp2MaxResetFramesPerMinute() {
         return null;
     }
 

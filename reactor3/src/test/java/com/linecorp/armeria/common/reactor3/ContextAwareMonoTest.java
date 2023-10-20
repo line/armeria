@@ -37,7 +37,6 @@ import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
-import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 
 @GenerateNativeImageTrace
@@ -102,7 +101,7 @@ class ContextAwareMonoTest {
         final Mono<Object> mono;
         try (SafeCloseable ignored = ctx.push()) {
             mono = addCallbacks(Mono.create(sink -> {
-                final Context context = sink.currentContext();
+                assertThat(ctxExists(ctx)).isTrue();
                 sink.success("foo");
             }).publishOn(Schedulers.single()), ctx);
         }
@@ -166,11 +165,11 @@ class ContextAwareMonoTest {
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
         try (SafeCloseable ignored = ctx.push()) {
-            mono = addCallbacks(Mono.first(Mono.delay(Duration.ofMillis(1000)).then(Mono.just("bar")),
-                                           Mono.fromCallable(() -> {
-                                               assertThat(ctxExists(ctx)).isTrue();
-                                               return "foo";
-                                           })).publishOn(Schedulers.single()), ctx);
+            mono = addCallbacks(Mono.firstWithSignal(Mono.delay(Duration.ofMillis(1000)).then(Mono.just("bar")),
+                                                     Mono.fromCallable(() -> {
+                                                         assertThat(ctxExists(ctx)).isTrue();
+                                                         return "foo";
+                                                     })).publishOn(Schedulers.single()), ctx);
         }
         StepVerifier.create(mono)
                     .expectSubscriptionMatches(s -> ctxExists(ctx))

@@ -116,7 +116,8 @@ class CuratorServiceDiscoveryCompatibilityTest {
                                                              }).build();
             discoverySpec.decode(zk.getData(Z_NODE + "/foo/bar").get());
             final ServiceInstance<?> actual = instanceCaptor.join();
-            assertThat(actual).isEqualToIgnoringGivenFields(registered, "registrationTimeUTC");
+            assertThat(actual).usingRecursiveComparison().ignoringFields("registrationTimeUTC")
+                              .isEqualTo(registered);
         }
     }
 

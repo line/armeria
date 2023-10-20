@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -52,7 +53,9 @@ class LoggingClientDefaultLoggerTest {
 
     @Test
     void defaultLoggerUsedIfLogWriterNotSet() throws Exception {
-        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ClientRequestContext ctx = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                             .eventLoop(ImmediateEventLoop.INSTANCE)
+                                                             .build();
         final LoggingClient client = LoggingClient.newDecorator().apply(delegate);
         client.execute(ctx, ctx.request());
         assertThat(logAppender.list).hasSize(2);

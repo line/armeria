@@ -62,6 +62,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -747,6 +748,18 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     public ClientFactoryBuilder useHttp2Preface(boolean useHttp2Preface) {
         option(ClientFactoryOptions.USE_HTTP2_PREFACE, useHttp2Preface);
+        return this;
+    }
+
+    /**
+     * Sets whether to use HTTP/1.1 instead of HTTP/2. If enabled, the client will not attempt to upgrade to
+     * HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}. However, the client will use
+     * HTTP/2 if {@link SessionProtocol#H2} or {@link SessionProtocol#H2C} is used.
+     * This option is disabled by default.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder preferHttp1(boolean preferHttp1) {
+        option(ClientFactoryOptions.PREFER_HTTP1, preferHttp1);
         return this;
     }
 
