@@ -4,7 +4,7 @@ date: 2023-10-20
 
 ## 🌟 New features
 
-- **Configure EventLoopGroup for services.**: You can now set an `EventLoopGroup` for a server,
+- **Configure EventLoopGroup for services**: You can now set an `EventLoopGroup` for a server,
   a virtual host and a service to run a service with it.
   #4099 #5233
   ```java
@@ -42,12 +42,13 @@ date: 2023-10-20
   ```java
   @GrpcExceptionHandler(MyGrpcExceptionHandlerFunction.class)
   @Override
-  public void unaryCall(SimpleRequest request,
-                        StreamObserver<SimpleResponse> responseObserver) {
-    ...
+  public void unaryCall(
+    SimpleRequest request,
+    StreamObserver<SimpleResponse> responseObserver) {
+      ...
   }
 
-  private static class MyGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+  class MyGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
     @Override
     public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
       if (unauthenticatedExcpetion(cause)) {
@@ -68,7 +69,7 @@ date: 2023-10-20
         return -1;
     });
   ```
-- **Disable HTTP/2 for requests.**: You can now disable HTTP/2 protocol when sending HTTP or HTTPS requests. #5168
+- **Disable HTTP/2 for requests**: You can now disable HTTP/2 protocol when sending HTTP or HTTPS requests. #5168
   ```java
   ClientFactory
     .builder()
