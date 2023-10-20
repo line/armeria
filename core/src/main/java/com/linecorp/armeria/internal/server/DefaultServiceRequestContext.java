@@ -174,7 +174,7 @@ public final class DefaultServiceRequestContext
             this.requestCancellationScheduler = requestCancellationScheduler;
         } else {
             this.requestCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
         }
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");

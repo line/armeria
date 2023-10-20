@@ -66,6 +66,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     private final VirtualHostBuilder virtualHostBuilder;
 
     VirtualHostServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
     }
 
@@ -353,6 +354,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
      * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
     public VirtualHostBuilder build(HttpService service) {
+        requireNonNull(service, "service");
         build0(service);
         return virtualHostBuilder;
     }

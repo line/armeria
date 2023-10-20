@@ -53,6 +53,6 @@ interface HttpResponseDecoder {
     KeepAliveHandler keepAliveHandler();
 
     default boolean needsToDisconnectNow() {
-        return !session().isAcquirable() && !hasUnfinishedResponses();
+        return !session().isAcquirable(keepAliveHandler()) && !hasUnfinishedResponses();
     }
 }

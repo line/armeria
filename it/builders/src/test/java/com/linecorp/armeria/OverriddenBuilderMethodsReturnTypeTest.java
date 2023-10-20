@@ -53,7 +53,9 @@ class OverriddenBuilderMethodsReturnTypeTest {
                                                final Method overriddenMethod =
                                                        clazz.getDeclaredMethod(m.getName(),
                                                                                m.getParameterTypes());
-                                               assertThat(overriddenMethod.getReturnType()).isSameAs(clazz);
+                                               assertThat(overriddenMethod.getReturnType())
+                                                       .describedAs("Method name: " + m)
+                                                       .isSameAs(clazz);
                                            } catch (NoSuchMethodException e) {
                                                // ignored
                                            }

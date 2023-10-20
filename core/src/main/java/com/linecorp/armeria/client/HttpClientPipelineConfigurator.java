@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.client.ClientRequestContextBuilder.noopResponseCancellationScheduler;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -57,6 +56,7 @@ import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -418,6 +418,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         }
 
+        // Do not call fireUserEventTriggered right away because it triggers completing a session promise
+        // in HttpSessionHandler that will make the client to send a request.
+        // However, the HTTP/2 settings frame from the server may not be handled yet at this point.
+        // We need to put the task in the queue so that the promise is complete after the settings
+        // frame is handled.
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
     }
 
@@ -542,7 +547,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     com.linecorp.armeria.common.HttpMethod.OPTIONS,
                     RequestTarget.forClient("*"), ClientOptions.of(),
                     HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
-                    null, REQUEST_OPTIONS_FOR_UPGRADE_REQUEST, noopResponseCancellationScheduler,
+                    null, REQUEST_OPTIONS_FOR_UPGRADE_REQUEST, CancellationScheduler.noop(),
                     System.nanoTime(), SystemInfo.currentTimeMicros());
 
             // NB: No need to set the response timeout because we have session creation timeout.

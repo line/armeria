@@ -33,7 +33,7 @@ import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 
-class ServerTlsCertificateMetricsTest {
+public class ServerTlsCertificateMetricsTest {
 
     private static final String RESOURCE_PATH_PREFIX =
             "/testing/core/" + ServerTlsCertificateMetricsTest.class.getSimpleName() + '/';
@@ -130,7 +130,7 @@ class ServerTlsCertificateMetricsTest {
 
     @Test
     void tlsMetricGivenCertificateChainNotExpired() {
-        final InputStream expiredCertificateChain = getClass().getResourceAsStream(
+        final InputStream certificateChain = getClass().getResourceAsStream(
                 RESOURCE_PATH_PREFIX + "certificate-chain.pem");
         final InputStream pk = getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "pk.key");
 
@@ -138,7 +138,7 @@ class ServerTlsCertificateMetricsTest {
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)
-              .tls(expiredCertificateChain, pk)
+              .tls(certificateChain, pk)
               .build();
 
         assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isOne();

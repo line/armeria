@@ -1,3 +1,5 @@
+import static org.gradle.internal.os.OperatingSystem.current
+
 plugins {
     id 'base'
     alias(libs.plugins.node.gradle)
@@ -28,9 +30,21 @@ task buildWeb(type: NpmTask) {
 
     args = ['run', 'build']
 
-    inputs.dir('src')
-    inputs.files('package.json', 'package-lock.json')
+    // note that node_modules isn't cached due to potential cache misses per architecture
+    inputs.property("node.version", node.version)
+    // build per OS type to preserve behavior of packaging jar from linux
+    inputs.property("os.familyName", current().getFamilyName())
+    inputs.dir('src').withPathSensitivity(PathSensitivity.RELATIVE)
+          .withPropertyName("sources files")
+    inputs.files('package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig-webpack.json',
+                 'webpack.config.ts')
+          .withPathSensitivity(PathSensitivity.RELATIVE)
+          .withPropertyName("npm configuration files")
+
     outputs.dir('build/web')
+
+    // TODO: consider disabling cacheability once arm actions runners are available
+    outputs.cacheIf { true }
 }
 
 task copyWeb(type: Copy) {
@@ -49,8 +63,12 @@ if (!rootProject.hasProperty('noLint')) {
         args = ['run', 'lint']
 
         inputs.dir('src')
-        inputs.file('package.json')
-        inputs.file('package-lock.json')
+                .withPropertyName("sources files")
+        inputs.files('package.json', 'package-lock.json', '.prettierrc.js', '.eslintrc.js')
+                .withPropertyName("configuration files")
+        inputs.dir('../settings/')
+                .withPropertyName("settings files")
+
         outputs.upToDateWhen { true }
     }
 
