@@ -633,7 +633,7 @@ public final class GrpcServiceBuilder {
     /**
      * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
      *
-     * <p>Limitations:
+     * <p><b>Limitations:</b>
      * <ul>
      *     <li>Only unary methods (single request, single response) are supported.</li>
      *     <li>
@@ -646,6 +646,10 @@ public final class GrpcServiceBuilder {
      *         {@link ServerBuilder#serviceUnder(String, HttpService)}.
      *     </li>
      * </ul>
+     *
+     * <p>When custom {@link #supportedSerializationFormats(SerializationFormat...)} are used,
+     * {@link GrpcSerializationFormats#JSON} must be included to enable HTTP/JSON transcoding.
+     * Otherwise, service builder will throw {@link IllegalStateException} when building the service.
      *
      * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
      */
@@ -956,6 +960,12 @@ public final class GrpcServiceBuilder {
             throw new IllegalStateException(
                     "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
                     "is enabled");
+        }
+        if (enableHttpJsonTranscoding && !supportedSerializationFormats.contains(
+                GrpcSerializationFormats.JSON)) {
+            throw new IllegalStateException(
+                    "'GrpcSerializationFormats.JSON' must be set if 'enableHttpJsonTranscoding' is set"
+            );
         }
         if (enableHealthCheckService) {
             grpcHealthCheckService = GrpcHealthCheckService.builder().build();

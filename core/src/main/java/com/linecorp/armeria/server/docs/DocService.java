@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
@@ -198,7 +199,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                       .collect(toImmutableList());
         final ExecutorService executorService = Executors.newSingleThreadExecutor(
                 ThreadFactories.newThreadFactory("docservice-loader", true));
-        vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
+        vfs().specificationLoader.updateServices(services, cfg.route(), executorService).handle((res, e) -> {
             if (e != null) {
                 logger.warn("Failed to load specifications completely: ", e);
             }
@@ -267,11 +268,12 @@ public final class DocService extends SimpleDecoratingHttpService {
         }
 
         CompletableFuture<List<AggregatedHttpFile>> updateServices(List<ServiceConfig> services,
+                                                                   Route docServiceRoute,
                                                                    Executor executor) {
             this.services = services;
 
             final CompletableFuture<ServiceSpecification> serviceSpecificationFuture =
-                    generateServiceSpecification(executor);
+                    generateServiceSpecification(executor, docServiceRoute);
 
             final List<CompletableFuture<AggregatedHttpFile>> files =
                     TARGET_PATHS.stream()
@@ -313,10 +315,11 @@ public final class DocService extends SimpleDecoratingHttpService {
             }, executor));
         }
 
-        private CompletableFuture<ServiceSpecification> generateServiceSpecification(Executor executor) {
+        private CompletableFuture<ServiceSpecification> generateServiceSpecification(Executor executor,
+                                                                                     Route docServiceRoute) {
             return CompletableFuture.supplyAsync(() -> {
                 final DocStringSupport docStringSupport = new DocStringSupport(services);
-                ServiceSpecification spec = generate(services);
+                ServiceSpecification spec = generate(services, docServiceRoute);
                 spec = docStringSupport.addDocStrings(spec);
                 spec = exampleSupport.addExamples(spec);
                 return spec;
@@ -360,13 +363,13 @@ public final class DocService extends SimpleDecoratingHttpService {
                     .build();
         }
 
-        private ServiceSpecification generate(List<ServiceConfig> services) {
+        private ServiceSpecification generate(List<ServiceConfig> services, Route docServiceRoute) {
             return ServiceSpecification.merge(
                     plugins.stream()
                            .map(plugin -> plugin.generateSpecification(
                                    findSupportedServices(plugin, services),
                                    filter, descriptiveTypeInfoProvider))
-                           .collect(toImmutableList()));
+                           .collect(toImmutableList()), docServiceRoute);
         }
 
         private static DescriptiveTypeInfoProvider composeDescriptiveTypeInfoProvider(

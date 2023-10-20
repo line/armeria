@@ -49,11 +49,13 @@
     "advanced-unit-testing",
     "advanced-production-checklist",
     "advanced-saml",
+    "advanced-spring-boot-integration",
     "advanced-spring-webflux-integration",
     "advanced-dropwizard-integration",
     "advanced-kotlin",
     "advanced-scala",
     "advanced-scalapb",
+    "advanced-flags-provider",
     "advanced-zipkin",
     "advanced-client-interoperability"
   ]

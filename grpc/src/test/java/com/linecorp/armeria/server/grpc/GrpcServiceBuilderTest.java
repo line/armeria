@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
@@ -236,6 +238,26 @@ class GrpcServiceBuilderTest {
                                             .enableHealthCheckService(true)
                                             .build())
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void enableHttpJsonTranscodingWithJsonSupport() {
+        assertDoesNotThrow(() -> GrpcService.builder()
+                                            .enableHttpJsonTranscoding(true)
+                                            .supportedSerializationFormats(GrpcSerializationFormats.JSON)
+                                            .build());
+    }
+
+    @Test
+    void enableHttpJsonTranscodingWithoutJsonSupport() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .enableHttpJsonTranscoding(true)
+                                            .supportedSerializationFormats(GrpcSerializationFormats.PROTO)
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("GrpcSerializationFormats.JSON")
+                .hasMessageContaining("must be set")
+                .hasMessageContaining("enableHttpJsonTranscoding");
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}

@@ -2727,7 +2727,6 @@ gentapps.com
 genting
 gentlentapis.com
 geo.br
-geometre-expert.fr
 george
 georgia.su
 getmyip.com
@@ -3904,7 +3903,6 @@ k12.ca.us
 k12.co.us
 k12.ct.us
 k12.dc.us
-k12.de.us
 k12.ec
 k12.fl.us
 k12.ga.us
@@ -4637,6 +4635,7 @@ lucca.it
 lug.org.uk
 lugansk.ua
 lugs.org.uk
+luhansk.ua
 lukow.pl
 lund.no
 lundbeck
@@ -5154,7 +5153,6 @@ musica.bo
 musician.io
 mutsu.aomori.jp
 mutsuzawa.chiba.jp
-mutual
 mutual.ar
 mv
 mw
@@ -5691,7 +5689,6 @@ nordre-land.no
 nordreisa.no
 nore-og-uvdal.no
 north-kazakhstan.su
-northwesternmutual
 norton
 nose.osaka.jp
 nosegawa.nara.jp
@@ -7651,7 +7648,6 @@ tickets
 tickets.io
 tienda
 tiengiang.vn
-tiffany
 time.no
 tingvoll.no
 tinn.no
@@ -8092,6 +8088,7 @@ uy.com
 uz
 uz.ua
 uzhgorod.ua
+uzhhorod.ua
 uzs.gov.pl
 v-info.info
 v.bg
@@ -8420,7 +8417,9 @@ witd.gov.pl
 withgoogle.com
 withyoutube.com
 wiw.gov.pl
+wix.run
 wixsite.com
+wixstudio.io
 wkz.gov.pl
 wlocl.pl
 wloclawek.pl
@@ -9075,6 +9074,7 @@ za.net
 za.org
 zachpomor.pl
 zagan.pl
+zakarpattia.ua
 zakopane.pl
 zama.kanagawa.jp
 zamami.okinawa.jp

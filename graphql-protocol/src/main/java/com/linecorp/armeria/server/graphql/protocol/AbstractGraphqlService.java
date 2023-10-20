@@ -100,8 +100,8 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
 
         // See https://github.com/jaydenseric/graphql-multipart-request-spec/blob/master/readme.md
         if (contentType.is(MediaType.MULTIPART_FORM_DATA)) {
-            return HttpResponse.from(FileAggregatedMultipart.aggregateMultipart(ctx, request)
-                                                            .thenApply(multipart -> {
+            return HttpResponse.of(FileAggregatedMultipart.aggregateMultipart(ctx, request)
+                                                          .thenApply(multipart -> {
                 try {
                     final ListMultimap<String, String> multipartParams = multipart.params();
                     final String operationsParam = getValueFromMultipartParam("operations", multipartParams);
@@ -135,7 +135,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         }
 
         if (contentType.isJson()) {
-            return HttpResponse.from(request.aggregate(ctx.eventLoop()).thenApply(req -> {
+            return HttpResponse.of(request.aggregate(ctx.eventLoop()).thenApply(req -> {
                 try (SafeCloseable ignored = ctx.push()) {
                     final String body = req.contentUtf8();
                     if (Strings.isNullOrEmpty(body)) {
@@ -171,7 +171,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         }
 
         if (contentType.is(MediaType.GRAPHQL)) {
-            return HttpResponse.from(request.aggregate(ctx.eventLoop()).thenApply(req -> {
+            return HttpResponse.of(request.aggregate(ctx.eventLoop()).thenApply(req -> {
                 try (SafeCloseable ignored = ctx.push()) {
                     final String query = req.contentUtf8();
                     if (Strings.isNullOrEmpty(query)) {

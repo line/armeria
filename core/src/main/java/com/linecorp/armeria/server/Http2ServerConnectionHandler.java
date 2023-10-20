@@ -65,6 +65,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
             Http2ConnectionEncoder encoder, Channel channel, ServerConfig cfg, Timer keepAliveTimer) {
 
         final long idleTimeoutMillis = cfg.idleTimeoutMillis();
+        final boolean keepAliveOnPing = cfg.keepAliveOnPing();
         final long pingIntervalMillis = cfg.pingIntervalMillis();
         final long maxConnectionAgeMillis = cfg.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = cfg.maxNumRequestsPerConnection();
@@ -77,7 +78,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
         return new Http2ServerKeepAliveHandler(
                 channel, encoder.frameWriter(), keepAliveTimer, idleTimeoutMillis,
-                pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
     }
 
     ServerHttp2ObjectEncoder getOrCreateResponseEncoder(ChannelHandlerContext connectionHandlerCtx) {

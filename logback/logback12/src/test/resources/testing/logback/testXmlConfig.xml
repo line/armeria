@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2016 LINE Corporation
+  ~
+  ~ LINE Corporation licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<configuration>
+  <appender name="NOP" class="ch.qos.logback.core.helpers.NOPAppender" />
+  <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    <appender-ref ref="NOP" />
+    <export>remote.host</export>
+    <export>req.headers.user-agent</export>
+    <export>res.headers.set-cookie</export>
+    <export>attrs.foo:testing.logback.CustomObject#FOO</export>
+    <export>
+      attrs.bar:testing.logback.CustomObject#ATTR:testing.logback.CustomObjectNameStringifier
+    </export>
+    <exports>
+      foo.remote.host=remote.host,
+      remote.*,
+      local.*,
+      req.headers.content-type,
+      baz=attr:testing.logback.CustomObject#ATTR:testing.logback.CustomObjectValueStringifier
+    </exports>
+  </appender>
+
+  <appender name="RCEA_WITH_PREFIX" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    <appender-ref ref="NOP" />
+    <!-- default export group -->
+    <prefix>defaultPrefix.</prefix>
+    <export>remote.host</export>
+    <exports>remote.ip, remote.port</exports>
+
+    <exportGroup>
+      <prefix>group1.</prefix>
+      <export>remote.host</export>
+      <exports>remote.ip, remote.port</exports>
+    </exportGroup>
+
+    <exportGroup>
+      <export>remote.host</export>
+      <exports>remote.ip, remote.port</exports>
+      <!-- users can specify a prefix later -->
+      <prefix>group2.</prefix>
+    </exportGroup>
+
+    <exportGroup>
+      <!-- no prefix -->
+      <export>remote.host</export>
+      <exports>remote.ip, remote.port</exports>
+    </exportGroup>
+  </appender>
+
+  <logger name="RCEA" level="TRACE">
+    <appender-ref ref="RCEA" />
+  </logger>
+
+  <logger name="RCEA_WITH_PREFIX" level="TRACE">
+    <appender-ref ref="RCEA_WITH_PREFIX" />
+  </logger>
+
+  <appender name="RCEA1" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    <appender-ref ref="NOP" />
+    <export>remote.ip</export>
+  </appender>
+
+  <appender name="RCEA2" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    <appender-ref ref="NOP" />
+    <export>remote.port</export>
+  </appender>
+
+  <logger name="multiple-exporters" level="trace">
+    <appender-ref ref="RCEA1" />
+    <appender-ref ref="RCEA2" />
+  </logger>
+
+  <!-- Copied from testing-internal/src/main/resources/logback-test.xml -->
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="com.linecorp.armeria" level="DEBUG" />
+
+  <root level="WARN">
+    <appender-ref ref="STDOUT" />
+  </root>
+</configuration>

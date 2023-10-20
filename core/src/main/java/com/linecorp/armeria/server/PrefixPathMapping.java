@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.PREFIX;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
@@ -26,6 +27,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class PrefixPathMapping extends AbstractPathMapping {
@@ -37,6 +39,8 @@ final class PrefixPathMapping extends AbstractPathMapping {
     private final String strVal;
 
     PrefixPathMapping(String prefix, boolean stripPrefix) {
+        checkArgument(Flags.allowSemicolonInPathComponent() || prefix.indexOf(';') < 0,
+                      "prefix: %s (expected not to have a ';')", prefix);
         prefix = ensureAbsolutePath(prefix, "prefix");
         if (!prefix.endsWith("/")) {
             prefix += '/';

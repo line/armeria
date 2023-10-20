@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,8 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
@@ -78,8 +82,19 @@ final class HttpClientFactory implements ClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
-                  .map(p -> Scheme.of(SerializationFormat.NONE, p))
+                  .flatMap(p -> Stream.of(Scheme.of(SerializationFormat.NONE, p),
+                                          Scheme.of(SerializationFormat.WS, p)))
                   .collect(toImmutableSet());
+
+    private static void setupTlsMetrics(List<X509Certificate> certificates, MeterRegistry registry) {
+        final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.client");
+            try {
+                MoreMeterBinders.certificateMetrics(certificates, meterIdPrefix)
+                                .bindTo(registry);
+            } catch (Exception ex) {
+                logger.warn("Failed to set up TLS certificate metrics: {}", certificates, ex);
+            }
+    }
 
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
@@ -97,6 +112,7 @@ final class HttpClientFactory implements ClientFactory {
     private final int http1MaxHeaderSize;
     private final int http1MaxChunkSize;
     private final long idleTimeoutMillis;
+    private final boolean keepAliveOnPing;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
     private final int maxNumRequestsPerConnection;
@@ -161,10 +177,14 @@ final class HttpClientFactory implements ClientFactory {
         final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
                 ImmutableList.of(options.tlsCustomizer());
         final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
+        final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
         sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers);
+                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers,
+                                  keyCertChainCaptor);
         sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers);
+                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers,
+                                  keyCertChainCaptor);
+        setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
@@ -175,6 +195,7 @@ final class HttpClientFactory implements ClientFactory {
         http1MaxHeaderSize = options.http1MaxHeaderSize();
         http1MaxChunkSize = options.http1MaxChunkSize();
         idleTimeoutMillis = options.idleTimeoutMillis();
+        keepAliveOnPing = options.keepAliveOnPing();
         useHttp2Preface = options.useHttp2Preface();
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
@@ -244,6 +265,10 @@ final class HttpClientFactory implements ClientFactory {
 
     long idleTimeoutMillis() {
         return idleTimeoutMillis;
+    }
+
+    boolean keepAliveOnPing() {
+        return keepAliveOnPing;
     }
 
     long pingIntervalMillis() {

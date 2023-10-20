@@ -62,6 +62,6 @@ public final class ThrottlingService extends AbstractThrottlingService<HttpReque
     ThrottlingService(HttpService delegate, ThrottlingStrategy<HttpRequest> strategy,
                       ThrottlingAcceptHandler<HttpRequest, HttpResponse> acceptHandler,
                       ThrottlingRejectHandler<HttpRequest, HttpResponse> rejectHandler) {
-        super(delegate, strategy, HttpResponse::from, acceptHandler, rejectHandler);
+        super(delegate, strategy, HttpResponse::of, acceptHandler, rejectHandler);
     }
 }

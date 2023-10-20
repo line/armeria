@@ -95,7 +95,7 @@ class UnaryServerCallTest {
     @BeforeEach
     void setUp() {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        res = HttpResponse.from(responseFuture);
+        res = HttpResponse.of(responseFuture);
 
         ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/"))
                                    .eventLoop(EventLoopGroups.directEventLoop())
@@ -211,7 +211,7 @@ class UnaryServerCallTest {
     @Test
     void deferResponseHeaders() {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse response = HttpResponse.from(responseFuture);
+        final HttpResponse response = HttpResponse.of(responseFuture);
         call = newServerCall(response, responseFuture, false);
 
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
@@ -256,7 +256,7 @@ class UnaryServerCallTest {
     @Test
     void deferResponseHeaders_unary_nonResponseMessage() {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse response = HttpResponse.from(responseFuture);
+        final HttpResponse response = HttpResponse.of(responseFuture);
         call = newServerCall(response, responseFuture, false);
 
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
@@ -305,7 +305,7 @@ class UnaryServerCallTest {
     @Test
     void decodeMultipleChunks() {
         final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-        final HttpResponse response = HttpResponse.from(resFuture);
+        final HttpResponse response = HttpResponse.of(resFuture);
         final byte[] bytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
         final int length = bytes.length;
         final int middle = length / 2;

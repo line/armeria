@@ -171,7 +171,7 @@ class UnframedGrpcServiceTest {
                 .of(responseHeaders, HttpData.wrap(byteBuf));
         AbstractUnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
                                                       null, MediaType.PROTOBUF);
-        assertThat(HttpResponse.from(res).aggregate().get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(HttpResponse.of(res).aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

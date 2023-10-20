@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.createStreamMessageFrom;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
@@ -29,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -182,6 +184,57 @@ public interface StreamMessage<T> extends Publisher<T> {
         } else {
             return new PublisherBasedStreamMessage<>(publisher);
         }
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param future the {@link CompletableFuture} which will produce the actual {@link StreamMessage}
+     */
+    @UnstableApi
+    static <T> StreamMessage<T> of(CompletableFuture<? extends Publisher<? extends T>> future) {
+        requireNonNull(future, "stage");
+        return createStreamMessageFrom(future);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     */
+    @UnstableApi
+    static <T> StreamMessage<T> of(CompletionStage<? extends Publisher<? extends T>> stage) {
+        requireNonNull(stage, "stage");
+
+        final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>();
+        //noinspection unchecked
+        deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) stage);
+        return deferred;
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link StreamMessage} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    static <T> StreamMessage<T> of(CompletionStage<? extends StreamMessage<? extends T>> stage,
+                                   EventExecutor subscriberExecutor) {
+        requireNonNull(stage, "stage");
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        // Have to use DeferredStreamMessage to use the subscriberExecutor.
+        final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>(subscriberExecutor);
+        //noinspection unchecked
+        deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) stage);
+        return deferred;
     }
 
     /**
@@ -489,7 +542,27 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     default CompletableFuture<Void> subscribe() {
-        subscribe(NoopSubscriber.get());
+        return subscribe(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Drains and discards all objects in this {@link StreamMessage}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * CompletableFuture<Void> future = source.peek(collected::add).subscribe();
+     * future.join();
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert future.isDone();
+     * }</pre>
+     *
+     * @param executor the executor to subscribe
+     */
+    @UnstableApi
+    default CompletableFuture<Void> subscribe(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        subscribe(NoopSubscriber.get(), executor);
         return whenComplete();
     }
 
@@ -946,8 +1019,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     @UnstableApi
-    default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
-            Function<? super E, ? extends StreamMessage<T>> function) {
+    default <E extends Throwable> StreamMessage<T> recoverAndResume(
+            Class<E> causeClass, Function<? super E, ? extends StreamMessage<T>> function) {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         return recoverAndResume(cause -> {

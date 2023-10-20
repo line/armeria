@@ -77,7 +77,7 @@ class ContentPreviewingClientTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/", (ctx, req) -> HttpResponse.from(
+            sb.service("/", (ctx, req) -> HttpResponse.of(
                     req.aggregate()
                        .thenApply(aggregated -> {
                            final ResponseHeaders responseHeaders =

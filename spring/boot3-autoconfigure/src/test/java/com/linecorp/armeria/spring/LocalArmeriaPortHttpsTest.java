@@ -19,15 +19,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
@@ -42,11 +40,10 @@ import com.linecorp.armeria.spring.LocalArmeriaPortHttpsTest.TestConfiguration;
 /**
  * Tests for {@link LocalArmeriaPort} when https.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "sslTest" })
 @DirtiesContext
-public class LocalArmeriaPortHttpsTest {
+class LocalArmeriaPortHttpsTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
@@ -67,19 +64,19 @@ public class LocalArmeriaPortHttpsTest {
         return scheme + "://127.0.0.1:" + port;
     }
 
-    @AfterClass
-    public static void closeClientFactory() {
+    @AfterAll
+    static void closeClientFactory() {
         clientFactory.closeAsync();
     }
 
     @Test
-    public void testPortConfiguration() throws Exception {
+    void testPortConfiguration() throws Exception {
         final Integer actualPort = server.activeLocalPort(SessionProtocol.HTTPS);
         assertThat(actualPort).isEqualTo(port);
     }
 
     @Test
-    public void testHttpServiceRegistrationBean() throws Exception {
+    void testHttpServiceRegistrationBean() throws Exception {
         final HttpResponse response = WebClient.builder(newUrl("https"))
                                                .factory(clientFactory)
                                                .build()

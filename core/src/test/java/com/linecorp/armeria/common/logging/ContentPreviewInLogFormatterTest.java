@@ -42,7 +42,7 @@ class ContentPreviewInLogFormatterTest {
             sb.decorator(LoggingService.newDecorator());
             sb.decorator(ContentPreviewingService.newDecorator(ContentPreviewerFactory.text(10000)));
             sb.service("/foo", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(agg -> {
+                return HttpResponse.of(req.aggregate().thenApply(agg -> {
                     return HttpResponse.of("World");
                 }));
             });

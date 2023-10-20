@@ -60,8 +60,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
         requireNonNull(sampler, "sampler");
-        this.successSampler = sampler;
-        this.failureSampler = sampler;
+        successSampler = sampler;
+        failureSampler = sampler;
         return this;
     }
 
@@ -134,6 +134,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    protected LoggingServiceBuilder defaultLogger(Logger logger) {
+        return (LoggingServiceBuilder) super.defaultLogger(logger);
+    }
 
     @Override
     public LoggingServiceBuilder logger(Logger logger) {

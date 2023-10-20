@@ -241,6 +241,15 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                     GrpcStatus.fromThrowable(exceptionHandler, ctx, e, metadata),
                                     metadata));
                 }
+            } else {
+                if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {
+                    // For unframed gRPC, we use the default timeout.
+                } else {
+                    // For framed gRPC, as per gRPC specification, if timeout is omitted a server should assume
+                    // an infinite timeout.
+                    // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#protocol
+                    ctx.clearRequestTimeout();
+                }
             }
         }
 
@@ -250,7 +259,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final HttpResponse res;
         if (method.getMethodDescriptor().getType() == MethodType.UNARY) {
             final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-            res = HttpResponse.from(resFuture);
+            res = HttpResponse.of(resFuture);
             startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
                       resFuture, serializationFormat);
         } else {

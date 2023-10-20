@@ -19,27 +19,24 @@ package com.linecorp.armeria.spring.mixed.tomcat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.context.ApplicationContext;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.spring.ArmeriaAutoConfiguration;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
 
 import jakarta.inject.Inject;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-public class SpringTomcatApplicationItTest {
+class SpringTomcatApplicationItTest {
     @Inject
     private ApplicationContext applicationContext;
 
     @Test
-    public void contextLoads() {
+    void contextLoads() {
         assertThat(applicationContext.getBean(ArmeriaAutoConfiguration.class)).isNotNull();
         assertThatThrownBy(() -> {
             applicationContext.getBean(ArmeriaReactiveWebServerFactory.class);

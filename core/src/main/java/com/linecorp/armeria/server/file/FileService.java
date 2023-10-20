@@ -485,7 +485,7 @@ public final class FileService extends AbstractHttpService {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(
+            return HttpResponse.of(
                     first.findFile(ctx, req)
                          .readAttributes(ctx.blockingTaskExecutor())
                          .thenApply(firstAttrs -> {

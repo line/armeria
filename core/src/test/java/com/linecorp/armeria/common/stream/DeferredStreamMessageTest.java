@@ -38,6 +38,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -168,6 +169,52 @@ class DeferredStreamMessageTest {
         verify(subscriber).onSubscribe(any());
 
         assertFailedSubscription(m, IllegalStateException.class);
+    }
+
+    @Test
+    void setStreamMessageAfterSubscribe() {
+        final CompletableFuture<StreamMessage<String>> future = new CompletableFuture<>();
+        final StreamMessage<String> streamMessage = StreamMessage.of(future);
+        final CompletableFuture<List<String>> collectFuture = streamMessage.collect();
+        // Set StreamMessage.
+        future.complete(StreamMessage.of("foo"));
+        final List<String> collected = collectFuture.join();
+        assertThat(collected).containsExactly("foo");
+    }
+
+    @Test
+    void abortedStreamMessage() {
+        final CompletableFuture<StreamMessage<String>> future = new CompletableFuture<>();
+        final StreamMessage<String> streamMessage = StreamMessage.of(future);
+        final CompletableFuture<List<String>> collectFuture = streamMessage.collect();
+
+        future.complete(StreamMessage.aborted(new AnticipatedException()));
+        assertThatThrownBy(collectFuture::join).hasCauseInstanceOf(AnticipatedException.class);
+    }
+
+    @Test
+    void cancellationPropagatesToUpstream() {
+        final CompletableFuture<StreamMessage<String>> future = new CompletableFuture<>();
+        final StreamMessage<String> streamMessage = StreamMessage.of(future);
+        streamMessage.subscribe(new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.cancel(); // Cancel immediately.
+            }
+
+            @Override
+            public void onNext(String str) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {}
+        }, ImmediateEventExecutor.INSTANCE);
+
+        // Should not cancel the upstream CompletableFuture.
+        // A StreamMessage could be leaked if it is set after completion.
+        assertThat(future).isNotDone();
     }
 
     private static void assertAborted(StreamMessage<?> m, @Nullable Throwable cause) {

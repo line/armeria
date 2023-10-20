@@ -142,6 +142,11 @@ public abstract class AbstractHttpRequestBuilder
     }
 
     @Override
+    public AbstractHttpRequestBuilder content(Publisher<? extends HttpData> content) {
+        return (AbstractHttpRequestBuilder) super.content(content);
+    }
+
+    @Override
     public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> content) {
         return (AbstractHttpRequestBuilder) super.content(contentType, content);
     }
@@ -288,7 +293,9 @@ public abstract class AbstractHttpRequestBuilder
     }
 
     private String buildPath() {
-        checkState(path != null, "path must be set.");
+        final String headerPath = requestHeadersBuilder.get(HttpHeaderNames.PATH);
+        checkState(path != null || headerPath != null, "path must be set.");
+        final String path = firstNonNull(this.path, headerPath);
 
         if (!disablePathParams) {
             // Path parameter substitution is enabled. Look for : or { first.

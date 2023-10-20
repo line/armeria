@@ -90,7 +90,25 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
-    private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
+    private static final InetSocketAddress UNKNOWN_ADDR;
+
+    static {
+        InetAddress unknownAddr;
+        try {
+            unknownAddr = InetAddress.getByAddress("<unknown>", new byte[] { 0, 0, 0, 0 });
+        } catch (Exception e1) {
+            // Just in case a certain JRE implementation doesn't accept the hostname '<unknown>'
+            try {
+                unknownAddr = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0 });
+            } catch (Exception e2) {
+                // Should never reach here.
+                final Error err = new Error(e2);
+                err.addSuppressed(e1);
+                throw err;
+            }
+        }
+        UNKNOWN_ADDR = new InetSocketAddress(unknownAddr, 1);
+    }
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();

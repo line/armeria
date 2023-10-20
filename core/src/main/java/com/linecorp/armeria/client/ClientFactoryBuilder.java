@@ -62,6 +62,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -612,21 +613,43 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
-     * progress for this amount of time.
+     * progress for the given amount of time. By default, HTTP/2 PING frames do not prevent connection from
+     * closing. Use the method {@link ClientFactoryBuilder#idleTimeout(Duration, boolean)} to set whether to
+     * prevent connection from closing when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"}
+     * is received.
      */
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout) {
-        requireNonNull(idleTimeout, "idleTimeout");
-        checkArgument(!idleTimeout.isNegative(), "idleTimeout: %s (expected: >= 0)", idleTimeout);
-        return idleTimeoutMillis(idleTimeout.toMillis());
+        return idleTimeoutMillis(requireNonNull(idleTimeout, "idleTimeout").toMillis());
+    }
+
+    /**
+     * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
+     * progress for the given amount of time. If {@code keepAliveOnPing} is true, the idle timeout is reset
+     * when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"} is received.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
+        return idleTimeoutMillis(requireNonNull(idleTimeout, "idleTimeout").toMillis(), keepAliveOnPing);
     }
 
     /**
      * Sets the idle timeout of a socket connection in milliseconds. The connection is closed if there is no
-     * request in progress for this amount of time.
+     * request in progress for the given amount of time.
      */
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis) {
+        return idleTimeoutMillis(idleTimeoutMillis, Flags.defaultClientKeepAliveOnPing());
+    }
+
+    /**
+     * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
+     * progress for the given amount of time. If {@code keepAliveOnPing} is true, the idle timeout is reset
+     * when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"} is received.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {
         checkArgument(idleTimeoutMillis >= 0, "idleTimeoutMillis: %s (expected: >= 0)", idleTimeoutMillis);
         option(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS, idleTimeoutMillis);
+        option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);
         return this;
     }
 
@@ -725,6 +748,18 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     public ClientFactoryBuilder useHttp2Preface(boolean useHttp2Preface) {
         option(ClientFactoryOptions.USE_HTTP2_PREFACE, useHttp2Preface);
+        return this;
+    }
+
+    /**
+     * Sets whether to use HTTP/1.1 instead of HTTP/2. If enabled, the client will not attempt to upgrade to
+     * HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}. However, the client will use
+     * HTTP/2 if {@link SessionProtocol#H2} or {@link SessionProtocol#H2C} is used.
+     * This option is disabled by default.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder preferHttp1(boolean preferHttp1) {
+        option(ClientFactoryOptions.PREFER_HTTP1, preferHttp1);
         return this;
     }
 

@@ -60,6 +60,12 @@ configure(projectsWithFlags('java')) {
                         }
                     }
 
+                    if (project.ext.hasFlag('krotodc-grpc')) {
+                        krotodcGrpc {
+                            artifact = "io.github.mscheong01:protoc-gen-krotoDC:${managedVersions['io.github.mscheong01:protoc-gen-krotoDC']}:jdk8@jar"
+                        }
+                    }
+
                     def isWindows = OperatingSystem.current() == OperatingSystem.WINDOWS
                     if (project.ext.hasFlag('scala-grpc_2.13')) {
                         def artifactName = "com.thesamet.scalapb:protoc-gen-scala:${managedVersions['com.thesamet.scalapb:scalapb-runtime_2.13']}:"
@@ -95,6 +101,9 @@ configure(projectsWithFlags('java')) {
                             }
                             if (project.ext.hasFlag('kotlin-grpc') && managedVersions.containsKey('io.grpc:grpc-kotlin-stub')) {
                                 kotlinGrpc {}
+                            }
+                            if (project.ext.hasFlag('krotodc-grpc') && managedVersions.containsKey('io.github.mscheong01:protoc-gen-krotoDC')) {
+                                krotodcGrpc {}
                             }
                             if (project.ext.hasFlag('akka-grpc_2.13') && managedVersions.containsKey('com.lightbend.akka.grpc:akka-grpc-runtime_2.13')) {
                                 akkaGrpc {}
@@ -135,13 +144,6 @@ configure(projectsWithFlags('java')) {
                     // A workaround for  ':grpc-kotlin:kotlinSourcesJar' uses this output of task
                     // ':grpc-kotlin:generateProto' without declaring an explicit or implicit dependency.
                     kotlinSourcesJar.dependsOn(task)
-                }
-
-                def copyAlpnAgentTask= tasks.findByName('copyAlpnAgent')
-                if (copyAlpnAgentTask) {
-                    // A workaround for ':generateProto' uses this output of task ':copyAlpnAgent' without
-                    // declaring an explicit or implicit dependency.
-                    task.dependsOn(copyAlpnAgentTask)
                 }
 
                 project.ext.getGenerateSourcesTask().dependsOn(task)

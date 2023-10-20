@@ -162,9 +162,9 @@ public final class ResteasyService<T> implements HttpService {
         final long contentLength = headers.contentLength();
         if (contentLength >= -1 && contentLength <= maxRequestBufferSize) {
             // aggregate bounded requests
-            return HttpResponse.from(req.aggregate().thenCompose(r -> serveAsync(ctx, r)));
+            return HttpResponse.of(req.aggregate().thenCompose(r -> serveAsync(ctx, r)));
         } else {
-            return HttpResponse.from(serveAsync(ctx, req));
+            return HttpResponse.of(serveAsync(ctx, req));
         }
     }
 

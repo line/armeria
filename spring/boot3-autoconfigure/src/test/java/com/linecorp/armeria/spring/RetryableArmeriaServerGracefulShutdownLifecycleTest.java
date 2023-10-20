@@ -24,17 +24,17 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.context.SmartLifecycle;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 
-public class RetryableArmeriaServerGracefulShutdownLifecycleTest {
+class RetryableArmeriaServerGracefulShutdownLifecycleTest {
 
     @Test
-    public void retryStarting() throws InterruptedException {
+    void retryStarting() throws InterruptedException {
         final Server dummyServer = Server.builder()
                                          .service("/", (ctx, req) -> HttpResponse.of("OK"))
                                          .build();

@@ -19,9 +19,11 @@ package com.linecorp.armeria.internal.client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -34,6 +36,12 @@ public interface HttpSession {
     int MAX_NUM_REQUESTS_SENT = 536870912;
 
     HttpSession INACTIVE = new HttpSession() {
+
+        @Override
+        public SerializationFormat serializationFormat() {
+            return SerializationFormat.UNKNOWN;
+        }
+
         @Nullable
         @Override
         public SessionProtocol protocol() {
@@ -77,6 +85,11 @@ public interface HttpSession {
         }
 
         @Override
+        public boolean isAcquirable(KeepAliveHandler keepAliveHandler) {
+            return false;
+        }
+
+        @Override
         public void deactivate() {}
 
         @Override
@@ -93,6 +106,13 @@ public interface HttpSession {
         return INACTIVE;
     }
 
+    SerializationFormat serializationFormat();
+
+    /**
+     * Returns the explicit {@link SessionProtocol} of this {@link HttpSession}.
+     * This is one of {@link SessionProtocol#H1}, {@link SessionProtocol#H1C}, {@link SessionProtocol#H2} and
+     * {@link SessionProtocol#H2C}.
+     */
     @Nullable
     SessionProtocol protocol();
 
@@ -101,6 +121,14 @@ public interface HttpSession {
      * session from {@code com.linecorp.armeria.client.HttpChannelPool}.
      */
     boolean isAcquirable();
+
+    /**
+     * Returns whether this {@link HttpSession} is healthy using the {@link KeepAliveHandler}.
+     * {@code true} if a new request can acquire this session from
+     * {@code com.linecorp.armeria.client.HttpChannelPool}. {@link KeepAliveHandler#needsDisconnection()}
+     * is also used to determine whether this {@link HttpSession} is healthy.
+     */
+    boolean isAcquirable(KeepAliveHandler keepAliveHandler);
 
     /**
      * Deactivates this {@link HttpSession} to prevent new requests from acquiring this {@link HttpSession}.

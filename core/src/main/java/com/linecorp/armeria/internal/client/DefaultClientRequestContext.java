@@ -104,6 +104,20 @@ public final class DefaultClientRequestContext
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
 
+    private static SessionProtocol desiredSessionProtocol(SessionProtocol protocol, ClientOptions options) {
+        if (!options.factory().options().preferHttp1()) {
+            return protocol;
+        }
+        switch (protocol) {
+            case HTTP:
+                return SessionProtocol.H1C;
+            case HTTPS:
+                return SessionProtocol.H1;
+            default:
+                return protocol;
+        }
+    }
+
     private static final short STR_CHANNEL_AVAILABILITY = 1;
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
@@ -208,7 +222,7 @@ public final class DefaultClientRequestContext
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        super(meterRegistry, sessionProtocol, id, method, reqTarget,
+        super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root));
@@ -226,7 +240,7 @@ public final class DefaultClientRequestContext
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -404,7 +418,7 @@ public final class DefaultClientRequestContext
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
-        autoFillSchemeAndAuthority();
+        autoFillSchemeAuthorityAndOrigin();
     }
 
     private void acquireEventLoop(EndpointGroup endpointGroup) {
@@ -428,7 +442,7 @@ public final class DefaultClientRequestContext
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
-            autoFillSchemeAndAuthority();
+            autoFillSchemeAuthorityAndOrigin();
             req.abort(wrapped);
         }
 
@@ -438,7 +452,7 @@ public final class DefaultClientRequestContext
     }
 
     // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
-    private void autoFillSchemeAndAuthority() {
+    private void autoFillSchemeAuthorityAndOrigin() {
         final String authority = authority();
         if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
             // The connection will be established with the IP address but `host` set to the `Endpoint`
@@ -453,7 +467,16 @@ public final class DefaultClientRequestContext
         final HttpHeadersBuilder headersBuilder = internalRequestHeaders.toBuilder();
         headersBuilder.set(HttpHeaderNames.SCHEME, getScheme(sessionProtocol()));
         if (endpoint != null) {
-            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpoint.authority());
+            final String endpointAuthority = endpoint.authority();
+            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpointAuthority);
+            final String origin = origin();
+            if (origin != null) {
+                headersBuilder.set(HttpHeaderNames.ORIGIN, origin);
+            } else if (options().autoFillOriginHeader()) {
+                final String uriText = sessionProtocol().isTls() ? SessionProtocol.HTTPS.uriText()
+                                                                 : SessionProtocol.HTTP.uriText();
+                headersBuilder.set(HttpHeaderNames.ORIGIN, uriText + "://" + endpointAuthority);
+            }
         }
         internalRequestHeaders = headersBuilder.build();
     }
@@ -495,7 +518,7 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
-                new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
@@ -576,7 +599,6 @@ public final class DefaultClientRequestContext
                                                        protocol, newHeaders.method(), reqTarget);
             }
         }
-
         return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
                                                sessionProtocol(), method(), requestTarget());
     }
@@ -647,11 +669,8 @@ public final class DefaultClientRequestContext
     @Nullable
     @Override
     public SSLSession sslSession() {
-        if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.partial().sslSession();
-        } else {
-            return null;
-        }
+        final RequestLog requestLog = log.getIfAvailable(RequestLogProperty.SESSION);
+        return requestLog != null ? requestLog.sslSession() : null;
     }
 
     @Override
@@ -699,6 +718,23 @@ public final class DefaultClientRequestContext
             authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
         }
         return authority;
+    }
+
+    @Nullable
+    private String origin() {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String origin = additionalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        final HttpRequest request = request();
+        if (origin == null && request != null) {
+            origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = defaultRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = internalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        return origin;
     }
 
     @Override

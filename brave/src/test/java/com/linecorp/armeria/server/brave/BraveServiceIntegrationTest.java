@@ -118,7 +118,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
 
     HttpResponse asyncResponse(Consumer<CompletableFuture<HttpResponse>> completeResponse) {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture);
+        final HttpResponse res = HttpResponse.of(responseFuture);
         CommonPools.workerGroup().next().submit(
                 () -> completeResponse.accept(responseFuture));
         return res;

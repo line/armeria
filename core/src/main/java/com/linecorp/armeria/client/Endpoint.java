@@ -30,7 +30,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
-import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -871,7 +870,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             }
 
             assert decodedHost.startsWith("unix:") : decodedHost;
-            return DomainSocketAddress.of(Paths.get(decodedHost.substring(5))); // Strip "unix:"
+            return DomainSocketAddress.of(decodedHost.substring(5)); // Strip "unix:"
         }
 
         final int port = hasPort() ? this.port : defaultPort;

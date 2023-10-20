@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -91,8 +92,8 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), hasResponseFilter);
-
+                                                    exceptionFilter(), totalDurationFilter(),
+                                                    hasResponseFilter);
         final RetryRule first = RetryRuleBuilder.build(
                 ruleFilter, decision, requiresResponseTrailers());
 
@@ -252,5 +253,16 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     @Override
     public RetryRuleWithContentBuilder<T> onUnprocessed() {
         return (RetryRuleWithContentBuilder<T>) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code responseDurationFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code responseDurationFilter} returns {@code true}.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onTotalDuration(totalDurationFilter);
     }
 }
