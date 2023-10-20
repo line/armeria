@@ -264,8 +264,10 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Sets the {@link GraphqlErrorHandler}.
-     * If not specified, {@link GraphqlErrorHandler#of()} is used by default.
+     * Sets the {@link GraphqlErrorHandler}. If multiple handlers are added, the latter is composed with the
+     * former one using {@link GraphqlErrorHandler#orElse(GraphqlErrorHandler).
+     *
+     * <p>If not specified, {@link GraphqlErrorHandler#of()} is used by default.
      */
     public GraphqlServiceBuilder errorHandler(GraphqlErrorHandler errorHandler) {
         requireNonNull(errorHandler, "errorHandler");
