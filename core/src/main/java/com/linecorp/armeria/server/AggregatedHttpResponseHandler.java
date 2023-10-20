@@ -68,6 +68,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     private void apply0(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
         clearTimeout();
+        // Close early to avoid sending data unnecessarily on a closed stream.
         if (failIfStreamOrSessionClosed()) {
             if (response != null) {
                 response.content().close();

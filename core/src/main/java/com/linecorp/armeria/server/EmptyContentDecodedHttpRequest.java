@@ -229,7 +229,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
-    public boolean abortedResponse() {
+    public boolean isResponseAborted() {
         return abortResponseCause != null;
     }
 

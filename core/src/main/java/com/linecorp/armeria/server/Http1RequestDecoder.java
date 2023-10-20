@@ -313,15 +313,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         // status.
                         final HttpStatusException httpStatusException =
                                 HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-                        if (decodedReq.isInitialized()) {
+                        if (decodedReq.needsAggregation()) {
+                            assert decodedReq.isInitialized();
+                            final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
+                                    inboundTrafficController, httpStatusException, false);
+                            ctx.fireChannelRead(streamingReq);
+                        } else {
                             decodedReq.abortResponse(httpStatusException, true);
-                            return;
                         }
-
-                        assert decodedReq.needsAggregation();
-                        final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
-                                inboundTrafficController, httpStatusException, false);
-                        ctx.fireChannelRead(streamingReq);
                         return;
                     }
 
@@ -336,8 +335,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
                     decodedReq.close();
-                    if (!decodedReq.isInitialized()) {
-                        assert decodedReq.needsAggregation();
+                    if (decodedReq.needsAggregation()) {
+                        assert decodedReq.isInitialized();
                         // An aggregated request is now ready to be fired.
                         ctx.fireChannelRead(decodedReq);
                     }

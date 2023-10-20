@@ -282,8 +282,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 logInvalidStream = true;
             }
         } else {
-            if (req.abortedResponse()) {
-                // Additional DATA frame can be sent after the response has been aborted.
+            if (req.isResponseAborted()) {
+                // Discard the DATA frame received after the response has been aborted
+                // because an aborted response means we have finished handling the
+                // request.
                 return dataLength + padding;
             }
 

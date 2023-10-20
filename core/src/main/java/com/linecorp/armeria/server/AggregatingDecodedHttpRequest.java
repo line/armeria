@@ -196,7 +196,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
-    public boolean abortedResponse() {
+    public boolean isResponseAborted() {
         return abortResponseCause != null;
     }
 
@@ -226,13 +226,14 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
-    public StreamingDecodedHttpRequest toAbortedStreaming(InboundTrafficController inboundTrafficController,
-                                                          Throwable cause, boolean resetAfterResponseSent) {
+    public StreamingDecodedHttpRequest toAbortedStreaming(
+            InboundTrafficController inboundTrafficController,
+            Throwable cause, boolean shouldResetAfterSendingResponse) {
         final StreamingDecodedHttpRequest streamingDecodedHttpRequest = new StreamingDecodedHttpRequest(
                 eventLoop, id, streamId, headers, keepAlive,
                 inboundTrafficController, maxRequestLength, routingCtx,
                 exchangeType, requestStartTimeNanos, requestStartTimeMicros,
-                false, resetAfterResponseSent);
+                false, shouldResetAfterSendingResponse);
         abort(cause);
         streamingDecodedHttpRequest.abortResponse(cause, true);
         return streamingDecodedHttpRequest;

@@ -105,7 +105,7 @@ interface DecodedHttpRequest extends HttpRequest {
     /**
      * Tells whether {@link #abortResponse(Throwable, boolean)} was called or not.
      */
-    boolean abortedResponse();
+    boolean isResponseAborted();
 
     /**
      * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
@@ -141,15 +141,16 @@ interface DecodedHttpRequest extends HttpRequest {
      * specified {@link Throwable}. This is called when an {@link AggregatingDecodedHttpRequest}
      * needs to be passed to a service before it's closed.
      */
-    default StreamingDecodedHttpRequest toAbortedStreaming(InboundTrafficController inboundTrafficController,
-                                                           Throwable cause, boolean resetAfterResponseSent) {
+    default StreamingDecodedHttpRequest toAbortedStreaming(
+            InboundTrafficController inboundTrafficController,
+            Throwable cause, boolean shouldResetAfterSendingResponse) {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Tells whether to send an RST_STREAM after the response is sent.
      */
-    default boolean resetAfterResponseSent() {
+    default boolean sholdResetAfterSendingResponse() {
         return false;
     }
 }
