@@ -17,35 +17,36 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.IdentityHashMap;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
+
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
 
 /**
  * A skeletal {@link Listenable} implementation.
  */
 public abstract class AbstractListenable<T> implements Listenable<T> {
 
-    private static final Map<?, Boolean> EMPTY_LISTENERS = new IdentityHashMap<>();
-
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<AbstractListenable, Map> listenersUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractListenable.class, Map.class, "listeners");
+    private static final AtomicReferenceFieldUpdater<AbstractListenable, Set> listenersUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(AbstractListenable.class, Set.class, "listeners");
 
     // Updated via updateListenersUpdater
     @SuppressWarnings("unchecked")
-    private volatile Map<Consumer<? super T>, Boolean> listeners =
-            (Map<Consumer<? super T>, Boolean>) EMPTY_LISTENERS;
+    private volatile Set<Consumer<? super T>> listeners = ImmutableSet.of();
 
     /**
      * Notify the new value changes to the listeners added via {@link #addListener(Consumer)}.
      */
     protected final void notifyListeners(T latestValue) {
-        final Map<Consumer<? super T>, Boolean> listeners = this.listeners;
-        listeners.forEach((listener, unused) -> listener.accept(latestValue));
+        final Set<Consumer<? super T>> listeners = this.listeners;
+        listeners.forEach(listener -> listener.accept(latestValue));
     }
 
     /**
@@ -79,9 +80,9 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
             }
         }
         for (;;) {
-            final Map<Consumer<? super T>, Boolean> listeners = this.listeners;
-            final Map<Consumer<? super T>, Boolean> newListeners = new IdentityHashMap<>(listeners);
-            newListeners.put(listener, true);
+            final Set<Consumer<? super T>> listeners = this.listeners;
+            final Set<Consumer<? super T>> newListeners = newIdentitySet(listeners);
+            newListeners.add(listener);
             if (listenersUpdater.compareAndSet(this, listeners, newListeners)) {
                 break;
             }
@@ -92,12 +93,20 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     public final void removeListener(Consumer<?> listener) {
         requireNonNull(listener, "listener");
         for (;;) {
-            final Map<Consumer<? super T>, Boolean> listeners = this.listeners;
-            final Map<Consumer<? super T>, Boolean> newListeners = new IdentityHashMap<>(listeners);
+            final Set<Consumer<? super T>> listeners = this.listeners;
+            final Set<Consumer<? super T>> newListeners = newIdentitySet(listeners);
             newListeners.remove(listener);
             if (listenersUpdater.compareAndSet(this, listeners, newListeners)) {
                 break;
             }
+        }
+    }
+
+    private Set<Consumer<? super T>> newIdentitySet(Set<Consumer<? super T>> listeners) {
+        if (listeners.isEmpty()) {
+            return new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
+        } else {
+            return new ObjectLinkedOpenCustomHashSet<>(listeners, IdentityHashStrategy.of());
         }
     }
 }
