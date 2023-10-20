@@ -1691,7 +1691,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
 
     /**
      * Adds the {@link ServerErrorHandler} that provides the error responses in case of unexpected exceptions
-     * or protocol errors. If multiple handlers are added, the latter is composed with the former one using
+     * or protocol errors. If multiple handlers are added, the latter is composed with the former using
      * {@link ServerErrorHandler#orElse(ServerErrorHandler)}.
      *
      * <p>Note that the {@link HttpResponseException} is not handled by the {@link ServerErrorHandler}

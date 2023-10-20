@@ -868,7 +868,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
     /**
      * Adds the {@link ServiceErrorHandler} that handles exceptions thrown in this virtual host.
-     * If multiple handlers are added, the latter is composed with the former one using
+     * If multiple handlers are added, the latter is composed with the former using
      * {@link ServiceErrorHandler#orElse(ServiceErrorHandler)
      */
     public VirtualHostBuilder errorHandler(ServiceErrorHandler errorHandler) {
