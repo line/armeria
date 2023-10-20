@@ -10,9 +10,11 @@
 package com.linecorp.armeria.common.util;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
 
@@ -29,20 +31,21 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
     private final float percentile;
     private final long windowLengthMillis;
     private final TimeWindowPercentileHistogram histogram;
-    @VisibleForTesting
-    static long SNAPSHOT_UPDATE_MILLIS = 1000L;
-    private long lastSnapshotMillis;
+    private final long snapshotUpdateNanos;
+    private static final long DEFAULT_SNAPSHOT_UPDATE_NANOS = TimeUnit.SECONDS.toNanos(1);
+    private long lastSnapshotNanos;
     private HistogramSnapshot histogramSnapshot;
 
     private final Clock clock;
     private final AtomicReference<Boolean> isTakingSnapshot = new AtomicReference<>(false);
 
     TimeWindowPercentileSampler(float percentile, long windowLengthMillis) {
-        this(percentile, windowLengthMillis, Clock.SYSTEM);
+        this(percentile, windowLengthMillis, Clock.SYSTEM, DEFAULT_SNAPSHOT_UPDATE_NANOS);
     }
 
     @VisibleForTesting
-    TimeWindowPercentileSampler(float percentile, long windowLengthMillis, Clock clock) {
+    TimeWindowPercentileSampler(float percentile, long windowLengthMillis, Clock clock,
+                                long snapshotUpdateNanos) {
         this.percentile = percentile;
         this.windowLengthMillis = windowLengthMillis;
 
@@ -54,24 +57,37 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
                                            .build()
                                            .merge(MoreMeters.distributionStatisticConfig());
         this.histogram = new TimeWindowPercentileHistogram(clock, distributionStatisticConfig, true);
+        this.snapshotUpdateNanos = snapshotUpdateNanos;
         this.histogramSnapshot = histogram.takeSnapshot(0, 0, 0);
         this.clock = clock;
-        this.lastSnapshotMillis = clock.wallTime();
+        this.lastSnapshotNanos = clock.monotonicTime();
     }
 
-    static TimeWindowPercentileSampler create(float percentile, long windowLengthMillis) {
-        return new TimeWindowPercentileSampler(percentile, windowLengthMillis);
+    @VisibleForTesting
+    static TimeWindowPercentileSampler create(float percentile, long windowLengthMillis,
+                                              long snapshotUpdateNanos) {
+        return new TimeWindowPercentileSampler(percentile, windowLengthMillis, Clock.SYSTEM,
+                                               snapshotUpdateNanos);
     }
 
     @Override
     public boolean isSampled(Long t) {
         histogram.recordLong(t);
 
-        if (lastSnapshotMillis + SNAPSHOT_UPDATE_MILLIS <= clock.wallTime()) {
+        System.out.println("lastSnapshotNanos: " + lastSnapshotNanos);
+        System.out.println("snapshotUpdateNanos: " + snapshotUpdateNanos);
+        System.out.println("clock.monotonicTime(): " + clock.monotonicTime());
+
+        if (lastSnapshotNanos + snapshotUpdateNanos <= clock.monotonicTime()) {
             if (isTakingSnapshot.compareAndSet(false, true)) {
-                histogramSnapshot = histogram.takeSnapshot(0, 0, 0);
-                lastSnapshotMillis = clock.wallTime();
-                isTakingSnapshot.set(false);
+                // Two threads reach here back to back. Make sure snapshot is not taken very recently before
+                // we acquired the lock.
+                if (lastSnapshotNanos + snapshotUpdateNanos <= clock.monotonicTime()) {
+                    System.out.println("Taking snapshot");
+                    histogramSnapshot = histogram.takeSnapshot(0, 0, 0);
+                    lastSnapshotNanos = clock.monotonicTime();
+                    isTakingSnapshot.set(false);
+                }
             }
         }
 
@@ -81,7 +97,11 @@ final class TimeWindowPercentileSampler implements Sampler<Long> {
 
     @Override
     public String toString() {
-        return "TimeWindowPercentileSampler with " + windowLengthMillis + " ms window and " + percentile +
-               " percentile";
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("percentile", percentile)
+                          .add("windowLengthMillis", windowLengthMillis)
+                          .add("snapshotUpdateNanos", snapshotUpdateNanos)
+                          .toString();
     }
 }

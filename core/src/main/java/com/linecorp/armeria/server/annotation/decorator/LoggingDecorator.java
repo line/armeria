@@ -90,20 +90,20 @@ public @interface LoggingDecorator {
     float slowRequestSamplingPercentile() default -1.0f;
 
     /**
-     * Slow request percentiles are calculated over the last {@code slowRequestSamplingWindowMilliseconds}.
+     * Slow request percentiles are calculated over the last {@code slowRequestSamplingWindowMillis}.
      */
-    long slowRequestSamplingWindowMilliseconds() default 10 * 60 * 1000;
+    long slowRequestSamplingWindowMillis() default 10 * 60 * 1000;
 
     /**
-     * Don't sample the requests if they are faster than the {@code slowRequestSamplingLowerBoundMilliseconds}.
-     * Should be used with {@link #slowRequestSamplingUpperBoundMilliseconds()}.
+     * Don't sample the requests if they are faster than the {@code slowRequestSamplingLowerBoundMillis()}.
+     * Should be used with {@link #slowRequestSamplingUpperBoundMillis()}.
      */
-    long slowRequestSamplingLowerBoundMilliseconds() default 0L;
+    long slowRequestSamplingLowerBoundMillis() default 0L;
 
     /**
-     * Always sample the requests if they are slower than the {@code slowRequestSamplingUpperBoundMilliseconds}.
+     * Always sample the requests if they are slower than the {@code slowRequestSamplingUpperBoundMillis()}.
      */
-    long slowRequestSamplingUpperBoundMilliseconds() default Long.MAX_VALUE;
+    long slowRequestSamplingUpperBoundMillis() default Long.MAX_VALUE;
 
     /**
      * The order of decoration, where a {@link Decorator} of lower value will be applied first.

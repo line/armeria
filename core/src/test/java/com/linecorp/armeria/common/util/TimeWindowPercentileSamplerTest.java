@@ -18,13 +18,15 @@ package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
 
 public class TimeWindowPercentileSamplerTest {
     @Test
     public void testSamplingMinimumPercentile() {
-        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
-        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(0.0f, 10000000L);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(0.0f,
+                                                                         TimeUnit.SECONDS.toMillis(60), 0L);
 
         // Should sample everything
         assertThat(sampler.isSampled(10L)).isTrue();
@@ -34,8 +36,8 @@ public class TimeWindowPercentileSamplerTest {
 
     @Test
     public void testSamplingMaximumPercentile() {
-        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
-        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f, 10000000L);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f,
+                                                                         TimeUnit.SECONDS.toMillis(60), 0L);
 
         // Should only sample the maximum value
         assertThat(sampler.isSampled(10L)).isTrue();
@@ -49,9 +51,8 @@ public class TimeWindowPercentileSamplerTest {
 
     @Test
     public void testSamplingWindowExpires() throws InterruptedException {
-        final long windowLength = 1000L;
-        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
-        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f, windowLength);
+        final long windowLength = TimeUnit.SECONDS.toMillis(1);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(1.0f, windowLength, 0L);
 
         // Should only sample the maximum value
         assertThat(sampler.isSampled(20L)).isTrue();
@@ -64,8 +65,8 @@ public class TimeWindowPercentileSamplerTest {
 
     @Test
     public void testSampling0_5Percentile() {
-        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
-        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(.5f, 10000L);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(.5f,
+                                                                         TimeUnit.SECONDS.toMillis(60), 0L);
 
         // Create a uniform distribution of 1000 values from 1 to 1000
         for (long i = 1; i <= 1000; i++) {
@@ -79,8 +80,8 @@ public class TimeWindowPercentileSamplerTest {
 
     @Test
     public void testSampling0_95Percentile() {
-        TimeWindowPercentileSampler.SNAPSHOT_UPDATE_MILLIS = 0;
-        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(.95f, 10000L);
+        final Sampler<Long> sampler = TimeWindowPercentileSampler.create(.95f,
+                                                                         TimeUnit.SECONDS.toMillis(60), 0);
 
         // Create a uniform distribution of 1000 values from 1 to 1000
         for (long i = 1; i <= 1000; i++) {

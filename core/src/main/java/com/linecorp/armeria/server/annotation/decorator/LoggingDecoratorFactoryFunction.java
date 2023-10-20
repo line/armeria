@@ -50,11 +50,14 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
                                 .successSamplingRate(successSamplingRate)
                                 .failureSamplingRate(failureSamplingRate);
 
-        if (parameter.slowRequestSamplingPercentile() >= 0.0f) {
+        if (
+                parameter.slowRequestSamplingPercentile() >= 0.0f ||
+                parameter.slowRequestSamplingUpperBoundMillis() >= 0
+        ) {
             builder.slowRequestSamplingPercentile(parameter.slowRequestSamplingPercentile(),
-                                                  parameter.slowRequestSamplingWindowMilliseconds(),
-                                                  parameter.slowRequestSamplingLowerBoundMilliseconds(),
-                                                  parameter.slowRequestSamplingUpperBoundMilliseconds());
+                                                  parameter.slowRequestSamplingWindowMillis(),
+                                                  parameter.slowRequestSamplingLowerBoundMillis(),
+                                                  parameter.slowRequestSamplingUpperBoundMillis());
         }
         return builder.newDecorator();
     }

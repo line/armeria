@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.logging;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -153,23 +154,37 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
      * @param slowRequestSamplingUpperBoundMilliseconds upper bound of slow requests.
      *          Any request that took more than this amount of time will be sampled regardless
      *          of their percentile.
+     *
      */
     public LoggingServiceBuilder slowRequestSamplingPercentile(float slowRequestPercentile,
                                                                long windowMilliseconds,
                                                                long slowRequestSamplingLowerBoundMilliseconds,
                                                                long slowRequestSamplingUpperBoundMilliseconds) {
-        final Sampler<Long> percentileMatches;
-        if (0.0 <= slowRequestPercentile && slowRequestPercentile <= 1.0) {
-            percentileMatches = Sampler.never();
-        } else {
-            percentileMatches = Sampler.percentile(slowRequestPercentile, windowMilliseconds);
+        // Check if configuration is valid. A valid configuration requires at least one parameter to be set
+        // correctly. Either `slowRequestPercentile` or `slowRequestSamplingUpperBoundMilliseconds` should be
+        // set to a value that would trigger sampling.
+        if ((slowRequestPercentile <= 0.0 || windowMilliseconds <= 0) &&
+            slowRequestSamplingUpperBoundMilliseconds == Long.MAX_VALUE) {
+            // Ignore the invalid configuration.
+            return this;
         }
 
-        final Sampler<Long> isSlow = Sampler.greaterThanOrEqual(
-                slowRequestSamplingLowerBoundMilliseconds * 1000);
-        final Sampler<Long> isVerySlow = Sampler.greaterThan(slowRequestSamplingUpperBoundMilliseconds * 1000);
+        // Samplers should use Nanoseconds as the unit.
+        final Sampler<Long> percentileMatches;
+        if (0.0 <= slowRequestPercentile && slowRequestPercentile <= 1.0) {
+            percentileMatches = Sampler.percentile(slowRequestPercentile, windowMilliseconds);
+        } else {
+            percentileMatches = Sampler.never();
+        }
+
+        final long slowEnoughNanos = TimeUnit.MILLISECONDS.toNanos(slowRequestSamplingLowerBoundMilliseconds);
+        final Sampler<Long> isSlowEnough = Sampler.greaterThanOrEqual(slowEnoughNanos);
+
+        final long verySlowNanos = TimeUnit.MILLISECONDS.toNanos(slowRequestSamplingUpperBoundMilliseconds);
+        final Sampler<Long> isVerySlow = Sampler.greaterThan(verySlowNanos);
+
         return slowRequestSampler(
-                isVerySlow.or(percentileMatches.and(isSlow))
+                isVerySlow.or(isSlowEnough.and(percentileMatches))
         );
     }
 
