@@ -440,7 +440,7 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the {@link Supplier}  which provides an {@link AutoCloseable} and will be called whenever this
+     * Returns the {@link Supplier} which provides an {@link AutoCloseable} and will be called whenever this
      * {@link RequestContext} is popped from the {@link RequestContextStorage}.
      */
     @UnstableApi
