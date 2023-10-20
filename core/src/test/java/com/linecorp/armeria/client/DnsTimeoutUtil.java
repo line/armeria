@@ -13,30 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License
  */
-
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.UnknownHostException;
-
-import com.google.common.base.Throwables;
-
-import io.netty.resolver.dns.DnsNameResolverTimeoutException;
+import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 final class DnsTimeoutUtil {
 
     static void assertDnsTimeoutException(Throwable cause) {
-        final Throwable rootCause = Throwables.getRootCause(cause);
-        if (rootCause instanceof UnknownHostException) {
-            final Throwable suppressed = rootCause.getSuppressed()[0];
-            assertThat(suppressed.getClass().getSimpleName())
-                    .isEqualTo("SearchDomainUnknownHostException");
-            assertThat(suppressed.getCause()).isInstanceOf(DnsNameResolverTimeoutException.class);
-        } else {
-            assertThat(rootCause).isInstanceOfAny(DnsTimeoutException.class,
-                                                  DnsNameResolverTimeoutException.class);
-        }
+        assertThat(DnsUtil.isDnsQueryTimedOut(cause))
+                .withFailMessage("Expected the DNS query to fail due to a timeout, " +
+                                 "but it failed with a non-timeout exception: %s", cause)
+                .isTrue();
     }
 
     private DnsTimeoutUtil() {}

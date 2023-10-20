@@ -152,7 +152,7 @@ final class SamlService implements HttpServiceWithRoutes {
         } else {
             f = portConfigHolder.future().thenCompose(unused -> req.aggregate());
         }
-        return HttpResponse.from(f.handleAsync((aggregatedReq, cause) -> {
+        return HttpResponse.of(f.handleAsync((aggregatedReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a SAML request.", ctx, cause);
                 return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,

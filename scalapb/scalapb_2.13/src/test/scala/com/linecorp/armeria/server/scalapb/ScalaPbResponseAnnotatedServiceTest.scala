@@ -33,12 +33,14 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 import _root_.scalapb.json4s.{JsonFormat, Parser}
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import testing.scalapb.messages._
 
 import java.io.ByteArrayOutputStream
 import java.util.stream.Stream
 import scala.concurrent.{ExecutionContext, Future}
 
+@GenerateNativeImageTrace
 class ScalaPbResponseAnnotatedServiceTest {
 
   private val RECORD_SEPARATOR: Int = 0x1e

@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -60,7 +61,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 class LoggingServiceTest {
 
-    private static final HttpService delegate = (ctx, req) -> {
+    static final HttpService delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
         return HttpResponse.of(200);
@@ -81,9 +82,19 @@ class LoggingServiceTest {
         LoggingTestUtil.throwIfCaptured(capturedCause);
     }
 
+    private static ServiceRequestContext serviceRequestContext() {
+        return serviceRequestContext(HttpRequest.of(HttpMethod.GET, "/"));
+    }
+
+    private static ServiceRequestContext serviceRequestContext(HttpRequest req) {
+        return ServiceRequestContext.builder(req)
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
+                                    .build();
+    }
+
     @Test
     void defaultsSuccess() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         final LoggingService service =
                 LoggingService.builder()
@@ -96,7 +107,7 @@ class LoggingServiceTest {
 
     @Test
     void defaultsError() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -118,7 +129,7 @@ class LoggingServiceTest {
     @MethodSource("expectedException")
     @ParameterizedTest
     void shouldNotLogHttpStatusAndResponseExceptions(Exception exception) throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         final Throwable cause = exception.getCause();
         ctx.logBuilder().endResponse(exception);
@@ -148,7 +159,7 @@ class LoggingServiceTest {
 
     @Test
     void infoLevel() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -173,8 +184,9 @@ class LoggingServiceTest {
 
     @Test
     void mapRequestLogLevelMapper() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(RequestHeaders.of(
-                HttpMethod.GET, "/", "x-req", "test", "x-res", "test")));
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.GET, "/", "x-req", "test", "x-res", "test"));
+        final ServiceRequestContext ctx = serviceRequestContext(req);
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isWarnEnabled()).thenReturn(true);
 
@@ -211,7 +223,7 @@ class LoggingServiceTest {
 
     @Test
     void mapRequestLogLevelMapperUnmatched() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
 
@@ -267,7 +279,7 @@ class LoggingServiceTest {
         final BiFunction<RequestContext, HttpHeaders, String> responseTrailersSanitizer =
                 (ctx, trailers) -> sanitizedResponseTrailers;
 
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         ctx.logBuilder().requestContent(new Object(), new Object());
         ctx.logBuilder().requestTrailers(HttpHeaders.of("foo", "bar"));
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
@@ -327,7 +339,7 @@ class LoggingServiceTest {
         final BiFunction<RequestContext, HttpHeaders, String> responseTrailersSanitizer =
                 (ctx, trailers) -> sanitizedResponseTrailers;
 
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         ctx.logBuilder().requestContent(new Object(), new Object());
         ctx.logBuilder().requestTrailers(HttpHeaders.of("foo", "bar"));
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
@@ -372,7 +384,7 @@ class LoggingServiceTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final ServiceRequestContext ctx = serviceRequestContext(req);
         final Exception cause = new Exception("not sanitized");
         ctx.logBuilder().endResponse(cause);
 
@@ -424,7 +436,7 @@ class LoggingServiceTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final ServiceRequestContext ctx = serviceRequestContext(req);
         final Exception cause = new Exception("not sanitized");
         ctx.logBuilder().endResponse(cause);
 
@@ -476,7 +488,7 @@ class LoggingServiceTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final ServiceRequestContext ctx = serviceRequestContext(req);
         ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -518,7 +530,7 @@ class LoggingServiceTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final ServiceRequestContext ctx = serviceRequestContext(req);
         ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -554,7 +566,7 @@ class LoggingServiceTest {
 
     @Test
     void sample() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         final LogWriter logWriter = LogWriter.builder()
                                              .logger(logger)
@@ -573,7 +585,7 @@ class LoggingServiceTest {
 
     @Test
     void shouldLogFailedRequestWhenFailureSamplingRateIsAlways() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -596,7 +608,7 @@ class LoggingServiceTest {
 
     @Test
     void shouldNotLogFailedRequestWhenSamplingRateIsZero() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -613,7 +625,7 @@ class LoggingServiceTest {
 
     @Test
     void responseCauseFilter() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx = serviceRequestContext();
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);

@@ -79,8 +79,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
-    ServiceConfigBuilder(Route route, HttpService service) {
-        this.route = requireNonNull(route, "route");
+    ServiceConfigBuilder(Route route, String contextPath, HttpService service) {
+        this.route = requireNonNull(route, "route").withPrefix(contextPath);
         this.service = requireNonNull(service, "service");
     }
 
@@ -296,7 +296,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
-                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter) {
+                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
+                        String baseContextPath) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
@@ -312,7 +313,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         } else if (!webSocket || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
             requestTimeoutMillis = defaultRequestTimeoutMillis;
         } else {
-            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_TIMEOUT_MILLIS;
+            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS;
         }
 
         final long maxRequestLength;
@@ -321,7 +322,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         } else if (!webSocket || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
             maxRequestLength = defaultMaxRequestLength;
         } else {
-            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_LENGTH;
+            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH;
         }
 
         final long requestAutoAbortDelayMillis;
@@ -334,8 +335,10 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
             requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
         }
 
+        final Route routeWithBaseContextPath = route.withPrefix(baseContextPath);
         return new ServiceConfig(
-                route, mappedRoute == null ? route : mappedRoute,
+                routeWithBaseContextPath,
+                mappedRoute == null ? routeWithBaseContextPath : mappedRoute,
                 service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis,

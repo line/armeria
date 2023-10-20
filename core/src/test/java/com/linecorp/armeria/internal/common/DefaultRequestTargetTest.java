@@ -16,9 +16,11 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Strings.emptyToNull;
+import static com.linecorp.armeria.internal.common.DefaultRequestTarget.removeMatrixVariables;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -342,12 +344,14 @@ class DefaultRequestTargetTest {
         assertAccepted(parse(mode, "/%26?a=1%26a=2&b=3"), "/&", "a=1%26a=2&b=3");
     }
 
-    @ParameterizedTest
-    @EnumSource(Mode.class)
-    void shouldNormalizeSemicolon(Mode mode) {
-        assertAccepted(parse(mode, "/;?a=b;c=d"), "/;", "a=b;c=d");
-        // '%3B' in a query string should never be decoded into ';'.
-        assertAccepted(parse(mode, "/%3b?a=b%3Bc=d"), "/;", "a=b%3Bc=d");
+    @Test
+    void serverShouldRemoveMatrixVariablesWhenNotAllowed() {
+        // Not allowed
+        assertAccepted(forServer("/foo;a=b?c=d;e=f"), "/foo", "c=d;e=f");
+        // Allowed.
+        assertAccepted(forServer("/;a=b?c=d;e=f", true), "/;a=b", "c=d;e=f");
+        // '%3B' should never be decoded into ';'.
+        assertAccepted(forServer("/%3B?a=b%3Bc=d"), "/%3B", "a=b%3Bc=d");
     }
 
     @ParameterizedTest
@@ -359,10 +363,23 @@ class DefaultRequestTargetTest {
     }
 
     @Test
-    void shouldReserveQuestionMark() {
+    void shouldReserveQuestionMark() throws URISyntaxException {
         // '%3F' must not be decoded into '?'.
         assertAccepted(forServer("/abc%3F.json?a=%3F"), "/abc%3F.json", "a=%3F");
         assertAccepted(forClient("/abc%3F.json?a=%3F"), "/abc%3F.json", "a=%3F");
+    }
+
+    @Test
+    void reserveSemicolonWhenAllowed() {
+        // '%3B' is decoded into ';' when allowSemicolonInPathComponent is true.
+        assertAccepted(forServer("/abc%3B?a=%3B", true), "/abc;", "a=%3B");
+        assertAccepted(forServer("/abc%3B?a=%3B"), "/abc%3B", "a=%3B");
+
+        assertAccepted(forServer("/abc%3B", true), "/abc;");
+        assertAccepted(forServer("/abc%3B"), "/abc%3B");
+
+        // Client always decodes '%3B' into ';'.
+        assertAccepted(forClient("/abc%3B?a=%3B"), "/abc;", "a=%3B");
     }
 
     @Test
@@ -386,12 +403,12 @@ class DefaultRequestTargetTest {
 
     @Test
     void serverShouldHandleReservedCharacters() {
-        assertAccepted(forServer("/#/:@!$&'()*+,;=?a=/#/:[]@!$&'()*+,;="),
-                       "/%23/:@!$&'()*+,;=",
-                       "a=/%23/:[]@!$&'()*+,;=");
+        assertAccepted(forServer("/#/:@!$&'()*+,=?a=/#/:[]@!$&'()*+,="),
+                       "/%23/:@!$&'()*+,=",
+                       "a=/%23/:[]@!$&'()*+,=");
         assertAccepted(forServer("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
                                  "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
-                       "/%23%2F:@!$&'()*+,;=%3F",
+                       "/%23%2F:@!$&'()*+,%3B=%3F",
                        "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
     }
 
@@ -418,9 +435,9 @@ class DefaultRequestTargetTest {
     @ParameterizedTest
     @EnumSource(Mode.class)
     void shouldHandleSquareBracketsInPath(Mode mode) {
-        assertAccepted(parse(mode, "/@/:[]!$&'()*+,;="), "/@/:%5B%5D!$&'()*+,;=");
-        assertAccepted(parse(mode, "/%40%2F%3A%5B%5D%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
-                       "/@%2F:%5B%5D!$&'()*+,;=%3F");
+        assertAccepted(parse(mode, "/@/:[]!$&'()*+,="), "/@/:%5B%5D!$&'()*+,=");
+        assertAccepted(parse(mode, "/%40%2F%3A%5B%5D%21%24%26%27%28%29%2A%2B%2C%3D%3F"),
+                       "/@%2F:%5B%5D!$&'()*+,=%3F");
     }
 
     @ParameterizedTest
@@ -496,6 +513,35 @@ class DefaultRequestTargetTest {
         }
     }
 
+    @Test
+    void testRemoveMatrixVariables() {
+        assertThat(removeMatrixVariables("/foo")).isEqualTo("/foo");
+        assertThat(removeMatrixVariables("/foo;")).isEqualTo("/foo");
+        assertThat(removeMatrixVariables("/foo/")).isEqualTo("/foo/");
+        assertThat(removeMatrixVariables("/foo/bar")).isEqualTo("/foo/bar");
+        assertThat(removeMatrixVariables("/foo/bar;")).isEqualTo("/foo/bar");
+        assertThat(removeMatrixVariables("/foo/bar/")).isEqualTo("/foo/bar/");
+        assertThat(removeMatrixVariables("/foo;/bar")).isEqualTo("/foo/bar");
+        assertThat(removeMatrixVariables("/foo;/bar;")).isEqualTo("/foo/bar");
+        assertThat(removeMatrixVariables("/foo;/bar/")).isEqualTo("/foo/bar/");
+        assertThat(removeMatrixVariables("/foo;a=b/bar")).isEqualTo("/foo/bar");
+        assertThat(removeMatrixVariables("/foo;a=b/bar;")).isEqualTo("/foo/bar");
+        assertThat(removeMatrixVariables("/foo;a=b/bar/")).isEqualTo("/foo/bar/");
+        assertThat(removeMatrixVariables("/foo;a=b/bar/baz")).isEqualTo("/foo/bar/baz");
+        assertThat(removeMatrixVariables("/foo;a=b/bar/baz;")).isEqualTo("/foo/bar/baz");
+        assertThat(removeMatrixVariables("/foo;a=b/bar/baz/")).isEqualTo("/foo/bar/baz/");
+        assertThat(removeMatrixVariables("/foo;a=b/bar;/baz")).isEqualTo("/foo/bar/baz");
+        assertThat(removeMatrixVariables("/foo;a=b/bar;/baz;")).isEqualTo("/foo/bar/baz");
+        assertThat(removeMatrixVariables("/foo;a=b/bar;/baz/")).isEqualTo("/foo/bar/baz/");
+        assertThat(removeMatrixVariables("/foo;a=b/bar;c=d/baz")).isEqualTo("/foo/bar/baz");
+        assertThat(removeMatrixVariables("/foo;a=b/bar;c=d/baz;")).isEqualTo("/foo/bar/baz");
+        assertThat(removeMatrixVariables("/foo;a=b/bar;c=d/baz/")).isEqualTo("/foo/bar/baz/");
+
+        // Invalid
+        assertThat(removeMatrixVariables("/;a=b")).isNull();
+        assertThat(removeMatrixVariables("/prefix/;a=b")).isNull();
+    }
+
     private static void assertAccepted(@Nullable RequestTarget res, String expectedPath) {
         assertAccepted(res, expectedPath, null, null);
     }
@@ -538,8 +584,8 @@ class DefaultRequestTargetTest {
     }
 
     @Nullable
-    private static RequestTarget forServer(String rawPath, boolean allowDoubleDotsInQueryString) {
-        final RequestTarget res = DefaultRequestTarget.forServer(rawPath, allowDoubleDotsInQueryString);
+    private static RequestTarget forServer(String rawPath, boolean allowSemicolonInPathComponent) {
+        final RequestTarget res = DefaultRequestTarget.forServer(rawPath, allowSemicolonInPathComponent, false);
         if (res != null) {
             logger.info("forServer({}) => path: {}, query: {}", rawPath, res.path(), res.query());
         } else {
@@ -593,7 +639,20 @@ class DefaultRequestTargetTest {
                 "/foo%2f..", "/foo%2f../", "/foo/..%2f", "/foo%2F..%2F",
 
                 // Dots and slashes escaped
-                ".%2E%2F"
+                ".%2E%2F",
+
+                // With matrix variables
+                "..;a=b", "/..;a=b",
+                "..;a=b/foo", "/..;a=b/foo",
+                "foo/..;a=b", "/foo/..;a=b",
+                "foo/..;a=b/", "/foo/..;a=b/",
+                "foo/..;a=b/bar", "/foo/..;a=b/bar",
+                ".%2e;a=b", "/.%2e;a=b", "%2E.;a=b/", "/%2E.;a=b/", ".%2E;a=b/", "/.%2E;a=b/",
+                "foo/.%2e;a=b", "/foo/.%2e;a=b",
+                "foo/%2E.;a=b/", "/foo/%2E.;a=b/",
+                "foo/%2E.;a=b/bar", "/foo/%2E.;a=b/bar",
+                "%2f..;a=b", "..;a=b%2F", "/..;a=b%2F", "%2F..;a=b/", "%2f..;a=b%2f",
+                "/foo%2f..;a=b", "/foo%2f..;a=b/", "/foo/..;a=b%2f", "/foo%2F..;a=b%2F"
         );
     }
 

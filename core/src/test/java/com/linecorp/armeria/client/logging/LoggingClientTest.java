@@ -48,9 +48,10 @@ import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 class LoggingClientTest {
-    private static final HttpClient delegate = (ctx, req) -> {
+    static final HttpClient delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
         return HttpResponse.of(HttpStatus.NO_CONTENT);
@@ -63,10 +64,16 @@ class LoggingClientTest {
         LoggingTestUtil.throwIfCaptured(capturedCause);
     }
 
+    static ClientRequestContext clientRequestContext(HttpRequest req) {
+        return ClientRequestContext.builder(req)
+                                   .eventLoop(ImmediateEventLoop.INSTANCE)
+                                   .build();
+    }
+
     @Test
     void logger() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
@@ -115,7 +122,7 @@ class LoggingClientTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
@@ -162,7 +169,7 @@ class LoggingClientTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
@@ -206,7 +213,7 @@ class LoggingClientTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -249,7 +256,7 @@ class LoggingClientTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -290,7 +297,7 @@ class LoggingClientTest {
     @Test
     void internalServerError() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -318,7 +325,7 @@ class LoggingClientTest {
     @Test
     void defaultsError() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
 
@@ -350,7 +357,7 @@ class LoggingClientTest {
     @Test
     void shouldLogFailedResponseWhenFailureSamplingRateIsAlways() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
 
@@ -382,7 +389,7 @@ class LoggingClientTest {
     @Test
     void shouldNotLogFailedResponseWhenSamplingRateIsZero() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
 

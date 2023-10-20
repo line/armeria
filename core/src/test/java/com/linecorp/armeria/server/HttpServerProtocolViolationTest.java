@@ -44,7 +44,7 @@ class HttpServerProtocolViolationTest {
             sb.maxRequestLength(MAX_CONTENT_LENGTH);
             sb.decorator(LoggingService.newDecorator());
             sb.service("/echo", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(
+                return HttpResponse.of(req.aggregate().thenApply(
                         agg -> HttpResponse.of(ResponseHeaders.of(200), agg.content())));
             });
         }

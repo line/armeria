@@ -71,9 +71,9 @@ class CustomServerErrorHandlerTest {
                 final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
                 ctx.eventLoop().schedule(() -> future.completeExceptionally(
                         new UnsupportedOperationException("Unsupported!")), 100, TimeUnit.MILLISECONDS);
-                return HttpResponse.from(future);
+                return HttpResponse.of(future);
             });
-            sb.service("/post", (ctx, req) -> HttpResponse.from(
+            sb.service("/post", (ctx, req) -> HttpResponse.of(
                     req.aggregate().thenApply(aggregated -> HttpResponse.of(HttpStatus.OK))));
 
             sb.virtualHost(TEST_HOST)

@@ -15,7 +15,7 @@
  */
 
 import Typography from '@material-ui/core/Typography';
-import React from 'react';
+import React, { SetStateAction } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
 import Button from '@material-ui/core/Button';
@@ -136,7 +136,36 @@ type Props = OwnProps &
   }>;
 
 const MethodPage: React.FunctionComponent<Props> = (props) => {
-  const [debugFormIsOpen, setDebugFormIsOpen] = React.useState(false);
+  const [debugFormIsOpen, setDebugFormIsOpenState] = React.useState(false);
+
+  const { location, history } = props;
+  const setDebugFormIsOpen: React.Dispatch<SetStateAction<boolean>> =
+    React.useCallback(
+      (value) => {
+        const valueToSet =
+          value instanceof Function ? value(debugFormIsOpen) : value;
+        const urlParams = new URLSearchParams(location.search);
+        if (valueToSet === true) {
+          urlParams.set('debug_form_is_open', `${valueToSet}`);
+        } else {
+          urlParams.delete('debug_form_is_open');
+        }
+
+        const serializedParams = `?${urlParams.toString()}`;
+        if (serializedParams !== location.search) {
+          history.push(`${location.pathname}${serializedParams}`);
+        }
+
+        return setDebugFormIsOpenState(valueToSet);
+      },
+      [
+        debugFormIsOpen,
+        setDebugFormIsOpenState,
+        history,
+        location.search,
+        location.pathname,
+      ],
+    );
 
   const params = props.match.params;
   const service = props.specification.getServiceByName(params.serviceName);
@@ -196,7 +225,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           </Button>
         )}
       </Grid>
-      {method.descriptionInfo && (
+      {method.descriptionInfo?.docString && (
         <Section>
           <Description descriptionInfo={method.descriptionInfo} />
         </Section>
@@ -239,6 +268,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           useRequestBody={needsToUseRequestBody(props.match.params.httpMethod)}
           debugFormIsOpen={debugFormIsOpen}
           setDebugFormIsOpen={setDebugFormIsOpen}
+          docServiceRoute={props.specification.getDocServiceRoute()}
         />
       )}
     </>

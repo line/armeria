@@ -126,8 +126,12 @@ public final class ServerPort implements Comparable<ServerPort> {
         this.protocols = checkProtocols(protocols);
         this.portGroup = portGroup;
 
-        comparisonStr = localAddress.getAddress().getHostAddress() + '/' +
-                        localAddress.getPort() + '/' + protocols;
+        if (localAddress instanceof DomainSocketAddress) {
+            comparisonStr = ((DomainSocketAddress) localAddress).authority() + '/' + protocols;
+        } else {
+            comparisonStr = localAddress.getAddress().getHostAddress() + '/' +
+                            localAddress.getPort() + '/' + protocols;
+        }
     }
 
     private static Set<SessionProtocol> checkProtocols(Iterable<SessionProtocol> protocols) {

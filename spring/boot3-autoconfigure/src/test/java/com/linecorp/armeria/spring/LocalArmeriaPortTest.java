@@ -19,14 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -38,7 +36,6 @@ import com.linecorp.armeria.spring.LocalArmeriaPortTest.TestConfiguration;
 /**
  * Tests for {@link LocalArmeriaPort}.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
@@ -64,19 +61,19 @@ public class LocalArmeriaPortTest {
     }
 
     @Test
-    public void testPortConfigurationFromFieldInjection() throws Exception {
+    void testPortConfigurationFromFieldInjection() throws Exception {
         final Integer actualPort = server.activeLocalPort();
         assertThat(actualPort).isEqualTo(portField);
     }
 
     @Test
-    public void testPortConfigurationFromMethodInjection() throws Exception {
+    void testPortConfigurationFromMethodInjection() throws Exception {
         final Integer actualPort = server.activeLocalPort();
         assertThat(actualPort).isEqualTo(portMethod);
     }
 
     @Test
-    public void testHttpServiceRegistrationBean() throws Exception {
+    void testHttpServiceRegistrationBean() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
         final HttpResponse response = client.get("/ok");
         final AggregatedHttpResponse res = response.aggregate().get();

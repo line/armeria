@@ -212,8 +212,8 @@ class ByteBufsInputStreamTest {
         assertThatThrownBy(consumer::get)
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseExactlyInstanceOf(InterruptedIOException.class)
-                .getCause().hasCauseExactlyInstanceOf(IllegalStateException.class)
-                .getCause().hasMessageContaining("my fault");
+                .cause().hasCauseExactlyInstanceOf(IllegalStateException.class)
+                .cause().hasMessageContaining("my fault");
     }
 
     @ParameterizedTest

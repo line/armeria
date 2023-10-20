@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class DefaultLogWriter implements LogWriter {
 
-    static final Logger defaultLogger = LoggerFactory.getLogger(DefaultLogWriter.class);
+    static final Logger defaultLogger = LoggerFactory.getLogger(LogWriter.class);
 
     static final DefaultLogWriter DEFAULT =
             new DefaultLogWriter(defaultLogger, DEFAULT_REQUEST_LOG_LEVEL_MAPPER,

@@ -22,13 +22,11 @@ import java.util.Collection;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
@@ -37,14 +35,11 @@ import com.linecorp.armeria.spring.DeprecatedIpTest.TestConfiguration;
 
 /**
  * Tests for keeping the behavior of deprecated {@link Port#getIp()}.
- *
- * TODO(ikhoon): Migarate Junit 4 to Junit 5.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "deprecatedIpTest" })
 @DirtiesContext
-public class DeprecatedIpTest {
+class DeprecatedIpTest {
 
     @SpringBootApplication
     static class TestConfiguration {}
@@ -53,7 +48,7 @@ public class DeprecatedIpTest {
     private Server server;
 
     @Test
-    public void testIpCanBeUsed() {
+    void testIpCanBeUsed() {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
         for (ServerPort sp : serverPorts) {
             final InetAddress address = sp.localAddress().getAddress();

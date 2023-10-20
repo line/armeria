@@ -86,8 +86,8 @@ public final class AuthService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(AuthorizerUtil.authorizeAndSupplyHandlers(authorizer, ctx, req)
-                                               .handleAsync((result, cause) -> {
+        return HttpResponse.of(AuthorizerUtil.authorizeAndSupplyHandlers(authorizer, ctx, req)
+                                             .handleAsync((result, cause) -> {
             try {
                 final HttpService delegate = (HttpService) unwrap();
                 if (cause == null) {

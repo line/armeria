@@ -43,8 +43,8 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * A default implementation of {@link ServiceConfigSetters} that stores service related settings
- * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, HttpService)} to build
- * {@link ServiceConfigBuilder}.
+ * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, String, HttpService)}
+ * to build {@link ServiceConfigBuilder}.
  */
 final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
@@ -284,8 +284,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
      * {@link AnnotatedServiceBindingBuilder} needs exception handling decorators to be the last to handle
      * any exceptions thrown by the service and other decorators.
      */
-    ServiceConfigBuilder toServiceConfigBuilder(Route route, HttpService service) {
-        final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
+    ServiceConfigBuilder toServiceConfigBuilder(Route route, String contextPath, HttpService service) {
+        final ServiceConfigBuilder serviceConfigBuilder =
+                new ServiceConfigBuilder(route, contextPath, service);
 
         final AnnotatedService annotatedService;
         if (defaultServiceNaming == null || defaultLogName == null) {

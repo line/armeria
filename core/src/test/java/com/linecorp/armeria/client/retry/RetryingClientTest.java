@@ -269,7 +269,7 @@ class RetryingClientTest {
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    return HttpResponse.from(req.aggregate().handle((aggregatedRequest, thrown) -> {
+                    return HttpResponse.of(req.aggregate().handle((aggregatedRequest, thrown) -> {
                         if (reqPostCount.getAndIncrement() < 1) {
                             return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                         } else {
@@ -359,6 +359,16 @@ class RetryingClientTest {
                                 })
                                 .thenBackoff());
         final AggregatedHttpResponse res = client.get("/trailers-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+    }
+
+    @Test
+    void retryWhenTotalDurationIsHigh() {
+        final WebClient client =
+                client(RetryRule.builder()
+                                .onTotalDuration((unused, duration) -> duration.toNanos() > 100)
+                                .thenBackoff());
+        final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 

@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.protobuf
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.json.JsonMapper
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.{ConsumesJson, Post, ProducesJson}
 import com.linecorp.armeria.server.docs.{ContainerTypeSignature, DocService, MapTypeSignature, StructInfo, TypeSignatureType}
@@ -30,6 +31,7 @@ import testing.scalapb.messages.TestMessage
 
 import scala.concurrent.Future
 
+@GenerateNativeImageTrace
 class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
 
   override def configureServer: ServerBuilder => Unit = {

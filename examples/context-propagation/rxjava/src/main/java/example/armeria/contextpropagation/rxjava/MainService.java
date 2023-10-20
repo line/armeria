@@ -105,6 +105,6 @@ public class MainService implements HttpService {
                         .map(content -> HttpResponse.of(content.toString()))
                         .onErrorReturn(HttpResponse::ofFailure);
 
-        return HttpResponse.from(response.toCompletionStage());
+        return HttpResponse.of(response.toCompletionStage());
     }
 }
