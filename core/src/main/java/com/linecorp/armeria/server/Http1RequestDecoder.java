@@ -314,7 +314,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         final HttpStatusException httpStatusException =
                                 HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
                         if (decodedReq.needsAggregation()) {
-                            assert decodedReq.isInitialized();
+                            assert !decodedReq.isInitialized();
                             final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
                                     inboundTrafficController, httpStatusException, false);
                             ctx.fireChannelRead(streamingReq);
