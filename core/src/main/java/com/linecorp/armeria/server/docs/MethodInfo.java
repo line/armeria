@@ -102,6 +102,27 @@ public final class MethodInfo {
      * Creates a new instance.
      */
     public MethodInfo(String serviceName, String name,
+        TypeSignature returnTypeSignature,
+        Iterable<FieldInfo> parameters,
+        boolean useParameterAsRoot,
+        Iterable<TypeSignature> exceptionTypeSignatures,
+        Iterable<EndpointInfo> endpoints,
+        Iterable<HttpHeaders> exampleHeaders,
+        Iterable<String> exampleRequests,
+        Iterable<String> examplePaths,
+        Iterable<String> exampleQueries,
+        HttpMethod httpMethod,
+        DescriptionInfo descriptionInfo) {
+        this(name, returnTypeSignature, parameters, useParameterAsRoot,
+            exceptionTypeSignatures, endpoints, exampleHeaders,
+            exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
+            createId(serviceName, name, 0, httpMethod));
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public MethodInfo(String serviceName, String name,
                       TypeSignature returnTypeSignature,
                       Iterable<FieldInfo> parameters,
                       boolean useParameterAsRoot,
@@ -112,11 +133,12 @@ public final class MethodInfo {
                       Iterable<String> examplePaths,
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
-                      DescriptionInfo descriptionInfo) {
+                      DescriptionInfo descriptionInfo,
+                      int overloadId) {
         this(name, returnTypeSignature, parameters, useParameterAsRoot,
              exceptionTypeSignatures, endpoints, exampleHeaders,
              exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
-             createId(serviceName, name, 0, httpMethod));
+             createId(serviceName, name, overloadId, httpMethod));
     }
 
     MethodInfo(String name, TypeSignature returnTypeSignature,
@@ -130,7 +152,6 @@ public final class MethodInfo {
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
         this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters"));
-        assert !useParameterAsRoot || this.parameters.size() == 1;
         this.useParameterAsRoot = useParameterAsRoot;
 
         this.exceptionTypeSignatures =

@@ -23,6 +23,7 @@ import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServic
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.compositeBean;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
 import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
+import static com.linecorp.armeria.server.docs.FieldRequirement.OPTIONAL;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
 import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
@@ -64,6 +65,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.CompositeBean;
 import com.linecorp.armeria.internal.testing.TestUtil;
@@ -326,15 +328,24 @@ class AnnotatedDocServiceTest {
         final EndpointInfo endpoint1 = EndpointInfo.builder("*", "exact:/service/json")
                                                    .availableMimeTypes(MediaType.JSON_UTF_8)
                                                    .build();
-        final FieldInfo jsonRequest =
+        // request is moved to front even though it is the middle in the Java definition.
+        final List<FieldInfo> fields = ImmutableList.of(
                 FieldInfo.builder("request", TypeSignature.ofStruct(JsonRequest.class))
                          .requirement(REQUIRED)
-                         .build();
+                         .build(),
+                FieldInfo.builder("query1", TypeSignature.ofBase("string"))
+                         .location(QUERY)
+                         .requirement(OPTIONAL)
+                         .build(),
+                FieldInfo.builder("query2", TypeSignature.ofBase("string"))
+                         .location(QUERY)
+                         .requirement(OPTIONAL)
+                         .build());
         final MethodInfo methodInfo1 = new MethodInfo(
-                MyService.class.getName(), "json", 0, STRING, ImmutableList.of(jsonRequest), ImmutableList.of(),
+                MyService.class.getName(), "json", 0, STRING, fields, ImmutableList.of(),
                 ImmutableList.of(endpoint1), HttpMethod.POST, DescriptionInfo.empty());
         final MethodInfo methodInfo2 = new MethodInfo(
-                MyService.class.getName(), "json", 0, STRING, ImmutableList.of(jsonRequest), ImmutableList.of(),
+                MyService.class.getName(), "json", 0, STRING, fields, ImmutableList.of(),
                 ImmutableList.of(endpoint1), HttpMethod.PUT, DescriptionInfo.empty());
         final Set<MethodInfo> methods = methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>());
         methods.add(methodInfo1);
@@ -600,7 +611,7 @@ class AnnotatedDocServiceTest {
         @Path("/json")
         @Post
         @Put
-        public String json(JsonRequest request) {
+        public String json(@Param @Nullable String query1, JsonRequest request, @Param @Nullable String query2) {
             return request.bar;
         }
 

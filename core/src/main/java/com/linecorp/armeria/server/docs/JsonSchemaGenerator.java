@@ -130,6 +130,7 @@ final class JsonSchemaGenerator {
                 methodFields = ImmutableList.of();
             } else {
                 methodFields = structInfo.fields();
+                root.put("useParamaterAsRoot", true);
             }
             visited.put(signature, currentPath);
         } else {
