@@ -336,7 +336,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
                     decodedReq.close();
                     if (decodedReq.needsAggregation()) {
-                        assert decodedReq.isInitialized();
+                        assert !decodedReq.isInitialized();
                         // An aggregated request is now ready to be fired.
                         ctx.fireChannelRead(decodedReq);
                     }
