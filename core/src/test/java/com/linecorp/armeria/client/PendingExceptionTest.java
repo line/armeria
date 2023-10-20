@@ -53,11 +53,11 @@ class PendingExceptionTest {
 
     @EnumSource(value = SessionProtocol.class, mode = Mode.EXCLUDE, names = "PROXY")
     @ParameterizedTest
-    void shouldPropagatePendingException(SessionProtocol session) {
+    void shouldPropagatePendingException(SessionProtocol protocol) {
         final AnticipatedException pendingException = new AnticipatedException();
         final BlockingWebClient client =
-                WebClient.builder(server.uri(session))
-                        .factory(ClientFactory.insecure())
+                WebClient.builder(server.uri(protocol))
+                         .factory(ClientFactory.insecure())
                          .decorator((delegate, ctx, req) -> {
                              ctx.log().whenAvailable(RequestLogProperty.SESSION).thenAccept(log -> {
                                  PendingExceptionUtil.setPendingException(log.channel(), pendingException);
