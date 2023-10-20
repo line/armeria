@@ -75,6 +75,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 }
             }
         }
+
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
             final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
