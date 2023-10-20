@@ -42,8 +42,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import testing.thrift.main.HelloService;
 
 /**
  * Test of serialization format validation / detection based on HTTP headers.
@@ -116,7 +117,7 @@ public class ThriftSerializationFormatsTest {
         final HelloService.Iface client =
                 ThriftClients.newClient(server.httpUri(TEXT) + "/hellobinaryonly", HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
-                                                         .getCause()
+                                                         .cause()
                                                          .isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=415");
     }
@@ -140,7 +141,7 @@ public class ThriftSerializationFormatsTest {
                              .setHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
                              .build(HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
-                                                         .getCause()
+                                                         .cause()
                                                          .isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=406");
     }

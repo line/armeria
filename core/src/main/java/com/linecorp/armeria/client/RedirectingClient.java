@@ -133,7 +133,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
+        final HttpResponse res = HttpResponse.of(responseFuture, ctx.eventLoop());
         final RedirectContext redirectCtx = new RedirectContext(ctx, req, res, responseFuture);
         if (ctx.exchangeType().isRequestStreaming()) {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
@@ -262,8 +262,15 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 return;
             }
 
-            abortResponse(response, derivedCtx, null);
-            ctx.eventLoop().execute(() -> execute0(ctx, redirectCtx, newReqDuplicator, false));
+            // Drain the response to release the pooled objects.
+            response.subscribe(ctx.eventLoop()).handleAsync((unused, cause) -> {
+                if (cause != null) {
+                    handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, cause);
+                    return null;
+                }
+                execute0(ctx, redirectCtx, newReqDuplicator, false);
+                return null;
+            }, ctx.eventLoop());
         });
     }
 

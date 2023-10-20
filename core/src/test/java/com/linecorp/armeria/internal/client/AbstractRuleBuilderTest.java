@@ -54,7 +54,9 @@ class AbstractRuleBuilderTest {
                                                           method.getName().startsWith("on") &&
                                                           !"onResponseHeaders".equals(method.getName()) &&
                                                           !"onResponseTrailers".equals(method.getName()) &&
+                                                          !"onGrpcTrailers".equals(method.getName()) &&
                                                           !"onUnprocessed".equals(method.getName()) &&
+                                                          !"onTotalDuration".equals(method.getName()) &&
                                                           !method.isVarArgs());
 
             final List<Method> ruleMethods =

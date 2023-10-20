@@ -1,4 +1,4 @@
-namespace java resilience4j.thrift
+namespace java testing.resilience4j
 
 struct HelloRequest {
   1: required string name;
@@ -11,6 +11,6 @@ struct HelloReply {
 exception NoHelloException {
 }
 
-service HelloService {
+service TestService {
     HelloReply hello(1:HelloRequest request) throws (1:NoHelloException nhe)
 }

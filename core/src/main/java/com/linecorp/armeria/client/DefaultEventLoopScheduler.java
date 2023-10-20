@@ -41,6 +41,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -58,7 +59,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
 
     static final int DEFAULT_MAX_NUM_EVENT_LOOPS = 1;
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
 
     private final List<EventLoop> eventLoops;
 
@@ -169,8 +170,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
             secondTryHost = null;
         }
 
-        final int port = endpoint.hasPort() ? endpoint.port() : sessionProtocol.defaultPort();
-        final Endpoint endpointWithPort = endpoint.withPort(port);
+        final Endpoint endpointWithPort = endpoint.withDefaultPort(sessionProtocol);
+        final int port = endpointWithPort.port();
         final boolean isHttp1 = isHttp1(sessionProtocol, endpointWithPort);
         final StateKey firstKey = new StateKey(firstTryHost, port, isHttp1);
         AbstractEventLoopState state = states.get(firstKey);

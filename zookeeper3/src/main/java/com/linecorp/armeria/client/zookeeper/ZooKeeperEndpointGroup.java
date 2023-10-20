@@ -34,9 +34,8 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener;
-
-import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -49,7 +48,7 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
 
     private static final ThreadFactory closeCuratorFrameworkThreadFactory =
-            new DefaultThreadFactory("armeria-close-CuratorFramework");
+            ThreadFactories.newThreadFactory("armeria-close-CuratorFramework", false);
 
     /**
      * Returns a new {@link ZooKeeperEndpointGroup} that retrieves the {@link Endpoint} list from

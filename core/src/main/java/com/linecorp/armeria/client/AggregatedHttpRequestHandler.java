@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -36,7 +37,7 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
                                  HttpResponseDecoder responseDecoder,
                                  HttpRequest request, DecodedHttpResponse originalRes,
                                  ClientRequestContext ctx, long timeoutMillis) {
-        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty());
+        super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty(), true, true);
     }
 
     @Override

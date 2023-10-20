@@ -305,6 +305,11 @@ public final class WebClientRequestPreparation
             maxResponseLength(maxResponseLength);
         }
 
+        final Long delayMillis = requestOptions.requestAutoAbortDelayMillis();
+        if (delayMillis != null) {
+            requestAutoAbortDelayMillis(delayMillis);
+        }
+
         final long responseTimeoutMillis = requestOptions.responseTimeoutMillis();
         if (responseTimeoutMillis >= 0) {
             responseTimeoutMillis(responseTimeoutMillis);
@@ -352,6 +357,18 @@ public final class WebClientRequestPreparation
     @Override
     public WebClientRequestPreparation maxResponseLength(long maxResponseLength) {
         requestOptionsBuilder().maxResponseLength(maxResponseLength);
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation requestAutoAbortDelay(Duration delay) {
+        requestOptionsBuilder().requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation requestAutoAbortDelayMillis(long delayMillis) {
+        requestOptionsBuilder().requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 
@@ -472,6 +489,11 @@ public final class WebClientRequestPreparation
     @Override
     public WebClientRequestPreparation content(MediaType contentType, HttpData content) {
         return (WebClientRequestPreparation) super.content(contentType, content);
+    }
+
+    @Override
+    public WebClientRequestPreparation content(Publisher<? extends HttpData> publisher) {
+        return (WebClientRequestPreparation) super.content(publisher);
     }
 
     @Override

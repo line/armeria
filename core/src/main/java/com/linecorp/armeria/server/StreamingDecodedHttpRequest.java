@@ -42,6 +42,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final ExchangeType exchangeType;
     private final long requestStartTimeNanos;
     private final long requestStartTimeMicros;
+    private final boolean http1WebSocket;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -54,7 +55,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
-                                long requestStartTimeNanos, long requestStartTimeMicros) {
+                                long requestStartTimeNanos, long requestStartTimeMicros,
+                                boolean http1WebSocket) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -68,6 +70,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.exchangeType = exchangeType;
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
+        this.http1WebSocket = http1WebSocket;
     }
 
     @Override
@@ -206,5 +209,10 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public long requestStartTimeMicros() {
         return requestStartTimeMicros;
+    }
+
+    @Override
+    public boolean isHttp1WebSocket() {
+        return http1WebSocket;
     }
 }

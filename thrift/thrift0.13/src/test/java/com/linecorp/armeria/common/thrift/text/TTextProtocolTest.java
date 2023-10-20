@@ -58,9 +58,18 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 
-import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_args;
-import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_result;
 import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
+
+import testing.thrift.debug.RpcDebugService;
+import testing.thrift.debug.RpcDebugService.doDebug_args;
+import testing.thrift.debug.RpcDebugService.doDebug_result;
+import testing.thrift.text.Letter;
+import testing.thrift.text.Number;
+import testing.thrift.text.NumberSub;
+import testing.thrift.text.Sub;
+import testing.thrift.text.SubSub;
+import testing.thrift.text.TTextProtocolTestMsg;
+import testing.thrift.text.TestUnion;
 
 /**
  * Tests the TTextProtocol.
@@ -487,7 +496,7 @@ class TTextProtocolTest {
         return Resources.toString(
                 Resources.getResource(
                         TTextProtocolTest.class,
-                        "/com/linecorp/armeria/common/thrift/text/" + filename),
+                        "/testing/thrift/text/" + filename),
                 Charsets.UTF_8
         );
     }

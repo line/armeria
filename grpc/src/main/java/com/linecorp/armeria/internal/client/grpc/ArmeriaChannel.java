@@ -38,15 +38,18 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcCallOptions;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 
 import io.grpc.CallCredentials;
 import io.grpc.CallOptions;
@@ -132,6 +135,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
         final HttpRequestWriter req = HttpRequest.streaming(headersBuilder.build());
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req, method);
+
+        GrpcCallOptions.set(ctx, callOptions);
 
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
@@ -221,14 +226,17 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
     private <I, O> DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req,
                                                           MethodDescriptor<I, O> methodDescriptor) {
+        final String path = req.path();
+        final RequestTarget reqTarget = RequestTarget.forClient(path);
+        assert reqTarget != null : path;
+        RequestTargetCache.putForClient(path, reqTarget);
+
         return new DefaultClientRequestContext(
                 meterRegistry,
                 sessionProtocol,
                 options().requestIdGenerator().get(),
                 method,
-                req.path(),
-                null,
-                null,
+                reqTarget,
                 options(),
                 req,
                 null,

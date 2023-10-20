@@ -93,6 +93,7 @@ public class DecoratingClientFactory extends AbstractUnwrappable<ClientFactory> 
     }
 
     @Override
+    @Deprecated
     public void setMeterRegistry(MeterRegistry meterRegistry) {
         unwrap().setMeterRegistry(meterRegistry);
     }

@@ -98,7 +98,7 @@ class ContentPreviewingServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final HttpService httpService = (ctx, req) -> HttpResponse.from(
+            final HttpService httpService = (ctx, req) -> HttpResponse.of(
                     req.aggregate()
                        .thenApply(aggregated -> {
                            final ResponseHeaders responseHeaders =
@@ -140,7 +140,7 @@ class ContentPreviewingServiceTest {
 
             sb.service("/deferred", httpService);
             sb.decorator("/deferred", ContentPreviewingService.newDecorator(100));
-            sb.decorator("/deferred", (delegate, ctx, req) -> HttpResponse.from(
+            sb.decorator("/deferred", (delegate, ctx, req) -> HttpResponse.of(
                     completedFuture(null).handleAsync((ignored, cause) -> {
                         try {
                             return delegate.serve(ctx, req);

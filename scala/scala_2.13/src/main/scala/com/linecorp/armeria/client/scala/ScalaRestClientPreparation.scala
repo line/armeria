@@ -135,6 +135,16 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
     this
   }
 
+  override def requestAutoAbortDelay(delay: Duration): ScalaRestClientPreparation = {
+    delegate.requestAutoAbortDelay(delay)
+    this
+  }
+
+  override def requestAutoAbortDelayMillis(delayMillis: Long): ScalaRestClientPreparation = {
+    delegate.requestAutoAbortDelayMillis(delayMillis)
+    this
+  }
+
   override def attr[V](key: AttributeKey[V], value: V): ScalaRestClientPreparation = {
     delegate.attr(key, value)
     this
@@ -177,6 +187,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
 
   override def content(contentType: MediaType, content: HttpData): ScalaRestClientPreparation = {
     delegate.content(contentType, content)
+    this
+  }
+
+  override def content(content: Publisher[_ <: HttpData]): ScalaRestClientPreparation = {
+    delegate.content(content)
     this
   }
 

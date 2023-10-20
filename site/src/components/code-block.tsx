@@ -13,6 +13,7 @@ import prismTheme from 'react-syntax-highlighter/dist/esm/styles/prism/cb';
 // Prism syntaxes
 /* eslint-disable import/no-extraneous-dependencies */
 import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
+import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
 import graphql from 'react-syntax-highlighter/dist/esm/languages/prism/graphql';
 import groovy from 'react-syntax-highlighter/dist/esm/languages/prism/groovy';
 import http from 'react-syntax-highlighter/dist/esm/languages/prism/http';
@@ -40,6 +41,7 @@ none.aliases = [] as string[];
 
 const supportedLanguages = {
   bash,
+  cpp,
   graphql,
   groovy,
   http,

@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -67,7 +68,7 @@ public class HttpClientMaxConcurrentStreamTest {
             sb.service(PATH, (ctx, req) -> {
                 final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
                 responses.add(f);
-                return HttpResponse.from(f);
+                return HttpResponse.of(f);
             });
             sb.http2MaxStreamsPerConnection(MAX_CONCURRENT_STREAMS);
             sb.maxNumConnections(MAX_NUM_CONNECTIONS);
@@ -82,7 +83,7 @@ public class HttpClientMaxConcurrentStreamTest {
             sb.service(PATH, (ctx, req) -> {
                 final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
                 responses.add(f);
-                return HttpResponse.from(f);
+                return HttpResponse.of(f);
             });
             sb.http2MaxStreamsPerConnection(1);
             sb.maxNumConnections(MAX_NUM_CONNECTIONS);
@@ -316,13 +317,8 @@ public class HttpClientMaxConcurrentStreamTest {
                                           .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final int sleepMillis = 300;
-        connectionPoolListener = newConnectionPoolListener(() -> {
-            try {
-                Thread.sleep(sleepMillis);
-            } catch (InterruptedException e) {
-                throw new IllegalStateException(e);
-            }
-        }, () -> {});
+        connectionPoolListener = newConnectionPoolListener(
+                () -> BlockingUtils.blockingRun(() -> Thread.sleep(sleepMillis)), () -> {});
 
         final int numConnections = MAX_NUM_CONNECTIONS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numConnections;

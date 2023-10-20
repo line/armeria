@@ -30,7 +30,7 @@
 // used to generate the *.java files checked into the Hbase project.
 // ----------------------------------------------------------------
 
-namespace java com.linecorp.armeria.service.test.thrift.hbase
+namespace java testing.thrift.hbase
 
 //
 // Types

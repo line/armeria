@@ -337,6 +337,12 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    public BlockingWebClientRequestPreparation content(Publisher<? extends HttpData> content) {
+        delegate.content(content);
+        return this;
+    }
+
+    @Override
     public BlockingWebClientRequestPreparation content(MediaType contentType,
                                                        Publisher<? extends HttpData> content) {
         delegate.content(contentType, content);
@@ -445,6 +451,18 @@ public final class BlockingWebClientRequestPreparation
     @Override
     public BlockingWebClientRequestPreparation maxResponseLength(long maxResponseLength) {
         delegate.maxResponseLength(maxResponseLength);
+        return this;
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation requestAutoAbortDelay(Duration delay) {
+        delegate.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation requestAutoAbortDelayMillis(long delayMillis) {
+        delegate.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

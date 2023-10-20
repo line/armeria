@@ -19,18 +19,14 @@ package com.linecorp.armeria.common.zookeeper;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.awaitility.Awaitility.await;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.time.Duration;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.server.Server;
 
 public final class ZooKeeperTestUtil {
@@ -38,31 +34,42 @@ public final class ZooKeeperTestUtil {
     private static final Random random = new Random();
 
     public static List<Endpoint> sampleEndpoints(int count) {
-        final int[] ports = unusedPorts(count);
-        final Builder<Endpoint> builder = ImmutableList.builder();
+        final int[] ports = unusedTcpPorts(count);
+        final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
         for (int i = 0; i < count; i++) {
             builder.add(Endpoint.of("127.0.0.1", ports[i]).withWeight(random.nextInt(10000) + 1));
         }
         return builder.build();
     }
 
-    private static int[] unusedPorts(int numPorts) {
+    static int[] unusedTcpPorts(int numPorts) {
         final int[] ports = new int[numPorts];
-        final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < numPorts; i++) {
+            int mayUnusedTcpPort;
             for (;;) {
-                final int candidatePort = random.nextInt(64512) + 1024;
-                try (ServerSocket ss = new ServerSocket()) {
-                    ss.bind(new InetSocketAddress("127.0.0.1", candidatePort));
-                    ports[i] = candidatePort;
+                mayUnusedTcpPort = PortUtil.unusedTcpPort();
+                if (i == 0) {
+                    // The first acquired port is always unique.
                     break;
-                } catch (IOException e) {
-                    // Port in use or unable to bind.
+                }
+                boolean isAcquiredPort = false;
+                for (int j = 0; j < i; j++) {
+                    isAcquiredPort = ports[j] == mayUnusedTcpPort;
+                    if (isAcquiredPort) {
+                        break;
+                    }
+                }
+
+                if (isAcquiredPort) {
+                    // Duplicate port. Look up an unused port again.
                     continue;
+                } else {
+                    // A newly acquired unique port.
+                    break;
                 }
             }
+            ports[i] = mayUnusedTcpPort;
         }
-
         return ports;
     }
 

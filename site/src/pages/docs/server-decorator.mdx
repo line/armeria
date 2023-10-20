@@ -213,7 +213,7 @@ MemberService memberService = ...;
 HtmlService htmlService = ...;
 JsService jsService = ...;
 
-ServerBuilder sb = new ServerBuilder();
+ServerBuilder sb = Server.builder();
 
 // Register vipService and memberService under '/users' path
 sb.annotatedService("/users/vip", vipService)
@@ -243,7 +243,7 @@ sb.decorator(Route.builder().get("/public").build(), (delegate, ctx, req) -> {
 You can also use fluent route builder with `routeDecorator()` to match services being decorated.
 
 ```java
-ServerBuilder sb = new ServerBuilder();
+ServerBuilder sb = Server.builder();
 
 // Register vipService and memberService under '/users' path
 sb.annotatedService("/users/vip", vipService)

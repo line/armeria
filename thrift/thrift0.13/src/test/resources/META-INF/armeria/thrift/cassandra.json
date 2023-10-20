@@ -1,7 +1,7 @@
 {
   "name": "cassandra",
   "namespaces": {
-    "java": "com.linecorp.armeria.service.test.thrift.cassandra"
+    "java": "testing.thrift.cassandra"
   },
   "includes": [
   ],

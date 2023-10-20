@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.google.common.base.MoreObjects;
-
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -60,9 +60,10 @@ public final class CircuitBreakerClientBuilder
      */
     public CircuitBreakerClient build(HttpClient delegate) {
         if (needsContentInRule) {
-            return new CircuitBreakerClient(delegate, handler(), ruleWithContent(), maxContentLength);
+            return new CircuitBreakerClient(
+                    delegate, handler(), ruleWithContent(), maxContentLength, fallback());
         }
-        return new CircuitBreakerClient(delegate, handler(), rule());
+        return new CircuitBreakerClient(delegate, handler(), rule(), fallback());
     }
 
     /**
@@ -87,10 +88,8 @@ public final class CircuitBreakerClientBuilder
     }
 
     @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("needsContentInRule", needsContentInRule)
-                          .add("maxContentLength", maxContentLength)
-                          .toString();
+    public CircuitBreakerClientBuilder recover(BiFunction<? super ClientRequestContext, ? super HttpRequest,
+            ? extends HttpResponse> fallback) {
+        return (CircuitBreakerClientBuilder) super.recover(fallback);
     }
 }

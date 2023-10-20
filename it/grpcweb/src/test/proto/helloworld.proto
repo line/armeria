@@ -3,12 +3,11 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "com.example.helloworld";
+option java_package = "testing.grpcweb";
 option java_outer_classname = "HelloWorldProto";
 
-service GreeterService {
+service TestService {
     rpc SayHello (HelloRequest) returns (HelloReply) {}
-
     rpc SayHelloToAll (stream HelloRequest) returns (stream HelloReply) {}
 }
 

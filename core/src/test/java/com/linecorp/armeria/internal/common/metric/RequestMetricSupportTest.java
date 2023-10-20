@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -139,12 +140,12 @@ class RequestMetricSupportTest {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
-        addLogInfoInDerivedCtx(ctx);
+        addLogInfoInDerivedCtx(ctx, 500);
 
         Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
 
-        addLogInfoInDerivedCtx(ctx);
+        addLogInfoInDerivedCtx(ctx, 500);
         // Does not increase the active requests.
         assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
 
@@ -172,6 +173,66 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.response.length#count{http.status=500,method=POST,service=none}", 1.0)
                 .containsEntry("foo.response.length#total{http.status=500,method=POST,service=none}", 456.0)
                 .containsEntry("foo.total.duration#count{http.status=500,method=POST,service=none}", 1.0);
+    }
+
+    @Test
+    void allRetryingRequestFailed() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx = setupClientRequestCtx(registry);
+
+        addLogInfoInDerivedCtx(ctx, 500);
+
+        Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
+
+        addLogInfoInDerivedCtx(ctx, 500);
+        // Does not increase the active requests.
+        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
+
+        ctx.logBuilder().endResponseWithLastChild();
+
+        measurements = measureAll(registry);
+        assertThat(measurements)
+                .containsEntry("foo.active.requests#value{method=POST,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=success,service=none}",
+                               0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure,service=none}",
+                               1.0)
+                .containsEntry("foo.actual.requests#count{http.status=500,method=POST,service=none}", 2.0)
+                .containsEntry("foo.actual.requests.attempts#count{http.status=500,method=POST," +
+                               "result=failure,service=none}", 1.0)
+                .containsEntry("foo.actual.requests.attempts#total{http.status=500,method=POST," +
+                               "result=failure,service=none}", 2.0);
+    }
+
+    @Test
+    void firstRetryingRequestFailedAndTheSecondOneSuccess() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx = setupClientRequestCtx(registry);
+
+        addLogInfoInDerivedCtx(ctx, 500);
+
+        Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
+
+        addLogInfoInDerivedCtx(ctx, 200);
+        // Does not increase the active requests.
+        assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
+
+        ctx.logBuilder().endResponseWithLastChild();
+
+        measurements = measureAll(registry);
+        assertThat(measurements)
+                .containsEntry("foo.active.requests#value{method=POST,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=200,method=POST,result=success,service=none}",
+                               1.0)
+                .containsEntry("foo.requests#count{http.status=200,method=POST,result=failure,service=none}",
+                               0.0)
+                .containsEntry("foo.actual.requests#count{http.status=200,method=POST,service=none}", 2.0)
+                .containsEntry("foo.actual.requests.attempts#count{http.status=200,method=POST," +
+                               "result=success,service=none}", 1.0)
+                .containsEntry("foo.actual.requests.attempts#total{http.status=200,method=POST," +
+                               "result=success,service=none}", 2.0);
     }
 
     @Test
@@ -225,6 +286,7 @@ class RequestMetricSupportTest {
                                     .meterRegistry(registry)
                                     .endpoint(Endpoint.of("example.com", 8080))
                                     .connectionTimings(newConnectionTimings())
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
@@ -233,7 +295,7 @@ class RequestMetricSupportTest {
         return ctx;
     }
 
-    private static void addLogInfoInDerivedCtx(ClientRequestContext ctx) {
+    private static void addLogInfoInDerivedCtx(ClientRequestContext ctx, int statusCode) {
         final ClientRequestContext derivedCtx =
                 ctx.newDerivedContext(ctx.id(), ctx.request(), ctx.rpcRequest(), ctx.endpoint());
 
@@ -243,7 +305,7 @@ class RequestMetricSupportTest {
         derivedCtx.logBuilder().requestContent(null, null);
         derivedCtx.logBuilder().requestLength(123);
 
-        derivedCtx.logBuilder().responseHeaders(ResponseHeaders.of(500));
+        derivedCtx.logBuilder().responseHeaders(ResponseHeaders.of(statusCode));
         derivedCtx.logBuilder().responseFirstBytesTransferred();
         derivedCtx.logBuilder().responseLength(456);
         derivedCtx.logBuilder().endRequest();
@@ -256,6 +318,7 @@ class RequestMetricSupportTest {
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
+                                     .eventLoop(ImmediateEventLoop.INSTANCE)
                                      .build();
         final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
@@ -294,6 +357,7 @@ class RequestMetricSupportTest {
         final ClientRequestContext ctx =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/bar"))
                                     .meterRegistry(registry)
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
                                     .endpoint(Endpoint.of("example.com", 8080))
                                     .build();
 
@@ -313,6 +377,7 @@ class RequestMetricSupportTest {
         final ServiceRequestContext sctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
+                                     .eventLoop(ImmediateEventLoop.INSTANCE)
                                      .build();
         final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
@@ -324,6 +389,7 @@ class RequestMetricSupportTest {
             final ClientRequestContext cctx =
                     ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                         .meterRegistry(registry)
+                                        .eventLoop(ImmediateEventLoop.INSTANCE)
                                         .endpoint(Endpoint.of("example.com", 8080))
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
@@ -370,12 +436,14 @@ class RequestMetricSupportTest {
                                     .meterRegistry(registry)
                                     .endpoint(Endpoint.of("example.com", 8080))
                                     .connectionTimings(newConnectionTimings())
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
                                     .build();
         final ClientRequestContext ctx2 =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/bar"))
                                     .meterRegistry(registry)
                                     .endpoint(Endpoint.of("example.com", 8080))
                                     .connectionTimings(newConnectionTimings())
+                                    .eventLoop(ImmediateEventLoop.INSTANCE)
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");

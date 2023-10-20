@@ -79,7 +79,7 @@ class RedirectingClientTest {
                 }
             });
 
-            sb.service("/seeOther", (ctx, req) -> HttpResponse.from(
+            sb.service("/seeOther", (ctx, req) -> HttpResponse.of(
                       req.aggregate().thenApply(aggregatedReq -> {
                           assertThat(aggregatedReq.contentUtf8()).isEqualTo("hello!");
                           return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/seeOtherRedirect");
@@ -119,9 +119,9 @@ class RedirectingClientTest {
                     server.server().activePorts().values()
                           .stream().filter(ServerPort::hasHttp)
                           .filter(port -> port.localAddress().getPort() !=
-                                          ((InetSocketAddress) ctx.localAddress()).getPort())
+                                          ctx.localAddress().getPort())
                           .findFirst();
-            assert serverPort.isPresent();
+            assertThat(serverPort).isPresent();
             return serverPort.get().localAddress().getPort();
         }
     };

@@ -76,6 +76,9 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
             case IPV4_ONLY:
                 builder.add(DnsRecordType.A);
                 break;
+            case IPV6_ONLY:
+                builder.add(DnsRecordType.AAAA);
+                break;
             case IPV4_PREFERRED:
                 builder.add(DnsRecordType.A);
                 builder.add(DnsRecordType.AAAA);

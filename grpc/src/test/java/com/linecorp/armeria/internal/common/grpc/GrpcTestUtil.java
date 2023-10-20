@@ -24,15 +24,14 @@ import com.google.common.io.ByteStreams;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.MessageLite;
 
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
 
 public final class GrpcTestUtil {
     public static final SimpleRequest REQUEST_MESSAGE =

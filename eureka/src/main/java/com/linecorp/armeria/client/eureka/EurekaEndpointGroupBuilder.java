@@ -323,6 +323,16 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
     }
 
     @Override
+    public EurekaEndpointGroupBuilder requestAutoAbortDelay(Duration delay) {
+        return (EurekaEndpointGroupBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (EurekaEndpointGroupBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public EurekaEndpointGroupBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (EurekaEndpointGroupBuilder) super.requestIdGenerator(requestIdGenerator);
     }

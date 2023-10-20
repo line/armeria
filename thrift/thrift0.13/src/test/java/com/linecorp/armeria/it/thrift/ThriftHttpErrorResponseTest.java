@@ -36,9 +36,10 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.thrift.main.HelloService;
+import testing.thrift.main.HelloService.Iface;
 
 /**
  * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters.
@@ -105,7 +106,7 @@ class ThriftHttpErrorResponseTest {
         final Iface client = ThriftClients.newClient(server.httpUri().resolve(param.path), Iface.class);
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOf(TTransportException.class)
-                .getCause()
+                .cause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.CONFLICT);
                 });

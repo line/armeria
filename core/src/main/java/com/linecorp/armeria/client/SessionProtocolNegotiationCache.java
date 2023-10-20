@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -29,13 +28,17 @@ import java.util.concurrent.locks.StampedLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.LruMap;
+import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
+import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 
 /**
- * Keeps the recent {@link SessionProtocol} negotiation failures. It is a LRU cache which keeps at most
+ * Keeps the recent {@link SessionProtocol} negotiation failures. It is an LRU cache which keeps at most
  * 64k 'host name + port' pairs.
  */
 public final class SessionProtocolNegotiationCache {
@@ -61,18 +64,11 @@ public final class SessionProtocolNegotiationCache {
      * Returns {@code true} if the specified {@link Endpoint} is known to have no support for
      * the specified {@link SessionProtocol}.
      */
-    public static boolean isUnsupported(Endpoint endpointWithPort, SessionProtocol protocol) {
-        requireNonNull(endpointWithPort, "endpointWithPort");
-        checkArgument(endpointWithPort.hasPort(), "endpointWithPort must have a port.");
-        // It's okay to create the key using endpointWithPort.host():
-        // - If the endpoint has an IP address without host name, the IP address is used in the key to store
-        //   and retrieve the value.
-        // - If the endpoint has an IP address with host name, the host name is used in the key to store
-        //   and retrieve the value.
-        // - If the endpoint has host name only, the host name is used in the key to store and retrieve
-        //   the value.
-        final String key = key(endpointWithPort.host(), endpointWithPort.port());
-        return isUnsupported(key, protocol);
+    public static boolean isUnsupported(Endpoint endpoint, SessionProtocol protocol) {
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(protocol, "protocol");
+
+        return isUnsupported(key(endpoint, protocol), protocol);
     }
 
     /**
@@ -80,12 +76,12 @@ public final class SessionProtocolNegotiationCache {
      * the specified {@link SessionProtocol}.
      */
     public static boolean isUnsupported(SocketAddress remoteAddress, SessionProtocol protocol) {
-        final String key = key(remoteAddress);
-        return isUnsupported(key, protocol);
+        requireNonNull(remoteAddress, "remoteAddress");
+        requireNonNull(protocol, "protocol");
+        return isUnsupported(key(remoteAddress), protocol);
     }
 
     private static boolean isUnsupported(String key, SessionProtocol protocol) {
-        requireNonNull(protocol, "protocol");
         final CacheEntry e;
         final long stamp = lock.readLock();
         try {
@@ -160,24 +156,40 @@ public final class SessionProtocolNegotiationCache {
         }
     }
 
-    private static String key(SocketAddress remoteAddress) {
-        requireNonNull(remoteAddress, "remoteAddress");
-        if (!(remoteAddress instanceof InetSocketAddress)) {
-            throw new IllegalArgumentException(
-                    "remoteAddress: " + remoteAddress +
-                    " (expected: an " + InetSocketAddress.class.getSimpleName() + ')');
+    @VisibleForTesting
+    static String key(Endpoint endpoint, SessionProtocol protocol) {
+        if (endpoint.isDomainSocket()) {
+            return endpoint.host();
+        } else {
+            return endpoint.host() + '|' + endpoint.port(protocol.defaultPort());
         }
-
-        final InetSocketAddress raddr = (InetSocketAddress) remoteAddress;
-        return key(raddr.getHostString(), raddr.getPort());
     }
 
-    private static String key(String host, int port) {
-        return new StringBuilder(host.length() + 6)
-                .append(host)
-                .append(':')
-                .append(port)
-                .toString();
+    @VisibleForTesting
+    static String key(SocketAddress remoteAddress) {
+        if (remoteAddress instanceof DomainSocketAddress) {
+            return ((DomainSocketAddress) remoteAddress).authority();
+        }
+
+        if (remoteAddress instanceof InetSocketAddress) {
+            final InetSocketAddress raddr = (InetSocketAddress) remoteAddress;
+            final String hostOrIpAddr = raddr.getHostString();
+            final String normalizedIpAddr = IpAddrUtil.normalize(hostOrIpAddr);
+            if (normalizedIpAddr != null) {
+                return normalizedIpAddr + '|' + raddr.getPort();
+            } else {
+                return hostOrIpAddr + '|' + raddr.getPort();
+            }
+        }
+
+        if (remoteAddress instanceof io.netty.channel.unix.DomainSocketAddress) {
+            return DomainSocketUtil.toAuthority(
+                    ((io.netty.channel.unix.DomainSocketAddress) remoteAddress).path());
+        }
+
+        throw new IllegalArgumentException(
+                "unsupported address type: " + remoteAddress.getClass().getName() +
+                " (expected: InetSocketAddress or DomainSocketAddress)");
     }
 
     private static long convertToWriteLock(long stamp) {

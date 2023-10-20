@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.reactor3.RequestContextHooks.ContextAwareMono;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.ConnectableFlux;
@@ -41,6 +42,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
+@GenerateNativeImageTrace
 class ContextAwareFluxTest {
 
     @BeforeAll
@@ -390,12 +392,12 @@ class ContextAwareFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
         try (SafeCloseable ignored = ctx.push()) {
-            flux = Flux.deferWithContext(reactorCtx -> {
+            flux = Flux.deferContextual(reactorCtx -> {
                 assertThat((String) reactorCtx.get("foo")).isEqualTo("bar");
                 return Flux.just("baz");
             });
         }
-        final Flux<String> flux1 = flux.subscriberContext(reactorCtx -> reactorCtx.put("foo", "bar"));
+        final Flux<String> flux1 = flux.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
         StepVerifier.create(flux1)
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
@@ -47,16 +48,20 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final GraphQL graphQL;
 
-    private final DataLoaderRegistry dataLoaderRegistry;
+    private final Function<? super ServiceRequestContext,
+                           ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
 
     private final boolean useBlockingTaskExecutor;
 
     private final GraphqlErrorHandler errorHandler;
 
-    DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
-                          boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
+    DefaultGraphqlService(
+            GraphQL graphQL,
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
+            boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
-        this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
+        this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
+                                                         "dataLoaderRegistryFunction");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.errorHandler = errorHandler;
     }
@@ -89,7 +94,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final ExecutionInput executionInput =
                 builder.context(ctx)
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                       .dataLoaderRegistry(dataLoaderRegistry)
+                       .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
                        .build();
         return execute(ctx, executionInput, produceType);
     }
@@ -102,7 +107,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         } else {
             future = graphQL.executeAsync(input);
         }
-        return HttpResponse.from(
+        return HttpResponse.of(
                 future.handle((executionResult, cause) -> {
                     if (executionResult.getData() instanceof Publisher) {
                         logger.warn("executionResult.getData() returns a {} that is not supported yet.",

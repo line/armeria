@@ -71,29 +71,29 @@ class HttpServerAutoRedirectTest {
 
         res = client.get("/a");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
-        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/a/");
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("a/");
 
         res = client.get("/b");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
-        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/b/");
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("b/");
 
         res = client.get("/c/1");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
-        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/c/1/");
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("1/");
 
         res = client.get("/d");
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
         res = client.get("/e");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
-        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/e/");
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("e/");
 
         res = client.delete("/e");
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
 
         res = client.get("/f");
         assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
-        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/f/");
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("f/");
 
         res = client.get("/f/");
         assertThat(res.status()).isSameAs(HttpStatus.ACCEPTED);

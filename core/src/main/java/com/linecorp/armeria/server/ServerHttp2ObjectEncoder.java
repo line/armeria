@@ -40,7 +40,6 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
 
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private boolean hasCalledChannelClose;
 
     ServerHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
                              AbstractHttp2ConnectionHandler connectionHandler,
@@ -55,18 +54,12 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     @Override
     public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
                                         boolean isTrailersEmpty) {
-        if (!isStreamPresentAndWritable(streamId)) {
+        if (!isStreamPresentAndWritable(streamId) || isResponseHeadersSent(id, streamId)) {
             // One of the following cases:
             // - Stream has been closed already.
             // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
+            // - Server tried to send a response HEADERS frame twice.
             return newFailedFuture(ClosedStreamException.get());
-        }
-
-        // TODO(alexc-db): decouple this from headers write and do it from inside the KeepAliveHandler.
-        if (!hasCalledChannelClose && keepAliveHandler().needToCloseConnection()) {
-            // Initiates channel close, connection will be closed after all streams are closed.
-            ctx().channel().close();
-            hasCalledChannelClose = true;
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);

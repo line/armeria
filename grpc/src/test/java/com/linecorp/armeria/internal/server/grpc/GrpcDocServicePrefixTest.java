@@ -30,11 +30,12 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.grpc.testing.GrpcDocServicePrefixTestServiceGrpc.GrpcDocServicePrefixTestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.grpc.GrpcDocServicePrefixTestServiceGrpc.GrpcDocServicePrefixTestServiceImplBase;
 
 class GrpcDocServicePrefixTest {
 

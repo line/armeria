@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.
@@ -64,6 +65,9 @@ public enum SessionProtocol {
     private static final Set<SessionProtocol> HTTP_VALUES = Sets.immutableEnumSet(HTTP, H1C, H2C);
 
     private static final Set<SessionProtocol> HTTPS_VALUES = Sets.immutableEnumSet(HTTPS, H1, H2);
+
+    private static final Set<SessionProtocol> HTTP_AND_HTTPS_VALUES =
+            Sets.immutableEnumSet(HTTPS, HTTP, H1, H1C, H2, H2C);
 
     private static final Map<String, SessionProtocol> uriTextToProtocols;
 
@@ -117,6 +121,14 @@ public enum SessionProtocol {
         return HTTPS_VALUES;
     }
 
+    /**
+     * Returns an immutable {@link Set} that contains {@link #httpValues()} and {@link #httpsValues()}.
+     */
+    @UnstableApi
+    public static Set<SessionProtocol> httpAndHttpsValues() {
+        return HTTP_AND_HTTPS_VALUES;
+    }
+
     private final String uriText;
     private final boolean useTls;
     private final boolean isMultiplex;
@@ -147,6 +159,22 @@ public enum SessionProtocol {
      */
     public boolean isHttps() {
         return HTTPS_VALUES.contains(this);
+    }
+
+    /**
+     * Returns {@code true} if this {@link SessionProtocol} is {@link #H1} or {@link #H1C}.
+     * Note that this method returns {@code false} for {@link #HTTP} and {@link #HTTPS}.
+     */
+    public boolean isExplicitHttp1() {
+        return this == H1 || this == H1C;
+    }
+
+    /**
+     * Returns {@code true} if this {@link SessionProtocol} is {@link #H2} or {@link #H2C}.
+     * Note that this method returns {@code false} for {@link #HTTP} and {@link #HTTPS}.
+     */
+    public boolean isExplicitHttp2() {
+        return this == H2 || this == H2C;
     }
 
     /**

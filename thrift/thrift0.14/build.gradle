@@ -5,6 +5,9 @@ dependencies {
 
     api libs.javax.annotation
 
+    // thrift api depends on httpclient4
+    testImplementation libs.apache.httpclient4
+
     // Jetty, for testing TServlet interoperability.
     testImplementation libs.jetty94.webapp
     testImplementation libs.jetty94.http2.server
@@ -13,6 +16,12 @@ dependencies {
     testImplementation libs.dropwizard.metrics.core
     testImplementation libs.micrometer.prometheus
     testImplementation libs.prometheus
+
+    // micrometer tracing
+    testImplementation (libs.micrometer.tracing.integration.test) {
+        exclude group: "org.mockito"
+    }
+    testImplementation libs.brave.instrumentation.http.tests
 }
 
 // Use the sources from ':thrift0.13'.

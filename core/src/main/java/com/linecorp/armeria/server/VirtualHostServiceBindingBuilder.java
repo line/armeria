@@ -28,7 +28,9 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -64,6 +66,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     private final VirtualHostBuilder virtualHostBuilder;
 
     VirtualHostServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
     }
 
@@ -279,6 +282,14 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder blockingTaskExecutor(
+            BlockingTaskExecutor blockingTaskExecutor,
+            boolean shutdownOnStop) {
+        return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor,
+                                                                             shutdownOnStop);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         return (VirtualHostServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
     }
@@ -289,8 +300,24 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        return (VirtualHostServiceBindingBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (VirtualHostServiceBindingBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (VirtualHostServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        return (VirtualHostServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
     }
 
     @Override
@@ -315,6 +342,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
         return (VirtualHostServiceBindingBuilder) super.setHeaders(defaultHeaders);
     }
 
+    @Override
+    public VirtualHostServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        return (VirtualHostServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
     /**
      * Sets the {@link HttpService} and returns the {@link VirtualHostBuilder} that this
      * {@link VirtualHostServiceBindingBuilder} was created from.
@@ -322,6 +354,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
      * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
     public VirtualHostBuilder build(HttpService service) {
+        requireNonNull(service, "service");
         build0(service);
         return virtualHostBuilder;
     }

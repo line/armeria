@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 public final class InternalStreamMessageUtil {
 
+    public static final int DEFAULT_FILE_BUFFER_SIZE = 8192;
     public static final SubscriptionOption[] EMPTY_OPTIONS = {};
     public static final SubscriptionOption[] POOLED_OBJECTS = { SubscriptionOption.WITH_POOLED_OBJECTS };
     public static final SubscriptionOption[] CANCELLATION_OPTION = { SubscriptionOption.NOTIFY_CANCELLATION };

@@ -159,6 +159,6 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                }
                return null;
            });
-        return HttpResponse.from(responseFuture);
+        return HttpResponse.of(responseFuture);
     }
 }

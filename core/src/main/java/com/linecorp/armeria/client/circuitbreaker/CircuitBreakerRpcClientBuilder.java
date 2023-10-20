@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -36,7 +38,7 @@ public final class CircuitBreakerRpcClientBuilder
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return new CircuitBreakerRpcClient(delegate, handler(), ruleWithContent());
+        return new CircuitBreakerRpcClient(delegate, handler(), ruleWithContent(), fallback());
     }
 
     /**
@@ -57,5 +59,11 @@ public final class CircuitBreakerRpcClientBuilder
     @Override
     public CircuitBreakerRpcClientBuilder handler(CircuitBreakerClientHandler handler) {
         return (CircuitBreakerRpcClientBuilder) super.handler(handler);
+    }
+
+    @Override
+    public CircuitBreakerRpcClientBuilder recover(BiFunction<? super ClientRequestContext, ? super RpcRequest,
+            ? extends RpcResponse> fallback) {
+        return (CircuitBreakerRpcClientBuilder) super.recover(fallback);
     }
 }

@@ -49,6 +49,7 @@ import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.AbstractAddressResolver;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
 
 final class RefreshingAddressResolver
@@ -99,6 +100,15 @@ final class RefreshingAddressResolver
             throws Exception {
         requireNonNull(unresolvedAddress, "unresolvedAddress");
         requireNonNull(promise, "promise");
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            doResolve0(unresolvedAddress, promise);
+        } else {
+            executor.execute(() -> doResolve0(unresolvedAddress, promise));
+        }
+    }
+
+    private void doResolve0(InetSocketAddress unresolvedAddress, Promise<InetSocketAddress> promise) {
         if (resolverClosed) {
             promise.tryFailure(new IllegalStateException("resolver is closed already."));
             return;

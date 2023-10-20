@@ -67,6 +67,7 @@ import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.thrift.THttpService;
+import com.linecorp.armeria.server.thrift.ThriftServiceEntry;
 
 /**
  * {@link DocServicePlugin} implementation that supports {@link THttpService}s.
@@ -123,8 +124,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                 for (Class<?> iface : entry.interfaces()) {
                     final Class<?> serviceClass = iface.getEnclosingClass();
                     final EntryBuilder builder =
-                            map.computeIfAbsent(serviceClass, cls -> new EntryBuilder(serviceClass));
-
+                            map.computeIfAbsent(serviceClass, cls -> new EntryBuilder(serviceClass, entry));
                     // Add all available endpoints. Accept only the services with exact and prefix path
                     // mappings, whose endpoint path can be determined.
                     final Route route = c.route();
@@ -152,7 +152,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                                          DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         final List<ServiceInfo> services =
                 entries.stream()
-                       .map(e -> newServiceInfo(e.serviceType, e.endpointInfos, filter))
+                       .map(e -> newServiceInfo(e, filter))
                        .filter(Objects::nonNull)
                        .collect(toImmutableList());
 
@@ -162,8 +162,8 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     @Nullable
-    ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
-                               DocServiceFilter filter) {
+    ServiceInfo newServiceInfo(Entry entry, DocServiceFilter filter) {
+        final Class<?> serviceClass = entry.serviceType;
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -178,7 +178,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         final Method[] methods = interfaceClass.getDeclaredMethods();
 
         final List<MethodInfo> methodInfos = Arrays.stream(methods)
-                                                   .map(m -> newMethodInfo(m, endpoints, filter))
+                                                   .map(m -> newMethodInfo(m, entry, filter))
                                                    .filter(Objects::nonNull)
                                                    .collect(toImmutableList());
         if (methodInfos.isEmpty()) {
@@ -188,18 +188,25 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     @Nullable
-    private MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints,
+    private MethodInfo newMethodInfo(Method method, Entry entry,
                                      DocServiceFilter filter) {
-        final String methodName = method.getName();
+        // Get the function name in thrift IDL
+        final String thriftFunctionName;
+        if (entry.thriftServiceEntry != null) {
+            thriftFunctionName = entry.thriftServiceEntry.functionName(method.getName());
+        } else {
+            // entry.thriftServiceEntry can be null for tests
+            thriftFunctionName = method.getName();
+        }
 
         final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
         final String serviceName = serviceClass.getName();
-        if (!filter.test(name(), serviceName, methodName)) {
+        if (!filter.test(name(), serviceName, thriftFunctionName)) {
             return null;
         }
         final ClassLoader classLoader = serviceClass.getClassLoader();
 
-        final String argsClassName = serviceName + '$' + methodName + "_args";
+        final String argsClassName = serviceName + '$' + thriftFunctionName + "_args";
         final Class<? extends TBase<?, ?>> argsClass;
         try {
             @SuppressWarnings("unchecked")
@@ -212,7 +219,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         Class<?> resultClass;
         try {
-            resultClass = Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
+            resultClass = Class.forName(serviceName + '$' + thriftFunctionName + "_result", false, classLoader);
         } catch (ClassNotFoundException ignored) {
             // Oneway function does not have a result type.
             resultClass = null;
@@ -220,10 +227,10 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         @SuppressWarnings("unchecked")
         final MethodInfo methodInfo =
-                newMethodInfo(serviceName, methodName, argsClass,
+                newMethodInfo(serviceName, thriftFunctionName, argsClass,
                               (Class<? extends TBase<?, ?>>) resultClass,
                               (Class<? extends TException>[]) method.getExceptionTypes(),
-                              endpoints);
+                              entry.endpointInfos);
         return methodInfo;
     }
 
@@ -239,18 +246,16 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         requireNonNull(exceptionClasses, "exceptionClasses");
         requireNonNull(endpoints, "endpoints");
 
-        //noinspection unchecked,RedundantCast
         final List<FieldInfo> parameters =
-                FieldMetaData.getStructMetaDataMap((Class<T>) argsClass).values().stream()
-                             .map(fieldMetaData -> newFieldInfo(argsClass, fieldMetaData))
-                             .collect(toImmutableList());
+                ThriftMetadataAccess.getStructMetaDataMap(argsClass).values().stream()
+                                    .map(fieldMetaData -> newFieldInfo(argsClass, fieldMetaData))
+                                    .collect(toImmutableList());
 
         // Find the 'success' field.
         FieldInfo fieldInfo = null;
         if (resultClass != null) { // Function isn't "oneway" function
-            //noinspection unchecked,RedundantCast
-            final Map<? extends TFieldIdEnum, FieldMetaData> resultMetaData =
-                    FieldMetaData.getStructMetaDataMap((Class<T>) resultClass);
+            final Map<?, FieldMetaData> resultMetaData =
+                    ThriftMetadataAccess.getStructMetaDataMap(resultClass);
 
             for (FieldMetaData fieldMetaData : resultMetaData.values()) {
                 if ("success".equals(fieldMetaData.fieldName)) {
@@ -297,32 +302,43 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    public static final class Entry {
+    static final class Entry {
         final Class<?> serviceType;
         final List<EndpointInfo> endpointInfos;
+        @Nullable
+        final ThriftServiceEntry thriftServiceEntry;
 
-        Entry(Class<?> serviceType, List<EndpointInfo> endpointInfos) {
+        Entry(Class<?> serviceType, List<EndpointInfo> endpointInfos,
+              @Nullable ThriftServiceEntry thriftServiceEntry) {
             this.serviceType = serviceType;
             this.endpointInfos = ImmutableList.copyOf(endpointInfos);
+            this.thriftServiceEntry = thriftServiceEntry;
         }
     }
 
     @VisibleForTesting
-    public static final class EntryBuilder {
+    static final class EntryBuilder {
         private final Class<?> serviceType;
         private final List<EndpointInfo> endpointInfos = new ArrayList<>();
+        @Nullable
+        private final ThriftServiceEntry thriftServiceEntry;
 
-        public EntryBuilder(Class<?> serviceType) {
-            this.serviceType = requireNonNull(serviceType, "serviceType");
+        EntryBuilder(Class<?> serviceType) {
+            this(serviceType, null);
         }
 
-        public EntryBuilder endpoint(EndpointInfo endpointInfo) {
+        EntryBuilder(Class<?> serviceType, @Nullable ThriftServiceEntry thriftServiceEntry) {
+            this.serviceType = requireNonNull(serviceType, "serviceType");
+            this.thriftServiceEntry = thriftServiceEntry;
+        }
+
+        EntryBuilder endpoint(EndpointInfo endpointInfo) {
             endpointInfos.add(requireNonNull(endpointInfo, "endpointInfo"));
             return this;
         }
 
-        public Entry build() {
-            return new Entry(serviceType, endpointInfos);
+        Entry build() {
+            return new Entry(serviceType, endpointInfos, thriftServiceEntry);
         }
     }
 

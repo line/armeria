@@ -31,6 +31,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -71,8 +73,16 @@ final class JsonSchemaGenerator {
 
     private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
         serviceInfos = serviceSpecification.services();
-        typeSignatureToStructMapping = serviceSpecification.structs().stream().collect(
-                toImmutableMap(StructInfo::name, Function.identity()));
+        final ImmutableMap.Builder<String, StructInfo> typeSignatureToStructMappingBuilder =
+                ImmutableMap.builderWithExpectedSize(serviceSpecification.structs().size());
+        for (StructInfo struct : serviceSpecification.structs()) {
+            typeSignatureToStructMappingBuilder.put(struct.name(), struct);
+            if (struct.alias() != null) {
+                // TypeSignature.signature() could be StructInfo.alias() if the type is a protobuf Message.
+                typeSignatureToStructMappingBuilder.put(struct.alias(), struct);
+            }
+        }
+        typeSignatureToStructMapping = typeSignatureToStructMappingBuilder.build();
         typeNameToEnumMapping = serviceSpecification.enums().stream().collect(
                 toImmutableMap(EnumInfo::name, Function.identity()));
     }

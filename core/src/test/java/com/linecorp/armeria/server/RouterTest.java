@@ -44,6 +44,7 @@ import com.google.common.collect.Maps;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 
 class RouterTest {
     private static final Logger logger = LoggerFactory.getLogger(RouterTest.class);
@@ -118,7 +119,7 @@ class RouterTest {
     private static DefaultRoutingContext routingCtx(String path) {
         return new DefaultRoutingContext(virtualHost(), "example.com",
                                          RequestHeaders.of(HttpMethod.GET, path),
-                                         path, null, null, RoutingStatus.OK);
+                                         RequestTarget.forServer(path), RoutingStatus.OK);
     }
 
     static Stream<Arguments> generateRouteMatchData() {

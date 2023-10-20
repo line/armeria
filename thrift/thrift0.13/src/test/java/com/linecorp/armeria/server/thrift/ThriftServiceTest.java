@@ -52,23 +52,23 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
-import com.linecorp.armeria.common.thrift.text.ChildRpcDebugService;
-import com.linecorp.armeria.common.thrift.text.Response;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.service.test.thrift.main.BinaryService;
-import com.linecorp.armeria.service.test.thrift.main.DevNullService;
-import com.linecorp.armeria.service.test.thrift.main.FileService;
-import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.Name;
-import com.linecorp.armeria.service.test.thrift.main.NameService;
-import com.linecorp.armeria.service.test.thrift.main.NameSortService;
-import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import testing.thrift.debug.ChildRpcDebugService;
+import testing.thrift.debug.Response;
+import testing.thrift.main.BinaryService;
+import testing.thrift.main.DevNullService;
+import testing.thrift.main.FileService;
+import testing.thrift.main.FileServiceException;
+import testing.thrift.main.HelloService;
+import testing.thrift.main.Name;
+import testing.thrift.main.NameService;
+import testing.thrift.main.NameSortService;
+import testing.thrift.main.OnewayHelloService;
 
 /**
  * Tests {@link ThriftCallService} and {@link THttpService}.
@@ -710,11 +710,11 @@ class ThriftServiceTest {
     }
 
     private TProtocol inProto(SerializationFormat defaultSerializationFormat) {
-        return ThriftSerializationFormats.protocolFactory(defaultSerializationFormat).getProtocol(in);
+        return ThriftSerializationFormats.protocolFactory(defaultSerializationFormat, 0, 0).getProtocol(in);
     }
 
     private TProtocol outProto(SerializationFormat defaultSerializationFormat) {
-        return ThriftSerializationFormats.protocolFactory(defaultSerializationFormat).getProtocol(out);
+        return ThriftSerializationFormats.protocolFactory(defaultSerializationFormat, 0, 0).getProtocol(out);
     }
 
     private static class SerializationFormatProvider implements ArgumentsProvider {

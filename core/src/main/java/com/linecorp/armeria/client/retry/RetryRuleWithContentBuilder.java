@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -84,16 +85,18 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         final boolean hasResponseFilter = responseFilter != null;
         if (decision != RetryDecision.noRetry() && exceptionFilter() == null &&
             responseHeadersFilter() == null && responseTrailersFilter() == null &&
-            !hasResponseFilter) {
+            grpcTrailersFilter() == null && !hasResponseFilter) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
 
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), exceptionFilter(),
+                                                    responseTrailersFilter(), grpcTrailersFilter(),
+                                                    exceptionFilter(), totalDurationFilter(),
                                                     hasResponseFilter);
+        final RetryRule first = RetryRuleBuilder.build(
+                ruleFilter, decision, requiresResponseTrailers());
 
-        final RetryRule first = RetryRuleBuilder.build(ruleFilter, decision, responseTrailersFilter() != null);
         if (!hasResponseFilter) {
             return RetryRuleUtil.fromRetryRule(first);
         }
@@ -136,6 +139,18 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     public RetryRuleWithContentBuilder<T> onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code grpcTrailersFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code grpcTrailersFilter} returns {@code true}. Note that using this method makes the entire
+     * response buffered, which may lead to excessive memory usage.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onGrpcTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onGrpcTrailers(grpcTrailersFilter);
     }
 
     /**
@@ -238,5 +253,16 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     @Override
     public RetryRuleWithContentBuilder<T> onUnprocessed() {
         return (RetryRuleWithContentBuilder<T>) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code responseDurationFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code responseDurationFilter} returns {@code true}.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onTotalDuration(totalDurationFilter);
     }
 }

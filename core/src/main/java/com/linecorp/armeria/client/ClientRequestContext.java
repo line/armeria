@@ -279,6 +279,32 @@ public interface ClientRequestContext extends RequestContext {
     String fragment();
 
     /**
+     * Returns the authority which will eventually be sent when a {@link Client} sends an {@link HttpRequest}.
+     * This method checks the following locations and returns the first non-null value.
+     * <ol>
+     *     <li>Either the {@link HttpHeaderNames#HOST} or {@link HttpHeaderNames#AUTHORITY} value from
+     *         {@link ClientRequestContext#additionalRequestHeaders()}.</li>
+     *     <li>The {@link HttpRequest#authority()} from {@link ClientRequestContext#request()}.</li>
+     *     <li>{@link ClientRequestContext#defaultRequestHeaders()}.</li>
+     *     <li>{@link Endpoint#authority()}.</li>
+     * </ol>
+     */
+    @Nullable
+    @UnstableApi
+    String authority();
+
+    /**
+     * Returns the {@link URI} constructed based on {@link ClientRequestContext#sessionProtocol()},
+     * {@link ClientRequestContext#authority()}, {@link ClientRequestContext#path()} and
+     * {@link ClientRequestContext#query()}.
+     *
+     * @throws IllegalStateException if the resulting URI is not valid.
+     */
+    @Override
+    @UnstableApi
+    URI uri();
+
+    /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
@@ -538,6 +564,20 @@ public interface ClientRequestContext extends RequestContext {
      * @param mutator the {@link Consumer} that mutates the additional request headers
      */
     void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator);
+
+    /**
+     * Initiates connection shutdown and returns {@link CompletableFuture} that completes when the connection
+     * associated with this context is closed.
+     *
+     * <p>
+     * If not sent already, {@code "connection: close"} header is sent with the request.
+     * If the underlying connection's protocol is HTTP/1.1, the connection will be closed as soon as all pending
+     * requests are processed. Otherwise, a GOAWAY frame will be sent to initiate graceful connection shutdown.
+     * </p>
+     */
+    @UnstableApi
+    @Override
+    CompletableFuture<Void> initiateConnectionShutdown();
 
     /**
      * {@inheritDoc}

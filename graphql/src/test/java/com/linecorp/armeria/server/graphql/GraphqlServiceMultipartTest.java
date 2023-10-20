@@ -52,7 +52,7 @@ class GraphqlServiceMultipartTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile =
-                    new File(getClass().getResource("/multipart.graphqls").toURI());
+                    new File(getClass().getResource("/testing/graphql/multipart.graphqls").toURI());
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
@@ -137,7 +137,7 @@ class GraphqlServiceMultipartTest {
     @Test
     void shouldCreateGraphqlServiceWithoutPathScalar() throws Exception {
         final File graphqlSchemaFile =
-                new File(getClass().getResource("/multipart.graphqls").toURI());
+                new File(getClass().getResource("/testing/graphql/multipart.graphqls").toURI());
 
         assertThatThrownBy(() -> {
             GraphqlService.builder()

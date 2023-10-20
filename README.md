@@ -4,11 +4,13 @@ Visit [the official web site](https://armeria.dev/) for more information.
 
 <a href="https://github.com/line/armeria"><img src="https://img.shields.io/github/stars/line/armeria.svg?style=social" /></a>
 <a href="https://twitter.com/armeria_project"><img src="https://img.shields.io/twitter/follow/armeria_project.svg?label=Follow" /></a>
-<a href="https://armeria.dev/s/slack"><img src="https://img.shields.io/badge/chat-on%20Slack-brightgreen.svg?style=social&amp;logo=slack" /></a>
+<a href="https://armeria.dev/s/discord"><img src="https://img.shields.io/badge/chat-on%20Discord-brightgreen.svg?style=social&amp;logo=discord" /></a>
 <a href="https://github.com/line/armeria/contributors"><img src="https://img.shields.io/github/contributors/line/armeria.svg" /></a>
 <a href="https://github.com/line/armeria/pulse"><img src="https://img.shields.io/github/commit-activity/m/line/armeria.svg?label=commits" /></a>
 <a href="https://search.maven.org/search?q=g:com.linecorp.armeria%20AND%20a:armeria"><img src="https://img.shields.io/maven-central/v/com.linecorp.armeria/armeria.svg?label=version" /></a>
 <a href="https://github.com/line/armeria/commits"><img src="https://img.shields.io/github/release-date/line/armeria.svg?label=release" /></a>
+[![Revved up by Gradle Enterprise](https://img.shields.io/badge/Revved%20up%20by-Gradle%20Enterprise-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.armeria.dev/scans)
+
 
 > Build a reactive microservice **at your pace**, not theirs.
 

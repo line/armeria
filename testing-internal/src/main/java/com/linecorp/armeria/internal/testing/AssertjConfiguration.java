@@ -26,8 +26,7 @@ public final class AssertjConfiguration extends Configuration {
         // See: https://github.com/assertj/assertj-core/issues/2267
         // We assume that JUnit5 is the primary tool for testing Armeria modules.
         // - TestNG is only used for Reactive Streams TCK.
-        // - JUnit4, eventually, will be migrated to JUnit5 except for Spring
-        //   so that Spring Boot 1 and 2 share the same test suites.
+        // - JUnit4, eventually, will be migrated to JUnit5.
         return PreferredAssumptionException.JUNIT5;
     }
 }

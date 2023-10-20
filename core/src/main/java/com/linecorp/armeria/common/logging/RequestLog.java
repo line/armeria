@@ -210,7 +210,9 @@ public interface RequestLog extends RequestOnlyLog {
      *                      (ctx, content) -> content,
      *                      (ctx, trailers) -> trailers);
      * }</pre>
+     * @deprecated Use {@link LogFormatter#formatResponse(RequestLog)} instead.
      */
+    @Deprecated
     default String toStringResponseOnly() {
         return toStringResponseOnly(Functions.second(), Functions.second(), Functions.second());
     }
@@ -225,7 +227,9 @@ public interface RequestLog extends RequestOnlyLog {
      *                         the {@link BiFunction} is what is actually logged as headers.
      * @param contentSanitizer a {@link BiFunction} for sanitizing response content for logging. The result of
      *                         the {@link BiFunction} is what is actually logged as content.
+     * @deprecated Use {@link LogFormatter#formatResponse(RequestLog)} instead.
      */
+    @Deprecated
     default String toStringResponseOnly(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> headersSanitizer,
@@ -243,12 +247,41 @@ public interface RequestLog extends RequestOnlyLog {
      *                         the {@link BiFunction} is what is actually logged as content.
      * @param trailersSanitizer a {@link BiFunction} for sanitizing HTTP trailers for logging. The result of
      *                          the {@link BiFunction} is what is actually logged as trailers.
+     * @deprecated Use {@link LogFormatter#formatResponse(RequestLog)} instead.
      */
-    String toStringResponseOnly(
+    @Deprecated
+    default String toStringResponseOnly(
             BiFunction<? super RequestContext, ? super ResponseHeaders,
                     ? extends @Nullable Object> headersSanitizer,
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> contentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> trailersSanitizer);
+                    ? extends @Nullable Object> trailersSanitizer) {
+        return LogFormatter.builderForText()
+                           .responseHeadersSanitizer((ctx, headers) -> {
+                               final ResponseHeaders responseHeaders = (ResponseHeaders) headers;
+                               final Object sanitized = headersSanitizer.apply(ctx, responseHeaders);
+                               if (sanitized == null) {
+                                   return "<sanitized>";
+                               }
+                               return sanitized.toString();
+                           })
+                           .responseTrailersSanitizer((ctx, headers) -> {
+                               final Object sanitized = trailersSanitizer.apply(ctx, headers);
+                               if (sanitized == null) {
+                                   return "<sanitized>";
+                               }
+                               return sanitized.toString();
+                           })
+                           .responseContentSanitizer((ctx, content) -> {
+                               final Object sanitized = contentSanitizer.apply(ctx, content);
+                               if (sanitized == null) {
+                                   return "<sanitized>";
+                               }
+                               return sanitized.toString();
+                           })
+                           .includeContext(false)
+                           .build()
+                           .formatResponse(this);
+    }
 }

@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.Server;
@@ -71,12 +72,6 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void testConcatPaths() throws Exception {
-        assertThat(concatPaths(null, "a")).isEqualTo("/a");
-        assertThat(concatPaths(null, "/a")).isEqualTo("/a");
-
-        assertThat(concatPaths("", "a")).isEqualTo("/a");
-        assertThat(concatPaths("", "/a")).isEqualTo("/a");
-
         assertThat(concatPaths("/", "a")).isEqualTo("/a");
         assertThat(concatPaths("/", "/a")).isEqualTo("/a");
         assertThat(concatPaths("/", "/")).isEqualTo("/");
@@ -89,6 +84,11 @@ class ArmeriaHttpUtilTest {
         assertThat(concatPaths("/a/", "")).isEqualTo("/a/");
         assertThat(concatPaths("/a", "?foo=bar")).isEqualTo("/a?foo=bar");
         assertThat(concatPaths("/a/", "?foo=bar")).isEqualTo("/a/?foo=bar");
+
+        // Bad prefixes
+        assertThatThrownBy(() -> concatPaths(null, "a")).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> concatPaths("", "b")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> concatPaths("relative", "c")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest
@@ -261,7 +261,9 @@ class ArmeriaHttpUtilTest {
         in.add(HttpHeaderNames.COOKIE, "i=j");
         in.add(HttpHeaderNames.COOKIE, "k=l;");
 
-        final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(null, in, false, "http", null);
+        final RequestTarget reqTarget = RequestTarget.forServer(in.path().toString());
+        final RequestHeaders out = ArmeriaHttpUtil.toArmeriaRequestHeaders(
+                null, in, false, "http", null, reqTarget);
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f;g=h; i=j; k=l;");
@@ -275,14 +277,10 @@ class ArmeriaHttpUtilTest {
         final HttpRequest originReq =
                 new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello", headers);
 
-        final InetSocketAddress socketAddress = new InetSocketAddress(36462);
-        final Channel channel = mock(Channel.class);
-        when(channel.localAddress()).thenReturn(socketAddress);
+        final ChannelHandlerContext ctx = mockChannelHandlerContext();
 
-        final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
-        when(ctx.channel()).thenReturn(channel);
-
-        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http");
+        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http",
+                                                  RequestTarget.forServer(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
         assertThat(armeriaHeaders.authority()).isEqualTo("bar");
         assertThat(armeriaHeaders.scheme()).isEqualTo("http");
@@ -290,49 +288,12 @@ class ArmeriaHttpUtilTest {
 
         // Remove Host header.
         headers.remove(HttpHeaderNames.HOST);
-        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https");
+        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https",
+                                   RequestTarget.forServer(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
         assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");
         assertThat(armeriaHeaders.scheme()).isEqualTo("https");
         assertThat(armeriaHeaders.path()).isEqualTo("/hello");
-    }
-
-    @Test
-    void pathValidation() throws Exception {
-        final InetSocketAddress socketAddress = new InetSocketAddress(36462);
-        final Channel channel = mock(Channel.class);
-        when(channel.localAddress()).thenReturn(socketAddress);
-
-        final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
-        when(ctx.channel()).thenReturn(channel);
-
-        // Should not be overly strict, e.g. allow `"` in the path.
-        final HttpRequest doubleQuoteReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/\"?\"",
-                                       new DefaultHttpHeaders());
-        RequestHeaders armeriaHeaders = toArmeria(ctx, doubleQuoteReq, serverConfig(), "http");
-        assertThat(armeriaHeaders.path()).isEqualTo("/\"?\"");
-
-        // Should accept an asterisk request.
-        final HttpRequest asteriskReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "*", new DefaultHttpHeaders());
-        armeriaHeaders = toArmeria(ctx, asteriskReq, serverConfig(), "http");
-        assertThat(armeriaHeaders.path()).isEqualTo("*");
-
-        // Should reject an absolute URI.
-        final HttpRequest absoluteUriReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
-                                       "http://example.com/hello", new DefaultHttpHeaders());
-        assertThatThrownBy(() -> toArmeria(ctx, absoluteUriReq, serverConfig(), "http"))
-                .isInstanceOf(URISyntaxException.class)
-                .hasMessageContaining("neither origin form nor asterisk form");
-
-        // Should not accept a path that starts with an asterisk.
-        final HttpRequest badAsteriskReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "*/", new DefaultHttpHeaders());
-        assertThatThrownBy(() -> toArmeria(ctx, badAsteriskReq, serverConfig(), "http"))
-                .isInstanceOf(URISyntaxException.class)
-                .hasMessageContaining("neither origin form nor asterisk form");
     }
 
     @Test
@@ -416,23 +377,23 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void excludeDisallowedHeadersWhileHttp2ToHttp1() {
-        final HttpHeaders in = HttpHeaders.builder()
-                                          .add(HttpHeaderNames.TRAILER, "foo")
-                                          .add(HttpHeaderNames.HOST, "bar")
-                                          .add(HttpHeaderNames.PATH, "dummy")
-                                          .add(HttpHeaderNames.METHOD, "dummy")
-                                          .add(HttpHeaderNames.SCHEME, "dummy")
-                                          .add(HttpHeaderNames.STATUS, "dummy")
-                                          .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
-                                          .add(ExtensionHeaderNames.STREAM_ID.text(), "dummy")
-                                          .add(ExtensionHeaderNames.SCHEME.text(), "dummy")
-                                          .add(ExtensionHeaderNames.PATH.text(), "dummy")
-                                          .build();
+        final ResponseHeaders in = ResponseHeaders.builder()
+                                                  .add(HttpHeaderNames.TRAILER, "foo")
+                                                  .add(HttpHeaderNames.HOST, "bar")
+                                                  .add(HttpHeaderNames.PATH, "dummy")
+                                                  .add(HttpHeaderNames.METHOD, "dummy")
+                                                  .add(HttpHeaderNames.SCHEME, "dummy")
+                                                  .add(HttpHeaderNames.STATUS, "dummy")
+                                                  .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
+                                                  .add(ExtensionHeaderNames.STREAM_ID.text(), "dummy")
+                                                  .add(ExtensionHeaderNames.SCHEME.text(), "dummy")
+                                                  .add(ExtensionHeaderNames.PATH.text(), "dummy")
+                                                  .build();
 
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ServerHeaders(in, out, Http1HeaderNaming.ofDefault());
+        toNettyHttp1ServerHeaders(in, out, Http1HeaderNaming.ofDefault(), true);
         assertThat(out).isEqualTo(new DefaultHttpHeaders()
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.TRAILER, "foo")
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.HOST, "bar"));
@@ -501,9 +462,11 @@ class ArmeriaHttpUtilTest {
                                                        .add("Content-Length", "dummy")
                                                        .add("Cache-Control", "dummy"));
 
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(200).add(in).build();
         final io.netty.handler.codec.http.HttpHeaders serverOutHeaders =
                 new DefaultHttpHeaders();
-        toNettyHttp1ServerHeaders(in, serverOutHeaders, Http1HeaderNaming.traditional());
+        toNettyHttp1ServerHeaders(responseHeaders, serverOutHeaders, Http1HeaderNaming.traditional(), true);
+        // 200 status is included in the status-line.
         assertThat(serverOutHeaders).isEqualTo(new DefaultHttpHeaders()
                                                        .add("foo", "bar")
                                                        .add("Authorization", "dummy")
@@ -558,18 +521,15 @@ class ArmeriaHttpUtilTest {
     void toArmeriaRequestHeaders() {
         final Http2Headers in = new ArmeriaHttp2Headers().set("a", "b");
 
-        final InetSocketAddress socketAddress = new InetSocketAddress(36462);
-        final Channel channel = mock(Channel.class);
-        when(channel.localAddress()).thenReturn(socketAddress);
-
-        final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
-        when(ctx.channel()).thenReturn(channel);
+        final ChannelHandlerContext ctx = mockChannelHandlerContext();
 
         in.set(HttpHeaderNames.METHOD, "GET")
           .set(HttpHeaderNames.PATH, "/");
         // Request headers without pseudo headers.
+        final RequestTarget reqTarget = RequestTarget.forServer(in.path().toString());
         final RequestHeaders headers =
-                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https", serverConfig());
+                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https",
+                                                        serverConfig(), reqTarget);
         assertThat(headers.scheme()).isEqualTo("https");
         assertThat(headers.authority()).isEqualTo("foo:36462");
     }
@@ -611,11 +571,35 @@ class ArmeriaHttpUtilTest {
         assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).doesNotContain(HttpHeaderNames.LOCATION);
     }
 
+    @Test
+    void shouldReturnConnectionCloseWithNoKeepAlive() {
+        final ResponseHeaders in = ResponseHeaders.builder(HttpStatus.OK)
+                                                  .contentType(MediaType.JSON)
+                                                  .build();
+        final io.netty.handler.codec.http.HttpHeaders out =
+                new DefaultHttpHeaders();
+
+        toNettyHttp1ServerHeaders(in, out, Http1HeaderNaming.ofDefault(), false);
+        assertThat(out).isEqualTo(new DefaultHttpHeaders()
+                                          .add(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON.toString())
+                                          .add(HttpHeaderNames.CONNECTION, "close"));
+    }
+
     private static ServerConfig serverConfig() {
         final Server server = Server.builder()
                                     .defaultHostname("foo")
                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                     .build();
         return server.config();
+    }
+
+    private static ChannelHandlerContext mockChannelHandlerContext() {
+        final InetSocketAddress socketAddress = new InetSocketAddress(36462);
+        final Channel channel = mock(Channel.class);
+        when(channel.localAddress()).thenReturn(socketAddress);
+
+        final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        when(ctx.channel()).thenReturn(channel);
+        return ctx;
     }
 }

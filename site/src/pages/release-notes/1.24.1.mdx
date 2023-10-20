@@ -1,0 +1,30 @@
+---
+date: 2023-06-21
+---
+
+## 🛠️ Bug fixes
+
+- You can no longer see compilation errors when using <type://TextLogFormatterBuilder#build()> and 
+  <type://JsonLogFormatterBuilder#build()>. #4975
+- Armeria server does not accept a `ClientHello` message larger than 4096 bytes. #4974 ([CVE-2023-34462](https://github.com/netty/netty/security/advisories/GHSA-6mjq-h674-j845))
+
+## 📃 Documentation
+
+- You can now learn how to write a Thrift service and client with Armeria by walking through
+  [the Thrift tutorial](/tutorials/thrift/blog). #3987
+  - Special thanks to @haneepark who volunteered for this.
+
+## ⛓ Dependencies
+
+- Netty 4.1.93 → 4.1.94
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'gsongson',
+  'haneepark',
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin'
+]} />

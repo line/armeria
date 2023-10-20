@@ -28,7 +28,8 @@ import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
+
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcClientUnwrapTest {
 

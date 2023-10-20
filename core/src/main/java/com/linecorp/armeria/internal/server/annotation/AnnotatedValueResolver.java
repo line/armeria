@@ -1523,13 +1523,11 @@ final class AnnotatedValueResolver {
         QueryParams queryParams() {
             QueryParams result = queryParams;
             if (result == null) {
-                synchronized (this) {
-                    result = queryParams;
-                    if (result == null) {
-                        queryParams = result = queryParamsOf(context.query(),
-                                                             request.contentType(),
-                                                             aggregatedResult);
-                    }
+                result = queryParams;
+                if (result == null) {
+                    queryParams = result = queryParamsOf(context.query(),
+                                                         request.contentType(),
+                                                         aggregatedResult);
                 }
             }
             return result;

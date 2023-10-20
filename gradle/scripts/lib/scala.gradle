@@ -16,14 +16,18 @@ configure(scala212 + scala213 + scala3) {
         }
     }
 
-    tasks.withType(Test) {
-        useJUnitPlatform {
-            // A workaround for 'java.lang.InternalError: Malformed class name'
-            // when testing scalapb module with Java 8. This bug was fixed in Java 9.
-            // - https://github.com/gradle/gradle/issues/8432
-            // - https://bugs.openjdk.java.net/browse/JDK-8057919
-            if (rootProject.ext.testJavaVersion == 8) {
-                exclude("**/*\$*\$*.class")
+    testing.suites {
+        configureEach {
+            targets.configureEach {
+                testTask.configure {
+                    // A workaround for 'java.lang.InternalError: Malformed class name'
+                    // when testing scalapb module with Java 8. This bug was fixed in Java 9.
+                    // - https://github.com/gradle/gradle/issues/8432
+                    // - https://bugs.openjdk.java.net/browse/JDK-8057919
+                    if (project.ext.testJavaVersion == 8) {
+                        exclude("**/*\$*\$*.class")
+                    }
+                }
             }
         }
     }
@@ -33,6 +37,7 @@ configure(scala212 + scala213 + scala3) {
         // Run `scalafmt` to automatically format scala code from source sets
         // https://github.com/alenkacz/gradle-scalafmt#tasks
         project.ext.getLintTask().dependsOn tasks.checkScalafmt
+        tasks.checkScalafmt.dependsOn tasks.processResources
     }
 
     if (project.hasFlags('publish')) {
@@ -58,7 +63,7 @@ configure(scala212 + scala213 + scala3) {
 
 configure(scala212) {
     dependencies {
-        implementation('org.scala-lang:scala-library:2.12.17')
+        implementation('org.scala-lang:scala-library:2.12.18')
         if (managedVersions.containsKey('org.scalameta:munit_2.12')) {
             testImplementation "org.scalameta:munit_2.12:${managedVersions['org.scalameta:munit_2.12']}"
         }
@@ -76,7 +81,7 @@ configure(scala212) {
 
 configure(scala213) {
     dependencies {
-        implementation 'org.scala-lang:scala-library:2.13.10'
+        implementation 'org.scala-lang:scala-library:2.13.11'
         if (managedVersions.containsKey('org.scalameta:munit_2.13')) {
             testImplementation "org.scalameta:munit_2.13:${managedVersions['org.scalameta:munit_2.13']}"
         }

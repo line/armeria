@@ -15,9 +15,10 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.common.CancellationScheduler.noopCancellationTask;
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -35,12 +36,10 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
-import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Builds a new {@link ClientRequestContext}. Note that it is not usually required to create a new context by
@@ -49,29 +48,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
-    private static final CancellationTask noopCancellationTask = new CancellationTask() {
-        @Override
-        public boolean canSchedule() {
-            return true;
-        }
-
-        @Override
-        public void run(Throwable cause) { /* no-op */ }
-    };
-
-    /**
-     * A cancellation scheduler that has been finished.
-     */
-    private static final CancellationScheduler noopResponseCancellationScheduler = new CancellationScheduler(0);
-
-    static {
-        noopResponseCancellationScheduler
-                .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, /* server */ false);
-        noopResponseCancellationScheduler.finishNow();
-    }
-
-    @Nullable
-    private final String fragment;
     @Nullable
     private Endpoint endpoint;
     private ClientOptions options = ClientOptions.of();
@@ -81,12 +57,10 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
     ClientRequestContextBuilder(HttpRequest request) {
         super(false, request);
-        fragment = null;
     }
 
     ClientRequestContextBuilder(RpcRequest request, URI uri) {
         super(false, request, uri);
-        fragment = uri.getRawFragment();
     }
 
     @Override
@@ -140,9 +114,9 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final CancellationScheduler responseCancellationScheduler;
         if (timedOut()) {
-            responseCancellationScheduler = noopResponseCancellationScheduler;
+            responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
-            responseCancellationScheduler = new CancellationScheduler(0);
+            responseCancellationScheduler = CancellationScheduler.of(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
                 responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
@@ -157,7 +131,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
-                id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
+                id(), method(), requestTarget(), options, request(), rpcRequest(),
                 requestOptions, responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
@@ -204,12 +178,12 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     @Override
-    public ClientRequestContextBuilder remoteAddress(SocketAddress remoteAddress) {
+    public ClientRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
         return (ClientRequestContextBuilder) super.remoteAddress(remoteAddress);
     }
 
     @Override
-    public ClientRequestContextBuilder localAddress(SocketAddress localAddress) {
+    public ClientRequestContextBuilder localAddress(InetSocketAddress localAddress) {
         return (ClientRequestContextBuilder) super.localAddress(localAddress);
     }
 

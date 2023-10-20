@@ -465,6 +465,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString KEEP_ALIVE = create("Keep-Alive");
     /**
+     * The HTTP <a href="https://github.com/WICG/nav-speculation/blob/main/no-vary-search.md">{@code
+     * No-Vary-Seearch}</a> header field name.
+     */
+    public static final AsciiString NO_VARY_SEARCH = create("No-Vary-Search");
+    /**
      * The HTTP <a href="https://googlechrome.github.io/OriginTrials/#header">{@code "Origin-Trial"}</a>
      * header field name.
      */
@@ -516,7 +521,15 @@ public final class HttpHeaderNames {
      * The HTTP <a href="https://goo.gl/Dxx19N">{@code "SourceMap"}</a> header field name.
      */
     public static final AsciiString SOURCE_MAP = create("SourceMap");
-
+    /**
+     * The HTTP <a href="https://github.com/WICG/nav-speculation/blob/main/opt-in.md">{@code
+     * Supports-Loading-Mode}</a> header field name. This can be used to specify, for example, <a
+     * href="https://developer.chrome.com/docs/privacy-sandbox/fenced-frame/#server-opt-in">fenced
+     * frames</a>.
+     *
+     * @since 32.0.0
+     */
+    public static final AsciiString SUPPORTS_LOADING_MODE = create("Supports-Loading-Mode");
     /**
      * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6797#section-6.1">{@code
      * Strict-Transport-Security}</a> header field name.
@@ -777,10 +790,37 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString SEC_CH_UA_MOBILE = create("Sec-CH-UA-Mobile");
     /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-wow64">{@code
+     * Sec-CH-UA-WoW64}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_WOW64 = create("Sec-CH-UA-WoW64");
+    /**
      * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-bitness">{@code
      * Sec-CH-UA-Bitness}</a> header field name.
      */
     public static final AsciiString SEC_CH_UA_BITNESS = create("Sec-CH-UA-Bitness");
+    /**
+     * The HTTP <a href="https://wicg.github.io/ua-client-hints/#sec-ch-ua-form-factor">{@code
+     * Sec-CH-UA-Form-Factor}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_UA_FORM_FACTOR = create("Sec-CH-UA-Form-Factor");
+    /**
+     * The HTTP <a
+     * href="https://wicg.github.io/responsive-image-client-hints/#sec-ch-viewport-width">{@code
+     * Sec-CH-Viewport-Width}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_VIEWPORT_WIDTH = create("Sec-CH-Viewport-Width");
+    /**
+     * The HTTP <a
+     * href="https://wicg.github.io/responsive-image-client-hints/#sec-ch-viewport-height">{@code
+     * Sec-CH-Viewport-Height}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_VIEWPORT_HEIGHT = create("Sec-CH-Viewport-Height");
+    /**
+     * The HTTP <a href="https://wicg.github.io/responsive-image-client-hints/#sec-ch-dpr">{@code
+     * Sec-CH-DPR}</a> header field name.
+     */
+    public static final AsciiString SEC_CH_DPR = create("Sec-CH-DPR");
     /**
      * The HTTP <a href="https://w3c.github.io/webappsec-fetch-metadata/">{@code Sec-Fetch-Dest}</a>
      * header field name.
@@ -846,6 +886,16 @@ public final class HttpHeaderNames {
      * field name.
      */
     public static final AsciiString SEC_WEBSOCKET_VERSION = create("Sec-WebSocket-Version");
+    /**
+     * The HTTP <a href="https://patcg-individual-drafts.github.io/topics/">{@code
+     * Sec-Browsing-Topics}</a> header field name.
+     */
+    public static final AsciiString SEC_BROWSING_TOPICS = create("Sec-Browsing-Topics");
+    /**
+     * The HTTP <a href="https://patcg-individual-drafts.github.io/topics/">{@code
+     * Observe-Browsing-Topics}</a> header field name.
+     */
+    public static final AsciiString OBSERVE_BROWSING_TOPICS = create("Observe-Browsing-Topics");
     /**
      * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc8586">{@code CDN-Loop}</a> header field name.
      */

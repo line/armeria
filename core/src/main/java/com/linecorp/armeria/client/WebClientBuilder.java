@@ -147,6 +147,16 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder requestAutoAbortDelay(Duration delay) {
+        return (WebClientBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public WebClientBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (WebClientBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public WebClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (WebClientBuilder) super.requestIdGenerator(requestIdGenerator);
     }

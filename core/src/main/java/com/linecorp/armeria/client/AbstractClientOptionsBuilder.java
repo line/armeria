@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -176,6 +177,31 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder maxResponseLength(long maxResponseLength) {
         return option(ClientOptions.MAX_RESPONSE_LENGTH, maxResponseLength);
+    }
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to send additional data even after the response is complete.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to send additional data even after the response is complete.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        option(ClientOptions.REQUEST_AUTO_ABORT_DELAY_MILLIS, delayMillis);
+        return this;
     }
 
     /**

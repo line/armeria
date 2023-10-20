@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.grpc.GrpcServiceBuilder.toGrpcStatusFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -32,16 +33,11 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.MetricsServiceGrpc.MetricsServiceImplBase;
-import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -66,6 +62,12 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.MetricsServiceGrpc.MetricsServiceImplBase;
+import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcServiceBuilderTest {
 
@@ -380,6 +382,26 @@ class GrpcServiceBuilderTest {
                                             .enableHealthCheckService(true)
                                             .build())
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void enableHttpJsonTranscodingWithJsonSupport() {
+        assertDoesNotThrow(() -> GrpcService.builder()
+                                            .enableHttpJsonTranscoding(true)
+                                            .supportedSerializationFormats(GrpcSerializationFormats.JSON)
+                                            .build());
+    }
+
+    @Test
+    void enableHttpJsonTranscodingWithoutJsonSupport() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .enableHttpJsonTranscoding(true)
+                                            .supportedSerializationFormats(GrpcSerializationFormats.PROTO)
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("GrpcSerializationFormats.JSON")
+                .hasMessageContaining("must be set")
+                .hasMessageContaining("enableHttpJsonTranscoding");
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}

@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
 
+import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -75,11 +76,11 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         final boolean hasResponseFilter = responseFilter != null;
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), exceptionFilter(),
+                                                    responseTrailersFilter(), grpcTrailersFilter(),
+                                                    exceptionFilter(), totalDurationFilter(),
                                                     hasResponseFilter);
-
-        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(ruleFilter, decision,
-                                                                         responseTrailersFilter() != null);
+        final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
+                ruleFilter, decision, requiresResponseTrailers());
         if (!hasResponseFilter) {
             return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
         }
@@ -138,6 +139,19 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     public CircuitBreakerRuleWithContentBuilder<T> onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code grpcTrailersFilter} for a {@link CircuitBreakerRuleWithContent}.
+     * If the specified {@code grpcTrailersFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public CircuitBreakerRuleWithContentBuilder<T> onGrpcTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onGrpcTrailers(grpcTrailersFilter);
     }
 
     /**
@@ -259,5 +273,18 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onUnprocessed() {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code totalDurationFilter} for a {@link CircuitBreakerRuleWithContent}.
+     * If the specified {@code totalDurationFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public CircuitBreakerRuleWithContentBuilder<T> onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onTotalDuration(totalDurationFilter);
     }
 }

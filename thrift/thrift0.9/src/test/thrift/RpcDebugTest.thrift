@@ -1,4 +1,4 @@
-namespace java com.linecorp.armeria.common.thrift.text
+namespace java testing.thrift.debug
 
 struct RequestDetails {
   1: string detailsArg1,

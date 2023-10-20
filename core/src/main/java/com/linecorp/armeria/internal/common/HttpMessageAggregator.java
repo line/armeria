@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -107,7 +106,9 @@ public final class HttpMessageAggregator {
     public static AggregatedHttpResponse aggregateResponse(List<HttpObject> objects,
                                                            @Nullable ByteBufAllocator alloc) {
         final int size = objects.size();
-        checkState(size >= 1, "An aggregated message does not have headers.");
+        if (size == 0) {
+            throw EmptyHttpResponseException.get();
+        }
 
         final ResponseHeaders headers = (ResponseHeaders) objects.get(0);
         boolean foundNonInformationalHeaders = !headers.status().isInformational();
@@ -218,9 +219,7 @@ public final class HttpMessageAggregator {
             for (int i = start; i < end; i++) {
                 try (HttpData data = (HttpData) objects.get(i)) {
                     final ByteBuf buf = data.byteBuf();
-                    if (data.isEmpty()) {
-                        data.close();
-                    } else {
+                    if (!data.isEmpty()) {
                         merged.writeBytes(buf, buf.readerIndex(), data.length());
                     }
                 }

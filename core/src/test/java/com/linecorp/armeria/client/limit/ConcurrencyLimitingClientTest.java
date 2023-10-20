@@ -28,7 +28,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
@@ -44,7 +43,6 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
-@Disabled
 class ConcurrencyLimitingClientTest {
 
     @RegisterExtension
@@ -179,6 +177,7 @@ class ConcurrencyLimitingClientTest {
         await().untilAsserted(() -> assertThat(res.isOpen()).isFalse());
         assertThatThrownBy(() -> res.whenComplete().get()).hasCauseInstanceOf(Exception.class);
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
+        await().untilAsserted(() -> assertThat(ctx.log().isComplete()).isTrue());
     }
 
     @Test

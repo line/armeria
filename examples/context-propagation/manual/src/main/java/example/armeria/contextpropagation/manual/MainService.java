@@ -110,6 +110,6 @@ public class MainService implements HttpService {
                                         // mounted and stay on a single thread to reduce concurrency issues.
                                         ctxExecutor);
 
-        return HttpResponse.from(response);
+        return HttpResponse.of(response);
     }
 }

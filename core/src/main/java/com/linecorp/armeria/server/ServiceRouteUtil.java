@@ -18,52 +18,37 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflightRequest;
 
-import java.net.InetSocketAddress;
-
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.channel.Channel;
 
 final class ServiceRouteUtil {
 
     static RoutingContext newRoutingContext(ServerConfig serverConfig, Channel channel,
-                                            RequestHeaders headers) {
+                                            RequestHeaders headers, RequestTarget reqTarget) {
 
         final String hostname = hostname(headers);
-        final int port = ((InetSocketAddress) channel.localAddress()).getPort();
+        final int port = ChannelUtil.getPort(channel.localAddress(), 0);
         final String originalPath = headers.path();
 
-        PathAndQuery pathAndQuery = null;
         final RoutingStatus routingStatus;
-        if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
-            // 'OPTIONS * HTTP/1.1' will be handled by HttpServerHandler
-            if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
+        if (headers.method() == HttpMethod.OPTIONS) {
+            if (isCorsPreflightRequest(headers)) {
+                routingStatus = RoutingStatus.CORS_PREFLIGHT;
+            } else if ("*".equals(originalPath)) {
                 routingStatus = RoutingStatus.OPTIONS;
             } else {
-                routingStatus = RoutingStatus.INVALID_PATH;
+                routingStatus = RoutingStatus.OK;
             }
         } else {
-            pathAndQuery = PathAndQuery.parse(originalPath);
-            if (pathAndQuery != null) {
-                if (isCorsPreflightRequest(headers)) {
-                    routingStatus = RoutingStatus.CORS_PREFLIGHT;
-                } else {
-                    routingStatus = RoutingStatus.OK;
-                }
-            } else {
-                routingStatus = RoutingStatus.INVALID_PATH;
-            }
+            routingStatus = RoutingStatus.OK;
         }
 
-        final VirtualHost virtualHost = serverConfig.findVirtualHost(hostname, port);
-        if (pathAndQuery == null) {
-            return DefaultRoutingContext.of(virtualHost, hostname, headers.path(), /* query */ null, headers,
-                                            routingStatus);
-        } else {
-            return DefaultRoutingContext.of(virtualHost, hostname, pathAndQuery, headers, routingStatus);
-        }
+        return DefaultRoutingContext.of(serverConfig.findVirtualHost(hostname, port),
+                                        hostname, reqTarget, headers, routingStatus);
     }
 
     private static String hostname(RequestHeaders headers) {

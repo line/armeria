@@ -249,9 +249,24 @@ public final class AnnotatedService implements HttpService {
         return route;
     }
 
+    HttpService withExceptionHandler(HttpService service) {
+        if (exceptionHandler == null) {
+            return service;
+        }
+        return new ExceptionHandlingHttpService(service, exceptionHandler);
+    }
+
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpResponse response = HttpResponse.from(serve0(ctx, req));
+        if (!defaultHttpHeaders.isEmpty()) {
+            ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
+        }
+        if (!defaultHttpTrailers.isEmpty()) {
+            ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
+        }
+
+        final HttpResponse response = serve0(ctx, req);
+
         if (exceptionHandler == null) {
             // If an error occurs, the default ExceptionHandler will handle the error.
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
@@ -262,14 +277,25 @@ public final class AnnotatedService implements HttpService {
                 });
             }
         }
+
         return response;
     }
 
-    HttpService withExceptionHandler(HttpService service) {
-        if (exceptionHandler == null) {
-            return service;
+    private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req) {
+        final AggregationType aggregationType =
+                AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers());
+
+        if (aggregationType == AggregationType.NONE && !useBlockingTaskExecutor) {
+            // Fast-path: No aggregation required and blocking task executor is not used.
+            switch (responseType) {
+                case HTTP_RESPONSE:
+                    return (HttpResponse) invoke(ctx, req, AggregatedResult.EMPTY);
+                case OTHER_OBJECTS:
+                    return convertResponse(ctx, invoke(ctx, req, AggregatedResult.EMPTY));
+            }
         }
-        return new ExceptionHandlingHttpService(service, exceptionHandler);
+
+        return HttpResponse.of(serve1(ctx, req, aggregationType));
     }
 
     /**
@@ -277,9 +303,10 @@ public final class AnnotatedService implements HttpService {
      * required to be aggregated. If the return type of the method is not a {@link CompletionStage} or
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
-    private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
+    private CompletionStage<HttpResponse> serve1(ServiceRequestContext ctx, HttpRequest req,
+                                                 AggregationType aggregationType) {
         final CompletableFuture<AggregatedResult> f;
-        switch (AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers())) {
+        switch (aggregationType) {
             case MULTIPART:
                 f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
                 break;
@@ -294,9 +321,6 @@ public final class AnnotatedService implements HttpService {
                 throw new Error();
         }
 
-        ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
-        ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
-
         switch (responseType) {
             case HTTP_RESPONSE:
                 if (useBlockingTaskExecutor) {
@@ -305,7 +329,6 @@ public final class AnnotatedService implements HttpService {
                 } else {
                     return f.thenApply(aReq -> (HttpResponse) invoke(ctx, req, aReq));
                 }
-
             case COMPLETION_STAGE:
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
@@ -392,7 +415,7 @@ public final class AnnotatedService implements HttpService {
                                                  HttpHeaders trailers) {
         if (result instanceof CompletionStage) {
             final CompletionStage<?> future = (CompletionStage<?>) result;
-            return HttpResponse.from(
+            return HttpResponse.of(
                     future.thenApply(object -> convertResponseInternal(ctx, headers, object, trailers)));
         }
 

@@ -326,7 +326,7 @@ class DefaultEventLoopSchedulerTest {
         } else {
             acquired = s.acquire(SessionProtocol.HTTP, EndpointGroup.of(), null);
         }
-        assert acquired instanceof AbstractEventLoopEntry;
+        assertThat(acquired).isInstanceOf(AbstractEventLoopEntry.class);
         return (AbstractEventLoopEntry) acquired;
     }
 }

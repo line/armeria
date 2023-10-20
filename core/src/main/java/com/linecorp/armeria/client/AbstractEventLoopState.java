@@ -21,6 +21,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+
 import io.netty.channel.EventLoop;
 
 abstract class AbstractEventLoopState {
@@ -35,7 +37,7 @@ abstract class AbstractEventLoopState {
         return new HeapBasedEventLoopState(eventLoops, maxNumEventLoops, scheduler);
     }
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     private final List<EventLoop> eventLoops;
     private final DefaultEventLoopScheduler scheduler;
 

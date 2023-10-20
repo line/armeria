@@ -48,6 +48,6 @@ class HttpRequestNotSubscribedTest {
     void nullRequestCause() throws InterruptedException {
         assertThat(server.blockingWebClient().get("/foo").status()).isSameAs(HttpStatus.OK);
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
-        assertThat(ctx.log().ensureComplete().requestCause()).isNull();
+        assertThat(ctx.log().whenComplete().join().requestCause()).isNull();
     }
 }

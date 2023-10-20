@@ -46,11 +46,9 @@ import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 
@@ -58,6 +56,8 @@ import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import reactor.test.StepVerifier;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
 
 class ArmeriaMessageDeframerTest {
 
@@ -77,7 +77,7 @@ class ArmeriaMessageDeframerTest {
 
     @Test
     void request_noDataYet() {
-        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> source = StreamMessage.streaming();
         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, false);
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -111,7 +111,7 @@ class ArmeriaMessageDeframerTest {
         } else {
             httpData = HttpData.wrap(data);
         }
-        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> source = StreamMessage.streaming();
         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -135,7 +135,7 @@ class ArmeriaMessageDeframerTest {
                              .collect(toImmutableList());
         }
 
-        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> source = StreamMessage.streaming();
         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
 
         StepVerifier.create(deframed)
@@ -158,7 +158,7 @@ class ArmeriaMessageDeframerTest {
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
     void deframe_frameWithHeaderAndBodyFragment(boolean base64, byte[] data) {
-        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> source = StreamMessage.streaming();
         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
 
         StepVerifier.create(deframed)
@@ -206,7 +206,7 @@ class ArmeriaMessageDeframerTest {
     @ParameterizedTest
     void deframe_multipleMessagesAfterRequests(boolean base64, byte[] data) {
         final byte[] maybeEncoded = base64 ? Base64.getEncoder().encode(data) : data;
-        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> source = StreamMessage.streaming();
         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
 
         StepVerifier.create(deframed)
