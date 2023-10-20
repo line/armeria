@@ -41,9 +41,10 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
 
     private void init(final int acquisitionStartIndex) {
         final int initialEventLoopOffset = ThreadLocalRandom.current().nextInt(maxNumEventLoops);
+        final int eventLoopSize = eventLoops().size();
         for (int i = 0; i < maxNumEventLoops; ++i) {
             final int nextIndex = (acquisitionStartIndex + (initialEventLoopOffset + i) % maxNumEventLoops) %
-                                  eventLoops().size();
+                                  eventLoopSize;
             entries[i] = new Entry(this, eventLoops().get(nextIndex), i);
         }
     }
