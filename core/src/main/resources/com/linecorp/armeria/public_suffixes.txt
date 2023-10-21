@@ -1347,7 +1347,6 @@ citi
 citic
 city
 city.hu
-cityeats
 civilaviation.aero
 ck.ua
 cl
@@ -2596,7 +2595,6 @@ from-wv.com
 from-wy.com
 from.hr
 from.tv
-frontdoor
 frontier
 frosinone.it
 frosta.no
