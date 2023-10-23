@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+
 import java.nio.file.Path;
 import java.util.List;
 
@@ -64,19 +66,21 @@ public class RoutersBenchmark {
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(), 0, multipartUploadsLocation, ImmutableList.of(),
-                                  HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler),
+                                  HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler,
+                                  NOOP_CONTEXT_HOOK),
                 new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(), 0, multipartUploadsLocation, ImmutableList.of(),
-                                  HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler));
+                                  HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler,
+                                  NOOP_CONTEXT_HOOK));
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
                                              defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              CommonPools.blockingTaskExecutor(),
                                              SuccessFunction.always(), 0, multipartUploadsLocation,
                                              ImmutableList.of(), HttpHeaders.of(), ctx -> RequestId.random(),
-                                             serviceErrorHandler);
+                                             serviceErrorHandler, NOOP_CONTEXT_HOOK);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, defaultLogName, 0, 0, false,
