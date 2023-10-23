@@ -185,10 +185,11 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             useParamaterAsRoot = true;
             if (i != 0) {
                 // Move root parameter to front.
-                ImmutableList.Builder<FieldInfo> moved = ImmutableList.builderWithExpectedSize(fieldInfos.size());
+                final ImmutableList.Builder<FieldInfo> moved =
+                        ImmutableList.builderWithExpectedSize(fieldInfos.size());
                 moved.add(field);
                 moved.addAll(fieldInfos.subList(0, i));
-                moved.addAll(fieldInfos.subList(i+1, fieldInfos.size()));
+                moved.addAll(fieldInfos.subList(i + 1, fieldInfos.size()));
                 fieldInfos = moved.build();
             }
         }

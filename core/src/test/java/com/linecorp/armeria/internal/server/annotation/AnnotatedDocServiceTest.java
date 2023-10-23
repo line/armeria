@@ -611,7 +611,8 @@ class AnnotatedDocServiceTest {
         @Path("/json")
         @Post
         @Put
-        public String json(@Param @Nullable String query1, JsonRequest request, @Param @Nullable String query2) {
+        public String json(
+                @Param @Nullable String query1, JsonRequest request, @Param @Nullable String query2) {
             return request.bar;
         }
 
