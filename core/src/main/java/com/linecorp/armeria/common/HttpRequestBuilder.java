@@ -154,6 +154,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     }
 
     @Override
+    public HttpRequestBuilder trailer(CharSequence name, Object value) {
+        return (HttpRequestBuilder) super.trailer(name, value);
+    }
+
+    @Override
     public HttpRequestBuilder trailers(
             Iterable<? extends Map.Entry<? extends CharSequence, String>> trailers) {
         return (HttpRequestBuilder) super.trailers(trailers);

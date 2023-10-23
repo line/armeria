@@ -24,6 +24,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
+import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -242,6 +243,12 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     @Override
     public RetryRuleWithContentBuilder<T> onException() {
         return (RetryRuleWithContentBuilder<T>) super.onException();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onTimeoutException() {
+        return (RetryRuleWithContentBuilder<T>) super.onTimeoutException();
     }
 
     /**
