@@ -86,7 +86,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
                                             boolean sendResetIfRemoteIsOpen) {
         final Http2Stream stream = encoder.connection().stream(streamId);
 
-        if (sendResetIfRemoteIsOpen && !stream.state().localSideOpen()) {
+        if (sendResetIfRemoteIsOpen && !stream.state().remoteSideOpen()) {
             return ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
         }
 

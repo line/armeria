@@ -133,7 +133,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             }
 
             // Send RST_STREAM if the peer may still send something.
-            if (stream.state().localSideOpen()) {
+            if (stream.state().remoteSideOpen()) {
                 future = encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(),
                                                   ctx().voidPromise());
                 ctx().flush();

@@ -385,7 +385,7 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
                     if (f.isSuccess() && !isReset) {
                         maybeLogFirstResponseBytesTransferred();
                         if (req.shouldResetIfRemoteIsOpen()) {
-                            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL, false);
+                            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL, true);
                         }
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
