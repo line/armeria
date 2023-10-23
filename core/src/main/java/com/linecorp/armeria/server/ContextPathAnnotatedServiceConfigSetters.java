@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -269,5 +270,11 @@ public final class ContextPathAnnotatedServiceConfigSetters
     public ContextPathAnnotatedServiceConfigSetters errorHandler(
             ServiceErrorHandler serviceErrorHandler) {
         return (ContextPathAnnotatedServiceConfigSetters) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public ContextPathAnnotatedServiceConfigSetters contextHook(
+            Supplier<? extends AutoCloseable> contextHook) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.contextHook(contextHook);
     }
 }
