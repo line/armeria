@@ -19,9 +19,6 @@ package com.linecorp.armeria.common.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.LinkedList;
-import java.util.Map.Entry;
-
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -63,8 +60,6 @@ class GrpcExceptionHandlerFunctionBuilderTest {
 
     @Test
     void sortExceptionHandler() {
-        final LinkedList<Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction>> exceptionMappings
-                = new LinkedList<>();
         final GrpcExceptionHandlerFunctionBuilder builder = GrpcExceptionHandlerFunction.builder();
         builder.on(A1Exception.class, (ctx, throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
         builder.on(A2Exception.class, (ctx, throwable, metadata) -> Status.UNIMPLEMENTED);
@@ -73,20 +68,20 @@ class GrpcExceptionHandlerFunctionBuilderTest {
                 .containsExactly(A2Exception.class, A1Exception.class);
 
         builder.on(B1Exception.class, (ctx, throwable, metadata) -> Status.UNAUTHENTICATED);
-        assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
+        assertThat(builder.exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A2Exception.class,
                                  A1Exception.class,
                                  B1Exception.class);
 
         builder.on(A3Exception.class, (ctx, throwable, metadata) -> Status.UNAUTHENTICATED);
-        assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
+        assertThat(builder.exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A3Exception.class,
                                  A2Exception.class,
                                  A1Exception.class,
                                  B1Exception.class);
 
         builder.on(B2Exception.class, (ctx, throwable, metadata) -> Status.NOT_FOUND);
-        assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
+        assertThat(builder.exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A3Exception.class,
                                  A2Exception.class,
                                  A1Exception.class,
