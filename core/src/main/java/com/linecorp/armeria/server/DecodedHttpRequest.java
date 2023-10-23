@@ -143,14 +143,14 @@ interface DecodedHttpRequest extends HttpRequest {
      */
     default StreamingDecodedHttpRequest toAbortedStreaming(
             InboundTrafficController inboundTrafficController,
-            Throwable cause, boolean shouldResetAfterSendingResponse) {
+            Throwable cause, boolean shouldResetIfRemoteIsOpen) {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * Tells whether to send an RST_STREAM after the response is sent.
+     * Tells whether to send an RST_STREAM after the response sending response when the peer is open state.
      */
-    default boolean sholdResetAfterSendingResponse() {
+    default boolean shouldResetIfRemoteIsOpen() {
         return false;
     }
 }

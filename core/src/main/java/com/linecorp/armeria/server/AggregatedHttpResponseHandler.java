@@ -130,7 +130,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
     }
 
     private void resetAndFail(Throwable cause) {
-        responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL).addListener(f -> {
+        responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL, false).addListener(f -> {
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 fail(cause);
             }

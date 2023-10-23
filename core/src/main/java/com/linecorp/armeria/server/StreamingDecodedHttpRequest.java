@@ -43,7 +43,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long requestStartTimeNanos;
     private final long requestStartTimeMicros;
     private final boolean http1WebSocket;
-    private final boolean shouldResetAfterSendingResponse;
+    private final boolean shouldResetIfRemoteIsOpen;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -58,7 +58,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
                                 long requestStartTimeNanos, long requestStartTimeMicros,
-                                boolean http1WebSocket, boolean shouldResetAfterSendingResponse) {
+                                boolean http1WebSocket, boolean shouldResetIfRemoteIsOpen) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -73,7 +73,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.http1WebSocket = http1WebSocket;
-        this.shouldResetAfterSendingResponse = shouldResetAfterSendingResponse;
+        this.shouldResetIfRemoteIsOpen = shouldResetIfRemoteIsOpen;
     }
 
     @Override
@@ -231,7 +231,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
-    public boolean sholdResetAfterSendingResponse() {
-        return shouldResetAfterSendingResponse;
+    public boolean shouldResetIfRemoteIsOpen() {
+        return shouldResetIfRemoteIsOpen;
     }
 }

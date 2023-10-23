@@ -397,7 +397,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode));
         if (!req.isInitialized()) {
             assert req.needsAggregation();
-                    // Call fireChannelRead so that the cause is logged by LoggingService.
+            // Call fireChannelRead so that the cause is logged by LoggingService.
             ctx.fireChannelRead(req.toAbortedStreaming(inboundTrafficController, cause, false));
         } else {
             req.abortResponse(cause, /* cancel */ true);
