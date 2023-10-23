@@ -323,14 +323,14 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             final ContentTooLargeException cause =
                     ContentTooLargeException.builder()
                                             .maxContentLength(maxContentLength)
-                                            .contentLength(req.headers())
+                                            .contentLength(decodedReq.headers())
                                             .transferred(transferredLength)
                                             .build();
 
             final HttpStatusException httpStatusException =
                     HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-            if (req.needsAggregation()) {
-                assert !req.isInitialized();
+            if (!decodedReq.isInitialized()) {
+                assert decodedReq.needsAggregation();
                 final StreamingDecodedHttpRequest streamingReq =
                         decodedReq.toAbortedStreaming(inboundTrafficController, httpStatusException, true);
                 requests.put(streamId, streamingReq);
@@ -342,10 +342,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-                if (endOfStream && req.needsAggregation()) {
-                    assert !req.isInitialized();
+                if (endOfStream && decodedReq.needsAggregation()) {
+                    assert !decodedReq.isInitialized();
                     // An aggregated request is now ready to be fired.
-                    ctx.fireChannelRead(req);
+                    ctx.fireChannelRead(decodedReq);
                 }
             } catch (Throwable t) {
                 decodedReq.close(t);
@@ -395,8 +395,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         final ClosedStreamException cause =
                 new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode));
-        if (req.needsAggregation() && !req.isInitialized()) {
-            // Call fireChannelRead so that the cause is logged by LoggingService.
+        if (!req.isInitialized()) {
+            assert req.needsAggregation();
+                    // Call fireChannelRead so that the cause is logged by LoggingService.
             ctx.fireChannelRead(req.toAbortedStreaming(inboundTrafficController, cause, false));
         } else {
             req.abortResponse(cause, /* cancel */ true);

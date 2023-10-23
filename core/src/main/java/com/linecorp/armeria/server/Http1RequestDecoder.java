@@ -16,60 +16,34 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
-import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
-
-import java.net.URISyntaxException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.Ascii;
-
-import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.ExchangeType;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.ProtocolViolationException;
-import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestTarget;
-import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.*;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
+import com.linecorp.armeria.internal.common.*;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
 import com.linecorp.armeria.server.websocket.WebSocketService;
-
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
+import io.netty.channel.*;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpExpectationFailedEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http.TooLongHttpHeaderException;
-import io.netty.handler.codec.http.TooLongHttpLineException;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.URISyntaxException;
+
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
+import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 final class Http1RequestDecoder extends ChannelDuplexHandler {
 
@@ -313,8 +287,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         // status.
                         final HttpStatusException httpStatusException =
                                 HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-                        if (decodedReq.needsAggregation()) {
-                            assert !decodedReq.isInitialized();
+                        if (!decodedReq.isInitialized()) {
+                            assert decodedReq.needsAggregation();
                             final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
                                     inboundTrafficController, httpStatusException, false);
                             ctx.fireChannelRead(streamingReq);
