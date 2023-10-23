@@ -431,7 +431,7 @@ public class ArmeriaSettings {
     private List<Port> ports = new ArrayList<>();
 
     /**
-     * The context path to serve the requests on. If not set, will serve requests on the root context path.
+     * The context path to serve the requests on. If not set, requests will be served on the root context path.
      */
     @Nullable
     private String contextPath;
@@ -652,7 +652,8 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Sets the context path to serve the requests on. If not set, will serve requests on the root context path.
+     * Sets the context path to serve the requests on. If not set, requests will be served on the root context
+     * path.
      */
     public void setContextPath(String contextPath) {
         this.contextPath = contextPath;
