@@ -69,6 +69,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.internal.logging.ContentPreviewingUtil;
+import com.linecorp.armeria.internal.logging.ResponseContentPreviewer;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -269,8 +270,8 @@ class ContentPreviewingServiceTest {
 
         final ContentPreviewerFactory factory = mock(ContentPreviewerFactory.class);
         when(factory.responseContentPreviewer(any(), any())).thenReturn(contentPreviewer);
-        final HttpResponse filteredResponse = ContentPreviewingUtil.setUpResponseContentPreviewer(
-                factory, ctx, response, Functions.second());
+        final HttpResponse filteredResponse = ResponseContentPreviewer.of(factory, ctx, Functions.second())
+                                                                      .setUp(response);
         filteredResponse.subscribe(new CancelSubscriber());
 
         assertThat(ctx.log()
