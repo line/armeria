@@ -4,20 +4,6 @@ date: 2023-10-20
 
 ## 🌟 New features
 
-- **Configure EventLoopGroup for services**: You can now set an `EventLoopGroup` for a server,
-  a virtual host and a service to run a service with it.
-  #4099 #5233
-  ```java
-  final EventLoopGroup serviceWorkerGroup =
-    EventLoopGroups.newEventLoopGroup(8, "service-worker");
-  Server.builder()
-        .route()
-        ...
-        .serviceWorkerGroup(serviceWorkerGroup)
-        .service(myService) // myService is run with serviceEventLoopGroup.
-        ...
-        .build();
-  ```
 - **Context Path Support**: You can now set services/decorators under a context path fluently. #3591 #4802 #5037 #5157
   ```java
   Server.builder()
