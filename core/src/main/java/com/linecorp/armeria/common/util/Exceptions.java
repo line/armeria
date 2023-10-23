@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.linecorp.armeria.common.util.GrpcExceptions.isGrpcCancel;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -196,6 +197,7 @@ public final class Exceptions {
                cause instanceof RequestCancellationException ||
                cause instanceof WriteTimeoutException ||
                cause instanceof AbortedStreamException ||
+               isGrpcCancel(cause) ||
                (cause instanceof Http2Exception.StreamException &&
                 ((Http2Exception.StreamException) cause).error() == Http2Error.CANCEL);
     }
