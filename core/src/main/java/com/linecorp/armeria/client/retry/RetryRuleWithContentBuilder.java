@@ -24,7 +24,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
-import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
