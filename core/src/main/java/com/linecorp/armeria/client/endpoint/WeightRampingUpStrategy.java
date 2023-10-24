@@ -151,7 +151,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
                 endpointsFinishedRampingUp.addAll(dedupEndpoints);
 
-                group().addListener(this::maybeUpdateEndpoints);
+                group().addListener(this::updateEndpoints);
             } else {
                 // Use the executor so the order of endpoints change is guaranteed.
                 executor.execute(() -> updateEndpoints(endpoints));
