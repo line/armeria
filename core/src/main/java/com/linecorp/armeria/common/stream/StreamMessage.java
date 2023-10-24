@@ -1100,7 +1100,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      *
      * <p>Note that if {@code null} is returned by the {@link Function}, the {@link StreamMessage} will complete
-     * successfully without emitting an additional value.
+     * successfully without emitting an additional value when this stream is complete successfully,
+     * or complete exceptionally when this stream is complete exceptionally.
      */
     @UnstableApi
     default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
