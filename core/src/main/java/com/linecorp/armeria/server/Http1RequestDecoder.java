@@ -272,13 +272,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     return;
                 }
             }
-            if (msg instanceof LastHttpContent && encoder instanceof ServerHttp2ObjectEncoder) {
+            final boolean endOfStream = msg instanceof LastHttpContent;
+            if (endOfStream && encoder instanceof ServerHttp2ObjectEncoder) {
                 // An HTTP/1 connection has been upgraded to HTTP/2.
                 ctx.pipeline().remove(this);
             }
 
             // req is not null.
-            if (msg instanceof LastHttpContent && req instanceof EmptyContentDecodedHttpRequest) {
+            if (endOfStream && req instanceof EmptyContentDecodedHttpRequest) {
                 this.req = null;
             } else if (msg instanceof HttpContent) {
                 assert req instanceof DecodedHttpRequestWriter;
@@ -308,6 +309,15 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                         .build();
                         discarding = true;
                         req = null;
+                        final boolean shouldReset;
+                        if (encoder instanceof ServerHttp1ObjectEncoder) {
+                            keepAliveHandler.disconnectWhenFinished();
+                            shouldReset = false;
+                        } else {
+                            // Upgraded to HTTP/2. Reset only if the remote peer is still open.
+                            shouldReset = !endOfStream;
+                        }
+
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
                         final HttpStatusException httpStatusException =
@@ -315,10 +325,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         if (!decodedReq.isInitialized()) {
                             assert decodedReq.needsAggregation();
                             final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
-                                    inboundTrafficController, httpStatusException, true);
+                                    inboundTrafficController, httpStatusException, shouldReset);
                             ctx.fireChannelRead(streamingReq);
                         } else {
-                            decodedReq.setShouldResetIfRemoteIsOpen(true);
+                            decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
                             decodedReq.abortResponse(httpStatusException, true);
                         }
                         return;
@@ -329,7 +339,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
                 }
 
-                if (msg instanceof LastHttpContent) {
+                if (endOfStream) {
                     final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                     if (!trailingHeaders.isEmpty()) {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));

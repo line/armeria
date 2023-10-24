@@ -83,12 +83,12 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
 
     @Override
     public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error,
-                                            boolean sendResetIfRemoteIsOpen) {
+                                            boolean sendResetOnlyIfRemoteIsOpen) {
         final Http2Stream stream = encoder.connection().stream(streamId);
 
         // Send a RST_STREAM frame only for an active stream which did not send a RST_STREAM frame already.
         if (stream != null && !stream.isResetSent()) {
-            if (!sendResetIfRemoteIsOpen || stream.state().remoteSideOpen()) {
+            if (!sendResetOnlyIfRemoteIsOpen || stream.state().remoteSideOpen()) {
                 return encoder.writeRstStream(ctx, streamId, error.code(), ctx.newPromise());
             }
         }

@@ -327,16 +327,19 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                             .transferred(transferredLength)
                                             .build();
 
+            final boolean shouldReset = !endOfStream;
+
             final HttpStatusException httpStatusException =
                     HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
             if (!decodedReq.isInitialized()) {
                 assert decodedReq.needsAggregation();
                 final StreamingDecodedHttpRequest streamingReq =
-                        decodedReq.toAbortedStreaming(inboundTrafficController, httpStatusException, true);
+                        decodedReq.toAbortedStreaming(inboundTrafficController,
+                                                      httpStatusException, shouldReset);
                 requests.put(streamId, streamingReq);
                 ctx.fireChannelRead(streamingReq);
             } else {
-                decodedReq.setShouldResetIfRemoteIsOpen(true);
+                decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
                 decodedReq.abortResponse(httpStatusException, true);
             }
         } else if (decodedReq.isOpen()) {

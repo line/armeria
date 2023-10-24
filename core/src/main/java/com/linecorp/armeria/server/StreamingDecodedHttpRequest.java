@@ -43,7 +43,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long requestStartTimeNanos;
     private final long requestStartTimeMicros;
     private final boolean http1WebSocket;
-    private boolean shouldResetIfRemoteIsOpen;
+    private boolean shouldResetOnlyIfRemoteIsOpen;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -58,7 +58,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
                                 long requestStartTimeNanos, long requestStartTimeMicros,
-                                boolean http1WebSocket, boolean shouldResetIfRemoteIsOpen) {
+                                boolean http1WebSocket, boolean shouldResetOnlyIfRemoteIsOpen) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -73,7 +73,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.http1WebSocket = http1WebSocket;
-        this.shouldResetIfRemoteIsOpen = shouldResetIfRemoteIsOpen;
+        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
     }
 
     @Override
@@ -231,12 +231,12 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
-    public void setShouldResetIfRemoteIsOpen(boolean shouldResetIfRemoteIsOpen) {
-        this.shouldResetIfRemoteIsOpen = shouldResetIfRemoteIsOpen;
+    public void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
+        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
     }
 
     @Override
-    public boolean shouldResetIfRemoteIsOpen() {
-        return shouldResetIfRemoteIsOpen;
+    public boolean shouldResetOnlyIfRemoteIsOpen() {
+        return shouldResetOnlyIfRemoteIsOpen;
     }
 }
