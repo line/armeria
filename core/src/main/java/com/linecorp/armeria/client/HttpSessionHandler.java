@@ -148,7 +148,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             // A session timeout for a proxied connection may be scheduled when ProxyConnectionEvent is
             // received.
         }
-
     }
 
     private void scheduleSessionTimeout(Channel channel, Promise<Channel> sessionPromise,
