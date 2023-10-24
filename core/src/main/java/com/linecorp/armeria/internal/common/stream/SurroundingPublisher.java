@@ -26,6 +26,8 @@ import java.util.function.Function;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
@@ -41,6 +43,8 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import io.netty.util.concurrent.EventExecutor;
 
 public final class SurroundingPublisher<T> implements StreamMessage<T> {
+
+    private static final Logger logger = LoggerFactory.getLogger(SurroundingPublisher.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<SurroundingPublisher> subscribedUpdater =
@@ -305,12 +309,17 @@ public final class SurroundingPublisher<T> implements StreamMessage<T> {
             try {
                 tail = finalizer.apply(cause);
             } catch (Throwable ex) {
-                close0(ex);
+                if (cause != null) {
+                    logger.warn("Unexpected exception from finalizer:", ex);
+                    close0(cause);
+                } else {
+                    close0(ex);
+                }
                 return;
             }
 
             if (tail == null) {
-                // An exception is not recovered.
+                // Immediately close the stream if the finalizer returns null.
                 close0(cause);
             } else {
                 downstream.onNext(tail);
