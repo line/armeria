@@ -38,17 +38,11 @@ import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
-    private final boolean enableServerHeader;
-    private final boolean enableDateHeader;
-
     ServerHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
-                             AbstractHttp2ConnectionHandler connectionHandler,
-                             boolean enableDateHeader, boolean enableServerHeader) {
+                             AbstractHttp2ConnectionHandler connectionHandler) {
         super(connectionHandlerCtx, connectionHandler);
         assert keepAliveHandler() instanceof Http2ServerKeepAliveHandler ||
                keepAliveHandler() instanceof NoopKeepAliveHandler;
-        this.enableServerHeader = enableServerHeader;
-        this.enableDateHeader = enableDateHeader;
     }
 
     @Override
