@@ -527,9 +527,9 @@ public final class FileService extends AbstractHttpService {
 
         static {
             if (Brotli.isAvailable()) {
-                availableEncodings = Sets.immutableEnumSet(BROTLI, GZIP);
+                availableEncodings = Sets.immutableEnumSet(BROTLI, GZIP, SNAPPY);
             } else {
-                availableEncodings = Sets.immutableEnumSet(GZIP);
+                availableEncodings = Sets.immutableEnumSet(GZIP, SNAPPY);
             }
         }
 
