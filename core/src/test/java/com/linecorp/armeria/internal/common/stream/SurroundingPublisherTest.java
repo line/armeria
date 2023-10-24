@@ -377,6 +377,78 @@ class SurroundingPublisherTest {
                     .verify();
     }
 
+    @Test
+    void finalizer_return_null() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4);
+        final Function<Throwable, Integer> finalizer = unused -> null;
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, streamMessage, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    void finalizer_return_null_upstream_thrown() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4, 5);
+        final StreamMessage<Integer> aborted = streamMessage
+                .peek(val -> {
+                    if (val == 5) {
+                        throw new RuntimeException();
+                    }
+                });
+        final Function<Throwable, Integer> finalizer = unused -> null;
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, aborted, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4)
+                    .expectError(RuntimeException.class)
+                    .verify();
+    }
+
+    @Test
+    void finalizer_apply_thrown() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4);
+        final Function<Throwable, Integer> finalizer = unused -> {
+            throw new IllegalArgumentException();
+        };
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, streamMessage, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4)
+                    .expectError(IllegalArgumentException.class)
+                    .verify();
+    }
+
+    @Test
+    void finalizer_apply_thrown_upstream_thrown() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4, 5);
+        final StreamMessage<Integer> aborted = streamMessage
+                .peek(val -> {
+                    if (val == 5) {
+                        throw new RuntimeException();
+                    }
+                });
+        final Function<Throwable, Integer> finalizer = unused -> {
+            throw new IllegalArgumentException();
+        };
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, aborted, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4)
+                    .expectError(RuntimeException.class)
+                    .verify();
+    }
+
     private static class OneElementSurroundingPublisherProvider implements ArgumentsProvider {
 
         @Override
