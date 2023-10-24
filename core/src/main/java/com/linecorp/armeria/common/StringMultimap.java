@@ -778,7 +778,6 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, v, false);
         }
-        onChange(normalizedName);
     }
 
     final void set(IN_NAME name, String... values) {
@@ -793,7 +792,6 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, v, false);
         }
-        onChange(normalizedName);
     }
 
     final void set(Iterable<? extends Map.Entry<? extends IN_NAME, String>> entries) {
@@ -825,7 +823,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int h = hashName(normalizedName);
         final int i = index(h);
         removeAndNotify(h, i, normalizedName, notifyChange);
-        addAndNotify(h, i, normalizedName, value, notifyChange);
+        addAndNotify(h, i, normalizedName, value, false);
     }
 
     final StringMultimap<IN_NAME, NAME> setIfAbsent(
@@ -901,7 +899,6 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, fromObject(v), false);
         }
-        onChange(normalizedName);
     }
 
     final void setObject(IN_NAME name, Object... values) {
@@ -916,7 +913,6 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             addAndNotify(h, i, normalizedName, fromObject(v), false);
         }
-        onChange(normalizedName);
     }
 
     final void setObject(Iterable<? extends Map.Entry<? extends IN_NAME, ?>> entries) {
