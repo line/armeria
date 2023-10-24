@@ -271,16 +271,19 @@ class DefaultEventLoopSchedulerTest {
 
         // Release all acquired entries to make sure activeRequests are all 0.
         acquiredEntries.forEach(AbstractEventLoopEntry::release);
-        final List<AbstractEventLoopEntry> entries = s.entries(SessionProtocol.HTTP, endpoint, endpoint);
+        final AbstractEventLoopEntry[] entries = s.entries(SessionProtocol.HTTP, endpoint, endpoint);
         for (AbstractEventLoopEntry e : entries) {
-            assertThat(e.activeRequests()).withFailMessage("All entries must have 0 activeRequests.").isZero();
+            if (e != null) {
+                assertThat(e.activeRequests()).withFailMessage(
+                        "All entries must have 0 activeRequests.").isZero();
+            }
         }
-        assertThat(entries.get(0).id()).isZero();
+        assertThat(entries[0].id()).isZero();
     }
 
     private static void stressTest(DefaultEventLoopScheduler s, List<AbstractEventLoopEntry> acquiredEntries,
                                    double acquireRatio) {
-        final List<AbstractEventLoopEntry> entries = s.entries(SessionProtocol.HTTP, endpoint, endpoint);
+        final AbstractEventLoopEntry[] entries = s.entries(SessionProtocol.HTTP, endpoint, endpoint);
         final Random random = ThreadLocalRandom.current();
         final int acquireRatioAsInt = (int) (Integer.MAX_VALUE * acquireRatio);
 
@@ -295,6 +298,9 @@ class DefaultEventLoopSchedulerTest {
                 // The acquired entry must be the best available.
                 final int activeRequests = e.activeRequests() - 1;
                 for (AbstractEventLoopEntry entry : entries) {
+                    if (entry == null) {
+                        break;
+                    }
                     if (activeRequests == entry.activeRequests()) {
                         assertThat(e.id()).isLessThan(entry.id());
                     } else {

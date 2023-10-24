@@ -25,6 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -66,6 +67,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     private final VirtualHostBuilder virtualHostBuilder;
 
     VirtualHostServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
     }
 
@@ -346,6 +348,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
         return (VirtualHostServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
     }
 
+    @Override
+    public VirtualHostServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (VirtualHostServiceBindingBuilder) super.contextHook(contextHook);
+    }
+
     /**
      * Sets the {@link HttpService} and returns the {@link VirtualHostBuilder} that this
      * {@link VirtualHostServiceBindingBuilder} was created from.
@@ -353,6 +360,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
      * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
     public VirtualHostBuilder build(HttpService service) {
+        requireNonNull(service, "service");
         build0(service);
         return virtualHostBuilder;
     }

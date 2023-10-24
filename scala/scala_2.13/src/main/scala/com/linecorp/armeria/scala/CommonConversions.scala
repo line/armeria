@@ -69,9 +69,9 @@ trait CommonConversions {
 final class HttpResponseCompletionStageOps(private val stage: CompletionStage[HttpResponse]) extends AnyVal {
 
   /**
-   * Converts this `CompletionStage` into an `HttpResponse` using `HttpResponse.from(CompletionStage)`.
+   * Converts this `CompletionStage` into an `HttpResponse` using `HttpResponse.of(CompletionStage)`.
    */
-  def toHttpResponse: HttpResponse = HttpResponse.from(stage)
+  def toHttpResponse: HttpResponse = HttpResponse.of(stage)
 }
 
 @UnstableApi
@@ -91,9 +91,9 @@ final class VoidCompletionStageOps(private val future: CompletionStage[Void]) ex
 final class HttpResponseFutureOps(private val future: Future[HttpResponse]) extends AnyVal {
 
   /**
-   * Converts this `Future` into an `HttpResponse` using `HttpResponse.from(CompletionStage)`.
+   * Converts this `Future` into an `HttpResponse` using `HttpResponse.of(CompletionStage)`.
    */
-  def toHttpResponse: HttpResponse = HttpResponse.from(FutureConverters.toJava(future))
+  def toHttpResponse: HttpResponse = HttpResponse.of(FutureConverters.toJava(future))
 }
 
 @UnstableApi

@@ -7,6 +7,7 @@ dependencies {
     implementation(libs.kotlin.coroutines.jdk8)
     implementation(libs.kotlin.reflect)
 
+    testImplementation(libs.kotlin.coroutines.test)
     testImplementation(libs.reactivestreams.tck)
 }
 

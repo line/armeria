@@ -93,7 +93,7 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
         // FIXME: Enable this test once we have a working Thrift-over-HTTP/1 client with pipelining.
         try (TTransport transport = newTransport("http", "/sleep")) {
             final SleepService.Client client = new SleepService.Client.Factory().getClient(
-                    ThriftProtocolFactories.BINARY.getProtocol(transport));
+                    ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             client.send_sleep(1000);
             client.send_sleep(500);

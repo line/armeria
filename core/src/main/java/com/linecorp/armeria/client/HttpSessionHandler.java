@@ -178,7 +178,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
         } else {
             // Don't allow to send a request if a connection is closed or about to be closed for HTTP/1.
-            return isAcquirable();
+            return isAcquirable(responseDecoder.keepAliveHandler());
         }
     }
 
@@ -206,7 +206,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                     useHttp1Pipelining ? req.whenComplete()
                                        : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
             completionFuture.handle((ret, cause) -> {
-                if (isAcquirable()) {
+                if (isAcquirable(responseDecoder.keepAliveHandler())) {
                     pooledChannel.release();
                 }
                 return null;
@@ -282,13 +282,16 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean isAcquirable() {
+        // responseDecoder and keepAliveHandler are set before this session is added to the pool.
+        assert responseDecoder != null;
+        return isAcquirable(responseDecoder.keepAliveHandler());
+    }
+
+    @Override
+    public boolean isAcquirable(KeepAliveHandler keepAliveHandler) {
         if (!isAcquirable) {
             return false;
         }
-        // responseDecoder and keepAliveHandler are set before this session is added to the pool.
-        assert responseDecoder != null;
-        final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
-        assert keepAliveHandler != null;
         return !keepAliveHandler.needsDisconnection();
     }
 

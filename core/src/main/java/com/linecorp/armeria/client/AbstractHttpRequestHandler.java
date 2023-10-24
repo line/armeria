@@ -166,7 +166,8 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                         " in one connection. ID: " + id);
             } else {
                 exception = new ClosedSessionException(
-                        "Can't send requests. ID: " + id + ", session active: " + session.isAcquirable());
+                        "Can't send requests. ID: " + id + ", session active: " +
+                        session.isAcquirable(responseDecoder.keepAliveHandler()));
             }
             session.deactivate();
             // No need to send RST because we didn't send any packet and this will be disconnected anyway.

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.CancellationScheduler.noopCancellationTask;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -40,14 +41,12 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
-import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Builds a new {@link ServiceRequestContext}. Note that it is not usually required to create a new context by
@@ -70,27 +69,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             throw new UnsupportedOperationException();
         }
     };
-
-    private static final CancellationTask noopCancellationTask = new CancellationTask() {
-        @Override
-        public boolean canSchedule() {
-            return true;
-        }
-
-        @Override
-        public void run(Throwable cause) { /* no-op */ }
-    };
-
-    /**
-     * A cancellation scheduler that has been finished.
-     */
-    private static final CancellationScheduler noopRequestCancellationScheduler = new CancellationScheduler(0);
-
-    static {
-        noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask,
-                                              0, /* server */ true);
-        noopRequestCancellationScheduler.finishNow();
-    }
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
 
@@ -254,9 +232,9 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
         final CancellationScheduler requestCancellationScheduler;
         if (timedOut()) {
-            requestCancellationScheduler = noopRequestCancellationScheduler;
+            requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
-            requestCancellationScheduler = new CancellationScheduler(0);
+            requestCancellationScheduler = CancellationScheduler.of(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
                 requestCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ true);
@@ -278,7 +256,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                HttpHeaders.of(), HttpHeaders.of());
+                HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {
