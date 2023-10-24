@@ -444,20 +444,8 @@ final class HttpChannelPool implements AsyncCloseable {
         final EventLoop eventLoop = ch.eventLoop();
         assert eventLoop.inEventLoop();
 
-        int connectTimeoutMillis = this.connectTimeoutMillis;
-        if (poolKey.proxyConfig != ProxyConfig.direct()) {
-            // Add a bit more timeout to prevent a race between the proxy timeout and session timeout.
-            connectTimeoutMillis += 100;
-        }
-        final ScheduledFuture<?> timeoutFuture = eventLoop.schedule(() -> {
-            if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
-                    desiredProtocol, "connection established, but session creation timed out: " + ch))) {
-                ch.close();
-            }
-        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-
         ch.pipeline().addLast(
-                new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture,
+                new HttpSessionHandler(this, ch, sessionPromise, connectTimeoutMillis,
                                        desiredProtocol, serializationFormat, poolKey, clientFactory));
     }
 
