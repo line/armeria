@@ -1076,7 +1076,8 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Emits the last value whether this {@link StreamMessage} completes successfully or exceptionally.
+     * Dynamically emits the last value depending on whether this {@link StreamMessage} completes successfully
+     * or exceptionally.
      *
      * <p>For example:<pre>{@code
      * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
@@ -1097,9 +1098,12 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * assert collected.equals(List.of(1, 2, 3, 4, 5, 100));
      * }</pre>
+     *
+     * <p>Note that if {@code null} is returned by the {@link Function}, the {@link StreamMessage} will complete
+     * successfully without emitting an additional value.
      */
     @UnstableApi
-    default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends T> finalizer) {
-        return SurroundingPublisher.from(null, this, finalizer);
+    default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
+        return new SurroundingPublisher<>(null, this, finalizer);
     }
 }

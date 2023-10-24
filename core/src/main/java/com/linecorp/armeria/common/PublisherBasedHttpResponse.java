@@ -33,17 +33,8 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
 
     static PublisherBasedHttpResponse from(ResponseHeaders headers,
                                            Publisher<? extends HttpData> publisher,
-                                           HttpHeaders trailers) {
-        if (trailers.isEmpty()) {
-            return from(headers, publisher);
-        }
-        return new PublisherBasedHttpResponse(new SurroundingPublisher<>(headers, publisher, trailers));
-    }
-
-    static PublisherBasedHttpResponse from(ResponseHeaders headers,
-                                           Publisher<? extends HttpData> publisher,
                                            Function<@Nullable Throwable, HttpHeaders> trailersFunction) {
-        return new PublisherBasedHttpResponse(SurroundingPublisher.from(headers, publisher, trailersFunction));
+        return new PublisherBasedHttpResponse(new SurroundingPublisher<>(headers, publisher, trailersFunction));
     }
 
     PublisherBasedHttpResponse(Publisher<? extends HttpObject> publisher) {

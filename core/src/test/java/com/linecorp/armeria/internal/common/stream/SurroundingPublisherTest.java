@@ -39,7 +39,8 @@ class SurroundingPublisherTest {
     @Test
     void zeroElementSurroundingPublisher() {
         // given
-        final StreamMessage<Integer> zeroElement = new SurroundingPublisher<>(null, Mono.empty(), null);
+        final StreamMessage<Integer> zeroElement =
+                new SurroundingPublisher<>(null, Mono.empty(), unused -> null);
 
         // when & then
         StepVerifier.create(zeroElement, 1)
@@ -320,7 +321,7 @@ class SurroundingPublisherTest {
             }
             return -1;
         };
-        final StreamMessage<Integer> publisher = SurroundingPublisher.from(1, aborted, finalizer);
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, aborted, finalizer);
 
         // when & then
         StepVerifier.create(publisher)
@@ -345,7 +346,7 @@ class SurroundingPublisherTest {
             }
             return -1;
         };
-        final StreamMessage<Integer> publisher = SurroundingPublisher.from(1, aborted, finalizer);
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, aborted, finalizer);
 
         // when & then
         StepVerifier.create(publisher)
@@ -367,7 +368,7 @@ class SurroundingPublisherTest {
             }
             return -1;
         };
-        final StreamMessage<Integer> publisher = SurroundingPublisher.from(1, streamMessage, finalizer);
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, streamMessage, finalizer);
 
         // when & then
         StepVerifier.create(publisher)
@@ -380,10 +381,8 @@ class SurroundingPublisherTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(new SurroundingPublisher<>(1, Mono.empty(), null),
-                             new SurroundingPublisher<>(null, Mono.just(1), null),
-                             new SurroundingPublisher<>(null, Mono.empty(), 1),
-                             SurroundingPublisher.from(null, Mono.empty(), th -> 1))
+            return Stream.of(new SurroundingPublisher<>(null, Mono.empty(), unused -> 1),
+                             new SurroundingPublisher<>(null, Mono.empty(), th -> 1))
                          .map(Arguments::of);
         }
     }
@@ -392,12 +391,10 @@ class SurroundingPublisherTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(new SurroundingPublisher<>(1, Mono.just(2), null),
-                             new SurroundingPublisher<>(1, Mono.empty(), 2),
-                             new SurroundingPublisher<>(null, Mono.just(1), 2),
-                             SurroundingPublisher.from(1, Mono.empty(), th -> 2),
-                             SurroundingPublisher.from(null, Mono.just(1), th -> 2),
-                             new SurroundingPublisher<>(null, Flux.just(1, 2), null))
+            return Stream.of(new SurroundingPublisher<>(1, Mono.empty(), unused -> 2),
+                             new SurroundingPublisher<>(null, Mono.just(1), unused -> 2),
+                             new SurroundingPublisher<>(1, Mono.empty(), th -> 2),
+                             new SurroundingPublisher<>(null, Mono.just(1), th -> 2))
                          .map(Arguments::of);
         }
     }
@@ -406,12 +403,10 @@ class SurroundingPublisherTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(new SurroundingPublisher<>(1, Flux.just(2, 3), null),
-                             new SurroundingPublisher<>(1, Mono.just(2), 3),
-                             new SurroundingPublisher<>(null, Flux.just(1, 2), 3),
-                             SurroundingPublisher.from(1, Mono.just(2), th -> 3),
-                             SurroundingPublisher.from(null, Flux.just(1, 2), th -> 3),
-                             new SurroundingPublisher<>(null, Flux.just(1, 2, 3), null))
+            return Stream.of(new SurroundingPublisher<>(1, Mono.just(2), unused -> 3),
+                             new SurroundingPublisher<>(null, Flux.just(1, 2), unused -> 3),
+                             new SurroundingPublisher<>(1, Mono.just(2), th -> 3),
+                             new SurroundingPublisher<>(null, Flux.just(1, 2), th -> 3))
                          .map(Arguments::of);
         }
     }
@@ -420,19 +415,14 @@ class SurroundingPublisherTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(
-                    new SurroundingPublisher<>(
-                            1, Flux.fromStream(IntStream.range(2, 6).boxed()), null),
-                    new SurroundingPublisher<>(
-                            1, Flux.fromStream(IntStream.range(2, 5).boxed()), 5),
-                    new SurroundingPublisher<>(
-                            null, Flux.fromStream(IntStream.range(1, 5).boxed()), 5),
-                    SurroundingPublisher.from(
-                            1, Flux.fromStream(IntStream.range(2, 5).boxed()), th -> 5),
-                    SurroundingPublisher.from(
-                            null, Flux.fromStream(IntStream.range(1, 5).boxed()), th -> 5),
-                    new SurroundingPublisher<>(
-                            null, Flux.fromStream(IntStream.range(1, 6).boxed()), null))
+            return Stream.of(new SurroundingPublisher<>(
+                                     1, Flux.fromStream(IntStream.range(2, 5).boxed()), unused -> 5),
+                             new SurroundingPublisher<>(
+                                     null, Flux.fromStream(IntStream.range(1, 5).boxed()), unused -> 5),
+                             new SurroundingPublisher<>(
+                                     1, Flux.fromStream(IntStream.range(2, 5).boxed()), th -> 5),
+                             new SurroundingPublisher<>(
+                                     null, Flux.fromStream(IntStream.range(1, 5).boxed()), th -> 5))
                          .map(Arguments::of);
         }
     }
@@ -441,37 +431,36 @@ class SurroundingPublisherTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(
-                    SurroundingPublisher.from(
-                            1,
-                            Flux.fromStream(IntStream.range(2, 10).boxed())
-                                .map(i -> {
-                                    if (i >= 5) {
-                                        throw new RuntimeException();
-                                    }
-                                    return i;
-                                }),
-                            th -> {
-                                if (th instanceof RuntimeException) {
-                                    return 100;
-                                }
-                                return -1;
-                            }),
-                    SurroundingPublisher.from(
-                            null,
-                            Flux.fromStream(IntStream.range(1, 10).boxed())
-                                .map(i -> {
-                                    if (i >= 5) {
-                                        throw new RuntimeException();
-                                    }
-                                    return i;
-                                }),
-                            th -> {
-                                if (th instanceof RuntimeException) {
-                                    return 100;
-                                }
-                                return -1;
-                            }))
+            return Stream.of(new SurroundingPublisher<>(
+                                     1,
+                                     Flux.fromStream(IntStream.range(2, 10).boxed())
+                                         .map(i -> {
+                                             if (i >= 5) {
+                                                 throw new RuntimeException();
+                                             }
+                                             return i;
+                                         }),
+                                     th -> {
+                                         if (th instanceof RuntimeException) {
+                                             return 100;
+                                         }
+                                         return -1;
+                                     }),
+                             new SurroundingPublisher<>(
+                                     null,
+                                     Flux.fromStream(IntStream.range(1, 10).boxed())
+                                         .map(i -> {
+                                             if (i >= 5) {
+                                                 throw new RuntimeException();
+                                             }
+                                             return i;
+                                         }),
+                                     th -> {
+                                         if (th instanceof RuntimeException) {
+                                             return 100;
+                                         }
+                                         return -1;
+                                     }))
                          .map(Arguments::of);
         }
     }
