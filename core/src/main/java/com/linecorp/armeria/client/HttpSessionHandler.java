@@ -460,8 +460,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
 
         sessionTimeoutFuture.cancel(false);
-        if (!sessionPromise.trySuccess(channel) && !sessionPromise.isSuccess()) {
-            // Session creation has been failed already; close the connection.
+        if (sessionPromise.trySuccess(channel) || sessionPromise.isSuccess()) {
+            // The session is created successfully or has already been created.
+        } else {
+            // The session creation has been failed already; close the connection.
             ctx.close();
         }
     }
