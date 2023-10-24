@@ -43,7 +43,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long requestStartTimeNanos;
     private final long requestStartTimeMicros;
     private final boolean http1WebSocket;
-    private final boolean shouldResetIfRemoteIsOpen;
+    private boolean shouldResetIfRemoteIsOpen;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -228,6 +228,11 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isHttp1WebSocket() {
         return http1WebSocket;
+    }
+
+    @Override
+    public void setShouldResetIfRemoteIsOpen(boolean shouldResetIfRemoteIsOpen) {
+        this.shouldResetIfRemoteIsOpen = shouldResetIfRemoteIsOpen;
     }
 
     @Override

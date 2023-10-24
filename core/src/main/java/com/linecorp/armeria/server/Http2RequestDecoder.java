@@ -336,6 +336,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 requests.put(streamId, streamingReq);
                 ctx.fireChannelRead(streamingReq);
             } else {
+                decodedReq.setShouldResetIfRemoteIsOpen(true);
                 decodedReq.abortResponse(httpStatusException, true);
             }
         } else if (decodedReq.isOpen()) {

@@ -308,7 +308,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                         .build();
                         discarding = true;
                         req = null;
-                        keepAliveHandler.disconnectWhenFinished();
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
                         final HttpStatusException httpStatusException =
@@ -316,9 +315,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         if (!decodedReq.isInitialized()) {
                             assert decodedReq.needsAggregation();
                             final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
-                                    inboundTrafficController, httpStatusException, false);
+                                    inboundTrafficController, httpStatusException, true);
                             ctx.fireChannelRead(streamingReq);
                         } else {
+                            decodedReq.setShouldResetIfRemoteIsOpen(true);
                             decodedReq.abortResponse(httpStatusException, true);
                         }
                         return;
