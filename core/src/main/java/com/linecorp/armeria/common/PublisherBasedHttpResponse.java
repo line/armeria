@@ -28,7 +28,7 @@ import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpObject> implements HttpResponse {
 
     static PublisherBasedHttpResponse from(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
-        return new PublisherBasedHttpResponse(new SurroundingPublisher<>(headers, publisher, null));
+        return new PublisherBasedHttpResponse(new SurroundingPublisher<>(headers, publisher, unused -> null));
     }
 
     static PublisherBasedHttpResponse from(ResponseHeaders headers,
