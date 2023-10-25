@@ -153,8 +153,12 @@ public final class Exceptions {
     public static boolean isExpected(Throwable cause) {
         requireNonNull(cause, "cause");
         for (ExceptionClassifier classifier : exceptionClassifiers) {
-            if (classifier.isExpected(cause)) {
-                return true;
+            try {
+                if (classifier.isExpected(cause)) {
+                    return true;
+                }
+            } catch (Throwable t) {
+                // ignore it.
             }
         }
 
