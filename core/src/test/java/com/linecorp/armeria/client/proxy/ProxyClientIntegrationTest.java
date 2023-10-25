@@ -317,7 +317,7 @@ class ProxyClientIntegrationTest {
                                   .useHttp2Preface(true)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(SessionProtocol.H1, backendServer.httpEndpoint())
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
