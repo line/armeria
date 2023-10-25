@@ -72,17 +72,17 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
      */
     public final void addListener(Consumer<? super T> listener, boolean notifyLatestValue) {
         requireNonNull(listener, "listener");
-        if (notifyLatestValue) {
-            final T latest = latestValue();
-            if (latest != null) {
-                listener.accept(latest);
-            }
-        }
         for (;;) {
             final Set<Consumer<? super T>> listeners = this.listeners;
             final Set<Consumer<? super T>> newListeners = newIdentitySet(listeners);
             newListeners.add(listener);
             if (listenersUpdater.compareAndSet(this, listeners, newListeners)) {
+                if (notifyLatestValue) {
+                    final T latest = latestValue();
+                    if (latest != null) {
+                        listener.accept(latest);
+                    }
+                }
                 break;
             }
         }

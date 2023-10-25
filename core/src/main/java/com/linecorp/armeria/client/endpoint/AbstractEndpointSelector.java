@@ -17,7 +17,9 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,27 +28,34 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Sets;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * A skeletal {@link EndpointSelector} implementation. This abstract class implements the
  * {@link #select(ClientRequestContext, ScheduledExecutorService)} method by listening to
  * the change events emitted by {@link EndpointGroup} specified at construction time.
  */
-public abstract class AbstractEndpointSelector implements EndpointSelector {
+public abstract class AbstractEndpointSelector implements EndpointSelector, Consumer<List<Endpoint>> {
 
     private final EndpointGroup endpointGroup;
+    private final ReentrantShortLock lock = new ReentrantShortLock();
+    @GuardedBy("lock")
+    private final Set<ListeningFuture> pendingFutures = Sets.newIdentityHashSet();
 
     /**
      * Creates a new instance that selects an {@link Endpoint} from the specified {@link EndpointGroup}.
      */
     protected AbstractEndpointSelector(EndpointGroup endpointGroup) {
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
+        endpointGroup.addListener(this);
     }
 
     /**
@@ -67,20 +76,17 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
     @Override
     public final CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                                     ScheduledExecutorService executor) {
-        Endpoint endpoint = selectNow(ctx);
+        final Endpoint endpoint = selectNow(ctx);
         if (endpoint != null) {
             return UnmodifiableFuture.completedFuture(endpoint);
         }
 
         final ListeningFuture listeningFuture = new ListeningFuture(ctx, executor);
-        endpointGroup.addListener(listeningFuture);
+        addPendingFuture(listeningFuture);
 
-        // Try to select again because the EndpointGroup might have been updated
-        // between selectNow() and addListener() above.
-        endpoint = selectNow(ctx);
-        if (endpoint != null) {
-            endpointGroup.removeListener(listeningFuture);
-            return UnmodifiableFuture.completedFuture(endpoint);
+        // The EndpointGroup have just been updated.
+        if (listeningFuture.isDone()) {
+            return listeningFuture;
         }
 
         final long selectionTimeoutMillis = endpointGroup.selectionTimeoutMillis();
@@ -115,8 +121,42 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         return listeningFuture;
     }
 
+    @Override
+    public void accept(List<Endpoint> endpoints) {
+        lock.lock();
+        try {
+            // Use iterator to avoid concurrent modification. `future.accept()` may remove the future.
+            //noinspection ForLoopReplaceableByForEach
+            for (final Iterator<ListeningFuture> it = pendingFutures.iterator(); it.hasNext();) {
+                final ListeningFuture future = it.next();
+                future.accept(null);
+                continue;
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void addPendingFuture(ListeningFuture future) {
+        lock.lock();
+        try {
+            pendingFutures.add(future);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void removePendingFuture(ListeningFuture future) {
+        lock.lock();
+        try {
+            pendingFutures.remove(future);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     @VisibleForTesting
-    final class ListeningFuture extends CompletableFuture<Endpoint> implements Consumer<List<Endpoint>> {
+    final class ListeningFuture extends CompletableFuture<Endpoint> implements Consumer<Void> {
         private final ClientRequestContext ctx;
         private final Executor executor;
         @Nullable
@@ -130,7 +170,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         }
 
         @Override
-        public void accept(List<Endpoint> unused) {
+        public void accept(Void updated) {
             if (selectedEndpoint != null || isDone()) {
                 return;
             }
@@ -168,7 +208,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         }
 
         private void cleanup() {
-            group().removeListener(this);
+            removePendingFuture(this);
             final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
             if (timeoutFuture != null) {
                 this.timeoutFuture = null;
