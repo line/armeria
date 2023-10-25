@@ -92,8 +92,8 @@ date: 2023-10-23
     ...
     .build();
   ```
-- **Notify CircuitBreak on Duration Exceed**: You can now report a failure to a circuit breaking when the total duration exceeds a certain threshold.
-  #4782 #4827
+- **New Circuit Breaker and Retry Rule for Time-consuming Requests**: You can now report a failure to a
+  circuit breaking or retry when the total duration exceeds a certain threshold. #4782 #4827
   ```java
   final CircuitBreakerRuleWithContent<HttpResponse> rule =
         CircuitBreakerRuleWithContent
@@ -102,8 +102,8 @@ date: 2023-10-23
                     (ctx, duration) -> duration.toMillis() > 10000)
                 .thenFailure();
   ```
-- **RST Floods Attack Prevention**: You can now protect your server against
-  [DDoS caused by RST floods](https://www.securityweek.com/rapid-reset-zero-day-exploited-to-launch-largest-ddos-attacks-in-history/)
+- **RST Flood Attack Prevention**: You can now protect your server against
+  [DDoS caused by RST flood attack](https://www.securityweek.com/rapid-reset-zero-day-exploited-to-launch-largest-ddos-attacks-in-history/)
   using <type://ServerBuilder#http2MaxResetFramesPerWindow(int,int)>. #5232
   - The default maximum number of allowed RST frames for an HTTP/2 connection is 400 per minute.
   ```java
