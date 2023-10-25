@@ -118,6 +118,17 @@ static def addFlags(Set<String> actualFlags, ...flags) {
         }
     }
 
+    // 'kotlin(\\d+\\.\\+d)' implies 'kotlin'
+    if (!actualFlags.contains('kotlin')) {
+        def pattern = Pattern.compile('^kotlin(\\d+\\.\\d+)$')
+        for (String flag: actualFlags) {
+            if (pattern.matcher(flag).matches()) {
+                actualFlags.add('kotlin')
+                break
+            }
+        }
+    }
+
     // 'kotlin' implies 'java'
     if (actualFlags.contains('kotlin')) {
         actualFlags.add('java')
