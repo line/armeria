@@ -515,6 +515,9 @@ public interface ClientRequestContext extends RequestContext {
      */
     @Override
     default boolean isTimedOut() {
+        if (RequestContext.super.isTimedOut()) {
+            return true;
+        }
         final Throwable cause = cancellationCause();
         return cause instanceof TimeoutException ||
                cause instanceof UnprocessedRequestException && cause.getCause() instanceof TimeoutException;

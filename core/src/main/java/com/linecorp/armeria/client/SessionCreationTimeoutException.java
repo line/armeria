@@ -37,7 +37,7 @@ public final class SessionCreationTimeoutException extends TimeoutException {
      * Creates a new instance with the specified {@link SessionProtocol}.
      */
     public SessionCreationTimeoutException(SessionProtocol protocol, @Nullable String reason) {
-        super("protocol: " + requireNonNull(protocol, "protocol") + ", reason: " + reason);
+        super(appendReason("protocol: " + requireNonNull(protocol, "protocol"), reason));
         this.protocol = protocol;
     }
 
@@ -54,5 +54,12 @@ public final class SessionCreationTimeoutException extends TimeoutException {
             return super.fillInStackTrace();
         }
         return this;
+    }
+
+    private static String appendReason(String message, @Nullable String reason) {
+        if (reason == null) {
+            return message;
+        }
+        return message + ", reason: " + reason;
     }
 }
