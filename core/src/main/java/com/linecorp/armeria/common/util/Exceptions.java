@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.util;
 
-import static com.linecorp.armeria.common.util.GrpcExceptions.isGrpcCancel;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -24,18 +24,23 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.channels.ClosedChannelException;
+import java.util.List;
+import java.util.ServiceLoader;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WriteTimeoutException;
@@ -46,17 +51,21 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.internal.common.util.CancellingExceptionPredicateProvider;
 import com.linecorp.armeria.server.RequestCancellationException;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
 /**
  * Provides methods that are useful for handling exceptions.
  */
 public final class Exceptions {
+
+    private static final Logger logger = LoggerFactory.getLogger(Exceptions.class);
 
     private static final Pattern IGNORABLE_SOCKET_ERROR_MESSAGE = Pattern.compile(
             "(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe)", Pattern.CASE_INSENSITIVE);
@@ -68,6 +77,22 @@ public final class Exceptions {
             "(?:closed already)", Pattern.CASE_INSENSITIVE);
 
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
+
+    private static final List<Predicate<Throwable>> cancellingExceptionPredicate;
+    static {
+        final List<CancellingExceptionPredicateProvider> providers = ImmutableList.copyOf(
+                ServiceLoader.load(CancellingExceptionPredicateProvider.class,
+                                   Exceptions.class.getClassLoader()));
+
+        if (providers.isEmpty()) {
+            logger.debug("Available {}s: {}", CancellingExceptionPredicateProvider.class.getSimpleName(),
+                         providers);
+        }
+
+        cancellingExceptionPredicate = providers.stream()
+                                                .map(CancellingExceptionPredicateProvider::newPredicate)
+                                                .collect(toImmutableList());
+    }
 
     /**
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
@@ -192,14 +217,29 @@ public final class Exceptions {
             cause = cause.getCause();
         }
 
-        return cause instanceof ClosedStreamException ||
-               cause instanceof CancelledSubscriptionException ||
-               cause instanceof RequestCancellationException ||
-               cause instanceof WriteTimeoutException ||
-               cause instanceof AbortedStreamException ||
-               isGrpcCancel(cause) ||
-               (cause instanceof Http2Exception.StreamException &&
-                ((Http2Exception.StreamException) cause).error() == Http2Error.CANCEL);
+        final boolean cancel = cause instanceof ClosedStreamException ||
+                               cause instanceof CancelledSubscriptionException ||
+                               cause instanceof RequestCancellationException ||
+                               cause instanceof WriteTimeoutException ||
+                               cause instanceof AbortedStreamException ||
+                               (cause instanceof StreamException &&
+                                ((StreamException) cause).error() == Http2Error.CANCEL);
+        if (cancel) {
+            return true;
+        }
+
+        if (!cancellingExceptionPredicate.isEmpty()) {
+            for (Predicate<Throwable> predicate : cancellingExceptionPredicate) {
+                try {
+                    if (predicate.test(cause)) {
+                        return true;
+                    }
+                } catch (Throwable t) {
+                    // ignore it.
+                }
+            }
+        }
+        return false;
     }
 
     /**
