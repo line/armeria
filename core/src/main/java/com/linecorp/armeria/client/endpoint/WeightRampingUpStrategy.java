@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -132,30 +131,23 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
         @Nullable
         private Set<EndpointAndStep> unhandledNewEndpoints;
-        private final AtomicBoolean initialized = new AtomicBoolean();
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
             this.executor = executor;
 
-            endpointGroup.whenReady().thenAccept(unused -> maybeUpdateEndpoints(endpointGroup.endpoints()));
+            endpointGroup.whenReady().thenAccept(unused -> initializeEndpointSelector(endpointGroup.endpoints()));
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
             }
         }
 
-        private void maybeUpdateEndpoints(List<Endpoint> endpoints) {
-            if (initialized.compareAndSet(false, true)) {
+        private void initializeEndpointSelector(List<Endpoint> endpoints) {
                 final List<Endpoint> dedupEndpoints =
                         new ArrayList<>(deduplicateEndpoints(endpoints).values());
                 endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
                 endpointsFinishedRampingUp.addAll(dedupEndpoints);
-
                 group().addListener(this::updateEndpoints);
-            } else {
-                // Use the executor so the order of endpoints change is guaranteed.
-                executor.execute(() -> updateEndpoints(endpoints));
-            }
         }
 
         /**
