@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Status;
@@ -33,5 +34,9 @@ class ExceptionsTest {
         assertThat(Exceptions.isStreamCancelling(new StatusRuntimeException(Status.INTERNAL))).isFalse();
         assertThat(Exceptions.isStreamCancelling(new StatusException(Status.CANCELLED))).isTrue();
         assertThat(Exceptions.isStreamCancelling(new StatusException(Status.INTERNAL))).isFalse();
+        assertThat(Exceptions.isStreamCancelling(
+                new ArmeriaStatusException(Status.CANCELLED.getCode().value(), null))).isTrue();
+        assertThat(Exceptions.isStreamCancelling(
+                new ArmeriaStatusException(Status.INTERNAL.getCode().value(), null))).isFalse();
     }
 }

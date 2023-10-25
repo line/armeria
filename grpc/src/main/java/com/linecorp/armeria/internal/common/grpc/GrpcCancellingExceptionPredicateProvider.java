@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.common.grpc;
 
 import java.util.function.Predicate;
 
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.internal.common.util.CancellingExceptionPredicateProvider;
 
 import io.grpc.Status.Code;
@@ -33,6 +34,10 @@ public final class GrpcCancellingExceptionPredicateProvider implements Cancellin
 
             if (cause instanceof StatusException) {
                 return ((StatusException) cause).getStatus().getCode() == Code.CANCELLED;
+            }
+
+            if (cause instanceof ArmeriaStatusException) {
+                return ((ArmeriaStatusException) cause).getCode() == Code.CANCELLED.value();
             }
             return false;
         };

@@ -85,7 +85,7 @@ public final class Exceptions {
                 ServiceLoader.load(CancellingExceptionPredicateProvider.class,
                                    Exceptions.class.getClassLoader()));
 
-        if (providers.isEmpty()) {
+        if (!providers.isEmpty()) {
             logger.debug("Available {}s: {}", CancellingExceptionPredicateProvider.class.getSimpleName(),
                          providers);
         }
