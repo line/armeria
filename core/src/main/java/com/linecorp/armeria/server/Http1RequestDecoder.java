@@ -134,6 +134,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         final int id = req != null ? req.id() : ++receivedRequests;
         try {
             if (discarding) {
+                // This happens when:
+                // - Upgraded to HTTP/2 so the connection is reused.
+                // - the upgrade request exceeds maxRequestLength so this Http1RequestDecoder is discarded.
+                // - When receiving the LastHttpContent, remove this Http1RequestDecoder from the pipeline
+                //   thus, the next request will be handled by Http2RequestDecoder.
+                removeFromPipelineIfUpgraded(ctx, msg instanceof LastHttpContent);
                 return;
             }
 
@@ -273,10 +279,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
             final boolean endOfStream = msg instanceof LastHttpContent;
-            if (endOfStream && encoder instanceof ServerHttp2ObjectEncoder) {
-                // An HTTP/1 connection has been upgraded to HTTP/2.
-                ctx.pipeline().remove(this);
-            }
+            removeFromPipelineIfUpgraded(ctx, endOfStream);
 
             // req is not null.
             if (endOfStream && req instanceof EmptyContentDecodedHttpRequest) {
@@ -370,6 +373,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             }
         } finally {
             ReferenceCountUtil.release(msg);
+        }
+    }
+
+    private void removeFromPipelineIfUpgraded(ChannelHandlerContext ctx, boolean endOfStream) {
+        if (endOfStream && encoder instanceof ServerHttp2ObjectEncoder) {
+            // An HTTP/1 connection has been upgraded to HTTP/2.
+            ctx.pipeline().remove(this);
         }
     }
 
