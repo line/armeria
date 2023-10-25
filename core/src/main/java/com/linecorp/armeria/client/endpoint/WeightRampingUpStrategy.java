@@ -146,6 +146,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         private void initializeEndpointSelector(List<Endpoint> endpoints) {
+            currentEndpoints = endpoints;
             final List<Endpoint> dedupEndpoints =
                     new ArrayList<>(deduplicateEndpoints(endpoints).values());
             endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
@@ -295,7 +296,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             }
 
             for (final Iterator<EndpointsRampingUpEntry> i = endpointsRampingUp.iterator();
-                 i.hasNext(); ) {
+                 i.hasNext();) {
                 final EndpointsRampingUpEntry endpointsRampingUpEntry = i.next();
 
                 final Set<EndpointAndStep> endpointAndSteps = endpointsRampingUpEntry.endpointAndSteps();
