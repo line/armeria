@@ -87,7 +87,7 @@ public class ThrottlingRpcServiceTest {
 
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOf(TTransportException.class)
-                .getCause()
+                .cause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
                 });

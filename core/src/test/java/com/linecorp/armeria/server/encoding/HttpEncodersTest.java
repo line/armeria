@@ -17,97 +17,95 @@
 package com.linecorp.armeria.server.encoding;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.mockito.Mockito.when;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 
 import io.netty.handler.codec.compression.Brotli;
 
-public class HttpEncodersTest {
-    @Rule public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock private HttpRequest request;
-
+class HttpEncodersTest {
     @Test
-    public void noAcceptEncoding() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isNull();
+    void noAcceptEncoding() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isNull();
     }
 
     @Test
-    public void acceptEncodingGzip() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.GZIP);
+    void acceptEncodingGzip() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING, "gzip");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.GZIP);
     }
 
     @Test
-    public void acceptEncodingDeflate() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING, "deflate"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.DEFLATE);
+    void acceptEncodingDeflate() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING, "deflate");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.DEFLATE);
     }
 
     @Test
-    public void acceptEncodingBrotli() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING, "br"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(
-                Brotli.isAvailable() ? HttpEncodingType.BROTLI : null);
+    void acceptEncodingBrotli() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING, "br");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(
+                Brotli.isAvailable() ? StreamEncoderFactories.BROTLI : null);
     }
 
     @Test
-    public void acceptEncodingAllOfThree() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING,
-                                                             "gzip, deflate, br"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.GZIP);
+    void acceptEncodingSnappyFraming() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING, "x-snappy-framed");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.SNAPPY);
     }
 
     @Test
-    public void acceptEncodingBoth() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING, "gzip, deflate"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.GZIP);
+    void acceptEncodingAllOfThree() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING,
+                                                         "gzip, deflate, br");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.GZIP);
     }
 
     @Test
-    public void acceptEncodingUnknown() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING, "piedpiper"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isNull();
+    void acceptEncodingBoth() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING, "gzip, deflate");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.GZIP);
     }
 
     @Test
-    public void acceptEncodingWithQualityValues() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING,
-                                                             "br;q=0.8, deflate, gzip;q=0.7, *;q=0.1"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.DEFLATE);
+    void acceptEncodingUnknown() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING, "piedpiper");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isNull();
     }
 
     @Test
-    public void acceptEncodingOrder() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING,
-                                                             "deflate;q=0.5, gzip;q=0.9, br;q=0.9"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.GZIP);
+    void acceptEncodingWithQualityValues() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING,
+                                                         "br;q=0.8, deflate, gzip;q=0.7, *;q=0.1");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.DEFLATE);
     }
 
     @Test
-    public void acceptEncodingWithZeroValues() {
-        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
-                                                             HttpHeaderNames.ACCEPT_ENCODING,
-                                                             "gzip;q=0.0, br;q=0.0, *;q=0.1"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.DEFLATE);
+    void acceptEncodingOrder() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING,
+                                                         "deflate;q=0.5, gzip;q=0.9, br;q=0.9");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.GZIP);
+    }
+
+    @Test
+    void acceptEncodingWithZeroValues() {
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.ACCEPT_ENCODING,
+                                                         "gzip;q=0.0, br;q=0.0, *;q=0.1");
+        assertThat(HttpEncoders.getEncoderFactory(headers)).isEqualTo(StreamEncoderFactories.DEFLATE);
     }
 }

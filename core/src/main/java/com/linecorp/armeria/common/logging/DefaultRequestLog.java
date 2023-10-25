@@ -599,6 +599,15 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void propagateResponseSideLog(RequestLog lastChild) {
+        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            // Update responseCause first if available because callbacks of the other properties may need it
+            // to retry or open circuit breakers.
+            final Throwable responseCause = lastChild.responseCause();
+            if (responseCause != null) {
+                responseCause(responseCause);
+            }
+        }
+
         // Update the available properties without adding a callback if the lastChild already has them.
         if (lastChild.isAvailable(RequestLogProperty.RESPONSE_START_TIME)) {
             startResponse(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMicros(), true);

@@ -31,8 +31,8 @@ public interface ContextAwareBiConsumer<T, U> extends BiConsumer<T, U>, ContextH
      * Returns a new {@link ContextAwareBiConsumer} that sets the specified {@link RequestContext}
      * before executing an underlying {@link BiConsumer}.
      */
-    static <T, U> ContextAwareBiConsumer of(RequestContext context, BiConsumer<T, U> action) {
-        return new DefaultContextAwareBiConsumer(context, action);
+    static <T, U> ContextAwareBiConsumer<T, U> of(RequestContext context, BiConsumer<T, U> action) {
+        return new DefaultContextAwareBiConsumer<>(context, action);
     }
 
     /**

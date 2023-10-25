@@ -68,8 +68,8 @@ class ClientRequestContextDelayedInitTest {
         final WebClient client = WebClient.of(SessionProtocol.H2C, group);
         final Stopwatch stopwatch = Stopwatch.createStarted();
         assertThatThrownBy(() -> client.get("/").aggregate().join())
-                .getCause().isInstanceOf(UnprocessedRequestException.class)
-                .getCause().isInstanceOf(EndpointSelectionTimeoutException.class);
+                .cause().isInstanceOf(UnprocessedRequestException.class)
+                .cause().isInstanceOf(EndpointSelectionTimeoutException.class);
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
                 .isGreaterThanOrEqualTo(Flags.defaultConnectTimeoutMillis());
     }
@@ -97,8 +97,8 @@ class ClientRequestContextDelayedInitTest {
         final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
         group.add(server.httpEndpoint());
         assertThatThrownBy(future::join)
-                .getCause().isInstanceOf(UnprocessedRequestException.class)
-                .getCause().isSameAs(cause);
+                .cause().isInstanceOf(UnprocessedRequestException.class)
+                .cause().isSameAs(cause);
     }
 
     private static final class Group extends DynamicEndpointGroup {
