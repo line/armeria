@@ -79,6 +79,7 @@ public final class Exceptions {
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
     private static final List<Predicate<Throwable>> cancellingExceptionPredicate;
+
     static {
         final List<CancellingExceptionPredicateProvider> providers = ImmutableList.copyOf(
                 ServiceLoader.load(CancellingExceptionPredicateProvider.class,
