@@ -4,7 +4,7 @@ date: 2023-10-23
 
 ## 🌟 New features
 
-- **Context Path Support**: You can now set services/decorators under a context path fluently. #3591 #4802 #5037 #5157
+- **Context Path Support**: You can now set services/decorators under a context path fluently. #3591 #4802 #5037 #5157 #5260
   ```java
   Server.builder()
         .contextPath("/v1", "/v2")
@@ -14,6 +14,11 @@ date: 2023-10-23
         .contextPath("/v3")
         .service(myService) // served by virtual host "foo.com" under "/v3"
         .build();
+  ```
+  - You can also set the context path via Spring property.
+  ```yaml
+  armeria:
+    context-path: /api/v1
   ```
 - **Easier Request Scoping for Kotlin**: You can now easily propagate an Armeria <type://RequestContext> in Kotlin using
   <type://ContextAwareExecutor#asCoroutineDispatcher()>. #5171
@@ -44,8 +49,8 @@ date: 2023-10-23
     }
   }
   ```
-- **StreamMessage finalizer**: You can now produce the last value for a <type://StreamMessage> when it completes exceptionally using
-  <type://StreamMessage#endWith(Function)>. #4816 #5198
+- **StreamMessage finalizer**: You can now produce the last value for a <type://StreamMessage> when it completes
+  exceptionally or successfully using <type://StreamMessage#endWith(Function)>. #4816 #5198
   ```java
   StreamMessage<Integer> message =
     original.endWith(th -> {
@@ -140,7 +145,6 @@ date: 2023-10-23
   propagated to users. #5154
 - Armeria gRPC service no longer schedules a timeout if `grpc-timeout` header is omitted when
   <type://GrpcServiceBuilder#useClientTimeoutHeader(boolean)> is enabled. #5144
-- A recovered <type://HttpResponse> by <type://ServiceErrorHandler> produces a response content preview. #3969 #5076
 - The `Content-Length` header isn't set anymore for the streaming response of a HEAD request. #4509 #4644
 
 ## 🏚️ Deprecations
@@ -170,7 +174,7 @@ date: 2023-10-23
 - Micrometer 1.11.3 → 1.11.5
 - Micrometer Tracing 1.1.4 → 1.1.6
 - Netty 4.1.96.Final → 4.1.100.Final
-- Netty incubator 0.0.21.Final → 0.0.23.Final
+- Netty io_uring 0.0.21.Final → 0.0.23.Final
 - OkHttp 4.11.0 → 4.12.0
 - Reactor 3.5.8 → 3.5.11
 - RxJava3 3.1.6 → 3.1.8
