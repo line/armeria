@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.util;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -30,9 +29,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLException;
 
@@ -43,22 +40,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.internal.common.util.CancellingExceptionPredicateProvider;
-import com.linecorp.armeria.server.RequestCancellationException;
+import com.linecorp.armeria.internal.common.util.ExceptionClassifier;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelException;
-import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Exception.StreamException;
 
 /**
  * Provides methods that are useful for handling exceptions.
@@ -67,32 +56,19 @@ public final class Exceptions {
 
     private static final Logger logger = LoggerFactory.getLogger(Exceptions.class);
 
-    private static final Pattern IGNORABLE_SOCKET_ERROR_MESSAGE = Pattern.compile(
-            "(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe)", Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern IGNORABLE_HTTP2_ERROR_MESSAGE = Pattern.compile(
-            "(?:stream closed)", Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern IGNORABLE_TLS_ERROR_MESSAGE = Pattern.compile(
-            "(?:closed already)", Pattern.CASE_INSENSITIVE);
-
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
-    private static final List<Predicate<Throwable>> cancellingExceptionPredicate;
+    private static final List<ExceptionClassifier> exceptionClassifiers;
 
     static {
-        final List<CancellingExceptionPredicateProvider> providers = ImmutableList.copyOf(
-                ServiceLoader.load(CancellingExceptionPredicateProvider.class,
+        exceptionClassifiers = ImmutableList.copyOf(
+                ServiceLoader.load(ExceptionClassifier.class,
                                    Exceptions.class.getClassLoader()));
 
-        if (!providers.isEmpty()) {
-            logger.debug("Available {}s: {}", CancellingExceptionPredicateProvider.class.getSimpleName(),
-                         providers);
+        if (!exceptionClassifiers.isEmpty()) {
+            logger.debug("Available {}s: {}", ExceptionClassifier.class.getSimpleName(),
+                         exceptionClassifiers);
         }
-
-        cancellingExceptionPredicate = providers.stream()
-                                                .map(CancellingExceptionPredicateProvider::newPredicate)
-                                                .collect(toImmutableList());
     }
 
     /**
@@ -176,32 +152,8 @@ public final class Exceptions {
      */
     public static boolean isExpected(Throwable cause) {
         requireNonNull(cause, "cause");
-        if (Flags.verboseSocketExceptions()) {
-            return false;
-        }
-
-        // We do not need to log every exception because some exceptions are expected to occur.
-
-        if (cause instanceof ClosedChannelException || cause instanceof ClosedSessionException) {
-            // Can happen when attempting to write to a channel closed by the other end.
-            return true;
-        }
-
-        final String msg = cause.getMessage();
-        if (msg != null) {
-            if ((cause instanceof IOException || cause instanceof ChannelException) &&
-                IGNORABLE_SOCKET_ERROR_MESSAGE.matcher(msg).find()) {
-                // Can happen when socket error occurs.
-                return true;
-            }
-
-            if (cause instanceof Http2Exception && IGNORABLE_HTTP2_ERROR_MESSAGE.matcher(msg).find()) {
-                // Can happen when disconnected prematurely.
-                return true;
-            }
-
-            if (cause instanceof SSLException && IGNORABLE_TLS_ERROR_MESSAGE.matcher(msg).find()) {
-                // Can happen when disconnected prematurely.
+        for (ExceptionClassifier classifier : exceptionClassifiers) {
+            if (classifier.isExpected(cause)) {
                 return true;
             }
         }
@@ -218,26 +170,13 @@ public final class Exceptions {
             cause = cause.getCause();
         }
 
-        final boolean cancel = cause instanceof ClosedStreamException ||
-                               cause instanceof CancelledSubscriptionException ||
-                               cause instanceof RequestCancellationException ||
-                               cause instanceof WriteTimeoutException ||
-                               cause instanceof AbortedStreamException ||
-                               (cause instanceof StreamException &&
-                                ((StreamException) cause).error() == Http2Error.CANCEL);
-        if (cancel) {
-            return true;
-        }
-
-        if (!cancellingExceptionPredicate.isEmpty()) {
-            for (Predicate<Throwable> predicate : cancellingExceptionPredicate) {
-                try {
-                    if (predicate.test(cause)) {
-                        return true;
-                    }
-                } catch (Throwable t) {
-                    // ignore it.
+        for (ExceptionClassifier classifier : exceptionClassifiers) {
+            try {
+                if (classifier.isStreamCancelling(cause)) {
+                    return true;
                 }
+            } catch (Throwable t) {
+                // ignore it.
             }
         }
         return false;

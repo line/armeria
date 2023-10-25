@@ -15,10 +15,13 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
-import java.util.function.Predicate;
+public interface ExceptionClassifier {
 
-@FunctionalInterface
-public interface CancellingExceptionPredicateProvider {
+    default boolean isExpected(Throwable cause) {
+        return false;
+    }
 
-    Predicate<Throwable> newPredicate();
+    default boolean isStreamCancelling(Throwable cause) {
+        return false;
+    }
 }

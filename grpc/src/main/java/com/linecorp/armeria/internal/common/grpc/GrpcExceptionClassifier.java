@@ -15,31 +15,28 @@
  */
 package com.linecorp.armeria.internal.common.grpc;
 
-import java.util.function.Predicate;
-
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
-import com.linecorp.armeria.internal.common.util.CancellingExceptionPredicateProvider;
+import com.linecorp.armeria.internal.common.util.ExceptionClassifier;
 
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 
-public final class GrpcCancellingExceptionPredicateProvider implements CancellingExceptionPredicateProvider {
+public final class GrpcExceptionClassifier implements ExceptionClassifier {
+
     @Override
-    public Predicate<Throwable> newPredicate() {
-        return cause -> {
-            if (cause instanceof StatusRuntimeException) {
-                return ((StatusRuntimeException) cause).getStatus().getCode() == Code.CANCELLED;
-            }
+    public boolean isStreamCancelling(Throwable cause) {
+        if (cause instanceof StatusRuntimeException) {
+            return ((StatusRuntimeException) cause).getStatus().getCode() == Code.CANCELLED;
+        }
 
-            if (cause instanceof StatusException) {
-                return ((StatusException) cause).getStatus().getCode() == Code.CANCELLED;
-            }
+        if (cause instanceof StatusException) {
+            return ((StatusException) cause).getStatus().getCode() == Code.CANCELLED;
+        }
 
-            if (cause instanceof ArmeriaStatusException) {
-                return ((ArmeriaStatusException) cause).getCode() == Code.CANCELLED.value();
-            }
-            return false;
-        };
+        if (cause instanceof ArmeriaStatusException) {
+            return ((ArmeriaStatusException) cause).getCode() == Code.CANCELLED.value();
+        }
+        return false;
     }
 }
