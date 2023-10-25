@@ -126,7 +126,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      * {@code true} if an {@link Http2Settings} has been received from the remote endpoint.
      */
     private boolean isSettingsFrameReceived;
-    private boolean isChannelActive;
+    // Note: This field never becomes false once it becomes true.
+    private boolean channelActivated;
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, int connectionTimeoutMillis,
@@ -334,16 +335,16 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        isChannelActive = channel.isActive();
+        channelActivated = channel.isActive();
         if (isAcquirable == null) {
-            isAcquirable = isChannelActive;
+            isAcquirable = channelActivated;
         }
         tryCompleteSessionPromise(ctx);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        isChannelActive = true;
+        channelActivated = true;
         // deactivate() may be called before channelActive() event if the first request contains
         // "connection:close" or triggers initiateConnectionShutdown().
         if (isAcquirable == null) {
@@ -478,7 +479,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      *         {@code false} if the {@link #sessionPromise} is still incomplete.
      */
     private boolean tryCompleteSessionPromise(ChannelHandlerContext ctx) {
-        if (protocol == null || !isChannelActive) {
+        if (protocol == null || !channelActivated) {
             return false;
         }
         if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT && proxyDestinationAddress == null) {
