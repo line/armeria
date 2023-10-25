@@ -28,18 +28,15 @@ import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 
 /**
- * A {@link GrpcStatusFunction} that provides a way to include details of a status into a {@link Metadata}.
- * You can implement a mapping function to convert {@link Throwable} into a {@link com.google.rpc.Status}
- * which is stored in the `grpc-status-details-bin` key in the {@link Metadata}.
+ * A {@link GoogleGrpcExceptionHandlerFunction} that provides a way to include details of a status into
+ * a {@link Metadata}. You can implement a mapping function to convert {@link Throwable} into
+ * a {@link com.google.rpc.Status} which is stored in the `grpc-status-details-bin` key in the {@link Metadata}.
  * If a given {@link Throwable} is an instance of either {@link StatusRuntimeException} or
  * {@link StatusException}, the {@link Status} retrieved from the exception is
  * returned with higher priority.
- *
- * @deprecated Use {@link GoogleGrpcExceptionHandlerFunction} instead.
  */
-@Deprecated
 @UnstableApi
-public interface GoogleGrpcStatusFunction extends GrpcStatusFunction, GoogleGrpcExceptionHandlerFunction {
+public interface GoogleGrpcExceptionHandlerFunction extends GrpcExceptionHandlerFunction {
 
     @Nullable
     @Override
@@ -51,10 +48,9 @@ public interface GoogleGrpcStatusFunction extends GrpcStatusFunction, GoogleGrpc
      * Maps the specified {@link Throwable} to a {@link com.google.rpc.Status},
      * and mutates the specified {@link Metadata}.
      * The `grpc-status-details-bin` key is ignored since it will be overwritten
-     * by {@link GoogleGrpcStatusFunction#apply(RequestContext, Throwable, Metadata)}.
+     * by {@link GoogleGrpcExceptionHandlerFunction#apply(RequestContext, Throwable, Metadata)}.
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
-    @Override
     com.google.rpc.@Nullable Status applyStatusProto(RequestContext ctx, Throwable throwable,
                                                      Metadata metadata);
 }
