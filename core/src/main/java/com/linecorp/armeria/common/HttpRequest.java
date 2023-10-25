@@ -300,7 +300,7 @@ public interface HttpRequest extends Request, HttpMessage {
         if (trailers.isEmpty()) {
             return of(headers, publisher);
         }
-        return of(headers, new SurroundingPublisher<>(null, publisher, trailers));
+        return of(headers, new SurroundingPublisher<>(null, publisher, unused -> trailers));
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,14 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.internal.common.util;
 
-package com.linecorp.armeria.server.encoding;
+public interface ExceptionClassifier {
 
-/**
- * A type of HTTP encoding, which is usually included in accept-encoding and content-encoding headers.
- */
-enum HttpEncodingType {
-    GZIP,
-    DEFLATE,
-    BROTLI
+    default boolean isExpected(Throwable cause) {
+        return false;
+    }
+
+    default boolean isStreamCancelling(Throwable cause) {
+        return false;
+    }
 }

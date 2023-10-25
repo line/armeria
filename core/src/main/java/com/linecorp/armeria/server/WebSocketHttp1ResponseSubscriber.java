@@ -47,7 +47,7 @@ final class WebSocketHttp1ResponseSubscriber extends AbstractHttpResponseSubscri
                                      config.isDateHeaderEnabled());
         logBuilder().responseHeaders(merged);
         setState(State.NEEDS_DATA);
-        responseEncoder.writeHeaders(req.id(), req.streamId(), merged, endOfStream)
+        responseEncoder.writeHeaders(req.id(), req.streamId(), merged, endOfStream, reqCtx.method())
                        .addListener(writeHeadersFutureListener(endOfStream));
     }
 }

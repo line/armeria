@@ -244,6 +244,12 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
         return (RetryRuleWithContentBuilder<T>) super.onException();
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onTimeoutException() {
+        return (RetryRuleWithContentBuilder<T>) super.onTimeoutException();
+    }
+
     /**
      * Makes a {@link RetryRuleWithContent} retry on an {@link UnprocessedRequestException} which means that
      * the request has not been processed by the server.

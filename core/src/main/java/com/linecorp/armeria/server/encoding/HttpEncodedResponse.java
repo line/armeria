@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
+import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactory;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -53,7 +54,7 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpEncodedResponse.class);
 
-    private final HttpEncodingType encodingType;
+    private final StreamEncoderFactory encoderFactory;
     private final Predicate<MediaType> encodableContentTypePredicate;
     private final long minBytesToForceChunkedAndEncoding;
     private final ByteBufAllocator alloc;
@@ -70,12 +71,12 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
     private boolean encoderClosed;
 
     HttpEncodedResponse(HttpResponse delegate,
-                        HttpEncodingType encodingType,
+                        StreamEncoderFactory encoderFactory,
                         Predicate<MediaType> encodableContentTypePredicate,
                         ByteBufAllocator alloc,
                         long minBytesToForceChunkedAndEncoding) {
         super(delegate);
-        this.encodingType = encodingType;
+        this.encoderFactory = encoderFactory;
         this.encodableContentTypePredicate = encodableContentTypePredicate;
         this.alloc = alloc;
         this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
@@ -112,22 +113,12 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
                 buf = alloc.buffer();
             }
             encodedStream = new ByteBufOutputStream(buf);
-            encodingStream = HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
+            encodingStream = encoderFactory.newEncoder(encodedStream);
 
             final ResponseHeadersBuilder mutable = headers.toBuilder();
             // Always use chunked encoding when compressing.
             mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
-            switch (encodingType) {
-                case GZIP:
-                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "gzip");
-                    break;
-                case DEFLATE:
-                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "deflate");
-                    break;
-                case BROTLI:
-                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "br");
-                    break;
-            }
+            mutable.set(HttpHeaderNames.CONTENT_ENCODING, encoderFactory.encodingHeaderValue());
             mutable.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
             return mutable.build();
         }
