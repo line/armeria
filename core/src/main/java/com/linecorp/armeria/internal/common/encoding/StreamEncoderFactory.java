@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,13 +14,17 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.encoding;
+package com.linecorp.armeria.internal.common.encoding;
 
-/**
- * A type of HTTP encoding, which is usually included in accept-encoding and content-encoding headers.
- */
-enum HttpEncodingType {
-    GZIP,
-    DEFLATE,
-    BROTLI
+import java.io.OutputStream;
+
+import io.netty.buffer.ByteBufOutputStream;
+
+public interface StreamEncoderFactory {
+
+    // TODO(ikhoon): Consider making this interface the public API.
+
+    String encodingHeaderValue();
+
+    OutputStream newEncoder(ByteBufOutputStream os);
 }

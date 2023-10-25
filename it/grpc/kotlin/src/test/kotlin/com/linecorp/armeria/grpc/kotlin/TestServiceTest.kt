@@ -194,7 +194,7 @@ class TestServiceTest {
                 .service(
                     GrpcService.builder()
                         .addService(TestServiceImpl())
-                        .exceptionMapping { _, throwable, _ ->
+                        .exceptionHandler { _, throwable, _ ->
                             when (throwable) {
                                 is AuthError -> {
                                     Status.UNAUTHENTICATED

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server.grpc;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
@@ -22,17 +22,19 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+
 /**
- * Specifies an {@link ExceptionHandlerFunction} class which handles exceptions throwing from an
- * annotated service method.
+ * Specifies a {@link GrpcExceptionHandlerFunction} class which handles exceptions throwing from a gRPC service
+ * or its methods.
  */
-@Repeatable(ExceptionHandlers.class)
+@Repeatable(GrpcExceptionHandlers.class)
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface ExceptionHandler {
+public @interface GrpcExceptionHandler {
 
     /**
-     * {@link ExceptionHandlerFunction} implementation type.
+     * {@link GrpcExceptionHandlerFunction} implementation type.
      */
-    Class<? extends ExceptionHandlerFunction> value();
+    Class<? extends GrpcExceptionHandlerFunction> value();
 }
