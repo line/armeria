@@ -39,7 +39,7 @@ import io.grpc.StatusRuntimeException;
  */
 @Deprecated
 @UnstableApi
-public interface GoogleGrpcStatusFunction extends GrpcStatusFunction, GoogleGrpcExceptionHandlerFunction {
+public interface GoogleGrpcStatusFunction extends GrpcStatusFunction {
 
     @Nullable
     @Override
@@ -54,7 +54,6 @@ public interface GoogleGrpcStatusFunction extends GrpcStatusFunction, GoogleGrpc
      * by {@link GoogleGrpcStatusFunction#apply(RequestContext, Throwable, Metadata)}.
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
-    @Override
     com.google.rpc.@Nullable Status applyStatusProto(RequestContext ctx, Throwable throwable,
                                                      Metadata metadata);
 }
