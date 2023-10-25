@@ -38,7 +38,6 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
             AtomicReferenceFieldUpdater.newUpdater(AbstractListenable.class, Set.class, "listeners");
 
     // Updated via updateListenersUpdater
-    @SuppressWarnings("unchecked")
     private volatile Set<Consumer<? super T>> listeners = ImmutableSet.of();
 
     /**
