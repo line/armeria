@@ -106,16 +106,17 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         if (req == null) {
             assert encoder != null;
 
-            // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
-            // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
-            // This is because removing a header from RequestHeaders is more expensive due to its
-            // immutability.
-            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders);
-
             // Validate the method.
             final CharSequence methodText = nettyHeaders.method();
-            if (methodText == null) {
-                writeErrorResponse(streamId, null, HttpStatus.BAD_REQUEST, "Missing method", null);
+            final HttpMethod method;
+            if (methodText != null) {
+                method = HttpMethod.tryParse(methodText.toString());
+            } else {
+                method = null;
+            }
+            if (method == null) {
+                final String message = methodText == null ? "Missing method" : "Invalid method: " + methodText;
+                writeErrorResponse(streamId, null, HttpStatus.BAD_REQUEST, message, null);
                 return;
             }
 
@@ -127,13 +128,18 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
+            // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
+            // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
+            // This is because removing a header from RequestHeaders is more expensive due to its
+            // immutability.
+            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders, method);
+
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
                     ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream,
                                                             scheme, cfg, reqTarget);
 
             // Reject a request with an unsupported method.
-            final HttpMethod method = headers.method();
             switch (method) {
                 case CONNECT:
                     // Accept a CONNECT request only when it has a :protocol header, as defined in:
@@ -230,7 +236,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
-    private boolean handle100Continue(int streamId, Http2Headers headers) {
+    private boolean handle100Continue(int streamId, Http2Headers headers, HttpMethod method) {
         final CharSequence expectValue = headers.get(HttpHeaderNames.EXPECT);
         if (expectValue == null) {
             // No 'expect' header.
@@ -244,7 +250,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         // Send a '100 Continue' response.
         assert encoder != null;
-        encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false);
+        encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false, method);
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         headers.remove(HttpHeaderNames.EXPECT);
