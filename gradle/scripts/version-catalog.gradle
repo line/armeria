@@ -12,86 +12,80 @@ buildscript {
     }
 }
 
+def dependenciesYamlFile = new File("${rootProject.projectDir}/dependencies.yml")
+if (dependenciesYamlFile.exists()) {
+    throw new IllegalStateException(
+            "'dependencies.yml' file is no longer supported. Please use 'dependencies.toml' instead.")
+}
 def dependenciesTomlFile = new File("${rootProject.projectDir}/dependencies.toml")
-if (dependenciesTomlFile.exists()) {
-    def dependenciesYamlFile = new File("${rootProject.projectDir}/dependencies.yml")
-    if (dependenciesYamlFile.exists()) {
-        logger.quiet "Both 'dependencies.toml' and 'dependencies.yml' exist. " +
-                "'dependencies.toml' takes precedence over 'dependencies.yml'"
-    }
+if (!dependenciesTomlFile.exists()) {
+    throw new IllegalStateException(
+            "'dependencies.toml' file is not found. Please create one at the root of the project.")
+}
 
-    def dependenciesToml = Collections.unmodifiableMap(Toml.parse(dependenciesTomlFile.text).toMap())
-    def metadata = [:]
-    def boms = []
+def dependenciesToml = Collections.unmodifiableMap(Toml.parse(dependenciesTomlFile.text).toMap())
+def metadata = [:]
+def boms = []
 
-    dependencyResolutionManagement {
-        versionCatalogs {
-            create("libs") { libs ->
-                dependenciesToml.forEach { String key, value ->
-                    def map = value.toMap()
-                    switch (key) {
-                        case "versions":
-                            map.forEach { alias, version -> addVersion(libs, alias, version) }
-                            break
-                        case "libraries":
-                            map.forEach { alias, dependency -> addLibrary(libs, alias, dependency, metadata) }
-                            break
-                        case "bundles":
-                            map.forEach { alias, modules -> addBundle(libs, alias, modules) }
-                            break
-                        case "plugins":
-                            map.forEach { alias, plugin -> addPlugin(libs, alias, plugin) }
-                            break
-                        case "boms":
-                            map.forEach { alias, dependency -> addBom(libs, alias, dependency, boms) }
-                            break
-                        default:
-                            throw new IllegalStateException("Unknown version catalog: '$key'. " +
-                                    "(expected: one of 'versions', 'libraries', 'bundles', 'plungins' and 'boms')")
-                    }
+dependencyResolutionManagement {
+    versionCatalogs {
+        create("libs") { libs ->
+            dependenciesToml.forEach { String key, value ->
+                def map = value.toMap()
+                switch (key) {
+                    case "versions":
+                        map.forEach { alias, version -> addVersion(libs, alias, version) }
+                        break
+                    case "libraries":
+                        map.forEach { alias, dependency -> addLibrary(libs, alias, dependency, metadata) }
+                        break
+                    case "bundles":
+                        map.forEach { alias, modules -> addBundle(libs, alias, modules) }
+                        break
+                    case "plugins":
+                        map.forEach { alias, plugin -> addPlugin(libs, alias, plugin) }
+                        break
+                    case "boms":
+                        map.forEach { alias, dependency -> addBom(libs, alias, dependency, boms) }
+                        break
+                    default:
+                        throw new IllegalStateException(
+                                "Unknown version catalog: '$key'. (expected: one of 'versions', " +
+                                "'libraries', 'bundles', 'plungins' and 'boms')")
                 }
             }
         }
     }
+}
 
-    gradle.projectsLoaded {
-        def exclusions = [:].withDefault { [] }
-        def relocations = []
-        def javadocLinks = []
-        metadata.forEach { alias, map ->
-            def rel = map.get("relocations")
-            if (rel != null) {
-                relocations.addAll(rel)
-            }
+gradle.projectsLoaded {
+    def exclusions = [:].withDefault { [] }
+    def relocations = []
+    def javadocLinks = []
+    metadata.forEach { alias, map ->
+        def rel = map.get("relocations")
+        if (rel != null) {
+            relocations.addAll(rel)
+        }
 
-            def ex = map.get("exclusions")
-            if (ex != null) {
-                ex.each {
-                    exclusions[it["name"]].add(ex["exclusion"])
-                }
-            }
-
-            def javadocs = map.get("javadocs")
-            if (javadocs != null) {
-                javadocLinks.addAll(javadocs)
+        def ex = map.get("exclusions")
+        if (ex != null) {
+            ex.each {
+                exclusions[it["name"]].add(ex["exclusion"])
             }
         }
 
-        gradle.allprojects { p ->
-            p.ext.hasDependenciesToml = true
-            p.ext.dependenciesTomlBoms = boms
-            p.ext.exclusions = exclusions
-            p.ext.relocations = relocations
-            p.ext.javadocLinks = javadocLinks
+        def javadocs = map.get("javadocs")
+        if (javadocs != null) {
+            javadocLinks.addAll(javadocs)
         }
     }
-} else {
-    gradle.projectsLoaded {
-        gradle.rootProject { p ->
-            p.ext.hasDependenciesToml = false
-            p.ext.dependenciesTomlMetadata = Collections.emptyMap()
-            p.ext.dependenciesTomlBoms = Collections.emptyList()
-        }
+
+    gradle.allprojects { p ->
+        p.ext.dependenciesTomlBoms = boms
+        p.ext.exclusions = exclusions
+        p.ext.relocations = relocations
+        p.ext.javadocLinks = javadocLinks
     }
 }
 
@@ -146,7 +140,7 @@ static def addBom(VersionCatalogBuilder libs, String alias, TomlTable dependency
     }
 
     throw new IllegalStateException("An invalid BOM version on ${alias}: ${dependency.toJson()}" +
-            " (expected: 'version' or 'version.ref')")
+                                    " (expected: 'version' or 'version.ref')")
 }
 
 static def addLibrary(VersionCatalogBuilder libs, String alias, TomlTable dependency,
@@ -188,7 +182,7 @@ static def newLibrary(VersionCatalogBuilder libs, String alias, TomlTable depend
         return [lib: libs.library(alias, group, artifact), group: group, artifact: artifact]
     } else {
         throw new IllegalStateException("An invalid library declaration on ${alias}: ${dependency.toJson()}" +
-                " (expected: 'module' or 'group' and 'name')")
+                                        " (expected: 'module' or 'group' and 'name')")
     }
 }
 
@@ -204,7 +198,7 @@ static Map<String, Object> extractMetadata(TomlTable dependency, String group, S
             }
         } else {
             throw new IllegalStateException("An invalid javadoc links on ${alias}: $javadocs'" +
-                    " (expected: A string or an array of strings)")
+                                            " (expected: A string or an array of strings)")
         }
     }
 
@@ -221,7 +215,7 @@ static Map<String, Object> extractMetadata(TomlTable dependency, String group, S
             }
         } else {
             throw new IllegalStateException("An invalid exclusions on ${alias}: $exclusions" +
-                    " (expected: A string or an array of strings)")
+                                            " (expected: A string or an array of strings)")
         }
     }
 
@@ -235,7 +229,7 @@ static Map<String, Object> extractMetadata(TomlTable dependency, String group, S
             }
         } else {
             throw new IllegalStateException("An invalid relocations on ${alias}: $relocations" +
-                    " (expected: A map or an array of maps)")
+                                            " (expected: A map or an array of maps)")
         }
     }
     metadata
@@ -260,32 +254,30 @@ static def addPlugin(VersionCatalogBuilder libs, String alias, TomlTable plugin)
 
 gradle.projectsLoaded {
     gradle.rootProject { p ->
-        if (p.ext.hasDependenciesToml) {
-            // Prints all versions registered through 'dependencies.toml'
-            p.tasks.register("printVersionCatalogs") {
-                def catalogs = p.extensions.getByType(VersionCatalogsExtension)
-                doLast {
-                    catalogs.catalogNames.forEach { name ->
-                        def catalog = catalogs.named(name)
-                        catalog.libraryAliases.forEach {
-                            def library = catalog.findLibrary(it).get().get()
-                            println "$name / library / $it / $library"
-                        }
+        // Prints all versions registered through 'dependencies.toml'
+        p.tasks.register("printVersionCatalogs") {
+            def catalogs = p.extensions.getByType(VersionCatalogsExtension)
+            doLast {
+                catalogs.catalogNames.forEach { name ->
+                    def catalog = catalogs.named(name)
+                    catalog.libraryAliases.forEach {
+                        def library = catalog.findLibrary(it).get().get()
+                        println "$name / library / $it / $library"
+                    }
 
-                        catalog.pluginAliases.forEach {
-                            def plugin = catalog.findPlugin(it).get().get()
-                            println "$name / plugin / $it / $plugin"
-                        }
+                    catalog.pluginAliases.forEach {
+                        def plugin = catalog.findPlugin(it).get().get()
+                        println "$name / plugin / $it / $plugin"
+                    }
 
-                        catalog.versionAliases.forEach {
-                            def version = catalog.findVersion(it).get()
-                            println "$name / version / $it / $version"
-                        }
+                    catalog.versionAliases.forEach {
+                        def version = catalog.findVersion(it).get()
+                        println "$name / version / $it / $version"
+                    }
 
-                        catalog.bundleAliases.forEach {
-                            def bundle = catalog.findBundle(it).get().get()
-                            println "$name / bundle / $it / $bundle"
-                        }
+                    catalog.bundleAliases.forEach {
+                        def bundle = catalog.findBundle(it).get().get()
+                        println "$name / bundle / $it / $bundle"
                     }
                 }
             }

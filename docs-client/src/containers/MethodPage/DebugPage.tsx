@@ -186,10 +186,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
     const urlParams = new URLSearchParams(location.search);
 
     let urlRequestBody = '';
-    if (useRequestBody) {
-      if (urlParams.has('request_body')) {
-        urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-      }
+    if (useRequestBody && urlParams.has('request_body')) {
+      urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
+    }
+
+    let urlDebugFormIsOpen = false;
+    if (urlParams.has('debug_form_is_open')) {
+      urlDebugFormIsOpen = urlParams.get('debug_form_is_open') === 'true';
     }
 
     let urlPath;
@@ -221,6 +224,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
+
+    if (urlDebugFormIsOpen) {
+      setDebugFormIsOpen(urlDebugFormIsOpen);
+    }
   }, [
     exactPathMapping,
     exampleQueries.length,
@@ -232,6 +239,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     useRequestBody,
     keepDebugResponse,
     docServiceRoute,
+    setDebugFormIsOpen,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */

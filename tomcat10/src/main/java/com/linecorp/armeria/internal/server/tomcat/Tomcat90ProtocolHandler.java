@@ -136,6 +136,9 @@ public final class Tomcat90ProtocolHandler implements ProtocolHandler {
     public void addSslHostConfig(SSLHostConfig sslHostConfig) {}
 
     @Override
+    public void addSslHostConfig(SSLHostConfig sslHostConfig, boolean replace) {}
+
+    @Override
     @SuppressWarnings("ZeroLengthArrayAllocation")
     public SSLHostConfig[] findSslHostConfigs() {
         return new SSLHostConfig[0];

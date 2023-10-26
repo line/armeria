@@ -1004,7 +1004,7 @@ class GrpcClientTest {
 
         final AtomicReference<Metadata> headers = new AtomicReference<>();
         final AtomicReference<Metadata> trailers = new AtomicReference<>();
-        stub = MetadataUtils.captureMetadata(stub, headers, trailers);
+        stub = stub.withInterceptors(MetadataUtils.newCaptureMetadataInterceptor(headers, trailers));
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 
@@ -1031,11 +1031,12 @@ class GrpcClientTest {
         final Metadata metadata = new Metadata();
         metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "dog");
 
-        TestServiceBlockingStub stub = MetadataUtils.attachHeaders(blockingStub, metadata);
+        TestServiceBlockingStub stub =
+                blockingStub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
         final AtomicReference<Metadata> headers = new AtomicReference<>();
         final AtomicReference<Metadata> trailers = new AtomicReference<>();
-        stub = MetadataUtils.captureMetadata(stub, headers, trailers);
+        stub = stub.withInterceptors(MetadataUtils.newCaptureMetadataInterceptor(headers, trailers));
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 

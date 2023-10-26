@@ -17,7 +17,7 @@
     "core-js": "^3.22.0",
     "dayjs": "^1.11.1",
     "github-markdown-css": "^5.1.0",
-    "graphql": "^16.3.0",
+    "graphql": "^16.8.1",
     "json-bigint": "^1.0.0",
     "jsonminify": "^0.4.2",
     "mermaid": "^9.3.0",

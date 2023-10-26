@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.observation.ObservationClient.newDecor
 import static com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils.observationRegistry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.same;
@@ -55,6 +56,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.observation.SpanCollector;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 import brave.Span.Kind;
 import brave.Tracing;
@@ -220,7 +222,7 @@ class ObservationClientTest {
         assertThatThrownBy(() -> blockingWebClient.get("/"))
                 .isInstanceOf(UnprocessedRequestException.class)
                 .hasCauseInstanceOf(EmptyEndpointGroupException.class);
-        assertThat(collector.spans()).hasSize(1);
+        await().untilAsserted(() -> assertThat(collector.spans()).hasSize(1));
         final MutableSpan span = collector.spans().poll();
         assertThat(span.tag("http.host")).isEqualTo("UNKNOWN");
         assertThat(span.tag("http.url")).isEqualTo("http:/");
@@ -238,7 +240,9 @@ class ObservationClientTest {
                                                 "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
-        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
+        final ClientRequestContext ctx = ClientRequestContext.builder(req)
+                                                             .eventLoop(ImmediateEventLoop.INSTANCE)
+                                                             .build();
         // the authority is extracted even when the request doesn't declare an authority
         final RequestHeaders headersWithoutAuthority =
                 req.headers().toBuilder().removeAndThen(HttpHeaderNames.AUTHORITY).build();

@@ -18,8 +18,7 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
@@ -29,17 +28,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import reactor.test.StepVerifier;
 
-public class StreamingDecodedHttpRequestTest {
-
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
+class StreamingDecodedHttpRequestTest {
 
     @Test
-    public void dataOnly() throws Exception {
+    void dataOnly() throws Exception {
         final StreamingDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         req.close();
@@ -51,7 +46,7 @@ public class StreamingDecodedHttpRequestTest {
     }
 
     @Test
-    public void trailersOnly() throws Exception {
+    void trailersOnly() throws Exception {
         final StreamingDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         req.close();
@@ -63,7 +58,7 @@ public class StreamingDecodedHttpRequestTest {
     }
 
     @Test
-    public void dataIsIgnoreAfterTrailers() throws Exception {
+    void dataIsIgnoreAfterTrailers() throws Exception {
         final StreamingDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isFalse();
@@ -76,7 +71,7 @@ public class StreamingDecodedHttpRequestTest {
     }
 
     @Test
-    public void splitTrailersIsIgnored() throws Exception {
+    void splitTrailersIsIgnored() throws Exception {
         final StreamingDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
@@ -89,7 +84,7 @@ public class StreamingDecodedHttpRequestTest {
     }
 
     @Test
-    public void splitTrailersAfterDataIsIgnored() throws Exception {
+    void splitTrailersAfterDataIsIgnored() throws Exception {
         final StreamingDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
@@ -116,7 +111,7 @@ public class StreamingDecodedHttpRequestTest {
                 request = new StreamingDecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
                                                           InboundTrafficController.disabled(),
                                                           sctx.maxRequestLength(), sctx.routingContext(),
-                                                          ExchangeType.BIDI_STREAMING, 0, 0, false);
+                                                          ExchangeType.BIDI_STREAMING, 0, 0, false, false);
         request.init(sctx);
         return request;
     }

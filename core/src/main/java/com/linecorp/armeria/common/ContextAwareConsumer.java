@@ -31,8 +31,8 @@ public interface ContextAwareConsumer<T> extends Consumer<T>, ContextHolder {
      * Returns a new {@link ContextAwareConsumer} that sets the specified {@link RequestContext}
      * before executing an underlying {@link Consumer}.
      */
-    static <T, R> ContextAwareConsumer of(RequestContext context, Consumer<T> action) {
-        return new DefaultContextAwareConsumer(context, action);
+    static <T> ContextAwareConsumer<T> of(RequestContext context, Consumer<T> action) {
+        return new DefaultContextAwareConsumer<>(context, action);
     }
 
     /**

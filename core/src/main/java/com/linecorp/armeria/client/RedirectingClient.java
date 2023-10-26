@@ -262,8 +262,15 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 return;
             }
 
-            abortResponse(response, derivedCtx, null);
-            ctx.eventLoop().execute(() -> execute0(ctx, redirectCtx, newReqDuplicator, false));
+            // Drain the response to release the pooled objects.
+            response.subscribe(ctx.eventLoop()).handleAsync((unused, cause) -> {
+                if (cause != null) {
+                    handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, cause);
+                    return null;
+                }
+                execute0(ctx, redirectCtx, newReqDuplicator, false);
+                return null;
+            }, ctx.eventLoop());
         });
     }
 

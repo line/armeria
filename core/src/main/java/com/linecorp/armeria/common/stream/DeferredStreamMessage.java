@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.SubscriberUtil.abortedOrLate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -399,9 +400,10 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         requireNonNull(options, "options");
 
         if (!downstreamSubscriptionUpdater.compareAndSet(this, null, NOOP_SUBSCRIPTION)) {
+            final Subscriber<Object> subscriber = downstreamSubscription.subscriber();
+            final Throwable cause = abortedOrLate(subscriber);
             final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
-            collectingFuture.completeExceptionally(
-                    new IllegalStateException("subscribed by other subscriber already"));
+            collectingFuture.completeExceptionally(cause);
             return collectingFuture;
         }
 

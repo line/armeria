@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.HttpResponseUtil.createHttpResponseFrom;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.setOrRemoveContentLength;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeUpdateContentLengthAndEndOfStream;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.ThreeElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -240,7 +241,9 @@ public interface HttpResponse extends Response, HttpMessage {
         checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status)", status);
 
         if (status.isContentAlwaysEmpty()) {
-            return new OneElementFixedHttpResponse(ResponseHeaders.of(status));
+            return new OneElementFixedHttpResponse(ResponseHeaders.builder(status)
+                                                                  .endOfStream(true)
+                                                                  .build());
         } else {
             return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
         }
@@ -428,7 +431,8 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
 
-        final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailers);
+        final ResponseHeaders newHeaders =
+                maybeUpdateContentLengthAndEndOfStream(headers, content, trailers, false);
         final boolean contentIsEmpty = content.isEmpty();
         if (contentIsEmpty) {
             content.close();
@@ -502,7 +506,36 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         requireNonNull(trailers, "trailers");
-        return PublisherBasedHttpResponse.from(headers, publisher, trailers);
+        return of(headers, publisher, ignored -> trailers);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified headers and trailers function
+     * whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    static HttpResponse of(ResponseHeaders headers,
+                           Publisher<? extends HttpData> publisher,
+                           Function<@Nullable Throwable, HttpHeaders> trailersFunction) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailersFunction, "trailersFunction");
+        return PublisherBasedHttpResponse.from(headers, publisher, trailersFunction);
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned response will
+     * be closed with the same cause as well.
+     *
+     * @param future the {@link CompletableFuture} which will produce the actual {@link HttpResponse}
+     */
+    static HttpResponse of(CompletableFuture<? extends HttpResponse> future) {
+        requireNonNull(future, "future");
+        return createHttpResponseFrom(future);
     }
 
     /**
@@ -514,14 +547,9 @@ public interface HttpResponse extends Response, HttpMessage {
      */
     static HttpResponse of(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
-
-        if (stage instanceof CompletableFuture) {
-            return createHttpResponseFrom((CompletableFuture<? extends HttpResponse>) stage);
-        } else {
-            final DeferredHttpResponse res = new DeferredHttpResponse();
-            res.delegateWhenComplete(stage);
-            return res;
-        }
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        res.delegateWhenComplete(stage);
+        return res;
     }
 
     /**
