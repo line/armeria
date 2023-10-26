@@ -62,7 +62,6 @@ final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy
      * Creates a new {@link StickyEndpointSelector}.
      *
      * @param endpointGroup an {@link EndpointGroup}
-     *
      * @return a new {@link StickyEndpointSelector}
      */
     @Override
