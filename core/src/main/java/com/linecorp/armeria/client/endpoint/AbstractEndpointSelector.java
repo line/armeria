@@ -132,10 +132,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
      */
     @UnstableApi
     protected final void initialize() {
-        endpointGroup.whenReady().thenRun(() -> {
-            final List<Endpoint> endpoints = endpointGroup.endpoints();
-            accept(endpoints);
-        });
+        endpointGroup.whenReady().thenRun(() -> accept(endpointGroup.endpoints()));
         endpointGroup.addListener(this);
     }
 
