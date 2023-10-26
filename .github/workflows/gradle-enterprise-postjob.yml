@@ -108,6 +108,7 @@ jobs:
           PR_NUMBER: ${{ steps.get-pr-number.outputs.PR_NUMBER }}
 
   upload-build-cache:
+    if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
     strategy:
