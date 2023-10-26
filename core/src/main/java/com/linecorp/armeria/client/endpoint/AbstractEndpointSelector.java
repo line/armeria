@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -36,7 +35,10 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
 
 /**
  * A skeletal {@link EndpointSelector} implementation. This abstract class implements the
@@ -48,7 +50,8 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
     private final EndpointGroup endpointGroup;
     private final ReentrantShortLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
-    private final Set<ListeningFuture> pendingFutures = Sets.newIdentityHashSet();
+    private final Set<ListeningFuture> pendingFutures =
+            new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
     @Nullable
     private List<Endpoint> currentEndpoints;
 
