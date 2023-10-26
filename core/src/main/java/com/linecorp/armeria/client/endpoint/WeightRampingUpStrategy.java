@@ -138,6 +138,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
             }
+            initialize();
         }
 
         @Override

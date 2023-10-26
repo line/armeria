@@ -43,6 +43,7 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
 
         RoundRobinSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
+            initialize();
         }
 
         @Override

@@ -131,7 +131,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
      * {@link EndpointGroup}. The new endpoints will be passed to {@link #updateNewEndpoints(List)}.
      */
     @UnstableApi
-    final void initialize() {
+    protected final void initialize() {
         endpointGroup.whenReady().thenRun(() -> {
             final List<Endpoint> endpoints = endpointGroup.endpoints();
             accept(endpoints);
