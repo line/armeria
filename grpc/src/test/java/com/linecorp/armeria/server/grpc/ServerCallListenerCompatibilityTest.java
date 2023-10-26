@@ -34,6 +34,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -54,6 +56,7 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.EmptyProtos.Empty;
 import testing.grpc.Messages.Payload;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
@@ -66,13 +69,14 @@ class ServerCallListenerCompatibilityTest {
 
     private static final ListenerEventCollector eventCollector = new ListenerEventCollector();
 
+    private static final Logger logger = LoggerFactory.getLogger(ServerCallListenerCompatibilityTest.class);
+
     @BeforeEach
     void setUp() {
         eventCollector.clear();
     }
 
     @ArgumentsSource(ServiceProvider.class)
-    @ArgumentsSource(ServiceErrorProvider.class)
     @ParameterizedTest
     void unaryCall(List<ReleasableHolder<TestServiceBlockingStub>> clients) throws InterruptedException {
         @Nullable StatusRuntimeException oldException = null;
@@ -80,12 +84,9 @@ class ServerCallListenerCompatibilityTest {
         for (int i = 0; i < clients.size(); i++) {
             final ReleasableHolder<TestServiceBlockingStub> resource = clients.get(i);
             final TestServiceBlockingStub client = resource.get();
-            final Payload payload = Payload.newBuilder()
-                                           .setBody(ByteString.copyFromUtf8(Strings.repeat("a", 100)))
-                                           .build();
             try {
                 try {
-                    client.unaryCall(SimpleRequest.newBuilder().setPayload(payload).build());
+                    client.emptyCall(Empty.getDefaultInstance());
                 } catch (Throwable ex) {
                     final StatusRuntimeException newException = (StatusRuntimeException) ex;
                     if (i == 0) {
@@ -98,16 +99,12 @@ class ServerCallListenerCompatibilityTest {
                         final Code code = status.getCode();
                         if (code == Code.DEADLINE_EXCEEDED ||
                             (code == Code.CANCELLED &&
-                             "Completed without a response".equals(status.getDescription())) ||
-                            code == Code.RESOURCE_EXHAUSTED) {
+                             "Completed without a response".equals(status.getDescription()))) {
                             // Don't compare the descriptions when:
                             // - a response is incompletely finished, the upstream error does not contain
                             //   description.
                             // - a description about DEADLINE_EXCEEDED might have different deadlines
                             //   depending on OS scheduling and network conditions.
-                            // - maxInboundMessageSize is exceeded. In this case, Armeria returns a
-                            //   RESOURCE_EXHAUSTED with a description whereas upstream returns a CANCELLED.
-                            //   Armeria's behavior seems to make more sense.
                         } else {
                             assertThat(newException.getMessage()).describedAs(clients.get(i).toString())
                                                                  .isEqualTo(oldException.getMessage());
@@ -120,6 +117,7 @@ class ServerCallListenerCompatibilityTest {
                     events = eventCollector.capture();
                 } else {
                     final List<String> newEvents = eventCollector.capture();
+                    logger.info("expected: {}, actual: {}", events, newEvents);
                     assertThat(events).describedAs(clients.get(i).toString())
                                       .isNotNull();
                     assertThat(newEvents).describedAs(clients.get(i).toString())
@@ -131,12 +129,9 @@ class ServerCallListenerCompatibilityTest {
         }
     }
 
-    @ArgumentsSource(ServiceProvider.class)
     @ArgumentsSource(ServiceErrorProvider.class)
     @ParameterizedTest
-    void streamCall(List<ReleasableHolder<TestServiceBlockingStub>> clients) throws InterruptedException {
-        @Nullable Throwable exception = null;
-        boolean hasResponse = false;
+    void errorUnaryCall(List<ReleasableHolder<TestServiceBlockingStub>> clients) throws InterruptedException {
         final List<List<String>> allEvents = new ArrayList<>();
         for (int i = 0; i < clients.size(); i++) {
             final ReleasableHolder<TestServiceBlockingStub> resource = clients.get(i);
@@ -146,10 +141,54 @@ class ServerCallListenerCompatibilityTest {
                                            .build();
             try {
                 try {
+                    client.unaryCall(SimpleRequest.newBuilder().setPayload(payload).build());
+                } catch (Throwable ex) {
+                    final StatusRuntimeException statusException = (StatusRuntimeException) ex;
+                    // Armeria returns a RESOURCE_EXHAUSTED when maxInboundMessageSize is exceeded
+                    // whereas upstream returns a CANCELLED. Armeria's behavior seems to make more
+                    // sense so leaving as is.
+                    if (i == 0) {
+                        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+                    } else {
+                        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
+                    }
+                }
+                Thread.sleep(1000);
+                // Waits 1 second for events to be fully collected.
+                allEvents.add(eventCollector.capture());
+
+                if (i == 0) {
+                    continue;
+                }
+                List<String> upstream = allEvents.get(0);
+                final List<String> current = allEvents.get(i);
+                if (upstream.size() + 1 == current.size() && !"onReady".equals(upstream.get(0))) {
+                    // gRPC upstream's behavior is nondeterministic in that sometimes
+                    // [onCancel] is returned and sometimes [onReady, onCancel] is returned.
+                    // Ignore the first onReady before comparing
+                    upstream = new ArrayList<>(upstream);
+                    upstream.add(0, "onReady");
+                }
+                assertThat(upstream).describedAs(clients.get(i).toString()).isEqualTo(current);
+            } finally {
+                resource.release();
+            }
+        }
+    }
+
+    @ArgumentsSource(ServiceProvider.class)
+    @ParameterizedTest
+    void streamCall(List<ReleasableHolder<TestServiceBlockingStub>> clients) throws InterruptedException {
+        @Nullable Throwable exception = null;
+        boolean hasResponse = false;
+        final List<List<String>> allEvents = new ArrayList<>();
+        for (int i = 0; i < clients.size(); i++) {
+            final ReleasableHolder<TestServiceBlockingStub> resource = clients.get(i);
+            final TestServiceBlockingStub client = resource.get();
+            try {
+                try {
                     final Iterator<StreamingOutputCallResponse> res =
-                            client.streamingOutputCall(StreamingOutputCallRequest.newBuilder()
-                                                                                 .setPayload(payload)
-                                                                                 .build());
+                            client.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance());
                     // Drain responses.
                     while (res.hasNext()) {
                         res.next();
@@ -163,12 +202,8 @@ class ServerCallListenerCompatibilityTest {
                         assertThat(exception).describedAs(clients.get(i).toString()).isNotNull();
                         assertThat(statusException).describedAs(clients.get(i).toString())
                                                    .isInstanceOf(exception.getClass());
-                        if (statusException.getStatus().getCode() != Code.DEADLINE_EXCEEDED &&
-                            statusException.getStatus().getCode() != Code.RESOURCE_EXHAUSTED) {
+                        if (statusException.getStatus().getCode() != Code.DEADLINE_EXCEEDED) {
                             // A description about a deadline might have a different time decision.
-                            // Armeria returns a RESOURCE_EXHAUSTED when maxInboundMessageSize is exceeded
-                            // whereas upstream returns a CANCELLED. Armeria's behavior seems to make more
-                            // sense.
                             assertThat(statusException.getMessage())
                                     .describedAs(clients.get(i).toString())
                                     .isEqualTo(exception.getMessage());
@@ -178,6 +213,7 @@ class ServerCallListenerCompatibilityTest {
                 // Waits 1 second for events to be fully collected.
                 Thread.sleep(1000);
                 allEvents.add(eventCollector.capture());
+                logger.info("expected: {}, actual: {}", allEvents.get(0), allEvents.get(i));
                 if (i > 0) {
                     if (!hasResponse) {
                         assertThat(allEvents.get(i)).describedAs(clients.get(i).toString())
@@ -211,7 +247,67 @@ class ServerCallListenerCompatibilityTest {
         }
     }
 
+    @ArgumentsSource(ServiceErrorProvider.class)
+    @ParameterizedTest
+    void errorStreamCall(List<ReleasableHolder<TestServiceBlockingStub>> clients) throws InterruptedException {
+        final List<List<String>> allEvents = new ArrayList<>();
+        for (int i = 0; i < clients.size(); i++) {
+            final ReleasableHolder<TestServiceBlockingStub> resource = clients.get(i);
+            final TestServiceBlockingStub client = resource.get();
+            final Payload payload = Payload.newBuilder()
+                                           .setBody(ByteString.copyFromUtf8(Strings.repeat("a", 100)))
+                                           .build();
+            try {
+                try {
+                    final Iterator<StreamingOutputCallResponse> res =
+                            client.streamingOutputCall(StreamingOutputCallRequest.newBuilder()
+                                                                                 .setPayload(payload)
+                                                                                 .build());
+                    // Drain responses.
+                    while (res.hasNext()) {
+                        res.next();
+                    }
+                } catch (Throwable ex) {
+                    final StatusRuntimeException statusException = (StatusRuntimeException) ex;
+                    // Armeria returns a RESOURCE_EXHAUSTED when maxInboundMessageSize is exceeded
+                    // whereas upstream returns a CANCELLED. Armeria's behavior seems to make more
+                    // sense so leaving as is.
+                    if (i == 0) {
+                        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+                    } else {
+                        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
+                    }
+                }
+                // Waits 1 second for events to be fully collected.
+                Thread.sleep(1000);
+
+                allEvents.add(eventCollector.capture());
+            } finally {
+                resource.release();
+            }
+
+            if (i == 0) {
+                continue;
+            }
+            List<String> upstream = allEvents.get(0);
+            final List<String> current = allEvents.get(i);
+            if (upstream.size() + 1 == current.size() && !"onReady".equals(upstream.get(0))) {
+                // gRPC upstream's behavior is nondeterministic in that sometimes
+                // [onCancel] is returned and sometimes [onReady, onCancel] is returned.
+                // Ignore the first onReady before comparing
+                upstream = new ArrayList<>(upstream);
+                upstream.add(0, "onReady");
+            }
+            assertThat(upstream).describedAs(clients.get(i).toString()).isEqualTo(current);
+        }
+    }
+
     private static final class ExceptionalService extends TestServiceImplBase {
+        @Override
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            throw new IllegalArgumentException("Boom!");
+        }
+
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             throw new IllegalArgumentException("Boom!");
@@ -226,6 +322,11 @@ class ServerCallListenerCompatibilityTest {
 
     private static final class CancelingService extends TestServiceImplBase {
         @Override
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            responseObserver.onError(Status.CANCELLED.withDescription("cancel").asRuntimeException());
+        }
+
+        @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onError(Status.CANCELLED.withDescription("cancel").asRuntimeException());
         }
@@ -239,6 +340,11 @@ class ServerCallListenerCompatibilityTest {
 
     private static final class EmptyResponseService extends TestServiceImplBase {
         @Override
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            responseObserver.onCompleted();
+        }
+
+        @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onCompleted();
         }
@@ -251,6 +357,12 @@ class ServerCallListenerCompatibilityTest {
     }
 
     private static final class OkService extends TestServiceImplBase {
+        @Override
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
+
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
@@ -268,6 +380,12 @@ class ServerCallListenerCompatibilityTest {
 
     private static final class NonOkService extends TestServiceImplBase {
         @Override
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            responseObserver.onError(
+                    Status.INVALID_ARGUMENT.withDescription("invalid").asRuntimeException());
+        }
+
+        @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onError(
                     Status.INVALID_ARGUMENT.withDescription("invalid").asRuntimeException());
@@ -282,6 +400,11 @@ class ServerCallListenerCompatibilityTest {
     }
 
     private static final class SlowService extends TestServiceImplBase {
+        @Override
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            // A client will cancel the request by a deadline.
+        }
+
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             // A client will cancel the request by a deadline.
@@ -372,8 +495,7 @@ class ServerCallListenerCompatibilityTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.<Supplier<TestServiceImplBase>>of(
-                                                            EmptyResponseService::new,
+            return Stream.<Supplier<TestServiceImplBase>>of(EmptyResponseService::new,
                                                             CancelingService::new,
                                                             OkService::new,
                                                             NonOkService::new,
