@@ -462,8 +462,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
             if (!tryCompleteSessionPromise(ctx)) {
                 // A session has not been created yet. Additional handshakes will be done by HTTP/1 or HTTP/2.
-                assert sessionTimeoutFuture == null;
-                scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
+                if (poolKey.proxyConfig.proxyType().isForwardProxy()) {
+                    scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
+                }
             }
             return;
         }
