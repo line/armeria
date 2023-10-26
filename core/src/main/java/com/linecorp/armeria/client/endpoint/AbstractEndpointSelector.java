@@ -145,11 +145,11 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
 
     @Override
     public final void accept(List<Endpoint> endpoints) {
-        updateNewEndpoints(endpoints);
         if (currentEndpoints == endpoints) {
             return;
         }
         currentEndpoints = endpoints;
+        updateNewEndpoints(endpoints);
 
         lock.lock();
         try {
