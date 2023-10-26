@@ -28,11 +28,13 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
+import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -73,19 +75,22 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final Channel channel;
     private final SocketAddress remoteAddress;
     private final Promise<Channel> sessionPromise;
-    private final ScheduledFuture<?> sessionTimeoutFuture;
+    private final int connectionTimeoutMillis;
     private final SessionProtocol desiredProtocol;
     private final SerializationFormat serializationFormat;
     private final PoolKey poolKey;
     private final HttpClientFactory clientFactory;
 
     @Nullable
+    private ScheduledFuture<?> sessionTimeoutFuture;
+    @Nullable
     private SocketAddress proxyDestinationAddress;
 
     /**
      * Whether a new request can acquire this channel from {@link HttpChannelPool}.
      */
-    private volatile boolean isAcquirable;
+    @Nullable
+    private volatile Boolean isAcquirable;
 
     /**
      * The current negotiated {@link SessionProtocol}.
@@ -116,19 +121,45 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Nullable
     private SessionProtocol retryProtocol;
 
+    /**
+     * {@code true} if an {@link Http2Settings} has been received from the remote endpoint.
+     */
+    private boolean isSettingsFrameReceived;
+    // Note: This field never becomes false once it becomes true.
+    private boolean channelActivated;
+
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
-                       Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
+                       Promise<Channel> sessionPromise, int connectionTimeoutMillis,
                        SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
                        PoolKey poolKey, HttpClientFactory clientFactory) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
-        this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
+        this.connectionTimeoutMillis = connectionTimeoutMillis;
         this.desiredProtocol = desiredProtocol;
         this.serializationFormat = serializationFormat;
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
+
+        if (poolKey.proxyConfig == ProxyConfig.direct()) {
+            scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
+        } else {
+            // A session timeout for a proxied connection may be scheduled when ProxyConnectionEvent is
+            // received.
+        }
+    }
+
+    private void scheduleSessionTimeout(Channel channel, Promise<Channel> sessionPromise,
+                                        int connectionTimeoutMillis, SessionProtocol desiredProtocol) {
+        assert sessionTimeoutFuture == null : "sessionTimeoutFuture is scheduled already.";
+        sessionTimeoutFuture = channel.eventLoop().schedule(() -> {
+            if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
+                    desiredProtocol,
+                    "connection established, but session creation timed out: " + channel))) {
+                channel.close();
+            }
+        }, connectionTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -289,7 +320,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean isAcquirable(KeepAliveHandler keepAliveHandler) {
-        if (!isAcquirable) {
+        final Boolean isAcquirable = this.isAcquirable;
+        if (isAcquirable == null || !isAcquirable) {
             return false;
         }
         return !keepAliveHandler.needsDisconnection();
@@ -297,19 +329,27 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void deactivate() {
-        if (isAcquirable) {
-            isAcquirable = false;
-        }
+        isAcquirable = false;
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        isAcquirable = channel.isActive();
+        channelActivated = channel.isActive();
+        if (isAcquirable == null) {
+            isAcquirable = channelActivated;
+        }
+        tryCompleteSessionPromise(ctx);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        isAcquirable = true;
+        channelActivated = true;
+        // deactivate() may be called before channelActive() event if the first request contains
+        // "connection:close" or triggers initiateConnectionShutdown().
+        if (isAcquirable == null) {
+            isAcquirable = true;
+        }
+        tryCompleteSessionPromise(ctx);
     }
 
     @Override
@@ -323,6 +363,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             } else {
                 maxUnfinishedResponses = Integer.MAX_VALUE;
             }
+            isSettingsFrameReceived = true;
+            tryCompleteSessionPromise(ctx);
             return;
         }
 
@@ -345,8 +387,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (evt instanceof SessionProtocol) {
             assert protocol == null;
             assert responseDecoder == null;
-
-            sessionTimeoutFuture.cancel(false);
 
             // Set the current protocol and its associated WaitsHolder implementation.
             final SessionProtocol protocol = (SessionProtocol) evt;
@@ -383,21 +423,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT) {
-                if (proxyDestinationAddress != null) {
-                    // ProxyConnectionEvent was already triggered.
-                    tryCompleteSessionPromise(ctx);
-                }
-            } else {
-                tryCompleteSessionPromise(ctx);
-            }
+            tryCompleteSessionPromise(ctx);
             return;
         }
 
         if (evt instanceof SessionProtocolNegotiationException ||
             evt instanceof ProxyConnectException) {
-            sessionTimeoutFuture.cancel(false);
-            sessionPromise.tryFailure((Throwable) evt);
+            tryFailSessionPromise((Throwable) evt);
             ctx.close();
             return;
         }
@@ -414,8 +446,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                     pendingException.addSuppressed(handshakeException);
                     handshakeException = pendingException;
                 }
-                sessionTimeoutFuture.cancel(false);
-                sessionPromise.tryFailure(handshakeException);
+                tryFailSessionPromise(handshakeException);
                 ctx.close();
             }
             return;
@@ -429,9 +460,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
         if (evt instanceof ProxyConnectionEvent) {
             proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
-            if (protocol != null) {
-                // SessionProtocol event was already triggered.
-                tryCompleteSessionPromise(ctx);
+            if (!tryCompleteSessionPromise(ctx)) {
+                // A session has not been created yet. Additional handshakes will be done by HTTP/1 or HTTP/2.
+                assert sessionTimeoutFuture == null;
+                scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
             }
             return;
         }
@@ -439,10 +471,43 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         logger.warn("{} Unexpected user event: {}", channel, evt);
     }
 
-    private void tryCompleteSessionPromise(ChannelHandlerContext ctx) {
-        if (!sessionPromise.trySuccess(channel)) {
-            // Session creation has been failed already; close the connection.
+    /**
+     * Tries to complete the {@link #sessionPromise} if the session is ready to serve.
+     *
+     * @return {@code true} if the {@link #sessionPromise} has been completed successfully or exceptionally.
+     *         {@code false} if the {@link #sessionPromise} is still incomplete.
+     */
+    private boolean tryCompleteSessionPromise(ChannelHandlerContext ctx) {
+        if (protocol == null || !channelActivated) {
+            return false;
+        }
+        if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT && proxyDestinationAddress == null) {
+            // ProxyConnectionEvent is necessary for a proxied connection.
+            return false;
+        }
+        if (protocol.isExplicitHttp2() && !isSettingsFrameReceived) {
+            // Http2Settings should be received for HTTP/2.
+            return false;
+        }
+
+        if (sessionTimeoutFuture != null) {
+            sessionTimeoutFuture.cancel(false);
+        }
+        if (sessionPromise.trySuccess(channel) || sessionPromise.isSuccess()) {
+            // The session is created successfully or has already been created.
+        } else {
+            // The session creation has been failed already; close the connection.
             ctx.close();
+        }
+        return true;
+    }
+
+    private void tryFailSessionPromise(Throwable cause) {
+        if (sessionTimeoutFuture != null) {
+            sessionTimeoutFuture.cancel(false);
+        }
+        if (!sessionPromise.isDone()) {
+            sessionPromise.tryFailure(cause);
         }
     }
 
@@ -453,7 +518,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         // Protocol upgrade has failed, but needs to retry.
         if (retryProtocol != null) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
-            sessionTimeoutFuture.cancel(false);
+            if (sessionTimeoutFuture != null) {
+                sessionTimeoutFuture.cancel(false);
+            }
             if (proxyDestinationAddress != null) {
                 channelPool.connect(proxyDestinationAddress, retryProtocol, serializationFormat,
                                     poolKey, sessionPromise);
@@ -473,11 +540,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
             // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
             // even before the session protocol negotiation is done.
-            sessionTimeoutFuture.cancel(false);
-            if (!sessionPromise.isDone()) {
-                sessionPromise.tryFailure(pendingException != null ? pendingException
-                                                                   : newClosedSessionException(ctx));
-            }
+            tryFailSessionPromise(pendingException != null ? pendingException
+                                                           : newClosedSessionException(ctx));
         }
     }
 
@@ -487,7 +551,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
             final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
             channelPool.maybeHandleProxyFailure(protocol, poolKey, wrapped);
-            sessionPromise.tryFailure(wrapped);
+            tryFailSessionPromise(wrapped);
             return;
         }
         setPendingException(ctx, new ClosedSessionException(cause));
