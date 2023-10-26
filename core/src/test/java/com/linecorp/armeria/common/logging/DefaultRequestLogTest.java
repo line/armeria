@@ -117,6 +117,7 @@ class DefaultRequestLogTest {
     void endResponseSuccess() {
         log.endResponse();
         assertThat(log.responseDurationNanos()).isZero();
+        assertThat(log.requestReceivedDurationNanos()).isNotZero();
         assertThat(log.responseCause()).isNull();
     }
 
@@ -125,6 +126,7 @@ class DefaultRequestLogTest {
         final Throwable error = new Throwable("response failed");
         log.endResponse(error);
         assertThat(log.responseDurationNanos()).isZero();
+        assertThat(log.requestReceivedDurationNanos()).isNotZero();
         assertThat(log.responseCause()).isSameAs(error);
     }
 

@@ -441,7 +441,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
     }
 
     @Override
-    public final void close(Throwable cause) {
+    public void close(Throwable cause) {
         requireNonNull(cause, "cause");
         if (cause instanceof CancelledSubscriptionException) {
             throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
