@@ -18,13 +18,14 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
 
@@ -34,18 +35,30 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
 public abstract class AbstractListenable<T> implements Listenable<T> {
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<AbstractListenable, Set> listenersUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractListenable.class, Set.class, "listeners");
+    private static final Consumer[] EMPTY_LISTENERS = new Consumer[0];
 
-    // Updated via updateListenersUpdater
-    private volatile Set<Consumer<? super T>> listeners = ImmutableSet.of();
+    @GuardedBy("reentrantLock")
+    private final Set<Consumer<? super T>> updateListeners =
+            new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
+
+    private final ReentrantLock reentrantLock = new ReentrantShortLock();
 
     /**
      * Notify the new value changes to the listeners added via {@link #addListener(Consumer)}.
      */
     protected final void notifyListeners(T latestValue) {
-        final Set<Consumer<? super T>> listeners = this.listeners;
-        listeners.forEach(listener -> listener.accept(latestValue));
+        final Consumer<? super T>[] updateListeners;
+        reentrantLock.lock();
+        try {
+            //noinspection unchecked
+            updateListeners = this.updateListeners.toArray((Consumer<? super T>[]) EMPTY_LISTENERS);
+        } finally {
+            reentrantLock.unlock();
+        }
+
+        for (Consumer<? super T> listener : updateListeners) {
+            listener.accept(latestValue);
+        }
     }
 
     /**
@@ -72,18 +85,16 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
      */
     public final void addListener(Consumer<? super T> listener, boolean notifyLatestValue) {
         requireNonNull(listener, "listener");
-        for (;;) {
-            final Set<Consumer<? super T>> listeners = this.listeners;
-            final Set<Consumer<? super T>> newListeners = newIdentitySet(listeners);
-            newListeners.add(listener);
-            if (listenersUpdater.compareAndSet(this, listeners, newListeners)) {
-                if (notifyLatestValue) {
-                    final T latest = latestValue();
-                    if (latest != null) {
-                        listener.accept(latest);
-                    }
-                }
-                break;
+        reentrantLock.lock();
+        try {
+            updateListeners.add(listener);
+        } finally {
+            reentrantLock.unlock();
+        }
+        if (notifyLatestValue) {
+            final T latest = latestValue();
+            if (latest != null) {
+                listener.accept(latest);
             }
         }
     }
@@ -91,21 +102,11 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     @Override
     public final void removeListener(Consumer<?> listener) {
         requireNonNull(listener, "listener");
-        for (;;) {
-            final Set<Consumer<? super T>> listeners = this.listeners;
-            final Set<Consumer<? super T>> newListeners = newIdentitySet(listeners);
-            newListeners.remove(listener);
-            if (listenersUpdater.compareAndSet(this, listeners, newListeners)) {
-                break;
-            }
-        }
-    }
-
-    private Set<Consumer<? super T>> newIdentitySet(Set<Consumer<? super T>> listeners) {
-        if (listeners.isEmpty()) {
-            return new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
-        } else {
-            return new ObjectLinkedOpenCustomHashSet<>(listeners, IdentityHashStrategy.of());
+        reentrantLock.lock();
+        try {
+            updateListeners.remove(listener);
+        } finally {
+            reentrantLock.unlock();
         }
     }
 }

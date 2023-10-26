@@ -18,7 +18,9 @@ package com.linecorp.armeria.client.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -88,6 +90,26 @@ class DynamicEndpointGroupTest {
 
         group.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111)));
         assertThat(invoked).hasValue(2);
+    }
+
+    @Test
+    void removeDuringNotification() {
+        final DynamicEndpointGroup group = new DynamicEndpointGroup();
+        group.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111)));
+
+        final AtomicInteger invoked = new AtomicInteger();
+        class RemovableListener implements Consumer<List<Endpoint>> {
+            @Override
+            public void accept(List<Endpoint> endpoints) {
+                invoked.incrementAndGet();
+                group.removeListener(this);
+            }
+        };
+        group.addListener(new RemovableListener(), true);
+        assertThat(invoked).hasValue(1);
+        group.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 2222)));
+        // Make sure the listener is correctly removed.
+        assertThat(invoked).hasValue(1);
     }
 
     @Test

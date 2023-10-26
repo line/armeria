@@ -62,7 +62,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        public void updateNewEndpoints(List<Endpoint> endpoints) {
+        protected void updateNewEndpoints(List<Endpoint> endpoints) {
             final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
             if (endpointsAndWeights == null || endpointsAndWeights.endpoints != endpoints) {
                 this.endpointsAndWeights = new EndpointsAndWeights(endpoints);

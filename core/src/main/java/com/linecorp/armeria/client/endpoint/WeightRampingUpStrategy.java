@@ -124,7 +124,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         private final EventExecutor executor;
         private volatile WeightedRandomDistributionEndpointSelector endpointSelector = EMPTY_SELECTOR;
 
-        private List<Endpoint> endpointsFinishedRampingUp = new ArrayList<>();
+        private final List<Endpoint> endpointsFinishedRampingUp = new ArrayList<>();
 
         @VisibleForTesting
         final Deque<EndpointsRampingUpEntry> endpointsRampingUp = new ArrayDeque<>();
