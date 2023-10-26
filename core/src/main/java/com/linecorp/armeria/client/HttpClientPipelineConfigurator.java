@@ -23,6 +23,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.internal.client.PendingExceptionUtil.setPendingException;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -176,7 +177,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise connectionPromise) throws Exception {
 
         // Remember the requested remote address for later use.
         this.remoteAddress = remoteAddress;
@@ -193,10 +194,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (isHttps()) {
                 configureAsHttps(ch, remoteAddress);
             } else {
-                configureAsHttp(ch);
+                configureAsHttp(ch, connectionPromise);
             }
         } catch (Throwable t) {
-            promise.tryFailure(t);
+            connectionPromise.tryFailure(t);
             ctx.close();
             return;
         } finally {
@@ -205,7 +206,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         }
 
-        ctx.connect(remoteAddress, localAddress, promise);
+        ctx.connect(remoteAddress, localAddress, connectionPromise);
     }
 
     /**
@@ -299,13 +300,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                             "Possible reasons: no cipher suites in common, unsupported TLS version, etc. " +
                             "(TLS version: " + tlsVersion + ", cipher suites: " + sslCtx.cipherSuites() + ')',
                             cause);
-                    HttpSessionHandler.setPendingException(ctx, maybeHandshakeException);
+                    setPendingException(ctx, maybeHandshakeException);
                     return;
                 }
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
-                    HttpSessionHandler.setPendingException(ctx, cause.getCause());
+                    setPendingException(ctx, cause.getCause());
                     return;
                 }
 
@@ -377,7 +378,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     // refer https://http2.github.io/http2-spec/#discover-http
-    private void configureAsHttp(Channel ch) {
+    private void configureAsHttp(Channel ch, ChannelPromise connectionPromise) {
         final ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast(TrafficLoggingHandler.CLIENT);
 
@@ -390,14 +391,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     clientFactory.http1MaxChunkSize()));
 
             // NB: We do not call finishSuccessfully() immediately here
-            //     because it triggers a userEvent that must be received by HttpSessionHandler,
-            //     which is only added after the connection attempt is successful.
-            pipeline.addLast(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                    ctx.pipeline().remove(this);
+            //     because HttpSessionHandler is added when connectionPromise completes.
+            connectionPromise.addListener(future -> {
+                if (future.isSuccess()) {
                     finishSuccessfully(pipeline, H1C);
-                    ctx.fireChannelActive();
                 }
             });
         }
@@ -418,12 +415,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         }
 
-        // Do not call fireUserEventTriggered right away because it triggers completing a session promise
-        // in HttpSessionHandler that will make the client to send a request.
-        // However, the HTTP/2 settings frame from the server may not be handled yet at this point.
-        // We need to put the task in the queue so that the promise is complete after the settings
-        // frame is handled.
-        pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
+        pipeline.fireUserEventTriggered(protocol);
     }
 
     private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
