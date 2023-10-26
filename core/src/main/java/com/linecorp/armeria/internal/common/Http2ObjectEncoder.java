@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedStreamException;
+
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -71,7 +72,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
             // Can't write to an outdated (closed) stream.
             data.close();
             return data.isEmpty() ? ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
-                                  : newFailedFuture(ClosedStreamException.get());
+                                  : newFailedFuture(newClosedStreamException(ctx));
         }
 
         // Cannot start a new stream with a DATA frame. It must start with a HEADERS frame.

@@ -19,6 +19,9 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
+import static com.linecorp.armeria.internal.client.PendingExceptionUtil.getPendingException;
+import static com.linecorp.armeria.internal.client.PendingExceptionUtil.setPendingException;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -60,16 +63,12 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyConnectionEvent;
 import io.netty.handler.ssl.SslCompletionEvent;
-import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
 final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpSessionHandler.class);
-
-    private static final AttributeKey<Throwable> PENDING_EXCEPTION =
-            AttributeKey.valueOf(HttpSessionHandler.class, "PENDING_EXCEPTION");
 
     private final HttpChannelPool channelPool;
     private final Channel channel;
@@ -533,7 +532,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final HttpResponseDecoder responseDecoder = this.responseDecoder;
             final Throwable pendingException;
             if (responseDecoder != null && responseDecoder.hasUnfinishedResponses()) {
-                pendingException = maybeGetPendingException(ctx);
+                pendingException = newClosedSessionException(ctx);
                 responseDecoder.failUnfinishedResponses(pendingException);
             } else {
                 pendingException = null;
@@ -542,7 +541,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
             // even before the session protocol negotiation is done.
             tryFailSessionPromise(pendingException != null ? pendingException
-                                                           : maybeGetPendingException(ctx));
+                                                           : newClosedSessionException(ctx));
         }
     }
 
@@ -560,30 +559,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             ctx.close();
         } else {
             // Netty will close the connection automatically on an IOException.
-        }
-    }
-
-    private static Throwable maybeGetPendingException(ChannelHandlerContext ctx) {
-        final Throwable pendingException = getPendingException(ctx);
-        if (pendingException != null) {
-            return pendingException;
-        }
-        return ClosedSessionException.get();
-    }
-
-    @Nullable
-    private static Throwable getPendingException(ChannelHandlerContext ctx) {
-        if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
-            return ctx.channel().attr(PENDING_EXCEPTION).get();
-        }
-
-        return null;
-    }
-
-    static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {
-        final Throwable previousCause = ctx.channel().attr(PENDING_EXCEPTION).setIfAbsent(cause);
-        if (previousCause != null && logger.isWarnEnabled()) {
-            logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);
         }
     }
 }
