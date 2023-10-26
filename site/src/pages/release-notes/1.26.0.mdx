@@ -7,12 +7,13 @@ date: 2023-10-23
 - **Context Path Support**: You can now set services/decorators under a context path fluently. #3591 #4802 #5037 #5157 #5260
   ```java
   Server.builder()
+        .baseContextPath("/api")
         .contextPath("/v1", "/v2")
-        .service(myService) // served under "/v1" and "/v2"
+        .service(myService) // served under "/api/v1" and "/api/v2"
         .and()
         .virtualHost("foo.com")
         .contextPath("/v3")
-        .service(myService) // served by virtual host "foo.com" under "/v3"
+        .service(myService) // served by virtual host "foo.com" under "/api/v3"
         .build();
   ```
   - You can also set the context path via Spring property.
@@ -24,7 +25,7 @@ date: 2023-10-23
   <type://ContextAwareExecutor#asCoroutineDispatcher()>. #5171
   ```kotlin
   withContext(ctx.eventLoop().asCoroutineDispatcher()) {
-    assert RequestContext.current() == ctx
+    assert(RequestContext.current() == ctx)
     ...
   }
   ```
@@ -42,7 +43,7 @@ date: 2023-10-23
   class MyGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
     @Override
     public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
-      if (unauthenticatedExcpetion(cause)) {
+      if (unauthenticatedException(cause)) {
         return Status.UNAUTHENTICATED;
       }
       ...
@@ -138,8 +139,6 @@ date: 2023-10-23
   a `CompletationStage`. #5190
 - A new HTTP/2 connection is created and correctly reused from the pending requests when the number of requests
   exceeds max concurrent streams. #5173
-- You no longer see a false negative <type://EndpointSelectionTimeoutException> when
-  <type://EndpointSelectionStrategy#weightedRoundRobin()> is used with a <type://DynamicEndpointGroup>. #5163
 - `NullPointerException` isn't raised anymore when a client establishes an HTTP session. #5162
 - Pending exceptions that are raised while sending requests or receiving responses are now correctly
   propagated to users. #5154
@@ -149,9 +148,11 @@ date: 2023-10-23
 
 ## 🏚️ Deprecations
 
-- <type://GrpcStatusFunction> is deprecated. Use <type://GrpcExceptionHandlerFunction> instead. #5046
+- <type://GrpcStatusFunction> is deprecated. Use <type://GrpcExceptionHandlerFunction> instead. #5046 #5267
   - `exceptionMapping` methods on <type://GrpcServiceBuilder> are deprecated.
     Use <type://GrpcExceptionHandlerFunctionBuilder> instead.
+  - <type://GoogleGrpcStatusFunction> is also deprecated. Use <type://GoogleGrpcExceptionHandlerFunction>
+    instead.
 
 ## ☢️ Breaking changes
 
