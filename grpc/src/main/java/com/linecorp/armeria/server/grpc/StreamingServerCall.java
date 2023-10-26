@@ -24,7 +24,10 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -59,6 +62,8 @@ import io.netty.buffer.ByteBufAllocator;
  */
 final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         implements Subscriber<DeframedMessage>, TransportStatusListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(StreamingServerCall.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<StreamingServerCall> pendingMessagesUpdater =
@@ -175,7 +180,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                 maybeCancel();
             }
         } catch (Throwable e) {
-            close(e);
+            close(e, true);
         }
     }
 
@@ -185,7 +190,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void doClose(Status status, Metadata metadata, boolean completed) {
+    public void doClose(Status status, Metadata metadata) {
         final boolean trailersOnly;
         if (firstResponse != null) {
             // ResponseHeaders was written successfully.
@@ -216,12 +221,20 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         // Set responseContent before closing stream to use responseCause in error handling
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
+        final HttpObject trailers;
         try {
-            if (res.tryWrite(responseTrailers(ctx, status, metadata, trailersOnly))) {
-                res.close();
-            }
-        } finally {
-            closeListener(statusAndMetadata, completed, false);
+            trailers = responseTrailers(ctx, status, metadata, trailersOnly);
+        } catch (Exception e) {
+            logger.warn("An unexpected exception occurred while serializing gRPC trailers for ctx: {}," +
+                        " status: {}, metadata: {}", ctx, status, metadata, e);
+            closeListener(statusAndMetadata, false, false);
+            return;
+        }
+        if (res.tryWrite(trailers)) {
+            res.close();
+            closeListener(statusAndMetadata, true, false);
+        } else {
+            closeListener(statusAndMetadata, false, false);
         }
     }
 
@@ -254,7 +267,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     @Override
     public void onError(Throwable t) {
         if (!isCloseCalled() && !(t instanceof AbortedStreamException)) {
-            close(t);
+            close(t, true);
         }
     }
 

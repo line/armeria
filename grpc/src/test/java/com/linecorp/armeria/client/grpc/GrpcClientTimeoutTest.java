@@ -143,6 +143,7 @@ class GrpcClientTimeoutTest {
         Thread.sleep(3000);
 
         verify(appender, atLeastOnce()).doAppend(loggingEventCaptor.capture());
+        System.out.println(loggingEventCaptor.getAllValues());
         assertThat(loggingEventCaptor.getAllValues()).noneMatch(event -> {
             return event.getLevel() == Level.WARN &&
                    event.getThrowableProxy() != null &&

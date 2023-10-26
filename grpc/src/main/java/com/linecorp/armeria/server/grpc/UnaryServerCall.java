@@ -140,7 +140,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     }
 
     @Override
-    public void doClose(Status status, Metadata metadata, boolean completed) {
+    public void doClose(Status status, Metadata metadata) {
         final ResponseHeaders responseHeaders = responseHeaders();
         final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         final HttpResponse response;
@@ -173,10 +173,10 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             // Set responseContent before closing stream to use responseCause in error handling
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, responseMessage), null);
             resFuture.complete(response);
+            closeListener(statusAndMetadata, true, false);
         } catch (Exception ex) {
             resFuture.completeExceptionally(ex);
-        } finally {
-            closeListener(statusAndMetadata, completed, false);
+            closeListener(statusAndMetadata, false, false);
         }
     }
 

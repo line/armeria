@@ -209,27 +209,50 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     public final void close(Throwable exception) {
+        close(exception, false);
+    }
+
+    /**
+     * This method exists to match the behavior with upstream grpc-java.
+     * The basic mechanism of upstream is:
+     * - If an exception is returned by the user explicitly and a header is written,
+     *   then invoke the listener with onComplete.
+     * - For other unexpected cases, invoke the listener depending on status.isOk().
+     * The parameter {@param preCloseListener} mimics this behavior. If {@param preCloseListener}
+     * is {@code true}, then an unexpected case has been encountered and the listener will be
+     * invoked preemptively. Note that the listener is guarded by {@link #listenerClosed}
+     * so that it isn't invoked more than once.
+     * Otherwise,
+     * - onComplete will be invoked if write is eventually successful.
+     * - onCancel will be invoked if write is eventually failed.
+     * @param preCloseListener closes the listener preemptively.
+     */
+    public final void close(Throwable exception, boolean preCloseListener) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        close(GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata), metadata, exception);
+        final Status status = GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata);
+        close(status, metadata, exception, preCloseListener);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
-        close(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx, status, metadata), metadata, null);
+        close(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx, status, metadata),
+              metadata, null, false);
     }
 
-    private void close(Status status, Metadata metadata, @Nullable Throwable exception) {
+    private void close(Status status, Metadata metadata, @Nullable Throwable exception,
+                       boolean preCloseListener) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(status, metadata, exception);
+            doClose(status, metadata, exception, preCloseListener);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(status, metadata, exception);
+                doClose(status, metadata, exception, preCloseListener);
             });
         }
     }
 
-    private void doClose(Status status, Metadata metadata, @Nullable Throwable exception) {
+    private void doClose(Status status, Metadata metadata, @Nullable Throwable exception,
+                         boolean preCloseListener) {
         maybeLogFailedRequestContent(exception);
         if (isCancelled()) {
             // No need to write anything to client if cancelled already.
@@ -246,21 +269,24 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                    status, exception);
         closeCalled = true;
 
-        boolean completed = true;
-        if (status.getCode() == Code.CANCELLED && status.getCause() instanceof RequestTimeoutException) {
+        if (preCloseListener) {
+            // call close listener first
+            closeListener(status, metadata, status.isOk(), false);
+        } else if (status.getCode() == Code.CANCELLED && status.getCause() instanceof RequestTimeoutException) {
             // A call was finished by a timeout scheduler, not a user.
-            completed = false;
+            closeListener(status, metadata, false, false);
         } else if (status.isOk() && method.getType().serverSendsOneMessage() && firstResponse() == null) {
             // A call that should send a message incompletely finished.
+            // Preemptively call closeListener and then write the response.
             final String description = "Completed without a response";
             logger.warn("{} {} status: {}, metadata: {}", ctx, description, status, metadata);
             status = Status.CANCELLED.withDescription(description);
-            completed = false;
+            closeListener(status, metadata, false, false);
         }
-        doClose(status, metadata, completed);
+        doClose(status, metadata);
     }
 
-    protected abstract void doClose(Status status, Metadata metadata, boolean completed);
+    protected abstract void doClose(Status status, Metadata metadata);
 
     protected final void closeListener(Status newStatus, Metadata metadata, boolean completed,
                                        boolean setResponseContent) {
@@ -313,8 +339,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     public void onRequestMessage(DeframedMessage message, boolean endOfStream) {
+        final I request;
         try {
-            final I request;
             final ByteBuf buf = message.buf();
 
             boolean success = false;
@@ -346,14 +372,15 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
                 GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
             }
-
-            if (blockingExecutor != null) {
-                blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
-            } else {
-                invokeOnMessage(request, endOfStream);
-            }
         } catch (Throwable cause) {
-            close(cause);
+            close(cause, true);
+            return;
+        }
+
+        if (blockingExecutor != null) {
+            blockingExecutor.execute(() -> invokeOnMessage(request, endOfStream));
+        } else {
+            invokeOnMessage(request, endOfStream);
         }
     }
 
@@ -429,7 +456,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected void onError(Throwable t) {
         if (!closeCalled && !(t instanceof AbortedStreamException)) {
-            close(t);
+            close(t, true);
         }
     }
 
