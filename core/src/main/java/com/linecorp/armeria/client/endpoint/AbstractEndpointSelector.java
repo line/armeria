@@ -53,6 +53,8 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
     @GuardedBy("lock")
     private final Set<ListeningFuture> pendingFutures =
             new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
+    @Nullable
+    private List<Endpoint> currentEndpoints;
 
     /**
      * Creates a new instance that selects an {@link Endpoint} from the specified {@link EndpointGroup}.
@@ -133,8 +135,8 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
         endpointGroup.whenReady().thenRun(() -> {
             final List<Endpoint> endpoints = endpointGroup.endpoints();
             accept(endpoints);
-            endpointGroup.addListener(this);
         });
+        endpointGroup.addListener(this);
     }
 
     /**
@@ -145,6 +147,10 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
 
     @Override
     public final void accept(List<Endpoint> endpoints) {
+        if (currentEndpoints == endpoints) {
+            return;
+        }
+        currentEndpoints = endpoints;
         updateNewEndpoints(endpoints);
 
         lock.lock();
