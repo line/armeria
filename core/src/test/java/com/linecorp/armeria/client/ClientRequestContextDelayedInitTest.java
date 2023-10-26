@@ -100,7 +100,8 @@ class ClientRequestContextDelayedInitTest {
                     }
                     return null;
                 }
-            };
+            }
+
             return new TestEndpointSelector(endpointGroup);
         });
         final WebClient client = WebClient.of(SessionProtocol.H2C, group);

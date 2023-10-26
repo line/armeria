@@ -104,7 +104,8 @@ class DynamicEndpointGroupTest {
                 invoked.incrementAndGet();
                 group.removeListener(this);
             }
-        };
+        }
+
         group.addListener(new RemovableListener(), true);
         assertThat(invoked).hasValue(1);
         group.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 2222)));
