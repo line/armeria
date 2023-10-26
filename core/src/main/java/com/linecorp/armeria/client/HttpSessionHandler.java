@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
-import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -143,7 +142,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
 
-        if (poolKey.proxyConfig == ProxyConfig.direct()) {
+        if (!poolKey.proxyConfig.proxyType().isForwardProxy()) {
             scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
         } else {
             // A session timeout for a proxied connection may be scheduled when ProxyConnectionEvent is
@@ -463,8 +462,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
             if (!tryCompleteSessionPromise(ctx)) {
                 // A session has not been created yet. Additional handshakes will be done by HTTP/1 or HTTP/2.
-                assert sessionTimeoutFuture == null;
-                scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
+                if (poolKey.proxyConfig.proxyType().isForwardProxy()) {
+                    scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
+                }
             }
             return;
         }
