@@ -76,6 +76,7 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                         ctx.close();
                     }
                 });
+                ctx.flush();
             } catch (Exception e) {
                 ctx.pipeline().fireUserEventTriggered(wrapException(e));
                 ctx.close();
