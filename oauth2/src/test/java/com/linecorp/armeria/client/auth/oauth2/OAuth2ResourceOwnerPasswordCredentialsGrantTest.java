@@ -163,7 +163,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
 
             assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .getCause().isInstanceOf(InvalidClientException.class);
+                    .cause().isInstanceOf(InvalidClientException.class);
         }
     }
 
@@ -183,7 +183,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
 
             assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .getCause().isInstanceOf(InvalidClientException.class);
+                    .cause().isInstanceOf(InvalidClientException.class);
         }
     }
 }

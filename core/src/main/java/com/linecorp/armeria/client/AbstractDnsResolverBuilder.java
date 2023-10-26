@@ -47,6 +47,7 @@ import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
 import io.netty.resolver.dns.NoopAuthoritativeDnsServerCache;
 import io.netty.resolver.dns.NoopDnsCache;
 import io.netty.resolver.dns.NoopDnsCnameCache;
@@ -94,7 +95,11 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets if this resolver should generate detailed trace information in exception messages so that
      * it is easier to understand the cause of resolution failure. This flag is enabled by default.
+     *
+     * @deprecated Use {@link #dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory)} with
+     *             {@link LoggingDnsQueryLifeCycleObserverFactory}.
      */
+    @Deprecated
     public AbstractDnsResolverBuilder traceEnabled(boolean traceEnabled) {
         this.traceEnabled = traceEnabled;
         return this;

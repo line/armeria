@@ -17,6 +17,8 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
@@ -72,7 +74,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     private volatile HttpRequest req;
     @Nullable
     private volatile RpcRequest rpcReq;
-    @Nullable // Updated via `contextHookUpdater`
+    // Updated via `contextHookUpdater`
     private volatile Supplier<AutoCloseable> contextHook;
 
     /**
@@ -83,7 +85,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
             RequestId id, HttpMethod method, RequestTarget reqTarget, ExchangeType exchangeType,
             long requestAutoAbortDelayMillis,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable AttributesGetters rootAttributeMap) {
+            @Nullable AttributesGetters rootAttributeMap, Supplier<? extends AutoCloseable> contextHook) {
         assert req != null || rpcReq != null;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
@@ -102,6 +104,8 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         originalRequest = firstNonNull(req, rpcReq);
         this.req = req;
         this.rpcReq = rpcReq;
+        //noinspection unchecked
+        this.contextHook = (Supplier<AutoCloseable>) contextHook;
     }
 
     @Override
@@ -149,10 +153,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public final SessionProtocol sessionProtocol() {
         return sessionProtocol;
-    }
-
-    protected void sessionProtocol(SessionProtocol sessionProtocol) {
-        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
     }
 
     /**
@@ -271,22 +271,14 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public void hook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
+
+        if (contextHook == NOOP_CONTEXT_HOOK) {
+            return;
+        }
+
         for (;;) {
             final Supplier<? extends AutoCloseable> oldContextHook = this.contextHook;
-            final Supplier<? extends AutoCloseable> newContextHook;
-            if (oldContextHook == null) {
-                newContextHook = contextHook;
-            } else {
-                newContextHook = () -> {
-                    final AutoCloseable oldHook = oldContextHook.get();
-                    final AutoCloseable newHook = contextHook.get();
-                    return () -> {
-                        oldHook.close();
-                        newHook.close();
-                    };
-                };
-            }
-
+            final Supplier<? extends AutoCloseable> newContextHook = mergeHooks(oldContextHook, contextHook);
             if (contextHookUpdater.compareAndSet(this, oldContextHook, newContextHook)) {
                 break;
             }
@@ -294,7 +286,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     }
 
     @Override
-    @Nullable
     public Supplier<AutoCloseable> hook() {
         return contextHook;
     }

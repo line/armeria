@@ -49,9 +49,9 @@ final class EventLoopMetrics implements MeterBinder {
     /**
      * Creates an instance of {@link EventLoopMetrics}.
      */
-    EventLoopMetrics(EventLoopGroup eventLoopGroup, String name) {
+    EventLoopMetrics(EventLoopGroup eventLoopGroup, MeterIdPrefix idPrefix) {
         this.eventLoopGroup = requireNonNull(eventLoopGroup, "eventLoopGroup");
-        idPrefix = new MeterIdPrefix("armeria.netty").append(requireNonNull(name, "name"));
+        this.idPrefix = idPrefix;
     }
 
     @Override

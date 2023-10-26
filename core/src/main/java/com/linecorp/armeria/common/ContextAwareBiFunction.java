@@ -31,8 +31,8 @@ public interface ContextAwareBiFunction<T, U, R> extends BiFunction<T, U, R>, Co
      * Returns a new {@link ContextAwareBiFunction} that sets the specified {@link RequestContext}
      * before executing an underlying {@link BiFunction}.
      */
-    static <T, U, R> ContextAwareBiFunction of(RequestContext context, BiFunction<T, U, R> function) {
-        return new DefaultContextAwareBiFunction(context, function);
+    static <T, U, R> ContextAwareBiFunction<T, U, R> of(RequestContext context, BiFunction<T, U, R> function) {
+        return new DefaultContextAwareBiFunction<>(context, function);
     }
 
     /**
