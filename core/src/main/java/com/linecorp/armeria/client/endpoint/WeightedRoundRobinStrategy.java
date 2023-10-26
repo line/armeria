@@ -58,16 +58,14 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            endpointGroup.whenReady().thenAccept(unused -> maybeUpdateEndpoints(endpointGroup.endpoints()));
+            refreshNewEndpoints();
         }
 
-        private void maybeUpdateEndpoints(List<Endpoint> endpoints) {
+        @Override
+        public void updateNewEndpoints(List<Endpoint> endpoints) {
             final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
             if (endpointsAndWeights == null || endpointsAndWeights.endpoints != endpoints) {
                 this.endpointsAndWeights = new EndpointsAndWeights(endpoints);
-                if (endpointsAndWeights == null) {
-                    group().addListener(this::maybeUpdateEndpoints);
-                }
             }
         }
 

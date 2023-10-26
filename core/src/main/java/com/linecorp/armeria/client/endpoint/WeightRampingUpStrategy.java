@@ -124,37 +124,34 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         private final EventExecutor executor;
         private volatile WeightedRandomDistributionEndpointSelector endpointSelector = EMPTY_SELECTOR;
 
-        private final List<Endpoint> endpointsFinishedRampingUp = new ArrayList<>();
+        private List<Endpoint> endpointsFinishedRampingUp = new ArrayList<>();
 
         @VisibleForTesting
         final Deque<EndpointsRampingUpEntry> endpointsRampingUp = new ArrayDeque<>();
 
         @Nullable
         private Set<EndpointAndStep> unhandledNewEndpoints;
-        @Nullable
-        private List<Endpoint> currentEndpoints;
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
             this.executor = executor;
-
-            endpointGroup.whenReady().thenAccept(
-                    unused -> initializeEndpointSelector(endpointGroup.endpoints()));
+            refreshNewEndpoints();
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
             }
         }
 
-        private void initializeEndpointSelector(List<Endpoint> endpoints) {
-            currentEndpoints = endpoints;
-            final List<Endpoint> dedupEndpoints =
-                    new ArrayList<>(deduplicateEndpoints(endpoints).values());
-            endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
-            endpointsFinishedRampingUp.addAll(dedupEndpoints);
-            group().addListener(newEndpoints -> {
+        @Override
+        protected void updateNewEndpoints(List<Endpoint> endpoints) {
+            if (endpointSelector == EMPTY_SELECTOR) {
+                final List<Endpoint> dedupEndpoints =
+                        new ArrayList<>(deduplicateEndpoints(endpoints).values());
+                endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
+                endpointsFinishedRampingUp.addAll(dedupEndpoints);
+            } else {
                 // Use the executor so the order of endpoints change is guaranteed.
-                executor.execute(() -> updateEndpoints(newEndpoints));
-            });
+                executor.execute(() -> updateEndpoints(endpoints));
+            }
         }
 
         /**
@@ -187,10 +184,6 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
         // Only executed by the executor.
         private void updateEndpoints(List<Endpoint> newEndpoints) {
-            if (currentEndpoints == newEndpoints) {
-                return;
-            }
-            currentEndpoints = newEndpoints;
             unhandledNewEndpoints = null;
             final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
             if (rampingUpTaskWindowNanos > 0) {

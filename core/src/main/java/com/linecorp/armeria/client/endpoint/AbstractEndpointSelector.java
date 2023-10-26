@@ -49,13 +49,14 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
     private final ReentrantShortLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
     private final Set<ListeningFuture> pendingFutures = Sets.newIdentityHashSet();
+    @Nullable
+    private List<Endpoint> currentEndpoints;
 
     /**
      * Creates a new instance that selects an {@link Endpoint} from the specified {@link EndpointGroup}.
      */
     protected AbstractEndpointSelector(EndpointGroup endpointGroup) {
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
-        endpointGroup.addListener(this);
     }
 
     /**
@@ -121,8 +122,32 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
         return listeningFuture;
     }
 
+    /**
+     * Starts listening to the new endpoints emitted by the {@link EndpointGroup} via
+     * {@link #updateNewEndpoints(List)}.
+     *
+     */
+    protected final void refreshNewEndpoints() {
+        endpointGroup.whenReady().thenRun(() -> {
+            final List<Endpoint> endpoints = endpointGroup.endpoints();
+            accept(endpoints);
+        });
+        endpointGroup.addListener(this);
+    }
+
+    /**
+     * Invoked when the {@link EndpointGroup} has been updated.
+     */
+    protected void updateNewEndpoints(List<Endpoint> endpoints) {}
+
     @Override
-    public void accept(List<Endpoint> endpoints) {
+    public final void accept(List<Endpoint> endpoints) {
+        updateNewEndpoints(endpoints);
+        if (currentEndpoints == endpoints) {
+            return;
+        }
+        currentEndpoints = endpoints;
+
         lock.lock();
         try {
             // Use iterator to avoid concurrent modification. `future.accept()` may remove the future.
