@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
@@ -128,8 +129,8 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
     /**
      * Starts listening to the new endpoints emitted by the {@link EndpointGroup} via
      * {@link #updateNewEndpoints(List)}.
-     *
      */
+    @UnstableApi
     protected final void refreshNewEndpoints() {
         endpointGroup.whenReady().thenRun(() -> {
             final List<Endpoint> endpoints = endpointGroup.endpoints();
@@ -141,6 +142,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
     /**
      * Invoked when the {@link EndpointGroup} has been updated.
      */
+    @UnstableApi
     protected void updateNewEndpoints(List<Endpoint> endpoints) {}
 
     @Override

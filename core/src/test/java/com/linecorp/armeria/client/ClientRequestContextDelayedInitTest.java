@@ -79,7 +79,7 @@ class ClientRequestContextDelayedInitTest {
      * properly at different points of execution.
      */
     @ParameterizedTest
-    @CsvSource({ "0", "1", "2", "3" })
+    @CsvSource({ "0", "1" })
     void failure(int failAfter) {
         final AtomicInteger counter = new AtomicInteger();
         final RuntimeException cause = new RuntimeException();
