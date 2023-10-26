@@ -127,11 +127,11 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
     }
 
     /**
-     * Starts listening to the new endpoints emitted by the {@link EndpointGroup} via
-     * {@link #updateNewEndpoints(List)}.
+     * Initialize this {@link EndpointSelector} to listen to the new endpoints emitted by the
+     * {@link EndpointGroup}. The new endpoints will be passed to {@link #updateNewEndpoints(List)}.
      */
     @UnstableApi
-    protected final void refreshNewEndpoints() {
+    final void initialize() {
         endpointGroup.whenReady().thenRun(() -> {
             final List<Endpoint> endpoints = endpointGroup.endpoints();
             accept(endpoints);

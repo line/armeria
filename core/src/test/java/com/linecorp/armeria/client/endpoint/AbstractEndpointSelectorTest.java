@@ -91,8 +91,7 @@ class AbstractEndpointSelectorTest {
     }
 
     private static EndpointSelector newSelector(EndpointGroup endpointGroup) {
-        final AbstractEndpointSelector selector = new AbstractEndpointSelector(endpointGroup) {
-
+        return new AbstractEndpointSelector(endpointGroup) {
             @Nullable
             @Override
             public Endpoint selectNow(ClientRequestContext ctx) {
@@ -100,7 +99,5 @@ class AbstractEndpointSelectorTest {
                 return endpoints.isEmpty() ? null : endpoints.get(0);
             }
         };
-        selector.refreshNewEndpoints();
-        return selector;
     }
 }

@@ -135,7 +135,6 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
             this.executor = executor;
-            refreshNewEndpoints();
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
             }

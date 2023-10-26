@@ -31,7 +31,6 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
@@ -84,25 +83,15 @@ class ClientRequestContextDelayedInitTest {
     void failure(int failAfter) {
         final AtomicInteger counter = new AtomicInteger();
         final RuntimeException cause = new RuntimeException();
-        final Group group = new Group(endpointGroup -> {
-            class TestEndpointSelector extends AbstractEndpointSelector {
-
-                protected TestEndpointSelector(EndpointGroup endpointGroup) {
-                    super(endpointGroup);
-                    refreshNewEndpoints();
+        final Group group = new Group(endpointGroup -> new AbstractEndpointSelector(endpointGroup) {
+            @Nullable
+            @Override
+            public Endpoint selectNow(ClientRequestContext ctx) {
+                if (counter.getAndIncrement() >= failAfter) {
+                    throw cause;
                 }
-
-                @Nullable
-                @Override
-                public Endpoint selectNow(ClientRequestContext ctx) {
-                    if (counter.getAndIncrement() >= failAfter) {
-                        throw cause;
-                    }
-                    return null;
-                }
+                return null;
             }
-
-            return new TestEndpointSelector(endpointGroup);
         });
         final WebClient client = WebClient.of(SessionProtocol.H2C, group);
         final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();

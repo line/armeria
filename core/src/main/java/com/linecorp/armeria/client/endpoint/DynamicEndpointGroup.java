@@ -195,6 +195,9 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
         final EndpointSelector newSelector = selectionStrategy.newSelector(this);
         if (this.selector.compareAndSet(null, newSelector)) {
+            if (newSelector instanceof AbstractEndpointSelector) {
+                ((AbstractEndpointSelector) newSelector).initialize();
+            }
             return newSelector;
         }
 
