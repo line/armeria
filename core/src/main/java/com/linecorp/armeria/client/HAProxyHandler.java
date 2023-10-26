@@ -65,17 +65,18 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                 return;
             }
             try {
-                ctx.writeAndFlush(createMessage(haProxyConfig, ctx.channel(), remoteAddress)).addListener(f0 -> {
-                    if (f0.isSuccess()) {
-                        ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
-                        final ProxyConnectionEvent event = new ProxyConnectionEvent(
-                                PROTOCOL, AUTH, proxyAddress, remoteAddress);
-                        ctx.pipeline().fireUserEventTriggered(event);
-                    } else {
-                        ctx.fireExceptionCaught(wrapException(f0.cause()));
-                        ctx.close();
-                    }
-                });
+                ctx.writeAndFlush(createMessage(haProxyConfig, ctx.channel(), remoteAddress))
+                   .addListener(f0 -> {
+                       if (f0.isSuccess()) {
+                           ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
+                           final ProxyConnectionEvent event = new ProxyConnectionEvent(
+                                   PROTOCOL, AUTH, proxyAddress, remoteAddress);
+                           ctx.pipeline().fireUserEventTriggered(event);
+                       } else {
+                           ctx.fireExceptionCaught(wrapException(f0.cause()));
+                           ctx.close();
+                       }
+                   });
             } catch (Exception e) {
                 ctx.pipeline().fireUserEventTriggered(wrapException(e));
                 ctx.close();
