@@ -144,7 +144,6 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
             for (final Iterator<ListeningFuture> it = pendingFutures.iterator(); it.hasNext();) {
                 final ListeningFuture future = it.next();
                 future.accept(null);
-                continue;
             }
         } finally {
             lock.unlock();
