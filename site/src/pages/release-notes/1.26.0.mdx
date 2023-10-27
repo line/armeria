@@ -139,6 +139,8 @@ date: 2023-10-23
   a `CompletationStage`. #5190
 - A new HTTP/2 connection is created and correctly reused from the pending requests when the number of requests
   exceeds max concurrent streams. #5173
+- You no longer see a false negative <type://EndpointSelectionTimeoutException> when
+  <type://EndpointSelectionStrategy#weightedRoundRobin()> is used with a <type://DynamicEndpointGroup>. #5163
 - `NullPointerException` isn't raised anymore when a client establishes an HTTP session. #5162
 - Pending exceptions that are raised while sending requests or receiving responses are now correctly
   propagated to users. #5154
@@ -176,7 +178,6 @@ date: 2023-10-23
 - Micrometer Tracing 1.1.4 → 1.1.6
 - Netty 4.1.96.Final → 4.1.100.Final
 - Netty io_uring 0.0.21.Final → 0.0.23.Final
-- OkHttp 4.11.0 → 4.12.0
 - Reactor 3.5.8 → 3.5.11
 - RxJava3 3.1.6 → 3.1.8
 - Sangria 4.0.1 → 4.0.2
