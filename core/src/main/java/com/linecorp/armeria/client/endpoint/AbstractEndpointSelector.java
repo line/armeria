@@ -46,7 +46,7 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
  * {@link #select(ClientRequestContext, ScheduledExecutorService)} method by listening to
  * the change events emitted by {@link EndpointGroup} specified at construction time.
  */
-public abstract class AbstractEndpointSelector implements EndpointSelector, Consumer<List<Endpoint>> {
+public abstract class AbstractEndpointSelector implements EndpointSelector {
 
     private final EndpointGroup endpointGroup;
     private final ReentrantShortLock lock = new ReentrantShortLock();
@@ -130,17 +130,11 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
      */
     @UnstableApi
     protected final void initialize() {
-        endpointGroup.addListener(this, true);
+        endpointGroup.addListener(this::refreshEndpoints, true);
     }
 
-    /**
-     * Invoked when the {@link EndpointGroup} has been updated.
-     */
-    @UnstableApi
-    protected void updateNewEndpoints(List<Endpoint> endpoints) {}
-
-    @Override
-    public final void accept(List<Endpoint> endpoints) {
+    private void refreshEndpoints(List<Endpoint> endpoints) {
+        // Allow subclasses to update the endpoints first.
         updateNewEndpoints(endpoints);
 
         lock.lock();
@@ -156,6 +150,12 @@ public abstract class AbstractEndpointSelector implements EndpointSelector, Cons
             lock.unlock();
         }
     }
+
+    /**
+     * Invoked when the {@link EndpointGroup} has been updated.
+     */
+    @UnstableApi
+    protected void updateNewEndpoints(List<Endpoint> endpoints) {}
 
     private void addPendingFuture(ListeningFuture future) {
         lock.lock();
