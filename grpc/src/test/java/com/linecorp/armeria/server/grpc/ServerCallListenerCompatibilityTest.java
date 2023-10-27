@@ -34,8 +34,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -68,8 +66,6 @@ import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 class ServerCallListenerCompatibilityTest {
 
     private static final ListenerEventCollector eventCollector = new ListenerEventCollector();
-
-    private static final Logger logger = LoggerFactory.getLogger(ServerCallListenerCompatibilityTest.class);
 
     @BeforeEach
     void setUp() {
@@ -117,7 +113,6 @@ class ServerCallListenerCompatibilityTest {
                     events = eventCollector.capture();
                 } else {
                     final List<String> newEvents = eventCollector.capture();
-                    logger.info("expected: {}, actual: {}", events, newEvents);
                     assertThat(events).describedAs(clients.get(i).toString())
                                       .isNotNull();
                     assertThat(newEvents).describedAs(clients.get(i).toString())
@@ -213,7 +208,6 @@ class ServerCallListenerCompatibilityTest {
                 // Waits 1 second for events to be fully collected.
                 Thread.sleep(1000);
                 allEvents.add(eventCollector.capture());
-                logger.info("expected: {}, actual: {}", allEvents.get(0), allEvents.get(i));
                 if (i > 0) {
                     if (!hasResponse) {
                         assertThat(allEvents.get(i)).describedAs(clients.get(i).toString())
@@ -417,19 +411,6 @@ class ServerCallListenerCompatibilityTest {
         }
     }
 
-    private static final class ResourceExhaustedService extends TestServiceImplBase {
-        @Override
-        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            responseObserver.onError(Status.RESOURCE_EXHAUSTED.asRuntimeException());
-        }
-
-        @Override
-        public void streamingOutputCall(StreamingOutputCallRequest request,
-                                        StreamObserver<StreamingOutputCallResponse> responseObserver) {
-            responseObserver.onError(Status.RESOURCE_EXHAUSTED.asRuntimeException());
-        }
-    }
-
     private static final class ListenerEventCollector implements ServerInterceptor {
 
         private final Queue<String> eventQueue = new ArrayDeque<>();
@@ -499,8 +480,7 @@ class ServerCallListenerCompatibilityTest {
                                                             CancelingService::new,
                                                             OkService::new,
                                                             NonOkService::new,
-                                                            SlowService::new,
-                                                            ResourceExhaustedService::new)
+                                                            SlowService::new)
                          .map(service -> ImmutableList.of(clientForGrpcJava(service.get()),
                                                           clientForArmeria(service.get(), true, true),
                                                           clientForArmeria(service.get(), false, false),

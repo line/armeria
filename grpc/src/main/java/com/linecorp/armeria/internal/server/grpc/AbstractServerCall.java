@@ -212,21 +212,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         close(exception, false);
     }
 
-    /**
-     * This method exists to match the behavior with upstream grpc-java.
-     * The basic mechanism of upstream is:
-     * - If an exception is returned by the user explicitly and a header is written,
-     *   then invoke the listener with onComplete.
-     * - For other unexpected cases, invoke the listener depending on status.isOk().
-     * The parameter {@param preCloseListener} mimics this behavior. If {@param preCloseListener}
-     * is {@code true}, then an unexpected case has been encountered and the listener will be
-     * invoked preemptively. Note that the listener is guarded by {@link #listenerClosed}
-     * so that it isn't invoked more than once.
-     * Otherwise,
-     * - onComplete will be invoked if write is eventually successful.
-     * - onCancel will be invoked if write is eventually failed.
-     * @param preCloseListener closes the listener preemptively.
-     */
     public final void close(Throwable exception, boolean preCloseListener) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
@@ -251,6 +236,14 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
+    /**
+     * Closes the {@link ServerCall}.
+     * @param preCloseListener overrides the default behavior of setting "complete == true" if
+     *                         the response is written successfully by invoking the listener
+     *                         immediately using the given status. This may be useful if a network
+     *                         error occurs and the error response is written correctly, but we would
+     *                         like to invoke ServerCall.Listener.onCancel instead of onComplete.
+     */
     private void doClose(Status status, Metadata metadata, @Nullable Throwable exception,
                          boolean preCloseListener) {
         maybeLogFailedRequestContent(exception);
@@ -269,19 +262,21 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                    status, exception);
         closeCalled = true;
 
+        // Override the default behavior of setting "completed == true" if the response
+        // is written successfully by invoking the listener immediately.
         if (preCloseListener) {
-            // call close listener first
-            closeListener(status, metadata, status.isOk(), false);
+            // the call is closed due to a reason out of the user's control. (e.g. deframer exception)
+            closeListener(status, metadata, status.isOk(), true);
         } else if (status.getCode() == Code.CANCELLED && status.getCause() instanceof RequestTimeoutException) {
             // A call was finished by a timeout scheduler, not a user.
-            closeListener(status, metadata, false, false);
+            closeListener(status, metadata, false, true);
         } else if (status.isOk() && method.getType().serverSendsOneMessage() && firstResponse() == null) {
             // A call that should send a message incompletely finished.
             // Preemptively call closeListener and then write the response.
             final String description = "Completed without a response";
             logger.warn("{} {} status: {}, metadata: {}", ctx, description, status, metadata);
             status = Status.CANCELLED.withDescription(description);
-            closeListener(status, metadata, false, false);
+            closeListener(status, metadata, false, true);
         }
         doClose(status, metadata);
     }
