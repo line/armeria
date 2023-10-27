@@ -1237,7 +1237,6 @@ cba
 cbg.ru
 cbn
 cbre
-cbs
 cc
 cc.ak.us
 cc.al.us
@@ -7603,7 +7602,6 @@ show.aero
 showa.fukushima.jp
 showa.gunma.jp
 showa.yamanashi.jp
-showtime
 shunan.yamaguchi.jp
 shw.io
 si
