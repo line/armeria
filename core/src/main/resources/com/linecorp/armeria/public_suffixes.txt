@@ -1905,7 +1905,6 @@ dep.no
 deporte.bo
 des.br
 desa.id
-desi
 design
 design.aero
 det.br
