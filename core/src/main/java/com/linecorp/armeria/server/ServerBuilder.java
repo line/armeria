@@ -232,7 +232,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private long unhandledExceptionsReportIntervalMillis =
             Flags.defaultUnhandledExceptionsReportIntervalMillis();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
-    private int http2MaxResetFramesPerWindow = Flags.defaultHttp2MaxResetFramesPerMinute();
+    private int http2MaxResetFramesPerWindow = Flags.defaultServerHttp2MaxResetFramesPerMinute();
     private int http2MaxResetFramesWindowSeconds = 60;
 
     ServerBuilder() {
@@ -778,7 +778,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     /**
      * Sets the maximum number of RST frames that are allowed per window before the connection is closed. This
      * allows to protect against the remote peer flooding us with such frames and using up a lot of CPU.
-     * Defaults to {@link Flags#defaultHttp2MaxResetFramesPerMinute()}.
+     * Defaults to {@link Flags#defaultServerHttp2MaxResetFramesPerMinute()}.
      *
      * <p>Note that {@code 0} for any of the parameters means no protection should be applied.
      */
