@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
