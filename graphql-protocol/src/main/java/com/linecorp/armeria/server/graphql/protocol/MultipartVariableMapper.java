@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.multipart.MultipartFile;
  * Mapper for handling populating the query variables with the files specified by object paths
  * in the multi-part request.
  */
-final class MultipartVariableMapper {
+public final class MultipartVariableMapper {
 
    // Forked form https://github.com/Netflix/dgs-framework/blob/12cc1931e3c410e342134b7c0a8401f2c5a4aca6/graphql-dgs/src/main/kotlin/com/netflix/graphql/dgs/internal/utils/MultipartVariableMapper.kt
 
@@ -90,7 +90,7 @@ final class MultipartVariableMapper {
       }
    };
 
-   static void mapVariable(String objectPath, Map<String, Object> variables, MultipartFile multipartFile) {
+   public static void mapVariable(String objectPath, Map<String, Object> variables, MultipartFile multipartFile) {
       final List<String> segments = ImmutableList.copyOf(SPLITTER.split(objectPath));
       if (segments.size() < 2) {
          throw new IllegalArgumentException("Invalid object-path: " + objectPath);

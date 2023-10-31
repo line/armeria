@@ -89,6 +89,8 @@ public final class GraphqlServiceBuilder {
 
     private ExecutionIdGenerator executionIdGenerator = ExecutionIdGenerator.of();
 
+    private boolean useWebSocket = false;
+
     GraphqlServiceBuilder() {}
 
     /**
@@ -264,6 +266,14 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
+     * Sets whether the service supports WebSockets for subscriptions;
+     */
+    public GraphqlServiceBuilder useWebSocket(boolean useWebSocket) {
+        this.useWebSocket = useWebSocket;
+        return this;
+    }
+
+    /**
      * Adds the {@link GraphqlErrorHandler}. If multiple handlers are added, the latter is composed with the
      * former one using {@link GraphqlErrorHandler#orElse(GraphqlErrorHandler)}.
      *
@@ -287,6 +297,8 @@ public final class GraphqlServiceBuilder {
         this.executionIdGenerator = requireNonNull(executionIdGenerator, "executionIdGenerator");
         return this;
     }
+
+    // TODO JONAS Add a property to GraphqlServiceBuilder that builds DefaultGraphqlWebSocketService.
 
     /**
      * Creates a {@link GraphqlService}.
@@ -325,10 +337,18 @@ public final class GraphqlServiceBuilder {
         } else {
             errorHandler = this.errorHandler.orElse(GraphqlErrorHandler.of());
         }
-        return new DefaultGraphqlService(builder.build(),
-                                         dataLoaderRegistryFactory,
-                                         useBlockingTaskExecutor,
-                                         errorHandler);
+
+        if (useWebSocket) {
+            return new DefaultGraphqlWebSocketService(builder.build(),
+                    dataLoaderRegistryFactory,
+                    useBlockingTaskExecutor,
+                    errorHandler);
+        } else {
+            return new DefaultGraphqlService(builder.build(),
+                dataLoaderRegistryFactory,
+                useBlockingTaskExecutor,
+                errorHandler);
+        }
     }
 
     private GraphQLSchema buildSchema() {
