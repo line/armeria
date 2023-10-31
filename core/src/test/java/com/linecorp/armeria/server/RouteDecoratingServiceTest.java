@@ -41,6 +41,19 @@ class RouteDecoratingServiceTest {
         }
     };
 
+    @RegisterExtension
+    static final ServerExtension baseContextPathAppliedServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/", (ctx, req) -> HttpResponse.of("Hello, world!"));
+            sb.routeDecorator()
+              .methods(HttpMethod.TRACE)
+              .pathPrefix("/")
+              .build((delegate, ctx, req) -> HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
+            sb.baseContextPath("/api");
+        }
+    };
+
     @Test
     void routeDecorator() throws Exception {
         final WebClient webClient = WebClient.of(server.httpUri());
@@ -50,6 +63,16 @@ class RouteDecoratingServiceTest {
 
         final HttpResponse response2 = webClient.execute(HttpRequest.of(HttpMethod.TRACE, "/"));
         assertThat(response2.aggregate().get().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        final WebClient baseContextPathAppliedWebClient = WebClient.of(baseContextPathAppliedServer.httpUri());
+        // This GET request doesn't go through the decorator.
+        final HttpResponse response3 = baseContextPathAppliedWebClient
+                .execute(HttpRequest.of(HttpMethod.GET, "/api/"));
+        assertThat(response3.aggregate().get().status()).isEqualTo(HttpStatus.OK);
+
+        final HttpResponse response4 = baseContextPathAppliedWebClient
+                .execute(HttpRequest.of(HttpMethod.TRACE, "/api/"));
+        assertThat(response4.aggregate().get().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
@@ -61,5 +84,15 @@ class RouteDecoratingServiceTest {
 
         final HttpResponse response2 = webClient.execute(HttpRequest.of(HttpMethod.TRACE, "/not_exist"));
         assertThat(response2.aggregate().get().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        final WebClient baseContextPathAppliedWebClient = WebClient.of(server.httpUri());
+        // This GET request doesn't go through the decorator.
+        final HttpResponse response3 = baseContextPathAppliedWebClient
+                .execute(HttpRequest.of(HttpMethod.GET, "/api/not_exist"));
+        assertThat(response3.aggregate().get().status()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        final HttpResponse response4 = baseContextPathAppliedWebClient
+                .execute(HttpRequest.of(HttpMethod.TRACE, "/api/not_exist"));
+        assertThat(response4.aggregate().get().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

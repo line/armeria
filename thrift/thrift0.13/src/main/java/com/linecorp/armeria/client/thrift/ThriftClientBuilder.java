@@ -289,6 +289,11 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ThriftClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ThriftClientBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
     public ThriftClientBuilder tlsProvider(TlsProvider tlsProvider) {
         return (ThriftClientBuilder) super.tlsProvider(tlsProvider);
     }

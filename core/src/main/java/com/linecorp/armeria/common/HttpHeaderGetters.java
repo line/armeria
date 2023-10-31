@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AsciiString;
 
@@ -47,6 +48,13 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      * or {@code -1} if this value is not known.
      */
     long contentLength();
+
+    /**
+     * Returns whether the content length is unknown.
+     * If {@code true}, {@code content-length} header is not automatically updated.
+     */
+    @UnstableApi
+    boolean isContentLengthUnknown();
 
     /**
      * Returns the parsed {@code "content-type"} header.

@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -64,6 +62,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyConnectException;
@@ -392,7 +391,10 @@ final class HttpChannelPool implements AsyncCloseable {
                 // should be invoked right before channel.connect() is invoked as defined in javadocs
                 clientFactory.channelPipelineCustomizer().accept(channel.pipeline());
 
-                channel.connect(remoteAddress).addListener((ChannelFuture connectFuture) -> {
+                final ChannelPromise connectionPromise = channel.newPromise();
+                // Add a listener in advance so that the HTTP/1 pipeline can deliver the SessionProtocol event
+                // to HttpSessionHandler.
+                connectionPromise.addListener((ChannelFuture connectFuture) -> {
                     if (connectFuture.isSuccess()) {
                         initSession(desiredProtocol, serializationFormat,
                                     poolKey, connectFuture, sessionPromise);
@@ -401,6 +403,7 @@ final class HttpChannelPool implements AsyncCloseable {
                         sessionPromise.tryFailure(connectFuture.cause());
                     }
                 });
+                channel.connect(remoteAddress, connectionPromise);
             } catch (Throwable cause) {
                 maybeHandleProxyFailure(desiredProtocol, poolKey, cause);
                 sessionPromise.tryFailure(cause);
@@ -439,15 +442,8 @@ final class HttpChannelPool implements AsyncCloseable {
         final EventLoop eventLoop = ch.eventLoop();
         assert eventLoop.inEventLoop();
 
-        final ScheduledFuture<?> timeoutFuture = eventLoop.schedule(() -> {
-            if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
-                    desiredProtocol, "connection established, but session creation timed out: " + ch))) {
-                ch.close();
-            }
-        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-
         ch.pipeline().addLast(
-                new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture,
+                new HttpSessionHandler(this, ch, sessionPromise, connectTimeoutMillis,
                                        desiredProtocol, serializationFormat, poolKey, clientFactory));
     }
 

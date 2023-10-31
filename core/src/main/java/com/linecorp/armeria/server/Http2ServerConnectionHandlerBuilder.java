@@ -42,6 +42,8 @@ final class Http2ServerConnectionHandlerBuilder
         // Disable graceful shutdown timeout in a super class. Server-side HTTP/2 graceful shutdown is
         // handled by Armeria's HTTP/2 server handler.
         gracefulShutdownTimeoutMillis(-1);
+        decoderEnforceMaxRstFramesPerWindow(config.http2MaxResetFramesPerWindow(),
+                                            config.http2MaxResetFramesWindowSeconds());
     }
 
     @Override

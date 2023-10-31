@@ -174,6 +174,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (WebClientBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
     public WebClientBuilder tlsProvider(TlsProvider tlsProvider) {
         return (WebClientBuilder) super.tlsProvider(tlsProvider);
     }
