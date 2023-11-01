@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -181,6 +182,11 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ClientOptionsBuilder successFunction(SuccessFunction successFunction) {
         return (ClientOptionsBuilder) super.successFunction(successFunction);
+    }
+
+    @Override
+    public ClientOptionsBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
+        return (ClientOptionsBuilder) super.tlsKeyPair(tlsKeyPair);
     }
 
     @Override

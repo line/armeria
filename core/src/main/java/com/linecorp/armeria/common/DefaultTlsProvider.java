@@ -16,27 +16,96 @@
 
 package com.linecorp.armeria.common;
 
+import static io.netty.util.internal.StringUtil.commonSuffixOfLength;
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.function.Consumer;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+
+import io.netty.handler.ssl.SslContextBuilder;
 
 final class DefaultTlsProvider implements TlsProvider {
 
-    static final DefaultTlsProvider EMPTY =
-            (DefaultTlsProvider) TlsProvider.builder().build();
+    private final Map<String, TlsKeyPair> tlsKeyPairs;
+    private final boolean allowsUnsafeCiphers;
+    private final Consumer<SslContextBuilder> tlsCustomizer;
+    @Nullable
+    private final MeterIdPrefix meterIdPrefix;
 
-    private final Map<String, TlsKeyPair> hostnameTlsKeyPairMap;
-
-    DefaultTlsProvider(Map<String, TlsKeyPair> hostnameTlsKeyPairMap) {
-        this.hostnameTlsKeyPairMap = hostnameTlsKeyPairMap;
+    DefaultTlsProvider(Map<String, TlsKeyPair> tlsKeyPairs, Consumer<SslContextBuilder> tlsCustomizer,
+                       boolean allowsUnsafeCiphers, @Nullable MeterIdPrefix meterIdPrefix) {
+        this.tlsKeyPairs = tlsKeyPairs;
+        this.allowsUnsafeCiphers = allowsUnsafeCiphers;
+        this.tlsCustomizer = tlsCustomizer;
+        this.meterIdPrefix = meterIdPrefix;
     }
 
     @Override
-    public TlsKeyPair provide(String hostname) {
-        return hostnameTlsKeyPairMap.get(hostname);
+    public boolean allowsUnsafeCiphers() {
+        return allowsUnsafeCiphers;
     }
 
     @Override
-    public boolean containsHostname(String hostname) {
-        return hostnameTlsKeyPairMap.containsKey(hostname);
+    public Consumer<SslContextBuilder> tlsCustomizer() {
+        return tlsCustomizer;
     }
 
+    @Override
+    public MeterIdPrefix meterIdPrefix() {
+        return meterIdPrefix;
+    }
+
+    @Override
+    public TlsKeyPair find(String hostname) {
+        requireNonNull(hostname, "hostname");
+        if ("*".equals(hostname)) {
+            return tlsKeyPairs.get("*");
+        }
+
+        for (Entry<String, TlsKeyPair> entry : tlsKeyPairs.entrySet()) {
+            if (matches(entry.getKey(), hostname)) {
+                return entry.getValue();
+            }
+        }
+        // Try to find the default TlsKeyPair.
+        return tlsKeyPairs.get("*");
+    }
+
+    // Forked from https://github.com/netty/netty/blob/60430c80e7f8718ecd07ac31e01297b42a176b87/common/src/main/java/io/netty/util/DomainNameMapping.java
+
+    /**
+     * Simple function to match <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a>.
+     */
+    private static boolean matches(String template, String hostName) {
+        if (template.startsWith("*.")) {
+            return template.regionMatches(2, hostName, 0, hostName.length()) ||
+                   commonSuffixOfLength(hostName, template, template.length() - 1);
+        }
+        return template.equals(hostName);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof DefaultTlsProvider)) {
+            return false;
+        }
+        final DefaultTlsProvider that = (DefaultTlsProvider) o;
+        return allowsUnsafeCiphers == that.allowsUnsafeCiphers &&
+               tlsKeyPairs.equals(that.tlsKeyPairs) &&
+               tlsCustomizer.equals(that.tlsCustomizer) &&
+               Objects.equals(meterIdPrefix, that.meterIdPrefix);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(tlsKeyPairs, allowsUnsafeCiphers, tlsCustomizer, meterIdPrefix);
+    }
 }

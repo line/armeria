@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -47,7 +46,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
@@ -102,8 +100,8 @@ final class HttpClientFactory implements ClientFactory {
     private final Bootstrap inetBaseBootstrap;
     @Nullable
     private final Bootstrap unixBaseBootstrap;
-    private SslContext sslCtxHttp1Or2;
-    private SslContext sslCtxHttp1Only;
+    private final SslContext sslCtxHttp1Or2;
+    private final SslContext sslCtxHttp1Only;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -175,15 +173,14 @@ final class HttpClientFactory implements ClientFactory {
             unixBaseBootstrap = null;
         }
 
-        final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
-                ImmutableList.of(options.tlsCustomizer());
+        final Consumer<? super SslContextBuilder> tlsCustomizer = options.tlsCustomizer();
         final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
         final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
         sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers,
+                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizer,
                                   keyCertChainCaptor);
         sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers,
+                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizer,
                                   keyCertChainCaptor);
         setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
 
@@ -485,18 +482,5 @@ final class HttpClientFactory implements ClientFactory {
                                      e -> new HttpChannelPool(this, eventLoop,
                                                               sslCtxHttp1Or2, sslCtxHttp1Only,
                                                               connectionPoolListener()));
-    }
-
-    void tls(TlsKeyPair tlsKeyPair) {
-        final Consumer<? super SslContextBuilder> tlsCustomizer =
-                    customizer -> customizer.keyManager(tlsKeyPair.privateKey(), tlsKeyPair.keyCertChain());
-        final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
-                    ImmutableList.of(tlsCustomizer);
-
-        final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
-        sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers);
-        sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers);
     }
 }

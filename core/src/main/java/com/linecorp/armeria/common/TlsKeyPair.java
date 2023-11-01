@@ -16,27 +16,136 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.util.CertificateUtil.toPrivateKey;
+import static com.linecorp.armeria.internal.common.util.CertificateUtil.toX509Certificates;
+import static java.util.Objects.requireNonNull;
+
+import java.io.File;
+import java.io.InputStream;
+import java.security.KeyException;
 import java.security.PrivateKey;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
+
+/**
+ * A pair of a {@link PrivateKey} and a {@link X509Certificate} chain.
+ */
+@UnstableApi
 public final class TlsKeyPair {
-    // TODO(ikhoon): Add factory methods
 
-    private final PrivateKey privateKey;
-    private final List<X509Certificate> keyCertChain;
-
-    public TlsKeyPair(PrivateKey privateKey, List<X509Certificate> keyCertChain) {
-        this.privateKey = privateKey;
-        this.keyCertChain = keyCertChain;
+    /**
+     * Creates a new {@link TlsKeyPair} from the specified the key {@link InputStream}, and certificate chain
+     * {@link InputStream}.
+     */
+    public static TlsKeyPair of(InputStream keyInputStream, InputStream certificateChainInputStream) {
+        return of(keyInputStream, null, certificateChainInputStream);
     }
 
+    /**
+     * Creates a new {@link TlsKeyPair} from the specified the key {@link InputStream}, key password
+     * {@link InputStream} and certificate chain {@link InputStream}.
+     */
+    public static TlsKeyPair of(InputStream keyInputStream, @Nullable String keyPassword,
+                                InputStream certificateChainInputStream) {
+        requireNonNull(keyInputStream, "keyInputStream");
+        requireNonNull(certificateChainInputStream, "certificateChainInputStream");
+        try {
+            final List<X509Certificate> certs = toX509Certificates(certificateChainInputStream);
+            final PrivateKey key = toPrivateKey(keyInputStream, keyPassword);
+            return of(key, certs);
+        } catch (CertificateException | KeyException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    /**
+     * Creates a new {@link TlsKeyPair} from the specified the key file and certificate chain file.
+     */
+    public static TlsKeyPair of(File keyFile, File certificateChainFile) {
+        return of(keyFile, null, certificateChainFile);
+    }
+
+    /**
+     * Creates a new {@link TlsKeyPair} from the specified the key file, key password and certificate chain
+     * file.
+     */
+    public static TlsKeyPair of(File keyFile, @Nullable String keyPassword, File certificateChainFile) {
+        requireNonNull(keyFile, "keyFile");
+        requireNonNull(certificateChainFile, "certificateChainFile");
+        try {
+            final List<X509Certificate> certs = toX509Certificates(certificateChainFile);
+            final PrivateKey key = toPrivateKey(keyFile, keyPassword);
+            return of(key, certs);
+        } catch (CertificateException | KeyException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    /**
+     * Creates a new {@link TlsKeyPair} from the specified {@link PrivateKey} and {@link X509Certificate}s.
+     */
+    public static TlsKeyPair of(PrivateKey key, X509Certificate... certificateChain) {
+        requireNonNull(certificateChain, "certificateChain");
+        return of(key, ImmutableList.copyOf(certificateChain));
+    }
+
+    /**
+     * Creates a new {@link TlsKeyPair} from the specified {@link PrivateKey} and {@link X509Certificate}s.
+     */
+    public static TlsKeyPair of(PrivateKey key, Iterable<? extends X509Certificate> certificateChain) {
+        requireNonNull(key, "key");
+        requireNonNull(certificateChain, "certificateChain");
+        return new TlsKeyPair(key, ImmutableList.copyOf(certificateChain));
+    }
+
+    /**
+     * Generates a self-signed certificate for the specified {@code hostname}.
+     */
+    public static TlsKeyPair ofSelfSinged(String hostname) {
+        requireNonNull(hostname, "hostname");
+        try {
+            final SelfSignedCertificate ssc = new SelfSignedCertificate(hostname);
+            return of(ssc.key(), ssc.cert());
+        } catch (CertificateException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Generates a self-signed certificate for the local hostname.
+     */
+    public static TlsKeyPair ofSelfSinged() {
+        return ofSelfSinged(SystemInfo.hostname());
+    }
+
+    private final PrivateKey privateKey;
+    private final List<X509Certificate> certificateChain;
+
+    private TlsKeyPair(PrivateKey privateKey, List<X509Certificate> certificateChain) {
+        this.privateKey = privateKey;
+        this.certificateChain = certificateChain;
+    }
+
+    /**
+     * Returns the private key.
+     */
     public PrivateKey privateKey() {
         return privateKey;
     }
 
-    public List<X509Certificate> keyCertChain() {
-        return keyCertChain;
+    /**
+     * Returns the certificate chain.
+     */
+    public List<X509Certificate> certificateChain() {
+        return certificateChain;
     }
 
     @Override
@@ -50,11 +159,11 @@ public final class TlsKeyPair {
         }
 
         final TlsKeyPair that = (TlsKeyPair) o;
-        return privateKey.equals(that.privateKey) && keyCertChain.equals(that.keyCertChain);
+        return privateKey.equals(that.privateKey) && certificateChain.equals(that.certificateChain);
     }
 
     @Override
     public int hashCode() {
-        return privateKey.hashCode() * 31 + keyCertChain.hashCode();
+        return privateKey.hashCode() * 31 + certificateChain.hashCode();
     }
 }

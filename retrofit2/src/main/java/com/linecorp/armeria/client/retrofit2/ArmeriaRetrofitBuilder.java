@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -357,6 +358,11 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     public ArmeriaRetrofitBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (ArmeriaRetrofitBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public ArmeriaRetrofitBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
+        return (ArmeriaRetrofitBuilder) super.tlsKeyPair(tlsKeyPair);
     }
 
     @Override

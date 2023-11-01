@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.client.ClientOptions.REDIRECT_CONFIG;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
@@ -29,6 +30,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -41,6 +45,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -61,6 +66,8 @@ public class AbstractClientOptionsBuilder {
     @Nullable
     private Consumer<ClientRequestContext> contextCustomizer;
     private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
+    @Nullable
+    private TlsProvider tlsProvider;
 
     /**
      * Creates a new instance.
@@ -266,9 +273,26 @@ public class AbstractClientOptionsBuilder {
         return option(ClientOptions.ENDPOINT_REMAPPER, endpointRemapper);
     }
 
+    /**
+     * Sets the specified {@link TlsKeyPair} for <a href="https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/">
+     * mutual TLS authentication</a>.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
+        requireNonNull(tlsKeyPair, "tlsKeyPair");
+        return tlsProvider(TlsProvider.of(tlsKeyPair));
+    }
+
+    /**
+     * Sets the specified {@link TlsProvider} for <a href="https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/">
+     * mutual TLS authentication</a>.
+     */
     @UnstableApi
     public AbstractClientOptionsBuilder tlsProvider(TlsProvider tlsProvider) {
-        return option(ClientOptions.TLS_PROVIDER, tlsProvider);
+        requireNonNull(tlsProvider, "tlsProvider");
+        checkState(this.tlsProvider == null, "A TlsProvider has been set already.");
+        this.tlsProvider = tlsProvider;
+        return this;
     }
 
     /**
@@ -527,19 +551,31 @@ public class AbstractClientOptionsBuilder {
     protected final ClientOptions buildOptions(@Nullable ClientOptions baseOptions) {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
-        final int extra = contextCustomizer == null ? 3 : 4;
-        final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + extra]);
-        optValArray[numOpts] = ClientOptions.DECORATION.newValue(decoration.build());
-        optValArray[numOpts + 1] = ClientOptions.HEADERS.newValue(headers.build());
-        optValArray[numOpts + 2] = ClientOptions.CONTEXT_HOOK.newValue(contextHook);
+        int extra = 3;
         if (contextCustomizer != null) {
-            optValArray[numOpts + 3] = ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer);
+            extra++;
+        }
+        if (tlsProvider != null) {
+            extra++;
+        }
+
+        final Builder<ClientOptionValue<?>> additionalValues =
+                ImmutableList.builderWithExpectedSize(numOpts + extra);
+        additionalValues.addAll(optVals);
+        additionalValues.add(ClientOptions.DECORATION.newValue(decoration.build()));
+        additionalValues.add(ClientOptions.HEADERS.newValue(headers.build()));
+        additionalValues.add(ClientOptions.CONTEXT_HOOK.newValue(contextHook));
+        if (tlsProvider != null) {
+            additionalValues.add(ClientOptions.TLS_PROVIDER.newValue(tlsProvider));
+        }
+        if (contextCustomizer != null) {
+            additionalValues.add(ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer));
         }
 
         if (baseOptions != null) {
-            return ClientOptions.of(baseOptions, optValArray);
+            return ClientOptions.of(baseOptions, additionalValues.build());
         } else {
-            return ClientOptions.of(optValArray);
+            return ClientOptions.of(additionalValues.build());
         }
     }
 }

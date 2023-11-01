@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -297,6 +298,11 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     public WebSocketClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (WebSocketClientBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public WebSocketClientBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
+        return (WebSocketClientBuilder) super.tlsKeyPair(tlsKeyPair);
     }
 
     @Override

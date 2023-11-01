@@ -32,10 +32,7 @@ import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.isPseudoHeader;
 import static java.util.Objects.requireNonNull;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOError;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.security.PrivateKey;
@@ -60,7 +57,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
@@ -76,6 +72,8 @@ import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -132,7 +130,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private Boolean tlsSelfSigned;
     @Nullable
     private SelfSignedCertificate selfSignedCertificate;
-    private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
+    @Nullable
+    private Consumer<SslContextBuilder> tlsCustomizer;
     @Nullable
     private Boolean tlsAllowUnsafeCiphers;
     private final LinkedList<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
@@ -262,70 +261,61 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return this;
     }
 
+    @Deprecated
     @Override
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) {
         return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
     }
 
+    @Deprecated
     @Override
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
-        requireNonNull(keyCertChainFile, "keyCertChainFile");
-        requireNonNull(keyFile, "keyFile");
-        return tls(() -> SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword));
+        return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile, keyPassword);
     }
 
+    @Deprecated
     @Override
     public VirtualHostBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
         return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
     }
 
+    @Deprecated
     @Override
     public VirtualHostBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                                   @Nullable String keyPassword) {
-        requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
-        requireNonNull(keyInputStream, "keyInputStream");
-
-        // Retrieve the content of the given streams so that they can be consumed more than once.
-        final byte[] keyCertChain;
-        final byte[] key;
-        try {
-            keyCertChain = ByteStreams.toByteArray(keyCertChainInputStream);
-            key = ByteStreams.toByteArray(keyInputStream);
-        } catch (IOException e) {
-            throw new IOError(e);
-        }
-
-        return tls(() -> SslContextBuilder.forServer(new ByteArrayInputStream(keyCertChain),
-                                                     new ByteArrayInputStream(key),
-                                                     keyPassword));
+        return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream, keyPassword);
     }
 
+    @Deprecated
     @Override
     public VirtualHostBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
         return (VirtualHostBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
+    @Deprecated
     @Override
     public VirtualHostBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
         return (VirtualHostBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
+    @Deprecated
     @Override
     public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                   X509Certificate... keyCertChain) {
         return (VirtualHostBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
     }
 
+    @Deprecated
     @Override
     public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                   Iterable<? extends X509Certificate> keyCertChain) {
-        requireNonNull(key, "key");
-        requireNonNull(keyCertChain, "keyCertChain");
-        for (X509Certificate keyCert : keyCertChain) {
-            requireNonNull(keyCert, "keyCertChain contains null.");
-        }
+        return (VirtualHostBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
+    }
 
-        return tls(() -> SslContextBuilder.forServer(key, keyPassword, keyCertChain));
+    @Override
+    public VirtualHostBuilder tls(TlsKeyPair tlsKeyPair) {
+        requireNonNull(tlsKeyPair, "tlsKeyPair");
+        return tls(() -> SslContextBuilder.forServer(tlsKeyPair.privateKey(), tlsKeyPair.certificateChain()));
     }
 
     @Override
@@ -373,7 +363,12 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         checkState(!portBased,
                    "Cannot configure TLS to a port-based virtual host. Please configure to %s.tlsCustomizer()",
                    ServerBuilder.class.getSimpleName());
-        tlsCustomizers.add(tlsCustomizer);
+        if (this.tlsCustomizer == null) {
+            //noinspection unchecked
+            this.tlsCustomizer = (Consumer<SslContextBuilder>) tlsCustomizer;
+        } else {
+            this.tlsCustomizer = this.tlsCustomizer.andThen(tlsCustomizer);
+        }
         return this;
     }
 
@@ -1240,8 +1235,10 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      */
     VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
                       @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
-                      ServerErrorHandler serverErrorHandler) {
+                      ServerErrorHandler serverErrorHandler, @Nullable TlsProvider tlsProvider) {
         requireNonNull(template, "template");
+        checkState(tlsProvider == null || sslContextBuilderSupplier == null,
+                   "ServerBuilder.tlsProvider() and VirtualHostBuilder.tls() are mutually exclusive.");
 
         if (defaultHostname == null) {
             if (hostnamePattern != null) {
@@ -1371,7 +1368,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
-                                serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
+                                tlsProvider, serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
                                 requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
@@ -1418,27 +1415,27 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(sslContextBuilderSupplier, tlsAllowUnsafeCiphers, tlsCustomizers);
+                sslContext = buildSslContext(sslContextBuilderSupplier, tlsAllowUnsafeCiphers, tlsCustomizer);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
             } else if (template.sslContextBuilderSupplier != null) {
                 sslContext = buildSslContext(template.sslContextBuilderSupplier,
                                              tlsAllowUnsafeCiphers,
-                                             template.tlsCustomizers);
+                                             template.tlsCustomizer);
                 releaseSslContextOnFailure = true;
             }
 
             // Generate a self-signed certificate if necessary.
             if (sslContext == null) {
                 final boolean tlsSelfSigned;
-                final List<Consumer<? super SslContextBuilder>> tlsCustomizers;
+                final Consumer<SslContextBuilder> tlsCustomizer;
                 if (this.tlsSelfSigned != null) {
                     tlsSelfSigned = this.tlsSelfSigned;
-                    tlsCustomizers = this.tlsCustomizers;
+                    tlsCustomizer = this.tlsCustomizer;
                     sslContextFromThis = true;
                 } else {
                     tlsSelfSigned = template.tlsSelfSigned;
-                    tlsCustomizers = template.tlsCustomizers;
+                    tlsCustomizer = template.tlsCustomizer;
                 }
 
                 if (tlsSelfSigned) {
@@ -1452,13 +1449,13 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                     sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
                                                                                    ssc.privateKey()),
                                                  tlsAllowUnsafeCiphers,
-                                                 tlsCustomizers);
+                                                 tlsCustomizer);
                     releaseSslContextOnFailure = true;
                 }
             }
 
             // Reject if a user called `tlsCustomizer()` without `tls()` or `tlsSelfSigned()`.
-            checkState(sslContextFromThis || tlsCustomizers.isEmpty(),
+            checkState(sslContextFromThis || tlsCustomizer == null,
                        "Cannot call tlsCustomizer() without tls() or tlsSelfSigned()");
 
             // Validate the built `SslContext`.

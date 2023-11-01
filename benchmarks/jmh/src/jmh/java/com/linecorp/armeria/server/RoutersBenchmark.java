@@ -82,8 +82,9 @@ public class RoutersBenchmark {
                                              ImmutableList.of(), HttpHeaders.of(), ctx -> RequestId.random(),
                                              serviceErrorHandler, NOOP_CONTEXT_HOOK);
         HOST = new VirtualHost(
-                "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
-                unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, defaultLogName, 0, 0, false,
+                "localhost", "localhost", 0, null, null, SERVICES, FALLBACK_SERVICE,
+                RejectedRouteHandler.DISABLED, unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming,
+                defaultLogName, 0, 0, false,
                 AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), 0, SuccessFunction.ofDefault(),
                 multipartUploadsLocation, ImmutableList.of(),
                 ctx -> RequestId.random());

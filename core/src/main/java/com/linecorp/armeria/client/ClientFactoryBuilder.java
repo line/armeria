@@ -24,10 +24,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_B
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOError;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
@@ -53,7 +50,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
@@ -63,6 +59,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -304,7 +301,11 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
@@ -313,18 +314,24 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
-        requireNonNull(keyCertChainFile, "keyCertChainFile");
-        requireNonNull(keyFile, "keyFile");
-        return tlsCustomizer(customizer -> customizer.keyManager(keyCertChainFile, keyFile, keyPassword));
+        return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile, keyPassword);
     }
 
     /**
      * Configures SSL or TLS for client certificate authentication with the specified
      * {@code keyCertChainInputStream} and cleartext {@code keyInputStream}.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
@@ -333,32 +340,28 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified
      * {@code keyCertChainInputStream} and {@code keyInputStream} and {@code keyPassword}.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                                     @Nullable String keyPassword) {
         requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
         requireNonNull(keyInputStream, "keyInputStream");
-
-        // Retrieve the content of the given streams so that they can be consumed more than once.
-        final byte[] keyCertChain;
-        final byte[] key;
-        try {
-            keyCertChain = ByteStreams.toByteArray(keyCertChainInputStream);
-            key = ByteStreams.toByteArray(keyInputStream);
-        } catch (IOException e) {
-            throw new IOError(e);
-        }
-
-        return tlsCustomizer(customizer -> customizer.keyManager(new ByteArrayInputStream(keyCertChain),
-                                                                 new ByteArrayInputStream(key),
-                                                                 keyPassword));
+        return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream,
+                                                           keyPassword);
     }
 
     /**
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
@@ -367,7 +370,11 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
@@ -376,7 +383,11 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                     X509Certificate... keyCertChain) {
@@ -386,18 +397,25 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
+     *
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
      */
+    @Deprecated
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                     Iterable<? extends X509Certificate> keyCertChain) {
-        requireNonNull(key, "key");
-        requireNonNull(keyCertChain, "keyCertChain");
+        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
+    }
 
-        for (X509Certificate keyCert : keyCertChain) {
-            requireNonNull(keyCert, "keyCertChain contains null.");
-        }
-
-        return tlsCustomizer(customizer -> customizer.keyManager(key, keyPassword, keyCertChain));
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@link TlsKeyPair}.
+     */
+    @Override
+    public ClientFactoryBuilder tls(TlsKeyPair tlsKeyPair) {
+        requireNonNull(tlsKeyPair, "tlsKeyPair");
+        return tlsCustomizer(customizer -> customizer.keyManager(tlsKeyPair.privateKey(),
+                                                                 tlsKeyPair.certificateChain()));
     }
 
     /**

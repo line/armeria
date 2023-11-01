@@ -567,7 +567,7 @@ public final class Flags {
                     SslContextBuilder::forClient,
                     /* forceHttp1 */ false,
                     /* tlsAllowUnsafeCiphers */ false,
-                    ImmutableList.of(), null).newEngine(ByteBufAllocator.DEFAULT);
+                    null, null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);

@@ -47,7 +47,7 @@ public final class MoreMeterBinders {
      * </ul>
      */
     @UnstableApi
-    public static MeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup, String name) {
+    public static EventLoopMetrics eventLoopMetrics(EventLoopGroup eventLoopGroup, String name) {
         requireNonNull(name, "name");
         return eventLoopMetrics(eventLoopGroup, new MeterIdPrefix("armeria.netty." + name));
     }
@@ -63,7 +63,8 @@ public final class MoreMeterBinders {
      * </ul>
      */
     @UnstableApi
-    public static MeterBinder eventLoopMetrics(EventLoopGroup eventLoopGroup, MeterIdPrefix meterIdPrefix) {
+    public static EventLoopMetrics eventLoopMetrics(EventLoopGroup eventLoopGroup,
+                                                    MeterIdPrefix meterIdPrefix) {
         return new EventLoopMetrics(eventLoopGroup, meterIdPrefix);
     }
 
@@ -82,7 +83,8 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static MeterBinder certificateMetrics(X509Certificate certificate, MeterIdPrefix meterIdPrefix) {
+    public static CloseableMeterBinder certificateMetrics(X509Certificate certificate,
+                                                          MeterIdPrefix meterIdPrefix) {
         requireNonNull(certificate, "certificate");
         return certificateMetrics(ImmutableList.of(certificate), meterIdPrefix);
     }
@@ -102,8 +104,8 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static MeterBinder certificateMetrics(Iterable<? extends X509Certificate> certificates,
-                                                 MeterIdPrefix meterIdPrefix) {
+    public static CertificateMetrics certificateMetrics(Iterable<? extends X509Certificate> certificates,
+                                                        MeterIdPrefix meterIdPrefix) {
         requireNonNull(certificates, "certificates");
         requireNonNull(meterIdPrefix, "meterIdPrefix");
         return new CertificateMetrics(ImmutableList.copyOf(certificates), meterIdPrefix);
@@ -124,7 +126,7 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static MeterBinder certificateMetrics(File keyCertChainFile, MeterIdPrefix meterIdPrefix)
+    public static CertificateMetrics certificateMetrics(File keyCertChainFile, MeterIdPrefix meterIdPrefix)
             throws CertificateException {
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         return certificateMetrics(CertificateUtil.toX509Certificates(keyCertChainFile), meterIdPrefix);
@@ -145,7 +147,8 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static MeterBinder certificateMetrics(InputStream keyCertChainFile, MeterIdPrefix meterIdPrefix)
+    public static CertificateMetrics certificateMetrics(InputStream keyCertChainFile,
+                                                        MeterIdPrefix meterIdPrefix)
             throws CertificateException {
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         return certificateMetrics(CertificateUtil.toX509Certificates(keyCertChainFile), meterIdPrefix);

@@ -48,12 +48,16 @@ import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
+import com.linecorp.armeria.internal.common.TlsProviderUtil;
+import com.linecorp.armeria.internal.common.TlsProviderUtil.SslContextType;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -64,6 +68,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyHandler;
@@ -105,12 +110,13 @@ final class HttpChannelPool implements AsyncCloseable {
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
         connectTimeoutMillis = (Integer) clientFactory.options()
-                .channelOptions()
-                .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                                                      .channelOptions()
+                                                      .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
     }
 
-    private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
+    private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol,
+                                @Nullable SslContext sslContext) {
         if (proxyConfig.proxyType() == ProxyType.DIRECT) {
             return;
         }
@@ -147,8 +153,13 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = bootstraps.determineSslContext(desiredProtocol);
-            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+            final SslContext proxySslCtx;
+            if (sslContext != null) {
+                proxySslCtx = sslContext;
+            } else {
+                proxySslCtx = bootstraps.determineSslContext(desiredProtocol);
+            }
+            ch.pipeline().addFirst(proxySslCtx.newHandler(ch.alloc()));
         }
     }
 
@@ -293,10 +304,12 @@ final class HttpChannelPool implements AsyncCloseable {
     CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol,
                                                   SerializationFormat serializationFormat,
                                                   PoolKey key,
-                                                  ClientConnectionTimingsBuilder timingsBuilder) {
+                                                  ClientConnectionTimingsBuilder timingsBuilder,
+                                                  TlsProvider tlsProvider) {
         final ChannelAcquisitionFuture promise = new ChannelAcquisitionFuture();
-        if (!usePendingAcquisition(desiredProtocol, serializationFormat, key, promise, timingsBuilder)) {
-            connect(desiredProtocol, serializationFormat, key, promise, timingsBuilder);
+        if (!usePendingAcquisition(desiredProtocol, serializationFormat, key, promise, timingsBuilder,
+                                   tlsProvider)) {
+            connect(desiredProtocol, serializationFormat, key, promise, timingsBuilder, tlsProvider);
         }
         return promise;
     }
@@ -310,7 +323,8 @@ final class HttpChannelPool implements AsyncCloseable {
                                           SerializationFormat serializationFormat,
                                           PoolKey key,
                                           ChannelAcquisitionFuture promise,
-                                          ClientConnectionTimingsBuilder timingsBuilder) {
+                                          ClientConnectionTimingsBuilder timingsBuilder,
+                                          TlsProvider tlsProvider) {
 
         if (desiredProtocol.isExplicitHttp1()) {
             // Can't use HTTP/1 connections because they will not be available in the pool until
@@ -324,13 +338,14 @@ final class HttpChannelPool implements AsyncCloseable {
         }
 
         timingsBuilder.pendingAcquisitionStart();
-        pendingAcquisition.piggyback(desiredProtocol, serializationFormat, key, promise, timingsBuilder);
+        pendingAcquisition.piggyback(desiredProtocol, serializationFormat, key, promise, timingsBuilder,
+                                     tlsProvider);
         return true;
     }
 
     private void connect(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
                          PoolKey key, ChannelAcquisitionFuture promise,
-                         ClientConnectionTimingsBuilder timingsBuilder) {
+                         ClientConnectionTimingsBuilder timingsBuilder, TlsProvider tlsProvider) {
         setPendingAcquisition(desiredProtocol, key, promise);
         timingsBuilder.socketConnectStart();
 
@@ -347,7 +362,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         // Create a new connection.
         final Promise<Channel> sessionPromise = eventLoop.newPromise();
-        connect(remoteAddress, desiredProtocol, serializationFormat, key, sessionPromise);
+        connect(remoteAddress, desiredProtocol, serializationFormat, key, sessionPromise, tlsProvider);
 
         if (sessionPromise.isDone()) {
             notifyConnect(desiredProtocol, key, sessionPromise, promise, timingsBuilder);
@@ -367,12 +382,13 @@ final class HttpChannelPool implements AsyncCloseable {
      * </ul>
      */
     void connect(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
-                 SerializationFormat serializationFormat,
-                 PoolKey poolKey, Promise<Channel> sessionPromise) {
+                 SerializationFormat serializationFormat, PoolKey poolKey, Promise<Channel> sessionPromise,
+                 TlsProvider tlsProvider) {
 
+        final SslContext sslContext = maybeCreateSslContext(remoteAddress, desiredProtocol, tlsProvider);
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.get(remoteAddress, desiredProtocol, serializationFormat);
+            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, serializationFormat, sslContext);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;
@@ -386,7 +402,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
             try {
                 final Channel channel = registerFuture.channel();
-                configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
+                configureProxy(channel, poolKey.proxyConfig, desiredProtocol, sslContext);
 
                 // should be invoked right before channel.connect() is invoked as defined in javadocs
                 clientFactory.channelPipelineCustomizer().accept(channel.pipeline());
@@ -397,7 +413,7 @@ final class HttpChannelPool implements AsyncCloseable {
                 connectionPromise.addListener((ChannelFuture connectFuture) -> {
                     if (connectFuture.isSuccess()) {
                         initSession(desiredProtocol, serializationFormat,
-                                    poolKey, connectFuture, sessionPromise);
+                                    poolKey, connectFuture, sessionPromise, tlsProvider);
                     } else {
                         maybeHandleProxyFailure(desiredProtocol, poolKey, connectFuture.cause());
                         sessionPromise.tryFailure(connectFuture.cause());
@@ -409,6 +425,34 @@ final class HttpChannelPool implements AsyncCloseable {
                 sessionPromise.tryFailure(cause);
             }
         });
+    }
+
+    @Nullable
+    private static SslContext maybeCreateSslContext(SocketAddress remoteAddress,
+                                                    SessionProtocol desiredProtocol,
+                                                    TlsProvider tlsProvider) {
+        if (tlsProvider == NullTlsProvider.INSTANCE) {
+            return null;
+        }
+
+        if (desiredProtocol.isTls()) {
+            final String hostname;
+            if (remoteAddress instanceof InetSocketAddress) {
+                hostname = ((InetSocketAddress) remoteAddress).getHostString();
+            } else {
+                assert remoteAddress instanceof DomainSocketAddress;
+                hostname = ((DomainSocketAddress) remoteAddress).path();
+            }
+
+            final TlsKeyPair tlsKeyPair = tlsProvider.find(hostname);
+            if (tlsKeyPair != null) {
+                final SslContextType sslContextType =
+                        desiredProtocol.isExplicitHttp1() ? SslContextType.CLIENT_HTTP1_ONLY
+                                                          : SslContextType.CLIENT;
+                return TlsProviderUtil.maybeCreateSslContext(tlsProvider, tlsKeyPair, sslContextType);
+            }
+        }
+        return null;
     }
 
     /**
@@ -435,7 +479,8 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void initSession(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
-                             PoolKey poolKey, ChannelFuture connectFuture, Promise<Channel> sessionPromise) {
+                             PoolKey poolKey, ChannelFuture connectFuture, Promise<Channel> sessionPromise,
+                             TlsProvider tlsProvider) {
         assert connectFuture.isSuccess();
 
         final Channel ch = connectFuture.channel();
@@ -444,7 +489,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
         ch.pipeline().addLast(
                 new HttpSessionHandler(this, ch, sessionPromise, connectTimeoutMillis,
-                                       desiredProtocol, serializationFormat, poolKey, clientFactory));
+                                       desiredProtocol, serializationFormat, poolKey, clientFactory,
+                                       tlsProvider));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol,
@@ -738,13 +784,13 @@ final class HttpChannelPool implements AsyncCloseable {
 
         void piggyback(SessionProtocol desiredProtocol, SerializationFormat serializationFormat, PoolKey key,
                        ChannelAcquisitionFuture childPromise,
-                       ClientConnectionTimingsBuilder timingsBuilder) {
+                       ClientConnectionTimingsBuilder timingsBuilder, TlsProvider tlsProvider) {
 
             // Add to the pending handler list if not complete yet.
             if (!isDone()) {
                 final Consumer<PooledChannel> handler =
                         pch -> handlePiggyback(desiredProtocol, serializationFormat, key,
-                                               childPromise, timingsBuilder, pch);
+                                               childPromise, timingsBuilder, tlsProvider, pch);
 
                 if (pendingPiggybackHandlers == null) {
                     // The 1st handler
@@ -774,7 +820,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
             // Handle immediately if complete already.
             handlePiggyback(desiredProtocol, serializationFormat, key, childPromise, timingsBuilder,
-                            isCompletedExceptionally() ? null : getNow(null));
+                            tlsProvider, isCompletedExceptionally() ? null : getNow(null));
         }
 
         private void handlePiggyback(SessionProtocol desiredProtocol,
@@ -782,6 +828,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                      PoolKey key,
                                      ChannelAcquisitionFuture childPromise,
                                      ClientConnectionTimingsBuilder timingsBuilder,
+                                     TlsProvider tlsProvider,
                                      @Nullable PooledChannel pch) {
 
             final PiggybackedChannelAcquisitionResult result;
@@ -793,7 +840,7 @@ final class HttpChannelPool implements AsyncCloseable {
                         result = PiggybackedChannelAcquisitionResult.SUCCESS;
                         // Should use the same protocol used to acquire a new connection.
                     } else if (usePendingAcquisition(desiredProtocol, serializationFormat,
-                                                     key, childPromise, timingsBuilder)) {
+                                                     key, childPromise, timingsBuilder, tlsProvider)) {
                         result = PiggybackedChannelAcquisitionResult.PIGGYBACKED_AGAIN;
                     } else {
                         result = PiggybackedChannelAcquisitionResult.NEW_CONNECTION;
@@ -822,7 +869,8 @@ final class HttpChannelPool implements AsyncCloseable {
                     break;
                 case NEW_CONNECTION:
                     timingsBuilder.pendingAcquisitionEnd();
-                    connect(desiredProtocol, serializationFormat, key, childPromise, timingsBuilder);
+                    connect(desiredProtocol, serializationFormat, key, childPromise, timingsBuilder,
+                            tlsProvider);
                     break;
                 case PIGGYBACKED_AGAIN:
                     // There's nothing to do because usePendingAcquisition() was called successfully above.

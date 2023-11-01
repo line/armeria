@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -291,6 +292,11 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     @Override
     public ThriftClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         return (ThriftClientBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
+    public ThriftClientBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
+        return (ThriftClientBuilder) super.tlsKeyPair(tlsKeyPair);
     }
 
     @Override
