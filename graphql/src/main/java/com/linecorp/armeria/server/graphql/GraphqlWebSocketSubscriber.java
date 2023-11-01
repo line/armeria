@@ -4,8 +4,11 @@ import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
+    private static final Logger logger = LoggerFactory.getLogger(GraphqlWebSocketSubscriber.class);
     private final GraphqlWSSubProtocol graphqlWSSubProtocol;
     private final WebSocketWriter outgoing;
     Subscription subscription;
@@ -17,12 +20,14 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
 
     @Override
     public void onSubscribe(Subscription s) {
+        logger.debug("onSubscribe");
         subscription = s;
         s.request(1);
     }
 
     @Override
     public void onNext(WebSocketFrame webSocketFrame) {
+        logger.debug("onNext: {}", webSocketFrame);
         switch (webSocketFrame.type()) {
             case TEXT:
                 // Parse the graphql-ws sub protocol

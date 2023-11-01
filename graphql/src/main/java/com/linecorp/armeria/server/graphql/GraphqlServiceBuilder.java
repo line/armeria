@@ -298,8 +298,6 @@ public final class GraphqlServiceBuilder {
         return this;
     }
 
-    // TODO JONAS Add a property to GraphqlServiceBuilder that builds DefaultGraphqlWebSocketService.
-
     /**
      * Creates a {@link GraphqlService}.
      */

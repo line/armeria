@@ -61,7 +61,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
  * because of the nature of WebSocket. See {@link WebSocketServiceBuilder} for more information.
  */
 @UnstableApi
-public final class WebSocketService extends AbstractHttpService {
+public final class WebSocketService extends AbstractHttpService implements IWebSocketService {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketService.class);
 

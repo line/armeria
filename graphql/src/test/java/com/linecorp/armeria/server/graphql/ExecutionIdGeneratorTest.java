@@ -78,6 +78,7 @@ class ExecutionIdGeneratorTest {
                     new File(getClass().getResource("/testing/graphql/test.graphqls").toURI());
             final GraphqlService service =
                     GraphqlService.builder()
+                        .useWebSocket(true)
                                   .configureGraphql(builder -> builder.queryExecutionStrategy(idStrategy))
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {

@@ -56,6 +56,7 @@ class GraphqlServiceMultipartTest {
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
+                        .useWebSocket(true)
                                   .runtimeWiring(c -> {
                                       c.scalar(MoreScalars.multipartFile());
                                       c.type("Mutation",

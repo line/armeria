@@ -58,6 +58,7 @@ class GraphqlErrorHandlerTest {
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
+                        .useWebSocket(true)
                                   .runtimeWiring(c -> {
                                       final DataFetcher<String> foo = dataFetcher("foo");
                                       c.type("Query",

@@ -23,6 +23,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -38,13 +39,16 @@ import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.websocket.IWebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 import com.linecorp.armeria.server.graphql.protocol.MultipartVariableMapper;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.execution.ExecutionId;
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -58,9 +62,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
 import static java.util.Objects.requireNonNull;
 
-public class DefaultGraphqlWebSocketService extends AbstractHttpService implements GraphqlService, WebSocketServiceHandler, GraphqlExecutor {
+public class DefaultGraphqlWebSocketService extends AbstractHttpService implements GraphqlService, IWebSocketService, WebSocketServiceHandler, GraphqlExecutor {
     private static final Logger logger = LoggerFactory.getLogger(DefaultGraphqlWebSocketService.class);
 
     private final GraphQL graphQL;
@@ -99,16 +104,22 @@ public class DefaultGraphqlWebSocketService extends AbstractHttpService implemen
 
     @Override
     protected HttpResponse doConnect(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return webSocketService.serve(ctx, req);
+        logger.debug("Received a GraphQL CONNECT request: {}", req);
+        if (ctx.sessionProtocol().isExplicitHttp2() && isHttp2WebSocketUpgradeRequest(req.headers())) {
+            return webSocketService.serve(ctx, req);
+        }
+        return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
     }
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final RequestHeaders headers = req.headers();
-        if (isHttp1WebSocketUpgradeRequest(headers)) {
+        logger.debug("Received a GET request: {}", req);
+        if (ctx.sessionProtocol().isExplicitHttp1() && isHttp1WebSocketUpgradeRequest(req.headers())) {
+            logger.debug("Received a GraphQL GET request with a WebSocket upgrade headers: {}", req.headers());
             return webSocketService.serve(ctx, req);
         }
 
+        logger.debug("Received a GraphQL GET headers: {}", req.headers());
         return doGetNotWebSocket(ctx, req);
     }
 
@@ -206,6 +217,7 @@ public class DefaultGraphqlWebSocketService extends AbstractHttpService implemen
 
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest request) throws Exception {
+        logger.debug("Received a GraphQL POST request: {}", request);
         final MediaType contentType = request.contentType();
         if (contentType == null) {
             return unsupportedMediaType();
@@ -305,7 +317,18 @@ public class DefaultGraphqlWebSocketService extends AbstractHttpService implemen
     }
 
     @Override
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        // Response stream will be supported via WebSocket.
+        final MediaType contentType = routingContext.contentType();
+        if (contentType != null && contentType.is(MediaType.MULTIPART_FORM_DATA)) {
+            return ExchangeType.REQUEST_STREAMING;
+        }
+        return ExchangeType.UNARY;
+    }
+
+    @Override
     public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
+        logger.debug("Handling websocket");
         WebSocketWriter outgoing = WebSocket.streaming();
         GraphqlWSSubProtocol protocol = new GraphqlWSSubProtocol(this);
 
@@ -315,8 +338,16 @@ public class DefaultGraphqlWebSocketService extends AbstractHttpService implemen
     }
 
     @Override
-    public ExecutionResult executeGraphql(ExecutionInput executionInput) {
-        return graphQL.execute(executionInput);
+    public ExecutionResult executeGraphql(ExecutionInput.Builder executionInput) {
+        logger.debug("Executing graphql");
+        // TODO dataloaderregistry needs context somehow?
+        try {
+            return graphQL.execute(executionInput
+                .executionId(ExecutionId.generate()));
+        } catch (Exception e) {
+            logger.error("Execution failed", e);
+            throw e;
+        }
     }
 
     private static Map<String, Object> toMap(@Nullable String value) throws JsonProcessingException {

@@ -4,5 +4,5 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 
 interface GraphqlExecutor {
-    ExecutionResult executeGraphql(ExecutionInput executionInput);
+    ExecutionResult executeGraphql(ExecutionInput.Builder executionInput);
 }

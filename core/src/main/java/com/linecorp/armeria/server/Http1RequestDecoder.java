@@ -21,6 +21,7 @@ import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
 
+import com.linecorp.armeria.server.websocket.IWebSocketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -233,7 +234,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         assert routed.isPresent();
                         final ServiceConfig serviceConfig = routingCtx.result().value();
                         if (isHttp1WebSocketUpgradeRequest(headers)) {
-                            if (serviceConfig.service().as(WebSocketService.class) == null) {
+                            if (serviceConfig.service().as(IWebSocketService.class) == null) {
                                 fail(id, headers, HttpStatus.BAD_REQUEST,
                                      "WebSocket upgrade requested but the service does not support it.", null);
                                 return;

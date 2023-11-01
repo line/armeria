@@ -45,6 +45,7 @@ class GraphqlServiceDataLoaderTest {
                     new File(getClass().getResource("/testing/graphql/test.graphqls").toURI());
             final GraphqlService service =
                     GraphqlService.builder()
+                        .useWebSocket(true)
                                   .schemaFile(graphqlSchemaFile)
                                   .dataLoaderRegistry(ctx -> new DataLoaderRegistry())
                                   .runtimeWiring(c -> {

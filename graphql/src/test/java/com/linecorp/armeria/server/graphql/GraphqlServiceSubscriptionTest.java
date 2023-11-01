@@ -16,31 +16,61 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-
-import org.hamcrest.CustomTypeSafeMatcher;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.stream.NoopSubscriber;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import graphql.schema.DataFetcher;
+import graphql.schema.StaticDataFetcher;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Publisher;
 
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import java.io.File;
+import java.net.URISyntaxException;
 
-import graphql.schema.DataFetcher;
-import graphql.schema.StaticDataFetcher;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class GraphqlServiceSubscriptionTest {
+    final File graphqlSchemaFile;
+
+    {
+        try {
+            graphqlSchemaFile = new File(getClass().getResource("/testing/graphql/subscription.graphqls").toURI());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    final GraphqlService service =
+        GraphqlService.builder()
+            .schemaFile(graphqlSchemaFile)
+            .useWebSocket(true)
+            .runtimeWiring(c -> {
+                final StaticDataFetcher bar = new StaticDataFetcher("bar");
+                c.type("Query",
+                    typeWiring -> typeWiring.dataFetcher("foo", bar));
+                c.type("Subscription",
+                    typeWiring -> typeWiring.dataFetcher("hello", dataFetcher()));
+            })
+            .build();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -51,6 +81,7 @@ class GraphqlServiceSubscriptionTest {
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
+                                  .useWebSocket(true)
                                   .runtimeWiring(c -> {
                                       final StaticDataFetcher bar = new StaticDataFetcher("bar");
                                       c.type("Query",
@@ -67,8 +98,35 @@ class GraphqlServiceSubscriptionTest {
         return environment -> StreamMessage.of("Armeria");
     }
 
+    private HttpRequestWriter req;
+    private ServiceRequestContext ctx;
+
+    @BeforeEach
+    void setUp() {
+        req = HttpRequest.streaming(webSocketUpgradeHeaders());
+        ctx = ServiceRequestContext.builder(req)
+            .sessionProtocol(SessionProtocol.H1C)
+            .build();
+    }
+
+    private static RequestHeaders webSocketUpgradeHeaders() {
+        return RequestHeaders.builder(HttpMethod.GET, "/chat")
+            .add(HttpHeaderNames.CONNECTION,
+                HttpHeaderValues.UPGRADE.toString() + ',' +
+                    // It works even if the header contains multiple values
+                    HttpHeaderValues.KEEP_ALIVE)
+            .add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET +
+                ", additional_value")
+            .add(HttpHeaderNames.HOST, "foo.com")
+            .add(HttpHeaderNames.ORIGIN, "http://foo.com")
+            .addInt(HttpHeaderNames.SEC_WEBSOCKET_VERSION, 13)
+            .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
+            .add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "superchat")
+            .build();
+    }
+
     @Test
-    void testSubscription() {
+    void testSubscriptionViaHttp() {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(MediaType.GRAPHQL, "subscription {hello}")
                                                .build();
@@ -77,15 +135,22 @@ class GraphqlServiceSubscriptionTest {
                                                          .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
-        assertThatJson(response.contentUtf8())
-                .withMatcher("errors",
-                             new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {
-                                 @Override
-                                 protected boolean matchesSafely(List<Map<String, String>> item) {
-                                     final Map<String, String> error = item.get(0);
-                                     final String message = "WebSocket is not implemented";
-                                     return message.equals(error.get("message"));
-                                 }
-                             });
+    }
+
+    private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
+
+    private HttpData toHttpData(WebSocketFrame frame) {
+        return HttpData.wrap(encoder.encode(ctx, frame));
+    }
+
+    @Test
+    void testSubscriptionViaWebSocket() throws Exception {
+        final HttpResponse response = service.serve(ctx, req);
+
+        req.write(toHttpData(WebSocketFrame.ofText("{\"type\": \"connection_init\"}", false)));
+        req.write(toHttpData(WebSocketFrame.ofText("{\"type\": \"ping\"}", false)));
+        req.close();
+
+        response.subscribe(NoopSubscriber.get());
     }
 }
