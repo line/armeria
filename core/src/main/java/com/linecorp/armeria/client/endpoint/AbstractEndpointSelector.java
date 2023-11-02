@@ -87,9 +87,17 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         final ListeningFuture listeningFuture = new ListeningFuture(ctx, executor);
         addPendingFuture(listeningFuture);
 
-        // The EndpointGroup have just been updated.
+        // The EndpointGroup have just been updated after adding ListeningFuture.
         if (listeningFuture.isDone()) {
             return listeningFuture;
+        }
+        if (endpointGroup.whenReady().isDone()) {
+            final Endpoint endpoint0 = selectNow(ctx);
+            if (endpoint0 != null) {
+                // The EndpointGroup have just been updated before adding ListeningFuture.
+                listeningFuture.complete(endpoint0);
+                return listeningFuture;
+            }
         }
 
         final long selectionTimeoutMillis = endpointGroup.selectionTimeoutMillis();
