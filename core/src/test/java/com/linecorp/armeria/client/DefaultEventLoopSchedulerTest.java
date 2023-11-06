@@ -319,8 +319,8 @@ class DefaultEventLoopSchedulerTest {
 
     @Test
     void cleanUpInactiveEndpointsAfterIdleTimeout() throws InterruptedException {
-        Endpoint endpointA = Endpoint.of("a.com");
-        Endpoint endpointB = Endpoint.of("b.com");
+        final Endpoint endpointA = Endpoint.of("a.com");
+        final Endpoint endpointB = Endpoint.of("b.com");
         final EventLoopGroup group = new DefaultEventLoopGroup(1024);
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(
                 group, 1, GROUP_SIZE,
