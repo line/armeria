@@ -304,8 +304,8 @@ class ArmeriaServerHttpResponseTest {
         final DataBufferFactoryWrapper<NettyDataBufferFactory> factoryWrapper = new DataBufferFactoryWrapper<>(
                 new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT) {
                     @Override
-                    public NettyDataBuffer allocateBuffer() {
-                        final NettyDataBuffer buffer = super.allocateBuffer();
+                    public NettyDataBuffer allocateBuffer(int initialCapacity) {
+                        final NettyDataBuffer buffer = super.allocateBuffer(initialCapacity);
                         allocatedBuffers.offer(buffer);
                         return buffer;
                     }
@@ -313,7 +313,7 @@ class ArmeriaServerHttpResponseTest {
         final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         final ArmeriaServerHttpResponse response =
                 new ArmeriaServerHttpResponse(ctx, future, factoryWrapper, null);
-        response.writeWith(Mono.just(factoryWrapper.delegate().allocateBuffer().write("foo".getBytes())))
+        response.writeWith(Mono.just(factoryWrapper.delegate().allocateBuffer(3).write("foo".getBytes())))
                 .then(Mono.defer(response::setComplete)).subscribe();
         await().until(future::isDone);
         assertThat(future.isCompletedExceptionally()).isFalse();

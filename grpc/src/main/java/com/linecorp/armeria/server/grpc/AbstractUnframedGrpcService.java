@@ -63,16 +63,19 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.netty.util.AttributeKey;
 
 /**
  * Common part of the {@link UnframedGrpcService} and {@link HttpJsonTranscodingService}.
  */
 abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AbstractUnframedGrpcService.class);
+    static final AttributeKey<Boolean> IS_UNFRAMED_GRPC =
+            AttributeKey.valueOf(AbstractUnframedGrpcService.class, "IS_UNFRAMED_GRPC");
+
     private final GrpcService delegate;
     private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
-
-    private static final Logger logger = LoggerFactory.getLogger(AbstractUnframedGrpcService.class);
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
@@ -142,6 +145,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             @Nullable Function<HttpData, HttpData> responseBodyConverter,
             MediaType responseContentType) {
         final HttpRequest grpcRequest;
+        ctx.setAttr(IS_UNFRAMED_GRPC, true);
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
             final HttpData frame;
@@ -194,7 +198,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             PooledObjects.close(grpcResponse.content());
             res.completeExceptionally(new NullPointerException("grpcStatusCode must not be null"));
             logger.warn("{} A gRPC response must have the {} header. response: {}",
-                    ctx, GrpcHeaderNames.GRPC_STATUS, grpcResponse);
+                        ctx, GrpcHeaderNames.GRPC_STATUS, grpcResponse);
             return;
         }
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));

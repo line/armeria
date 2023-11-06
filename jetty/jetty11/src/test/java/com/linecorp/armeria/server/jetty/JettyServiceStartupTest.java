@@ -23,12 +23,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
-import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
-import org.eclipse.jetty.plus.annotation.ContainerInitializer;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
@@ -88,11 +84,6 @@ class JettyServiceStartupTest {
                                                       "hello.jar")).getURI().toURL()
                 },
                 JettyService.class.getClassLoader()));
-
-        handler.addBean(new ServletContainerInitializersStarter(handler), true);
-        handler.setAttribute(
-                "org.eclipse.jetty.containerInitializers",
-                Collections.singletonList(new ContainerInitializer(new JettyJasperInitializer(), null)));
         return handler;
     }
 

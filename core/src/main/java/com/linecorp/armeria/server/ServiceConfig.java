@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -32,6 +33,8 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -80,6 +83,7 @@ public final class ServiceConfig {
     private final HttpHeaders defaultHeaders;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
     private final ServiceErrorHandler serviceErrorHandler;
+    private final Supplier<AutoCloseable> contextHook;
 
     /**
      * Creates a new instance.
@@ -93,13 +97,13 @@ public final class ServiceConfig {
                   Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
                   HttpHeaders defaultHeaders,
                   Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
-                  ServiceErrorHandler serviceErrorHandler) {
+                  ServiceErrorHandler serviceErrorHandler, Supplier<? extends AutoCloseable> contextHook) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
              multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                     requestIdGenerator, serviceErrorHandler);
+                     requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
     /**
@@ -117,7 +121,8 @@ public final class ServiceConfig {
                           Path multipartUploadsLocation,
                           List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
                           Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
-                          ServiceErrorHandler serviceErrorHandler) {
+                          ServiceErrorHandler serviceErrorHandler,
+                          Supplier<? extends AutoCloseable> contextHook) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
@@ -141,6 +146,8 @@ public final class ServiceConfig {
                 (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
         this.serviceErrorHandler = requireNonNull(serviceErrorHandler, "serviceErrorHandler");
+        //noinspection unchecked
+        this.contextHook = (Supplier<AutoCloseable>) requireNonNull(contextHook, "contextHook");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -179,7 +186,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 requestIdGenerator, serviceErrorHandler);
+                                 requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -190,7 +197,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 requestIdGenerator, serviceErrorHandler);
+                                 requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -200,7 +207,7 @@ public final class ServiceConfig {
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
                                  multipartUploadsLocation, shutdownSupports, defaultHeaders,
-                                 requestIdGenerator, serviceErrorHandler);
+                                 requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
     /**
@@ -430,6 +437,15 @@ public final class ServiceConfig {
 
     ServiceErrorHandler errorHandler() {
         return serviceErrorHandler;
+    }
+
+    /**
+     * Returns the {@link Supplier} which provides an {@link AutoCloseable} and will be called whenever this
+     * {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     */
+    @UnstableApi
+    public Supplier<AutoCloseable> contextHook() {
+        return contextHook;
     }
 
     List<ShutdownSupport> shutdownSupports() {

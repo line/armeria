@@ -237,6 +237,11 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
         return (HttpResponseBuilder) super.headers(headers);
     }
 
+    @Override
+    public HttpResponseBuilder trailer(CharSequence name, Object value) {
+        return (HttpResponseBuilder) super.trailer(name, value);
+    }
+
     /**
      * Adds HTTP trailers to this response.
      */
