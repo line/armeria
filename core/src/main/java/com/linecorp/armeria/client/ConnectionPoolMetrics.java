@@ -39,7 +39,7 @@ final class ConnectionPoolMetrics {
 
     private final MeterRegistry meterRegistry;
     private final MeterIdPrefix idPrefix;
-    private final Map<List<Tag>, Integer> activeConnections = new ConcurrentHashMap<>();
+    private final Map<List<Tag>, IntHolder> activeConnections = new ConcurrentHashMap<>();
 
     /**
      * Creates a new instance with the specified {@link Meter} name.
@@ -58,11 +58,11 @@ final class ConnectionPoolMetrics {
                .register(meterRegistry)
                .increment();
 
-        final int numConnections = activeConnections.compute(commonTags, (k, v) -> v == null ? 1 : v + 1);
-        if (numConnections == 1) {
-            Gauge.builder(idPrefix.name(),
-                          activeConnections,
-                          activeConnections -> activeConnections.getOrDefault(commonTags, 0))
+        final IntHolder numConnections = activeConnections.compute(commonTags, (k, v) -> {
+            return v == null ? new IntHolder(1) : v.increment();
+        });
+        if (numConnections.value == 1) {
+            Gauge.builder(idPrefix.name(), numConnections, self -> self.value)
                  .tags(commonTags)
                  .tag(STATE, "active")
                  .register(meterRegistry);
@@ -86,10 +86,31 @@ final class ConnectionPoolMetrics {
                .register(meterRegistry)
                .increment();
 
-        activeConnections.computeIfPresent(commonTags, (k, v) -> v - 1);
-        if (activeConnections.getOrDefault(commonTags, 0) <= 0) {
+        final IntHolder numConnections = activeConnections.computeIfPresent(commonTags,
+                                                                            (k, v) -> v.decrement());
+        if (numConnections != null && numConnections.value <= 0) {
             // Remove the gauge to be garbage collected.
             activeConnections.remove(commonTags);
         }
+    }
+
+    private static class IntHolder {
+
+        int value;
+
+        IntHolder(int value) {
+            this.value = value;
+        }
+
+        IntHolder increment() {
+            value++;
+            return this;
+        }
+
+        IntHolder decrement() {
+            value--;
+            return this;
+        }
+
     }
 }
