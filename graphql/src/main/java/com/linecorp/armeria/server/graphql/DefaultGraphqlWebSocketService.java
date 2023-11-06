@@ -330,7 +330,7 @@ public class DefaultGraphqlWebSocketService extends AbstractHttpService implemen
     public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
         logger.debug("Handling websocket");
         WebSocketWriter outgoing = WebSocket.streaming();
-        GraphqlWSSubProtocol protocol = new GraphqlWSSubProtocol(this);
+        GraphqlWSSubProtocol protocol = new GraphqlWSSubProtocol(ctx, this);
 
         in.subscribe(new GraphqlWebSocketSubscriber(protocol, outgoing));
 
@@ -338,12 +338,18 @@ public class DefaultGraphqlWebSocketService extends AbstractHttpService implemen
     }
 
     @Override
-    public ExecutionResult executeGraphql(ExecutionInput.Builder executionInput) {
+    public ExecutionResult executeGraphql(
+        ServiceRequestContext ctx,
+        ExecutionInput.Builder builder) {
         logger.debug("Executing graphql");
-        // TODO dataloaderregistry needs context somehow?
+        final ExecutionInput executionInput =
+            builder.context(ctx)
+                .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
+                .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
+                .executionId(ExecutionId.generate())
+                .build();
         try {
-            return graphQL.execute(executionInput
-                .executionId(ExecutionId.generate()));
+            return graphQL.execute(executionInput);
         } catch (Exception e) {
             logger.error("Execution failed", e);
             throw e;

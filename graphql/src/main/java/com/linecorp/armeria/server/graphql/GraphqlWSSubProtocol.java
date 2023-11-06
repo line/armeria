@@ -7,10 +7,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import graphql.ErrorClassification;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
-import graphql.GraphQLContext;
 import graphql.GraphQLError;
 import graphql.language.SourceLocation;
 import org.reactivestreams.Publisher;
@@ -22,13 +22,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.linecorp.armeria.server.graphql.GraphqlServiceContexts.GRAPHQL_CONTEXT_KEY;
 import static java.util.Collections.emptyList;
+import static java.util.Objects.requireNonNull;
 
+/**
+ * Handles the graphql-ws sub protocol within a web socket.
+ * Handles potentially multiple subscriptions through the same web socket.
+ */
 class GraphqlWSSubProtocol {
     private static final Logger logger = LoggerFactory.getLogger(GraphqlWSSubProtocol.class);
     private final GraphqlExecutor graphqlExecutor;
-    private HashMap<String, GraphqlSubscriber> graphqlSubscriptions = new HashMap<>();
+    private final HashMap<String, GraphqlSubscriber> graphqlSubscriptions = new HashMap<>();
     private final ObjectMapper mapper = new ObjectMapper();
 
     private final TypeReference<Map<String, Object>> JSON_MAP =
@@ -37,9 +41,11 @@ class GraphqlWSSubProtocol {
 
     private boolean connectionInitiated = false;
 
-    private Map<String, Object> ctx = ImmutableMap.of();
+    private final ServiceRequestContext serviceContext;
+    private Map<String, Object> initContext = ImmutableMap.of();
 
-    GraphqlWSSubProtocol(GraphqlExecutor executor) {
+    GraphqlWSSubProtocol(ServiceRequestContext ctx, GraphqlExecutor executor) {
+        this.serviceContext = ctx;
         this.graphqlExecutor = executor;
     }
 
@@ -53,13 +59,15 @@ class GraphqlWSSubProtocol {
             Map<String, Object> eventMap = parseJsonString(event, JSON_MAP);
 
             String type = toStringFromJson("type", eventMap.get("type"));
+            requireNonNull(type, "type");
+
             String id;
 
             switch (type) {
                 case "connection_init":
                     Object rawPayload = eventMap.get("payload");
                     if (rawPayload != null) {
-                        ctx = toMapFromJson(rawPayload);
+                        initContext = toMapFromJson(rawPayload);
                     }
                     connectionInitiated = true;
                     writeConnectionAck(out);
@@ -74,6 +82,7 @@ class GraphqlWSSubProtocol {
                 case "subscribe":
                     ensureInitiated();
                     id = toStringFromJson("id", eventMap.get("id"));
+                    requireNonNull(id, "id");
                     Map<String, Object> payload = toMapFromJson(eventMap.get("payload"));
                     try {
                         if (graphqlSubscriptions.containsKey(id)) {
@@ -89,9 +98,9 @@ class GraphqlWSSubProtocol {
                             .variables(variables)
                             .operationName(operationName)
                             .extensions(extensions)
-                            .graphQLContext(ctx);
+                            .graphQLContext(initContext);
 
-                        ExecutionResult executionResult = graphqlExecutor.executeGraphql(executionInput);
+                        ExecutionResult executionResult = graphqlExecutor.executeGraphql(serviceContext, executionInput);
 
                         if (!executionResult.getErrors().isEmpty()) {
                             writeError(out, id, executionResult.getErrors());
@@ -133,6 +142,7 @@ class GraphqlWSSubProtocol {
                     ensureInitiated();
                     // Read id and remove that subscription
                     id = toStringFromJson("id", eventMap.get("id"));
+                    requireNonNull(id, "id");
                     GraphqlSubscriber s = graphqlSubscriptions.remove(id);
                     if (s != null) {
                         s.setCompleted();
@@ -142,18 +152,11 @@ class GraphqlWSSubProtocol {
                         /*
                         Receiving a message of a type or format which is not specified in this document will result in an immediate socket closure with the event 4400: <error-message>. The <error-message> can be vaguely descriptive on why the received message is invalid.
                          */
-                    // TODO
+                    // TODO better error message?
                     throw new IllegalArgumentException("Unknown event type: " + type);
             }
-
-
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             logger.error("Error parsing json", e);
-            // TODO
-            throw new RuntimeException(e);
-        } catch (IllegalStateException e) {
-            logger.error("Error handling event", e);
-            // TODO send error back
             throw new RuntimeException(e);
         }
     }
@@ -253,7 +256,6 @@ class GraphqlWSSubProtocol {
 
                 @Override
                 public ErrorClassification getErrorType() {
-                    // TODO ?
                     return ErrorClassification.errorClassification("Unknown");
                 }
             }
