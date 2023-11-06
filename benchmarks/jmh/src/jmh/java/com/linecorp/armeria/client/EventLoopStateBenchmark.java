@@ -17,6 +17,7 @@ package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -51,7 +52,8 @@ public class EventLoopStateBenchmark {
 
         eventLoopGroup = EventLoopGroups.newEventLoopGroup(maxNumEventLoops);
         final DefaultEventLoopScheduler scheduler = new DefaultEventLoopScheduler(
-                eventLoopGroup, maxNumEventLoops, maxNumEventLoops, ImmutableList.of());
+                eventLoopGroup, maxNumEventLoops, maxNumEventLoops, ImmutableList.of(),
+                Duration.ofMinutes(1).toMillis());
         final List<EventLoop> eventLoops = Streams.stream(eventLoopGroup)
                                                   .map(EventLoop.class::cast)
                                                   .collect(toImmutableList());

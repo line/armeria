@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -55,7 +56,11 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     private static final AtomicIntegerFieldUpdater<DefaultEventLoopScheduler> acquisitionStartIndexUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultEventLoopScheduler.class, "acquisitionStartIndex");
 
-    private static final long CLEANUP_INTERVAL_NANOS = Duration.ofMinutes(1).toNanos();
+    @VisibleForTesting
+    static final long MIN_CLEANUP_INTERVAL_NANOS = Duration.ofMinutes(1).toNanos();
+    private static final long MAX_CLEANUP_INTERVAL_NANOS = Duration.ofDays(7).toNanos();
+    @VisibleForTesting
+    private static final long CLEANUP_INTERVAL_BUFFER_NANOS = Duration.ofSeconds(5).toNanos();
 
     static final int DEFAULT_MAX_NUM_EVENT_LOOPS = 1;
 
@@ -67,8 +72,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     private final int maxNumEventLoopsPerHttp1Endpoint;
 
     private final Map<StateKey, AbstractEventLoopState> states = new ConcurrentHashMap<>();
-
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions;
+    private final long cleanupIntervalNanos;
 
     private int cleanupCounter;
 
@@ -78,9 +83,11 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     @SuppressWarnings("FieldMayBeFinal")
     private volatile long lastCleanupTimeNanos = System.nanoTime();
 
+    // Used only for testing.
     DefaultEventLoopScheduler(EventLoopGroup eventLoopGroup, int maxNumEventLoopsPerEndpoint,
                               int maxNumEventLoopsPerHttp1Endpoint,
-                              List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions) {
+                              List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions, long idleTimeoutMillis,
+                              long minCleanUpIntervalNanos, long maxCleanUpIntervalNanos) {
         eventLoops = Streams.stream(eventLoopGroup)
                             .map(EventLoop.class::cast)
                             .collect(toImmutableList());
@@ -100,6 +107,21 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
                     Math.min(maxNumEventLoopsPerHttp1Endpoint, eventLoopSize);
         }
         this.maxNumEventLoopsFunctions = ImmutableList.copyOf(maxNumEventLoopsFunctions);
+        final long idleTimeoutNanos = idleTimeoutMillis > 0 ? Duration.ofMillis(idleTimeoutMillis).toNanos()
+                                                            : Long.MAX_VALUE;
+        final long cleanupIntervalNanos = Math.min(Math.max(minCleanUpIntervalNanos, idleTimeoutNanos),
+                                                   maxCleanUpIntervalNanos);
+        // As it is difficult to predict exactly when KeepAliveHandler will remove the idle connection,
+        // 5 seconds is added as a buffer.
+        this.cleanupIntervalNanos = LongMath.saturatedAdd(cleanupIntervalNanos, CLEANUP_INTERVAL_BUFFER_NANOS);
+    }
+
+    DefaultEventLoopScheduler(EventLoopGroup eventLoopGroup, int maxNumEventLoopsPerEndpoint,
+                              int maxNumEventLoopsPerHttp1Endpoint,
+                              List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions, long idleTimeoutMillis) {
+        this(eventLoopGroup, maxNumEventLoopsPerEndpoint, maxNumEventLoopsPerHttp1Endpoint,
+             maxNumEventLoopsFunctions, idleTimeoutMillis, MIN_CLEANUP_INTERVAL_NANOS,
+             MAX_CLEANUP_INTERVAL_NANOS);
     }
 
     /**
@@ -244,7 +266,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
 
         final long currentTimeNanos = System.nanoTime();
         final long lastCleanupTimeNanos = this.lastCleanupTimeNanos;
-        if (currentTimeNanos - lastCleanupTimeNanos < CLEANUP_INTERVAL_NANOS ||
+        if (currentTimeNanos - lastCleanupTimeNanos < cleanupIntervalNanos ||
             !lastCleanupTimeNanosUpdater.compareAndSet(this, lastCleanupTimeNanos, currentTimeNanos)) {
             return;
         }
@@ -255,7 +277,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
             lock.lock();
             try {
                 remove = state.allActiveRequests() == 0 &&
-                         currentTimeNanos - state.lastActivityTimeNanos() >= CLEANUP_INTERVAL_NANOS;
+                         currentTimeNanos - state.lastActivityTimeNanos() >= cleanupIntervalNanos;
             } finally {
                 lock.unlock();
             }

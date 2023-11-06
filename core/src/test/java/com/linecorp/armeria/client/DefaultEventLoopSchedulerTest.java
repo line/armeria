@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -252,7 +253,8 @@ class DefaultEventLoopSchedulerTest {
         for (int i = 0; i < 30; i++) {
             final DefaultEventLoopScheduler s =
                     // Create DefaultEventLoopScheduler with the default maxNumEventLoops values.
-                    new DefaultEventLoopScheduler(group, 0, 0, ImmutableList.of());
+                    new DefaultEventLoopScheduler(group, 0, 0, ImmutableList.of(),
+                                                  Duration.ofMinutes(1).toMillis());
             startIndices.add(s.acquisitionStartIndex(1));
         }
         assertThat(startIndices).contains(0, 1, 2);
@@ -263,7 +265,8 @@ class DefaultEventLoopSchedulerTest {
     void stressTest() {
         final EventLoopGroup group = new DefaultEventLoopGroup(1024);
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE,
-                                                                          ImmutableList.of());
+                                                                          ImmutableList.of(),
+                                                                          Duration.ofMinutes(1).toMillis());
         final List<AbstractEventLoopEntry> acquiredEntries = new ArrayList<>();
         stressTest(s, acquiredEntries, 0.8);
         stressTest(s, acquiredEntries, 0.5);
@@ -314,8 +317,45 @@ class DefaultEventLoopSchedulerTest {
         }
     }
 
+    @Test
+    void cleanUpInactiveEndpointsAfterIdleTimeout() throws InterruptedException {
+        Endpoint endpointA = Endpoint.of("a.com");
+        Endpoint endpointB = Endpoint.of("b.com");
+        final EventLoopGroup group = new DefaultEventLoopGroup(1024);
+        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(
+                group, 1, GROUP_SIZE,
+                ImmutableList.of(), 2000, 1000, 10000);
+
+        int cleanUpCount = 0;
+        ReleasableHolder<EventLoop> holderA = s.acquire(SessionProtocol.H2, endpointA, endpointA);
+        final EventLoop eventLoopA = holderA.get();
+        holderA.release();
+        cleanUpCount++;
+        ReleasableHolder<EventLoop> holderB = s.acquire(SessionProtocol.H2, endpointB, endpointB);
+        holderB.release();
+        cleanUpCount++;
+
+        // Iterate until the cleanupCounter in DefaultEventLoopScheduler reaches 255.
+        for (int i = cleanUpCount; i < 255; i++) {
+            holderA = s.acquire(SessionProtocol.H2, endpointA, endpointA);
+            final EventLoop eventLoopA1 = holderA.get();
+            holderA.release();
+            assertThat(eventLoopA).isSameAs(eventLoopA1);
+        }
+        // Wait for the inactive entry to be cleaned up. 5 seconds is the buffer time of the cleanup interval.
+        Thread.sleep(Duration.ofSeconds(2).toMillis() + 5000);
+
+        // This acquisition delete the AbstractEventLoopEntry for endpointA.
+        holderB = s.acquire(SessionProtocol.H2, endpointB, endpointB);
+        holderB.release();
+        final ReleasableHolder<EventLoop> holder2 = s.acquire(SessionProtocol.H2, endpointA, endpointA);
+        final EventLoop eventLoop2 = holder2.get();
+        assertThat(eventLoop2).isNotSameAs(eventLoopA);
+    }
+
     private static DefaultEventLoopScheduler defaultEventLoopScheduler() {
-        return new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE, ImmutableList.of());
+        return new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE, ImmutableList.of(),
+                                             Duration.ofMinutes(1).toMillis());
     }
 
     static AbstractEventLoopEntry acquireEntry(DefaultEventLoopScheduler s,

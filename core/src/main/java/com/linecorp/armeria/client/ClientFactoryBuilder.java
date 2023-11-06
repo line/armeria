@@ -876,14 +876,6 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     private ClientFactoryOptions buildOptions() {
-        options.computeIfAbsent(ClientFactoryOptions.EVENT_LOOP_SCHEDULER_FACTORY, k -> {
-            final Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory =
-                    eventLoopGroup -> new DefaultEventLoopScheduler(
-                            eventLoopGroup, maxNumEventLoopsPerEndpoint, maxNumEventLoopsPerHttp1Endpoint,
-                            maxNumEventLoopsFunctions);
-            return ClientFactoryOptions.EVENT_LOOP_SCHEDULER_FACTORY.newValue(eventLoopSchedulerFactory);
-        });
-
         options.computeIfAbsent(ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY, k -> {
             final Function<? super EventLoopGroup,
                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
@@ -948,6 +940,16 @@ public final class ClientFactoryBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         newOptions.channelOptions(), idleTimeoutMillis, pingIntervalMillis);
         adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
+
+        if (!options.containsKey(ClientFactoryOptions.EVENT_LOOP_SCHEDULER_FACTORY)) {
+            final long finalIdleTimeoutMillis = idleTimeoutMillis;
+            final Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory =
+                    eventLoopGroup -> new DefaultEventLoopScheduler(
+                            eventLoopGroup, maxNumEventLoopsPerEndpoint, maxNumEventLoopsPerHttp1Endpoint,
+                            maxNumEventLoopsFunctions, finalIdleTimeoutMillis);
+            adjustedOptionsBuilder.add(
+                    ClientFactoryOptions.EVENT_LOOP_SCHEDULER_FACTORY.newValue(eventLoopSchedulerFactory));
+        }
 
         final List<ClientFactoryOptionValue<?>> adjustedOptions = adjustedOptionsBuilder.build();
         if (!adjustedOptions.isEmpty()) {

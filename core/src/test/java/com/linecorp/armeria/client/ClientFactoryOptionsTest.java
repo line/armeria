@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -98,7 +99,8 @@ class ClientFactoryOptionsTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             final Function<? super EventLoopGroup, ? extends EventLoopScheduler> schedulerFactory =
-                    eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, ImmutableList.of());
+                    eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, ImmutableList.of(),
+                                                                    Duration.ofMinutes(1).toMillis());
             final Function<? super EventLoopGroup,
                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
                     eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup);
