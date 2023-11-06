@@ -256,7 +256,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                HttpHeaders.of(), HttpHeaders.of());
+                HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {

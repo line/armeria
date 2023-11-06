@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -335,6 +336,11 @@ public final class ContextPathServiceBindingBuilder
     @Override
     public ContextPathServiceBindingBuilder exclude(Route excludedRoute) {
         return (ContextPathServiceBindingBuilder) super.exclude(excludedRoute);
+    }
+
+    @Override
+    public ContextPathServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ContextPathServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     /**

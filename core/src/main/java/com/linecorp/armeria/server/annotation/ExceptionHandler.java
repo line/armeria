@@ -32,8 +32,7 @@ import java.lang.annotation.Target;
 public @interface ExceptionHandler {
 
     /**
-     * {@link ExceptionHandlerFunction} implementation type. The specified class must have an accessible
-     * default constructor.
+     * {@link ExceptionHandlerFunction} implementation type.
      */
     Class<? extends ExceptionHandlerFunction> value();
 }
