@@ -511,12 +511,9 @@ public final class DefaultClientRequestContext
         // So we don't check the nullness of rpcRequest unlike request.
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
-        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         root = ctx.root();
 
-        log = RequestLog.builder(this);
-        log.startRequest();
         responseCancellationScheduler =
                 CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
@@ -531,6 +528,14 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
+        if (ctx.endpoint() == endpoint || endpoint == null) {
+            eventLoop = ctx.eventLoop().withoutContext();
+        } else {
+            acquireEventLoop(endpoint);
+        }
+
+        log = RequestLog.builder(this);
+        log.startRequest();
     }
 
     @Nullable
