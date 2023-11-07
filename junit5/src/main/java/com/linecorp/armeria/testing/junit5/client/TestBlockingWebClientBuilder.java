@@ -62,7 +62,7 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
      * Creates a new instance.
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields in
-     * {@link SessionProtocol}
+     *     {@link SessionProtocol}
      */
     TestBlockingWebClientBuilder(URI uri) {
         super(uri);
@@ -72,7 +72,7 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
      * Creates a new instance.
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields in
-     * {@link SessionProtocol}
+     *     {@link SessionProtocol}
      */
     TestBlockingWebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup,
                                  @Nullable String path) {
@@ -83,8 +83,8 @@ public final class TestBlockingWebClientBuilder extends AbstractWebClientBuilder
      * Returns a newly-created web test client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
-     * {@link TestBlockingWebClient#builder(String)} or {@link TestBlockingWebClient#builder(URI)} is not
-     * an HTTP scheme
+     *     {@link TestBlockingWebClient#builder(String)} or {@link TestBlockingWebClient#builder(URI)} is not
+     *     an HTTP scheme
      */
     public TestBlockingWebClient build() {
         return TestBlockingWebClient.of(buildWebClient().blocking());
