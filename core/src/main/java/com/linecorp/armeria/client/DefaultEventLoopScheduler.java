@@ -256,8 +256,9 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     }
 
     /**
-     * Cleans up empty entries with no activity for more than 1 minute. For reduced overhead, we perform this
-     * only when 1) the last clean-up was more than 1 minute ago and 2) the number of acquisitions % 256 is 0.
+     * Cleans up empty entries with no activity for more than {@code cleanupIntervalNanos}. For reduced
+     * overhead, we perform this only when 1) the last clean-up was more than {@code cleanupIntervalNanos} ago
+     * and 2) the number of acquisitions % 256 is 0.
      */
     private void cleanup() {
         if ((++cleanupCounter & 0xFF) != 0) { // (++counter % 256) != 0
