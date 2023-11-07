@@ -99,11 +99,11 @@ public interface ConnectionPoolListener extends Unwrappable {
      *   <td>{@code <name>#count{state="closed"}}</td>
      *   <td>The number of closed connections.</td>
      * </tr>
-     * </table>
      * <tr>
      *   <td>{@code #value{state="active"}}</td>
      *   <td>The number of active connections.</td>
      * </tr>
+     * </table>
      */
     @UnstableApi
     static ConnectionPoolListener metricCollecting(MeterRegistry registry, MeterIdPrefix meterIdPrefix) {
