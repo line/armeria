@@ -53,7 +53,7 @@ import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
-class GoogleGrpcStatusFunctionTest {
+class GoogleGrpcExceptionHandlerTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -61,7 +61,7 @@ class GoogleGrpcStatusFunctionTest {
         protected void configure(ServerBuilder sb) {
             sb.service(GrpcService.builder()
                                   .intercept(new AuthInterceptor())
-                                  .exceptionMapping(new ExceptionHandler())
+                                  .exceptionHandler(new ExceptionHandler())
                                   .addService(new TestService())
                                   .build())
               .decorator(LoggingService.newDecorator());
@@ -169,7 +169,7 @@ class GoogleGrpcStatusFunctionTest {
         }
     }
 
-    private static final class ExceptionHandler implements GoogleGrpcStatusFunction {
+    private static final class ExceptionHandler implements GoogleGrpcExceptionHandlerFunction {
 
         @Override
         public com.google.rpc.Status applyStatusProto(RequestContext ctx, Throwable throwable,

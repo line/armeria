@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.AbstractHttpResponseDecoder.contentTooLargeException;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 
 import org.slf4j.Logger;
@@ -24,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
@@ -153,7 +153,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         keepAliveHandler.destroy();
         if (res != null) {
-            res.close(ClosedSessionException.get());
+            res.close(newClosedSessionException(ctx));
         }
         ctx.fireChannelInactive();
     }
@@ -196,7 +196,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                         state = State.NEEDS_HANDSHAKE_RESPONSE_END;
                     }
                     if (!res.tryWriteResponseHeaders(responseHeaders)) {
-                        fail(ctx, ClosedSessionException.get());
+                        fail(ctx, newClosedSessionException(ctx));
                     }
                     break;
                 case NEEDS_HANDSHAKE_RESPONSE_END:

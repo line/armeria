@@ -338,4 +338,9 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
     public DnsResolverGroupBuilder dnsCache(DnsCache dnsCache) {
         return (DnsResolverGroupBuilder) super.dnsCache(dnsCache);
     }
+
+    @Override
+    public DnsResolverGroupBuilder enableDnsQueryMetrics(boolean enable) {
+        return (DnsResolverGroupBuilder) super.enableDnsQueryMetrics(enable);
+    }
 }

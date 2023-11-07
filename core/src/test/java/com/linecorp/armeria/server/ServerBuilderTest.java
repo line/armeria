@@ -34,6 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -72,6 +73,18 @@ class ServerBuilderTest {
 
     private static ClientFactory clientFactory;
 
+    private static final AtomicInteger poppedRouterCnt = new AtomicInteger();
+    private static final Supplier<? extends AutoCloseable> contextHookRouter = () ->
+            (AutoCloseable) poppedRouterCnt::getAndIncrement;
+
+    private static final AtomicInteger poppedRouterCnt2 = new AtomicInteger();
+    private static final Supplier<? extends AutoCloseable> contextHookRouter2 = () ->
+            (AutoCloseable) poppedRouterCnt2::getAndIncrement;
+
+    private static final AtomicInteger poppedCnt = new AtomicInteger();
+    private static final Supplier<? extends AutoCloseable> contextHook = () ->
+            (AutoCloseable) poppedCnt::getAndIncrement;
+
     @RegisterExtension
     static final SelfSignedCertificateExtension selfSignedCertificate = new SelfSignedCertificateExtension();
 
@@ -93,6 +106,19 @@ class ServerBuilderTest {
                           mutator -> mutator.add("virtualhost_decorator", "true"));
                   return delegate.serve(ctx, req);
               });
+            sb.route()
+              .path("/hook_route")
+              .contextHook(contextHookRouter)
+              .contextHook(contextHookRouter2)
+              .build((ctx, req) -> HttpResponse.of("hook_route"));
+        }
+    };
+
+    @RegisterExtension
+    static final ServerExtension server1 = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.contextHook(contextHook).service("/hook", (ctx, req) -> HttpResponse.of("hook"));
         }
     };
 
@@ -704,6 +730,41 @@ class ServerBuilderTest {
                                SessionProtocol.HTTP, SessionProtocol.HTTPS),
                 new ServerPort(DomainSocketAddress.of("/tmp/bar"),
                                SessionProtocol.HTTP, SessionProtocol.HTTPS));
+    }
+
+    @Test
+    void contextHook() {
+        assertThat(poppedCnt.get()).isEqualTo(0);
+
+        final WebClient client = WebClient.builder(server1.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/hook").aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("hook");
+        assertThat(poppedCnt.get()).isEqualTo(1);
+    }
+
+    @Test
+    void contextHook_route() {
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
+        assertThat(poppedRouterCnt2.get()).isEqualTo(0);
+
+        final WebClient client = WebClient.builder(server.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/hook_route").aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("hook_route");
+        assertThat(poppedRouterCnt.get()).isEqualTo(1);
+        assertThat(poppedRouterCnt2.get()).isEqualTo(1);
+    }
+
+    @Test
+    void contextHook_otherRoute() {
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
+
+        final WebClient client = WebClient.builder(server.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/").aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
     }
 
     @Test

@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactory;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -80,12 +81,12 @@ public final class EncodingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpEncodingType encodingType = HttpEncoders.getWrapperForRequest(req);
+        final StreamEncoderFactory encoderFactory = HttpEncoders.getEncoderFactory(req.headers());
         final HttpResponse delegateResponse = unwrap().serve(ctx, req);
-        if (encodingType == null || !encodableRequestHeadersPredicate.test(req.headers())) {
+        if (encoderFactory == null || !encodableRequestHeadersPredicate.test(req.headers())) {
             return delegateResponse;
         }
-        return new HttpEncodedResponse(delegateResponse, encodingType, encodableContentTypePredicate,
+        return new HttpEncodedResponse(delegateResponse, encoderFactory, encodableContentTypePredicate,
                                        ctx.alloc(), minBytesToForceChunkedAndEncoding);
     }
 }

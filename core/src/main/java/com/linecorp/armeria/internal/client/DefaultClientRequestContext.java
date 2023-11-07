@@ -225,7 +225,7 @@ public final class DefaultClientRequestContext
         super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
-              getAttributes(root));
+              getAttributes(root), options.contextHook());
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -500,7 +500,7 @@ public final class DefaultClientRequestContext
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         RequestTarget reqTarget) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
-              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()));
+              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()), ctx.hook());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {

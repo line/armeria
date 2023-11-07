@@ -285,9 +285,9 @@ public final class Flags {
             getValue(FlagsProvider::defaultHttp2MaxHeaderListSize, "defaultHttp2MaxHeaderListSize",
                      value -> value > 0 && value <= 0xFFFFFFFFL);
 
-    private static final int DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE =
-            getValue(FlagsProvider::defaultHttp2MaxResetFramesPerMinute,
-                     "defaultHttp2MaxResetFramesPerMinute", value -> value >= 0);
+    private static final int DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE =
+            getValue(FlagsProvider::defaultServerHttp2MaxResetFramesPerMinute,
+                     "defaultServerHttp2MaxResetFramesPerMinute", value -> value >= 0);
 
     private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
             getValue(FlagsProvider::defaultHttp1MaxInitialLineLength, "defaultHttp1MaxInitialLineLength",
@@ -1063,13 +1063,13 @@ public final class Flags {
      * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
      *
      * <p>The default value of this flag is
-     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * {@value DefaultFlagsProvider#DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerHttp2MaxResetFramesPerMinute=<integer>} JVM option
      * to override the default value. {@code 0} means no protection should be applied.
      */
     @UnstableApi
-    public static int defaultHttp2MaxResetFramesPerMinute() {
-        return DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
+    public static int defaultServerHttp2MaxResetFramesPerMinute() {
+        return DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
     }
 
     /**

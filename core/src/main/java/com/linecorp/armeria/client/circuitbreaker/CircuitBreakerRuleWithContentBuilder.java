@@ -263,6 +263,12 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onException();
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public CircuitBreakerRuleWithContentBuilder<T> onTimeoutException() {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onTimeoutException();
+    }
+
     /**
      * Reports a {@link Response} as a success or failure to a {@link CircuitBreaker},
      * or ignores it according to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and

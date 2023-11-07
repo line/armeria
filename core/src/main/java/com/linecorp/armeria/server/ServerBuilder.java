@@ -76,6 +76,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -215,7 +216,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private MeterRegistry meterRegistry = Flags.meterRegistry();
-    private ServerErrorHandler errorHandler = ServerErrorHandler.ofDefault();
+    @Nullable
+    private ServerErrorHandler errorHandler;
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -230,7 +232,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private long unhandledExceptionsReportIntervalMillis =
             Flags.defaultUnhandledExceptionsReportIntervalMillis();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
-    private int http2MaxResetFramesPerWindow = Flags.defaultHttp2MaxResetFramesPerMinute();
+    private int http2MaxResetFramesPerWindow = Flags.defaultServerHttp2MaxResetFramesPerMinute();
     private int http2MaxResetFramesWindowSeconds = 60;
 
     ServerBuilder() {
@@ -776,7 +778,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     /**
      * Sets the maximum number of RST frames that are allowed per window before the connection is closed. This
      * allows to protect against the remote peer flooding us with such frames and using up a lot of CPU.
-     * Defaults to {@link Flags#defaultHttp2MaxResetFramesPerMinute()}.
+     * Defaults to {@link Flags#defaultServerHttp2MaxResetFramesPerMinute()}.
      *
      * <p>Note that {@code 0} for any of the parameters means no protection should be applied.
      */
@@ -1689,8 +1691,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
-     * Sets the {@link ServerErrorHandler} that provides the error responses in case of unexpected exceptions
-     * or protocol errors.
+     * Adds the {@link ServerErrorHandler} that provides the error responses in case of unexpected exceptions
+     * or protocol errors. If multiple handlers are added, the latter is composed with the former using
+     * {@link ServerErrorHandler#orElse(ServerErrorHandler)}.
      *
      * <p>Note that the {@link HttpResponseException} is not handled by the {@link ServerErrorHandler}
      * but the {@link HttpResponseException#httpResponse()} is sent as-is.
@@ -1698,16 +1701,12 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @UnstableApi
     public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
         requireNonNull(errorHandler, "errorHandler");
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
+        if (this.errorHandler == null) {
+            this.errorHandler = errorHandler;
+        } else {
+            this.errorHandler = this.errorHandler.orElse(errorHandler);
         }
-        this.errorHandler = errorHandler;
         return this;
-    }
-
-    ServerErrorHandler errorHandler() {
-        return errorHandler;
     }
 
     /**
@@ -1979,6 +1978,19 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Sets the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
+     * from the {@link RequestContextStorage}.
+     *
+     * @param contextHook the {@link Supplier} that provides the {@link AutoCloseable}
+     */
+    @UnstableApi
+    public ServerBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        virtualHostTemplate.contextHook(contextHook);
+        return this;
+    }
+
+    /**
      * Sets the {@link DependencyInjector} to inject dependencies in annotated services.
      *
      * @param dependencyInjector the {@link DependencyInjector} to inject dependencies
@@ -2087,13 +2099,20 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
             unhandledExceptionsReporter = null;
         }
 
+        final ServerErrorHandler errorHandler;
+        if (this.errorHandler == null) {
+            errorHandler = ServerErrorHandler.ofDefault();
+        } else {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
+            errorHandler = this.errorHandler.orElse(ServerErrorHandler.ofDefault());
+        }
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
-                                                unhandledExceptionsReporter);
+                                                unhandledExceptionsReporter, errorHandler);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
-                                                         unhandledExceptionsReporter))
+                                                         unhandledExceptionsReporter, errorHandler))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
