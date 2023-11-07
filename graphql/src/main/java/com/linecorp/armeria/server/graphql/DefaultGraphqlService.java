@@ -16,34 +16,39 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
+import com.linecorp.armeria.common.websocket.WebSocket;
+import com.linecorp.armeria.common.websocket.WebSocketWriter;
+import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
+import com.linecorp.armeria.server.websocket.IWebSocketService;
+import com.linecorp.armeria.server.websocket.WebSocketService;
+import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
+import graphql.ExecutionInput;
+import graphql.ExecutionResult;
+import graphql.GraphQL;
+import graphql.execution.ExecutionId;
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
-import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
+import static java.util.Objects.requireNonNull;
 
-import graphql.ExecutionInput;
-import graphql.ExecutionResult;
-import graphql.GraphQL;
-
-final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService {
-
+public class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService, IWebSocketService, WebSocketServiceHandler, GraphqlExecutor {
     private static final Logger logger = LoggerFactory.getLogger(DefaultGraphqlService.class);
 
     private final GraphQL graphQL;
@@ -51,19 +56,48 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
     private final Function<? super ServiceRequestContext,
                            ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
 
+    /**
+     * Used for web sockets where there is no request context.
+     */
+    @Nullable
+    private Supplier<? extends DataLoaderRegistry> dataLoaderRegistrySupplier = null;
+
     private final boolean useBlockingTaskExecutor;
 
     private final GraphqlErrorHandler errorHandler;
 
+    @Nullable
+    private final WebSocketService webSocketService;
+
     DefaultGraphqlService(
-            GraphQL graphQL,
-            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
-            boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
+        GraphQL graphQL,
+        Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
+        boolean useBlockingTaskExecutor,
+        GraphqlErrorHandler errorHandler,
+        boolean useWebSocket) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
-                                                         "dataLoaderRegistryFunction");
+            "dataLoaderRegistryFunction");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.errorHandler = errorHandler;
+
+        if (useWebSocket) {
+            this.webSocketService = WebSocketService.builder(this)
+                .subprotocols("graphql-transport-ws")
+                .build();
+        } else {
+            this.webSocketService = null;
+        }
+    }
+
+    @Override
+    protected HttpResponse doWebSocketUpgrade(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (webSocketService != null) {
+            dataLoaderRegistrySupplier = () -> dataLoaderRegistryFunction.apply(ctx);
+            return webSocketService.serve(ctx, req);
+        } else {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "websockets are disabled");
+        }
     }
 
     @Override
@@ -71,8 +105,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
         if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
-                                   "Only %s and %s compatible media types are acceptable",
-                                   MediaType.GRAPHQL_RESPONSE_JSON, MediaType.JSON);
+                "Only %s and %s compatible media types are acceptable",
+                MediaType.GRAPHQL_RESPONSE_JSON, MediaType.JSON);
         }
 
         final ExecutionInput.Builder builder = ExecutionInput.newExecutionInput(req.query());
@@ -92,15 +126,15 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         }
 
         final ExecutionInput executionInput =
-                builder.context(ctx)
-                       .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                       .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
-                       .build();
+            builder.context(ctx)
+                .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
+                .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
+                .build();
         return execute(ctx, executionInput, produceType);
     }
 
     private HttpResponse execute(
-            ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
+        ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
         final CompletableFuture<ExecutionResult> future;
         if (useBlockingTaskExecutor) {
             future = CompletableFuture.supplyAsync(() -> graphQL.execute(input), ctx.blockingTaskExecutor());
@@ -108,22 +142,46 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
             future = graphQL.executeAsync(input);
         }
         return HttpResponse.of(
-                future.handle((executionResult, cause) -> {
-                    if (executionResult.getData() instanceof Publisher) {
-                        logger.warn("executionResult.getData() returns a {} that is not supported yet.",
-                                    executionResult.getData().toString());
+            future.handle((executionResult, cause) -> {
+                if (executionResult.getData() instanceof Publisher) {
+                    logger.warn("executionResult.getData() returns a {} that is not supported yet.",
+                        executionResult.getData().toString());
 
-                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
-                                                   produceType,
-                                                   toSpecification("WebSocket is not implemented"));
-                    }
+                    return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
+                        produceType,
+                        toSpecification("WebSocket is not implemented"));
+                }
 
-                    if (executionResult.getErrors().isEmpty() && cause == null) {
-                        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
-                    }
+                if (executionResult.getErrors().isEmpty() && cause == null) {
+                    return HttpResponse.ofJson(produceType, executionResult.toSpecification());
+                }
 
-                    return errorHandler.handle(ctx, input, executionResult, cause);
-                }));
+                return errorHandler.handle(ctx, input, executionResult, cause);
+            }));
+    }
+
+    /**
+     * WebSocket operations are handled here.
+     */
+    @Override
+    public ExecutionResult executeGraphql(ExecutionInput.Builder builder) {
+        requireNonNull(dataLoaderRegistrySupplier, "dataLoaderRegistrySupplier");
+        final ExecutionInput executionInput = builder
+                .dataLoaderRegistry(dataLoaderRegistrySupplier.get())
+                .executionId(ExecutionId.generate())
+                .build();
+
+        return graphQL.execute(executionInput);
+    }
+
+    @Override
+    public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
+        WebSocketWriter outgoing = WebSocket.streaming();
+        GraphqlWSSubProtocol protocol = new GraphqlWSSubProtocol(ctx, this);
+
+        in.subscribe(new GraphqlWebSocketSubscriber(protocol, outgoing));
+
+        return outgoing;
     }
 
     static Map<String, Object> toSpecification(String message) {

@@ -19,11 +19,11 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.internal.client.websocket.WebSocketClientUtil;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameDecoder;
 
-final class WebSocketClientFrameDecoder extends WebSocketFrameDecoder {
+public final class WebSocketClientFrameDecoder extends WebSocketFrameDecoder {
 
     private final ClientRequestContext ctx;
 
-    WebSocketClientFrameDecoder(ClientRequestContext ctx, int maxFramePayloadLength,
+    public WebSocketClientFrameDecoder(ClientRequestContext ctx, int maxFramePayloadLength,
                                 boolean allowMaskMismatch) {
         super(ctx, maxFramePayloadLength, allowMaskMismatch);
         this.ctx = ctx;

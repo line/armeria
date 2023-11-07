@@ -45,6 +45,9 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
+
 /**
  * A skeletal <a href="https://graphql.org/learn/serving-over-http/">GraphQL HTTP service</a> implementation.
  */
@@ -64,7 +67,19 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
             new TypeReference<Map<String, List<String>>>() {};
 
     @Override
+    protected HttpResponse doConnect(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (ctx.sessionProtocol().isExplicitHttp2() && isHttp2WebSocketUpgradeRequest(req.headers())) {
+            return doWebSocketUpgrade(ctx, req);
+        }
+        return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (ctx.sessionProtocol().isExplicitHttp1() && isHttp1WebSocketUpgradeRequest(req.headers())) {
+            return doWebSocketUpgrade(ctx, req);
+        }
+
         final QueryParams queryString = QueryParams.fromQueryString(ctx.query());
         String query = queryString.get("query");
         if (Strings.isNullOrEmpty(query)) {
@@ -211,6 +226,11 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         }
         return ExchangeType.UNARY;
     }
+
+    /**
+     * Handles a WebSocket upgrade request.
+     */
+    protected abstract HttpResponse doWebSocketUpgrade(ServiceRequestContext ctx, HttpRequest req) throws Exception;
 
     /**
      * Handles a {@link GraphqlRequest}.

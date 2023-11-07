@@ -378,5 +378,10 @@ class AbstractGraphqlServiceTest {
             produceType = GraphqlUtil.produceType(ctx.request().headers());
             return HttpResponse.of(HttpStatus.OK);
         }
+
+        @Override
+        protected HttpResponse doWebSocketUpgrade(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "websockets are disabled");
+        }
     }
 }

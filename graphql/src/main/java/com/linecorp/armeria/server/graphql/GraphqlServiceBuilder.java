@@ -336,17 +336,11 @@ public final class GraphqlServiceBuilder {
             errorHandler = this.errorHandler.orElse(GraphqlErrorHandler.of());
         }
 
-        if (useWebSocket) {
-            return new DefaultGraphqlWebSocketService(builder.build(),
-                    dataLoaderRegistryFactory,
-                    useBlockingTaskExecutor,
-                    errorHandler);
-        } else {
-            return new DefaultGraphqlService(builder.build(),
-                dataLoaderRegistryFactory,
-                useBlockingTaskExecutor,
-                errorHandler);
-        }
+        return new DefaultGraphqlService(builder.build(),
+            dataLoaderRegistryFactory,
+            useBlockingTaskExecutor,
+            errorHandler,
+            useWebSocket);
     }
 
     private GraphQLSchema buildSchema() {

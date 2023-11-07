@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.linecorp.armeria.server.graphql;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -41,11 +57,11 @@ class GraphqlWSSubProtocol {
 
     private boolean connectionInitiated = false;
 
-    private final ServiceRequestContext serviceContext;
-    private Map<String, Object> initContext = ImmutableMap.of();
+    private final Map<String, Object> upgradeCtx;
+    private Map<String, Object> connectionCtx = ImmutableMap.of();
 
     GraphqlWSSubProtocol(ServiceRequestContext ctx, GraphqlExecutor executor) {
-        this.serviceContext = ctx;
+        this.upgradeCtx = GraphqlServiceContexts.graphqlContext(ctx);
         this.graphqlExecutor = executor;
     }
 
@@ -54,20 +70,17 @@ class GraphqlWSSubProtocol {
      */
     @Nullable
     public void handle(String event, WebSocketWriter out) {
-        logger.debug("handle: {}", event);
         try {
             Map<String, Object> eventMap = parseJsonString(event, JSON_MAP);
-
             String type = toStringFromJson("type", eventMap.get("type"));
             requireNonNull(type, "type");
-
             String id;
 
             switch (type) {
                 case "connection_init":
                     Object rawPayload = eventMap.get("payload");
                     if (rawPayload != null) {
-                        initContext = toMapFromJson(rawPayload);
+                        connectionCtx = toMapFromJson(rawPayload);
                     }
                     connectionInitiated = true;
                     writeConnectionAck(out);
@@ -94,13 +107,14 @@ class GraphqlWSSubProtocol {
                         Map<String, Object> extensions = toMapFromJson(payload.get("extensions"));
 
                         ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput()
+                            .graphQLContext(upgradeCtx)
+                            .graphQLContext(connectionCtx)
                             .query(query)
                             .variables(variables)
                             .operationName(operationName)
-                            .extensions(extensions)
-                            .graphQLContext(initContext);
+                            .extensions(extensions);
 
-                        ExecutionResult executionResult = graphqlExecutor.executeGraphql(serviceContext, executionInput);
+                        ExecutionResult executionResult = graphqlExecutor.executeGraphql(executionInput);
 
                         if (!executionResult.getErrors().isEmpty()) {
                             writeError(out, id, executionResult.getErrors());
@@ -112,7 +126,6 @@ class GraphqlWSSubProtocol {
                         GraphqlSubscriber executionResultSubscriber = new GraphqlSubscriber(id, new GraphqlSubProtocol() {
                             @Override
                             public void sendResult(String operationId, ExecutionResult executionResult) throws JsonProcessingException {
-                                logger.debug("Sending result: {}", executionResult);
                                 writeNext(out, operationId, executionResult);
                             }
 
@@ -120,20 +133,12 @@ class GraphqlWSSubProtocol {
                             public void sendGraphqlErrors(List<GraphQLError> errors) throws JsonProcessingException {
                                 writeError(out, id, errors);
                             }
-
-                            @Override
-                            public void sendError(Throwable t) throws JsonProcessingException {
-                                logger.error("Error in subscription", t);
-                                writeError(out, id, t);
-                            }
                         });
 
                         graphqlSubscriptions.put(id, executionResultSubscriber);
-
                         publisher.subscribe(executionResultSubscriber);
-
                     } catch (Exception e) {
-                        logger.error("Error handling subscription", e);
+                        logger.debug("Error handling subscription", e);
                         GraphqlWSSubProtocol.this.writeError(out, id, e);
                         return;
                     }
@@ -149,15 +154,11 @@ class GraphqlWSSubProtocol {
                     }
                     return;
                 default:
-                        /*
-                        Receiving a message of a type or format which is not specified in this document will result in an immediate socket closure with the event 4400: <error-message>. The <error-message> can be vaguely descriptive on why the received message is invalid.
-                         */
-                    // TODO better error message?
                     throw new IllegalArgumentException("Unknown event type: " + type);
             }
         } catch (Exception e) {
-            logger.error("Error parsing json", e);
-            throw new RuntimeException(e);
+            logger.debug("Error while handling event", e);
+            out.close(e);
         }
     }
 
@@ -210,35 +211,35 @@ class GraphqlWSSubProtocol {
         return mapper.readValue(content, typeReference);
     }
 
-    void writePong(WebSocketWriter out) {
+    private void writePong(WebSocketWriter out) {
         out.write("{\"type\":\"pong\"}");
     }
 
-    void writeConnectionAck(WebSocketWriter out) {
+    private void writeConnectionAck(WebSocketWriter out) {
         out.write("{\"type\":\"connection_ack\"}");
     }
 
-    void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult) throws JsonProcessingException {
+    private void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult) throws JsonProcessingException {
         HashMap<String, Object> response = new HashMap<>();
         response.put("id", operationId);
         response.put("type", "next");
         response.put("payload", executionResult.toSpecification());
         String event = serializeToJson(response);
-        logger.info("Writing next: {}", event);
+        logger.trace("NEXT: {}", event);
         out.write(event);
     }
 
-    void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors) throws JsonProcessingException {
+    private void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors) throws JsonProcessingException {
         HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
         errorResponse.put("payload", errors);
         String event = serializeToJson(errorResponse);
-        logger.info("Writing error: {}", event);
+        logger.trace("ERROR: {}", event);
         out.write(event);
     }
 
-    void writeError(WebSocketWriter out, String operationId, Throwable t) throws JsonProcessingException {
+    private void writeError(WebSocketWriter out, String operationId, Throwable t) throws JsonProcessingException {
         HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
@@ -261,7 +262,7 @@ class GraphqlWSSubProtocol {
             }
         ));
         String event = serializeToJson(errorResponse);
-        logger.info("Writing error: {}", event);
+        logger.trace("ERROR: {}", event);
         out.write(event);
     }
 }
