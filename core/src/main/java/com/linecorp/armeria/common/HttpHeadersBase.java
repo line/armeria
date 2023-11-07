@@ -91,6 +91,11 @@ class HttpHeadersBase
 
     private final Map<AsciiString, Object> cache;
 
+    /**
+     * {@code true} if {@link #contentLengthUnknown()} was explicitly called.
+     * The value may be {@code false} if {@link HttpHeaderNames#CONTENT_LENGTH} is set.
+     */
+    private boolean contentLengthMayBeUnknown;
     private boolean endOfStream;
 
     HttpHeadersBase(int sizeHint) {
@@ -103,6 +108,7 @@ class HttpHeadersBase
      */
     HttpHeadersBase(HttpHeadersBase parent, boolean shallowCopy) {
         super(parent, shallowCopy);
+        contentLengthMayBeUnknown = parent.contentLengthMayBeUnknown;
         endOfStream = parent.endOfStream;
         cache = new HashMap<>(parent.cache);
     }
@@ -113,6 +119,7 @@ class HttpHeadersBase
     HttpHeadersBase(HttpHeaderGetters parent) {
         super(parent);
         assert !(parent instanceof HttpHeadersBase);
+        contentLengthMayBeUnknown = parent.isContentLengthUnknown();
         endOfStream = parent.isEndOfStream();
         cache = new HashMap<>(4);
     }
@@ -120,6 +127,7 @@ class HttpHeadersBase
     @Override
     void onChange(@Nullable AsciiString name) {
         // This method could be called before the 'cache' field is initialized.
+        //noinspection ConstantValue
         if (cache == null || cache.isEmpty()) {
             return;
         }
@@ -129,6 +137,7 @@ class HttpHeadersBase
 
     @Override
     void onClear() {
+        contentLengthMayBeUnknown = false;
         if (cache == null || cache.isEmpty()) {
             return;
         }
@@ -462,6 +471,7 @@ class HttpHeadersBase
     final void contentLength(long contentLength) {
         checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
         cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+        contentLengthMayBeUnknown = false;
         final String contentLengthString = StringUtil.toString(contentLength);
         setWithoutNotifying(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
     }
@@ -481,6 +491,24 @@ class HttpHeadersBase
         } else {
             cache.put(HttpHeaderNames.CONTENT_LENGTH, -1L);
             return -1L;
+        }
+    }
+
+    public void contentLengthUnknown() {
+        remove(HttpHeaderNames.CONTENT_LENGTH);
+        contentLengthMayBeUnknown = true;
+    }
+
+    @Override
+    public boolean isContentLengthUnknown() {
+        if (contentLengthMayBeUnknown) {
+            if (contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                return contentLengthMayBeUnknown = false;
+            } else {
+                return true;
+            }
+        } else {
+            return false;
         }
     }
 
@@ -655,6 +683,8 @@ class HttpHeadersBase
             return false;
         }
 
+        // `contentLengthUnknown` is excluded from the comparison since it is not a field expressing headers
+        // data.
         return endOfStream == ((HttpHeaderGetters) o).isEndOfStream() && super.equals(o);
     }
 

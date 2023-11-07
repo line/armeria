@@ -53,10 +53,15 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
         } else {
             if (req.method() == HttpMethod.HEAD) {
                 endOfStream = true;
-            } else if (status.isContentAlwaysEmpty()) {
-                setState(State.NEEDS_TRAILERS);
             } else {
-                setState(State.NEEDS_DATA_OR_TRAILERS);
+                if (!reqCtx.additionalResponseTrailers().isEmpty()) {
+                    endOfStream = false;
+                }
+                if (status.isContentAlwaysEmpty()) {
+                    setState(State.NEEDS_TRAILERS);
+                } else {
+                    setState(State.NEEDS_DATA_OR_TRAILERS);
+                }
             }
             if (endOfStream) {
                 setDone(true);
@@ -74,7 +79,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
         }
 
         responseEncoder.writeHeaders(req.id(), req.streamId(), merged,
-                                     endOfStream, reqCtx.additionalResponseTrailers().isEmpty())
+                                     endOfStream, reqCtx.additionalResponseTrailers().isEmpty(), req.method())
                        .addListener(writeHeadersFutureListener(endOfStream));
     }
 }

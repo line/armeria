@@ -371,4 +371,9 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (WebSocketClientBuilder) super.contextCustomizer(contextCustomizer);
     }
+
+    @Override
+    public WebSocketClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (WebSocketClientBuilder) super.contextHook(contextHook);
+    }
 }

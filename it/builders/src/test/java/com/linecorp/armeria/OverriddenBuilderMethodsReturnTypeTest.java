@@ -18,8 +18,10 @@ package com.linecorp.armeria;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -45,18 +47,25 @@ class OverriddenBuilderMethodsReturnTypeTest {
         final String packageName = "com.linecorp.armeria";
         findAllClasses(packageName).stream()
                                    .map(ReflectionUtils::forName)
-                                   .filter(clazz -> clazz.getSimpleName().endsWith("Builder"))
+                                   .filter(clazz -> clazz.getSimpleName().endsWith("Builder") &&
+                                                    Modifier.isFinal(clazz.getModifiers()))
                                    .forEach(clazz -> {
                                        final List<Method> methods = overriddenMethods(clazz);
                                        for (Method m : methods) {
+                                           assertThatNoException().isThrownBy(
+                                                   () -> clazz.getDeclaredMethod(m.getName(),
+                                                                                 m.getParameterTypes()));
+                                           final Method overriddenMethod;
                                            try {
-                                               final Method overriddenMethod =
+                                               overriddenMethod =
                                                        clazz.getDeclaredMethod(m.getName(),
                                                                                m.getParameterTypes());
-                                               assertThat(overriddenMethod.getReturnType()).isSameAs(clazz);
                                            } catch (NoSuchMethodException e) {
-                                               // ignored
+                                               throw new RuntimeException(e);
                                            }
+                                           assertThat(overriddenMethod.getReturnType())
+                                                   .describedAs("Method name: " + m)
+                                                   .isSameAs(clazz);
                                        }
                                    });
     }

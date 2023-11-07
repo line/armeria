@@ -78,6 +78,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     // parameter values, thus anything greater than 0x7FFFFFFF will break them or make them unhappy.
     static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
     static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192L; // from Netty default maxHeaderSize
+    // Netty default is 200 for 30 seconds
+    static final int DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE = 400;
     static final String DEFAULT_BACKOFF_SPEC = "exponential=200:10000,jitter=0.2";
     static final int DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
     static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS = 0; // No delay.
@@ -253,6 +255,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultPreferHttp1() {
+        return false;
+    }
+
+    @Override
     public Boolean defaultUseHttp2WithoutAlpn() {
         return false;
     }
@@ -315,6 +322,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultHttp2MaxHeaderListSize() {
         return DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE;
+    }
+
+    @Override
+    public Integer defaultServerHttp2MaxResetFramesPerMinute() {
+        return DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
     }
 
     @Override
