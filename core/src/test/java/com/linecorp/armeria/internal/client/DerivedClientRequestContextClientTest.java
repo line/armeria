@@ -21,13 +21,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
+
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 class DerivedClientRequestContextClientTest {
 
@@ -46,13 +53,14 @@ class DerivedClientRequestContextClientTest {
 
     @Test
     void shouldAcquireNewEventLoopForNewEndpoint() {
-        final ClientRequestContext parent = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                                                .endpointGroup(group)
-                                                                .eventLoop(ImmediateEventLoop.INSTANCE)
-                                                                .build();
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext parent = new DefaultClientRequestContext(
+                new SimpleMeterRegistry(), SessionProtocol.H2C, RequestId.random(), HttpMethod.GET,
+                RequestTarget.forClient("/"), ClientOptions.of(), request, null, RequestOptions.of(), 0, 0);
+        parent.init(group);
         assertThat(parent.endpoint()).isEqualTo(endpointA);
         final ClientRequestContext child =
-                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+                ClientUtil.newDerivedContext(parent, request, null, false);
         assertThat(child.endpoint()).isEqualTo(endpointB);
         assertThat(parent.endpoint()).isNotSameAs(child.endpoint());
         assertThat(parent.eventLoop().withoutContext()).isNotSameAs(child.eventLoop().withoutContext());
@@ -60,9 +68,11 @@ class DerivedClientRequestContextClientTest {
 
     @Test
     void shouldAcquireSameEventLoopForSameEndpoint() {
-        final ClientRequestContext parent = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                                                .endpointGroup(group)
-                                                                .build();
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext parent = new DefaultClientRequestContext(
+                new SimpleMeterRegistry(), SessionProtocol.H2C, RequestId.random(), HttpMethod.GET,
+                RequestTarget.forClient("/"), ClientOptions.of(), request, null, RequestOptions.of(), 0, 0);
+        parent.init(group);
         assertThat(parent.endpoint()).isEqualTo(endpointA);
         final ClientRequestContext childA0 =
                 ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, true);

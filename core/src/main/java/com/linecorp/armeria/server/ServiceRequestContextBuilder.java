@@ -179,10 +179,9 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
 
         // Build a fake server which never starts up.
-        final EventLoop eventLoop = fakeChannel().eventLoop();
         final ServerBuilder serverBuilder = Server.builder()
                                                   .meterRegistry(meterRegistry())
-                                                  .workerGroup(eventLoop, false);
+                                                  .workerGroup(eventLoop(), false);
 
         final ServiceBindingBuilder serviceBindingBuilder;
         if (route != null) {

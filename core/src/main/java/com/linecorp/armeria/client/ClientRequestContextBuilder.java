@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -50,7 +49,7 @@ import io.netty.channel.EventLoop;
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
     @Nullable
-    private EndpointGroup endpointGroup;
+    private Endpoint endpoint;
     private ClientOptions options = ClientOptions.of();
     private RequestOptions requestOptions = RequestOptions.of();
     @Nullable
@@ -74,17 +73,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
      * Sets the {@link Endpoint} of the request. If not set, it is auto-generated from the request authority.
      */
     public ClientRequestContextBuilder endpoint(Endpoint endpoint) {
-        requireNonNull(endpoint, "endpoint");
-        return endpointGroup(endpoint);
-    }
-
-    /**
-     * Sets the {@link EndpointGroup} of the request. If not set, an {@link Endpoint} is auto-generated from the
-     * request authority.
-     */
-    public ClientRequestContextBuilder endpointGroup(EndpointGroup endpointGroup) {
-        requireNonNull(endpointGroup, "endpointGroup");
-        this.endpointGroup = endpointGroup;
+        this.endpoint = requireNonNull(endpoint, "endpoint");
         return this;
     }
 
@@ -116,11 +105,11 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
      * Returns a new {@link ClientRequestContext} created with the properties of this builder.
      */
     public ClientRequestContext build() {
-        final EndpointGroup endpointGroup;
-        if (this.endpointGroup != null) {
-            endpointGroup = this.endpointGroup;
+        final Endpoint endpoint;
+        if (this.endpoint != null) {
+            endpoint = this.endpoint;
         } else {
-            endpointGroup = Endpoint.parse(authority());
+            endpoint = Endpoint.parse(authority());
         }
 
         final CancellationScheduler responseCancellationScheduler;
@@ -128,6 +117,16 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
             responseCancellationScheduler = CancellationScheduler.of(0);
+            final CountDownLatch latch = new CountDownLatch(1);
+            eventLoop().execute(() -> {
+                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
+                latch.countDown();
+            });
+
+            try {
+                latch.await(1000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ignored) {
+            }
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
@@ -137,23 +136,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 
-        ctx.init(endpointGroup);
-
-        if (!timedOut()) {
-            // Initialize responseCancellationScheduler after ctx.init() is called because it acquires
-            // an EventLoop for the Endpoint.
-            final CountDownLatch latch = new CountDownLatch(1);
-            ctx.eventLoop().execute(() -> {
-                responseCancellationScheduler.init(ctx.eventLoop(), noopCancellationTask,
-                                                   0, /* server */ false);
-                latch.countDown();
-            });
-            try {
-                latch.await(1000, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException ignored) {
-            }
-        }
-
+        ctx.init(endpoint);
         ctx.logBuilder().session(fakeChannel(), sessionProtocol(), sslSession(), connectionTimings);
 
         if (request() != null) {
