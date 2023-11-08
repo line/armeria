@@ -76,7 +76,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     /**
      * Sets the {@link Endpoint} of the request. If not set, it is auto-generated from the request authority.
      *
-     * <p>Note that {@link #endpoint(Endpoint)} and {@link #endpointGroup(EndpointGroup)} are mutually exclusive.
+     * <p>Note that {@link #endpoint(Endpoint)} and {@link #endpointGroup(EndpointGroup)} are mutually
+     * exclusive.
      */
     public ClientRequestContextBuilder endpoint(Endpoint endpoint) {
         requireNonNull(endpoint, "endpoint");
@@ -89,7 +90,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
      * Sets the {@link EndpointGroup} of the request. If not set, an {@link Endpoint} is auto-generated from the
      * request authority.
      *
-     * <p>Note that {@link #endpoint(Endpoint)} and {@link #endpointGroup(EndpointGroup)} are mutually exclusive.
+     * <p>Note that {@link #endpoint(Endpoint)} and {@link #endpointGroup(EndpointGroup)} are mutually
+     * exclusive.
      */
     public ClientRequestContextBuilder endpointGroup(EndpointGroup endpointGroup) {
         requireNonNull(endpointGroup, "endpointGroup");
