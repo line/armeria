@@ -514,6 +514,8 @@ public final class DefaultClientRequestContext
         options = ctx.options();
         root = ctx.root();
 
+        log = RequestLog.builder(this);
+        log.startRequest();
         responseCancellationScheduler =
                 CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
@@ -533,9 +535,6 @@ public final class DefaultClientRequestContext
         } else {
             acquireEventLoop(endpoint);
         }
-
-        log = RequestLog.builder(this);
-        log.startRequest();
     }
 
     @Nullable
