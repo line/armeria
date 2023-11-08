@@ -103,7 +103,7 @@ class RetryingClientEventLoopSchedulerTest {
             for (int i = 0; i < 6; i++) {
                 final RequestContext childCtx = children.get(i).context();
                 assertThat(childCtx.eventLoop().withoutContext())
-                        .isEqualTo(eventLoopMapping.get(endpoints.get(i % 3)));
+                        .isSameAs(eventLoopMapping.get(endpoints.get(i % 3)));
             }
         }
     }
