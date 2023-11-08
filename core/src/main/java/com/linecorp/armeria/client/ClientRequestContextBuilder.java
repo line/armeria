@@ -143,8 +143,9 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             // Initialize responseCancellationScheduler after ctx.init() is called because it acquires
             // an EventLoop for the Endpoint.
             final CountDownLatch latch = new CountDownLatch(1);
-            eventLoop().execute(() -> {
-                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
+            ctx.eventLoop().execute(() -> {
+                responseCancellationScheduler.init(ctx.eventLoop(), noopCancellationTask,
+                                                   0, /* server */ false);
                 latch.countDown();
             });
             try {
