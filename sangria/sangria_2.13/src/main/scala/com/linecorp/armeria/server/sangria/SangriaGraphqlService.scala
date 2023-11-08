@@ -129,7 +129,11 @@ final class SangriaGraphqlService[Ctx, Val] private[sangria] (
    * Handles a WebSocket upgrade request.
    */
   override protected def doWebSocketUpgrade(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
-    HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "websockets are disabled")
+    HttpResponse.of(
+      HttpStatus.BAD_REQUEST,
+      MediaType.PLAIN_TEXT,
+      "websockets are disabled"
+    )
   }
 }
 

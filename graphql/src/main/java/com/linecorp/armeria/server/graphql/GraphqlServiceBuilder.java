@@ -89,7 +89,7 @@ public final class GraphqlServiceBuilder {
 
     private ExecutionIdGenerator executionIdGenerator = ExecutionIdGenerator.of();
 
-    private boolean useWebSocket = false;
+    private boolean useWebSocket;
 
     GraphqlServiceBuilder() {}
 
@@ -266,7 +266,7 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Sets whether the service supports WebSockets for subscriptions;
+     * Sets whether the service supports WebSockets for subscriptions.
      */
     public GraphqlServiceBuilder useWebSocket(boolean useWebSocket) {
         this.useWebSocket = useWebSocket;

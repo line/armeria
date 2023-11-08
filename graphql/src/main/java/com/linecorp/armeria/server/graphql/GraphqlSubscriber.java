@@ -16,15 +16,16 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.linecorp.armeria.common.annotation.Nullable;
-import graphql.ExecutionResult;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.atomic.AtomicReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+
+import graphql.ExecutionResult;
 
 @SuppressWarnings("ReactiveStreamsSubscriberImplementation")
 class GraphqlSubscriber implements Subscriber<ExecutionResult> {
@@ -35,7 +36,7 @@ class GraphqlSubscriber implements Subscriber<ExecutionResult> {
     @Nullable
     private Subscription subscription;
 
-    public GraphqlSubscriber(String operationId, GraphqlSubProtocol protocol) {
+    GraphqlSubscriber(String operationId, GraphqlSubProtocol protocol) {
         this.operationId = operationId;
         this.protocol = protocol;
     }
@@ -44,8 +45,8 @@ class GraphqlSubscriber implements Subscriber<ExecutionResult> {
     public void onSubscribe(Subscription s) {
         if (subscription != null) {
             /*
-            A Subscriber MUST call Subscription.cancel() on the given Subscription after an onSubscribe signal if
-            it already has an active Subscription.
+            A Subscriber MUST call Subscription.cancel() on the given Subscription after an onSubscribe signal
+            if it already has an active Subscription.
              */
             subscription.cancel();
         }

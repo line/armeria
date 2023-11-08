@@ -16,30 +16,33 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.websocket.WebSocketWriter;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import graphql.ErrorClassification;
-import graphql.ExecutionInput;
-import graphql.ExecutionResult;
-import graphql.GraphQLError;
-import graphql.language.SourceLocation;
-import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static java.util.Collections.emptyList;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.emptyList;
-import static java.util.Objects.requireNonNull;
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.websocket.WebSocketWriter;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+import graphql.ErrorClassification;
+import graphql.ExecutionInput;
+import graphql.ExecutionResult;
+import graphql.GraphQLError;
+import graphql.language.SourceLocation;
 
 /**
  * Handles the graphql-ws sub protocol within a web socket.
@@ -49,20 +52,19 @@ class GraphqlWSSubProtocol {
     private static final Logger logger = LoggerFactory.getLogger(GraphqlWSSubProtocol.class);
     private final GraphqlExecutor graphqlExecutor;
     private final HashMap<String, GraphqlSubscriber> graphqlSubscriptions = new HashMap<>();
-    private final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final TypeReference<Map<String, Object>> JSON_MAP =
-        new TypeReference<Map<String, Object>>() {
-        };
+    private static final TypeReference<Map<String, Object>> JSON_MAP =
+        new TypeReference<Map<String, Object>>() {};
 
-    private boolean connectionInitiated = false;
+    private boolean connectionInitiated;
 
     private final Map<String, Object> upgradeCtx;
     private Map<String, Object> connectionCtx = ImmutableMap.of();
 
     GraphqlWSSubProtocol(ServiceRequestContext ctx, GraphqlExecutor executor) {
-        this.upgradeCtx = GraphqlServiceContexts.graphqlContext(ctx);
-        this.graphqlExecutor = executor;
+        upgradeCtx = GraphqlServiceContexts.graphqlContext(ctx);
+        graphqlExecutor = executor;
     }
 
     /**
@@ -71,14 +73,14 @@ class GraphqlWSSubProtocol {
     @Nullable
     public void handle(String event, WebSocketWriter out) {
         try {
-            Map<String, Object> eventMap = parseJsonString(event, JSON_MAP);
-            String type = toStringFromJson("type", eventMap.get("type"));
+            final Map<String, Object> eventMap = parseJsonString(event, JSON_MAP);
+            final String type = toStringFromJson("type", eventMap.get("type"));
             requireNonNull(type, "type");
-            String id;
+            final String id;
 
             switch (type) {
                 case "connection_init":
-                    Object rawPayload = eventMap.get("payload");
+                    final Object rawPayload = eventMap.get("payload");
                     if (rawPayload != null) {
                         connectionCtx = toMapFromJson(rawPayload);
                     }
@@ -96,44 +98,49 @@ class GraphqlWSSubProtocol {
                     ensureInitiated();
                     id = toStringFromJson("id", eventMap.get("id"));
                     requireNonNull(id, "id");
-                    Map<String, Object> payload = toMapFromJson(eventMap.get("payload"));
+                    final Map<String, Object> payload = toMapFromJson(eventMap.get("payload"));
                     try {
                         if (graphqlSubscriptions.containsKey(id)) {
-                            throw new IllegalArgumentException("Subscription with id " + id + " already exists");
+                            throw new IllegalArgumentException(
+                                "Subscription with id " + id + " already exists");
                         }
-                        String operationName = toStringFromJson("operationName", payload.get("operationName"));
-                        String query = toStringFromJson("query", payload.get("query"));
-                        Map<String, Object> variables = toMapFromJson(payload.get("variables"));
-                        Map<String, Object> extensions = toMapFromJson(payload.get("extensions"));
+                        final String operationName = toStringFromJson("operationName",
+                                                                      payload.get("operationName"));
+                        final String query = toStringFromJson("query", payload.get("query"));
+                        final Map<String, Object> variables = toMapFromJson(payload.get("variables"));
+                        final Map<String, Object> extensions = toMapFromJson(payload.get("extensions"));
 
-                        ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput()
-                            .graphQLContext(upgradeCtx)
-                            .graphQLContext(connectionCtx)
-                            .query(query)
-                            .variables(variables)
-                            .operationName(operationName)
-                            .extensions(extensions);
+                        final ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput()
+                                                                              .graphQLContext(upgradeCtx)
+                                                                              .graphQLContext(connectionCtx)
+                                                                              .query(query)
+                                                                              .variables(variables)
+                                                                              .operationName(operationName)
+                                                                              .extensions(extensions);
 
-                        ExecutionResult executionResult = graphqlExecutor.executeGraphql(executionInput);
+                        final ExecutionResult executionResult = graphqlExecutor.executeGraphql(executionInput);
 
                         if (!executionResult.getErrors().isEmpty()) {
                             writeError(out, id, executionResult.getErrors());
                             return;
                         }
 
-                        Publisher<ExecutionResult> publisher = executionResult.getData();
+                        final Publisher<ExecutionResult> publisher = executionResult.getData();
 
-                        GraphqlSubscriber executionResultSubscriber = new GraphqlSubscriber(id, new GraphqlSubProtocol() {
-                            @Override
-                            public void sendResult(String operationId, ExecutionResult executionResult) throws JsonProcessingException {
-                                writeNext(out, operationId, executionResult);
-                            }
+                        final GraphqlSubscriber executionResultSubscriber =
+                            new GraphqlSubscriber(id, new GraphqlSubProtocol() {
+                                @Override
+                                public void sendResult(String operationId, ExecutionResult executionResult)
+                                    throws JsonProcessingException {
+                                    writeNext(out, operationId, executionResult);
+                                }
 
-                            @Override
-                            public void sendGraphqlErrors(List<GraphQLError> errors) throws JsonProcessingException {
-                                writeError(out, id, errors);
-                            }
-                        });
+                                @Override
+                                public void sendGraphqlErrors(List<GraphQLError> errors)
+                                    throws JsonProcessingException {
+                                    writeError(out, id, errors);
+                                }
+                            });
 
                         graphqlSubscriptions.put(id, executionResultSubscriber);
                         publisher.subscribe(executionResultSubscriber);
@@ -148,7 +155,7 @@ class GraphqlWSSubProtocol {
                     // Read id and remove that subscription
                     id = toStringFromJson("id", eventMap.get("id"));
                     requireNonNull(id, "id");
-                    GraphqlSubscriber s = graphqlSubscriptions.remove(id);
+                    final GraphqlSubscriber s = graphqlSubscriptions.remove(id);
                     if (s != null) {
                         s.setCompleted();
                     }
@@ -162,9 +169,9 @@ class GraphqlWSSubProtocol {
         }
     }
 
-    private void ensureInitiated() throws IllegalStateException {
+    private void ensureInitiated() throws Exception {
         if (!connectionInitiated) {
-            throw new IllegalStateException("Connection not initiated");
+            throw new Exception("Connection not initiated");
         }
     }
 
@@ -173,7 +180,7 @@ class GraphqlWSSubProtocol {
     }
 
     @Nullable
-    private String toStringFromJson(String name, @Nullable Object value) {
+    private static String toStringFromJson(String name, @Nullable Object value) {
         if (value == null) {
             return null;
         }
@@ -190,7 +197,7 @@ class GraphqlWSSubProtocol {
      * can only have string keys.
      */
     @SuppressWarnings("unchecked")
-    private Map<String, Object> toMapFromJson(@Nullable Object maybeMap) {
+    private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap) {
         if (maybeMap == null) {
             return ImmutableMap.of();
         }
@@ -219,28 +226,31 @@ class GraphqlWSSubProtocol {
         out.write("{\"type\":\"connection_ack\"}");
     }
 
-    private void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult) throws JsonProcessingException {
-        HashMap<String, Object> response = new HashMap<>();
+    private void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult)
+        throws JsonProcessingException {
+        final HashMap<String, Object> response = new HashMap<>();
         response.put("id", operationId);
         response.put("type", "next");
         response.put("payload", executionResult.toSpecification());
-        String event = serializeToJson(response);
+        final String event = serializeToJson(response);
         logger.trace("NEXT: {}", event);
         out.write(event);
     }
 
-    private void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors) throws JsonProcessingException {
-        HashMap<String, Object> errorResponse = new HashMap<>();
+    private void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors)
+        throws JsonProcessingException {
+        final HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
         errorResponse.put("payload", errors);
-        String event = serializeToJson(errorResponse);
+        final String event = serializeToJson(errorResponse);
         logger.trace("ERROR: {}", event);
         out.write(event);
     }
 
-    private void writeError(WebSocketWriter out, String operationId, Throwable t) throws JsonProcessingException {
-        HashMap<String, Object> errorResponse = new HashMap<>();
+    private void writeError(WebSocketWriter out, String operationId, Throwable t)
+        throws JsonProcessingException {
+        final HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
         errorResponse.put("payload", ImmutableList.of(
@@ -261,7 +271,7 @@ class GraphqlWSSubProtocol {
                 }
             }
         ));
-        String event = serializeToJson(errorResponse);
+        final String event = serializeToJson(errorResponse);
         logger.trace("ERROR: {}", event);
         out.write(event);
     }

@@ -90,7 +90,7 @@ public final class MultipartVariableMapper {
       }
    };
 
-   public static void mapVariable(String objectPath, Map<String, Object> variables, MultipartFile multipartFile) {
+   static void mapVariable(String objectPath, Map<String, Object> variables, MultipartFile multipartFile) {
       final List<String> segments = ImmutableList.copyOf(SPLITTER.split(objectPath));
       if (segments.size() < 2) {
          throw new IllegalArgumentException("Invalid object-path: " + objectPath);

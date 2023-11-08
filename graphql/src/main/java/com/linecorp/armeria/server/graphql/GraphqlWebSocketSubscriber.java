@@ -16,15 +16,14 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.websocket.WebSocketFrame;
-import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketWriter;
 
 @SuppressWarnings("ReactiveStreamsSubscriberImplementation")
 class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
@@ -43,8 +42,8 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
     public void onSubscribe(Subscription s) {
         if (subscription != null) {
             /*
-            A Subscriber MUST call Subscription.cancel() on the given Subscription after an onSubscribe signal if
-            it already has an active Subscription.
+            A Subscriber MUST call Subscription.cancel() on the given Subscription after an
+            onSubscribe signal if it already has an active Subscription.
              */
             subscription.cancel();
         }
@@ -53,11 +52,12 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
     }
 
     /**
-     * Calling onSubscribe, onNext, onError or onComplete MUST return normally except when any provided parameter
-     * is null in which case it MUST throw a java.lang.NullPointerException to the caller, for all other situations
-     * the only legal way for a Subscriber to signal failure is by cancelling its Subscription. In the case that this
-     * rule is violated, any associated Subscription to the Subscriber MUST be considered as cancelled, and the caller
-     * MUST raise this error condition in a fashion that is adequate for the runtime environment.
+     * Calling onSubscribe, onNext, onError or onComplete MUST return normally except when any provided
+     * parameter is null in which case it MUST throw a java.lang.NullPointerException to the caller, for all
+     * other situations the only legal way for a Subscriber to signal failure is by cancelling its
+     * Subscription. In the case that this rule is violated, any associated Subscription to the Subscriber
+     * MUST be considered as cancelled, and the caller MUST raise this error condition in a fashion that is
+     * adequate for the runtime environment.
      */
     @Override
     public void onNext(WebSocketFrame webSocketFrame) {
@@ -67,12 +67,13 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
         }
         switch (webSocketFrame.type()) {
             case TEXT:
-                // Parse the graphql-ws sub protocol. Maybe this could be done in a different thread so not to block the
-                // publisher?
+                // Parse the graphql-ws sub protocol. Maybe this could be done in a different thread so not
+                // to block the publisher?
                 graphqlWSSubProtocol.handle(webSocketFrame.text(), outgoing);
                 /*
                 It is RECOMMENDED that Subscribers request the upper limit of what they are able to process,
-                as requesting only one element at a time results in an inherently inefficient "stop-and-wait" protocol.
+                as requesting only one element at a time results in an inherently
+                inefficient "stop-and-wait" protocol.
                  */
                 subscription.request(1);
                 break;
@@ -84,7 +85,7 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
                 subscription.cancel();
                 outgoing.close();
                 break;
-                // PONG is a noop
+            // PONG is a noop
             case PONG:
                 // These below will never happen?
             case BINARY:

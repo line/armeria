@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.graphql;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 
+@FunctionalInterface
 interface GraphqlExecutor {
     ExecutionResult executeGraphql(ExecutionInput.Builder builder);
 }

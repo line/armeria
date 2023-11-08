@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,9 +48,6 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
-
 /**
  * A skeletal <a href="https://graphql.org/learn/serving-over-http/">GraphQL HTTP service</a> implementation.
  */
@@ -61,10 +61,10 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final TypeReference<Map<String, Object>> JSON_MAP =
-            new TypeReference<Map<String, Object>>() {};
+        new TypeReference<Map<String, Object>>() {};
 
     private static final TypeReference<Map<String, List<String>>> MAP_PARAM =
-            new TypeReference<Map<String, List<String>>>() {};
+        new TypeReference<Map<String, List<String>>>() {};
 
     @Override
     protected HttpResponse doConnect(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -167,7 +167,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                         }
 
                         final String operationName =
-                                toStringFromJson("operationName", requestMap.get("operationName"));
+                            toStringFromJson("operationName", requestMap.get("operationName"));
                         final Map<String, Object> variables = toMapFromJson(requestMap.get("variables"));
                         final Map<String, Object> extensions = toMapFromJson(requestMap.get("extensions"));
 
@@ -230,13 +230,14 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     /**
      * Handles a WebSocket upgrade request.
      */
-    protected abstract HttpResponse doWebSocketUpgrade(ServiceRequestContext ctx, HttpRequest req) throws Exception;
+    protected abstract HttpResponse doWebSocketUpgrade(ServiceRequestContext ctx, HttpRequest req)
+        throws Exception;
 
     /**
      * Handles a {@link GraphqlRequest}.
      */
     protected abstract HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req)
-            throws Exception;
+        throws Exception;
 
     private static Map<String, Object> toMap(@Nullable String value) throws JsonProcessingException {
         if (Strings.isNullOrEmpty(value)) {
@@ -291,7 +292,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     }
 
     private static <T> T parseJsonString(String content, TypeReference<T> typeReference)
-            throws JsonProcessingException {
+        throws JsonProcessingException {
         return mapper.readValue(content, typeReference);
     }
 
