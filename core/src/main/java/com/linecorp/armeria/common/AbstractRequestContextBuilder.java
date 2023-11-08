@@ -198,16 +198,13 @@ public abstract class AbstractRequestContextBuilder {
     /**
      * Returns the {@link EventLoop} that handles the request.
      */
+    @Nullable
     protected final EventLoop eventLoop() {
-        if (eventLoop == null) {
-            eventLoop = CommonPools.workerGroup().next();
-        }
         return eventLoop;
     }
 
     /**
      * Sets the {@link EventLoop} that handles the request.
-     * If not set, one of the {@link CommonPools#workerGroup()} is used.
      */
     public AbstractRequestContextBuilder eventLoop(EventLoop eventLoop) {
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
@@ -490,7 +487,8 @@ public abstract class AbstractRequestContextBuilder {
      */
     protected final Channel fakeChannel() {
         if (channel == null) {
-            channel = new FakeChannel(eventLoop(), alloc(), remoteAddress(), localAddress());
+            channel = new FakeChannel(CommonPools.workerGroup().next(), alloc(), remoteAddress(),
+                                      localAddress());
         }
         return channel;
     }

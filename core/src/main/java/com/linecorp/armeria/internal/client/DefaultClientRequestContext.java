@@ -180,7 +180,7 @@ public final class DefaultClientRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            @Nullable EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,

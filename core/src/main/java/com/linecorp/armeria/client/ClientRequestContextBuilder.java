@@ -131,7 +131,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                null, meterRegistry(), sessionProtocol(),
+                eventLoop(), meterRegistry(), sessionProtocol(),
                 id(), method(), requestTarget(), options, request(), rpcRequest(),
                 requestOptions, responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
