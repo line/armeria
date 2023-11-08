@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
@@ -102,10 +101,11 @@ class DerivedClientRequestContextClientTest {
 
     @Test
     void shouldNotAcquireNewEventLoopForInitialAttempt() {
-        final ClientRequestContext parent = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                                                .endpointGroup(group)
-                                                                .eventLoop(ImmediateEventLoop.INSTANCE)
-                                                                .build();
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/");
+        final DefaultClientRequestContext parent = new DefaultClientRequestContext(
+                new SimpleMeterRegistry(), SessionProtocol.H2C, RequestId.random(), HttpMethod.GET,
+                RequestTarget.forClient("/"), ClientOptions.of(), request, null, RequestOptions.of(), 0, 0);
+        parent.init(group);
         assertThat(parent.endpoint()).isEqualTo(endpointA);
         final ClientRequestContext child =
                 ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, true);
