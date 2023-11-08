@@ -37,13 +37,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoop;
 
-class RetyingClientEventLoopSchedulerTest {
+class RetryingClientEventLoopSchedulerTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -97,9 +98,10 @@ class RetyingClientEventLoopSchedulerTest {
                          .blocking();
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             assertThat(client.get("/fail").status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-            assertThat(captor.get().log().children().size()).isEqualTo(6);
+            final List<RequestLogAccess> children = captor.get().log().children();
+            assertThat(children.size()).isEqualTo(6);
             for (int i = 0; i < 6; i++) {
-                final RequestContext childCtx = captor.get().log().children().get(i).context();
+                final RequestContext childCtx = children.get(i).context();
                 assertThat(childCtx.eventLoop().withoutContext())
                         .isEqualTo(eventLoopMapping.get(endpoints.get(i % 3)));
             }
