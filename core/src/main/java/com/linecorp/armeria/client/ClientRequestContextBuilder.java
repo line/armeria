@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.CancellationScheduler.noopCancellationTask;
 import static java.util.Objects.requireNonNull;
 
@@ -51,8 +50,6 @@ import io.netty.channel.EventLoop;
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
     @Nullable
-    private Endpoint endpoint;
-    @Nullable
     private EndpointGroup endpointGroup;
     private ClientOptions options = ClientOptions.of();
     private RequestOptions requestOptions = RequestOptions.of();
@@ -75,27 +72,18 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
     /**
      * Sets the {@link Endpoint} of the request. If not set, it is auto-generated from the request authority.
-     *
-     * <p>Note that {@link #endpoint(Endpoint)} and {@link #endpointGroup(EndpointGroup)} are mutually
-     * exclusive.
      */
     public ClientRequestContextBuilder endpoint(Endpoint endpoint) {
         requireNonNull(endpoint, "endpoint");
-        checkState(endpointGroup == null, "endpoint and endpointGroup are mutually exclusive.");
-        this.endpoint = endpoint;
-        return this;
+        return endpointGroup(endpoint);
     }
 
     /**
      * Sets the {@link EndpointGroup} of the request. If not set, an {@link Endpoint} is auto-generated from the
      * request authority.
-     *
-     * <p>Note that {@link #endpoint(Endpoint)} and {@link #endpointGroup(EndpointGroup)} are mutually
-     * exclusive.
      */
     public ClientRequestContextBuilder endpointGroup(EndpointGroup endpointGroup) {
         requireNonNull(endpointGroup, "endpointGroup");
-        checkState(endpoint == null, "endpoint and endpointGroup are mutually exclusive.");
         this.endpointGroup = endpointGroup;
         return this;
     }
@@ -129,9 +117,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
      */
     public ClientRequestContext build() {
         final EndpointGroup endpointGroup;
-        if (endpoint != null) {
-            endpointGroup = endpoint;
-        } else if (this.endpointGroup != null) {
+        if (this.endpointGroup != null) {
             endpointGroup = this.endpointGroup;
         } else {
             endpointGroup = Endpoint.parse(authority());
@@ -142,26 +128,31 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
             responseCancellationScheduler = CancellationScheduler.of(0);
-            final CountDownLatch latch = new CountDownLatch(1);
-            eventLoop().execute(() -> {
-                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
-                latch.countDown();
-            });
-
-            try {
-                latch.await(1000, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException ignored) {
-            }
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop(), meterRegistry(), sessionProtocol(),
+                null, meterRegistry(), sessionProtocol(),
                 id(), method(), requestTarget(), options, request(), rpcRequest(),
                 requestOptions, responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 
         ctx.init(endpointGroup);
+
+        if (!timedOut()) {
+            // Initialize responseCancellationScheduler after ctx.init() is called because it acquires
+            // an EventLoop for the Endpoint.
+            final CountDownLatch latch = new CountDownLatch(1);
+            eventLoop().execute(() -> {
+                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
+                latch.countDown();
+            });
+            try {
+                latch.await(1000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ignored) {
+            }
+        }
+
         ctx.logBuilder().session(fakeChannel(), sessionProtocol(), sslSession(), connectionTimings);
 
         if (request() != null) {

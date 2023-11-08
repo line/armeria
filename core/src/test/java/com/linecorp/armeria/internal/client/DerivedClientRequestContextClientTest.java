@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -30,13 +31,21 @@ import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 class DerivedClientRequestContextClientTest {
 
-    @Test
-    void shouldAcquireNewEventLoopForNewEndpoint() {
-        final Endpoint endpointA = Endpoint.of("a.com", 8080);
-        final Endpoint endpointB = Endpoint.of("a.com", 8080);
-        final SettableEndpointGroup group = new SettableEndpointGroup();
+    private final Endpoint endpointA = Endpoint.of("a.com", 8080);
+    private final Endpoint endpointB = Endpoint.of("b.com", 8080);
+    private final Endpoint endpointC = Endpoint.of("c.com", 8080);
+    private SettableEndpointGroup group;
+
+    @BeforeEach
+    void setUp() {
+        group = new SettableEndpointGroup();
         group.add(endpointA);
         group.add(endpointB);
+        group.add(endpointC);
+    }
+
+    @Test
+    void shouldAcquireNewEventLoopForNewEndpoint() {
         final ClientRequestContext parent = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .endpointGroup(group)
                                                                 .eventLoop(ImmediateEventLoop.INSTANCE)
@@ -46,6 +55,53 @@ class DerivedClientRequestContextClientTest {
                 ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
         assertThat(child.endpoint()).isEqualTo(endpointB);
         assertThat(parent.endpoint()).isNotSameAs(child.endpoint());
+        assertThat(parent.eventLoop().withoutContext()).isNotSameAs(child.eventLoop().withoutContext());
+    }
+
+    @Test
+    void shouldAcquireSameEventLoopForSameEndpoint() {
+        final ClientRequestContext parent = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                                .endpointGroup(group)
+                                                                .build();
+        assertThat(parent.endpoint()).isEqualTo(endpointA);
+        final ClientRequestContext childA0 =
+                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, true);
+        assertThat(childA0.endpoint()).isEqualTo(endpointA);
+        final ClientRequestContext childB0 =
+                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+        assertThat(childB0.endpoint()).isEqualTo(endpointB);
+        final ClientRequestContext childC0 =
+                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+        assertThat(childC0.endpoint()).isEqualTo(endpointC);
+
+        for (int i = 0; i < 3; i++) {
+            final ClientRequestContext childA1 =
+                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+            assertThat(childA1.endpoint()).isEqualTo(endpointA);
+            assertThat(childA1.eventLoop().withoutContext()).isSameAs(childA0.eventLoop().withoutContext());
+            final ClientRequestContext childB1 =
+                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+            assertThat(childB1.endpoint()).isEqualTo(endpointB);
+            assertThat(childB1.eventLoop().withoutContext()).isSameAs(childB0.eventLoop().withoutContext());
+            final ClientRequestContext childC1 =
+                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+            assertThat(childC1.endpoint()).isEqualTo(endpointC);
+            assertThat(childC1.eventLoop().withoutContext()).isSameAs(childC0.eventLoop().withoutContext());
+        }
+    }
+
+    @Test
+    void shouldNotAcquireNewEventLoopForInitialAttempt() {
+        final ClientRequestContext parent = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                                .endpointGroup(group)
+                                                                .eventLoop(ImmediateEventLoop.INSTANCE)
+                                                                .build();
+        assertThat(parent.endpoint()).isEqualTo(endpointA);
+        final ClientRequestContext child =
+                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, true);
+        assertThat(child.endpoint()).isEqualTo(endpointA);
+        assertThat(parent.endpoint()).isSameAs(child.endpoint());
+        assertThat(parent.eventLoop().withoutContext()).isSameAs(child.eventLoop().withoutContext());
     }
 
     private static class SettableEndpointGroup extends DynamicEndpointGroup {

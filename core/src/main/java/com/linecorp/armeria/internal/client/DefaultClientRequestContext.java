@@ -530,7 +530,9 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
-        if (ctx.endpoint() == endpoint || endpoint == null) {
+        // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
+        // the root context.
+        if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
             eventLoop = ctx.eventLoop().withoutContext();
         } else {
             acquireEventLoop(endpoint);
