@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
@@ -35,7 +36,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
@@ -101,9 +101,9 @@ class RetryingClientEventLoopSchedulerTest {
             final List<RequestLogAccess> children = captor.get().log().children();
             assertThat(children.size()).isEqualTo(6);
             for (int i = 0; i < 6; i++) {
-                final RequestContext childCtx = children.get(i).context();
+                final ClientRequestContext childCtx = (ClientRequestContext) children.get(i).context();
                 assertThat(childCtx.eventLoop().withoutContext())
-                        .isSameAs(eventLoopMapping.get(endpoints.get(i % 3)));
+                        .isSameAs(eventLoopMapping.get(childCtx.endpoint()));
             }
         }
     }
