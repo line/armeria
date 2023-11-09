@@ -88,11 +88,9 @@ class GraphqlWSSubProtocol {
                     writeConnectionAck(out);
                     break;
                 case "ping":
-                    ensureInitiated();
                     writePong(out);
                     break;
                 case "pong":
-                    ensureInitiated();
                     break;
                 case "subscribe":
                     ensureInitiated();
