@@ -80,6 +80,10 @@ class GraphqlWSSubProtocol {
 
             switch (type) {
                 case "connection_init":
+                    if (connectionInitiated) {
+                        // Already initiated, that's an error
+                        throw new Exception("4429: Too many initialisation requests");
+                    }
                     final Object rawPayload = eventMap.get("payload");
                     if (rawPayload != null) {
                         connectionCtx = toMapFromJson(rawPayload);
