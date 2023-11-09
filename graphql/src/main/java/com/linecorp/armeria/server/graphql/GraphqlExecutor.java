@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.ExecutionInput.Builder;
@@ -23,5 +25,5 @@ import graphql.ExecutionResult;
 
 @FunctionalInterface
 interface GraphqlExecutor {
-    ExecutionResult executeGraphql(ServiceRequestContext ctx, Builder builder);
+    CompletableFuture<ExecutionResult> executeGraphql(ServiceRequestContext ctx, Builder builder);
 }

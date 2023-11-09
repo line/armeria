@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -114,18 +115,21 @@ class GraphqlWSSubProtocol {
                         final Map<String, Object> variables = toMapFromJson(payload.get("variables"));
                         final Map<String, Object> extensions = toMapFromJson(payload.get("extensions"));
 
-                        final ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput()
-                                                                                    .graphQLContext(upgradeCtx)
-                                                                                    .graphQLContext(
-                                                                                            connectionCtx)
-                                                                                    .query(query)
-                                                                                    .variables(variables)
-                                                                                    .operationName(
-                                                                                            operationName)
-                                                                                    .extensions(extensions);
+                        final ExecutionInput.Builder executionInput =
+                                ExecutionInput.newExecutionInput()
+                                              .graphQLContext(upgradeCtx)
+                                              .graphQLContext(
+                                                      connectionCtx)
+                                              .query(query)
+                                              .variables(variables)
+                                              .operationName(
+                                                      operationName)
+                                              .extensions(extensions);
 
-                        final ExecutionResult executionResult =
+                        final CompletableFuture<ExecutionResult> future =
                                 graphqlExecutor.executeGraphql(ctx, executionInput);
+
+                        final ExecutionResult executionResult = future.join();
 
                         if (!executionResult.getErrors().isEmpty()) {
                             writeError(out, id, executionResult.getErrors());

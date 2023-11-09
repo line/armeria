@@ -134,13 +134,17 @@ final class DefaultGraphqlService extends AbstractGraphqlService
      * WebSocket operations are handled here.
      */
     @Override
-    public ExecutionResult executeGraphql(ServiceRequestContext ctx, Builder builder) {
+    public CompletableFuture<ExecutionResult> executeGraphql(ServiceRequestContext ctx, Builder builder) {
         final ExecutionInput executionInput = builder
                 .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
                 .executionId(ExecutionId.generate())
                 .build();
 
-        return graphQL.execute(executionInput);
+        if (useBlockingTaskExecutor) {
+            return CompletableFuture.supplyAsync(() -> graphQL.execute(executionInput), ctx.blockingTaskExecutor());
+        } else {
+            return graphQL.executeAsync(executionInput);
+        }
     }
 
     @Override
