@@ -136,6 +136,10 @@ class GraphqlWSSubProtocol {
                             return;
                         }
 
+                        if (!(executionResult.getData() instanceof Publisher)) {
+                            throw new Exception("Result of operation was not a subscription");
+                        }
+
                         final Publisher<ExecutionResult> publisher = executionResult.getData();
 
                         final GraphqlSubscriber executionResultSubscriber =
