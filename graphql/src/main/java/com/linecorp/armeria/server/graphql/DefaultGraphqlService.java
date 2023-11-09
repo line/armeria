@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 
 import graphql.ExecutionInput;
+import graphql.ExecutionInput.Builder;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.execution.ExecutionId;
@@ -59,12 +59,6 @@ final class DefaultGraphqlService extends AbstractGraphqlService
 
     private final Function<? super ServiceRequestContext,
                            ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
-
-    /**
-     * Used for web sockets where there is no request context.
-     */
-    @Nullable
-    private Supplier<? extends DataLoaderRegistry> dataLoaderRegistrySupplier;
 
     private final boolean useBlockingTaskExecutor;
 
@@ -97,7 +91,6 @@ final class DefaultGraphqlService extends AbstractGraphqlService
     @Override
     protected HttpResponse doWebSocketUpgrade(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (webSocketService != null) {
-            dataLoaderRegistrySupplier = () -> dataLoaderRegistryFunction.apply(ctx);
             return webSocketService.serve(ctx, req);
         } else {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "websockets are disabled");
@@ -141,10 +134,9 @@ final class DefaultGraphqlService extends AbstractGraphqlService
      * WebSocket operations are handled here.
      */
     @Override
-    public ExecutionResult executeGraphql(ExecutionInput.Builder builder) {
-        requireNonNull(dataLoaderRegistrySupplier, "dataLoaderRegistrySupplier");
+    public ExecutionResult executeGraphql(ServiceRequestContext ctx, Builder builder) {
         final ExecutionInput executionInput = builder
-                .dataLoaderRegistry(dataLoaderRegistrySupplier.get())
+                .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
                 .executionId(ExecutionId.generate())
                 .build();
 

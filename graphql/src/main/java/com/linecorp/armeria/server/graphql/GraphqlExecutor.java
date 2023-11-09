@@ -16,10 +16,12 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import graphql.ExecutionInput;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+import graphql.ExecutionInput.Builder;
 import graphql.ExecutionResult;
 
 @FunctionalInterface
 interface GraphqlExecutor {
-    ExecutionResult executeGraphql(ExecutionInput.Builder builder);
+    ExecutionResult executeGraphql(ServiceRequestContext ctx, Builder builder);
 }

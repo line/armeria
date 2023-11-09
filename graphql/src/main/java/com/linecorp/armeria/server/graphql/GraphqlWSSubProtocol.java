@@ -59,12 +59,14 @@ class GraphqlWSSubProtocol {
 
     private boolean connectionInitiated;
 
+    private final ServiceRequestContext ctx;
     private final Map<String, Object> upgradeCtx;
     private Map<String, Object> connectionCtx = ImmutableMap.of();
 
     GraphqlWSSubProtocol(ServiceRequestContext ctx, GraphqlExecutor executor) {
         upgradeCtx = GraphqlServiceContexts.graphqlContext(ctx);
         graphqlExecutor = executor;
+        this.ctx = ctx;
     }
 
     /**
@@ -122,7 +124,8 @@ class GraphqlWSSubProtocol {
                                                                                             operationName)
                                                                                     .extensions(extensions);
 
-                        final ExecutionResult executionResult = graphqlExecutor.executeGraphql(executionInput);
+                        final ExecutionResult executionResult =
+                                graphqlExecutor.executeGraphql(ctx, executionInput);
 
                         if (!executionResult.getErrors().isEmpty()) {
                             writeError(out, id, executionResult.getErrors());
