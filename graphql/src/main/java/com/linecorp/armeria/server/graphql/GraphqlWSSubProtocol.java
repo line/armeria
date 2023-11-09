@@ -129,7 +129,7 @@ class GraphqlWSSubProtocol {
                         final CompletableFuture<ExecutionResult> future =
                                 graphqlExecutor.executeGraphql(ctx, executionInput);
 
-                        final ExecutionResult executionResult = future.join();
+                        final ExecutionResult executionResult = future.get();
 
                         if (!executionResult.getErrors().isEmpty()) {
                             writeError(out, id, executionResult.getErrors());
