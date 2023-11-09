@@ -47,18 +47,18 @@ class GraphqlServiceSubscriptionTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile =
-                new File(getClass().getResource("/testing/graphql/subscription.graphqls").toURI());
+                    new File(getClass().getResource("/testing/graphql/subscription.graphqls").toURI());
             final GraphqlService service =
-                GraphqlService.builder()
-                              .schemaFile(graphqlSchemaFile)
-                              .runtimeWiring(c -> {
-                                  final StaticDataFetcher bar = new StaticDataFetcher("bar");
-                                  c.type("Query",
-                                         typeWiring -> typeWiring.dataFetcher("foo", bar));
-                                  c.type("Subscription",
-                                         typeWiring -> typeWiring.dataFetcher("hello", dataFetcher()));
-                              })
-                              .build();
+                    GraphqlService.builder()
+                                  .schemaFile(graphqlSchemaFile)
+                                  .runtimeWiring(c -> {
+                                      final StaticDataFetcher bar = new StaticDataFetcher("bar");
+                                      c.type("Query",
+                                             typeWiring -> typeWiring.dataFetcher("foo", bar));
+                                      c.type("Subscription",
+                                             typeWiring -> typeWiring.dataFetcher("hello", dataFetcher()));
+                                  })
+                                  .build();
             sb.service("/graphql", service);
         }
     };
@@ -78,14 +78,14 @@ class GraphqlServiceSubscriptionTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         assertThatJson(response.contentUtf8())
-            .withMatcher("errors",
-                         new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {
-                             @Override
-                             protected boolean matchesSafely(List<Map<String, String>> item) {
-                                 final Map<String, String> error = item.get(0);
-                                 final String message = "WebSocket is not implemented";
-                                 return message.equals(error.get("message"));
-                             }
-                         });
+                .withMatcher("errors",
+                             new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {
+                                 @Override
+                                 protected boolean matchesSafely(List<Map<String, String>> item) {
+                                     final Map<String, String> error = item.get(0);
+                                     final String message = "WebSocket is not implemented";
+                                     return message.equals(error.get("message"));
+                                 }
+                             });
     }
 }

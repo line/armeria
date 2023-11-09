@@ -20,7 +20,14 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.linecorp.armeria.common.HttpStatus.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest
-import com.linecorp.armeria.common.{HttpHeaderNames, HttpHeaders, HttpRequest, HttpResponse, HttpStatus, MediaType}
+import com.linecorp.armeria.common.{
+  HttpHeaderNames,
+  HttpHeaders,
+  HttpRequest,
+  HttpResponse,
+  HttpStatus,
+  MediaType
+}
 import com.linecorp.armeria.internal.common.JacksonUtil
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil
 import com.linecorp.armeria.scala.implicits._

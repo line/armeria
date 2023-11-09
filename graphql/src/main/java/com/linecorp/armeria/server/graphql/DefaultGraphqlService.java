@@ -52,7 +52,7 @@ import graphql.GraphQL;
 import graphql.execution.ExecutionId;
 
 final class DefaultGraphqlService extends AbstractGraphqlService
-    implements GraphqlService, IWebSocketService, WebSocketServiceHandler, GraphqlExecutor {
+        implements GraphqlService, IWebSocketService, WebSocketServiceHandler, GraphqlExecutor {
     private static final Logger logger = LoggerFactory.getLogger(DefaultGraphqlService.class);
 
     private final GraphQL graphQL;
@@ -74,21 +74,21 @@ final class DefaultGraphqlService extends AbstractGraphqlService
     private final WebSocketService webSocketService;
 
     DefaultGraphqlService(
-        GraphQL graphQL,
-        Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
-        boolean useBlockingTaskExecutor,
-        GraphqlErrorHandler errorHandler,
-        boolean useWebSocket) {
+            GraphQL graphQL,
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
+            boolean useBlockingTaskExecutor,
+            GraphqlErrorHandler errorHandler,
+            boolean useWebSocket) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
-            "dataLoaderRegistryFunction");
+                                                         "dataLoaderRegistryFunction");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.errorHandler = errorHandler;
 
         if (useWebSocket) {
             this.webSocketService = WebSocketService.builder(this)
-                .subprotocols("graphql-transport-ws")
-                .build();
+                                                    .subprotocols("graphql-transport-ws")
+                                                    .build();
         } else {
             this.webSocketService = null;
         }
@@ -109,8 +109,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService
         final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
         if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
-                "Only %s and %s compatible media types are acceptable",
-                MediaType.GRAPHQL_RESPONSE_JSON, MediaType.JSON);
+                                   "Only %s and %s compatible media types are acceptable",
+                                   MediaType.GRAPHQL_RESPONSE_JSON, MediaType.JSON);
         }
 
         final ExecutionInput.Builder builder = ExecutionInput.newExecutionInput(req.query());
@@ -130,10 +130,10 @@ final class DefaultGraphqlService extends AbstractGraphqlService
         }
 
         final ExecutionInput executionInput =
-            builder.context(ctx)
-                .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
-                .build();
+                builder.context(ctx)
+                       .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
+                       .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
+                       .build();
         return execute(ctx, executionInput, produceType);
     }
 
@@ -144,9 +144,9 @@ final class DefaultGraphqlService extends AbstractGraphqlService
     public ExecutionResult executeGraphql(ExecutionInput.Builder builder) {
         requireNonNull(dataLoaderRegistrySupplier, "dataLoaderRegistrySupplier");
         final ExecutionInput executionInput = builder
-            .dataLoaderRegistry(dataLoaderRegistrySupplier.get())
-            .executionId(ExecutionId.generate())
-            .build();
+                .dataLoaderRegistry(dataLoaderRegistrySupplier.get())
+                .executionId(ExecutionId.generate())
+                .build();
 
         return graphQL.execute(executionInput);
     }
@@ -162,7 +162,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService
     }
 
     private HttpResponse execute(
-        ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
+            ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
         final CompletableFuture<ExecutionResult> future;
         if (useBlockingTaskExecutor) {
             future = CompletableFuture.supplyAsync(() -> graphQL.execute(input), ctx.blockingTaskExecutor());
@@ -170,22 +170,22 @@ final class DefaultGraphqlService extends AbstractGraphqlService
             future = graphQL.executeAsync(input);
         }
         return HttpResponse.of(
-            future.handle((executionResult, cause) -> {
-                if (executionResult.getData() instanceof Publisher) {
-                    logger.warn("executionResult.getData() returns a {} that is not supported yet.",
-                        executionResult.getData().toString());
+                future.handle((executionResult, cause) -> {
+                    if (executionResult.getData() instanceof Publisher) {
+                        logger.warn("executionResult.getData() returns a {} that is not supported yet.",
+                                    executionResult.getData().toString());
 
-                    return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
-                        produceType,
-                        toSpecification("WebSocket is not implemented"));
-                }
+                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
+                                                   produceType,
+                                                   toSpecification("WebSocket is not implemented"));
+                    }
 
-                if (executionResult.getErrors().isEmpty() && cause == null) {
-                    return HttpResponse.ofJson(produceType, executionResult.toSpecification());
-                }
+                    if (executionResult.getErrors().isEmpty() && cause == null) {
+                        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
+                    }
 
-                return errorHandler.handle(ctx, input, executionResult, cause);
-            }));
+                    return errorHandler.handle(ctx, input, executionResult, cause);
+                }));
     }
 
     static Map<String, Object> toSpecification(String message) {

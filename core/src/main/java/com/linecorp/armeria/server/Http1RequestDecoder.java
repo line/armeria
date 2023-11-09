@@ -167,7 +167,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final boolean hasInvalidExpectHeader = !handle100Continue(id, nettyReq);
 
                     final String path = HttpHeaderUtil
-                        .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
+                            .maybeTransformAbsoluteUri(nettyReq.uri(), cfg.absoluteUriTransformer());
 
                     // Parse and normalize the request path.
                     final RequestTarget reqTarget = RequestTarget.forServer(path);
@@ -178,7 +178,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                        ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), reqTarget);
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), reqTarget);
                     // Do not accept unsupported methods.
                     final HttpMethod method = headers.method();
                     switch (method) {
@@ -229,7 +229,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (routingCtx.status().routeMustExist()) {
                         // Find the service that matches the path.
                         final Routed<ServiceConfig> routed =
-                            routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                                routingCtx.virtualHost().findServiceConfig(routingCtx, true);
                         assert routed.isPresent();
                         final ServiceConfig serviceConfig = routingCtx.result().value();
                         if (isHttp1WebSocketUpgradeRequest(headers)) {
@@ -246,16 +246,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                 return;
                             }
                             final StreamingDecodedHttpRequest webSocketRequest =
-                                new StreamingDecodedHttpRequest(
-                                    eventLoop, id, 1, headers, false, inboundTrafficController,
-                                    serviceConfig.maxRequestLength(), routingCtx,
-                                    ExchangeType.BIDI_STREAMING,
-                                    System.nanoTime(), SystemInfo.currentTimeMicros(), true, false);
+                                    new StreamingDecodedHttpRequest(
+                                            eventLoop, id, 1, headers, false, inboundTrafficController,
+                                            serviceConfig.maxRequestLength(), routingCtx,
+                                            ExchangeType.BIDI_STREAMING,
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true, false);
                             assert encoder instanceof ServerHttp1ObjectEncoder;
                             ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
                             final ChannelPipeline pipeline = ctx.pipeline();
                             pipeline.replace(this, null, new WebSocketServiceChannelHandler(
-                                webSocketRequest, encoder, serviceConfig));
+                                    webSocketRequest, encoder, serviceConfig));
                             if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
                                 pipeline.remove(HttpServerUpgradeHandler.class);
                             }
@@ -292,7 +292,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 if (!decoderResult.isSuccess()) {
                     fail(id, decodedReq.headers(), HttpStatus.BAD_REQUEST, "Decoder failure", null);
                     final ProtocolViolationException cause =
-                        new ProtocolViolationException(decoderResult.cause());
+                            new ProtocolViolationException(decoderResult.cause());
                     decodedReq.close(HttpStatusException.of(HttpStatus.BAD_REQUEST, cause));
                     return;
                 }
@@ -305,11 +305,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final long transferredLength = decodedReq.transferredBytes();
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
                         final ContentTooLargeException cause =
-                            ContentTooLargeException.builder()
-                                                    .maxContentLength(maxContentLength)
-                                                    .contentLength(req.headers())
-                                                    .transferred(transferredLength)
-                                                    .build();
+                                ContentTooLargeException.builder()
+                                                        .maxContentLength(maxContentLength)
+                                                        .contentLength(req.headers())
+                                                        .transferred(transferredLength)
+                                                        .build();
                         discarding = true;
                         req = null;
                         final boolean shouldReset;
@@ -324,11 +324,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
                         final HttpStatusException httpStatusException =
-                            HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
+                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
                         if (!decodedReq.isInitialized()) {
                             assert decodedReq.needsAggregation();
                             final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
-                                inboundTrafficController, httpStatusException, shouldReset);
+                                    inboundTrafficController, httpStatusException, shouldReset);
                             ctx.fireChannelRead(streamingReq);
                         } else {
                             decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
@@ -434,9 +434,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
             final ChannelPipeline pipeline = ctx.pipeline();
             final ChannelHandlerContext connectionHandlerCtx =
-                pipeline.context(Http2ServerConnectionHandler.class);
+                    pipeline.context(Http2ServerConnectionHandler.class);
             final Http2ServerConnectionHandler connectionHandler =
-                (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
+                    (Http2ServerConnectionHandler) connectionHandlerCtx.handler();
             encoder.close();
             // The HTTP/2 encoder will be used when a protocol violation error occurs after upgrading to HTTP/2
             // that is directly written by 'fail()'.

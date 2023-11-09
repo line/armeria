@@ -55,7 +55,7 @@ class GraphqlWSSubProtocol {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final TypeReference<Map<String, Object>> JSON_MAP =
-        new TypeReference<Map<String, Object>>() {};
+            new TypeReference<Map<String, Object>>() {};
 
     private boolean connectionInitiated;
 
@@ -102,7 +102,7 @@ class GraphqlWSSubProtocol {
                     try {
                         if (graphqlSubscriptions.containsKey(id)) {
                             throw new IllegalArgumentException(
-                                "Subscription with id " + id + " already exists");
+                                    "Subscription with id " + id + " already exists");
                         }
                         final String operationName = toStringFromJson("operationName",
                                                                       payload.get("operationName"));
@@ -111,12 +111,14 @@ class GraphqlWSSubProtocol {
                         final Map<String, Object> extensions = toMapFromJson(payload.get("extensions"));
 
                         final ExecutionInput.Builder executionInput = ExecutionInput.newExecutionInput()
-                                                                              .graphQLContext(upgradeCtx)
-                                                                              .graphQLContext(connectionCtx)
-                                                                              .query(query)
-                                                                              .variables(variables)
-                                                                              .operationName(operationName)
-                                                                              .extensions(extensions);
+                                                                                    .graphQLContext(upgradeCtx)
+                                                                                    .graphQLContext(
+                                                                                            connectionCtx)
+                                                                                    .query(query)
+                                                                                    .variables(variables)
+                                                                                    .operationName(
+                                                                                            operationName)
+                                                                                    .extensions(extensions);
 
                         final ExecutionResult executionResult = graphqlExecutor.executeGraphql(executionInput);
 
@@ -128,19 +130,19 @@ class GraphqlWSSubProtocol {
                         final Publisher<ExecutionResult> publisher = executionResult.getData();
 
                         final GraphqlSubscriber executionResultSubscriber =
-                            new GraphqlSubscriber(id, new GraphqlSubProtocol() {
-                                @Override
-                                public void sendResult(String operationId, ExecutionResult executionResult)
-                                    throws JsonProcessingException {
-                                    writeNext(out, operationId, executionResult);
-                                }
+                                new GraphqlSubscriber(id, new GraphqlSubProtocol() {
+                                    @Override
+                                    public void sendResult(String operationId, ExecutionResult executionResult)
+                                            throws JsonProcessingException {
+                                        writeNext(out, operationId, executionResult);
+                                    }
 
-                                @Override
-                                public void sendGraphqlErrors(List<GraphQLError> errors)
-                                    throws JsonProcessingException {
-                                    writeError(out, id, errors);
-                                }
-                            });
+                                    @Override
+                                    public void sendGraphqlErrors(List<GraphQLError> errors)
+                                            throws JsonProcessingException {
+                                        writeError(out, id, errors);
+                                    }
+                                });
 
                         graphqlSubscriptions.put(id, executionResultSubscriber);
                         publisher.subscribe(executionResultSubscriber);
@@ -214,7 +216,7 @@ class GraphqlWSSubProtocol {
     }
 
     private <T> T parseJsonString(String content, TypeReference<T> typeReference)
-        throws JsonProcessingException {
+            throws JsonProcessingException {
         return mapper.readValue(content, typeReference);
     }
 
@@ -227,7 +229,7 @@ class GraphqlWSSubProtocol {
     }
 
     private void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult)
-        throws JsonProcessingException {
+            throws JsonProcessingException {
         final HashMap<String, Object> response = new HashMap<>();
         response.put("id", operationId);
         response.put("type", "next");
@@ -238,7 +240,7 @@ class GraphqlWSSubProtocol {
     }
 
     private void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors)
-        throws JsonProcessingException {
+            throws JsonProcessingException {
         final HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
@@ -249,27 +251,27 @@ class GraphqlWSSubProtocol {
     }
 
     private void writeError(WebSocketWriter out, String operationId, Throwable t)
-        throws JsonProcessingException {
+            throws JsonProcessingException {
         final HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
         errorResponse.put("payload", ImmutableList.of(
-            new GraphQLError() {
-                @Override
-                public String getMessage() {
-                    return t.getMessage();
-                }
+                new GraphQLError() {
+                    @Override
+                    public String getMessage() {
+                        return t.getMessage();
+                    }
 
-                @Override
-                public List<SourceLocation> getLocations() {
-                    return emptyList();
-                }
+                    @Override
+                    public List<SourceLocation> getLocations() {
+                        return emptyList();
+                    }
 
-                @Override
-                public ErrorClassification getErrorType() {
-                    return ErrorClassification.errorClassification("Unknown");
+                    @Override
+                    public ErrorClassification getErrorType() {
+                        return ErrorClassification.errorClassification("Unknown");
+                    }
                 }
-            }
         ));
         final String event = serializeToJson(errorResponse);
         logger.trace("ERROR: {}", event);

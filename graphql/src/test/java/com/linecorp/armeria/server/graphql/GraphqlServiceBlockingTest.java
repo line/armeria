@@ -44,7 +44,6 @@ class GraphqlServiceBlockingTest {
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
-                        .useWebSocket(true)
                                   .useBlockingTaskExecutor(true)
                                   .runtimeWiring(c -> {
                                       final DataFetcher<String> bar = dataFetcher("bar");

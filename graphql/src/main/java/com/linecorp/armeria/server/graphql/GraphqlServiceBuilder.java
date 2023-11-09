@@ -337,10 +337,10 @@ public final class GraphqlServiceBuilder {
         }
 
         return new DefaultGraphqlService(builder.build(),
-            dataLoaderRegistryFactory,
-            useBlockingTaskExecutor,
-            errorHandler,
-            useWebSocket);
+                                         dataLoaderRegistryFactory,
+                                         useBlockingTaskExecutor,
+                                         errorHandler,
+                                         useWebSocket);
     }
 
     private GraphQLSchema buildSchema() {
