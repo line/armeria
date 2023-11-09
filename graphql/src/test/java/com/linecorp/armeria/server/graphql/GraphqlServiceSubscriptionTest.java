@@ -89,7 +89,7 @@ class GraphqlServiceSubscriptionTest {
         assertThat(response.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         assertThatJson(response.contentUtf8())
                 .node("errors[0].message")
-                .isEqualTo("WebSocket is not implemented");
+                .isEqualTo("Use websocket for subscription");
     }
 
     @Test
