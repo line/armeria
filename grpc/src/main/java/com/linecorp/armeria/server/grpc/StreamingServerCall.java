@@ -24,10 +24,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -43,9 +40,9 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
+import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -62,8 +59,6 @@ import io.netty.buffer.ByteBufAllocator;
  */
 final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         implements Subscriber<DeframedMessage>, TransportStatusListener {
-
-    private static final Logger logger = LoggerFactory.getLogger(StreamingServerCall.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<StreamingServerCall> pendingMessagesUpdater =
@@ -190,7 +185,9 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void doClose(Status status, Metadata metadata) {
+    public void doClose(ServerStatusAndMetadata statusAndMetadata) {
+        final Status status = statusAndMetadata.status();
+        final Metadata metadata = statusAndMetadata.metadata();
         final boolean trailersOnly;
         if (firstResponse != null) {
             // ResponseHeaders was written successfully.
@@ -212,29 +209,23 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    closeListener(status, metadata, false, true);
+                    statusAndMetadata.completed(false);
+                    statusAndMetadata.setResponseContent(true);
+                    closeListener(statusAndMetadata);
                     return;
                 }
             }
         }
 
-        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         // Set responseContent before closing stream to use responseCause in error handling
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
-        final HttpObject trailers;
         try {
-            trailers = responseTrailers(ctx, status, metadata, trailersOnly);
-        } catch (Exception e) {
-            logger.warn("An unexpected exception occurred while serializing gRPC trailers for ctx: {}," +
-                        " status: {}, metadata: {}", ctx, status, metadata, e);
-            closeListener(statusAndMetadata, false, false);
-            return;
-        }
-        if (res.tryWrite(trailers)) {
-            res.close();
-            closeListener(statusAndMetadata, true, false);
-        } else {
-            closeListener(statusAndMetadata, false, false);
+            if (res.tryWrite(responseTrailers(ctx, status, metadata, trailersOnly))) {
+                res.close();
+            }
+        } finally {
+            statusAndMetadata.setResponseContent(false);
+            closeListener(statusAndMetadata);
         }
     }
 
@@ -282,6 +273,8 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(status, metadata, false, true);
+        final ServerStatusAndMetadata statusAndMetadata =
+                new ServerStatusAndMetadata(status, metadata, true, false, true);
+        closeListener(statusAndMetadata);
     }
 }
