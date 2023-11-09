@@ -78,14 +78,7 @@ class GraphqlServiceSubscriptionTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         assertThatJson(response.contentUtf8())
-                .withMatcher("errors",
-                             new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {
-                                 @Override
-                                 protected boolean matchesSafely(List<Map<String, String>> item) {
-                                     final Map<String, String> error = item.get(0);
-                                     final String message = "WebSocket is not implemented";
-                                     return message.equals(error.get("message"));
-                                 }
-                             });
+                .node("errors[0].message")
+                .isEqualTo("WebSocket is not implemented");
     }
 }
