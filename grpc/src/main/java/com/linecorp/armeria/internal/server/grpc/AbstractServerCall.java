@@ -65,7 +65,6 @@ import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
-import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -202,7 +201,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (!closeCalled) {
             cancelled = true;
             try (SafeCloseable ignore = ctx.push()) {
-                close(Status.CANCELLED, new Metadata());
+                close(new ServerStatusAndMetadata(Status.CANCELLED, new Metadata(), true));
             }
         }
     }
@@ -224,6 +223,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 new ServerStatusAndMetadata(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx,
                                                                             status, metadata),
                                             metadata, false);
+        close(statusAndMetadata);
+    }
+
+    public final void close(ServerStatusAndMetadata statusAndMetadata) {
         close(statusAndMetadata, null);
     }
 
@@ -260,10 +263,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                    status, exception);
         closeCalled = true;
 
-        if (status.getCode() == Code.CANCELLED && status.getCause() instanceof RequestTimeoutException) {
-            // A call was finished by a timeout scheduler, not a user.
-            statusAndMetadata.completed(false);
-        } else if (status.isOk() && method.getType().serverSendsOneMessage() && firstResponse() == null) {
+        if (status.isOk() && method.getType().serverSendsOneMessage() && firstResponse() == null) {
             // A call that should send a message incompletely finished.
             final String description = "Completed without a response";
             logger.warn("{} {} status: {}, metadata: {}", ctx, description, status, metadata);
