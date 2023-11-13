@@ -23,6 +23,7 @@ import java.net.URI;
 
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -47,7 +48,7 @@ import io.netty.channel.EventLoop;
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
     @Nullable
-    private Endpoint endpoint;
+    private EndpointGroup endpointGroup;
     private ClientOptions options = ClientOptions.of();
     private RequestOptions requestOptions = RequestOptions.of();
     @Nullable
@@ -71,7 +72,16 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
      * Sets the {@link Endpoint} of the request. If not set, it is auto-generated from the request authority.
      */
     public ClientRequestContextBuilder endpoint(Endpoint endpoint) {
-        this.endpoint = requireNonNull(endpoint, "endpoint");
+        endpointGroup = requireNonNull(endpoint, "endpointGroup");
+        return this;
+    }
+
+    /**
+     * Sets the {@link EndpointGroup} of the request. If not set, it is auto-generated from the request
+     * authority.
+     */
+    public ClientRequestContextBuilder endpointGroup(EndpointGroup endpointGroup) {
+        this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
         return this;
     }
 
@@ -103,11 +113,11 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
      * Returns a new {@link ClientRequestContext} created with the properties of this builder.
      */
     public ClientRequestContext build() {
-        final Endpoint endpoint;
-        if (this.endpoint != null) {
-            endpoint = this.endpoint;
+        final EndpointGroup endpointGroup;
+        if (this.endpointGroup != null) {
+            endpointGroup = this.endpointGroup;
         } else {
-            endpoint = Endpoint.parse(authority());
+            endpointGroup = Endpoint.parse(authority());
         }
 
         final CancellationScheduler responseCancellationScheduler;
@@ -125,7 +135,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 
-        ctx.init(endpoint);
+        ctx.init(endpointGroup);
         ctx.logBuilder().session(fakeChannel(), sessionProtocol(), sslSession(), connectionTimings);
 
         if (request() != null) {
