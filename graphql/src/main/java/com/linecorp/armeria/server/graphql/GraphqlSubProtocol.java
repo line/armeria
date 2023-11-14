@@ -27,4 +27,8 @@ interface GraphqlSubProtocol {
     void sendResult(String operationId, ExecutionResult executionResult) throws JsonProcessingException;
 
     void sendGraphqlErrors(List<GraphQLError> errors) throws JsonProcessingException;
+
+    void completeWithError(Throwable cause);
+
+    void complete();
 }

@@ -203,6 +203,27 @@ class GraphqlWSSubProtocol {
                     public void sendGraphqlErrors(List<GraphQLError> errors) {
                         writeError(out, id, errors);
                     }
+
+                    @Override
+                    public void completeWithError(Throwable cause) {
+                        writeError(out, id, cause);
+                        writeComplete(out, id);
+                        ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
+                        if (s != null) {
+                            s.setCompleted();
+                            streamMessage.abort(cause);
+                        }
+                    }
+
+                    @Override
+                    public void complete() {
+                        writeComplete(out, id);
+                        ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
+                        if (s != null) {
+                            s.setCompleted();
+                            streamMessage.abort();
+                        }
+                    }
                 });
 
         graphqlSubscriptions.put(id, executionResultSubscriber);
@@ -326,6 +347,10 @@ class GraphqlWSSubProtocol {
             logger.error("Error serializing error event", e);
             out.close(e);
         }
+    }
+
+    private void writeComplete(WebSocketWriter out, String operationId) {
+        out.write("{\"type\":\"complete\",\"id\":\"" + operationId + "\"}");
     }
 }
 

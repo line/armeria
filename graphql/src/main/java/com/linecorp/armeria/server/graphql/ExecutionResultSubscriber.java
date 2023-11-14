@@ -85,6 +85,7 @@ class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
          */
         logger.trace("onError", t);
         subscription = null;
+        protocol.completeWithError(t);
     }
 
     @Override
@@ -95,6 +96,7 @@ class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
          */
         logger.trace("onComplete");
         subscription = null;
+        protocol.complete();
     }
 
     public void setCompleted() {
