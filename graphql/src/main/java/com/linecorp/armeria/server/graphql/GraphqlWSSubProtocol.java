@@ -36,6 +36,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -183,6 +185,12 @@ class GraphqlWSSubProtocol {
         }
 
         final Publisher<ExecutionResult> publisher = executionResult.getData();
+        final StreamMessage<ExecutionResult> streamMessage;
+        if (publisher instanceof StreamMessage) {
+            streamMessage = (StreamMessage<ExecutionResult>) publisher;
+        } else {
+            streamMessage = new PublisherBasedStreamMessage<>(publisher);
+        }
 
         final ExecutionResultSubscriber executionResultSubscriber =
                 new ExecutionResultSubscriber(id, new GraphqlSubProtocol() {
@@ -198,7 +206,7 @@ class GraphqlWSSubProtocol {
                 });
 
         graphqlSubscriptions.put(id, executionResultSubscriber);
-        publisher.subscribe(executionResultSubscriber);
+        streamMessage.subscribe(executionResultSubscriber);
     }
 
     private void ensureInitiated() throws Exception {
