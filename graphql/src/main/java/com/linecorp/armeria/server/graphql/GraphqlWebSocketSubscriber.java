@@ -66,6 +66,8 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
             return;
         }
         switch (webSocketFrame.type()) {
+            // If Binary, handle it same as a text frame. Should never happen.
+            case BINARY:
             case TEXT:
                 // Parse the graphql-ws sub protocol. Maybe this could be done in a different thread so not
                 // to block the publisher?
@@ -87,9 +89,9 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
                 break;
             // PONG is a noop
             case PONG:
-                // These below will never happen?
-            case BINARY:
+            // Continuation is not mentioned in the spec. Should never happen.
             case CONTINUATION:
+                logger.trace("Ignoring frame type: {}", webSocketFrame.type());
                 subscription.request(1);
                 break;
             default:
