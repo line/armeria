@@ -129,36 +129,10 @@ class GraphqlWSSubProtocol {
                         final CompletableFuture<ExecutionResult> future =
                                 graphqlExecutor.executeGraphql(ctx, executionInput);
 
-                        final ExecutionResult executionResult = future.get();
-
-                        if (!executionResult.getErrors().isEmpty()) {
-                            writeError(out, id, executionResult.getErrors());
-                            return;
-                        }
-
-                        if (!(executionResult.getData() instanceof Publisher)) {
-                            throw new Exception("Result of operation was not a subscription");
-                        }
-
-                        final Publisher<ExecutionResult> publisher = executionResult.getData();
-
-                        final ExecutionResultSubscriber executionResultSubscriber =
-                                new ExecutionResultSubscriber(id, new GraphqlSubProtocol() {
-                                    @Override
-                                    public void sendResult(String operationId, ExecutionResult executionResult)
-                                            throws JsonProcessingException {
-                                        writeNext(out, operationId, executionResult);
-                                    }
-
-                                    @Override
-                                    public void sendGraphqlErrors(List<GraphQLError> errors)
-                                            throws JsonProcessingException {
-                                        writeError(out, id, errors);
-                                    }
-                                });
-
-                        graphqlSubscriptions.put(id, executionResultSubscriber);
-                        publisher.subscribe(executionResultSubscriber);
+                        future.handle(((executionResult, throwable) -> {
+                            handleBlocking(out, id, executionResult, throwable);
+                            return null;
+                        }));
                     } catch (Exception e) {
                         logger.debug("Error handling subscription", e);
                         GraphqlWSSubProtocol.this.writeError(out, id, e);
@@ -182,6 +156,49 @@ class GraphqlWSSubProtocol {
             logger.debug("Error while handling event", e);
             out.close(e);
         }
+    }
+
+    private void handleBlocking(WebSocketWriter out, String id,
+                                @Nullable ExecutionResult executionResult, @Nullable Throwable t) {
+        if (t != null) {
+            logger.debug("Error handling subscription", t);
+            writeError(out, id, t);
+            return;
+        }
+
+        if (executionResult == null) {
+            logger.debug("ExecutionResult was null but no error was thrown");
+            writeError(out, id, new IllegalArgumentException("ExecutionResult was null"));
+            return;
+        }
+
+        if (!executionResult.getErrors().isEmpty()) {
+            writeError(out, id, executionResult.getErrors());
+            return;
+        }
+
+        if (!(executionResult.getData() instanceof Publisher)) {
+            writeError(out, id, new Exception("Result of operation was not a subscription"));
+            return;
+        }
+
+        final Publisher<ExecutionResult> publisher = executionResult.getData();
+
+        final ExecutionResultSubscriber executionResultSubscriber =
+                new ExecutionResultSubscriber(id, new GraphqlSubProtocol() {
+                    @Override
+                    public void sendResult(String operationId, ExecutionResult executionResult) {
+                        writeNext(out, operationId, executionResult);
+                    }
+
+                    @Override
+                    public void sendGraphqlErrors(List<GraphQLError> errors) {
+                        writeError(out, id, errors);
+                    }
+                });
+
+        graphqlSubscriptions.put(id, executionResultSubscriber);
+        publisher.subscribe(executionResultSubscriber);
     }
 
     private void ensureInitiated() throws Exception {
@@ -241,30 +258,37 @@ class GraphqlWSSubProtocol {
         out.write("{\"type\":\"connection_ack\"}");
     }
 
-    private void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult)
-            throws JsonProcessingException {
+    private void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult) {
         final HashMap<String, Object> response = new HashMap<>();
         response.put("id", operationId);
         response.put("type", "next");
         response.put("payload", executionResult.toSpecification());
-        final String event = serializeToJson(response);
-        logger.trace("NEXT: {}", event);
-        out.write(event);
+        try {
+            final String event = serializeToJson(response);
+            logger.trace("NEXT: {}", event);
+            out.write(event);
+        } catch (JsonProcessingException e) {
+            logger.error("Error serializing next event", e);
+            writeError(out, operationId, e);
+        }
     }
 
-    private void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors)
-            throws JsonProcessingException {
+    private void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors) {
         final HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
         errorResponse.put("payload", errors);
-        final String event = serializeToJson(errorResponse);
-        logger.trace("ERROR: {}", event);
-        out.write(event);
+        try {
+            final String event = serializeToJson(errorResponse);
+            logger.trace("ERROR: {}", event);
+            out.write(event);
+        } catch (JsonProcessingException e) {
+            logger.error("Error serializing error event", e);
+            writeError(out, operationId, e);
+        }
     }
 
-    private void writeError(WebSocketWriter out, String operationId, Throwable t)
-            throws JsonProcessingException {
+    private void writeError(WebSocketWriter out, String operationId, Throwable t) {
         final HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
@@ -286,9 +310,14 @@ class GraphqlWSSubProtocol {
                     }
                 }
         ));
-        final String event = serializeToJson(errorResponse);
-        logger.trace("ERROR: {}", event);
-        out.write(event);
+        try {
+            final String event = serializeToJson(errorResponse);
+            logger.trace("ERROR: {}", event);
+            out.write(event);
+        } catch (JsonProcessingException e) {
+            logger.error("Error serializing error event", e);
+            out.close(e);
+        }
     }
 }
 
