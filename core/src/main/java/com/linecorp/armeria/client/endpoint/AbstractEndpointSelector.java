@@ -67,6 +67,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         return endpointGroup;
     }
 
+    @SuppressWarnings("GuardedBy")
     @VisibleForTesting
     final Set<ListeningFuture> pendingFutures() {
         return pendingFutures;
