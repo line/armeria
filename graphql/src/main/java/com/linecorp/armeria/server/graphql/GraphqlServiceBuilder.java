@@ -266,7 +266,7 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Sets whether the service supports WebSockets for subscriptions.
+     * Sets whether [[GraphQL over WebSocket Protocol](https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md)] is supported.
      */
     public GraphqlServiceBuilder useWebSocket(boolean useWebSocket) {
         this.useWebSocket = useWebSocket;
