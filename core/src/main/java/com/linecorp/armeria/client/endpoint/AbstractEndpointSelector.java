@@ -25,7 +25,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -66,6 +65,11 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
      */
     protected final EndpointGroup group() {
         return endpointGroup;
+    }
+
+    @VisibleForTesting
+    final Set<ListeningFuture> pendingFutures() {
+        return pendingFutures;
     }
 
     @Deprecated
@@ -148,10 +152,11 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         lock.lock();
         try {
             // Use iterator to avoid concurrent modification. `future.accept()` may remove the future.
-            //noinspection ForLoopReplaceableByForEach
             for (final Iterator<ListeningFuture> it = pendingFutures.iterator(); it.hasNext();) {
                 final ListeningFuture future = it.next();
-                future.accept(null);
+                if (future.tryComplete()) {
+                    it.remove();
+                }
             }
         } finally {
             lock.unlock();
@@ -183,7 +188,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
     }
 
     @VisibleForTesting
-    final class ListeningFuture extends CompletableFuture<Endpoint> implements Consumer<Void> {
+    final class ListeningFuture extends CompletableFuture<Endpoint> {
         private final ClientRequestContext ctx;
         private final Executor executor;
         @Nullable
@@ -196,46 +201,54 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
             this.executor = executor;
         }
 
-        @Override
-        public void accept(Void updated) {
+        /**
+         * Returns {@code true} if an {@link Endpoint} has been selected.
+         */
+        public boolean tryComplete() {
             if (selectedEndpoint != null || isDone()) {
-                return;
+                return true;
             }
 
             try {
                 final Endpoint endpoint = selectNow(ctx);
-                if (endpoint != null) {
-                    cleanup();
-
-                    // Complete with the selected endpoint.
-                    selectedEndpoint = endpoint;
-                    executor.execute(() -> super.complete(endpoint));
+                if (endpoint == null) {
+                    return false;
                 }
+
+                cleanup(false);
+                // Complete with the selected endpoint.
+                selectedEndpoint = endpoint;
+                executor.execute(() -> super.complete(endpoint));
+                return true;
             } catch (Throwable t) {
-                completeExceptionally(t);
+                cleanup(false);
+                super.completeExceptionally(t);
+                return true;
             }
         }
 
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
-            cleanup();
+            cleanup(true);
             return super.cancel(mayInterruptIfRunning);
         }
 
         @Override
         public boolean complete(Endpoint value) {
-            cleanup();
+            cleanup(true);
             return super.complete(value);
         }
 
         @Override
         public boolean completeExceptionally(Throwable ex) {
-            cleanup();
+            cleanup(true);
             return super.completeExceptionally(ex);
         }
 
-        private void cleanup() {
-            removePendingFuture(this);
+        private void cleanup(boolean removePendingFuture) {
+            if (removePendingFuture) {
+                removePendingFuture(this);
+            }
             final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
             if (timeoutFuture != null) {
                 this.timeoutFuture = null;
