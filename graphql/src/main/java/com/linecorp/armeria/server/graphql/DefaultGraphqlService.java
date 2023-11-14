@@ -41,8 +41,8 @@ import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
-import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.server.websocket.DefaultWebSocketService;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 
 import graphql.ExecutionInput;

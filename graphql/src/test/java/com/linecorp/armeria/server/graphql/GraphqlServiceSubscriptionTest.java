@@ -105,7 +105,7 @@ class GraphqlServiceSubscriptionTest {
 
         final WebSocketWriter outbound = webSocketSession.outbound();
 
-        List<String> receivedEvents = new ArrayList<>();
+        final List<String> receivedEvents = new ArrayList<>();
         //noinspection ReactiveStreamsSubscriberImplementation
         webSocketSession.inbound().subscribe(new Subscriber<WebSocketFrame>() {
             @Override

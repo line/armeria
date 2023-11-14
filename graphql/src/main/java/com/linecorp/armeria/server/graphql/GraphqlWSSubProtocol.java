@@ -208,7 +208,7 @@ class GraphqlWSSubProtocol {
                     public void completeWithError(Throwable cause) {
                         writeError(out, id, cause);
                         writeComplete(out, id);
-                        ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
+                        final ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
                         if (s != null) {
                             s.setCompleted();
                             streamMessage.abort(cause);
@@ -218,7 +218,7 @@ class GraphqlWSSubProtocol {
                     @Override
                     public void complete() {
                         writeComplete(out, id);
-                        ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
+                        final ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
                         if (s != null) {
                             s.setCompleted();
                             streamMessage.abort();

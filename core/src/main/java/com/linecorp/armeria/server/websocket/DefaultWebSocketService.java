@@ -85,8 +85,9 @@ public final class DefaultWebSocketService extends AbstractHttpService implement
     private final Set<String> allowedOrigins;
     private final boolean allowAnyOrigin;
 
-    DefaultWebSocketService(WebSocketServiceHandler handler, int maxFramePayloadLength, boolean allowMaskMismatch,
-                            Set<String> subprotocols, Set<String> allowedOrigins, boolean allowAnyOrigin) {
+    DefaultWebSocketService(WebSocketServiceHandler handler, int maxFramePayloadLength,
+                            boolean allowMaskMismatch, Set<String> subprotocols,
+                            Set<String> allowedOrigins, boolean allowAnyOrigin) {
         this.handler = handler;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
