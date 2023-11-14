@@ -52,7 +52,7 @@ import graphql.language.SourceLocation;
 class GraphqlWSSubProtocol {
     private static final Logger logger = LoggerFactory.getLogger(GraphqlWSSubProtocol.class);
     private final GraphqlExecutor graphqlExecutor;
-    private final HashMap<String, GraphqlSubscriber> graphqlSubscriptions = new HashMap<>();
+    private final HashMap<String, ExecutionResultSubscriber> graphqlSubscriptions = new HashMap<>();
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final TypeReference<Map<String, Object>> JSON_MAP =
@@ -142,8 +142,8 @@ class GraphqlWSSubProtocol {
 
                         final Publisher<ExecutionResult> publisher = executionResult.getData();
 
-                        final GraphqlSubscriber executionResultSubscriber =
-                                new GraphqlSubscriber(id, new GraphqlSubProtocol() {
+                        final ExecutionResultSubscriber executionResultSubscriber =
+                                new ExecutionResultSubscriber(id, new GraphqlSubProtocol() {
                                     @Override
                                     public void sendResult(String operationId, ExecutionResult executionResult)
                                             throws JsonProcessingException {
@@ -170,7 +170,7 @@ class GraphqlWSSubProtocol {
                     // Read id and remove that subscription
                     id = toStringFromJson("id", eventMap.get("id"));
                     requireNonNull(id, "id");
-                    final GraphqlSubscriber s = graphqlSubscriptions.remove(id);
+                    final ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
                     if (s != null) {
                         s.setCompleted();
                     }

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.graphql;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -89,7 +90,7 @@ class GraphqlServiceSubscriptionTest {
         assertThat(response.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         assertThatJson(response.contentUtf8())
                 .node("errors[0].message")
-                .isEqualTo("Use websocket for subscription");
+                .isEqualTo("Use GraphQL over WebSocket for subscription");
     }
 
     @Test

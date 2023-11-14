@@ -29,14 +29,14 @@ import graphql.ExecutionResult;
 
 @SuppressWarnings("ReactiveStreamsSubscriberImplementation")
 class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
-    private static final Logger logger = LoggerFactory.getLogger(GraphqlSubscriber.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExecutionResultSubscriber.class);
     private final GraphqlSubProtocol protocol;
     private final String operationId;
 
     @Nullable
     private Subscription subscription;
 
-    GraphqlSubscriber(String operationId, GraphqlSubProtocol protocol) {
+    ExecutionResultSubscriber(String operationId, GraphqlSubProtocol protocol) {
         this.operationId = operationId;
         this.protocol = protocol;
     }
