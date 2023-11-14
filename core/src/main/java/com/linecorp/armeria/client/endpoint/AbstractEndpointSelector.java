@@ -17,7 +17,6 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -152,13 +151,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
 
         lock.lock();
         try {
-            // Use iterator to avoid concurrent modification. `future.accept()` may remove the future.
-            for (final Iterator<ListeningFuture> it = pendingFutures.iterator(); it.hasNext();) {
-                final ListeningFuture future = it.next();
-                if (future.tryComplete()) {
-                    it.remove();
-                }
-            }
+            pendingFutures.removeIf(ListeningFuture::tryComplete);
         } finally {
             lock.unlock();
         }
