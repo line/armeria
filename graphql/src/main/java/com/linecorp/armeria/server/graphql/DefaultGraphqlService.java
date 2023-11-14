@@ -173,7 +173,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService
 
                         return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
                                                    produceType,
-                                                   toSpecification("Use websocket for subscription"));
+                                                   toSpecification("Use GraphQL over WebSocket for subscription"));
                     }
 
                     if (executionResult.getErrors().isEmpty() && cause == null) {

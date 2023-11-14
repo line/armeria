@@ -133,16 +133,7 @@ class GraphqlServiceSubscriptionTest {
         outbound.write(
                 "{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription {hello}\"}}");
 
-        long start = System.currentTimeMillis();
-        while (receivedEvents.size() < 3 && System.currentTimeMillis() - start < 1000L) {
-            try {
-                //noinspection BusyWait
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                break;
-            }
-        }
-        assertThat(receivedEvents.size()).isEqualTo(3);
+        await().until(() -> receivedEvents.size() >= 3);
         assertThatJson(receivedEvents.get(0)).node("type").isEqualTo("pong");
         assertThatJson(receivedEvents.get(1)).node("type").isEqualTo("connection_ack");
         assertThatJson(receivedEvents.get(2))

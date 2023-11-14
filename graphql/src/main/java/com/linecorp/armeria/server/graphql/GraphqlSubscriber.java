@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import graphql.ExecutionResult;
 
 @SuppressWarnings("ReactiveStreamsSubscriberImplementation")
-class GraphqlSubscriber implements Subscriber<ExecutionResult> {
+class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
     private static final Logger logger = LoggerFactory.getLogger(GraphqlSubscriber.class);
     private final GraphqlSubProtocol protocol;
     private final String operationId;
