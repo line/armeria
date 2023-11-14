@@ -45,7 +45,7 @@ import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
-import com.linecorp.armeria.server.websocket.IWebSocketService;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -233,7 +233,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         assert routed.isPresent();
                         final ServiceConfig serviceConfig = routingCtx.result().value();
                         if (isHttp1WebSocketUpgradeRequest(headers)) {
-                            if (serviceConfig.service().as(IWebSocketService.class) == null) {
+                            if (serviceConfig.service().as(WebSocketService.class) == null) {
                                 fail(id, headers, HttpStatus.BAD_REQUEST,
                                      "WebSocket upgrade requested but the service does not support it.", null);
                                 return;

@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 
 /**
- * Builds a {@link WebSocketService}.
+ * Builds a {@link DefaultWebSocketService}.
  * This service has the different default configs from a normal {@link HttpService}. Here are the differences:
  * <ul>
  *   <li>{@link ServiceConfig#requestTimeoutMillis()} is
@@ -143,10 +143,10 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Returns a newly-created {@link WebSocketService} with the properties set so far.
+     * Returns a newly-created {@link DefaultWebSocketService} with the properties set so far.
      */
-    public WebSocketService build() {
-        return new WebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
-                                    subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN));
+    public DefaultWebSocketService build() {
+        return new DefaultWebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
+                                           subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN));
     }
 }

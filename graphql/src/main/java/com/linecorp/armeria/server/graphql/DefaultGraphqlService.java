@@ -41,8 +41,8 @@ import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
-import com.linecorp.armeria.server.websocket.IWebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketService;
+import com.linecorp.armeria.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 
 import graphql.ExecutionInput;
@@ -52,7 +52,7 @@ import graphql.GraphQL;
 import graphql.execution.ExecutionId;
 
 final class DefaultGraphqlService extends AbstractGraphqlService
-        implements GraphqlService, IWebSocketService, WebSocketServiceHandler, GraphqlExecutor {
+        implements GraphqlService, WebSocketService, WebSocketServiceHandler, GraphqlExecutor {
     private static final Logger logger = LoggerFactory.getLogger(DefaultGraphqlService.class);
 
     private final GraphQL graphQL;
@@ -65,7 +65,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService
     private final GraphqlErrorHandler errorHandler;
 
     @Nullable
-    private final WebSocketService webSocketService;
+    private final DefaultWebSocketService webSocketService;
 
     DefaultGraphqlService(
             GraphQL graphQL,
@@ -141,7 +141,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService
                 .build();
 
         if (useBlockingTaskExecutor) {
-            return CompletableFuture.supplyAsync(() -> graphQL.execute(executionInput), ctx.blockingTaskExecutor());
+            return CompletableFuture.supplyAsync(() -> graphQL.execute(executionInput),
+                                                 ctx.blockingTaskExecutor());
         } else {
             return graphQL.executeAsync(executionInput);
         }
@@ -173,7 +174,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService
 
                         return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
                                                    produceType,
-                                                   toSpecification("Use GraphQL over WebSocket for subscription"));
+                                                   toSpecification(
+                                                           "Use GraphQL over WebSocket for subscription"));
                     }
 
                     if (executionResult.getErrors().isEmpty() && cause == null) {

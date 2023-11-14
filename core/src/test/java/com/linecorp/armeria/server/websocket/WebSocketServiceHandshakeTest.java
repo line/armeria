@@ -64,9 +64,9 @@ class WebSocketServiceHandshakeTest {
               .https(0)
               .requestTimeoutMillis(0);
             sb.service("/chat", WebSocketService.builder(new AbstractWebSocketHandler())
-                                                .subprotocols("chat", "superchat")
-                                                .allowedOrigins("foo.com")
-                                                .build());
+                                                       .subprotocols("chat", "superchat")
+                                                       .allowedOrigins("foo.com")
+                                                       .build());
             sb.decorator((delegate, ctx, req) -> {
                 if (!threadRescheduling.get()) {
                     return delegate.serve(ctx, req);

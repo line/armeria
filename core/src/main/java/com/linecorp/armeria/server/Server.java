@@ -78,7 +78,7 @@ import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
-import com.linecorp.armeria.server.websocket.WebSocketService;
+import com.linecorp.armeria.server.websocket.DefaultWebSocketService;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -464,7 +464,7 @@ public final class Server implements ListenableAsyncCloseable {
     private static boolean hasWebSocketService(UpdatableServerConfig config) {
         return config.serviceConfigs()
                      .stream()
-                     .anyMatch(serviceConfig -> serviceConfig.service().as(WebSocketService.class) != null);
+                     .anyMatch(serviceConfig -> serviceConfig.service().as(DefaultWebSocketService.class) != null);
     }
 
     /**

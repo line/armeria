@@ -24,7 +24,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Implement this interface to handle incoming {@link WebSocketFrame}s from the peer and
  * send {@link WebSocketFrame}s to the peer.
  *
- * @see WebSocketService
+ * @see DefaultWebSocketService
  */
 @UnstableApi
 @FunctionalInterface
