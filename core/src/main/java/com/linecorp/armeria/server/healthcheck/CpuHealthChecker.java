@@ -23,8 +23,10 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.DoubleSupplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -41,11 +43,15 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 // Forked from <a href="https://github.com/micrometer-metrics/micrometer/blob/8339d57bef8689beb8d7a18b429a166f6595f2af/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/system/ProcessorMetrics.java">ProcessorMetrics.java</a> in the micrometer core.
 final class CpuHealthChecker implements HealthChecker {
+    private static final Logger logger = LoggerFactory.getLogger(CpuHealthChecker.class);
+
+    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 
     private static final DoubleSupplier currentSystemCpuUsageSupplier;
 
     private static final DoubleSupplier currentProcessCpuUsageSupplier;
 
+    @Nullable
     private static final OperatingSystemMXBean operatingSystemBean;
 
     private static final Class<?> operatingSystemBeanClass;
@@ -57,16 +63,17 @@ final class CpuHealthChecker implements HealthChecker {
 
     @Nullable
     @VisibleForTesting
-    static final Method systemCpuUsage;
+    static final MethodHandle systemCpuUsage;
 
     @Nullable
     @VisibleForTesting
-    static final Method processCpuUsage;
+    static final MethodHandle processCpuUsage;
 
     static {
         operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
         operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
-        systemCpuUsage = detectMethod("getSystemCpuLoad");
+        final MethodHandle getCpuLoad = detectMethod("getCpuLoad");
+        systemCpuUsage = getCpuLoad != null ? getCpuLoad : detectMethod("getSystemCpuLoad");
         processCpuUsage = detectMethod("getProcessCpuLoad");
         currentSystemCpuUsageSupplier = () -> invoke(systemCpuUsage);
         currentProcessCpuUsageSupplier = () -> invoke(processCpuUsage);
@@ -79,10 +86,6 @@ final class CpuHealthChecker implements HealthChecker {
     private final DoubleSupplier processCpuUsageSupplier;
 
     private final double targetProcessCpuLoad;
-
-    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-
-    private static final ConcurrentHashMap<String, MethodHandle> CACHE = new ConcurrentHashMap<>();
 
     /**
      * Instantiates a new Default cpu health checker.
@@ -103,16 +106,9 @@ final class CpuHealthChecker implements HealthChecker {
         this.processCpuUsageSupplier = processCpuUsageSupplier;
     }
 
-    private static double invoke(final Method method) {
-        MethodHandle mh = CACHE.get(method.getName());
+    private static double invoke(@Nullable MethodHandle mh) {
         if (mh == null) {
-            try {
-                mh = LOOKUP.unreflect(method);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-
-            CACHE.put(method.getName(), mh);
+            return Double.NaN;
         }
 
         try {
@@ -123,12 +119,24 @@ final class CpuHealthChecker implements HealthChecker {
     }
 
     @Nullable
-    private static Method detectMethod(final String name) {
+    @SuppressWarnings("ReturnValueIgnored")
+    private static MethodHandle detectMethod(final String name) {
+        if (operatingSystemBeanClass == null) {
+            return null;
+        }
         try {
             // ensure the Bean we have is actually an instance of the interface
-            requireNonNull(operatingSystemBeanClass.cast(operatingSystemBean));
-            return operatingSystemBeanClass.getMethod(name);
-        } catch (ClassCastException | NoSuchMethodException | SecurityException e) {
+            operatingSystemBeanClass.cast(operatingSystemBean);
+            final Method method = operatingSystemBeanClass.getMethod(name);
+            return LOOKUP.unreflect(method);
+        } catch (ClassCastException | NoSuchMethodException | SecurityException | IllegalAccessException e) {
+            logger.warn(
+                    "Failed to detect method {}.{} for {}",
+                    operatingSystemBeanClass.getSimpleName(),
+                    name,
+                    CpuHealthChecker.class.getSimpleName(),
+                    e
+            );
             return null;
         }
     }
@@ -153,9 +161,7 @@ final class CpuHealthChecker implements HealthChecker {
      */
     @Override
     public boolean isHealthy() {
-        final double currentSystemCpuUsage = systemCpuUsageSupplier.getAsDouble();
-        final double currentProcessCpuUsage = processCpuUsageSupplier.getAsDouble();
-        return currentSystemCpuUsage <= targetCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
+        return isHealthy(systemCpuUsageSupplier, processCpuUsageSupplier);
     }
 
     @VisibleForTesting

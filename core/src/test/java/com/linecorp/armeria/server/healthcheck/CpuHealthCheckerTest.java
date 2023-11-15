@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,8 +28,8 @@ class CpuHealthCheckerTest {
     @Test
     void shouldGatherCpuUsageInformationAndCheckHealth() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
         assertTrue(cpuHealthChecker.isHealthy(() -> 2.0, () -> 1.0));
@@ -38,8 +38,8 @@ class CpuHealthCheckerTest {
     @Test
     void shouldGatherCpuUsageInformationAndCheckHealthWithBoundaryCpuUsage() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
         assertTrue(cpuHealthChecker.isHealthy(() -> 3.0, () -> 1.0));
@@ -48,8 +48,8 @@ class CpuHealthCheckerTest {
     @Test
     void shouldGatherCpuUsageInformationAndCheckHealthWithBoundaryProcessUsage() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
         assertTrue(cpuHealthChecker.isHealthy(() -> 1.0, () -> 10.0));
@@ -58,8 +58,8 @@ class CpuHealthCheckerTest {
     @Test
     void testGatheringCpuUsageInformation4() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
         assertFalse(cpuHealthChecker.isHealthy(() -> 4.0, () -> 10.0));
@@ -68,8 +68,8 @@ class CpuHealthCheckerTest {
     @Test
     void testGatheringCpuUsageInformation5() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
         assertFalse(cpuHealthChecker.isHealthy(() -> 3.0, () -> 11.0));
@@ -78,8 +78,8 @@ class CpuHealthCheckerTest {
     @Test
     void testGatheringCpuUsageInformation6() {
         final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final Method processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final Method systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
         assertFalse(cpuHealthChecker.isHealthy(() -> 4.0, () -> 11.0));
