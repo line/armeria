@@ -464,7 +464,7 @@ public final class Server implements ListenableAsyncCloseable {
     private static boolean hasWebSocketService(UpdatableServerConfig config) {
         return config.serviceConfigs()
                      .stream()
-                     .anyMatch(serviceConfig -> serviceConfig.service().as(DefaultWebSocketService.class) != null);
+                     .anyMatch(serviceConfig -> serviceConfig.service().as(WebSocketService.class) != null);
     }
 
     /**

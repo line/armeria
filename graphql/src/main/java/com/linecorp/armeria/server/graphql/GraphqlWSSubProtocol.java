@@ -131,10 +131,10 @@ class GraphqlWSSubProtocol {
                         final CompletableFuture<ExecutionResult> future =
                                 graphqlExecutor.executeGraphql(ctx, executionInput);
 
-                        future.handle(((executionResult, throwable) -> {
+                        future.handleAsync(((executionResult, throwable) -> {
                             handleBlocking(out, id, executionResult, throwable);
                             return null;
-                        }));
+                        }), ctx.eventLoop());
                     } catch (Exception e) {
                         logger.debug("Error handling subscription", e);
                         GraphqlWSSubProtocol.this.writeError(out, id, e);
@@ -160,7 +160,7 @@ class GraphqlWSSubProtocol {
         }
     }
 
-    private void handleBlocking(WebSocketWriter out, String id,
+    private void handleExecutionResult(WebSocketWriter out, String id,
                                 @Nullable ExecutionResult executionResult, @Nullable Throwable t) {
         if (t != null) {
             logger.debug("Error handling subscription", t);
@@ -207,7 +207,6 @@ class GraphqlWSSubProtocol {
                     @Override
                     public void completeWithError(Throwable cause) {
                         writeError(out, id, cause);
-                        writeComplete(out, id);
                         final ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
                         if (s != null) {
                             s.setCompleted();
@@ -227,7 +226,7 @@ class GraphqlWSSubProtocol {
                 });
 
         graphqlSubscriptions.put(id, executionResultSubscriber);
-        streamMessage.subscribe(executionResultSubscriber);
+        streamMessage.subscribe(executionResultSubscriber, ctx.eventLoop());
     }
 
     private void ensureInitiated() throws Exception {
