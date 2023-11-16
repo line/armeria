@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.server.websocket.WebSocketService;
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

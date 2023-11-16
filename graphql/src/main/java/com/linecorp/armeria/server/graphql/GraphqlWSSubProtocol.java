@@ -120,19 +120,17 @@ class GraphqlWSSubProtocol {
                         final ExecutionInput.Builder executionInput =
                                 ExecutionInput.newExecutionInput()
                                               .graphQLContext(upgradeCtx)
-                                              .graphQLContext(
-                                                      connectionCtx)
+                                              .graphQLContext(connectionCtx)
                                               .query(query)
                                               .variables(variables)
-                                              .operationName(
-                                                      operationName)
+                                              .operationName(operationName)
                                               .extensions(extensions);
 
                         final CompletableFuture<ExecutionResult> future =
                                 graphqlExecutor.executeGraphql(ctx, executionInput);
 
                         future.handleAsync(((executionResult, throwable) -> {
-                            handleBlocking(out, id, executionResult, throwable);
+                            handleExecutionResult(out, id, executionResult, throwable);
                             return null;
                         }), ctx.eventLoop());
                     } catch (Exception e) {
