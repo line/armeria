@@ -788,12 +788,11 @@ public class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldAcceptResponseBodyValueNoMatchInside() throws JsonProcessingException {
+    void shouldDenyMalformedJson() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                                                                 "/v1/echo/response_body/repeated", jsonContent);
-        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThat(response.contentUtf8()).isEqualTo("null");
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
