@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 import com.linecorp.armeria.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketService;
+import com.linecorp.armeria.server.websocket.WebSocketServiceBuilder;
 import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 
 import graphql.ExecutionInput;
@@ -72,7 +74,9 @@ final class DefaultGraphqlService extends AbstractGraphqlService
             Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
             boolean useBlockingTaskExecutor,
             GraphqlErrorHandler errorHandler,
-            boolean useWebSocket) {
+            boolean useWebSocket,
+            @Nullable
+            Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
                                                          "dataLoaderRegistryFunction");
@@ -80,9 +84,11 @@ final class DefaultGraphqlService extends AbstractGraphqlService
         this.errorHandler = errorHandler;
 
         if (useWebSocket) {
-            this.webSocketService = WebSocketService.builder(this)
-                                                    .subprotocols("graphql-transport-ws")
-                                                    .build();
+            final WebSocketServiceBuilder webSocketBuilder = WebSocketService.builder(this);
+            if (webSocketBuilderCustomizer != null) {
+                webSocketBuilderCustomizer.accept(webSocketBuilder);
+            }
+            this.webSocketService = webSocketBuilder.subprotocols("graphql-transport-ws").build();
         } else {
             this.webSocketService = null;
         }

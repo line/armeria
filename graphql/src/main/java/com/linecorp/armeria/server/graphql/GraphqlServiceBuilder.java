@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ResourceUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.websocket.WebSocketServiceBuilder;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
@@ -90,6 +91,9 @@ public final class GraphqlServiceBuilder {
     private ExecutionIdGenerator executionIdGenerator = ExecutionIdGenerator.of();
 
     private boolean useWebSocket;
+
+    @Nullable
+    private Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer;
 
     GraphqlServiceBuilder() {}
 
@@ -274,6 +278,16 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
+     * Sets an optional {@link WebSocketServiceBuilder} customizer.
+     */
+    public GraphqlServiceBuilder webSocketBuilderCustomizer(
+            Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer) {
+        checkState(useWebSocket, "useWebSocket must be true to customize WebSocketServiceBuilder");
+        this.webSocketBuilderCustomizer = webSocketBuilderCustomizer;
+        return this;
+    }
+
+    /**
      * Adds the {@link GraphqlErrorHandler}. If multiple handlers are added, the latter is composed with the
      * former one using {@link GraphqlErrorHandler#orElse(GraphqlErrorHandler)}.
      *
@@ -340,7 +354,8 @@ public final class GraphqlServiceBuilder {
                                          dataLoaderRegistryFactory,
                                          useBlockingTaskExecutor,
                                          errorHandler,
-                                         useWebSocket);
+                                         useWebSocket,
+                                         webSocketBuilderCustomizer);
     }
 
     private GraphQLSchema buildSchema() {
