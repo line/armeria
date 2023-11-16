@@ -2,9 +2,12 @@
 date: 2023-11-16
 ---
 
+
 ## 🛠️ Bug fixes
 
-- You no longer see an intermittent deadlock when a <type://StreamMessage> is aborted. #5301
+- You no longer see a `NullPointerException` when an <type://Endpoint> is selected from an <type://EndpointGroup> #5302
+  - This bug affects 1.26.2 only.
+- You no longer see an intermittent deadlock when a <type://StreamMessage> is being aborted. #5301
 
 ## 🙇 Thank you
 
