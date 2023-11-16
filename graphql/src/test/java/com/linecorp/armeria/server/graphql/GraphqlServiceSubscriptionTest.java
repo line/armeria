@@ -94,9 +94,18 @@ class GraphqlServiceSubscriptionTest {
     }
 
     @Test
-    void testSubscriptionOverWebSocket() {
+    void testSubscriptionOverWebSocketHttp1() {
+        testWebSocket(SessionProtocol.H1C);
+    }
+
+    @Test
+    void testSubscriptionOverWebSocketHttp2() {
+        testWebSocket(SessionProtocol.H2C);
+    }
+
+    private void testWebSocket(SessionProtocol sessionProtocol) {
         final WebSocketClient webSocketClient =
-                WebSocketClient.builder(server.uri(SessionProtocol.H1C, SerializationFormat.WS))
+                WebSocketClient.builder(server.uri(sessionProtocol, SerializationFormat.WS))
                                .subprotocols("graphql-transport-ws")
                                .build();
         final CompletableFuture<WebSocketSession> future = webSocketClient.connect("/graphql");

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -40,6 +42,7 @@ import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 import com.linecorp.armeria.server.websocket.DefaultWebSocketService;
@@ -101,6 +104,14 @@ final class DefaultGraphqlService extends AbstractGraphqlService
         } else {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "websockets are disabled");
         }
+    }
+
+    @Override
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        if (isHttp2WebSocketUpgradeRequest(routingContext.headers()) && webSocketService != null) {
+            return ExchangeType.BIDI_STREAMING;
+        }
+        return super.exchangeType(routingContext);
     }
 
     @Override
