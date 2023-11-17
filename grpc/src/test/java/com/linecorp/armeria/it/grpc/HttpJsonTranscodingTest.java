@@ -788,10 +788,42 @@ public class HttpJsonTranscodingTest {
     }
 
     @Test
+    void shouldAcceptResponseBodyValueNoMatchInside() throws JsonProcessingException {
+        final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
+        final AggregatedHttpResponse response = jsonPostRequest(webClient,
+                "/v1/echo/response_body/repeated", jsonContent);
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(response.contentUtf8()).isEqualTo("null");
+    }
+
+    @Test
     void shouldDenyMalformedJson() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                                                                 "/v1/echo/response_body/repeated", jsonContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldDenyMissingContentType() {
+        final String validJson = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
+        final RequestHeaders headers = RequestHeaders.builder()
+                .method(HttpMethod.POST)
+                .path("/v1/echo/response_body/repeated")
+                .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, validJson).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldDenyNonJsonContentType() {
+        final String validJson = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
+        final RequestHeaders headers = RequestHeaders.builder()
+                .method(HttpMethod.POST)
+                .path("/v1/echo/response_body/repeated")
+                .contentType(MediaType.CSV_UTF_8)
+                .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, validJson).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
