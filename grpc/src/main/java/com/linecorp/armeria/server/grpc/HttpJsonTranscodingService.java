@@ -651,7 +651,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         try {
             return mapper.readTree(request.contentUtf8());
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("error ocurred while parsing json request", e);
+            throw new IllegalArgumentException("Failed to parse JSON request.", e);
         }
     }
 
