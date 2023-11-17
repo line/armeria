@@ -70,7 +70,11 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
     /**
      * Sets the {@link Endpoint} of the request. If not set, it is auto-generated from the request authority.
+     * use @endpointGroup
+     *
+     * @deprecated Use {@link #endpointGroup(EndpointGroup)} instead.
      */
+    @Deprecated
     public ClientRequestContextBuilder endpoint(Endpoint endpoint) {
         endpointGroup = requireNonNull(endpoint, "endpointGroup");
         return this;
