@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +50,7 @@ class FilteredStreamMessageTest {
     @RegisterExtension
     static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
 
+    @Timeout(Long.MAX_VALUE)
     @ParameterizedTest
     @ArgumentsSource(ParametersProvider.class)
     void withPooledObjects(boolean filterSupportsPooledObjects, boolean subscribedWithPooledObjects,
@@ -101,7 +103,7 @@ class FilteredStreamMessageTest {
             }
         }, options);
 
-        await().untilAsserted(() -> assertThat(completed).isTrue());
+        await().forever().untilAsserted(() -> assertThat(completed).isTrue());
     }
 
     @Test

@@ -18,7 +18,9 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.toSubscriptionOptions;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -209,7 +211,7 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
 
     @Override
     public final void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, false);
+        subscribe(subscriber, executor, false, false);
     }
 
     @Override
@@ -219,14 +221,17 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
         final boolean withPooledObjects = containsWithPooledObjects(options);
-        subscribe(subscriber, executor, withPooledObjects, options);
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        subscribe(subscriber, executor, withPooledObjects, notifyCancellation);
     }
 
     private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
-                           boolean withPooledObjects, SubscriptionOption... options) {
+                           boolean withPooledObjects, boolean notifyCancellation) {
         final FilteringSubscriber filteringSubscriber = new FilteringSubscriber(
                 subscriber, withPooledObjects);
-            upstream.subscribe(filteringSubscriber, executor, options);
+        final SubscriptionOption[] options = toSubscriptionOptions(filterSupportsPooledObjects,
+                                                                   notifyCancellation);
+        upstream.subscribe(filteringSubscriber, executor, options);
     }
 
     @Override
