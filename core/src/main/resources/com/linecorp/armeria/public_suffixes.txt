@@ -2418,7 +2418,6 @@ et
 etajima.hiroshima.jp
 etc.br
 eti.br
-etisalat
 etne.no
 etnedal.no
 eu
@@ -9188,7 +9187,6 @@ xn--mgba3a4f16a.ir
 xn--mgba3a4fra
 xn--mgba3a4fra.ir
 xn--mgba7c0bbn0a
-xn--mgbaakc7dvf
 xn--mgbaam7a8h
 xn--mgbab2bd
 xn--mgbah1a3hjkrd
