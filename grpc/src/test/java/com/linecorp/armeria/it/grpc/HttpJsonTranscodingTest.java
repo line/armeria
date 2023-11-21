@@ -828,6 +828,18 @@ public class HttpJsonTranscodingTest {
     }
 
     @Test
+    void shouldDenyEmptyBody() {
+        final String validJson = "";
+        final RequestHeaders headers = RequestHeaders.builder()
+                .method(HttpMethod.POST)
+                .path("/v1/echo/response_body/repeated")
+                .contentType(MediaType.JSON)
+                .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, validJson).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void shouldAcceptResponseBodyValueStructPreservingProtoFieldNames() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}," +
                                    "\"arrayField\":[\"value1\",\"value2\"]}";
