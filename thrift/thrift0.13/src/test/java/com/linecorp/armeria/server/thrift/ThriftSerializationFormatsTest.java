@@ -117,7 +117,7 @@ public class ThriftSerializationFormatsTest {
         final HelloService.Iface client =
                 ThriftClients.newClient(server.httpUri(TEXT) + "/hellobinaryonly", HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
-                                                         .getCause()
+                                                         .cause()
                                                          .isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=415");
     }
@@ -141,7 +141,7 @@ public class ThriftSerializationFormatsTest {
                              .setHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
                              .build(HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
-                                                         .getCause()
+                                                         .cause()
                                                          .isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=406");
     }

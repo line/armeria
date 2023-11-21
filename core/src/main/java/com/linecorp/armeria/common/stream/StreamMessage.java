@@ -57,6 +57,7 @@ import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil;
 import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -542,7 +543,27 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     default CompletableFuture<Void> subscribe() {
-        subscribe(NoopSubscriber.get());
+        return subscribe(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Drains and discards all objects in this {@link StreamMessage}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * CompletableFuture<Void> future = source.peek(collected::add).subscribe();
+     * future.join();
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert future.isDone();
+     * }</pre>
+     *
+     * @param executor the executor to subscribe
+     */
+    @UnstableApi
+    default CompletableFuture<Void> subscribe(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        subscribe(NoopSubscriber.get(), executor);
         return whenComplete();
     }
 
@@ -1081,5 +1102,38 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(httpDataConverter, "httpDataConverter");
         requireNonNull(executor, "executor");
         return new StreamMessageInputStream<>(this, httpDataConverter, executor);
+    }
+
+    /**
+     * Dynamically emits the last value depending on whether this {@link StreamMessage} completes successfully
+     * or exceptionally.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+     * StreamMessage<Integer> aborted = source
+     *     .peek(i -> {
+     *         if (i > 5) {
+     *             source.abort();
+     *         }
+     *     });
+     * StreamMessage<Integer> endWith = aborted
+     *     .endWith(th -> {
+     *          if (th instanceof AbortedStreamException) {
+     *              return 100;
+     *          }
+     *          return -1;
+     *     });
+     * List<Integer> collected = endWith.collect().join();
+     *
+     * assert collected.equals(List.of(1, 2, 3, 4, 5, 100));
+     * }</pre>
+     *
+     * <p>Note that if {@code null} is returned by the {@link Function}, the {@link StreamMessage} will complete
+     * successfully without emitting an additional value when this stream is complete successfully,
+     * or complete exceptionally when this stream is complete exceptionally.
+     */
+    @UnstableApi
+    default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
+        return new SurroundingPublisher<>(null, this, finalizer);
     }
 }

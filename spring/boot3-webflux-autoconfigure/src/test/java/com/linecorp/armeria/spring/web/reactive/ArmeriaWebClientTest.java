@@ -137,7 +137,7 @@ class ArmeriaWebClientTest {
         final Mono<ClientResponse> response =
                 webClient.get()
                          .uri(uri("/conflict"))
-                         .exchange();
+                         .exchangeToMono(Mono::just);
         StepVerifier.create(response)
                     .assertNext(r -> assertThat(r.statusCode()).isEqualTo(HttpStatus.CONFLICT))
                     .expectComplete()

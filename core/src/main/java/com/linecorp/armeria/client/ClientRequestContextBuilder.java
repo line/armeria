@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.common.CancellationScheduler.noopCancellationTask;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -35,12 +36,10 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
-import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Builds a new {@link ClientRequestContext}. Note that it is not usually required to create a new context by
@@ -48,27 +47,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * cases such as unit testing.
  */
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
-
-    private static final CancellationTask noopCancellationTask = new CancellationTask() {
-        @Override
-        public boolean canSchedule() {
-            return true;
-        }
-
-        @Override
-        public void run(Throwable cause) { /* no-op */ }
-    };
-
-    /**
-     * A cancellation scheduler that has been finished.
-     */
-    static final CancellationScheduler noopResponseCancellationScheduler = new CancellationScheduler(0);
-
-    static {
-        noopResponseCancellationScheduler
-                .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, /* server */ false);
-        noopResponseCancellationScheduler.finishNow();
-    }
 
     @Nullable
     private Endpoint endpoint;
@@ -136,9 +114,9 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final CancellationScheduler responseCancellationScheduler;
         if (timedOut()) {
-            responseCancellationScheduler = noopResponseCancellationScheduler;
+            responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
-            responseCancellationScheduler = new CancellationScheduler(0);
+            responseCancellationScheduler = CancellationScheduler.of(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
                 responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);

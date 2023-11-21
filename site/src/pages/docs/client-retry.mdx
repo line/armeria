@@ -85,8 +85,9 @@ new RetryRule() {
 };
 ```
 
-This will retry when one of <type://ResponseTimeoutException> and <type://UnprocessedRequestException> is raised
-or the response's status is `429 Too Many Requests`.
+This will retry when one of <type://ResponseTimeoutException> and <type://UnprocessedRequestException> is raised.
+However, if the response's status is `429 Too Many Requests`, it will stop retrying.
+For all other cases, it will defer to the next rule if one exists.
 
 <Warning>
 

@@ -29,7 +29,7 @@ public final class EurekaClientUtil {
 
     private static final ClientOptions retryingClientOptions =
             ClientOptions.of(ClientOptions.DECORATION.newValue(ClientDecoration.of(
-                    RetryingClient.newDecorator(RetryRule.failsafe(), 3))));
+                    RetryingClient.builder(RetryRule.failsafe()).maxTotalAttempts(3).newDecorator())));
 
     /**
      * Returns the {@link ClientOptions} that has {@link RetryingClient} decorator.

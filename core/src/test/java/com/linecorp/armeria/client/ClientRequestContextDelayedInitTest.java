@@ -31,6 +31,7 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
@@ -68,8 +69,8 @@ class ClientRequestContextDelayedInitTest {
         final WebClient client = WebClient.of(SessionProtocol.H2C, group);
         final Stopwatch stopwatch = Stopwatch.createStarted();
         assertThatThrownBy(() -> client.get("/").aggregate().join())
-                .getCause().isInstanceOf(UnprocessedRequestException.class)
-                .getCause().isInstanceOf(EndpointSelectionTimeoutException.class);
+                .cause().isInstanceOf(UnprocessedRequestException.class)
+                .cause().isInstanceOf(EndpointSelectionTimeoutException.class);
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
                 .isGreaterThanOrEqualTo(Flags.defaultConnectTimeoutMillis());
     }
@@ -79,26 +80,36 @@ class ClientRequestContextDelayedInitTest {
      * properly at different points of execution.
      */
     @ParameterizedTest
-    @CsvSource({ "0", "1", "2", "3" })
+    @CsvSource({ "0", "1", "2" })
     void failure(int failAfter) {
         final AtomicInteger counter = new AtomicInteger();
         final RuntimeException cause = new RuntimeException();
-        final Group group = new Group(endpointGroup -> new AbstractEndpointSelector(endpointGroup) {
-            @Nullable
-            @Override
-            public Endpoint selectNow(ClientRequestContext ctx) {
-                if (counter.getAndIncrement() >= failAfter) {
-                    throw cause;
+        final Group group = new Group(endpointGroup -> {
+            class TestEndpointSelector extends AbstractEndpointSelector {
+
+                protected TestEndpointSelector(EndpointGroup endpointGroup) {
+                    super(endpointGroup);
+                    initialize();
                 }
-                return null;
+
+                @Nullable
+                @Override
+                public Endpoint selectNow(ClientRequestContext ctx) {
+                    if (counter.getAndIncrement() >= failAfter) {
+                        throw cause;
+                    }
+                    return null;
+                }
             }
+
+            return new TestEndpointSelector(endpointGroup);
         });
         final WebClient client = WebClient.of(SessionProtocol.H2C, group);
         final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
         group.add(server.httpEndpoint());
         assertThatThrownBy(future::join)
-                .getCause().isInstanceOf(UnprocessedRequestException.class)
-                .getCause().isSameAs(cause);
+                .cause().isInstanceOf(UnprocessedRequestException.class)
+                .cause().isSameAs(cause);
     }
 
     private static final class Group extends DynamicEndpointGroup {

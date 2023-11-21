@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentCaptor;
+import org.mockito.quality.Strictness;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
@@ -699,7 +700,7 @@ class RequestContextExportingAppenderTest {
     }
 
     private static SSLSession newSslSession() {
-        final SSLSession sslSession = mock(SSLSession.class, withSettings().lenient());
+        final SSLSession sslSession = mock(SSLSession.class, withSettings().strictness(Strictness.LENIENT));
         when(sslSession.getId()).thenReturn(new byte[] { 1, 1, 2, 3, 5, 8, 13, 21 });
         when(sslSession.getProtocol()).thenReturn("TLSv1.2");
         when(sslSession.getCipherSuite()).thenReturn("some-cipher");
