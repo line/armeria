@@ -63,9 +63,7 @@ class ContentPreviewerCancellationTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
-            sb.http(8080)
-              .requestTimeoutMillis(0)
-              .meterRegistry(registry)
+            sb.meterRegistry(registry)
               .decorator(
                       MetricCollectingService.newDecorator(
                               MeterIdPrefixFunction.ofDefault("armeria.server")))
@@ -85,7 +83,7 @@ class ContentPreviewerCancellationTest {
 
     @Test
     void shouldCompleteLogWithNoContentResponse() throws InterruptedException {
-        final BlockingWebClient client = server.blockingWebClient(cb -> cb.responseTimeoutMillis(0));
+        final BlockingWebClient client = server.blockingWebClient();
         final AggregatedHttpResponse response = client.get("/test");
         assertThat(response.status()).isEqualTo(HttpStatus.NO_CONTENT);
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
@@ -110,7 +108,7 @@ class ContentPreviewerCancellationTest {
 
             @Override
             public void onSubscribe(Subscription s) {
-                this.subscription = s;
+                subscription = s;
                 s.request(1);
             }
 
