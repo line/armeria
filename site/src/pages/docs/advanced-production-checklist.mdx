@@ -101,7 +101,7 @@ See [Using CircuitBreaker with non-Armeria client](/docs/client-circuit-breaker#
   and <type://ClientFactoryBuilder.maxNumEventLoopsPerHttp1Endpoint(int)> when a
   client needs to send a large number of requests to a specific endpoint. The client
   will assign more CPU resources and create more connections by increasing the number
-  of event loops.
+  of event loops up to the quantity in <type://ClientFactory#eventLoopGroup()>.
 
   ```java
   import com.linecorp.armeria.client.Clients;
