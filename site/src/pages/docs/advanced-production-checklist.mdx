@@ -97,8 +97,8 @@ See [Using CircuitBreaker with non-Armeria client](/docs/client-circuit-breaker#
   cb.factory(cf);
   ```
 
-- Consider increasing <type://ClientFactoryBuilder.maxNumEventLoopsPerEndpoint(int)>
-  and <type://ClientFactoryBuilder.maxNumEventLoopsPerHttp1Endpoint(int)> when a
+- Consider increasing <type://ClientFactoryBuilder#maxNumEventLoopsPerEndpoint(int)>
+  and <type://ClientFactoryBuilder#maxNumEventLoopsPerHttp1Endpoint(int)> when a
   client needs to send a large number of requests to a specific endpoint. The client
   will assign more CPU resources and create more connections by increasing the number
   of event loops up to the quantity in <type://ClientFactory#eventLoopGroup()>.
