@@ -610,8 +610,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         final ObjectNode root;
                         if (body instanceof ObjectNode) {
                             root = (ObjectNode) body;
+                        } else if (body == null) {
+                            root = mapper.createObjectNode();
                         } else {
-                            throw new IllegalArgumentException("Expected json object.");
+                            throw new IllegalArgumentException("Unexpected JSON: " +
+                                    body + ", (expected: ObjectNode or null).");
                         }
                         return setParametersAndWriteJson(root, ctx, spec);
                     }

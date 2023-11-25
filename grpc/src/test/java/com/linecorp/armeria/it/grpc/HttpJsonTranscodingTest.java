@@ -828,14 +828,36 @@ public class HttpJsonTranscodingTest {
     }
 
     @Test
-    void shouldDenyEmptyBody() {
-        final String validJson = "";
+    void shouldDenyEmptyJson() {
+        final String emptyJson = "";
         final RequestHeaders headers = RequestHeaders.builder()
                 .method(HttpMethod.POST)
                 .path("/v1/echo/response_body/repeated")
                 .contentType(MediaType.JSON)
                 .build();
-        final AggregatedHttpResponse response = webClient.execute(headers, validJson).aggregate().join();
+        final AggregatedHttpResponse response = webClient.execute(headers, emptyJson).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldAcceptEmptyNonJson() {
+        final String body = "";
+        final RequestHeaders headers = RequestHeaders.builder()
+                .method(HttpMethod.POST)
+                .path("/v1/echo/response_body/repeated")
+                .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, body).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void shouldDenyNonObjectJson() {
+        final String body = "[ 42, null ]";
+        final RequestHeaders headers = RequestHeaders.builder()
+                .method(HttpMethod.POST)
+                .path("/v1/echo/response_body/repeated")
+                .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, body).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
