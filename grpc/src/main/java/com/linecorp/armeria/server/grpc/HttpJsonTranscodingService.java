@@ -649,7 +649,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         @Nullable
         final MediaType contentType = request.contentType();
         if (contentType == null || !contentType.isJson()) {
-            if (request.contentUtf8().isEmpty()) {
+            if (request.content().isEmpty()) {
                 return null;
             }
             throw new IllegalArgumentException("Missing or invalid content-type in JSON request.");
