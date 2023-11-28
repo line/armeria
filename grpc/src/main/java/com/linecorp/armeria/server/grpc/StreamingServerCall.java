@@ -209,7 +209,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    statusAndMetadata.completed(false);
+                    statusAndMetadata.shouldCancel();
                     statusAndMetadata.setResponseContent(true);
                     closeListener(statusAndMetadata);
                     return;
@@ -273,8 +273,6 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        final ServerStatusAndMetadata statusAndMetadata =
-                new ServerStatusAndMetadata(status, metadata, true, false, true);
-        closeListener(statusAndMetadata);
+        closeListener(new ServerStatusAndMetadata(status, metadata, true, true));
     }
 }

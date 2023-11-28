@@ -201,7 +201,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (!closeCalled) {
             cancelled = true;
             try (SafeCloseable ignore = ctx.push()) {
-                close(new ServerStatusAndMetadata(Status.CANCELLED, new Metadata(), true));
+                close(new ServerStatusAndMetadata(Status.CANCELLED, new Metadata(), true, true));
             }
         }
     }
@@ -214,7 +214,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
         final Status status = GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata);
-        close(new ServerStatusAndMetadata(status, metadata, cancelled), exception);
+        close(new ServerStatusAndMetadata(status, metadata, false, cancelled), exception);
     }
 
     @Override
@@ -246,14 +246,14 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         final Metadata metadata = statusAndMetadata.metadata();
         if (isCancelled()) {
             // No need to write anything to client if cancelled already.
-            statusAndMetadata.completed(false);
+            statusAndMetadata.shouldCancel();
             statusAndMetadata.setResponseContent(true);
             closeListener(statusAndMetadata);
             return;
         }
 
         if (status.getCode() == Code.CANCELLED && status.getCause() instanceof ClosedStreamException) {
-            statusAndMetadata.completed(false);
+            statusAndMetadata.shouldCancel();
             statusAndMetadata.setResponseContent(true);
             closeListener(statusAndMetadata);
             return;
@@ -269,7 +269,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             logger.warn("{} {} status: {}, metadata: {}", ctx, description, status, metadata);
             status = Status.CANCELLED.withDescription(description);
             statusAndMetadata = statusAndMetadata.withStatus(status);
-            statusAndMetadata.completed(false);
+            statusAndMetadata.shouldCancel();
         }
         doClose(statusAndMetadata);
     }
@@ -278,8 +278,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected final void closeListener(ServerStatusAndMetadata statusAndMetadata) {
         final boolean setResponseContent = statusAndMetadata.setResponseContent();
-        final boolean completed = statusAndMetadata.completed();
-        final boolean cancelled = statusAndMetadata.cancelled();
+        final boolean cancelled = statusAndMetadata.isShouldCancel();
         if (!listenerClosed) {
             listenerClosed = true;
 
@@ -302,7 +301,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
             }
 
-            if (!cancelled && completed) {
+            if (!cancelled) {
                 if (blockingExecutor != null) {
                     blockingExecutor.execute(this::invokeOnComplete);
                 } else {
@@ -335,9 +334,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                     final Status status = Status.INTERNAL.withDescription(
                             "More than one request messages for unary call or server streaming " +
                             "call");
-                    final ServerStatusAndMetadata statusAndMetadata =
-                            new ServerStatusAndMetadata(status, new Metadata(), true, false, true);
-                    closeListener(statusAndMetadata);
+                    closeListener(new ServerStatusAndMetadata(status, new Metadata(), true, true));
                     return;
                 }
                 messageReceived = true;

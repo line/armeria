@@ -173,11 +173,12 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
             // Set responseContent before closing stream to use responseCause in error handling
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, responseMessage), null);
+            statusAndMetadata.setResponseContent(false);
             resFuture.complete(response);
         } catch (Exception ex) {
+            statusAndMetadata.shouldCancel();
             resFuture.completeExceptionally(ex);
         } finally {
-            statusAndMetadata.setResponseContent(false);
             closeListener(statusAndMetadata);
         }
     }

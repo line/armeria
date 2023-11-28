@@ -26,32 +26,32 @@ import io.grpc.Status;
 
 public final class ServerStatusAndMetadata extends StatusAndMetadata {
 
-    // true if `ServerCall.close()` is triggered by the client
-    private final boolean cancelled;
-    // Set true if response trailers are successfully written
-    private boolean completed = true;
+    private boolean shouldCancel;
     // Set true if response content is written
     private boolean setResponseContent;
 
-    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata, boolean cancelled) {
+    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata,  boolean setResponseContent) {
         super(status, metadata);
-        this.cancelled = cancelled;
-    }
-
-    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata, boolean cancelled,
-                                   boolean completed, boolean setResponseContent) {
-        super(status, metadata);
-        this.cancelled = cancelled;
-        this.completed = completed;
         this.setResponseContent = setResponseContent;
     }
 
-    public void completed(boolean completed) {
-        this.completed = completed;
+    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata,  boolean setResponseContent,
+                                   boolean shouldCancel) {
+        super(status, metadata);
+        this.setResponseContent = setResponseContent;
+        this.shouldCancel = shouldCancel;
     }
 
-    public boolean completed() {
-        return completed;
+    public boolean isShouldCancel() {
+        return shouldCancel;
+    }
+
+    /**
+     * Tries to mark whether the call should be cancelled. If a call path
+     * has already set the status to be cancelled, subsequent calls have no effect.
+     */
+    public void shouldCancel() {
+        shouldCancel = true;
     }
 
     public void setResponseContent(boolean setResponseContent) {
@@ -62,21 +62,8 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
         return setResponseContent;
     }
 
-    /**
-     * Overrides the default behavior of "complete" if
-     * the response is written successfully by invoking the listener
-     * immediately using the given status.
-     */
-    public boolean cancelled() {
-        return cancelled;
-    }
-
     public ServerStatusAndMetadata withStatus(Status status) {
-        final ServerStatusAndMetadata statusAndMetadata =
-                new ServerStatusAndMetadata(status, metadata(), cancelled());
-        statusAndMetadata.setResponseContent(setResponseContent());
-        statusAndMetadata.completed(completed());
-        return statusAndMetadata;
+        return new ServerStatusAndMetadata(status, metadata(), setResponseContent(), isShouldCancel());
     }
 
     @Override
@@ -84,8 +71,7 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
         return MoreObjects.toStringHelper(this)
                           .add("status", status())
                           .add("metadata", metadata())
-                          .add("cancelled", cancelled)
-                          .add("completed", completed)
+                          .add("shouldCancel", shouldCancel)
                           .add("setResponseContent", setResponseContent)
                           .toString();
     }

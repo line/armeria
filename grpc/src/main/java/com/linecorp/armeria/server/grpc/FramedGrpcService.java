@@ -324,7 +324,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             if (cancellationCause instanceof RequestTimeoutException) {
                 status = status.withDescription("Request timed out");
             }
-            call.close(new ServerStatusAndMetadata(status, new Metadata(), true));
+            call.close(new ServerStatusAndMetadata(status, new Metadata(), true, true));
             return null;
         });
     }
