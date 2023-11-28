@@ -25,7 +25,6 @@ tasks.sourcesJar.dependsOn(project(":spring:$boot3Actuator").tasks.sourcesJar)
 
 tasks.compileJava.source "${boot3ActuatorProjectDir}/src/main/java",
         "${boot3ActuatorProjectDir}/gen-src/main/java"
-tasks.processResources.from "${boot3ActuatorProjectDir}/src/main/resources"
 tasks.compileTestJava.source "${boot3ActuatorProjectDir}/src/test/java",
         "${boot3ActuatorProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${boot3ActuatorProjectDir}/src/test/resources"
