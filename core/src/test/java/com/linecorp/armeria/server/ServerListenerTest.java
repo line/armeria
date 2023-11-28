@@ -22,10 +22,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Stream;
 
 import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -100,24 +106,16 @@ class ServerListenerTest {
                 .hasRootCause(ex);
     }
 
-    @Test
-    void testGracefulShutdownExecutor() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(CancellableExecutorsProvider.class)
+    void testGracefulShutdownExecutorOnServerStopping(ExecutorService executor, CancellableRunnable task,
+                                                      long timeout,
+                                                      boolean isTerminationExpected) throws Exception {
+        executor.submit(task);
         final CompletableFuture<Void> stopFuture;
-        final CancellableExecutors executors = new CancellableExecutors();
         final ServerListener sl = ServerListener
                 .builder()
-                .shutdownWhenStopping(executors.periodicExecutors(0), 0)
-                .shutdownWhenStopping(executors.interruptibleExecutors(0), 0)
-                .shutdownWhenStopping(executors.uninterruptibleExecutors(0), 0)
-                .shutdownWhenStopping(executors.periodicExecutors(1), 1000)
-                .shutdownWhenStopping(executors.interruptibleExecutors(1), 1000)
-                .shutdownWhenStopping(executors.uninterruptibleExecutors(1), 1000)
-                .shutdownWhenStopped(executors.periodicExecutors(2), 0)
-                .shutdownWhenStopped(executors.interruptibleExecutors(2), 0)
-                .shutdownWhenStopped(executors.uninterruptibleExecutors(2), 0)
-                .shutdownWhenStopped(executors.periodicExecutors(3), 1000)
-                .shutdownWhenStopped(executors.interruptibleExecutors(3), 1000)
-                .shutdownWhenStopped(executors.uninterruptibleExecutors(3), 1000)
+                .shutdownWhenStopping(executor, timeout)
                 .build();
 
         final Server server = Server.builder()
@@ -126,37 +124,93 @@ class ServerListenerTest {
                                     .build();
         server.start().get();
         stopFuture = server.stop();
-        Thread.sleep(1000);
-
-        for (int i = 0; i < 2; i++) {
-            assertThat(executors.periodicExecutors(2 * i).isTerminated()).isEqualTo(true);
-            executors.periodicTasks(2 * i).cancel();
+        int retryCnt = 4;
+        while (retryCnt > 0 && isTerminationExpected && !executor.isTerminated()) {
             Thread.sleep(1000);
-
-            assertThat(executors.interruptibleExecutors(2 * i).isTerminated()).isEqualTo(false);
-            executors.interruptibleTasks(2 * i).cancel();
-            Thread.sleep(1000);
-
-            assertThat(executors.uninterruptibleExecutors(2 * i).isTerminated()).isEqualTo(false);
-            executors.uninterruptibleTasks(2 * i).cancel();
-            Thread.sleep(1000);
-
-            assertThat(executors.periodicExecutors(2 * i + 1).isTerminated()).isEqualTo(true);
-            executors.periodicTasks(2 * i + 1).cancel();
-            Thread.sleep(1000);
-
-            assertThat(executors.interruptibleExecutors(2 * i + 1).isTerminated()).isEqualTo(true);
-            executors.interruptibleTasks(2 * i + 1).cancel();
-            Thread.sleep(1000);
-
-            assertThat(executors.uninterruptibleExecutors(2 * i + 1).isTerminated()).isEqualTo(false);
-            executors.uninterruptibleTasks(2 * i + 1).cancel();
-            Thread.sleep(4000);
+            retryCnt -= 1;
         }
+        assertThat(executor.isTerminated()).isEqualTo(isTerminationExpected);
+        task.cancel();
         stopFuture.get();
     }
 
-    private abstract class CancellableRunnable implements Runnable {
+    @ParameterizedTest
+    @ArgumentsSource(CancellableExecutorsProvider.class)
+    void testGracefulShutdownExecutorOnServerStopped(ExecutorService executor, CancellableRunnable task,
+                                                     long timeout,
+                                                     boolean isTerminationExpected) throws Exception {
+        executor.submit(task);
+        final CompletableFuture<Void> stopFuture;
+        final ServerListener sl = ServerListener
+                .builder()
+                .shutdownWhenStopped(executor, timeout)
+                .build();
+
+        final Server server = Server.builder()
+                                    .service("/", (req, ctx) -> HttpResponse.of("Hello!"))
+                                    .serverListener(sl)
+                                    .build();
+        server.start().get();
+        stopFuture = server.stop();
+        int retryCnt = 4;
+        while (retryCnt > 0 && isTerminationExpected && !executor.isTerminated()) {
+            Thread.sleep(1000);
+            retryCnt -= 1;
+        }
+        assertThat(executor.isTerminated()).isEqualTo(isTerminationExpected);
+        task.cancel();
+        stopFuture.get();
+    }
+
+    private static class CancellableExecutorsProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext)
+                throws Exception {
+            return Stream.of(
+                    Arguments.of(Executors.newSingleThreadScheduledExecutor(), new Simple(), 0, true),
+                    Arguments.of(Executors.newSingleThreadExecutor(), new InterruptibleInfiniteLoop(), 0,
+                                 false),
+                    Arguments.of(Executors.newSingleThreadExecutor(), new UninterruptibleInfiniteLoop(), 0,
+                                 false),
+                    Arguments.of(Executors.newSingleThreadScheduledExecutor(), new Simple(), 100, true),
+                    Arguments.of(Executors.newSingleThreadExecutor(), new InterruptibleInfiniteLoop(), 100,
+                                 true),
+                    Arguments.of(Executors.newSingleThreadExecutor(), new UninterruptibleInfiniteLoop(), 100,
+                                 false)
+            );
+        }
+
+        private static class Simple extends CancellableRunnable {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+
+        private static class InterruptibleInfiniteLoop extends CancellableRunnable {
+            @Override
+            public void run() {
+                while (!isCanceled() && !Thread.currentThread().isInterrupted()) {
+                    final int foo = 42;
+                }
+            }
+        }
+
+        private static class UninterruptibleInfiniteLoop extends CancellableRunnable {
+            @Override
+            public void run() {
+                while (!isCanceled()) {
+                    final int foo = 42;
+                }
+            }
+        }
+    }
+
+    private abstract static class CancellableRunnable implements Runnable {
         private volatile boolean canceled;
 
         protected CancellableRunnable() {
@@ -169,84 +223,6 @@ class ServerListenerTest {
 
         void cancel() {
             canceled = true;
-        }
-    }
-
-    private final class CancellableExecutors {
-        private static final int SIZE = 4;
-        private final CancellableRunnable[] periodicTasks = new CancellableRunnable[SIZE];
-        private final ExecutorService[] periodicExecutors = new ExecutorService[SIZE];
-        private final CancellableRunnable[] interruptibleTasks = new CancellableRunnable[SIZE];
-        private final ExecutorService[] interruptibleExecutors = new ExecutorService[SIZE];
-        private final CancellableRunnable[] uninterruptibleTasks = new CancellableRunnable[SIZE];
-        private final ExecutorService[] uninterruptibleExecutors = new ExecutorService[SIZE];
-
-        CancellableExecutors() {
-            for (int i = 0; i < SIZE; i++) {
-                periodicTasks[i] = new Simple();
-                interruptibleTasks[i] = new InterruptibleInfiniteLoop();
-                uninterruptibleTasks[i] = new UninterruptibleInfiniteLoop();
-
-                periodicExecutors[i] = Executors.newSingleThreadScheduledExecutor();
-                periodicExecutors[i].submit(periodicTasks[i]);
-                interruptibleExecutors[i] = Executors.newSingleThreadExecutor();
-                interruptibleExecutors[i].submit(interruptibleTasks[i]);
-                uninterruptibleExecutors[i] = Executors.newSingleThreadExecutor();
-                uninterruptibleExecutors[i].submit(uninterruptibleTasks[i]);
-            }
-        }
-
-        CancellableRunnable periodicTasks(int index) {
-            return periodicTasks[index];
-        }
-
-        ExecutorService periodicExecutors(int index) {
-            return periodicExecutors[index];
-        }
-
-        CancellableRunnable interruptibleTasks(int index) {
-            return interruptibleTasks[index];
-        }
-
-        ExecutorService interruptibleExecutors(int index) {
-            return interruptibleExecutors[index];
-        }
-
-        CancellableRunnable uninterruptibleTasks(int index) {
-            return uninterruptibleTasks[index];
-        }
-
-        ExecutorService uninterruptibleExecutors(int index) {
-            return uninterruptibleExecutors[index];
-        }
-
-        private final class Simple extends CancellableRunnable {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }
-
-        private final class InterruptibleInfiniteLoop extends CancellableRunnable {
-            @Override
-            public void run() {
-                while (!isCanceled() && !Thread.currentThread().isInterrupted()) {
-                    final int foo = 42;
-                }
-            }
-        }
-
-        private final class UninterruptibleInfiniteLoop extends CancellableRunnable {
-            @Override
-            public void run() {
-                while (!isCanceled()) {
-                    final int foo = 42;
-                }
-            }
         }
     }
 }
