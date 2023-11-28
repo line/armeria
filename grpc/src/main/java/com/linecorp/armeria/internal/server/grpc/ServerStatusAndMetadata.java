@@ -27,7 +27,7 @@ import io.grpc.Status;
 public final class ServerStatusAndMetadata extends StatusAndMetadata {
 
     private boolean shouldCancel;
-    // Set true if response content is written
+    // Set true if response content log should be written
     private boolean setResponseContent;
 
     public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata,  boolean setResponseContent) {
