@@ -439,6 +439,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean contains(IN_NAME name, String value) {
+        return contains(name, value, true);
+    }
+
+    private boolean contains(IN_NAME name, String value, boolean caseSensitive) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         final int h = hashName(name);
@@ -447,9 +451,12 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         while (e != null) {
             if (e.hash == h) {
                 final NAME currentName = e.key;
-                if (currentName != null && nameEquals(currentName, name) &&
-                    AsciiString.contentEquals(e.value, value)) {
-                    return true;
+                if (currentName != null && nameEquals(currentName, name)) {
+                    if (caseSensitive && AsciiString.contentEquals(e.value, value)) {
+                        return true;
+                    } else if (!caseSensitive && AsciiString.contentEqualsIgnoreCase(e.value, value)) {
+                        return true;
+                    }
                 }
             }
             e = e.next;
@@ -465,8 +472,8 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean containsBoolean(IN_NAME name, boolean value) {
-        final Boolean v = getBoolean(name);
-        return v != null && v == value;
+         return contains(name, String.valueOf(value), false) ||
+                contains(name, value ? "1" : "0");
     }
 
     @Override

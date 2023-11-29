@@ -116,6 +116,27 @@ class QueryParamsBaseTest {
         params.add("baz", "false");
         assertThat(params.containsBoolean("baz", false)).isTrue();
         assertThat(params.containsBoolean("baz", true)).isFalse();
+
+        params.add("dup1", "v1");
+        params.add("dup1", "v2");
+        params.add("dup1", "true");
+        params.add("dup1", "false");
+        assertThat(params.containsBoolean("dup1", true)).isTrue();
+        assertThat(params.containsBoolean("dup1", false)).isTrue();
+
+        params.add("dup2", "v1");
+        params.add("dup2", "v2");
+        params.add("dup2", "1");
+        params.add("dup2", "0");
+        assertThat(params.containsBoolean("dup2", true)).isTrue();
+        assertThat(params.containsBoolean("dup2", false)).isTrue();
+
+        params.add("caseInsensitive", "TrUe");
+        params.add("caseInsensitive", "FALSE");
+        assertThat(params.getBoolean("caseInsensitive")).isTrue();
+        assertThat(params.getLastBoolean("caseInsensitive")).isFalse();
+        assertThat(params.containsBoolean("caseInsensitive", true)).isTrue();
+        assertThat(params.containsBoolean("caseInsensitive", false)).isTrue();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest

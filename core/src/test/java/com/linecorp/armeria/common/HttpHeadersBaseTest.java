@@ -120,6 +120,27 @@ class HttpHeadersBaseTest {
         headers.add("baz", "false");
         assertThat(headers.containsBoolean("baz", false)).isTrue();
         assertThat(headers.containsBoolean("baz", true)).isFalse();
+
+        headers.add("dup1", "v1");
+        headers.add("dup1", "v2");
+        headers.add("dup1", "true");
+        headers.add("dup1", "false");
+        assertThat(headers.containsBoolean("dup1", true)).isTrue();
+        assertThat(headers.containsBoolean("dup1", false)).isTrue();
+
+        headers.add("dup2", "v1");
+        headers.add("dup2", "v2");
+        headers.add("dup2", "1");
+        headers.add("dup2", "0");
+        assertThat(headers.containsBoolean("dup2", true)).isTrue();
+        assertThat(headers.containsBoolean("dup2", false)).isTrue();
+
+        headers.add("caseInsensitive", "TrUe");
+        headers.add("caseInsensitive", "FALSE");
+        assertThat(headers.getBoolean("caseInsensitive")).isTrue();
+        assertThat(headers.getLastBoolean("caseInsensitive")).isFalse();
+        assertThat(headers.containsBoolean("caseInsensitive", true)).isTrue();
+        assertThat(headers.containsBoolean("caseInsensitive", false)).isTrue();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
