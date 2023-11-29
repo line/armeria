@@ -264,10 +264,10 @@ public class HttpJsonTranscodingTest {
 
         static EchoResponseBodyResponse getResponseBodyResponse(EchoResponseBodyRequest request) {
             return EchoResponseBodyResponse.newBuilder()
-                    .setValue(request.getValue())
-                    .addAllArrayField(request.getArrayFieldList())
-                    .setStructBody(request.getStructBody())
-                    .build();
+                                           .setValue(request.getValue())
+                                           .addAllArrayField(request.getArrayFieldList())
+                                           .setStructBody(request.getStructBody())
+                                           .build();
         }
 
         @Override
@@ -734,17 +734,17 @@ public class HttpJsonTranscodingTest {
         final QueryParamsBuilder query = QueryParams.builder();
         query.add("value", "value");
         final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" +
-                query.toQueryString())
-                .aggregate().join();
+                                                              query.toQueryString())
+                                                         .aggregate().join();
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(response.contentUtf8()).isEqualTo("\"value\"");
     }
 
     @Test
     void shouldAcceptResponseBodyRepeated() throws JsonProcessingException {
-        final AggregatedHttpResponse response = webClient.get(
-                "/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
-                .aggregate().join();
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
+                         .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.isArray()).isTrue();
@@ -754,9 +754,9 @@ public class HttpJsonTranscodingTest {
     @Test
     void shouldAcceptResponseBodyValueStruct() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}," +
-                "\"arrayField\":[\"value1\",\"value2\"]}";
+                                   "\"arrayField\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                "/v1/echo/response_body/struct", jsonContent);
+                                                                "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.has("structBody")).isTrue();
@@ -766,9 +766,9 @@ public class HttpJsonTranscodingTest {
     @Test
     void shouldAcceptResponseBodyValueNullValue() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\"," +
-                "\"arrayField\":[\"value1\",\"value2\"]}";
+                                   "\"arrayField\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                "/v1/echo/response_body/struct", jsonContent);
+                                                                "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.isEmpty()).isTrue();
@@ -777,9 +777,9 @@ public class HttpJsonTranscodingTest {
     @Test
     void shouldAcceptResponseBodyValueAnonymusField() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}" +
-                ",\"arrayField\":[\"value1\",\"value2\"]}";
+                                   ",\"arrayField\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                "/v1/echo/response_body/nomatch", jsonContent);
+                                                                "/v1/echo/response_body/nomatch", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(root).isEqualTo("{\"value\":\"value\"," +
@@ -790,8 +790,8 @@ public class HttpJsonTranscodingTest {
     @Test
     void shouldAcceptResponseBodyValueNoMatchInside() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
-        final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                "/v1/echo/response_body/repeated", jsonContent);
+        final AggregatedHttpResponse response = jsonPostRequest(
+                webClient, "/v1/echo/response_body/repeated", jsonContent);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(response.contentUtf8()).isEqualTo("null");
     }
@@ -799,8 +799,8 @@ public class HttpJsonTranscodingTest {
     @Test
     void shouldDenyMalformedJson() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}";
-        final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                                                                "/v1/echo/response_body/repeated", jsonContent);
+        final AggregatedHttpResponse response =
+                jsonPostRequest(webClient, "/v1/echo/response_body/repeated", jsonContent);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
@@ -808,9 +808,9 @@ public class HttpJsonTranscodingTest {
     void shouldDenyMissingContentType() {
         final String validJson = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
         final RequestHeaders headers = RequestHeaders.builder()
-                .method(HttpMethod.POST)
-                .path("/v1/echo/response_body/repeated")
-                .build();
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .build();
         final AggregatedHttpResponse response = webClient.execute(headers, validJson).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -819,10 +819,10 @@ public class HttpJsonTranscodingTest {
     void shouldDenyNonJsonContentType() {
         final String validJson = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
         final RequestHeaders headers = RequestHeaders.builder()
-                .method(HttpMethod.POST)
-                .path("/v1/echo/response_body/repeated")
-                .contentType(MediaType.CSV_UTF_8)
-                .build();
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .contentType(MediaType.CSV_UTF_8)
+                                                     .build();
         final AggregatedHttpResponse response = webClient.execute(headers, validJson).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -831,10 +831,10 @@ public class HttpJsonTranscodingTest {
     void shouldDenyEmptyJson() {
         final String emptyJson = "";
         final RequestHeaders headers = RequestHeaders.builder()
-                .method(HttpMethod.POST)
-                .path("/v1/echo/response_body/repeated")
-                .contentType(MediaType.JSON)
-                .build();
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .contentType(MediaType.JSON)
+                                                     .build();
         final AggregatedHttpResponse response = webClient.execute(headers, emptyJson).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -843,9 +843,9 @@ public class HttpJsonTranscodingTest {
     void shouldAcceptEmptyNonJson() {
         final String body = "";
         final RequestHeaders headers = RequestHeaders.builder()
-                .method(HttpMethod.POST)
-                .path("/v1/echo/response_body/repeated")
-                .build();
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .build();
         final AggregatedHttpResponse response = webClient.execute(headers, body).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
@@ -854,9 +854,9 @@ public class HttpJsonTranscodingTest {
     void shouldDenyNonObjectJson() {
         final String body = "[ 42, null ]";
         final RequestHeaders headers = RequestHeaders.builder()
-                .method(HttpMethod.POST)
-                .path("/v1/echo/response_body/repeated")
-                .build();
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .build();
         final AggregatedHttpResponse response = webClient.execute(headers, body).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
