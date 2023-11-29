@@ -57,11 +57,11 @@ public final class HeadersUpdatingClient extends SimpleDecoratingHttpClient {
 
         final List<CompletableFuture<Entry<CharSequence, String>>> headerList =
                 merged.entrySet()
-                                        .stream()
-                                        .map(e -> e.getValue().apply(ctx.defaultRequestHeaders().getLast(e.getKey()))
-                                                   .<Map.Entry<CharSequence, String>>thenApply(
-                                                           v -> new SimpleImmutableEntry<>(e.getKey(), v)))
-                                        .collect(Collectors.toList());
+                      .stream()
+                      .map(e -> e.getValue().apply(ctx.defaultRequestHeaders().getLast(e.getKey()))
+                                 .<Map.Entry<CharSequence, String>>thenApply(
+                                         v -> new SimpleImmutableEntry<>(e.getKey(), v)))
+                      .collect(Collectors.toList());
         return HttpResponse.of(
                 CompletableFuture.allOf(headerList.toArray(new CompletableFuture[0]))
                                  .thenApply(ignored -> headerList.stream()

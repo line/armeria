@@ -69,7 +69,7 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     @Nullable
     protected T latestValue() {
         // TODO(ikhoon): Make this method abstract in Armeria 2.0 to avoid the mistake of not defining
-        //               the lastest value in subclasses.
+        //               the latest value in subclasses.
         return null;
     }
 
@@ -87,15 +87,15 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
         requireNonNull(listener, "listener");
         reentrantLock.lock();
         try {
-            if (notifyLatestValue) {
-                final T latest = latestValue();
-                if (latest != null) {
-                    listener.accept(latest);
-                }
-            }
             updateListeners.add(listener);
         } finally {
             reentrantLock.unlock();
+        }
+        if (notifyLatestValue) {
+            final T latest = latestValue();
+            if (latest != null) {
+                listener.accept(latest);
+            }
         }
     }
 

@@ -451,6 +451,12 @@ class RouteTest {
         assertThatJson(route).node("patternString").isEqualTo("/foo/:id");
     }
 
+    @Test
+    void prefixWithEmptySlash() {
+        final Route route = Route.builder().pathPrefix("/foo").build();
+        assertThat(route.withPrefix("/")).isSameAs(route);
+    }
+
     private static RoutingContext withMethod(HttpMethod method) {
         return DefaultRoutingContext.of(virtualHost(), "example.com",
                                         REQ_TARGET, RequestHeaders.of(method, PATH), RoutingStatus.OK);

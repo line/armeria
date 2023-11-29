@@ -223,8 +223,8 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             endpointsLock.unlock();
         }
 
+        maybeCompleteInitialEndpointsFuture(newEndpoints);
         notifyListeners(newEndpoints);
-        completeInitialEndpointsFuture(newEndpoints);
     }
 
     /**
@@ -253,22 +253,21 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         if (!allowEmptyEndpoints && Iterables.isEmpty(endpoints)) {
             return;
         }
-        final List<Endpoint> oldEndpoints = this.endpoints;
-        final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
-
-        if (!hasChanges(oldEndpoints, newEndpoints)) {
-            return;
-        }
-
+        final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
+            final List<Endpoint> oldEndpoints = this.endpoints;
+            newEndpoints = ImmutableList.sortedCopyOf(endpoints);
+            if (!hasChanges(oldEndpoints, newEndpoints)) {
+                return;
+            }
             this.endpoints = newEndpoints;
         } finally {
             endpointsLock.unlock();
         }
 
+        maybeCompleteInitialEndpointsFuture(newEndpoints);
         notifyListeners(newEndpoints);
-        completeInitialEndpointsFuture(newEndpoints);
     }
 
     private static boolean hasChanges(List<Endpoint> oldEndpoints, List<Endpoint> newEndpoints) {
@@ -291,7 +290,17 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return false;
     }
 
-    private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
+    @Override
+    protected List<Endpoint> latestValue() {
+        final List<Endpoint> endpoints = this.endpoints;
+        if (endpoints == UNINITIALIZED_ENDPOINTS) {
+            return null;
+        } else {
+            return endpoints;
+        }
+    }
+
+    private void maybeCompleteInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
             initialEndpointsFuture.complete(endpoints);
         }

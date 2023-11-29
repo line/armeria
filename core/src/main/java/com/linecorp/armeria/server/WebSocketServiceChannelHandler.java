@@ -98,7 +98,7 @@ final class WebSocketServiceChannelHandler extends ChannelDuplexHandler {
                                                     .transferred(transferredLength)
                                                     .build();
                     if (encoder.isResponseHeadersSent(req.id(), 1)) {
-                        encoder.writeReset(req.id(), 1, Http2Error.PROTOCOL_ERROR);
+                        encoder.writeReset(req.id(), 1, Http2Error.PROTOCOL_ERROR, false);
                     } else {
                         encoder.writeErrorResponse(req.id(), 1, serviceConfig, req.headers(),
                                                    HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, null);

@@ -104,6 +104,20 @@ public final class DefaultClientRequestContext
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
 
+    private static SessionProtocol desiredSessionProtocol(SessionProtocol protocol, ClientOptions options) {
+        if (!options.factory().options().preferHttp1()) {
+            return protocol;
+        }
+        switch (protocol) {
+            case HTTP:
+                return SessionProtocol.H1C;
+            case HTTPS:
+                return SessionProtocol.H1;
+            default:
+                return protocol;
+        }
+    }
+
     private static final short STR_CHANNEL_AVAILABILITY = 1;
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
@@ -166,7 +180,7 @@ public final class DefaultClientRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            @Nullable EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
@@ -208,10 +222,10 @@ public final class DefaultClientRequestContext
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        super(meterRegistry, sessionProtocol, id, method, reqTarget,
+        super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
-              getAttributes(root));
+              getAttributes(root), options.contextHook());
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -226,7 +240,7 @@ public final class DefaultClientRequestContext
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -486,7 +500,7 @@ public final class DefaultClientRequestContext
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         RequestTarget reqTarget) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
-              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()));
+              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()), ctx.hook());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -497,14 +511,13 @@ public final class DefaultClientRequestContext
         // So we don't check the nullness of rpcRequest unlike request.
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
-        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         root = ctx.root();
 
         log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
-                new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
@@ -517,6 +530,13 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
+        // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
+        // the root context.
+        if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
+            eventLoop = ctx.eventLoop().withoutContext();
+        } else {
+            acquireEventLoop(endpoint);
+        }
     }
 
     @Nullable

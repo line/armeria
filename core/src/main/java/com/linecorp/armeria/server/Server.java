@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
@@ -26,11 +25,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateExpiredException;
-import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -70,6 +65,8 @@ import com.spotify.futures.CompletableFutures;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -422,37 +419,16 @@ public final class Server implements ListenableAsyncCloseable {
         final MeterRegistry meterRegistry = config().meterRegistry();
 
         final SSLSession sslSession = validateSslContext(sslContext);
+        final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.server",
+                                                              "hostname.pattern", hostnamePattern);
         for (Certificate certificate : sslSession.getLocalCertificates()) {
             if (!(certificate instanceof X509Certificate)) {
                 continue;
             }
 
             try {
-                final X509Certificate x509Certificate = (X509Certificate) certificate;
-                final String commonName = firstNonNull(CertificateUtil.getCommonName(x509Certificate), "");
-
-                Gauge.builder("armeria.server.tls.certificate.validity", x509Certificate, x509Cert -> {
-                         try {
-                             x509Cert.checkValidity();
-                         } catch (CertificateExpiredException | CertificateNotYetValidException e) {
-                             return 0;
-                         }
-                         return 1;
-                     })
-                     .description("1 if TLS certificate is in validity period, 0 if certificate is not in " +
-                                  "validity period")
-                     .tags("common.name", commonName, "hostname.pattern", hostnamePattern)
-                     .register(meterRegistry);
-
-                Gauge.builder("armeria.server.tls.certificate.validity.days", x509Certificate, x509Cert -> {
-                         final Duration diff = Duration.between(Instant.now(),
-                                                                x509Cert.getNotAfter().toInstant());
-                         return diff.isNegative() ? -1 : diff.toDays();
-                     })
-                     .description("Duration in days before TLS certificate expires, which becomes -1 " +
-                                  "if certificate is expired")
-                     .tags("common.name", commonName, "hostname.pattern", hostnamePattern)
-                     .register(meterRegistry);
+                MoreMeterBinders.certificateMetrics((X509Certificate) certificate, meterIdPrefix)
+                                .bindTo(meterRegistry);
             } catch (Exception ex) {
                 logger.warn("Failed to set up TLS certificate metrics for a host: {}", hostnamePattern, ex);
             }
