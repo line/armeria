@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -51,11 +50,6 @@ class WebClientBuilderTest {
                 return HttpResponse.of(pathAndQuery);
             });
             sb.service("/head", (ctx, req) -> HttpResponse.of("Hello Armeria"));
-            sb.service("/echo-test-header", (ctx, req) -> {
-                final String testHeader = req.headers().get("test");
-                assertThat(testHeader).isNotNull();
-                return HttpResponse.of(testHeader);
-            });
         }
     };
 
@@ -130,31 +124,6 @@ class WebClientBuilderTest {
                 requestHeadersBuilder.method(HttpMethod.GET).build());
         final HttpResponse response = WebClient.of().execute(request);
         assertThat(response.aggregate().join().contentUtf8()).isEqualTo(path);
-    }
-
-    @Test
-    void dynamicDefaultHeader() {
-        final String path = "/echo-test-header";
-        final AtomicInteger counter = new AtomicInteger(0);
-        final Supplier<CompletableFuture<Object>> headerSupplier = () -> {
-            final CompletableFuture<Object> future = new CompletableFuture<>();
-            future.complete(counter.getAndIncrement());
-            return future;
-        };
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .defaultHeaderDecorator("test", headerSupplier)
-                                          .build();
-        assertThat(client.get(path).aggregate().join().contentUtf8()).isEqualTo("0");
-        assertThat(client.get(path).aggregate().join().contentUtf8()).isEqualTo("1");
-        assertThat(client.get(path).aggregate().join().contentUtf8()).isEqualTo("2");
-
-        final RequestHeadersBuilder requestHeadersBuilder =
-                RequestHeaders.builder()
-                              .add("test", "non-default")
-                              .path(path);
-        final AggregatedHttpRequest request = AggregatedHttpRequest.of(
-                requestHeadersBuilder.method(HttpMethod.GET).build());
-        assertThat(client.execute(request).aggregate().join().contentUtf8()).isEqualTo("non-default");
     }
 
     @Test
@@ -235,8 +204,8 @@ class WebClientBuilderTest {
         final Supplier<? extends AutoCloseable> contextHook = () ->
                 (AutoCloseable) popped::getAndIncrement;
 
-        final WebClient client = WebClient.builder(server.httpUri()).contextHook(contextHook).build();
-        final AggregatedHttpResponse response = client.get("/head").aggregate().join();
+        final WebClient client =  WebClient.builder(server.httpUri()).contextHook(contextHook).build();
+        final AggregatedHttpResponse response =  client.get("/head").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("Hello Armeria");
         assertThat(popped.get()).isGreaterThan(1);

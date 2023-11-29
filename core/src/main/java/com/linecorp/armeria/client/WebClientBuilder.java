@@ -16,20 +16,15 @@
 
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -191,43 +186,6 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     @Override
     public WebClientBuilder decorator(DecoratingHttpClientFunction decorator) {
         return (WebClientBuilder) super.decorator(decorator);
-    }
-
-    /**
-     * Adds the decorator that decorates the header of request that name is specified {@code name}.
-     *
-     * @param name  The name of the header.
-     * @param value A supplier that provides a future of the value of the header.
-     */
-    public WebClientBuilder defaultHeaderDecorator(CharSequence name,
-                                                   Supplier<CompletableFuture<Object>> value) {
-        requireNonNull(name, "name");
-        requireNonNull(value, "value");
-        final DecoratingHttpClientFunction decorator = (client, ctx, req) -> {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            ctx.makeContextAware(value.get()).handle((header, cause) -> {
-                if (cause != null) {
-                    future.completeExceptionally(cause);
-                    return null;
-                }
-                try {
-                    final HttpRequest decorated = req.mapHeaders(headers -> {
-                        if (headers.get("name") != null) {
-                            return headers;
-                        }
-                        return headers.toBuilder().addObject(name, header).build();
-                    });
-                    ctx.updateRequest(decorated);
-                    future.complete(client.execute(ctx, decorated));
-                } catch (Exception e) {
-                    future.completeExceptionally(e);
-                }
-                return null;
-            });
-            return HttpResponse.of(future);
-        };
-        decorator(decorator);
-        return this;
     }
 
     @Override
