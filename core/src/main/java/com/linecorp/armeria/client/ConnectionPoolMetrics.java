@@ -81,7 +81,7 @@ final class ConnectionPoolMetrics {
             final Meters meters = metersMap.get(commonTags);
             if (meters != null) {
                 meters.decrement();
-                assert meters.activeConnections() >= 0 : "active connections should not be negative" + meters;
+                assert meters.activeConnections() >= 0 : "active connections should not be negative. " + meters;
                 if (meters.activeConnections() == 0) {
                     // XXX(ikhoon): Should we consider to remove the gauge lazily so that collectors can get the
                     //              value.
