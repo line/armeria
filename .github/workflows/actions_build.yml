@@ -69,14 +69,14 @@ jobs:
       - id: setup-jdk
         if: ${{ matrix.java != env.BUILD_JDK_VERSION }}
         name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
 
       - id: setup-build-jdk
         name: Set up build JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.BUILD_JDK_VERSION }}
@@ -217,7 +217,7 @@ jobs:
 
       - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.BUILD_JDK_VERSION }}
@@ -245,7 +245,7 @@ jobs:
 
       - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.BUILD_JDK_VERSION }}
@@ -267,7 +267,7 @@ jobs:
 
       - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.BUILD_JDK_VERSION }}
