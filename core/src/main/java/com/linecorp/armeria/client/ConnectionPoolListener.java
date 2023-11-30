@@ -100,7 +100,7 @@ public interface ConnectionPoolListener extends Unwrappable {
      *   <td>The number of closed connections.</td>
      * </tr>
      * <tr>
-     *   <td>{@code #value{state="active"}}</td>
+     *   <td>{@code <name>#value{state="active"}}</td>
      *   <td>The number of active connections.</td>
      * </tr>
      * </table>
