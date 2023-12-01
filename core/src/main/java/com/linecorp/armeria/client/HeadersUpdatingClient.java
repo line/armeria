@@ -49,7 +49,6 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
  *     .and()
  *     .newDecorator();
  * }</pre>
- * </p>
  * The builder allows the addition or modification of headers for both request and response
  * in both synchronous and asynchronous manners.
  */
