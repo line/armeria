@@ -16,56 +16,120 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.ArrayList;
+import static java.util.Objects.requireNonNull;
+
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-public class HeadersUpdatingClientBuilder {
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
-    private final List<HeaderFunctionMap> requestHeaders = new ArrayList<>();
-    private final List<HeaderFunctionMap> responseHeaders = new ArrayList<>();
+/**
+ * Builds a new {@link HeadersUpdatingClient} or its decorator function.
+ */
+public final class HeadersUpdatingClientBuilder {
 
-    HeadersUpdatingClientBuilder() {}
+    private final HeaderFunctionMap requestHeaders;
+    private final HeaderFunctionMap responseHeaders;
 
+    /**
+     * Creates a new builder.
+     */
+    HeadersUpdatingClientBuilder() {
+        requestHeaders = new HeaderFunctionMap(this);
+        responseHeaders = new HeaderFunctionMap(this);
+    }
+
+    /**
+     * Returns a {@link HeaderFunctionMap} to decorate request headers.
+     */
     public HeaderFunctionMap requestHeaders() {
-        final HeaderFunctionMap headerFunctionMap = new HeaderFunctionMap(this);
-        requestHeaders.add(headerFunctionMap);
-        return headerFunctionMap;
+        return requestHeaders;
     }
 
+    /**
+     * Returns a {@link HeaderFunctionMap} to decorate response headers.
+     */
     public HeaderFunctionMap responseHeaders() {
-        final HeaderFunctionMap headerFunctionMap = new HeaderFunctionMap(this);
-        responseHeaders.add(headerFunctionMap);
-        return headerFunctionMap;
+        return responseHeaders;
     }
 
+    /**
+     * Returns a newly created {@link HeadersUpdatingClient}  with the specified {@link HttpClient}.
+     */
     public HeadersUpdatingClient build(HttpClient delegate) {
-        return new HeadersUpdatingClient(
-                delegate,
-                requestHeaders.stream()
-                              .map(HeaderFunctionMap::functionMap)
-                              .reduce(HeadersUpdatingClientBuilder::mergeHeaderFunctionMap)
-                              .orElseGet(HashMap::new),
-                responseHeaders.stream()
-                               .map(HeaderFunctionMap::functionMap)
-                               .reduce(HeadersUpdatingClientBuilder::mergeHeaderFunctionMap)
-                               .orElseGet(HashMap::new));
+        return new HeadersUpdatingClient(delegate, requestHeaders.functionMap, responseHeaders.functionMap);
     }
 
-    private static Map<CharSequence, Function<String, CompletableFuture<String>>> mergeHeaderFunctionMap(
-            Map<CharSequence, Function<String, CompletableFuture<String>>> map1,
-            Map<CharSequence, Function<String, CompletableFuture<String>>> map2
-    ) {
-        final Map<CharSequence, Function<String, CompletableFuture<String>>> merged =
-                new HashMap<>(map1);
-        map2.forEach((k, v) -> merged.merge(k, v, (f1, f2) -> header -> f1.apply(header).thenCompose(f2)));
-        return merged;
-    }
-
+    /**
+     * Returns a newly created decorator that decorates an {@link HttpClient} with a new
+     * {@link HeadersUpdatingClient} based on the properties of this builder.
+     */
     public Function<? super HttpClient, HeadersUpdatingClient> newDecorator() {
         return this::build;
+    }
+
+    /**
+     * Represents a mapping of header names to functions applied to those headers within the
+     * {@link HeadersUpdatingClient}.
+     */
+    public static final class HeaderFunctionMap {
+        private final HeadersUpdatingClientBuilder headersUpdatingClientBuilder;
+        private final Map<CharSequence, Function<String, CompletableFuture<String>>> functionMap =
+                new HashMap<>();
+
+        HeaderFunctionMap(HeadersUpdatingClientBuilder headersUpdatingClientBuilder) {
+            this.headersUpdatingClientBuilder = requireNonNull(headersUpdatingClientBuilder,
+                                                               "headersUpdatingClientBuilder");
+        }
+
+        /**
+         * Adds a header with the specified {@code name} and {@code value}.
+         */
+        public HeaderFunctionMap add(CharSequence name, String value) {
+            requireNonNull(name, "name");
+            requireNonNull(value, "value");
+            final CharSequence headerName = HttpHeaderNames.of(name);
+            functionMap.put(HttpHeaderNames.of(headerName),
+                            header -> UnmodifiableFuture.completedFuture(value));
+            return this;
+        }
+
+        /**
+         * Adds a header with the specified {@code name} and {@code function}.
+         */
+        public HeaderFunctionMap add(CharSequence name, Function<@Nullable String, String> function) {
+            requireNonNull(name, "name");
+            requireNonNull(function, "function");
+            final CharSequence headerName = HttpHeaderNames.of(name);
+            final Function<String, CompletableFuture<String>> f =
+                    functionMap.getOrDefault(headerName, UnmodifiableFuture::completedFuture);
+            functionMap.put(headerName, header -> f.apply(header).thenApply(function));
+            return this;
+        }
+
+        /**
+         * Adds a header with the specified {@code name} and asynchronous {@code function}.
+         */
+        public HeaderFunctionMap addAsync(CharSequence name,
+                                          Function<@Nullable String, CompletableFuture<String>> function) {
+            requireNonNull(name, "name");
+            requireNonNull(function, "function");
+            final CharSequence headerName = HttpHeaderNames.of(name);
+            final Function<String, CompletableFuture<String>> f =
+                    functionMap.getOrDefault(headerName, CompletableFuture::completedFuture);
+            functionMap.put(headerName, header -> f.apply(header).thenCompose(function));
+            return this;
+        }
+
+        /**
+         * Returns the parent {@link HeadersUpdatingClient}.
+         */
+        public HeadersUpdatingClientBuilder and() {
+            return headersUpdatingClientBuilder;
+        }
     }
 }
