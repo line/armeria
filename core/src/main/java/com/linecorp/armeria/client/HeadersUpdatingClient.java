@@ -35,7 +35,8 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 /**
  * The {@link HeadersUpdatingClient} enables the modification of request and response headers,
  * allowing modifications before sending requests or after receiving responses.
- * <p> Usage:
+ *
+ * <p>Usage:
  * <pre>{@code
  * HeadersUpdatingClient.builder()
  *     .requestHeaders()
