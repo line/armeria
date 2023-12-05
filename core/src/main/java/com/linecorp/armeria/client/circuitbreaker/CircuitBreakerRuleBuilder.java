@@ -21,6 +21,7 @@ import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.SUCCESS_DECISION;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
@@ -76,7 +77,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), false);
+                                                    exceptionFilter(), totalDurationFilter(), false);
         return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
@@ -264,5 +265,17 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     @Override
     public CircuitBreakerRuleBuilder onUnprocessed() {
         return (CircuitBreakerRuleBuilder) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code totalDurationFilter} for a {@link CircuitBreakerRule}.
+     * If the specified {@code totalDurationFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @Override
+    public CircuitBreakerRuleBuilder onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (CircuitBreakerRuleBuilder) super.onTotalDuration(totalDurationFilter);
     }
 }

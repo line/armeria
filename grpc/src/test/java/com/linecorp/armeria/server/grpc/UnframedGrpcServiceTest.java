@@ -175,7 +175,7 @@ class UnframedGrpcServiceTest {
     }
 
     @Test
-    void unframedGrpcStatusFunction() throws Exception {
+    void unframedGrpcExceptionHandlerFunctions() throws Exception {
         final TestService spyTestService = spy(testService);
         doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)
@@ -198,7 +198,7 @@ class UnframedGrpcServiceTest {
     }
 
     @Test
-    void unframedGrpcStatusFunction_default() throws Exception {
+    void unframedGrpcExceptionHandlerFunctions_default() throws Exception {
         final TestService spyTestService = spy(testService);
         doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)
@@ -214,7 +214,7 @@ class UnframedGrpcServiceTest {
     }
 
     @Test
-    void unframedGrpcStatusFunction_orElse() throws Exception {
+    void unframedGrpcExceptionHandlerFunctions_orElse() throws Exception {
         final TestService spyTestService = spy(testService);
         doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)

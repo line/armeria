@@ -106,7 +106,7 @@ class ThriftHttpErrorResponseTest {
         final Iface client = ThriftClients.newClient(server.httpUri().resolve(param.path), Iface.class);
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOf(TTransportException.class)
-                .getCause()
+                .cause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.CONFLICT);
                 });

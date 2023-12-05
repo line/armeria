@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.client;
 
+import java.time.Duration;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -44,10 +45,12 @@ public final class AbstractRuleBuilderUtil {
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                 @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
                 @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
+                @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
                 boolean hasResponseFilter) {
 
         return new Filter(requestHeadersFilter, exceptionFilter, responseHeadersFilter,
-                          responseTrailersFilter, grpcTrailersFilter, hasResponseFilter);
+                          responseTrailersFilter, grpcTrailersFilter, totalDurationFilter,
+                          hasResponseFilter);
     }
 
     private AbstractRuleBuilderUtil() {}
@@ -58,6 +61,7 @@ public final class AbstractRuleBuilderUtil {
         private final @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter;
         private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter;
         private final @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
+        private final @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter;
         private final boolean hasResponseFilter;
 
         Filter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
@@ -65,12 +69,14 @@ public final class AbstractRuleBuilderUtil {
                @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
                @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
+               @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
                boolean hasResponseFilter) {
             this.requestHeadersFilter = requestHeadersFilter;
             this.exceptionFilter = exceptionFilter;
             this.responseHeadersFilter = responseHeadersFilter;
             this.responseTrailersFilter = responseTrailersFilter;
             this.grpcTrailersFilter = grpcTrailersFilter;
+            this.totalDurationFilter = totalDurationFilter;
             this.hasResponseFilter = hasResponseFilter;
         }
 
@@ -87,7 +93,7 @@ public final class AbstractRuleBuilderUtil {
             // Safe to return true since no filters are set
             if (exceptionFilter == null && responseHeadersFilter == null &&
                 responseTrailersFilter == null && grpcTrailersFilter == null &&
-                !hasResponseFilter) {
+                totalDurationFilter == null && !hasResponseFilter) {
                 return true;
             }
 
@@ -131,6 +137,13 @@ public final class AbstractRuleBuilderUtil {
                 //noinspection RedundantIfStatement
                 if (maybeGrpcTrailers != null && grpcTrailersFilter.test(ctx, maybeGrpcTrailers)) {
                     // Found the matching gRPC trailers.
+                    return true;
+                }
+            }
+
+            if (totalDurationFilter != null && log.isAvailable(RequestLogProperty.RESPONSE_END_TIME)) {
+                final long totalDurationNanos = log.totalDurationNanos();
+                if (totalDurationFilter.test(ctx, Duration.ofNanos(totalDurationNanos))) {
                     return true;
                 }
             }

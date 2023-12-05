@@ -29,7 +29,8 @@ final class DefaultHttpHeadersBuilder
     public HttpHeaders build() {
         final HttpHeadersBase delegate = delegate();
         if (delegate != null) {
-            if (delegate.isEmpty()) {
+            // The size could be empty although delegate.isContentLengthUnknown() returns true.
+            if (delegate.isEmpty() && !delegate.isContentLengthUnknown()) {
                 return delegate.isEndOfStream() ? DefaultHttpHeaders.EMPTY_EOS : DefaultHttpHeaders.EMPTY;
             } else {
                 return new DefaultHttpHeaders(promoteDelegate());

@@ -34,6 +34,8 @@ final class Http2ClientConnectionHandlerBuilder
         super(ch);
         this.clientFactory = clientFactory;
         this.protocol = protocol;
+        // Disable RST frames limit for HTTP/2 clients.
+        decoderEnforceMaxRstFramesPerWindow(0, 0);
     }
 
     @Override

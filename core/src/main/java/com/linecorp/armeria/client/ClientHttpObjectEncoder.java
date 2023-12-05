@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.ClosedSessionException;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
+
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.HttpObjectEncoder;
@@ -37,7 +38,7 @@ interface ClientHttpObjectEncoder extends HttpObjectEncoder {
                                        ChannelPromise promise) {
         assert eventLoop().inEventLoop();
         if (isClosed()) {
-            promise.tryFailure(UnprocessedRequestException.of(ClosedSessionException.get()));
+            promise.tryFailure(UnprocessedRequestException.of(newClosedSessionException(channel())));
             return promise;
         }
 

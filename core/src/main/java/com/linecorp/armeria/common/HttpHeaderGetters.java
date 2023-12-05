@@ -54,6 +54,13 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     long contentLength();
 
     /**
+     * Returns whether the content length is unknown.
+     * If {@code true}, {@code content-length} header is not automatically updated.
+     */
+    @UnstableApi
+    boolean isContentLengthUnknown();
+
+    /**
      * Returns the parsed {@code "content-type"} header.
      *
      * @return the parsed {@link MediaType} if present and valid, or {@code null} otherwise.

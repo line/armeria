@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -38,7 +39,7 @@ public final class CommonPools {
     static {
         // Bind EventLoopMetrics for the common worker group.
         MoreMeterBinders
-                .eventLoopMetrics(WORKER_GROUP, "common")
+                .eventLoopMetrics(WORKER_GROUP, new MeterIdPrefix("armeria.netty.common"))
                 .bindTo(Flags.meterRegistry());
     }
 

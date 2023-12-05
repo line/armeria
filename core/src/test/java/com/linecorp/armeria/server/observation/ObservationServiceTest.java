@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.observation.MicrometerObservationRegistryUtils;
 import com.linecorp.armeria.internal.common.observation.SpanCollector;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
@@ -208,7 +209,9 @@ class ObservationServiceTest {
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
-        final ServiceRequestContext ctx = ServiceRequestContext.builder(req).build();
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(req)
+                                                               .eventLoop(ImmediateEventLoop.INSTANCE)
+                                                               .build();
         final RpcRequest rpcReq = RpcRequest.of(ObservationServiceTest.class, "hello", "trustin");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, trustin!");

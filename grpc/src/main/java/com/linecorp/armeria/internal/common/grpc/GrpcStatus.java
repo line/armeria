@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
@@ -96,10 +97,23 @@ public final class GrpcStatus {
      */
     public static Status fromThrowable(@Nullable GrpcStatusFunction statusFunction, RequestContext ctx,
                                        Throwable t, Metadata metadata) {
+        final GrpcExceptionHandlerFunction exceptionHandler =
+                statusFunction != null ? statusFunction::apply : null;
+        return fromThrowable(exceptionHandler, ctx, t, metadata);
+    }
+
+    /**
+     * Converts the {@link Throwable} to a {@link Status}.
+     * If the specified {@link GrpcExceptionHandlerFunction} returns {@code null},
+     * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
+     * and the protocol package, is used by default.
+     */
+    public static Status fromThrowable(@Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                                       RequestContext ctx, Throwable t, Metadata metadata) {
         t = peelAndUnwrap(requireNonNull(t, "t"));
 
-        if (statusFunction != null) {
-            final Status status = statusFunction.apply(ctx, t, metadata);
+        if (exceptionHandler != null) {
+            final Status status = exceptionHandler.apply(ctx, t, metadata);
             if (status != null) {
                 return status;
             }
@@ -151,13 +165,25 @@ public final class GrpcStatus {
      */
     public static Status fromStatusFunction(@Nullable GrpcStatusFunction statusFunction,
                                             RequestContext ctx, Status status, Metadata metadata) {
+        final GrpcExceptionHandlerFunction exceptionHandler =
+                statusFunction != null ? statusFunction::apply : null;
+        return fromExceptionHandler(exceptionHandler, ctx, status, metadata);
+    }
+
+    /**
+     * Converts the specified {@link Status} to a new user-specified {@link Status}
+     * using the specified {@link GrpcExceptionHandlerFunction}.
+     * Returns the given {@link Status} as is if the {@link GrpcExceptionHandlerFunction} returns {@code null}.
+     */
+    public static Status fromExceptionHandler(@Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                                              RequestContext ctx, Status status, Metadata metadata) {
         requireNonNull(status, "status");
 
-        if (statusFunction != null) {
+        if (exceptionHandler != null) {
             final Throwable cause = status.getCause();
             if (cause != null) {
                 final Throwable unwrapped = peelAndUnwrap(cause);
-                final Status newStatus = statusFunction.apply(ctx, unwrapped, metadata);
+                final Status newStatus = exceptionHandler.apply(ctx, unwrapped, metadata);
                 if (newStatus != null) {
                     return newStatus;
                 }

@@ -19,9 +19,9 @@ import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.ctxExist
 import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.newContext;
 import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.noopSubscription;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
@@ -371,20 +371,22 @@ class ContextAwareFluxTest {
     }
 
     @Test
-    void connectableFlux_dispose() {
+    void connectableFlux_dispose() throws InterruptedException {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
-        final CompletableFuture<Disposable> future = new CompletableFuture<>();
         try (SafeCloseable ignored = ctx.push()) {
             final ConnectableFlux<String> connectableFlux = Flux.just("foo").publish();
             flux = addCallbacks(connectableFlux.autoConnect(2, disposable -> {
                 assertThat(ctxExists(ctx)).isTrue();
-                future.complete(disposable);
-            }).publishOn(Schedulers.single()), ctx);
+            }).publishOn(Schedulers.newSingle("aaa")), ctx);
         }
-        flux.subscribe().dispose();
-        flux.subscribe().dispose();
-        assertThat(future.join().isDisposed()).isTrue();
+        final Disposable disposable1 = flux.subscribe();
+        await().pollDelay(Duration.ofMillis(200)).until(() -> !disposable1.isDisposed());
+        final Disposable disposable2 = flux.subscribe();
+        await().untilAsserted(() -> {
+            assertThat(disposable1.isDisposed()).isTrue();
+            assertThat(disposable2.isDisposed()).isTrue();
+        });
     }
 
     @Test
