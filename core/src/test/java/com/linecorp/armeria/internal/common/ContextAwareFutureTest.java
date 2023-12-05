@@ -83,8 +83,8 @@ class ContextAwareFutureTest {
             assertThat(callbackCalled.called.get()).isFalse();
             verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
             assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
-                assertThat(event.getLevel()).isEqualTo(Level.DEBUG);
-                assertThat(event.getMessage()).startsWith("Router created for");
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                assertThat(event.getMessage()).startsWith("An error occurred while pushing");
             });
         }
     }
