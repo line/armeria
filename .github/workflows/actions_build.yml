@@ -84,8 +84,8 @@ jobs:
       - name: Clean up stale build scan data
         if: always()
         run: |
-          rm -r ~/.gradle/build-scan-data/*
-          rm -r ~/.gradle/init.d
+          rm -vr ~/.gradle/build-scan-data/*
+          rm -vr ~/.gradle/init.d
         shell: bash
 
       - name: Setup Gradle
