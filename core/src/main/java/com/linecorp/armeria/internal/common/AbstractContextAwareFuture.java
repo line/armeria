@@ -25,9 +25,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.ContextHolder;
@@ -41,8 +38,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  */
 public abstract class AbstractContextAwareFuture<T>
         extends EventLoopCheckingFuture<T> implements ContextHolder {
-
-    private static final Logger logger = LoggerFactory.getLogger(AbstractContextAwareFuture.class);
 
     private final RequestContext context;
 
@@ -88,18 +83,12 @@ public abstract class AbstractContextAwareFuture<T>
     private void makeContextAwareLoggingException0(Runnable action) {
         try (SafeCloseable ignored = context.push()) {
             action.run();
-        } catch (Throwable th) {
-            logger.warn("An error occurred while pushing a context", th);
-            throw th;
         }
     }
 
     private <V> V makeContextAwareLoggingException0(Supplier<? extends V> fn) {
         try (SafeCloseable ignored = context.push()) {
             return fn.get();
-        } catch (Throwable th) {
-            logger.warn("An error occurred while pushing a context", th);
-            throw th;
         }
     }
 
