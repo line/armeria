@@ -35,6 +35,7 @@ gradleEnterprise {
             def prNumber = System.getenv("PR_NUMBER")
             if (prNumber != null) {
                 link "GitHub PR", "${githubUrl}/pull/${prNumber}"
+                tag "PR"
                 def sha = System.getenv("COMMIT_SHA")
                 if (sha != null) {
                     link "GitHub commit", "${githubUrl}/pull/${prNumber}/commits/${sha}"

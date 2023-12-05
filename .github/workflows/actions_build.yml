@@ -130,6 +130,13 @@ jobs:
           name: ${{ env.PR_NUMBER && format('{0}-', env.PR_NUMBER) || '' }}build-scan-${{ env.JOB_NAME }}
           path: ~/.gradle/build-scan-data
 
+      - name: Clean up gradle build scan
+        if: always()
+        run: |
+          rm -r ~/.gradle/build-scan-data/*
+          rm -r ~/.gradle/init.d
+        shell: bash
+
       - if: ${{ matrix.snapshot && github.ref_name == 'main' }}
         name: Publish snapshots
         run: |
