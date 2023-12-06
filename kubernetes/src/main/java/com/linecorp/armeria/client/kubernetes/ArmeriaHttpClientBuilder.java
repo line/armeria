@@ -23,15 +23,19 @@ import java.util.stream.Stream;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.TrustManager;
 
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.LogLevel;
 
 import io.fabric8.kubernetes.client.http.StandardHttpClientBuilder;
 import io.fabric8.kubernetes.client.http.TlsVersion;
@@ -53,13 +57,36 @@ public final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
         }
 
         final WebClientBuilder clientBuilder = WebClient.builder();
+        clientBuilder.factory(clientFactory(false));
+
+        if (LoggerFactory.getLogger(ArmeriaHttpClient.class).isTraceEnabled()) {
+            clientBuilder.decorator(LoggingClient.builder()
+                                                 .requestLogLevel(LogLevel.TRACE)
+                                                 .logger(ArmeriaHttpClient.class.getName())
+                                                 .successfulResponseLogLevel(LogLevel.TRACE)
+                                                 .newDecorator());
+            // 16 KiB should be enough for most of the cases.
+            clientBuilder.decorator(ContentPreviewingClient.newDecorator(16 * 1024));
+        }
+
+        if (followRedirects) {
+            clientBuilder.followRedirects();
+        }
+
+        final WebClient webClient = clientBuilder.build();
+        return client = new ArmeriaHttpClient(this, webClient);
+    }
+
+    ClientFactory clientFactory(boolean webSocket) {
         final ClientFactoryBuilderHolder factoryBuilderHolder = new ClientFactoryBuilderHolder();
         if (connectTimeout != null && !connectTimeout.isZero() && !connectTimeout.isNegative()) {
             factoryBuilderHolder.get().connectTimeout(connectTimeout);
         }
 
-        // Kubernetes mock server does not support HTTP/2.
-        factoryBuilderHolder.get().useHttp2Preface(false);
+        // Kubernetes WebSocket does not support HTTP/2.
+        if (isPreferHttp11() || webSocket) {
+            factoryBuilderHolder.get().preferHttp1(true);
+        }
 
         if (sslContext != null) {
             final KeyManager keyManager =
@@ -67,6 +94,7 @@ public final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
             final TrustManager trustManager =
                     (trustManagers != null && trustManagers.length > 0) ? trustManagers[0] : null;
 
+            // TODO(ikhoon): Use TlsProvider when https://github.com/line/armeria/pull/5228 is merged.
             factoryBuilderHolder.get().tlsCustomizer(sslContextBuilder -> {
                 if (keyManager != null) {
                     sslContextBuilder.keyManager(keyManager);
@@ -107,16 +135,7 @@ public final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
         }
         factoryBuilderHolder.get().proxyConfig(proxyConfig);
 
-        if (followRedirects) {
-            clientBuilder.followRedirects();
-        }
-
-        clientBuilder.decorator(LoggingClient.newDecorator());
-
-        final ClientFactory clientFactory = factoryBuilderHolder.maybeBuild();
-        clientBuilder.factory(clientFactory);
-        final WebClient webClient = clientBuilder.build();
-        return client = new ArmeriaHttpClient(this, webClient);
+        return factoryBuilderHolder.maybeBuild();
     }
 
     @Override

@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.ResponseHeaders;
 
 import io.fabric8.kubernetes.client.http.AsyncBody;
@@ -79,10 +81,9 @@ final class ArmeriaHttpResponse implements HttpResponse<AsyncBody> {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("ArmeriaHttpResponse{");
-        sb.append("responseHeaders=").append(responseHeaders);
-        sb.append(", body=").append(body);
-        sb.append('}');
-        return sb.toString();
+        return MoreObjects.toStringHelper(this)
+                          .add("responseHeaders", responseHeaders)
+                          .add("body", body)
+                          .toString();
     }
 }

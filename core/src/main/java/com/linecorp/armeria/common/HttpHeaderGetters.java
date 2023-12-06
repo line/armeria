@@ -17,12 +17,8 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -566,19 +562,5 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     default Stream<String> valueStream(CharSequence name) {
         requireNonNull(name, "name");
         return Streams.stream(valueIterator(name));
-    }
-
-    /**
-     * Returns a {@link Map} whose keys are header names and whose values are header values.
-     */
-    @UnstableApi
-    default Map<String, List<String>> toMap() {
-        final Map<String, List<String>> map = new HashMap<>();
-        forEach((name, value) -> {
-            final String nameStr = name.toString();
-            final List<String> values = map.computeIfAbsent(nameStr, k -> new ArrayList<>());
-            values.add(value);
-        });
-        return Collections.unmodifiableMap(map);
     }
 }

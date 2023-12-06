@@ -33,6 +33,7 @@ import io.netty.buffer.ByteBuf;
 final class AsyncBodySubscriber implements Subscriber<HttpData>, AsyncBody {
     private final AsyncBody.Consumer<List<ByteBuffer>> consumer;
     private final CompletableFuture<Void> done = new CompletableFuture<>();
+    // `CompletableFuture` is used instead `volatile` because we don't know when `consume()` is called.
     private final CompletableFuture<Subscription> subscription = new CompletableFuture<>();
 
     AsyncBodySubscriber(AsyncBody.Consumer<List<ByteBuffer>> consumer) {

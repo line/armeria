@@ -72,7 +72,7 @@ public final class ConnectProxyConfig extends ProxyConfig {
     }
 
     /**
-     * Returns the configured headers.
+     * Returns the configured {@link HttpHeaders}.
      */
     public HttpHeaders headers() {
         return headers;

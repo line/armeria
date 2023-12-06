@@ -55,12 +55,13 @@ public final class ArmeriaHttpClient
     ArmeriaHttpClient(ArmeriaHttpClientBuilder armeriaHttpClientBuilder, WebClient webClient) {
         super(armeriaHttpClientBuilder);
         this.webClient = webClient;
-        webSocketClient = new ArmeriaWebSocketClient(webClient);
+        webSocketClient = new ArmeriaWebSocketClient(armeriaHttpClientBuilder);
     }
 
     @Override
     public void close() {
         webClient.options().factory().close();
+        webSocketClient.close();
     }
 
     @Override

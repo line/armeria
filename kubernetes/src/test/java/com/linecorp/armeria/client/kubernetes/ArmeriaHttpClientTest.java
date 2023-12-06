@@ -105,18 +105,15 @@ class ArmeriaHttpClientTest {
 
         final CompletableFuture<String> closeReason = new CompletableFuture<>();
 
-        final CompletableFuture<WebSocket> startedFuture = client.getHttpClient().newWebSocketBuilder()
-                                                                 .uri(URI.create(
-                                                                         webSocketMasterUrl() + "wsclose"))
-                                                                 .buildAsync(new Listener() {
-
-                                                                     @Override
-                                                                     public void onClose(WebSocket webSocket,
-                                                                                         int code,
-                                                                                         String reason) {
-                                                                         closeReason.complete(reason);
-                                                                     }
-                                                                 });
+        final CompletableFuture<WebSocket> startedFuture =
+                client.getHttpClient().newWebSocketBuilder()
+                      .uri(URI.create(webSocketMasterUrl() + "wsclose"))
+                      .buildAsync(new Listener() {
+                          @Override
+                          public void onClose(WebSocket webSocket, int code, String reason) {
+                              closeReason.complete(reason);
+                          }
+                      });
 
         startedFuture.thenAccept(w -> w.sendClose(1000, "I'm done"));
 
@@ -146,16 +143,17 @@ class ArmeriaHttpClientTest {
               .done().always();
 
         final CompletableFuture<Boolean> opened = new CompletableFuture<>();
-        final CompletableFuture<Boolean> future = client.getHttpClient().newWebSocketBuilder()
-                                                        .uri(URI.create(webSocketMasterUrl() + "foo"))
-                                                        .buildAsync(new Listener() {
+        final CompletableFuture<Boolean> future =
+                client.getHttpClient().newWebSocketBuilder()
+                      .uri(URI.create(webSocketMasterUrl() + "foo"))
+                      .buildAsync(new Listener() {
 
-                                                            @Override
-                                                            public void onOpen(WebSocket webSocket) {
-                                                                opened.complete(true);
-                                                            }
-                                                        })
-                                                        .thenCompose(ws -> opened);
+                          @Override
+                          public void onOpen(WebSocket webSocket) {
+                              opened.complete(true);
+                          }
+                      })
+                      .thenCompose(ws -> opened);
 
         assertThat(future.get(10, TimeUnit.SECONDS)).isTrue();
     }

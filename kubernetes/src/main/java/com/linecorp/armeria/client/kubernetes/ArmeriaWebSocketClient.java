@@ -18,12 +18,16 @@
 package com.linecorp.armeria.client.kubernetes;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.RequestOptions;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.websocket.WebSocketClient;
 import com.linecorp.armeria.client.websocket.WebSocketClientHandshakeException;
 import com.linecorp.armeria.client.websocket.WebSocketSession;
@@ -33,6 +37,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.fabric8.kubernetes.client.http.StandardHttpRequest;
 import io.fabric8.kubernetes.client.http.StandardWebSocketBuilder;
@@ -40,20 +45,20 @@ import io.fabric8.kubernetes.client.http.WebSocket;
 import io.fabric8.kubernetes.client.http.WebSocketResponse;
 import io.fabric8.kubernetes.client.http.WebSocketUpgradeResponse;
 
-final class ArmeriaWebSocketClient {
+final class ArmeriaWebSocketClient implements SafeCloseable {
 
-    private final WebClient webClient;
+    private final ArmeriaHttpClientBuilder armeriaHttpClientBuilder;
     @Nullable
     private WebSocketClient webSocketClient;
 
-    ArmeriaWebSocketClient(WebClient webClient) {
-        this.webClient = webClient;
+    ArmeriaWebSocketClient(ArmeriaHttpClientBuilder armeriaHttpClientBuilder) {
+        this.armeriaHttpClientBuilder = armeriaHttpClientBuilder;
     }
 
     private WebSocketClient webSocketClient() {
         if (webSocketClient == null) {
             webSocketClient = WebSocketClient.builder()
-                                             .factory(webClient.options().factory())
+                                             .factory(armeriaHttpClientBuilder.clientFactory(true))
                                              .build();
         }
         return webSocketClient;
@@ -102,8 +107,26 @@ final class ArmeriaWebSocketClient {
         });
     }
 
+    @Override
+    public void close() {
+        if (webSocketClient != null) {
+            webSocketClient.options().factory().close();
+        }
+    }
+
     private static WebSocketUpgradeResponse newUpgradeResponse(StandardHttpRequest request,
                                                                ResponseHeaders upgradeHeaders) {
-        return new WebSocketUpgradeResponse(request, upgradeHeaders.status().code(), upgradeHeaders.toMap());
+        return new WebSocketUpgradeResponse(request, upgradeHeaders.status().code(), toMap(upgradeHeaders));
+    }
+
+    // TODO(ikhoon): Consider adding `HttpHeaders.toMap()`.
+    private static Map<String, List<String>> toMap(HttpHeaders headers) {
+        final Map<String, List<String>> map = new HashMap<>();
+        headers.forEach((name, value) -> {
+            final String nameStr = name.toString();
+            final List<String> values = map.computeIfAbsent(nameStr, k -> new ArrayList<>());
+            values.add(value);
+        });
+        return Collections.unmodifiableMap(map);
     }
 }
