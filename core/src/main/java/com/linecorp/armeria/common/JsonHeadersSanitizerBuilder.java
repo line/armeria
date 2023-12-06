@@ -60,7 +60,7 @@ public final class JsonHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
     }
 
     /**
-     * Sets the {@link ObjectMapper} that will be used to convert an object into a JSON format message.
+     * Sets the {@link ObjectMapper} that will be used to convert headers into a {@link JsonNode}.
      */
     public JsonHeadersSanitizerBuilder objectMapper(ObjectMapper objectMapper) {
         this.objectMapper = requireNonNull(objectMapper, "objectMapper");
@@ -68,7 +68,7 @@ public final class JsonHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
     }
 
     /**
-     * Returns a newly-created JSON {@link HeadersSanitizer} based on the properties of this builder.
+     * Returns a newly created JSON {@link HeadersSanitizer} based on the properties of this builder.
      */
     public JsonHeadersSanitizer build() {
         final ObjectMapper objectMapper = this.objectMapper != null ?

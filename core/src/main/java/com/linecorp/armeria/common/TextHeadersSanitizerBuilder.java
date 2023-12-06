@@ -49,7 +49,7 @@ public final class TextHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
     }
 
     /**
-     * Returns a newly-created text {@link HeadersSanitizer} based on the properties of this builder.
+     * Returns a newly created text {@link HeadersSanitizer} based on the properties of this builder.
      */
     public TextHeadersSanitizer build() {
         return new TextHeadersSanitizer(maskHeaders(), mask());

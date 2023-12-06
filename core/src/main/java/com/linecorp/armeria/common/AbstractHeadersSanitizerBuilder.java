@@ -56,17 +56,17 @@ abstract class AbstractHeadersSanitizerBuilder<T> {
     }
 
     /**
-     * Returns the {@link Function} to use to mask headers before logging.
-     */
-    final Function<String, String> mask() {
-        return mask;
-    }
-
-    /**
      * Sets the {@link Function} to use to mask headers before logging.
      */
     public AbstractHeadersSanitizerBuilder<T> mask(Function<String, String> mask) {
         this.mask = requireNonNull(mask, "mask");
         return this;
+    }
+
+    /**
+     * Returns the {@link Function} to use to mask headers before logging.
+     */
+    final Function<String, String> mask() {
+        return mask;
     }
 }
