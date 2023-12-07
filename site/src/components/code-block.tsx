@@ -152,6 +152,10 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   if (code.length === 0) {
     return null;
   }
+
+  const codeWithDollarPrefixRemoved = code.startsWith('$ ')
+    ? code.substring(2)
+    : code;
   const applyHighlightStyle = (lineNumber: number) => {
     if (lineNumber !== 0 && targetLines.includes(`${lineNumber}`)) {
       return { style: lineHighlights };
@@ -168,7 +172,10 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
       {props.filename && (
         <div className={styles.filename}>{props.filename}</div>
       )}
-      <CopyToClipboard text={code} onCopy={onCopyCallback}>
+      <CopyToClipboard
+        text={codeWithDollarPrefixRemoved}
+        onCopy={onCopyCallback}
+      >
         <Button
           className={styles.clipboardButton}
           aria-label="Copy to clipboard"
