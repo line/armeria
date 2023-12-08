@@ -713,6 +713,10 @@ module = "org.junit.platform:junit-platform-launcher"
 module = "org.junit-pioneer:junit-pioneer"
 version.ref = "junit-pioneer"
 
+[libraries.junit-testng-engine]
+module = "org.junit.support:testng-engine"
+version = "1.0.4"
+
 [libraries.jwt]
 module = "com.auth0:java-jwt"
 version.ref = "jwt"
