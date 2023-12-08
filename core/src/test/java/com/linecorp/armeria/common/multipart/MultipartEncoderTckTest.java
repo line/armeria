@@ -32,6 +32,8 @@
 
 package com.linecorp.armeria.common.multipart;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.stream.LongStream;
 
 import org.reactivestreams.Publisher;
@@ -60,6 +62,7 @@ public class MultipartEncoderTckTest extends PublisherVerification<HttpData> {
 
     @Override
     public Publisher<HttpData> createPublisher(final long l) {
+        assertThat(1).isEqualTo(2);
         final Flux<BodyPart> source =
                 Flux.fromStream(LongStream.rangeClosed(1, l)
                                           .mapToObj(i -> BodyPart.builder()
