@@ -141,6 +141,7 @@ class HttpServerStreamingTest {
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
     void testTooLargeContent(WebClient client) throws Exception {
+        assertThat(1).isEqualTo(2);
         final int maxContentLength = 65536;
         serverMaxRequestLength = maxContentLength;
 
