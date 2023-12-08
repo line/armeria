@@ -98,7 +98,6 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
 
     @Test
     fun test_backPressuresWithBuffer() {
-        assertThat(1).isEqualTo(3)
         val queue: BlockingQueue<Any> = LinkedTransferQueue()
         lateinit var subscription: Subscription
 

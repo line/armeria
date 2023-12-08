@@ -32,8 +32,6 @@
 
 package com.linecorp.armeria.common.multipart;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.stream.LongStream;
 
 import org.reactivestreams.Publisher;
@@ -79,7 +77,6 @@ public class MultipartEncoderTckTest extends PublisherVerification<HttpData> {
     @Override
     public void required_spec313_cancelMustMakeThePublisherEventuallyDropAllReferencesToTheSubscriber()
             throws Throwable {
-        assertThat(1).isEqualTo(2);
         super.required_spec313_cancelMustMakeThePublisherEventuallyDropAllReferencesToTheSubscriber();
     }
 
