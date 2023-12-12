@@ -156,6 +156,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         lock.lock();
         try {
             for (Endpoint endpoint : endpoints) {
+                if (contexts.containsKey(endpoint)) {
+                    continue;
+                }
                 final DefaultHealthCheckerContext context = findContext(endpoint);
                 if (context != null) {
                     contexts.put(endpoint, context.retain());
@@ -164,7 +167,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
 
-            final HealthCheckContextGroup contextGroup = new HealthCheckContextGroup(contexts, candidates,
+            final HealthCheckContextGroup contextGroup = new HealthCheckContextGroup(contexts, endpoints,
                                                                                      checkerFactory);
             // 'updateHealth()' that retrieves 'contextGroupChain' could be invoked while initializing
             // HealthCheckerContext. For this reason, 'contexts' should be added to 'contextGroupChain'
@@ -179,7 +182,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     if (logger.isWarnEnabled()) {
                         logger.warn("The first health check failed for all endpoints. " +
                                     "numCandidates: {} candidates: {}",
-                                    candidates.size(), truncate(candidates, 10), cause);
+                                    endpoints.size(), truncate(endpoints, 10), cause);
                     }
                 }
                 initialized = true;
@@ -256,6 +259,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private void destroyOldContexts(HealthCheckContextGroup contextGroup) {
         lock.lock();
         try {
+            if (!contextGroupChain.contains(contextGroup)) {
+                // The contextGroup is already removed by another callback of `contextGroup.whenInitialized()`.
+                return;
+            }
             final Iterator<HealthCheckContextGroup> it = contextGroupChain.iterator();
             while (it.hasNext()) {
                 final HealthCheckContextGroup maybeOldGroup = it.next();
