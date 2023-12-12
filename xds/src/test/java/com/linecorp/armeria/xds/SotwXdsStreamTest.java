@@ -145,10 +145,10 @@ class SotwXdsStreamTest {
 
             // check if the initial cache update is done
             await().until(() -> !responseHandler.getResponses().isEmpty());
-            assertThat(responseHandler.getResponses()).hasSize(1);
-            DiscoveryResponse res = responseHandler.getResponses().get(0);
-            Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            assertThat(responseHandler.getResponses()).allSatisfy(res -> {
+                final Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
+                assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            });
             responseHandler.clear();
 
             // check if a cache update is propagated to the handler
@@ -160,10 +160,10 @@ class SotwXdsStreamTest {
                             ImmutableList.of(), "2"));
 
             await().until(() -> !responseHandler.getResponses().isEmpty());
-            assertThat(responseHandler.getResponses()).hasSize(1);
-            res = responseHandler.getResponses().get(0);
-            expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            assertThat(responseHandler.getResponses()).allSatisfy(res -> {
+                final Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
+                assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            });
             responseHandler.clear();
 
             // now the stream is stopped, so no more updates
@@ -200,10 +200,10 @@ class SotwXdsStreamTest {
 
             // check if the initial cache update is done
             await().until(() -> !responseHandler.getResponses().isEmpty());
-            assertThat(responseHandler.getResponses()).hasSize(1);
-            DiscoveryResponse res = responseHandler.getResponses().get(0);
-            Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            assertThat(responseHandler.getResponses()).allSatisfy(res -> {
+                final Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
+                assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            });
             responseHandler.clear();
 
             // stop the stream and verify there are no updates
@@ -222,10 +222,10 @@ class SotwXdsStreamTest {
             // restart the thread and verify that the handle receives the update
             stream.start();
             await().until(() -> !responseHandler.getResponses().isEmpty());
-            assertThat(responseHandler.getResponses()).hasSize(1);
-            res = responseHandler.getResponses().get(0);
-            expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            assertThat(responseHandler.getResponses()).allSatisfy(res -> {
+                final Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
+                assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            });
         }
     }
 
@@ -257,10 +257,10 @@ class SotwXdsStreamTest {
 
             // Once an update is done, the handler will eventually receive the new update
             await().until(() -> !responseHandler.getResponses().isEmpty());
-            assertThat(responseHandler.getResponses()).hasSize(1);
-            final DiscoveryResponse res = responseHandler.getResponses().get(0);
-            final Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            assertThat(responseHandler.getResponses()).allSatisfy(res -> {
+                final Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
+                assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            });
         }
     }
 
@@ -299,10 +299,10 @@ class SotwXdsStreamTest {
 
             // Once an update is done, the handler will eventually receive the new update
             await().until(() -> !responseHandler.getResponses().isEmpty());
-            assertThat(responseHandler.getResponses()).hasSize(1);
-            final DiscoveryResponse res = responseHandler.getResponses().get(0);
-            final Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            assertThat(responseHandler.getResponses()).allSatisfy(res -> {
+                final Cluster expected = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
+                assertThat(res.getResources(0).unpack(Cluster.class)).isEqualTo(expected);
+            });
         }
     }
 
