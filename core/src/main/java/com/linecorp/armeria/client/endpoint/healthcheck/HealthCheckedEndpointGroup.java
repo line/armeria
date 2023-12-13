@@ -149,13 +149,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         delegate.addListener(this::setCandidates, true);
     }
 
-    private void setCandidates(List<Endpoint> candidates) {
-        final List<Endpoint> endpoints = healthCheckStrategy.select(candidates);
-        final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(endpoints.size());
+    private void setCandidates(List<Endpoint> endpoints) {
+        final List<Endpoint> candidates = healthCheckStrategy.select(endpoints);
+        final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(candidates.size());
 
         lock.lock();
         try {
-            for (Endpoint endpoint : endpoints) {
+            for (Endpoint endpoint : candidates) {
                 if (contexts.containsKey(endpoint)) {
                     continue;
                 }
@@ -167,7 +167,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
 
-            final HealthCheckContextGroup contextGroup = new HealthCheckContextGroup(contexts, endpoints,
+            final HealthCheckContextGroup contextGroup = new HealthCheckContextGroup(contexts, candidates,
                                                                                      checkerFactory);
             // 'updateHealth()' that retrieves 'contextGroupChain' could be invoked while initializing
             // HealthCheckerContext. For this reason, 'contexts' should be added to 'contextGroupChain'
@@ -182,7 +182,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     if (logger.isWarnEnabled()) {
                         logger.warn("The first health check failed for all endpoints. " +
                                     "numCandidates: {} candidates: {}",
-                                    endpoints.size(), truncate(endpoints, 10), cause);
+                                    candidates.size(), truncate(candidates, 10), cause);
                     }
                 }
                 initialized = true;
