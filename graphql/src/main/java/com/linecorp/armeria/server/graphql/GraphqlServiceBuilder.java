@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.graphql;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static graphql.com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -282,7 +283,6 @@ public final class GraphqlServiceBuilder {
      */
     public GraphqlServiceBuilder webSocketBuilderCustomizer(
             Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer) {
-        checkState(useWebSocket, "useWebSocket must be true to customize WebSocketServiceBuilder");
         this.webSocketBuilderCustomizer = webSocketBuilderCustomizer;
         return this;
     }
@@ -316,6 +316,9 @@ public final class GraphqlServiceBuilder {
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
+        checkArgument(useWebSocket || webSocketBuilderCustomizer == null,
+                      "useWebSocket must be true to customize WebSocketServiceBuilder");
+
         final GraphQLSchema schema = buildSchema();
         GraphQL.Builder builder = GraphQL.newGraphQL(schema)
                                          .executionIdProvider(executionIdGenerator.asExecutionProvider());

@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import graphql.ExecutionResult;
 
@@ -48,7 +49,8 @@ class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
             A Subscriber MUST call Subscription.cancel() on the given Subscription after an onSubscribe signal
             if it already has an active Subscription.
              */
-            subscription.cancel();
+            s.cancel();
+            return;
         }
         subscription = s;
         requestMore();
@@ -56,21 +58,17 @@ class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
 
     @Override
     public void onNext(ExecutionResult executionResult) {
-        if (subscription == null) {
-            return;
-        }
+        assert subscription != null;
         try {
             if (executionResult.getErrors().isEmpty()) {
                 protocol.sendResult(operationId, executionResult);
                 requestMore();
             } else {
                 protocol.sendGraphqlErrors(executionResult.getErrors());
-                if (subscription != null) {
-                    subscription.cancel();
-                }
+                subscription.cancel();
             }
         } catch (JsonProcessingException e) {
-            logger.error("Error serializing graphql result", e);
+            protocol.completeWithError(e);
             if (subscription != null) {
                 subscription.cancel();
             }
@@ -100,10 +98,10 @@ class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
     }
 
     public void setCompleted() {
-        if (subscription != null) {
-            subscription.cancel();
-            subscription = null;
+        if (subscription == null) {
+            subscription = NoopSubscription.get();
         }
+        subscription.cancel();
     }
 
     private void requestMore() {

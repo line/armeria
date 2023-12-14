@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -119,8 +120,8 @@ class GraphqlWSSubProtocol {
 
                         final ExecutionInput.Builder executionInput =
                                 ExecutionInput.newExecutionInput()
-                                              .graphQLContext(upgradeCtx)
                                               .graphQLContext(connectionCtx)
+                                              .graphQLContext(upgradeCtx)
                                               .query(query)
                                               .variables(variables)
                                               .operationName(operationName)
@@ -159,7 +160,7 @@ class GraphqlWSSubProtocol {
     }
 
     private void handleExecutionResult(WebSocketWriter out, String id,
-                                @Nullable ExecutionResult executionResult, @Nullable Throwable t) {
+                                       @Nullable ExecutionResult executionResult, @Nullable Throwable t) {
         if (t != null) {
             logger.debug("Error handling subscription", t);
             writeError(out, id, t);
@@ -192,6 +193,8 @@ class GraphqlWSSubProtocol {
 
         final ExecutionResultSubscriber executionResultSubscriber =
                 new ExecutionResultSubscriber(id, new GraphqlSubProtocol() {
+                    boolean completed;
+
                     @Override
                     public void sendResult(String operationId, ExecutionResult executionResult) {
                         writeNext(out, operationId, executionResult);
@@ -204,22 +207,22 @@ class GraphqlWSSubProtocol {
 
                     @Override
                     public void completeWithError(Throwable cause) {
-                        writeError(out, id, cause);
-                        final ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
-                        if (s != null) {
-                            s.setCompleted();
-                            streamMessage.abort(cause);
+                        if (completed) {
+                            return;
                         }
+                        completed = true;
+                        writeError(out, id, cause);
+                        graphqlSubscriptions.remove(id);
                     }
 
                     @Override
                     public void complete() {
-                        writeComplete(out, id);
-                        final ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
-                        if (s != null) {
-                            s.setCompleted();
-                            streamMessage.abort();
+                        if (completed) {
+                            return;
                         }
+                        completed = true;
+                        writeComplete(out, id);
+                        graphqlSubscriptions.remove(id);
                     }
                 });
 
@@ -303,7 +306,9 @@ class GraphqlWSSubProtocol {
         final HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
-        errorResponse.put("payload", errors);
+        final List<Map<String, Object>> errorSpecifications =
+                errors.stream().map(GraphQLError::toSpecification).collect(Collectors.toList());
+        errorResponse.put("payload", errorSpecifications);
         try {
             final String event = serializeToJson(errorResponse);
             logger.trace("ERROR: {}", event);
@@ -334,7 +339,7 @@ class GraphqlWSSubProtocol {
                     public ErrorClassification getErrorType() {
                         return ErrorClassification.errorClassification("Unknown");
                     }
-                }
+                }.toSpecification()
         ));
         try {
             final String event = serializeToJson(errorResponse);
