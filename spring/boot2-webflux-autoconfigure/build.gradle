@@ -70,6 +70,7 @@ task generateSources(type: Copy) {
     from("${"${rootProject.projectDir}/spring/boot3-webflux-autoconfigure"}/src") {
         exclude '**/AbstractServerHttpResponseVersionSpecific.java'
         exclude '**/package-info.java'
+        exclude '**/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
     }
 
     into "${project.ext.genSrcDir}"

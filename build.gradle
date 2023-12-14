@@ -50,6 +50,7 @@ gradle.buildFinished({ result ->
     }
 })
 
+def isCi = System.getenv("CI") != null
 allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
@@ -123,6 +124,10 @@ allprojects {
                 maxRetries = 3
                 failOnPassedAfterRetry = rootProject.findProperty('failOnPassedAfterRetry') != 'false'
             }
+        }
+
+        predictiveSelection {
+            enabled.set(!isCi)
         }
     }
 }
