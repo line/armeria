@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.client;
 
+import javax.net.ssl.SSLException;
+
 import com.linecorp.armeria.common.Flags;
 
 /**
- * A {@link RuntimeException} raised before starting a TLS handshake.
+ * An {@link SSLException} raised before starting a TLS handshake.
  */
-public final class PreTlsHandshakeException extends RuntimeException {
+public final class PreTlsHandshakeException extends SSLException {
 
     private static final long serialVersionUID = -4425286273254997423L;
 
