@@ -132,7 +132,7 @@ jobs:
 
       - name: Upload Gradle build scan
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PR_NUMBER && format('{0}-', env.PR_NUMBER) || '' }}build-scan-${{ env.JOB_NAME }}
           path: ~/.gradle/build-scan-data
@@ -209,7 +209,7 @@ jobs:
 
       - name: Upload the artifacts
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: reports-${{ env.JOB_NAME }}
           path: reports-${{ env.JOB_NAME }}.tar
