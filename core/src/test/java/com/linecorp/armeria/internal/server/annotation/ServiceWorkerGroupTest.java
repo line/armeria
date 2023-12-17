@@ -28,12 +28,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.Server;
@@ -78,6 +83,25 @@ class ServiceWorkerGroupTest {
                     });
                 }
                 return HttpResponse.of(200);
+            });
+            sb.service("/subscribe", (ctx, req) -> {
+                return HttpResponse.of(new Publisher<HttpObject>() {
+                    @Override
+                    public void subscribe(Subscriber<? super HttpObject> s) {
+                        s.onSubscribe(new Subscription() {
+                            @Override
+                            public void request(long n) {
+                                threadQueue.add(Thread.currentThread());
+                                s.onNext(ResponseHeaders.builder(200).endOfStream(true).build());
+                                s.onComplete();
+                            }
+
+                            @Override
+                            public void cancel() {
+                            }
+                        });
+                    }
+                });
             });
 
             sb.serviceWorkerGroup(defaultExecutor, true);
@@ -149,6 +173,15 @@ class ServiceWorkerGroupTest {
         assertThat(aggRes.status().code()).isEqualTo(200);
 
         await().untilAsserted(() -> assertThat(threadQueue).hasSize(RequestLogProperty.values().length));
+        assertThat(threadQueue).allSatisfy(t -> assertThat(defaultExecutor.inEventLoop(t)).isTrue());
+    }
+
+    @Test
+    void subscribeWorkerThread() {
+        final AggregatedHttpResponse aggRes = server.blockingWebClient().get("/subscribe");
+        assertThat(aggRes.status().code()).isEqualTo(200);
+
+        await().untilAsserted(() -> assertThat(threadQueue).isNotEmpty());
         assertThat(threadQueue).allSatisfy(t -> assertThat(defaultExecutor.inEventLoop(t)).isTrue());
     }
 
