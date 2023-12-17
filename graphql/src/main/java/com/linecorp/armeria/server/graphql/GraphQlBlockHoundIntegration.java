@@ -25,6 +25,6 @@ import reactor.blockhound.integration.BlockHoundIntegration;
 public class GraphQlBlockHoundIntegration implements BlockHoundIntegration {
     @Override
     public void applyTo(Builder builder) {
-        builder.allowBlockingCallsInside("om.linecorp.armeria.server.graphql.DefaultGraphqlService", "executeGraphql");
+        builder.allowBlockingCallsInside("graphql.execution.ExecutionId", "generate");
     }
 }
