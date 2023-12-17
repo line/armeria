@@ -25,8 +25,11 @@ import io.grpc.Status;
 
 /**
  * A mapping function that converts a {@link Throwable} into a gRPC {@link Status}.
+ *
+ * @deprecated Use {@link GrpcExceptionHandlerFunction} instead.
  */
 @UnstableApi
+@Deprecated
 @FunctionalInterface
 public interface GrpcStatusFunction {
 

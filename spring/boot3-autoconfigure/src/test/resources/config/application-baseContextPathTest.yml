@@ -1,0 +1,4 @@
+armeria:
+  ports:
+  - port: 0
+  context-path: /foo

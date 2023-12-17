@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -254,6 +255,11 @@ public final class AnnotatedServiceBindingBuilder extends AbstractAnnotatedServi
     @Override
     public AnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         return (AnnotatedServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (AnnotatedServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     @Override

@@ -134,6 +134,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         final int id = req != null ? req.id() : ++receivedRequests;
         try {
             if (discarding) {
+                // This happens when:
+                // - Upgraded to HTTP/2 so the connection is reused.
+                // - the upgrade request exceeds maxRequestLength so this Http1RequestDecoder is discarded.
+                // - When receiving the LastHttpContent, remove this Http1RequestDecoder from the pipeline
+                //   thus, the next request will be handled by Http2RequestDecoder.
+                removeFromPipelineIfUpgraded(ctx, msg instanceof LastHttpContent);
                 return;
             }
 
@@ -244,7 +250,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                             eventLoop, id, 1, headers, false, inboundTrafficController,
                                             serviceConfig.maxRequestLength(), routingCtx,
                                             ExchangeType.BIDI_STREAMING,
-                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true);
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true, false);
                             assert encoder instanceof ServerHttp1ObjectEncoder;
                             ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
                             final ChannelPipeline pipeline = ctx.pipeline();
@@ -272,13 +278,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     return;
                 }
             }
-            if (msg instanceof LastHttpContent && encoder instanceof ServerHttp2ObjectEncoder) {
-                // An HTTP/1 connection has been upgraded to HTTP/2.
-                ctx.pipeline().remove(this);
-            }
+            final boolean endOfStream = msg instanceof LastHttpContent;
+            removeFromPipelineIfUpgraded(ctx, endOfStream);
 
             // req is not null.
-            if (msg instanceof LastHttpContent && req instanceof EmptyContentDecodedHttpRequest) {
+            if (endOfStream && req instanceof EmptyContentDecodedHttpRequest) {
                 this.req = null;
             } else if (msg instanceof HttpContent) {
                 assert req instanceof DecodedHttpRequestWriter;
@@ -306,12 +310,30 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                         .contentLength(req.headers())
                                                         .transferred(transferredLength)
                                                         .build();
-                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
+                        discarding = true;
+                        req = null;
+                        final boolean shouldReset;
+                        if (encoder instanceof ServerHttp1ObjectEncoder) {
+                            keepAliveHandler.disconnectWhenFinished();
+                            shouldReset = false;
+                        } else {
+                            // Upgraded to HTTP/2. Reset only if the remote peer is still open.
+                            shouldReset = !endOfStream;
+                        }
+
                         // Wrap the cause with the returned status to let LoggingService correctly log the
                         // status.
-                        decodedReq.abortResponse(
-                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause),
-                                true);
+                        final HttpStatusException httpStatusException =
+                                HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
+                        if (!decodedReq.isInitialized()) {
+                            assert decodedReq.needsAggregation();
+                            final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
+                                    inboundTrafficController, httpStatusException, shouldReset);
+                            ctx.fireChannelRead(streamingReq);
+                        } else {
+                            decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
+                            decodedReq.abortResponse(httpStatusException, true);
+                        }
                         return;
                     }
 
@@ -320,13 +342,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
                 }
 
-                if (msg instanceof LastHttpContent) {
+                if (endOfStream) {
                     final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                     if (!trailingHeaders.isEmpty()) {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
                     decodedReq.close();
                     if (decodedReq.needsAggregation()) {
+                        assert !decodedReq.isInitialized();
                         // An aggregated request is now ready to be fired.
                         ctx.fireChannelRead(decodedReq);
                     }
@@ -353,6 +376,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
+    private void removeFromPipelineIfUpgraded(ChannelHandlerContext ctx, boolean endOfStream) {
+        if (endOfStream && encoder instanceof ServerHttp2ObjectEncoder) {
+            // An HTTP/1 connection has been upgraded to HTTP/2.
+            ctx.pipeline().remove(this);
+        }
+    }
+
     private boolean handle100Continue(int id, HttpRequest nettyReq) {
         final HttpHeaders nettyHeaders = nettyReq.headers();
         if (nettyReq.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
@@ -372,7 +402,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
 
         // Send a '100 Continue' response.
-        encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false);
+        encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false, HttpMethod.valueOf(nettyReq.method().name()));
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         nettyHeaders.remove(HttpHeaderNames.EXPECT);
@@ -388,7 +418,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         if (encoder.isResponseHeadersSent(id, 1)) {
             // The response is sent or being sent by HttpResponseSubscriber, so we cannot send
             // the error response.
-            encoder.writeReset(id, 1, Http2Error.PROTOCOL_ERROR);
+            encoder.writeReset(id, 1, Http2Error.PROTOCOL_ERROR, false);
         } else {
             discarding = true;
             req = null;

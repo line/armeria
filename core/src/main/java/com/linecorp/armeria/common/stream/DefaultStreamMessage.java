@@ -323,6 +323,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
             return;
         }
 
+        if (subscription.subscriber() instanceof AbortingSubscriber) {
+            // The stream is being aborted.
+            return;
+        }
+
         if (queue.isEmpty()) {
             return;
         }

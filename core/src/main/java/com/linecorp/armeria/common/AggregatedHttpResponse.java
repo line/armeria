@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.setOrRemoveContentLength;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeUpdateContentLengthAndEndOfStream;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -253,7 +253,8 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
         requireNonNull(trailers, "trailers");
 
         // Set the 'content-length' header if possible.
-        final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailers);
+        final ResponseHeaders newHeaders =
+                maybeUpdateContentLengthAndEndOfStream(headers, content, trailers, true);
 
         return new DefaultAggregatedHttpResponse(ImmutableList.copyOf(informationals),
                                                  newHeaders, content, trailers);

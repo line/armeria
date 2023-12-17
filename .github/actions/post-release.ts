@@ -41,18 +41,20 @@ async function main(): Promise<void> {
   });
   console.log(`📝 https://github.com/line/armeria/releases/tag/${tag} has been updated.`)
 
-  // Trigger Central Dogma workflow to upgrade Armeria version
-  console.log(`⛓️ Triggering 'update-armeria-version' workflow in Central Dogma repository...`);
-  await octokit.rest.actions.createWorkflowDispatch({
-    owner: owner,
-    repo: 'centraldogma',
-    workflow_id: 'update-armeria-version.yml',
-    ref: 'main',
-    inputs: {
-      armeria_version: releaseVersion
-    },
-  })
-  console.log("⛓️ https://github.com/line/centraldogma/actions/workflows/update-armeria-version.yml has been triggered.")
+  if (!releaseVersion.endsWith(".0")) {
+    // Trigger Central Dogma workflow to upgrade Armeria version
+    console.log(`⛓️ Triggering 'update-armeria-version' workflow in Central Dogma repository...`);
+    await octokit.rest.actions.createWorkflowDispatch({
+      owner: owner,
+      repo: 'centraldogma',
+      workflow_id: 'update-armeria-version.yml',
+      ref: 'main',
+      inputs: {
+        armeria_version: releaseVersion
+      },
+    })
+    console.log("⛓️ https://github.com/line/centraldogma/actions/workflows/update-armeria-version.yml has been triggered.")
+  }
 }
 
 /**

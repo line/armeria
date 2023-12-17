@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
 import static com.linecorp.armeria.server.VirtualHostBuilder.ensureNoPseudoHeader;
 import static com.linecorp.armeria.server.VirtualHostBuilder.mergeDefaultHeaders;
 import static java.util.Objects.requireNonNull;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -79,6 +82,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
+    private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
     @Nullable
@@ -260,7 +264,18 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Override
     public ServiceConfigBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         requireNonNull(serviceErrorHandler, "serviceErrorHandler");
-        this.serviceErrorHandler = serviceErrorHandler;
+        if (this.serviceErrorHandler == null) {
+            this.serviceErrorHandler = serviceErrorHandler;
+        } else {
+            this.serviceErrorHandler = this.serviceErrorHandler.orElse(serviceErrorHandler);
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        this.contextHook = mergeHooks(this.contextHook, contextHook);
         return this;
     }
 
@@ -319,7 +334,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
                         @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
-                        String baseContextPath) {
+                        String baseContextPath, Supplier<AutoCloseable> contextHook) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
@@ -357,6 +372,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
             requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
         }
 
+        final Supplier<AutoCloseable> mergedContextHook = mergeHooks(contextHook, this.contextHook);
+
         final Route routeWithBaseContextPath = route.withPrefix(baseContextPath);
         return new ServiceConfig(
                 routeWithBaseContextPath,
@@ -374,7 +391,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 serviceWorkerGroup != null ? serviceWorkerGroup : defaultServiceWorkerGroup,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
-                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler);
+                requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler,
+                mergedContextHook);
     }
 
     @Override
@@ -394,6 +412,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("shutdownSupports", shutdownSupports)
                           .add("defaultHeaders", defaultHeaders)
                           .add("serviceErrorHandler", serviceErrorHandler)
+                          .add("contextHook", contextHook)
                           .toString();
     }
 }

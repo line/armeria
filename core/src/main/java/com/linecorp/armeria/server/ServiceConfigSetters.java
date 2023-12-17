@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -282,8 +283,14 @@ interface ServiceConfigSetters {
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
 
     /**
-     * Sets the default {@link ServiceErrorHandler} served by this {@link Service}.
+     * Adds the default {@link ServiceErrorHandler} served by this {@link Service}.
+     * If multiple handlers are added, the latter is composed with the former using
+     * {@link ServiceErrorHandler#orElse(ServiceErrorHandler)}
+     *
      * @param serviceErrorHandler the default {@link ServiceErrorHandler}
      */
     ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler);
+
+    @UnstableApi
+    ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook);
 }

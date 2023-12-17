@@ -51,5 +51,22 @@ public final class InternalStreamMessageUtil {
         return false;
     }
 
+    public static SubscriptionOption[] toSubscriptionOptions(boolean withPooledObjects,
+                                                             boolean notifyCancellation) {
+        if (withPooledObjects) {
+            if (notifyCancellation) {
+                return CANCELLATION_AND_POOLED_OPTIONS;
+            } else {
+                return POOLED_OBJECTS;
+            }
+        } else {
+            if (notifyCancellation) {
+                return CANCELLATION_OPTION;
+            } else {
+                return EMPTY_OPTIONS;
+            }
+        }
+    }
+
     private InternalStreamMessageUtil() {}
 }

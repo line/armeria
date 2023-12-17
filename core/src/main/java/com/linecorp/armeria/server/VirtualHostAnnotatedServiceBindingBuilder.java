@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -261,6 +262,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder extends AbstractAnn
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         return (VirtualHostAnnotatedServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder contextHook(
+            Supplier<? extends AutoCloseable> contextHook) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     @Override

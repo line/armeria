@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -329,6 +330,12 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
     @Override
     public AbstractAnnotatedServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
         defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
+        return this;
+    }
+
+    @Override
+    public AbstractAnnotatedServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        defaultServiceConfigSetters.contextHook(contextHook);
         return this;
     }
 

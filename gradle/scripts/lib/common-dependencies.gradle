@@ -159,6 +159,22 @@ configure(projectsWithFlags('java')) {
         }
     }
 
+    configurations.create("dependencyManagement") {
+        visible = false
+        canBeConsumed = false
+        canBeResolved = false
+    }
+    configurations.configureEach {
+        ["Classpath", "AnnotationProcessor", "kapt"].each { name ->
+            if (it.name.containsIgnoreCase(name)) {
+                it.extendsFrom(configurations.dependencyManagement)
+            }
+        }
+    }
+    dependencies {
+        dependencyManagement(platform(dependencyManagementProject))
+    }
+
     // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
     // canBeConsumed are set otherwise.
     afterEvaluate {
@@ -171,15 +187,6 @@ configure(projectsWithFlags('java')) {
         def productionRuntimeClasspathConfig = configurations.findByName('productionRuntimeClasspath')
         if (springBootGradlePlugin != null && bootJarTask != null && productionRuntimeClasspathConfig != null) {
             productionRuntimeClasspathConfig.canBeConsumed(false)
-        }
-
-        dependencies {
-            configurations.configureEach { configuration ->
-                // Add to resolvable configurations
-                if (!configuration.canBeResolved && !configuration.canBeConsumed) {
-                    add(configuration.name, platform(dependencyManagementProject))
-                }
-            }
         }
     }
 }
