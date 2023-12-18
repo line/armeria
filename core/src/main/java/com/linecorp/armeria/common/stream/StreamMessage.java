@@ -1136,4 +1136,12 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
         return new SurroundingPublisher<>(null, this, finalizer);
     }
+
+    /**
+     * Run subscribe, onSubscribe and request on the specified {@link EventExecutor}
+     * and relays the stream transparently downstream.
+     */
+    default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
+        return new SubscribeOnStreamMessage<>(this, eventExecutor);
+    }
 }

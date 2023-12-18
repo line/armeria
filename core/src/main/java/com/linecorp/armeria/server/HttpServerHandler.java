@@ -391,9 +391,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (needsDirectExecution) {
             res = serve0(req, serviceCfg, service, reqCtx);
         } else {
-            res = HttpResponse.of(() -> {
-                return serve0(req, serviceCfg, service, reqCtx);
-            }, serviceEventLoop);
+            res = HttpResponse.of(() -> serve0(req, serviceCfg, service, reqCtx),
+                                  serviceEventLoop)
+                              .subscribeOn(serviceEventLoop);
         }
 
         // Keep track of the number of unfinished requests and
