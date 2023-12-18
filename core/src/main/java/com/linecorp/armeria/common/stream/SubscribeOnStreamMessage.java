@@ -28,7 +28,7 @@ final class SubscribeOnStreamMessage<T> implements StreamMessage<T> {
     private final StreamMessage<T> upstream;
     private final EventExecutor upstreamExecutor;
 
-    public SubscribeOnStreamMessage(StreamMessage<T> upstream, EventExecutor upstreamExecutor) {
+    SubscribeOnStreamMessage(StreamMessage<T> upstream, EventExecutor upstreamExecutor) {
         this.upstream = upstream;
         this.upstreamExecutor = upstreamExecutor;
     }
@@ -78,11 +78,10 @@ final class SubscribeOnStreamMessage<T> implements StreamMessage<T> {
 
     static class SchedulingSubscriber<T> implements Subscriber<T> {
 
-
         private final Subscriber<? super T> downstream;
         private final EventExecutor downstreamExecutor;
 
-        public SchedulingSubscriber(EventExecutor downstreamExecutor, Subscriber<? super T> downstream) {
+        SchedulingSubscriber(EventExecutor downstreamExecutor, Subscriber<? super T> downstream) {
             this.downstream = downstream;
             this.downstreamExecutor = downstreamExecutor;
         }
