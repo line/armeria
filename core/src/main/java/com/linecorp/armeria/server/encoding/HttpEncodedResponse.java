@@ -167,9 +167,8 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
                 logger.warn("Subscriber.onNext() should not raise an exception. subscriber: {}",
                             subscriber, t);
             }
-        } else {
-            buf.release();
         }
+        buf.release();
     }
 
     @Override
