@@ -171,13 +171,7 @@ public final class GrpcClientOptions {
      * via request metadata.
      */
     public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
-            ClientOption.define("EXCEPTION_HANDLER", (ctx, cause, metadata) -> null,
-                                Function.identity(),
-                                (oldValue, newValue) -> {
-                                    final GrpcExceptionHandlerFunction merged =
-                                            oldValue.value().orElse(newValue.value());
-                                    return newValue.option().newValue(merged);
-                                });
+            ClientOption.define("EXCEPTION_HANDLER", (ctx, cause, metadata) -> null);
 
     private GrpcClientOptions() {}
 }

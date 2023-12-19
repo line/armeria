@@ -81,6 +81,7 @@ import io.grpc.Codec;
 import io.grpc.Compressor;
 import io.grpc.DecompressorRegistry;
 import io.grpc.ServiceDescriptor;
+import io.grpc.Status;
 
 /**
  * Creates a new gRPC client that connects to the specified {@link URI} using the builder pattern.
@@ -391,6 +392,9 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         if (!clientInterceptors.isEmpty()) {
             option(GrpcClientOptions.INTERCEPTORS.newValue(clientInterceptors));
         }
+        if (exceptionHandler != null) {
+            option(EXCEPTION_HANDLER.newValue(exceptionHandler));
+        }
 
         final Object client;
         final ClientOptions options = buildOptions();
@@ -566,8 +570,17 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         return (GrpcClientBuilder) super.contextCustomizer(contextCustomizer);
     }
 
+    /**
+     * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
+     * to a gRPC {@link Status}.
+     */
     public GrpcClientBuilder exceptionHandler(GrpcExceptionHandlerFunction exceptionHandler) {
         requireNonNull(exceptionHandler, "exceptionHandler");
-        return option(EXCEPTION_HANDLER, exceptionHandler);
+        if (this.exceptionHandler == null) {
+            this.exceptionHandler = exceptionHandler;
+        } else {
+            this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
+        }
+        return this;
     }
 }

@@ -179,7 +179,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 decompressorRegistry,
                 serializationFormat,
                 jsonMarshaller,
-                unsafeWrapResponseBuffers);
+                unsafeWrapResponseBuffers,
+                exceptionHandler);
     }
 
     @Override

@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiFunction;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -244,14 +246,16 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         // Must come after handling deadline.
         prepareHeaders(compressor, metadata, remainingNanos);
 
+        final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
+                (unused, cause) -> HttpResponse.ofFailure(
+                        GrpcStatus.fromThrowable(exceptionHandler, ctx, cause, metadata)
+                                  .withDescription(cause.getMessage())
+                                  .asRuntimeException());
         final HttpResponse res = initContextAndExecuteWithFallback(
-                httpClient, ctx, endpointGroup, HttpResponse::of,
-                (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
-                                                                    .withDescription(cause.getMessage())
-                                                                    .asRuntimeException()));
+                httpClient, ctx, endpointGroup, HttpResponse::of, errorResponseFactory);
 
         final HttpStreamDeframer deframer = new HttpStreamDeframer(
-                decompressorRegistry, ctx, this, null,
+                decompressorRegistry, ctx, this, exceptionHandler,
                 maxInboundMessageSizeBytes, grpcWebText, false);
         final StreamMessage<DeframedMessage> deframed = res.decode(deframer, ctx.alloc());
         deframer.setDeframedStreamMessage(deframed);
@@ -449,7 +453,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             });
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            final Metadata metadata = new Metadata();
+            close(GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata), metadata);
         }
     }
 
@@ -505,7 +510,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void closeWhenListenerThrows(Throwable t) {
-        closeWhenEos(GrpcStatus.fromThrowable(t), new Metadata());
+        final Metadata metadata = new Metadata();
+        closeWhenEos(GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata), metadata);
     }
 
     private void closeWhenEos(Status status, Metadata metadata) {
