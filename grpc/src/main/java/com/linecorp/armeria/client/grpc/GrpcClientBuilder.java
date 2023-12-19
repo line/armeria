@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.CALL_CREDENTIALS;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.COMPRESSOR;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.DECOMPRESSOR_REGISTRY;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.EXCEPTION_HANDLER;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES;
@@ -66,6 +67,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -96,6 +98,8 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private String prefix;
     private Scheme scheme;
+    @Nullable
+    private GrpcExceptionHandlerFunction exceptionHandler;
 
     GrpcClientBuilder(URI uri) {
         requireNonNull(uri, "uri");
@@ -560,5 +564,10 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     public GrpcClientBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (GrpcClientBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    public GrpcClientBuilder exceptionHandler(GrpcExceptionHandlerFunction exceptionHandler) {
+        requireNonNull(exceptionHandler, "exceptionHandler");
+        return option(EXCEPTION_HANDLER, exceptionHandler);
     }
 }

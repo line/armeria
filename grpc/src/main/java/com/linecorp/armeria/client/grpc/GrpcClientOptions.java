@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -164,6 +165,19 @@ public final class GrpcClientOptions {
      */
     public static final ClientOption<CallCredentials> CALL_CREDENTIALS =
             ClientOption.define("GRPC_CLIENT_CALL_CREDENTIALS", NullCallCredentials.INSTANCE);
+
+    /**
+     * Sets the {@link CallCredentials} that carries credential data that will be propagated to the server
+     * via request metadata.
+     */
+    public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
+            ClientOption.define("EXCEPTION_HANDLER", (ctx, cause, metadata) -> null,
+                                Function.identity(),
+                                (oldValue, newValue) -> {
+                                    final GrpcExceptionHandlerFunction merged =
+                                            oldValue.value().orElse(newValue.value());
+                                    return newValue.option().newValue(merged);
+                                });
 
     private GrpcClientOptions() {}
 }

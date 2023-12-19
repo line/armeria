@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -122,6 +123,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
     private final Compressor compressor;
+    private final GrpcExceptionHandlerFunction exceptionHandler;
 
     private boolean endpointInitialized;
     @Nullable
@@ -155,7 +157,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
-            boolean unsafeWrapResponseBuffers) {
+            boolean unsafeWrapResponseBuffers,
+            GrpcExceptionHandlerFunction exceptionHandler) {
         this.ctx = ctx;
         this.endpointGroup = endpointGroup;
         this.httpClient = httpClient;
@@ -170,6 +173,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
+        this.exceptionHandler = exceptionHandler;
 
         ctx.whenInitialized().handle((unused1, unused2) -> {
             runPendingTask();
