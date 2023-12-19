@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.ErrorClassification;
+import graphql.ErrorType;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQLError;
@@ -130,10 +131,10 @@ class GraphqlWSSubProtocol {
                         final CompletableFuture<ExecutionResult> future =
                                 graphqlExecutor.executeGraphql(ctx, executionInput);
 
-                        future.handleAsync(((executionResult, throwable) -> {
+                        future.handleAsync((executionResult, throwable) -> {
                             handleExecutionResult(out, id, executionResult, throwable);
                             return null;
-                        }), ctx.eventLoop());
+                        }, ctx.eventLoop());
                     } catch (Exception e) {
                         logger.debug("Error handling subscription", e);
                         GraphqlWSSubProtocol.this.writeError(out, id, e);
@@ -236,7 +237,7 @@ class GraphqlWSSubProtocol {
         }
     }
 
-    private String serializeToJson(Object object) throws JsonProcessingException {
+    private static String serializeToJson(Object object) throws JsonProcessingException {
         return mapper.writer().writeValueAsString(object);
     }
 
@@ -274,16 +275,16 @@ class GraphqlWSSubProtocol {
         }
     }
 
-    private <T> T parseJsonString(String content, TypeReference<T> typeReference)
+    private static <T> T parseJsonString(String content, TypeReference<T> typeReference)
             throws JsonProcessingException {
         return mapper.readValue(content, typeReference);
     }
 
-    private void writePong(WebSocketWriter out) {
+    private static void writePong(WebSocketWriter out) {
         out.tryWrite("{\"type\":\"pong\"}");
     }
 
-    private void writeConnectionAck(WebSocketWriter out) {
+    private static void writeConnectionAck(WebSocketWriter out) {
         out.tryWrite("{\"type\":\"connection_ack\"}");
     }
 
@@ -319,7 +320,7 @@ class GraphqlWSSubProtocol {
         }
     }
 
-    private void writeError(WebSocketWriter out, String operationId, Throwable t) {
+    private static void writeError(WebSocketWriter out, String operationId, Throwable t) {
         final HashMap<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("type", "error");
         errorResponse.put("id", operationId);
@@ -337,7 +338,7 @@ class GraphqlWSSubProtocol {
 
                     @Override
                     public ErrorClassification getErrorType() {
-                        return ErrorClassification.errorClassification("Unknown");
+                        return ErrorType.DataFetchingException;
                     }
                 }.toSpecification()
         ));
@@ -351,7 +352,7 @@ class GraphqlWSSubProtocol {
         }
     }
 
-    private void writeComplete(WebSocketWriter out, String operationId) {
+    private static void writeComplete(WebSocketWriter out, String operationId) {
         out.tryWrite("{\"type\":\"complete\",\"id\":\"" + operationId + "\"}");
     }
 }

@@ -29,7 +29,7 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import graphql.ExecutionResult;
 
 @SuppressWarnings("ReactiveStreamsSubscriberImplementation")
-class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
+final class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
     private static final Logger logger = LoggerFactory.getLogger(ExecutionResultSubscriber.class);
     private final GraphqlSubProtocol protocol;
     private final String operationId;

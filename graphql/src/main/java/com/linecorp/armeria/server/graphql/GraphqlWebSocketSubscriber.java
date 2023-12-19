@@ -26,12 +26,12 @@ import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 
 @SuppressWarnings("ReactiveStreamsSubscriberImplementation")
-class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
+final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
     private static final Logger logger = LoggerFactory.getLogger(GraphqlWebSocketSubscriber.class);
     private final GraphqlWSSubProtocol graphqlWSSubProtocol;
     private final WebSocketWriter outgoing;
     @Nullable
-    Subscription subscription;
+    private Subscription subscription;
 
     GraphqlWebSocketSubscriber(GraphqlWSSubProtocol graphqlWSSubProtocol, WebSocketWriter outgoing) {
         this.graphqlWSSubProtocol = graphqlWSSubProtocol;
@@ -62,9 +62,7 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
     @Override
     public void onNext(WebSocketFrame webSocketFrame) {
         logger.trace("onNext: {}", webSocketFrame);
-        if (subscription == null) {
-            return;
-        }
+        assert subscription != null;
         switch (webSocketFrame.type()) {
             // If Binary, handle it same as a text frame. Should never happen.
             case BINARY:
@@ -95,9 +93,8 @@ class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
                 subscription.request(1);
                 break;
             default:
-                logger.error("Unsupported type: {}", webSocketFrame.type());
-                subscription.cancel();
-                break;
+                // Should never reach here.
+                throw new Error();
         }
     }
 

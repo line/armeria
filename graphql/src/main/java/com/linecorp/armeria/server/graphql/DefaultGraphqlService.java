@@ -91,9 +91,9 @@ final class DefaultGraphqlService extends AbstractGraphqlService
             if (webSocketBuilderCustomizer != null) {
                 webSocketBuilderCustomizer.accept(webSocketBuilder);
             }
-            this.webSocketService = webSocketBuilder.subprotocols("graphql-transport-ws").build();
+            webSocketService = webSocketBuilder.subprotocols("graphql-transport-ws").build();
         } else {
-            this.webSocketService = null;
+            webSocketService = null;
         }
     }
 
@@ -102,7 +102,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService
         if (webSocketService != null) {
             return webSocketService.serve(ctx, req);
         } else {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "websockets are disabled");
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                   "GraphQL over WebSocket Protocol is disabled");
         }
     }
 
