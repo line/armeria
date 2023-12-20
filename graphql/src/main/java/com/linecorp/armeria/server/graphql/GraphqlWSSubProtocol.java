@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.graphql;
 
 import static java.util.Collections.emptyList;
-import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,6 +38,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -75,21 +75,31 @@ class GraphqlWSSubProtocol {
     }
 
     /**
+     * Called when a binary frame is received. Binary frames are not supported by the graphql-ws protocol.
+     */
+    @Nullable
+    public void handleBinary(WebSocketWriter out) {
+        out.close(WebSocketCloseStatus.INVALID_MESSAGE_TYPE, "Binary frames are not supported");
+    }
+
+    /**
      * Receives an event and returns a response if one should be sent.
      */
     @Nullable
-    public void handle(String event, WebSocketWriter out) {
+    public void handleText(String event, WebSocketWriter out) {
         try {
             final Map<String, Object> eventMap = parseJsonString(event, JSON_MAP);
-            final String type = toStringFromJson("type", eventMap.get("type"));
-            requireNonNull(type, "type");
+            final String type = toStringFromJson(eventMap.get("type"));
+            if (type == null) {
+                throw new WebSocketCloseException(4400);
+            }
             final String id;
 
             switch (type) {
                 case "connection_init":
                     if (connectionInitiated) {
                         // Already initiated, that's an error
-                        throw new Exception("4429: Too many initialisation requests");
+                        throw new WebSocketCloseException(4429);
                     }
                     final Object rawPayload = eventMap.get("payload");
                     if (rawPayload != null) {
@@ -105,17 +115,18 @@ class GraphqlWSSubProtocol {
                     break;
                 case "subscribe":
                     ensureInitiated();
-                    id = toStringFromJson("id", eventMap.get("id"));
-                    requireNonNull(id, "id");
+                    id = toStringFromJson(eventMap.get("id"));
+                    if (id == null) {
+                        throw new WebSocketCloseException(4400);
+                    }
                     final Map<String, Object> payload = toMapFromJson(eventMap.get("payload"));
                     try {
                         if (graphqlSubscriptions.containsKey(id)) {
-                            throw new IllegalArgumentException(
-                                    "Subscription with id " + id + " already exists");
+                            // Subscription already exists
+                            throw new WebSocketCloseException(4409);
                         }
-                        final String operationName = toStringFromJson("operationName",
-                                                                      payload.get("operationName"));
-                        final String query = toStringFromJson("query", payload.get("query"));
+                        final String operationName = toStringFromJson(payload.get("operationName"));
+                        final String query = toStringFromJson(payload.get("query"));
                         final Map<String, Object> variables = toMapFromJson(payload.get("variables"));
                         final Map<String, Object> extensions = toMapFromJson(payload.get("extensions"));
 
@@ -135,26 +146,41 @@ class GraphqlWSSubProtocol {
                             handleExecutionResult(out, id, executionResult, throwable);
                             return null;
                         }, ctx.eventLoop());
+                    } catch (WebSocketCloseException e) {
+                        logger.debug("Error handling subscription", e);
+                        // Also cancel subscription if present before closing websocket
+                        final ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
+                        if (s != null) {
+                            s.setCompleted();
+                        }
+                        out.close(e.getWebSocketCloseStatus());
                     } catch (Exception e) {
                         logger.debug("Error handling subscription", e);
-                        GraphqlWSSubProtocol.this.writeError(out, id, e);
+                        // Unknown but possibly recoverable error
+                        writeError(out, id, e);
                         return;
                     }
                     break;
                 case "complete":
                     ensureInitiated();
                     // Read id and remove that subscription
-                    id = toStringFromJson("id", eventMap.get("id"));
-                    requireNonNull(id, "id");
+                    id = toStringFromJson(eventMap.get("id"));
+                    if (id == null) {
+                        throw new WebSocketCloseException(4400);
+                    }
                     final ExecutionResultSubscriber s = graphqlSubscriptions.remove(id);
                     if (s != null) {
                         s.setCompleted();
                     }
                     return;
                 default:
-                    throw new IllegalArgumentException("Unknown event type: " + type);
+                    throw new WebSocketCloseException(4400);
             }
-        } catch (Exception e) {
+        } catch (WebSocketCloseException e) {
+            logger.debug("Error while handling event", e);
+            out.close(e.getWebSocketCloseStatus());
+        }
+        catch (Exception e) {
             logger.debug("Error while handling event", e);
             out.close(e);
         }
@@ -233,7 +259,8 @@ class GraphqlWSSubProtocol {
 
     private void ensureInitiated() throws Exception {
         if (!connectionInitiated) {
-            throw new Exception("Connection not initiated");
+            // ConnectionAck not sent yet. Must be closed with 4401 Unauthorized.
+            throw new WebSocketCloseException(4401);
         }
     }
 
@@ -242,7 +269,7 @@ class GraphqlWSSubProtocol {
     }
 
     @Nullable
-    private static String toStringFromJson(String name, @Nullable Object value) {
+    private static String toStringFromJson(@Nullable Object value) throws WebSocketCloseException {
         if (value == null) {
             return null;
         }
@@ -250,7 +277,7 @@ class GraphqlWSSubProtocol {
         if (value instanceof String) {
             return (String) value;
         } else {
-            throw new IllegalArgumentException("Invalid " + name + " (expected: string)");
+            throw new WebSocketCloseException(4400);
         }
     }
 
@@ -259,7 +286,7 @@ class GraphqlWSSubProtocol {
      * can only have string keys.
      */
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap) {
+    private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap) throws WebSocketCloseException {
         if (maybeMap == null) {
             return ImmutableMap.of();
         }
@@ -271,7 +298,7 @@ class GraphqlWSSubProtocol {
             }
             return Collections.unmodifiableMap((Map<String, Object>) maybeMap);
         } else {
-            throw new IllegalArgumentException("Unknown parameter type variables");
+            throw new WebSocketCloseException(4400);
         }
     }
 

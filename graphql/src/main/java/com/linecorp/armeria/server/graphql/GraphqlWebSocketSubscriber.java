@@ -40,13 +40,7 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
 
     @Override
     public void onSubscribe(Subscription s) {
-        if (subscription != null) {
-            /*
-            A Subscriber MUST call Subscription.cancel() on the given Subscription after an
-            onSubscribe signal if it already has an active Subscription.
-             */
-            subscription.cancel();
-        }
+        assert this.subscription == null;
         subscription = s;
         s.request(1);
     }
@@ -64,12 +58,12 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
         logger.trace("onNext: {}", webSocketFrame);
         assert subscription != null;
         switch (webSocketFrame.type()) {
-            // If Binary, handle it same as a text frame. Should never happen.
             case BINARY:
+                graphqlWSSubProtocol.handleBinary(outgoing);
             case TEXT:
                 // Parse the graphql-ws sub protocol. Maybe this could be done in a different thread so not
                 // to block the publisher?
-                graphqlWSSubProtocol.handle(webSocketFrame.text(), outgoing);
+                graphqlWSSubProtocol.handleText(webSocketFrame.text(), outgoing);
                 /*
                 It is RECOMMENDED that Subscribers request the upper limit of what they are able to process,
                 as requesting only one element at a time results in an inherently
