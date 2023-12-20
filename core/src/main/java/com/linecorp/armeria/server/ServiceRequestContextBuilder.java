@@ -215,7 +215,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 localAddress().getHostString(),
                 requestTarget(),
                 req.headers(),
-                RoutingStatus.OK);
+                RoutingStatus.OK, sessionProtocol());
 
         final RoutingResult routingResult =
                 this.routingResult != null ? this.routingResult

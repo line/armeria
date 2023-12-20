@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
+import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
+import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTPS;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -224,7 +227,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final EventLoop eventLoop = ctx.channel().eventLoop();
 
                     // Close the request early when it is certain there will be neither content nor trailers.
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), sessionProtocol(),
                                                                         headers, reqTarget);
                     if (routingCtx.status().routeMustExist()) {
                         // Find the service that matches the path.
@@ -373,6 +376,21 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             }
         } finally {
             ReferenceCountUtil.release(msg);
+        }
+    }
+
+    private SessionProtocol sessionProtocol() {
+        // scheme is http or https
+        if (scheme == SCHEME_HTTP) {
+            if (encoder instanceof ServerHttp1ObjectEncoder) {
+                return SessionProtocol.H1C;
+            } else {
+                return SessionProtocol.H2C;
+            }
+        } else {
+            assert scheme == SCHEME_HTTPS;
+            assert encoder instanceof ServerHttp1ObjectEncoder;
+            return SessionProtocol.H1;
         }
     }
 
