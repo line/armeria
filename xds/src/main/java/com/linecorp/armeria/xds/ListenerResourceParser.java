@@ -24,6 +24,8 @@ final class ListenerResourceParser extends ResourceParser<Listener> {
 
     static final ListenerResourceParser INSTANCE = new ListenerResourceParser();
 
+    private ListenerResourceParser() {}
+
     @Override
     String name(Message message) {
         if (!(message instanceof Listener)) {

@@ -24,6 +24,8 @@ final class ClusterResourceParser extends ResourceParser<Cluster> {
 
     static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 
+    private ClusterResourceParser() {}
+
     @Override
     String name(Message message) {
         if (!(message instanceof Cluster)) {

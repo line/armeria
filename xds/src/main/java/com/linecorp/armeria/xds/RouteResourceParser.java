@@ -24,6 +24,8 @@ final class RouteResourceParser extends ResourceParser<RouteConfiguration> {
 
     static final RouteResourceParser INSTANCE = new RouteResourceParser();
 
+    private RouteResourceParser() {}
+
     @Override
     String name(Message message) {
         if (!(message instanceof RouteConfiguration)) {

@@ -24,6 +24,8 @@ final class EndpointResourceParser extends ResourceParser<ClusterLoadAssignment>
 
     static final EndpointResourceParser INSTANCE = new EndpointResourceParser();
 
+    private EndpointResourceParser() {}
+
     @Override
     String name(Message message) {
         if (!(message instanceof ClusterLoadAssignment)) {
