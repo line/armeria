@@ -22,7 +22,7 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 final class ListenerResourceParser extends ResourceParser<Listener> {
 
-    static ListenerResourceParser INSTANCE = new ListenerResourceParser();
+    static final ListenerResourceParser INSTANCE = new ListenerResourceParser();
 
     @Override
     String name(Message message) {

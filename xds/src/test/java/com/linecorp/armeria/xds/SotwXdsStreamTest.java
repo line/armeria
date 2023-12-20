@@ -306,10 +306,10 @@ class SotwXdsStreamTest {
         }
     }
 
-    static Cluster createCluster(String clusterName, long id) {
+    static Cluster createCluster(String clusterName, long connectTimeout) {
         return Cluster.newBuilder()
                       .setName(clusterName)
-                      .setConnectTimeout(Duration.newBuilder().setSeconds(id))
+                      .setConnectTimeout(Duration.newBuilder().setSeconds(connectTimeout))
                       .build();
     }
 }

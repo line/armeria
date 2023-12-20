@@ -22,12 +22,12 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 final class EndpointResourceParser extends ResourceParser<ClusterLoadAssignment> {
 
-    static EndpointResourceParser INSTANCE = new EndpointResourceParser();
+    static final EndpointResourceParser INSTANCE = new EndpointResourceParser();
 
     @Override
     String name(Message message) {
         if (!(message instanceof ClusterLoadAssignment)) {
-            throw new IllegalArgumentException("message not type of Cluster");
+            throw new IllegalArgumentException("message not type of ClusterLoadAssignment");
         }
         return ((ClusterLoadAssignment) message).getClusterName();
     }

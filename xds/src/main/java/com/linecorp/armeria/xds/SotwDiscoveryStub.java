@@ -23,9 +23,10 @@ import io.envoyproxy.envoy.service.discovery.v3.DiscoveryRequest;
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 import io.grpc.stub.StreamObserver;
 
+@FunctionalInterface
 interface SotwDiscoveryStub {
 
-    StreamObserver<DiscoveryRequest> request(StreamObserver<DiscoveryResponse> responseObserver);
+    StreamObserver<DiscoveryRequest> stream(StreamObserver<DiscoveryResponse> responseObserver);
 
     static SotwDiscoveryStub ads(GrpcClientBuilder builder) {
         final AggregatedDiscoveryServiceStub stub = builder.build(AggregatedDiscoveryServiceStub.class);

@@ -22,7 +22,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 
 final class ClusterResourceParser extends ResourceParser<Cluster> {
 
-    static ClusterResourceParser INSTANCE = new ClusterResourceParser();
+    static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 
     @Override
     String name(Message message) {

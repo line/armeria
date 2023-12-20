@@ -26,11 +26,9 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class SubscriberStorage implements SafeCloseable {
 
+    // Accessed only from a single eventLoop
     private final Map<XdsType, Map<String, XdsStreamSubscriber>> subscriberMap =
             new HashMap<>();
-
-    SubscriberStorage() {
-    }
 
     @Nullable
     boolean register(XdsType type, String resourceName) {

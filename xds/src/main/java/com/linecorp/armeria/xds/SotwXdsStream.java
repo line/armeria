@@ -50,7 +50,7 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
     private final SotwDiscoveryStub stub;
     private final Node node;
     private final Backoff backoff;
-    private final EventExecutor eventloop;
+    private final EventExecutor eventLoop;
     private final XdsResponseHandler responseHandler;
     private final SubscriberStorage subscriberStorage;
     private final StreamObserver<DiscoveryResponse> responseObserver =
@@ -69,21 +69,21 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
     SotwXdsStream(SotwDiscoveryStub stub,
                   Node node,
                   Backoff backoff,
-                  EventExecutor eventloop,
+                  EventExecutor eventLoop,
                   XdsResponseHandler responseHandler,
                   SubscriberStorage subscriberStorage) {
         this.stub = requireNonNull(stub, "stub");
         this.node = requireNonNull(node, "node");
         this.backoff = requireNonNull(backoff, "backoff");
-        this.eventloop = requireNonNull(eventloop, "eventloop");
+        this.eventLoop = requireNonNull(eventLoop, "eventloop");
         this.responseHandler = requireNonNull(responseHandler, "responseHandler");
         this.subscriberStorage = requireNonNull(subscriberStorage, "subscriberStorage");
     }
 
     @Override
     public void start() {
-        if (!eventloop.inEventLoop()) {
-            eventloop.execute(this::start);
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(this::start);
             return;
         }
         stopped = false;
@@ -95,7 +95,7 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
             return;
         }
         if (requestObserver == null) {
-            requestObserver = stub.request(responseObserver);
+            requestObserver = stub.stream(responseObserver);
         }
 
         responseHandler.handleReset(this);
@@ -107,8 +107,8 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
 
     public void stop(Throwable throwable) {
         requireNonNull(throwable, "throwable");
-        if (!eventloop.inEventLoop()) {
-            eventloop.execute(() -> stop(throwable));
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> stop(throwable));
             return;
         }
         stopped = true;
@@ -120,8 +120,8 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
     }
 
     private void retryOrClose(Status status) {
-        if (!eventloop.inEventLoop()) {
-            eventloop.execute(() -> retryOrClose(status));
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> retryOrClose(status));
             return;
         }
         if (stopped) {
@@ -138,7 +138,7 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
         }
         logger.info("Stream closed with status {}. Retrying for attempt ({}) in {}ms.",
                     status, connBackoffAttempts, nextDelayMillis);
-        eventloop.schedule(this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
+        eventLoop.schedule(this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -149,7 +149,7 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
     void sendDiscoveryRequest(XdsType type, @Nullable String version, Collection<String> resources,
                               @Nullable String nonce, @Nullable String errorDetail) {
         if (requestObserver == null) {
-            requestObserver = stub.request(responseObserver);
+            requestObserver = stub.stream(responseObserver);
         }
         final Builder builder = DiscoveryRequest.newBuilder()
                                                 .setTypeUrl(type.typeUrl())
@@ -171,7 +171,7 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
         logger.debug("Sending discovery request: {}", request);
         if (errorDetail != null) {
             ackBackoffAttempts++;
-            eventloop.schedule(() -> requestObserver.onNext(request),
+            eventLoop.schedule(() -> requestObserver.onNext(request),
                                backoff.nextDelayMillis(ackBackoffAttempts), TimeUnit.MILLISECONDS);
         } else {
             ackBackoffAttempts = 0;
@@ -200,8 +200,8 @@ final class SotwXdsStream implements XdsStream, SafeCloseable {
     private class DiscoveryResponseObserver implements StreamObserver<DiscoveryResponse> {
         @Override
         public void onNext(DiscoveryResponse value) {
-            if (!eventloop.inEventLoop()) {
-                eventloop.execute(() -> onNext(value));
+            if (!eventLoop.inEventLoop()) {
+                eventLoop.execute(() -> onNext(value));
                 return;
             }
 

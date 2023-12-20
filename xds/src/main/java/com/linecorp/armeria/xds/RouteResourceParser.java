@@ -22,7 +22,7 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 final class RouteResourceParser extends ResourceParser<RouteConfiguration> {
 
-    public static final RouteResourceParser INSTANCE = new RouteResourceParser();
+    static final RouteResourceParser INSTANCE = new RouteResourceParser();
 
     @Override
     String name(Message message) {
@@ -33,7 +33,7 @@ final class RouteResourceParser extends ResourceParser<RouteConfiguration> {
     }
 
     @Override
-    Class<? extends Message> clazz() {
+    Class<RouteConfiguration> clazz() {
         return RouteConfiguration.class;
     }
 

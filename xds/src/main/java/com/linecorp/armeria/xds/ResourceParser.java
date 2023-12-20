@@ -23,7 +23,7 @@ abstract class ResourceParser<T extends Message> {
 
     abstract String name(Message message);
 
-    abstract Class<? extends Message> clazz();
+    abstract Class<T> clazz();
 
     @Override
     public String toString() {
