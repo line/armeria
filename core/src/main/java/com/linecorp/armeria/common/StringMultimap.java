@@ -46,6 +46,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -439,24 +440,21 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean contains(IN_NAME name, String value) {
-        return contains(name, value, true);
+        return contains(name, val -> AsciiString.contentEquals(val, value));
     }
 
-    private boolean contains(IN_NAME name, String value, boolean caseSensitive) {
+    private boolean contains(IN_NAME name, Predicate<String> containsValuePredicate) {
         requireNonNull(name, "name");
-        requireNonNull(value, "value");
+        requireNonNull(containsValuePredicate, "containsValuePredicate");
         final int h = hashName(name);
         final int i = index(h);
         Entry e = entries[i];
         while (e != null) {
             if (e.hash == h) {
                 final NAME currentName = e.key;
-                if (currentName != null && nameEquals(currentName, name)) {
-                    if (caseSensitive && AsciiString.contentEquals(e.value, value)) {
-                        return true;
-                    } else if (!caseSensitive && AsciiString.contentEqualsIgnoreCase(e.value, value)) {
-                        return true;
-                    }
+                if (currentName != null && nameEquals(currentName, name) &&
+                    containsValuePredicate.test(e.value)) {
+                    return true;
                 }
             }
             e = e.next;
@@ -472,8 +470,8 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean containsBoolean(IN_NAME name, boolean value) {
-         return contains(name, String.valueOf(value), false) ||
-                contains(name, value ? "1" : "0");
+         return contains(name, val -> AsciiString.contentEqualsIgnoreCase(val, String.valueOf(value)) ||
+                                      AsciiString.contentEquals(val, value ? "1" : "0"));
     }
 
     @Override
