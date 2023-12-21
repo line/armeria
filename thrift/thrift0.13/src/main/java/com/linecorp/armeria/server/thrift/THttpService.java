@@ -367,8 +367,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         if (ctx.hasAttr(DECODED_REQUEST)) {
             final DecodedRequest decodedRequest = ctx.attr(DECODED_REQUEST);
             final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId, decodedRequest.f,
-                   decodedRequest.decodedReq, responseFuture);
+            invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId,
+                   decodedRequest.thriftFunction, decodedRequest.decodedReq, responseFuture);
             return HttpResponse.of(responseFuture);
         }
 
@@ -824,14 +824,14 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
         private final SerializationFormat serializationFormat;
         private final int seqId;
-        private final ThriftFunction f;
+        private final ThriftFunction thriftFunction;
         private final RpcRequest decodedReq;
 
-        private DecodedRequest(SerializationFormat serializationFormat, int seqId, ThriftFunction f,
-                              RpcRequest decodedReq) {
+        private DecodedRequest(SerializationFormat serializationFormat, int seqId,
+                               ThriftFunction thriftFunction, RpcRequest decodedReq) {
             this.serializationFormat = serializationFormat;
             this.seqId = seqId;
-            this.f = f;
+            this.thriftFunction = thriftFunction;
             this.decodedReq = decodedReq;
         }
 
@@ -846,13 +846,13 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             final DecodedRequest that = (DecodedRequest) obj;
             return seqId == that.seqId &&
                    Objects.equals(serializationFormat, that.serializationFormat) &&
-                   Objects.equals(f, that.f) &&
+                   Objects.equals(thriftFunction, that.thriftFunction) &&
                    Objects.equals(decodedReq, that.decodedReq);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(serializationFormat, seqId, f, decodedReq);
+            return Objects.hash(serializationFormat, seqId, thriftFunction, decodedReq);
         }
     }
 }
