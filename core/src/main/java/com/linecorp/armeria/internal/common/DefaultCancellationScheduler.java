@@ -32,6 +32,8 @@ import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -355,7 +357,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
         if (state == State.INIT) {
             state = State.FINISHED;
-            this.cause = getThrowable(server, cause);
+            this.cause = mapThrowable(server, cause);
             ((CancellationFuture) whenCancelled()).doComplete(cause);
         } else if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
@@ -527,7 +529,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             return;
         }
 
-        cause = getThrowable(server, cause);
+        cause = mapThrowable(server, cause);
 
         // Set FINISHING to preclude executing other timeout operations from the callbacks of `whenCancelling()`
         state = State.FINISHING;
@@ -545,14 +547,18 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         ((CancellationFuture) whenCancelled()).doComplete(cause);
     }
 
-    private static Throwable getThrowable(boolean server, @Nullable Throwable cause) {
-        if (cause != null) {
-            return cause;
+    private static Throwable mapThrowable(boolean server, @Nullable Throwable cause) {
+        if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+            // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
+            cause = cause.getCause();
         }
-        if (server) {
-            cause = RequestTimeoutException.get();
-        } else {
-            cause = ResponseTimeoutException.get();
+
+        if (cause == null) {
+            if (server) {
+                cause = RequestTimeoutException.get();
+            } else {
+                cause = ResponseTimeoutException.get();
+            }
         }
         return cause;
     }

@@ -525,7 +525,6 @@ public final class DefaultClientRequestContext
         log.startRequest();
         responseCancellationScheduler =
                 CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
-        updateEventLoop(ctx.eventLoop().withoutContext());
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
@@ -541,7 +540,7 @@ public final class DefaultClientRequestContext
         // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
-            eventLoop = ctx.eventLoop().withoutContext();
+            updateEventLoop(ctx.eventLoop().withoutContext());
         } else {
             acquireEventLoop(endpoint);
         }
