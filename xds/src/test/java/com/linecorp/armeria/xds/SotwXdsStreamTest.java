@@ -21,9 +21,9 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +36,7 @@ import com.google.protobuf.Message;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -58,7 +59,7 @@ class SotwXdsStreamTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(com.linecorp.armeria.server.ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) throws Exception {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
             sb.service(GrpcService.builder()
                                   .addService(v3DiscoveryServer.getAggregatedDiscoveryServiceImpl())
@@ -233,13 +234,19 @@ class SotwXdsStreamTest {
     void errorHandling() throws Exception {
         final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(GrpcClients.builder(server.httpUri()));
         final SubscriberStorage subscriberStorage = new SubscriberStorage();
-        final AtomicLong cntRef = new AtomicLong();
+        final AtomicInteger cntRef = new AtomicInteger();
+        final CountDownLatch latch = new CountDownLatch(1);
         final TestResponseHandler responseHandler = new TestResponseHandler(subscriberStorage) {
             @Override
             public <T extends Message> void handleResponse(
                     ResourceParser<T> type, DiscoveryResponse value, SotwXdsStream sender) {
-                if (cntRef.getAndIncrement() == 0) {
+                if (cntRef.getAndIncrement() < 3) {
                     throw new RuntimeException("test");
+                }
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
                 super.handleResponse(type, value, sender);
             }
@@ -255,6 +262,10 @@ class SotwXdsStreamTest {
             subscriberStorage.register(XdsType.CLUSTER, clusterName);
             stream.start();
 
+            await().untilAtomic(cntRef, Matchers.greaterThanOrEqualTo(3));
+            assertThat(responseHandler.getResponses()).isEmpty();
+
+            latch.countDown();
             // Once an update is done, the handler will eventually receive the new update
             await().until(() -> !responseHandler.getResponses().isEmpty());
             assertThat(responseHandler.getResponses()).allSatisfy(res -> {

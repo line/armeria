@@ -33,7 +33,6 @@ import com.google.rpc.Code;
 
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.Node;
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryRequest;
@@ -43,7 +42,7 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.netty.util.concurrent.EventExecutor;
 
-final class SotwXdsStream implements XdsStream, SafeCloseable {
+final class SotwXdsStream implements XdsStream {
 
     private static final Logger logger = LoggerFactory.getLogger(SotwXdsStream.class);
 
