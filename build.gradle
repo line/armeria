@@ -129,7 +129,7 @@ allprojects {
         }
 
         predictiveSelection {
-            enabled.set(true)
+            enabled.set(!isCi)
         }
     }
 }
