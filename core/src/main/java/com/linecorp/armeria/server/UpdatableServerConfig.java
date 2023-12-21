@@ -221,6 +221,16 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public int http2MaxResetFramesPerWindow() {
+        return delegate.http2MaxResetFramesPerWindow();
+    }
+
+    @Override
+    public int http2MaxResetFramesWindowSeconds() {
+        return delegate.http2MaxResetFramesWindowSeconds();
+    }
+
+    @Override
     public Duration gracefulShutdownQuietPeriod() {
         return delegate.gracefulShutdownQuietPeriod();
     }

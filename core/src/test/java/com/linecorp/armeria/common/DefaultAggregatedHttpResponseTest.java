@@ -53,9 +53,10 @@ class DefaultAggregatedHttpResponseTest {
                                                                       HttpData.empty());
         final HttpResponse res = aRes.toHttpResponse();
         StepVerifier.create(res)
-                    .expectNext(ResponseHeaders.of(HttpStatus.OK,
-                                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8,
-                                                   CONTENT_LENGTH, 0))
+                    .expectNext(ResponseHeaders.builder(HttpStatus.OK)
+                                               .contentType(PLAIN_TEXT_UTF_8)
+                                               .contentLength(0)
+                                               .build())
                     .expectComplete()
                     .verify();
     }

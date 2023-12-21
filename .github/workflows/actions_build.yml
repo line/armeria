@@ -64,22 +64,29 @@ jobs:
           echo "JOB_NAME=$JOB_NAME" >> $GITHUB_ENV
         shell: bash
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-jdk
         if: ${{ matrix.java != env.BUILD_JDK_VERSION }}
         name: Set up JDK ${{ matrix.java }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
 
       - id: setup-build-jdk
         name: Set up build JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.BUILD_JDK_VERSION }}
+
+      - name: Clean up stale build scan data
+        if: always()
+        run: |
+          rm -rf ~/.gradle/build-scan-data/*
+          rm -rf ~/.gradle/init.d
+        shell: bash
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
@@ -125,7 +132,7 @@ jobs:
 
       - name: Upload Gradle build scan
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PR_NUMBER && format('{0}-', env.PR_NUMBER) || '' }}build-scan-${{ env.JOB_NAME }}
           path: ~/.gradle/build-scan-data
@@ -202,7 +209,7 @@ jobs:
 
       - name: Upload the artifacts
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: reports-${{ env.JOB_NAME }}
           path: reports-${{ env.JOB_NAME }}.tar
@@ -213,11 +220,11 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.BUILD_JDK_VERSION }}
@@ -236,7 +243,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install svgbob_cli
         run: |
@@ -245,7 +252,7 @@ jobs:
 
       - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.BUILD_JDK_VERSION }}
@@ -263,11 +270,11 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.BUILD_JDK_VERSION }}

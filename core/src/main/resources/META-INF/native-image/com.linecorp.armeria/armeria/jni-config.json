@@ -282,9 +282,9 @@
     {"name":"<init>","parameterTypes":["byte[]"] }, 
     {"name":"<init>","parameterTypes":["byte[]","java.lang.String"] }, 
     {"name":"getBytes","parameterTypes":[] },
+    {"name":"getBytes","parameterTypes":["java.lang.String"] },
     {"name":"lastIndexOf","parameterTypes":["int"] },
     {"name":"substring","parameterTypes":["int"] },
-    {"name":"getBytes","parameterTypes":["java.lang.String"] },
     {"name":"toCharArray","parameterTypes":[] }
   ]
 },

@@ -332,7 +332,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
             throw cause;
         }
         final RequestLogProperty property =
-                rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
+                rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_END_TIME
                                                 : RequestLogProperty.RESPONSE_HEADERS;
 
         if (!needsContentInRule) {

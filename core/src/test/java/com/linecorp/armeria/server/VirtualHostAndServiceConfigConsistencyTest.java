@@ -63,7 +63,8 @@ class VirtualHostAndServiceConfigConsistencyTest {
                 "route",
                 "service",
                 "defaultHeaders",
-                "transientServiceOptions"
+                "transientServiceOptions",
+                "contextHook"
         );
         serviceConfigMethods.removeAll(ignorableServiceConfigMethods);
 

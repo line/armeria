@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.common;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
@@ -29,9 +31,33 @@ public interface CancellationScheduler {
         return new DefaultCancellationScheduler(timeoutNanos);
     }
 
+    /**
+     * A {@link CancellationScheduler} that has already completed.
+     */
+    static CancellationScheduler finished(boolean server) {
+        if (server) {
+            return DefaultCancellationScheduler.serverFinishedCancellationScheduler;
+        } else {
+            return DefaultCancellationScheduler.clientFinishedCancellationScheduler;
+        }
+    }
+
+    /**
+     * A {@link CancellationScheduler} that never completes.
+     */
     static CancellationScheduler noop() {
         return NoopCancellationScheduler.INSTANCE;
     }
+
+    CancellationTask noopCancellationTask = new CancellationTask() {
+        @Override
+        public boolean canSchedule() {
+            return true;
+        }
+
+        @Override
+        public void run(Throwable cause) { /* no-op */ }
+    };
 
     void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server);
 
@@ -39,13 +65,19 @@ public interface CancellationScheduler {
 
     void start(CancellationTask task, long timeoutNanos);
 
+    void clearTimeout();
+
+    void clearTimeout(boolean resetTimeout);
+
     void setTimeoutNanos(TimeoutMode mode, long timeoutNanos);
+
+    void finishNow();
+
+    void finishNow(@Nullable Throwable cause);
 
     boolean isFinished();
 
-    @Nullable
-
-    Throwable cause();
+    @Nullable Throwable cause();
 
     long timeoutNanos();
 
@@ -55,17 +87,22 @@ public interface CancellationScheduler {
 
     CompletableFuture<Throwable> whenCancelled();
 
-    void clearTimeout();
-
-    void clearTimeout(boolean reset);
-
-    void finishNow();
-
-    void finishNow(@Nullable Throwable cause);
-
+    @Deprecated
     CompletableFuture<Void> whenTimingOut();
 
+    @Deprecated
     CompletableFuture<Void> whenTimedOut();
+
+    @VisibleForTesting
+    boolean isInitialized();
+
+    enum State {
+        INIT,
+        INACTIVE,
+        SCHEDULED,
+        FINISHING,
+        FINISHED
+    }
 
     /**
      * A cancellation task invoked by the scheduler when its timeout exceeds or invoke by the user.
@@ -80,13 +117,5 @@ public interface CancellationScheduler {
          * Invoked by the scheduler with the cause of cancellation.
          */
         void run(Throwable cause);
-    }
-
-    enum State {
-        INIT,
-        INACTIVE,
-        SCHEDULED,
-        FINISHING,
-        FINISHED
     }
 }

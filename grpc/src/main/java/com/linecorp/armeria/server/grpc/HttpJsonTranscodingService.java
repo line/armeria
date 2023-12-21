@@ -610,8 +610,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         final ObjectNode root;
                         if (body instanceof ObjectNode) {
                             root = (ObjectNode) body;
-                        } else {
+                        } else if (body == null) {
                             root = mapper.createObjectNode();
+                        } else {
+                            throw new IllegalArgumentException("Unexpected JSON: " +
+                                    body + ", (expected: ObjectNode or null).");
                         }
                         return setParametersAndWriteJson(root, ctx, spec);
                     }
@@ -646,12 +649,15 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         @Nullable
         final MediaType contentType = request.contentType();
         if (contentType == null || !contentType.isJson()) {
-            return null;
+            if (request.content().isEmpty()) {
+                return null;
+            }
+            throw new IllegalArgumentException("Missing or invalid content-type in JSON request.");
         }
         try {
             return mapper.readTree(request.contentUtf8());
         } catch (JsonProcessingException e) {
-            return null;
+            throw new IllegalArgumentException("Failed to parse JSON request.", e);
         }
     }
 

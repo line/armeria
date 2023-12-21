@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,8 @@ class CircuitBreakerClientRuleTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"));
+            sb.service("/1-second-sleep", (ctx, req) -> HttpResponse
+                    .delayed(HttpResponse.of("Hello, Armeria!"), Duration.ofSeconds(1)));
             sb.service("/503", (ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE));
             sb.service("/slow", (ctx, req) -> HttpResponse.streaming());
             sb.service("/trailers", (ctx, req) -> HttpResponse.of(ResponseHeaders.of(200),
@@ -219,6 +222,25 @@ class CircuitBreakerClientRuleTest {
             assertThatThrownBy(() -> client.get("/slow").aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(FailFastException.class);
+        });
+    }
+
+    @Test
+    void openCircuitWithTotalDuration() {
+        final CircuitBreakerRuleWithContent<HttpResponse> rule =
+                CircuitBreakerRuleWithContent
+                        .<HttpResponse>builder()
+                        .onTotalDuration((ctx, duration) -> duration.toNanos() > 100)
+                        .thenFailure();
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .build()
+                         .blocking();
+
+        assertThat(client.get("/1-second-sleep").contentUtf8()).isEqualTo("Hello, Armeria!");
+        await().untilAsserted(() -> {
+            assertThatThrownBy(() -> client.get("/")).isInstanceOf(FailFastException.class);
         });
     }
 

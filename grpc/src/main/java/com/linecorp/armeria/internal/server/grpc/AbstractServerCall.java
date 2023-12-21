@@ -41,9 +41,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
@@ -116,7 +116,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     @Nullable
     private final Executor blockingExecutor;
     @Nullable
-    private final GrpcStatusFunction statusFunction;
+    private final GrpcExceptionHandlerFunction exceptionHandler;
 
     // Only set once.
     @Nullable
@@ -151,7 +151,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                  @Nullable GrpcJsonMarshaller jsonMarshaller,
                                  boolean unsafeWrapRequestBuffers,
                                  ResponseHeaders defaultHeaders,
-                                 @Nullable GrpcStatusFunction statusFunction,
+                                 @Nullable GrpcExceptionHandlerFunction exceptionHandler,
                                  @Nullable Executor blockingExecutor,
                                  boolean autoCompression) {
         requireNonNull(req, "req");
@@ -176,7 +176,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.blockingExecutor = blockingExecutor;
         defaultResponseHeaders = defaultHeaders;
-        this.statusFunction = statusFunction;
+        this.exceptionHandler = exceptionHandler;
 
         res.whenComplete().handle((unused, t) -> {
             final EventLoop eventLoop = ctx.eventLoop();
@@ -211,12 +211,12 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        close(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
+        close(GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata), metadata, exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
-        close(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata, null);
+        close(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx, status, metadata), metadata, null);
     }
 
     private void close(Status status, Metadata metadata, @Nullable Throwable exception) {

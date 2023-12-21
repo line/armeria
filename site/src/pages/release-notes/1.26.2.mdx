@@ -1,0 +1,21 @@
+---
+date: 2023-11-08
+---
+
+## 🛠️ Bug fixes
+
+- Armeria now reuses the connections more efficiently when <type://RetryingClient> is used in conjunction
+  with client-side load-balancing. Previously, an excessive number of connections were created when
+  requests are retried. #5290
+- You no longer see an <type://EndpointSelectionTimeoutException> when selecting an <type://Endpoint> from an
+  <type://EndpointGroup>. #5281
+- Fixed a bug where Armeria Spring Boot integration is not compatible with Spring Boot 2.6 and earlier. #5279
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin'
+]} />

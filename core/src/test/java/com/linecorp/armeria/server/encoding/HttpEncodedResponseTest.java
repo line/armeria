@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactories;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -61,7 +62,7 @@ class HttpEncodedResponseTest {
                                           MediaType.PLAIN_TEXT_UTF_8,
                                           HttpData.wrap(buf).withEndOfStream()).toHttpResponse();
         final HttpEncodedResponse encoded = new HttpEncodedResponse(
-                orig, HttpEncodingType.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
+                orig, StreamEncoderFactories.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
 
         // Drain the stream.
         encoded.subscribe(NoopSubscriber.get(), ImmediateEventExecutor.INSTANCE);
@@ -78,7 +79,7 @@ class HttpEncodedResponseTest {
                                 HttpData.ofUtf8("bar"),
                                 HttpData.ofUtf8("baz"));
         final HttpEncodedResponse encoded = new HttpEncodedResponse(
-                orig, HttpEncodingType.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
+                orig, StreamEncoderFactories.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
 
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         // Drain the stream.
@@ -129,7 +130,7 @@ class HttpEncodedResponseTest {
                                 HttpData.ofUtf8("bar"),
                                 HttpData.ofUtf8("baz"));
         final HttpEncodedResponse encoded = new HttpEncodedResponse(
-                orig, HttpEncodingType.BROTLI, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
+                orig, StreamEncoderFactories.BROTLI, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
 
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         encoded.subscribe(new Subscriber<HttpObject>() {
@@ -178,7 +179,7 @@ class HttpEncodedResponseTest {
         final HttpResponse orig = HttpResponse.of(ResponseHeaders.of(HttpStatus.CONTINUE), headers,
                                                   HttpData.ofUtf8("foo"));
         final HttpEncodedResponse encoded = new HttpEncodedResponse(
-                orig, HttpEncodingType.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
+                orig, StreamEncoderFactories.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
         StepVerifier.create(encoded)
                     .expectNext(ResponseHeaders.of(HttpStatus.CONTINUE))
                     .expectNext(headers)
@@ -195,7 +196,7 @@ class HttpEncodedResponseTest {
                                 HttpData.ofUtf8("bar"),
                                 HttpData.ofUtf8("baz"));
         final HttpEncodedResponse encoded = new HttpEncodedResponse(
-                orig, HttpEncodingType.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
+                orig, StreamEncoderFactories.DEFLATE, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
         final List<HttpData> data = encoded.split().body().collect().join();
         final StreamDecoder decoder = StreamDecoderFactory.deflate().newDecoder(ByteBufAllocator.DEFAULT);
 

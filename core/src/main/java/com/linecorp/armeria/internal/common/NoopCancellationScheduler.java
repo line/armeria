@@ -24,16 +24,17 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
-/**
- * A {@link CancellationScheduler} which never times out.
- */
-class NoopCancellationScheduler implements CancellationScheduler {
+final class NoopCancellationScheduler implements CancellationScheduler {
 
     static final CancellationScheduler INSTANCE = new NoopCancellationScheduler();
 
-    static final CompletableFuture<Throwable> THROWABLE_FUTURE =
+    private static final CompletableFuture<Throwable> THROWABLE_FUTURE =
             UnmodifiableFuture.wrap(new CompletableFuture<>());
-    static final CompletableFuture<Void> VOID_FUTURE = UnmodifiableFuture.wrap(new CompletableFuture<>());
+    private static final CompletableFuture<Void> VOID_FUTURE =
+            UnmodifiableFuture.wrap(new CompletableFuture<>());
+
+    private NoopCancellationScheduler() {
+    }
 
     @Override
     public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
@@ -48,7 +49,23 @@ class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
+    public void clearTimeout() {
+    }
+
+    @Override
+    public void clearTimeout(boolean resetTimeout) {
+    }
+
+    @Override
     public void setTimeoutNanos(TimeoutMode mode, long timeoutNanos) {
+    }
+
+    @Override
+    public void finishNow() {
+    }
+
+    @Override
+    public void finishNow(@Nullable Throwable cause) {
     }
 
     @Override
@@ -57,6 +74,7 @@ class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
+    @Nullable
     public Throwable cause() {
         return null;
     }
@@ -82,22 +100,6 @@ class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
-    public void clearTimeout() {
-    }
-
-    @Override
-    public void clearTimeout(boolean reset) {
-    }
-
-    @Override
-    public void finishNow() {
-    }
-
-    @Override
-    public void finishNow(@Nullable Throwable cause) {
-    }
-
-    @Override
     public CompletableFuture<Void> whenTimingOut() {
         return VOID_FUTURE;
     }
@@ -105,5 +107,10 @@ class NoopCancellationScheduler implements CancellationScheduler {
     @Override
     public CompletableFuture<Void> whenTimedOut() {
         return VOID_FUTURE;
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return false;
     }
 }

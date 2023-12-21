@@ -267,7 +267,9 @@ class RetryingRpcClientTest {
         final DevNullService.Iface client =
                 ThriftClients.builder(server.httpUri())
                              .path("/thrift-devnull")
-                             .rpcDecorator(RetryingRpcClient.newDecorator(retryOnException, 10))
+                             .rpcDecorator(RetryingRpcClient.builder(retryOnException)
+                                                            .maxTotalAttempts(10)
+                                                            .newDecorator())
                              .build(DevNullService.Iface.class);
 
         doThrow(new IllegalArgumentException())

@@ -18,6 +18,9 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -193,5 +196,18 @@ class WebClientBuilderTest {
             final ClientFactory clientFactory = clientOptions.factory();
             assertThat(clientFactory.options().get(ClientFactoryOptions.HTTP1_MAX_CHUNK_SIZE)).isEqualTo(100);
         }
+    }
+
+    @Test
+    void contextHook() {
+        final AtomicInteger popped = new AtomicInteger();
+        final Supplier<? extends AutoCloseable> contextHook = () ->
+                (AutoCloseable) popped::getAndIncrement;
+
+        final WebClient client =  WebClient.builder(server.httpUri()).contextHook(contextHook).build();
+        final AggregatedHttpResponse response =  client.get("/head").aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("Hello Armeria");
+        assertThat(popped.get()).isGreaterThan(1);
     }
 }
