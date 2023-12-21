@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -48,6 +49,7 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregationOptions;
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -72,6 +74,8 @@ import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftProtocolUtil;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
@@ -83,6 +87,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.AttributeKey;
 
 /**
  * An {@link HttpService} that handles a Thrift call.
@@ -91,6 +96,9 @@ import io.netty.buffer.ByteBuf;
  */
 public final class THttpService extends DecoratingService<RpcRequest, RpcResponse, HttpRequest, HttpResponse>
         implements HttpService {
+
+    private static final AttributeKey<DecodedRequest> DECODED_REQUEST =
+            AttributeKey.valueOf(THttpService.class, "DECODED_REQUEST");
 
     private static final Logger logger = LoggerFactory.getLogger(THttpService.class);
 
@@ -270,6 +278,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         .newDecorator();
     }
 
+    @Nullable
+    private DependencyInjector dependencyInjector;
     private final ThriftCallService thriftService;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -349,10 +359,19 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                                 format, maxRequestStringLength, maxRequestContainerLength)));
 
         super.serviceAdded(cfg);
+        dependencyInjector = cfg.server().config().dependencyInjector();
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (ctx.hasAttr(DECODED_REQUEST)) {
+            final DecodedRequest decodedRequest = ctx.attr(DECODED_REQUEST);
+            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+            invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId, decodedRequest.f,
+                   decodedRequest.decodedReq, responseFuture);
+            return HttpResponse.of(responseFuture);
+        }
+
         if (req.method() != HttpMethod.POST) {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
@@ -546,7 +565,30 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             ctx.logBuilder().requestContent(null, null);
         }
 
+        if (!f.declaredDecorators().isEmpty()) {
+            ctx.setAttr(DECODED_REQUEST, new DecodedRequest(serializationFormat, seqId, f, decodedReq));
+            try {
+                httpRes.complete(decorate(f).serve(this, ctx, req.toHttpRequest()));
+            } catch (Exception e) {
+                handleException(ctx, httpRes, serializationFormat, seqId, f, e);
+            }
+            return;
+        }
+
         invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
+    }
+
+    private DecoratingHttpServiceFunction decorate(ThriftFunction f) {
+        return (delegate, ctx, req) -> {
+            assert dependencyInjector != null;
+            final List<DecoratorAndOrder> decorators = f.declaredDecorators();
+            Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+            for (int i = decorators.size() - 1; i >= 0; i--) {
+                final DecoratorAndOrder d = decorators.get(i);
+                decorator = decorator.andThen(d.decorator(dependencyInjector));
+            }
+            return decorator.apply(delegate).serve(ctx, req);
+        };
     }
 
     private static String typeString(byte typeValue) {
@@ -775,6 +817,42 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             if (!success) {
                 buf.release();
             }
+        }
+    }
+
+    private static final class DecodedRequest {
+
+        private final SerializationFormat serializationFormat;
+        private final int seqId;
+        private final ThriftFunction f;
+        private final RpcRequest decodedReq;
+
+        private DecodedRequest(SerializationFormat serializationFormat, int seqId, ThriftFunction f,
+                              RpcRequest decodedReq) {
+            this.serializationFormat = serializationFormat;
+            this.seqId = seqId;
+            this.f = f;
+            this.decodedReq = decodedReq;
+        }
+
+        @Override
+        public boolean equals(@Nullable Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof DecodedRequest)) {
+                return false;
+            }
+            final DecodedRequest that = (DecodedRequest) obj;
+            return seqId == that.seqId &&
+                   Objects.equals(serializationFormat, that.serializationFormat) &&
+                   Objects.equals(f, that.f) &&
+                   Objects.equals(decodedReq, that.decodedReq);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(serializationFormat, seqId, f, decodedReq);
         }
     }
 }
