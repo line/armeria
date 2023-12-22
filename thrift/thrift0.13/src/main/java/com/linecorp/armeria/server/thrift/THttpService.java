@@ -75,7 +75,6 @@ import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftProtocolUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
-import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
@@ -278,8 +277,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         .newDecorator();
     }
 
-    @Nullable
-    private DependencyInjector dependencyInjector;
     private final ThriftCallService thriftService;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -359,7 +356,21 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                                 format, maxRequestStringLength, maxRequestContainerLength)));
 
         super.serviceAdded(cfg);
-        dependencyInjector = cfg.server().config().dependencyInjector();
+
+        final DependencyInjector dependencyInjector = cfg.server().config().dependencyInjector();
+        for (ThriftServiceEntry thriftServiceEntry : entries().values()) {
+            for (ThriftFunction thriftFunction : thriftServiceEntry.metadata.functions().values()) {
+                if (!thriftFunction.declaredDecorators().isEmpty()) {
+                    final List<DecoratorAndOrder> decorators = thriftFunction.declaredDecorators();
+                    Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+                    for (int i = decorators.size() - 1; i >= 0; i--) {
+                        final DecoratorAndOrder d = decorators.get(i);
+                        decorator = decorator.andThen(d.decorator(dependencyInjector));
+                    }
+                    thriftFunction.decoratedTHttpService(decorator.apply(this));
+                }
+            }
+        }
     }
 
     @Override
@@ -568,7 +579,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         if (!f.declaredDecorators().isEmpty()) {
             ctx.setAttr(DECODED_REQUEST, new DecodedRequest(serializationFormat, seqId, f, decodedReq));
             try {
-                httpRes.complete(decorate(f).serve(this, ctx, req.toHttpRequest()));
+                final HttpService decoratedTHttpService = f.decoratedTHttpService();
+                assert decoratedTHttpService != null;
+                httpRes.complete(decoratedTHttpService.serve(ctx, req.toHttpRequest()));
             } catch (Exception e) {
                 handleException(ctx, httpRes, serializationFormat, seqId, f, e);
             }
@@ -576,19 +589,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         }
 
         invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
-    }
-
-    private DecoratingHttpServiceFunction decorate(ThriftFunction f) {
-        return (delegate, ctx, req) -> {
-            assert dependencyInjector != null;
-            final List<DecoratorAndOrder> decorators = f.declaredDecorators();
-            Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
-            for (int i = decorators.size() - 1; i >= 0; i--) {
-                final DecoratorAndOrder d = decorators.get(i);
-                decorator = decorator.andThen(d.decorator(dependencyInjector));
-            }
-            return decorator.apply(delegate).serve(ctx, req);
-        };
     }
 
     private static String typeString(byte typeValue) {

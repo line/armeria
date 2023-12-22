@@ -39,6 +39,8 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.thrift.THttpService;
 
 /**
  * Provides the metadata of a Thrift service function.
@@ -64,6 +66,8 @@ public final class ThriftFunction {
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
     private final Class<?>[] declaredExceptions;
     private final List<DecoratorAndOrder> declaredDecorators;
+    @Nullable
+    private HttpService decoratedTHttpService;
 
     ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func,
                    @Nullable Object implementation) throws Exception {
@@ -214,6 +218,23 @@ public final class ThriftFunction {
      */
     public List<DecoratorAndOrder> declaredDecorators() {
         return declaredDecorators;
+    }
+
+    /**
+     * Returns the {@link THttpService} which is decorated by {@code declaredDecorators}.
+     * If {@code declaredDecorators} is empty, this returns {@code null}.
+     */
+    @Nullable
+    public HttpService decoratedTHttpService() {
+        return decoratedTHttpService;
+    }
+
+    /**
+     * Sets the given {@link HttpService} as {@code decoratedTHttpService}.
+     */
+    public void decoratedTHttpService(HttpService decoratedTHttpService) {
+        requireNonNull(decoratedTHttpService, "decoratedTHttpService");
+        this.decoratedTHttpService = decoratedTHttpService;
     }
 
     /**
