@@ -98,15 +98,18 @@ public final class WebSocketService extends AbstractHttpService {
     private final Set<String> subprotocols;
     private final Set<String> allowedOrigins;
     private final boolean allowAnyOrigin;
+    private final boolean aggregateContinuation;
 
     WebSocketService(WebSocketServiceHandler handler, int maxFramePayloadLength, boolean allowMaskMismatch,
-                     Set<String> subprotocols, Set<String> allowedOrigins, boolean allowAnyOrigin) {
+                     Set<String> subprotocols, Set<String> allowedOrigins, boolean allowAnyOrigin,
+                     boolean aggregateContinuation) {
         this.handler = handler;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
         this.subprotocols = subprotocols;
         this.allowedOrigins = allowedOrigins;
         this.allowAnyOrigin = allowAnyOrigin;
+        this.aggregateContinuation = aggregateContinuation;
     }
 
     /**
@@ -190,7 +193,8 @@ public final class WebSocketService extends AbstractHttpService {
     private HttpResponse handleUpgradeRequest(ServiceRequestContext ctx, HttpRequest req,
                                               ResponseHeaders responseHeaders) {
         final WebSocketServiceFrameDecoder decoder =
-                new WebSocketServiceFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch);
+                new WebSocketServiceFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch,
+                                                 aggregateContinuation);
         final StreamMessage<WebSocketFrame> inboundFrames = req.decode(decoder, ctx.alloc());
         final WebSocket outboundFrames = handler.handle(ctx, new WebSocketWrapper(inboundFrames));
         decoder.setOutboundWebSocket(outboundFrames);

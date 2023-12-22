@@ -13,13 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-package com.linecorp.armeria.client.websocket;
+package com.linecorp.armeria.server.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -28,12 +26,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.client.websocket.WebSocketClient;
+import com.linecorp.armeria.client.websocket.WebSocketInboundTestHandler;
+import com.linecorp.armeria.client.websocket.WebSocketSession;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -41,73 +37,73 @@ import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.websocket.WebSocketService;
-import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class WebSocketClientTest {
+class WebSocketServiceAggregateContinuationTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(0)
-              .https(0)
-              .tlsSelfSigned();
-            sb.route()
-              .get("/chat")
-              .connect("/chat")
-              .requestAutoAbortDelayMillis(5000)
-              .build(WebSocketService.of(new WebSocketServiceEchoHandler()));
+            final WebSocketEchoHandler handler = new WebSocketEchoHandler();
+            sb.service("/aggregate", WebSocketService.builder(handler)
+                                                     .aggregateContinuation(true)
+                                                     .build());
+            sb.service("/no_aggregate", WebSocketService.builder(handler)
+                                                        .aggregateContinuation(false)
+                                                        .build());
         }
     };
 
-    @CsvSource({
-            "H1,    false",
-            "H1C,   true",
-            "H1C,   false",
-            "H2,    false",
-            "H2C,   true",
-            "H2C,   false",
-            "HTTP,  true",
-            "HTTP,  false",
-            "HTTPS, false"
-    })
+    @CsvSource({ "true", "false" })
     @ParameterizedTest
-    void webSocketClient(SessionProtocol protocol, boolean defaultClient) throws InterruptedException {
-        // TODO(minwoox): Add server.webSocketClient();
-        final CompletableFuture<WebSocketSession> future;
-        if (defaultClient) {
-            future = WebSocketClient.of().connect(server.uri(protocol, SerializationFormat.WS) + "/chat");
-        } else {
-            final WebSocketClient webSocketClient =
-                    WebSocketClient.builder(server.uri(protocol, SerializationFormat.WS))
-                                   .factory(ClientFactory.insecure())
-                                   .build();
-            future = webSocketClient.connect("/chat");
-        }
-        final WebSocketSession webSocketSession = future.join();
-        final ServiceRequestContext sctx = server.requestContextCaptor().take();
-        final RequestHeaders headers = sctx.log().ensureAvailable(RequestLogProperty.REQUEST_HEADERS)
-                                           .requestHeaders();
-        assertThat(headers.get(HttpHeaderNames.ORIGIN)).isEqualTo(
-                protocol.isHttps() ? server.httpsUri().toString() : server.httpUri().toString());
+    void aggregateFrames(boolean aggregate) throws InterruptedException {
+        final WebSocketClient webSocketClient = WebSocketClient.of(server.httpUri());
+        final String path = aggregate ? "/aggregate" : "/no_aggregate";
+        final WebSocketSession webSocketSession = webSocketClient.connect(path).join();
 
         final WebSocketWriter outbound = webSocketSession.outbound();
-        outbound.write(WebSocketFrame.ofText("hello"));
+        outbound.write(WebSocketFrame.ofText("Hello", false));
+        outbound.write(WebSocketFrame.ofContinuation(" wor", false));
+        outbound.write(WebSocketFrame.ofContinuation("ld!", true));
 
         final WebSocketInboundTestHandler inboundHandler = new WebSocketInboundTestHandler(
-                webSocketSession.inbound(), protocol);
+                webSocketSession.inbound(), SessionProtocol.H2C);
 
-        WebSocketFrame frame = inboundHandler.inboundQueue().take();
-        assertThat(frame).isEqualTo(WebSocketFrame.ofText("hello"));
+        WebSocketFrame frame;
+        if (aggregate) {
+            frame = inboundHandler.inboundQueue().take();
+            assertThat(frame).isEqualTo(WebSocketFrame.ofText("Hello world!"));
+        } else {
+            frame = inboundHandler.inboundQueue().take();
+            assertThat(frame).isEqualTo(WebSocketFrame.ofText("Hello", false));
+            frame = inboundHandler.inboundQueue().take();
+            assertThat(frame).isEqualTo(WebSocketFrame.ofContinuation(" wor", false));
+            frame = inboundHandler.inboundQueue().take();
+            assertThat(frame).isEqualTo(WebSocketFrame.ofContinuation("ld!"));
+        }
 
         frame = inboundHandler.inboundQueue().poll(1, TimeUnit.SECONDS);
         assertThat(frame).isNull();
 
-        outbound.write(WebSocketFrame.ofText("armeria"));
-        frame = inboundHandler.inboundQueue().take();
-        assertThat(frame).isEqualTo(WebSocketFrame.ofText("armeria"));
+        outbound.write(WebSocketFrame.ofBinary("Hello".getBytes(), false));
+        outbound.write(WebSocketFrame.ofContinuation(" wor".getBytes(), false));
+        outbound.write(WebSocketFrame.ofContinuation("ld!".getBytes(), true));
+
+        if (aggregate) {
+            frame = inboundHandler.inboundQueue().take();
+            assertThat(frame).isEqualTo(WebSocketFrame.ofBinary("Hello world!".getBytes()));
+        } else {
+            frame = inboundHandler.inboundQueue().take();
+            assertThat(frame).isEqualTo(WebSocketFrame.ofBinary("Hello".getBytes(), false));
+            frame = inboundHandler.inboundQueue().take();
+            assertThat(frame).isEqualTo(WebSocketFrame.ofContinuation(" wor".getBytes(), false));
+            frame = inboundHandler.inboundQueue().take();
+            assertThat(frame).isEqualTo(WebSocketFrame.ofContinuation("ld!".getBytes()));
+        }
+
+        frame = inboundHandler.inboundQueue().poll(1, TimeUnit.SECONDS);
+        assertThat(frame).isNull();
 
         outbound.close(WebSocketCloseStatus.NORMAL_CLOSURE);
         frame = inboundHandler.inboundQueue().take();
@@ -116,7 +112,7 @@ class WebSocketClientTest {
         await().until(outbound::isComplete);
     }
 
-    static final class WebSocketServiceEchoHandler implements WebSocketServiceHandler {
+    static final class WebSocketEchoHandler implements WebSocketServiceHandler {
 
         @Override
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {

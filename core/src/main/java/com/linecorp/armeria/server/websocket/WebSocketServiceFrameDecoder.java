@@ -26,8 +26,8 @@ final class WebSocketServiceFrameDecoder extends WebSocketFrameDecoder {
     private final ServiceRequestContext ctx;
 
     WebSocketServiceFrameDecoder(ServiceRequestContext ctx, int maxFramePayloadLength,
-                                 boolean allowMaskMismatch) {
-        super(ctx, maxFramePayloadLength, allowMaskMismatch);
+                                 boolean allowMaskMismatch, boolean aggregateContinuation) {
+        super(maxFramePayloadLength, allowMaskMismatch, aggregateContinuation);
         this.ctx = ctx;
     }
 

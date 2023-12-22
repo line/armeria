@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
+import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -59,6 +60,7 @@ public final class WebSocketServiceBuilder {
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
+    private boolean aggregateContinuation;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -107,6 +109,17 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
+     * Sets whether to aggregate the subsequent continuation frames of the incoming
+     * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame into a single
+     * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame.
+     * Note that enabling this feature may lead to increased memory usage, so use it with caution.
+     */
+    public WebSocketServiceBuilder aggregateContinuation(boolean aggregateContinuation) {
+        this.aggregateContinuation = aggregateContinuation;
+        return this;
+    }
+
+    /**
      * Sets the allowed origins. The same-origin is allowed by default.
      * Specify {@value ANY_ORIGIN} to allow any origins.
      *
@@ -147,6 +160,7 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketService build() {
         return new WebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
-                                    subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN));
+                                    subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN),
+                                    aggregateContinuation);
     }
 }

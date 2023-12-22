@@ -31,10 +31,13 @@
 
 package com.linecorp.armeria.internal.common.websocket;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
@@ -64,9 +67,10 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
         CORRUPT
     }
 
-    private final RequestContext ctx;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
+    private final boolean aggregateContinuation;
+    private final List<WebSocketFrame> aggregatingFrames = new ArrayList<>();
     @Nullable
     private WebSocket outboundFrames;
 
@@ -81,10 +85,11 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
     private boolean receivedClosingHandshake;
     private State state = State.READING_FIRST;
 
-    protected WebSocketFrameDecoder(RequestContext ctx, int maxFramePayloadLength, boolean allowMaskMismatch) {
-        this.ctx = ctx;
+    protected WebSocketFrameDecoder(int maxFramePayloadLength, boolean allowMaskMismatch,
+                                    boolean aggregateContinuation) {
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
+        this.aggregateContinuation = aggregateContinuation;
     }
 
     public void setOutboundWebSocket(WebSocket outboundFrames) {
@@ -254,6 +259,7 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
                         logger.trace("{} is decoded.", decodedFrame);
                         continue; // to while loop
                     }
+
                     assert payloadBuffer != null;
                     if (frameOpcode == WebSocketFrameType.PONG.opcode()) {
                         final WebSocketFrame decodedFrame = WebSocketFrame.ofPooledPong(payloadBuffer);
@@ -271,25 +277,47 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
                         continue; // to while loop
                     }
 
-                    final WebSocketFrame decodedFrame;
-                    if (frameOpcode == WebSocketFrameType.TEXT.opcode()) {
-                        decodedFrame = WebSocketFrame.ofPooledText(payloadBuffer, finalFragment);
-                        out.add(decodedFrame);
-                    } else if (frameOpcode == WebSocketFrameType.BINARY.opcode()) {
-                        decodedFrame = WebSocketFrame.ofPooledBinary(payloadBuffer, finalFragment);
-                        out.add(decodedFrame);
-                    } else if (frameOpcode == WebSocketFrameType.CONTINUATION.opcode()) {
-                        decodedFrame = WebSocketFrame.ofPooledContinuation(payloadBuffer, finalFragment);
-                        out.add(decodedFrame);
-                    } else {
+                    if (frameOpcode != WebSocketFrameType.TEXT.opcode() &&
+                        frameOpcode != WebSocketFrameType.BINARY.opcode() &&
+                        frameOpcode != WebSocketFrameType.CONTINUATION.opcode()) {
                         throw protocolViolation(WebSocketCloseStatus.INVALID_MESSAGE_TYPE,
                                                 "Cannot decode a web socket frame with opcode: " + frameOpcode);
                     }
+
+                    final WebSocketFrame decodedFrame;
+                    if (frameOpcode == WebSocketFrameType.TEXT.opcode()) {
+                        decodedFrame = WebSocketFrame.ofPooledText(payloadBuffer, finalFragment);
+                    } else if (frameOpcode == WebSocketFrameType.BINARY.opcode()) {
+                        decodedFrame = WebSocketFrame.ofPooledBinary(payloadBuffer, finalFragment);
+                    } else {
+                        assert frameOpcode == WebSocketFrameType.CONTINUATION.opcode();
+                        decodedFrame = WebSocketFrame.ofPooledContinuation(payloadBuffer, finalFragment);
+                    }
                     logger.trace("{} is decoded.", decodedFrame);
+
                     if (finalFragment) {
                         fragmentedFramesCount = 0;
+                        if (aggregatingFrames.isEmpty()) {
+                            out.add(decodedFrame);
+                        } else {
+                            aggregatingFrames.add(decodedFrame);
+                            final ByteBuf[] byteBufs = aggregatingFrames.stream()
+                                                                        .map(Bytes::byteBuf)
+                                                                        .toArray(ByteBuf[]::new);
+                            if (aggregatingFrames.get(0).type() == WebSocketFrameType.TEXT) {
+                                out.add(WebSocketFrame.ofPooledText(Unpooled.wrappedBuffer(byteBufs), true));
+                            } else {
+                                out.add(WebSocketFrame.ofPooledBinary(Unpooled.wrappedBuffer(byteBufs), true));
+                            }
+                            aggregatingFrames.clear();
+                        }
                     } else {
                         fragmentedFramesCount++;
+                        if (aggregateContinuation) {
+                            aggregatingFrames.add(decodedFrame);
+                        } else {
+                            out.add(decodedFrame);
+                        }
                     }
                     continue; // to while loop
                 default:
@@ -365,7 +393,14 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
     }
 
     @Override
+    public void processOnComplete(StreamDecoderInput in, StreamDecoderOutput<WebSocketFrame> out)
+            throws Exception {
+        cleanup();
+    }
+
+    @Override
     public void processOnError(Throwable cause) {
+        cleanup();
         // If an exception from the inbound stream is raised after receiving a close frame,
         // we should not abort the outbound stream.
         if (!receivedClosingHandshake) {
@@ -377,4 +412,13 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
     }
 
     protected void onProcessOnError(Throwable cause) {}
+
+    private void cleanup() {
+        if (!aggregatingFrames.isEmpty()) {
+            for (WebSocketFrame frame : aggregatingFrames) {
+                frame.close();
+            }
+            aggregatingFrames.clear();
+        }
+    }
 }
