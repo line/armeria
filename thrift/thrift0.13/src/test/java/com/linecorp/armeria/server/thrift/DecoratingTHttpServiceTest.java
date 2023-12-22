@@ -33,11 +33,15 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.SimpleDecoratingRpcService;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
@@ -51,7 +55,10 @@ class DecoratingTHttpServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/", THttpService.of(new DecoratedHelloService()));
+            sb.service("/", THttpService.builder()
+                                        .decorate(GlobalDecorator.newDecorator())
+                                        .addService(new DecoratedHelloService())
+                                        .build());
         }
     };
 
@@ -73,6 +80,8 @@ class DecoratingTHttpServiceTest {
         assertThat(decorators.poll()).isEqualTo("MethodFirstDecorator");
         assertThat(decorators.poll()).isEqualTo("MethodSecondDecorator");
         assertThat(decorators.poll()).isEqualTo("CustomDecorator");
+        // Rpc decorators will be executed later than http decorators
+        assertThat(decorators.poll()).isEqualTo("GlobalDecorator");
         assertThat(decorators).isEmpty();
     }
 
@@ -81,6 +90,22 @@ class DecoratingTHttpServiceTest {
     @Target(ElementType.METHOD)
     public @interface CustomDecorator {
         int order() default 0;
+    }
+
+    private static final class GlobalDecorator extends SimpleDecoratingRpcService {
+        private GlobalDecorator(RpcService delegate) {
+            super(delegate);
+        }
+
+        private static Function<? super RpcService, GlobalDecorator> newDecorator() {
+            return GlobalDecorator::new;
+        }
+
+        @Override
+        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
+            decorators.offer("GlobalDecorator");
+            return unwrap().serve(ctx, req);
+        }
     }
 
     private static class ClassFirstDecorator implements DecoratingHttpServiceFunction {
