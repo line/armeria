@@ -108,8 +108,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     /**
      * Initializes this {@link CancellationScheduler}.
      */
-    @Override
-    public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
+    public void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
         if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
             return;
         }
@@ -590,7 +589,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private static CancellationScheduler finished0(boolean server) {
         final CancellationScheduler cancellationScheduler = CancellationScheduler.of(0);
         cancellationScheduler
-                .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, server);
+                .initAndStart(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, server);
         cancellationScheduler.finishNow();
         return cancellationScheduler;
     }

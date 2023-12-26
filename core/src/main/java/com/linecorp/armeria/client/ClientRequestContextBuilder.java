@@ -119,7 +119,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             responseCancellationScheduler = CancellationScheduler.of(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
+                responseCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask,
+                                                           0, /* server */ false);
                 latch.countDown();
             });
 

@@ -63,7 +63,7 @@ class CancellationSchedulerTest {
         final AtomicBoolean completed = new AtomicBoolean();
         eventExecutor.execute(() -> {
             final DefaultCancellationScheduler scheduler = new DefaultCancellationScheduler(0);
-            scheduler.init(eventExecutor, noopTask, initTimeoutNanos, true);
+            scheduler.initAndStart(eventExecutor, noopTask, initTimeoutNanos, true);
             task.accept(scheduler);
             completed.set(true);
         });
@@ -271,7 +271,7 @@ class CancellationSchedulerTest {
                     passed.set(true);
                 }
             };
-            scheduler.init(eventExecutor, task, 0, true);
+            scheduler.initAndStart(eventExecutor, task, 0, true);
             assertThat(scheduler.isFinished()).isFalse();
 
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
@@ -337,7 +337,7 @@ class CancellationSchedulerTest {
                     passed.set(true);
                 }
             };
-            scheduler.init(eventExecutor, task, 0, server);
+            scheduler.initAndStart(eventExecutor, task, 0, server);
             assertThat(scheduler.isFinished()).isFalse();
 
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
@@ -380,30 +380,30 @@ class CancellationSchedulerTest {
         eventExecutor.execute(() -> {
             CancellationScheduler scheduler = new DefaultCancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(1000));
-            scheduler.init(eventExecutor, noopTask, 0, false);
+            scheduler.initAndStart(eventExecutor, noopTask, 0, false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(2000));
 
             scheduler = new DefaultCancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(2000));
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
-            scheduler.init(eventExecutor, noopTask, 0, false);
+            scheduler.initAndStart(eventExecutor, noopTask, 0, false);
             assertTimeoutWithTolerance(scheduler.timeoutNanos(), MILLISECONDS.toNanos(1000));
 
             scheduler = new DefaultCancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.clearTimeout(false);
-            scheduler.init(eventExecutor, noopTask, 0, false);
+            scheduler.initAndStart(eventExecutor, noopTask, 0, false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(1000));
 
             scheduler = new DefaultCancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.clearTimeout();
-            scheduler.init(eventExecutor, noopTask, 0, false);
+            scheduler.initAndStart(eventExecutor, noopTask, 0, false);
             assertThat(scheduler.timeoutNanos()).isZero();
 
             scheduler = new DefaultCancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(2000));
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             scheduler.setTimeoutNanos(SET_FROM_START, MILLISECONDS.toNanos(10000));
-            scheduler.init(eventExecutor, noopTask, 0, false);
+            scheduler.initAndStart(eventExecutor, noopTask, 0, false);
             assertTimeoutWithTolerance(scheduler.timeoutNanos(), MILLISECONDS.toNanos(10000));
             completed.set(true);
         });
@@ -415,10 +415,10 @@ class CancellationSchedulerTest {
         final AtomicBoolean completed = new AtomicBoolean();
         final CancellationScheduler scheduler = new DefaultCancellationScheduler(0);
         eventExecutor.execute(() -> {
-            scheduler.init(eventExecutor, noopTask, MILLISECONDS.toNanos(100), false);
+            scheduler.initAndStart(eventExecutor, noopTask, MILLISECONDS.toNanos(100), false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
 
-            scheduler.init(eventExecutor, noopTask, MILLISECONDS.toNanos(1000), false);
+            scheduler.initAndStart(eventExecutor, noopTask, MILLISECONDS.toNanos(1000), false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
             completed.set(true);
         });
@@ -436,7 +436,7 @@ class CancellationSchedulerTest {
             completed.set(true);
         });
         eventExecutor.execute(() -> {
-            scheduler.init(eventExecutor, noopTask, MILLISECONDS.toNanos(100), false);
+            scheduler.initAndStart(eventExecutor, noopTask, MILLISECONDS.toNanos(100), false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
         });
 

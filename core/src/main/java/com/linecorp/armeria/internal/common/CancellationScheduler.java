@@ -59,7 +59,7 @@ public interface CancellationScheduler {
         public void run(Throwable cause) { /* no-op */ }
     };
 
-    void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server);
+    void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server);
 
     void init(EventExecutor eventLoop, boolean server);
 
