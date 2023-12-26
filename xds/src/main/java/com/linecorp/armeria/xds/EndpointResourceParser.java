@@ -20,7 +20,7 @@ import com.google.protobuf.Message;
 
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
-final class EndpointResourceParser extends ResourceParser<ClusterLoadAssignment> {
+final class EndpointResourceParser extends ResourceParser {
 
     static final EndpointResourceParser INSTANCE = new EndpointResourceParser();
 

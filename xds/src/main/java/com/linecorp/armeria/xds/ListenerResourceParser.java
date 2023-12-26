@@ -20,7 +20,7 @@ import com.google.protobuf.Message;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 
-final class ListenerResourceParser extends ResourceParser<Listener> {
+final class ListenerResourceParser extends ResourceParser {
 
     static final ListenerResourceParser INSTANCE = new ListenerResourceParser();
 

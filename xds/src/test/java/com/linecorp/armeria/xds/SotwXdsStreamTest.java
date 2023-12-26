@@ -33,7 +33,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Duration;
-import com.google.protobuf.Message;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -108,8 +107,8 @@ class SotwXdsStreamTest {
         }
 
         @Override
-        public <T extends Message> void handleResponse(
-                ResourceParser<T> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
+        public void handleResponse(ResourceParser resourceParser, DiscoveryResponse value,
+                                   SotwXdsStream sender) {
             responses.add(value);
             sender.ackResponse(resourceParser.type(), value.getVersionInfo(), value.getNonce());
         }
@@ -239,8 +238,7 @@ class SotwXdsStreamTest {
         final CountDownLatch latch = new CountDownLatch(1);
         final TestResponseHandler responseHandler = new TestResponseHandler(subscriberStorage) {
             @Override
-            public <T extends Message> void handleResponse(
-                    ResourceParser<T> type, DiscoveryResponse value, SotwXdsStream sender) {
+            public void handleResponse(ResourceParser type, DiscoveryResponse value, SotwXdsStream sender) {
                 if (cntRef.getAndIncrement() < 3) {
                     throw new RuntimeException("test");
                 }
@@ -284,8 +282,8 @@ class SotwXdsStreamTest {
         final AtomicInteger nackResponses = new AtomicInteger();
         final TestResponseHandler responseHandler = new TestResponseHandler(subscriberStorage) {
             @Override
-            public <T extends Message> void handleResponse(ResourceParser<T> resourceParser,
-                                                           DiscoveryResponse value, SotwXdsStream sender) {
+            public void handleResponse(ResourceParser resourceParser,
+                                       DiscoveryResponse value, SotwXdsStream sender) {
                 if (ackRef.get()) {
                     super.handleResponse(resourceParser, value, sender);
                 } else {

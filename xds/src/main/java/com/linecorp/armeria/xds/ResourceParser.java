@@ -19,11 +19,11 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 import com.google.protobuf.Message;
 
-abstract class ResourceParser<T extends Message> {
+abstract class ResourceParser {
 
     abstract String name(Message message);
 
-    abstract Class<T> clazz();
+    abstract Class<?> clazz();
 
     @Override
     public String toString() {

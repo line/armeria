@@ -19,13 +19,11 @@ package com.linecorp.armeria.xds;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.protobuf.Message;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class XdsResourceParserUtil {
 
-    private static final Map<String, ResourceParser<? extends Message>> typeUrlToResourceType = new HashMap<>();
+    private static final Map<String, ResourceParser> typeUrlToResourceType = new HashMap<>();
 
     static {
         typeUrlToResourceType.put(XdsType.ENDPOINT.typeUrl(), EndpointResourceParser.INSTANCE);
@@ -35,7 +33,7 @@ final class XdsResourceParserUtil {
     }
 
     @Nullable
-    static ResourceParser<? extends Message> fromTypeUrl(String typeUrl) {
+    static ResourceParser fromTypeUrl(String typeUrl) {
         return typeUrlToResourceType.get(typeUrl);
     }
 
