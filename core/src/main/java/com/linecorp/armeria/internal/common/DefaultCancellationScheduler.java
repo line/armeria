@@ -116,9 +116,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
      */
     @Override
     public void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos) {
-        if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
-            throw new IllegalStateException("Can't init() more than once");
-        }
+        init(eventLoop);
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> start(task, timeoutNanos));
         } else {
@@ -345,11 +343,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             eventLoop.execute(() -> finishNow(cause));
             return;
         }
-        if (state == State.INIT) {
-            state = State.FINISHED;
-            this.cause = mapThrowable(server, cause);
-            ((CancellationFuture) whenCancelled()).doComplete(cause);
-        } else if (isInitialized()) {
+        if (isInitialized()) {
             finishNow0(cause);
         } else {
             addPendingTask(() -> finishNow0(cause));
@@ -511,9 +505,8 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     private void invokeTask(@Nullable Throwable cause) {
-        if (task == null) {
-            return;
-        }
+        assert eventLoop != null && eventLoop.inEventLoop();
+        assert state != State.FINISHING && state != State.FINISHED;
 
         cause = mapThrowable(server, cause);
 
