@@ -27,8 +27,8 @@ import io.netty.util.concurrent.EventExecutor;
 
 public interface CancellationScheduler {
 
-    static CancellationScheduler of(long timeoutNanos) {
-        return new DefaultCancellationScheduler(timeoutNanos);
+    static CancellationScheduler of(long timeoutNanos, boolean server) {
+        return new DefaultCancellationScheduler(timeoutNanos, server);
     }
 
     /**
@@ -59,9 +59,9 @@ public interface CancellationScheduler {
         public void run(Throwable cause) { /* no-op */ }
     };
 
-    void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server);
+    void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos);
 
-    void init(EventExecutor eventLoop, boolean server);
+    void init(EventExecutor eventLoop);
 
     void start(CancellationTask task, long timeoutNanos);
 

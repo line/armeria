@@ -239,7 +239,7 @@ public final class DefaultClientRequestContext
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
-                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis), false);
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -425,7 +425,7 @@ public final class DefaultClientRequestContext
 
     private void updateEventLoop(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
-        responseCancellationScheduler.init(eventLoop, false);
+        responseCancellationScheduler.init(eventLoop);
     }
 
     private void acquireEventLoop(EndpointGroup endpointGroup) {
@@ -524,7 +524,7 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
-                CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()), false);
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 

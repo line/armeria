@@ -37,11 +37,11 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
-    public void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
+    public void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos) {
     }
 
     @Override
-    public void init(EventExecutor eventLoop, boolean server) {
+    public void init(EventExecutor eventLoop) {
     }
 
     @Override

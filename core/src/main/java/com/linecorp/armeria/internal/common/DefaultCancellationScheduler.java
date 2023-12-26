@@ -96,50 +96,41 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private volatile TimeoutFuture whenTimedOut;
     @SuppressWarnings("FieldMayBeFinal")
     private volatile long pendingTimeoutNanos;
-    private boolean server;
+    private final boolean server;
     @Nullable
     private Throwable cause;
 
+    @VisibleForTesting
     DefaultCancellationScheduler(long timeoutNanos) {
+        this(timeoutNanos, true);
+    }
+
+    DefaultCancellationScheduler(long timeoutNanos, boolean server) {
         this.timeoutNanos = timeoutNanos;
         pendingTimeoutNanos = timeoutNanos;
+        this.server = server;
     }
 
     /**
-     * Initializes this {@link CancellationScheduler}.
+     * Initializes this {@link DefaultCancellationScheduler}.
      */
-    public void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
+    @Override
+    public void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos) {
         if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
-            return;
+            throw new IllegalStateException("Can't init() more than once");
         }
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> {
-                init0(eventLoop, server);
-                start(task, timeoutNanos);
-            });
+            eventLoop.execute(() -> start(task, timeoutNanos));
         } else {
-            init0(eventLoop, server);
             start(task, timeoutNanos);
         }
     }
 
     @Override
-    public void init(EventExecutor eventLoop, boolean server) {
+    public void init(EventExecutor eventLoop) {
         if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
-            return;
+            throw new IllegalStateException("Can't init() more than once");
         }
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> init0(eventLoop, server));
-        } else {
-            init0(eventLoop, server);
-        }
-    }
-
-    private void init0(EventExecutor eventLoop, boolean server) {
-        if (state != State.INIT) {
-            return;
-        }
-        this.server = server;
     }
 
     @Override
@@ -155,7 +146,6 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             this.task = task;
             return;
         }
-        assert eventLoop != null;
         this.task = task;
         if (timeoutNanos > 0) {
             this.timeoutNanos = timeoutNanos;
@@ -350,6 +340,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (isFinishing()) {
             return;
         }
+        assert eventLoop != null;
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> finishNow(cause));
             return;
@@ -359,11 +350,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             this.cause = mapThrowable(server, cause);
             ((CancellationFuture) whenCancelled()).doComplete(cause);
         } else if (isInitialized()) {
-            if (eventLoop.inEventLoop()) {
-                finishNow0(cause);
-            } else {
-                eventLoop.execute(() -> finishNow0(cause));
-            }
+            finishNow0(cause);
         } else {
             addPendingTask(() -> finishNow0(cause));
         }
@@ -587,9 +574,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     private static CancellationScheduler finished0(boolean server) {
-        final CancellationScheduler cancellationScheduler = CancellationScheduler.of(0);
+        final CancellationScheduler cancellationScheduler = CancellationScheduler.of(0, server);
         cancellationScheduler
-                .initAndStart(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, server);
+                .initAndStart(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0);
         cancellationScheduler.finishNow();
         return cancellationScheduler;
     }
