@@ -37,7 +37,8 @@ public class ArmeriaHttpClientFactory implements HttpClient.Factory {
     }
 
     /**
-     * Additional configuration to be applied to the builder after the {@link Config} has been processed.
+     * Subclasses may use this to apply additional configuration after the Config has been applied
+     * This method is only called for clients constructed using the Config.
      */
     protected void additionalConfig(WebClientBuilder builder) {
         // no default implementation

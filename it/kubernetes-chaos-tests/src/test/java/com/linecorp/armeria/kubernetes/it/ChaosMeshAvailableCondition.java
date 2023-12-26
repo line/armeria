@@ -21,8 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.kubernetes.ArmeriaHttpClient;
-
 import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
@@ -33,7 +31,7 @@ final class ChaosMeshAvailableCondition {
 
     static boolean isRunning() {
         try (KubernetesClient client = new KubernetesClientBuilder().build()) {
-            assertThat(client.getHttpClient()).isInstanceOf(ArmeriaHttpClient.class);
+            assertThat(client.getHttpClient().getClass().getName()).isEqualTo("ArmeriaHttpClient");
             final Namespace namespace = client.namespaces().withName("chaos-mesh").get();
             return "Active".equals(namespace.getStatus().getPhase());
         } catch (Exception cause) {

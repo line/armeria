@@ -43,7 +43,7 @@ import io.fabric8.kubernetes.client.http.TlsVersion;
 /**
  * A {@link StandardHttpClientBuilder} to build an {@link ArmeriaHttpClient}.
  */
-public final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
+final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
         ArmeriaHttpClient, ArmeriaHttpClientFactory, ArmeriaHttpClientBuilder> {
 
     ArmeriaHttpClientBuilder(ArmeriaHttpClientFactory clientFactory) {
@@ -73,6 +73,7 @@ public final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
             clientBuilder.followRedirects();
         }
 
+        clientFactory.additionalConfig(clientBuilder);
         final WebClient webClient = clientBuilder.build();
         return client = new ArmeriaHttpClient(this, webClient);
     }

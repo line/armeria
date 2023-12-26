@@ -68,7 +68,7 @@ import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
  */
 class ArmeriaHttpClientTest {
 
-    // Forked from https://github.com/ikhoon/kubernetes-client/blob/main/httpclient-tests/src/test/java/io/fabric8/kubernetes/client/http/OkHttpClientTest.java
+    // Forked from https://github.com/fabric8io/kubernetes-client/blob/56a6c2c4f336cc6f64c19029a55c2d3d0289344f/httpclient-tests/src/test/java/io/fabric8/kubernetes/client/http/OkHttpClientTest.java
 
     private KubernetesMockServer server;
     private KubernetesClient client;

@@ -158,6 +158,8 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
                 }
             }
             buffer.flip();
+            // The listener will call `request()` when it consumes the buffer.
+            // See https://github.com/fabric8io/kubernetes-client/blob/56a6c2c4f336cc6f64c19029a55c2d3d0289344f/kubernetes-client/src/main/java/io/fabric8/kubernetes/client/dsl/internal/WatcherWebSocketListener.java
             listener.onMessage(this, buffer);
         } else {
             request();

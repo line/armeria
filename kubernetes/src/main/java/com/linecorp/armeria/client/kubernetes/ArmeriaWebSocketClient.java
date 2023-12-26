@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.fabric8.kubernetes.client.http.StandardHttpRequest;
 import io.fabric8.kubernetes.client.http.StandardWebSocketBuilder;
@@ -47,21 +48,35 @@ import io.fabric8.kubernetes.client.http.WebSocketUpgradeResponse;
 
 final class ArmeriaWebSocketClient implements SafeCloseable {
 
+    private final ReentrantShortLock lock = new ReentrantShortLock();
     private final ArmeriaHttpClientBuilder armeriaHttpClientBuilder;
     @Nullable
-    private WebSocketClient webSocketClient;
+    private volatile WebSocketClient webSocketClient;
 
     ArmeriaWebSocketClient(ArmeriaHttpClientBuilder armeriaHttpClientBuilder) {
         this.armeriaHttpClientBuilder = armeriaHttpClientBuilder;
     }
 
     private WebSocketClient webSocketClient() {
-        if (webSocketClient == null) {
-            webSocketClient = WebSocketClient.builder()
-                                             .factory(armeriaHttpClientBuilder.clientFactory(true))
-                                             .build();
+        final WebSocketClient webSocketClient = this.webSocketClient;
+        if (webSocketClient != null) {
+            return webSocketClient;
         }
-        return webSocketClient;
+
+        lock.lock();
+        try {
+            WebSocketClient webSocketClient0 = this.webSocketClient;
+            if (webSocketClient0 != null) {
+                return webSocketClient0;
+            }
+            webSocketClient0 = WebSocketClient.builder()
+                                              .factory(armeriaHttpClientBuilder.clientFactory(true))
+                                              .build();
+            this.webSocketClient = webSocketClient0;
+            return webSocketClient0;
+        } finally {
+            lock.unlock();
+        }
     }
 
     CompletableFuture<WebSocketResponse> execute(StandardWebSocketBuilder webSocketRequest,
