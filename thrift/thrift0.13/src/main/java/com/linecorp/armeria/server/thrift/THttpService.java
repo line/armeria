@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -367,7 +366,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         final DecoratorAndOrder d = decorators.get(i);
                         decorator = decorator.andThen(d.decorator(dependencyInjector));
                     }
-                    thriftFunction.decoratedTHttpService(decorator.apply(this));
+                    thriftFunction.setDecoratedTHttpService(decorator.apply(this));
                 }
             }
         }
@@ -833,26 +832,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             this.seqId = seqId;
             this.thriftFunction = thriftFunction;
             this.decodedReq = decodedReq;
-        }
-
-        @Override
-        public boolean equals(@Nullable Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (!(obj instanceof DecodedRequest)) {
-                return false;
-            }
-            final DecodedRequest that = (DecodedRequest) obj;
-            return seqId == that.seqId &&
-                   Objects.equals(serializationFormat, that.serializationFormat) &&
-                   Objects.equals(thriftFunction, that.thriftFunction) &&
-                   Objects.equals(decodedReq, that.decodedReq);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(serializationFormat, seqId, thriftFunction, decodedReq);
         }
     }
 }

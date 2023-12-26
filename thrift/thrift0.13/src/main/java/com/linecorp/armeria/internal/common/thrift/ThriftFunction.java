@@ -232,7 +232,7 @@ public final class ThriftFunction {
     /**
      * Sets the given {@link HttpService} as {@code decoratedTHttpService}.
      */
-    public void decoratedTHttpService(HttpService decoratedTHttpService) {
+    public void setDecoratedTHttpService(HttpService decoratedTHttpService) {
         requireNonNull(decoratedTHttpService, "decoratedTHttpService");
         this.decoratedTHttpService = decoratedTHttpService;
     }

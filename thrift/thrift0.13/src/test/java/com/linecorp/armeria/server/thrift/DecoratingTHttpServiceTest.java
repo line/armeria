@@ -56,7 +56,7 @@ class DecoratingTHttpServiceTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/", THttpService.builder()
-                                        .decorate(GlobalDecorator.newDecorator())
+                                        .decorate(GlobalRpcDecorator.newDecorator())
                                         .addService(new DecoratedHelloService())
                                         .build());
         }
@@ -81,7 +81,7 @@ class DecoratingTHttpServiceTest {
         assertThat(decorators.poll()).isEqualTo("MethodSecondDecorator");
         assertThat(decorators.poll()).isEqualTo("CustomDecorator");
         // Rpc decorators will be executed later than http decorators
-        assertThat(decorators.poll()).isEqualTo("GlobalDecorator");
+        assertThat(decorators.poll()).isEqualTo("GlobalRpcDecorator");
         assertThat(decorators).isEmpty();
     }
 
@@ -92,18 +92,18 @@ class DecoratingTHttpServiceTest {
         int order() default 0;
     }
 
-    private static final class GlobalDecorator extends SimpleDecoratingRpcService {
-        private GlobalDecorator(RpcService delegate) {
+    private static final class GlobalRpcDecorator extends SimpleDecoratingRpcService {
+        private GlobalRpcDecorator(RpcService delegate) {
             super(delegate);
         }
 
-        private static Function<? super RpcService, GlobalDecorator> newDecorator() {
-            return GlobalDecorator::new;
+        private static Function<? super RpcService, GlobalRpcDecorator> newDecorator() {
+            return GlobalRpcDecorator::new;
         }
 
         @Override
         public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
-            decorators.offer("GlobalDecorator");
+            decorators.offer("GlobalRpcDecorator");
             return unwrap().serve(ctx, req);
         }
     }
