@@ -22,6 +22,7 @@ import static org.awaitility.Awaitility.await;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -134,12 +135,12 @@ class SotwXdsStreamTest {
                 stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
                 subscriberStorage)) {
 
-            Thread.sleep(100);
-            assertThat(responseHandler.getResponses()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
             stream.start();
-            Thread.sleep(100);
-            assertThat(responseHandler.getResponses()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
             subscriberStorage.register(XdsType.CLUSTER, clusterName);
             responseHandler.handleReset(stream);
@@ -178,8 +179,8 @@ class SotwXdsStreamTest {
                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
                             ImmutableList.of(), "3"));
 
-            Thread.sleep(100);
-            assertThat(responseHandler.getResponses()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
         }
     }
 
@@ -193,8 +194,8 @@ class SotwXdsStreamTest {
                 stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
                 new SubscriberStorage())) {
 
-            Thread.sleep(100);
-            assertThat(responseHandler.getResponses()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
             subscriberStorage.register(XdsType.CLUSTER, clusterName);
             stream.start();
@@ -217,8 +218,8 @@ class SotwXdsStreamTest {
                             ImmutableList.of(createCluster(clusterName, 1)),
                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
                             ImmutableList.of(), "2"));
-            Thread.sleep(100);
-            assertThat(responseHandler.getResponses()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
             // restart the thread and verify that the handle receives the update
             stream.start();
@@ -256,8 +257,8 @@ class SotwXdsStreamTest {
                 stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
                 new SubscriberStorage())) {
 
-            Thread.sleep(100);
-            assertThat(responseHandler.getResponses()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
             subscriberStorage.register(XdsType.CLUSTER, clusterName);
             stream.start();
@@ -298,8 +299,8 @@ class SotwXdsStreamTest {
                 stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
                 new SubscriberStorage())) {
 
-            Thread.sleep(100);
-            assertThat(responseHandler.getResponses()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
             subscriberStorage.register(XdsType.CLUSTER, clusterName);
             stream.start();
