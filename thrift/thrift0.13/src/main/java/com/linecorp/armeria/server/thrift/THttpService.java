@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -287,7 +288,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private int maxRequestContainerLength;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
-    private final Map<ThriftFunction, HttpService> decoratedTHttpServices = new HashMap<>();
+    private Map<ThriftFunction, HttpService> decoratedTHttpServices;
 
     THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
@@ -308,6 +309,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         format -> ThriftSerializationFormats.protocolFactory(format, 0, 0)));
         // The actual requestProtocolFactories will be set when this service is added.
         requestProtocolFactories = responseProtocolFactories;
+        // The actual decoratedTHttpServices will be set when this service is added.
+        decoratedTHttpServices = Collections.emptyMap();
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -359,6 +362,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         super.serviceAdded(cfg);
 
         final DependencyInjector dependencyInjector = cfg.server().config().dependencyInjector();
+        final Map<ThriftFunction, HttpService> decoratedTHttpServices = new HashMap<>();
         for (ThriftServiceEntry thriftServiceEntry : entries().values()) {
             for (ThriftFunction thriftFunction : thriftServiceEntry.metadata.functions().values()) {
                 if (!thriftFunction.declaredDecorators().isEmpty()) {
@@ -372,6 +376,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 }
             }
         }
+        this.decoratedTHttpServices = decoratedTHttpServices;
     }
 
     @Override
