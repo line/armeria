@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +46,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 final class AggregatingWatcher implements ResourceWatcher<ResourceHolder<?>>, SafeCloseable {
 
     private final XdsBootstrap xdsBootstrap;
-    Map<XdsType, Deque<SafeCloseable>> closeables = new HashMap<>();
+    Map<XdsType, Deque<SafeCloseable>> closeables = new EnumMap<>(XdsType.class);
 
     private final Map<String, Listener> listenerMap = new HashMap<>();
     private final Map<String, RouteConfiguration> routeMap = new HashMap<>();

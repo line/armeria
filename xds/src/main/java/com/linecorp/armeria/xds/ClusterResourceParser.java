@@ -23,6 +23,7 @@ import com.google.protobuf.Message;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.DiscoveryType;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
+import io.envoyproxy.envoy.config.cluster.v3.ClusterOrBuilder;
 
 final class ClusterResourceParser extends ResourceParser {
 
@@ -51,7 +52,7 @@ final class ClusterResourceParser extends ResourceParser {
         if (!(message instanceof Cluster)) {
             throw new IllegalArgumentException("message not type of Cluster");
         }
-        return ((Cluster) message).getName();
+        return ((ClusterOrBuilder) message).getName();
     }
 
     @Override

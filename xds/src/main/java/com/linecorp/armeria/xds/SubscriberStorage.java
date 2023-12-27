@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,7 +33,7 @@ final class SubscriberStorage implements SafeCloseable {
     private final long timeoutMillis;
 
     private final Map<XdsType, Map<String, XdsStreamSubscriber>> subscriberMap =
-            new HashMap<>();
+            new EnumMap<>(XdsType.class);
 
     private final WatchersStorage watchersStorage;
 

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -36,9 +37,9 @@ final class WatchersStorage {
     private static final Object NOOP = new Object();
 
     private final Map<XdsType, Map<String, LinkedHashSet<ResourceNode<?>>>> storageMap =
-            new HashMap<>();
+            new EnumMap<>(XdsType.class);
 
-    private final Map<XdsType, Map<String, CompositeWatcher>> watchers = new HashMap<>();
+    private final Map<XdsType, Map<String, CompositeWatcher>> watchers = new EnumMap<>(XdsType.class);
 
     @Nullable
     Object current(XdsType type, String resource) {

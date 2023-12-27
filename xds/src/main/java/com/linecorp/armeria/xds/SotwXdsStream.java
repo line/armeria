@@ -118,28 +118,6 @@ final class SotwXdsStream implements XdsStream {
         requestObserver = null;
     }
 
-    private void retryOrClose(Status status) {
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> retryOrClose(status));
-            return;
-        }
-        if (stopped) {
-            // don't reschedule automatically since the user explicitly closed the stream
-            return;
-        }
-        requestObserver = null;
-        // wait backoff
-        connBackoffAttempts++;
-        final long nextDelayMillis = backoff.nextDelayMillis(connBackoffAttempts);
-        if (nextDelayMillis < 0) {
-            logger.warn("Stream closed with status {}, not retrying.", status);
-            return;
-        }
-        logger.info("Stream closed with status {}. Retrying for attempt ({}) in {}ms.",
-                    status, connBackoffAttempts, nextDelayMillis);
-        eventLoop.schedule(this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
-    }
-
     @Override
     public void close() {
         stop();
@@ -233,6 +211,28 @@ final class SotwXdsStream implements XdsStream {
         @Override
         public void onCompleted() {
             retryOrClose(Status.UNAVAILABLE.withDescription("Closed by server"));
+        }
+
+        private void retryOrClose(Status status) {
+            if (!eventLoop.inEventLoop()) {
+                eventLoop.execute(() -> retryOrClose(status));
+                return;
+            }
+            if (stopped) {
+                // don't reschedule automatically since the user explicitly closed the stream
+                return;
+            }
+            requestObserver = null;
+            // wait backoff
+            connBackoffAttempts++;
+            final long nextDelayMillis = backoff.nextDelayMillis(connBackoffAttempts);
+            if (nextDelayMillis < 0) {
+                logger.warn("Stream closed with status {}, not retrying.", status);
+                return;
+            }
+            logger.info("Stream closed with status {}. Retrying for attempt ({}) in {}ms.",
+                        status, connBackoffAttempts, nextDelayMillis);
+            eventLoop.schedule(SotwXdsStream.this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
         }
     }
 }

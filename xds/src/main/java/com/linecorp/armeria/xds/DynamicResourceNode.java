@@ -74,10 +74,11 @@ abstract class DynamicResourceNode<T extends Message, U extends ResourceHolder<T
         return xdsBootstrap;
     }
 
-    void setCurrent(@Nullable U t) {
-        current = t;
+    void setCurrent(@Nullable U current) {
+        this.current = current;
     }
 
+    @Override
     public U current() {
         return current;
     }

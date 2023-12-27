@@ -44,9 +44,9 @@ final class BootstrapApiConfigs {
             }
             bootstrapLdsConfig = dynamicResources.getLdsConfig();
         } else {
-            this.bootstrapCdsConfig = null;
-            this.bootstrapLdsConfig = null;
-            this.bootstrapAdsConfig = null;
+            bootstrapCdsConfig = null;
+            bootstrapLdsConfig = null;
+            bootstrapAdsConfig = null;
         }
     }
 

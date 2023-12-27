@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import com.google.protobuf.Message;
 
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignmentOrBuilder;
 
 final class EndpointResourceParser extends ResourceParser {
 
@@ -39,7 +40,7 @@ final class EndpointResourceParser extends ResourceParser {
         if (!(message instanceof ClusterLoadAssignment)) {
             throw new IllegalArgumentException("message not type of ClusterLoadAssignment");
         }
-        return ((ClusterLoadAssignment) message).getClusterName();
+        return ((ClusterLoadAssignmentOrBuilder) message).getClusterName();
     }
 
     @Override

@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import com.google.protobuf.Message;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.envoyproxy.envoy.config.listener.v3.ListenerOrBuilder;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 
@@ -49,7 +50,7 @@ final class ListenerResourceParser extends ResourceParser {
         if (!(message instanceof Listener)) {
             throw new IllegalArgumentException("message not type of Listener");
         }
-        return ((Listener) message).getName();
+        return ((ListenerOrBuilder) message).getName();
     }
 
     @Override

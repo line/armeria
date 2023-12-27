@@ -54,7 +54,7 @@ class XdsStreamSubscriber implements SafeCloseable {
         this.eventLoop = eventLoop;
         this.timeoutMillis = timeoutMillis;
         this.watchersStorage = watchersStorage;
-        this.node = (ResourceNode<ResourceHolder<?>>) DynamicResourceNode.from(type, xdsBootstrap);
+        node = (ResourceNode<ResourceHolder<?>>) DynamicResourceNode.from(type, xdsBootstrap);
         watchersStorage.addNode(type, resource, node);
 
         restartTimer();

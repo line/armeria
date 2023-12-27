@@ -90,7 +90,7 @@ public final class XdsEndpointGroup extends DynamicEndpointGroup {
                 setEndpoints(endpoints);
             }
         };
-        this.closeable = new AggregatingWatcher(xdsBootstrap, type, resourceName, listener);
+        closeable = new AggregatingWatcher(xdsBootstrap, type, resourceName, listener);
     }
 
     @Override

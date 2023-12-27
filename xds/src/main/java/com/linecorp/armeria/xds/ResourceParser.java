@@ -28,8 +28,11 @@ import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 abstract class ResourceParser {
 
+    @Nullable
     abstract String name(Message message);
 
     abstract Class<? extends Message> clazz();
