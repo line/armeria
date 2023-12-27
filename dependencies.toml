@@ -16,6 +16,7 @@ caffeine = "2.9.3"
 cglib = "3.3.0"
 checkerframework = "2.5.5"
 checkstyle = "10.3.2"
+controlplane = "1.0.41"
 curator = "5.5.0"
 dagger = "2.48.1"
 dgs = "7.6.0"
@@ -276,6 +277,16 @@ version.ref = "checkerframework"
 [libraries.checkstyle]
 module = "com.puppycrawl.tools:checkstyle"
 version.ref = "checkstyle"
+
+[libraries.controlplane-api]
+module = "io.envoyproxy.controlplane:api"
+version.ref = "controlplane"
+[libraries.controlplane-cache]
+module = "io.envoyproxy.controlplane:cache"
+version.ref = "controlplane"
+[libraries.controlplane-server]
+module = "io.envoyproxy.controlplane:server"
+version.ref = "controlplane"
 
 # Ensure that we use the same ZooKeeper version as what Curator depends on.
 # See: https://github.com/apache/curator/blob/master/pom.xml
