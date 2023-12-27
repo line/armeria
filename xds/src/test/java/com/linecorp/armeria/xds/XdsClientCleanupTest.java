@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,8 +80,7 @@ class XdsClientCleanupTest {
             await().until(() -> !clientMap.isEmpty());
 
             closeable.close();
-            Thread.sleep(100);
-            assertThat(clientMap).isEmpty();
+            await().untilAsserted(() -> assertThat(clientMap).isEmpty());
         }
     }
 
@@ -93,15 +93,14 @@ class XdsClientCleanupTest {
             final SafeCloseable closeable1 = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
             final SafeCloseable closeable2 = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
-            await().until(() -> !clientMap.isEmpty());
+            await().untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 
             closeable1.close();
-            Thread.sleep(100);
-            await().until(() -> !clientMap.isEmpty());
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(clientMap).isNotEmpty());
             closeable2.close();
 
-            Thread.sleep(100);
-            assertThat(clientMap).isEmpty();
+            await().untilAsserted(() -> assertThat(clientMap).isEmpty());
         }
     }
 
@@ -114,16 +113,15 @@ class XdsClientCleanupTest {
             final SafeCloseable closeable1 = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
             final SafeCloseable closeable2 = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
-            await().until(() -> !clientMap.isEmpty());
+            await().untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 
             closeable1.close();
             closeable1.close();
-            Thread.sleep(100);
-            await().until(() -> !clientMap.isEmpty());
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 
             closeable2.close();
-            Thread.sleep(100);
-            assertThat(clientMap).isEmpty();
+            await().untilAsserted(() -> assertThat(clientMap).isEmpty());
         }
     }
 }
