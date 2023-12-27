@@ -18,7 +18,11 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import io.netty.util.AsciiString;
 
@@ -311,5 +315,46 @@ class CompositeHttpHeadersBaseTest {
         assertThat(headers.toString()).isEqualTo("[EOS]");
         assertThat(new CompositeHttpHeadersBase(HttpHeaders.of().toBuilder().endOfStream(true)).toString())
                 .isEqualTo("[EOS]");
+    }
+
+    @Test
+    void testToString_mergedWithAdditionalsAndDefaults() {
+        final CompositeHttpHeadersBase additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeHttpHeadersBase defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeHttpHeadersBase headers = new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.toString())
+                .isEqualTo("[k1=additional1, additional=additional2, additional=additional3, " +
+                           "k2=v2, k3=v3, k4=v4, k5=v5, k6=v6, dup=dup1, dup=dup2, " +
+                           "default=default2, default=default3]");
+
+        headers.endOfStream(true);
+        assertThat(headers.toString())
+                .isEqualTo("[EOS, k1=additional1, additional=additional2, additional=additional3, " +
+                           "k2=v2, k3=v3, k4=v4, k5=v5, k6=v6, dup=dup1, dup=dup2, " +
+                           "default=default2, default=default3]");
+
+        headers.clear();
+        headers.endOfStream(false);
+        assertThat(headers.toString()).isEqualTo("[]");
+
+        headers.endOfStream(true);
+        assertThat(headers.toString()).isEqualTo("[EOS]");
     }
 }

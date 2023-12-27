@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
@@ -38,12 +39,39 @@ class CompositeHttpHeadersBase
         extends CompositeStringMultimap</* IN_NAME */ CharSequence, /* NAME */ AsciiString>
         implements HttpHeaderGetters {
 
+    private static final Supplier<StringMultimap<CharSequence, AsciiString>> DEFAULT_APPENDER_SUPPLIER =
+            () -> new HttpHeadersBase(DEFAULT_SIZE_HINT);
+
     CompositeHttpHeadersBase(HttpHeaderGetters... parents) {
-        super(from(parents), () -> new HttpHeadersBase(DEFAULT_SIZE_HINT));
+        super(from(parents), DEFAULT_APPENDER_SUPPLIER);
+    }
+
+    CompositeHttpHeadersBase(@Nullable CompositeStringMultimap<CharSequence, AsciiString> additionals,
+                             List<HttpHeaderGetters> parents,
+                             @Nullable CompositeStringMultimap<CharSequence, AsciiString> defaults) {
+        super(additionals, from(parents), defaults, DEFAULT_APPENDER_SUPPLIER);
     }
 
     private static List<StringMultimap<CharSequence, AsciiString>> from(HttpHeaderGetters... headers) {
         if (headers.length == 0) {
+            return Collections.emptyList();
+        }
+
+        final ImmutableList.Builder<StringMultimap<CharSequence, AsciiString>> builder =
+                ImmutableList.builder();
+        for (HttpHeaderGetters header : headers) {
+            if (header instanceof HttpHeadersBase) {
+                builder.add((HttpHeadersBase) header);
+            } else {
+                builder.add(new HttpHeadersBase(header));
+            }
+        }
+
+        return builder.build();
+    }
+
+    private static List<StringMultimap<CharSequence, AsciiString>> from(List<HttpHeaderGetters> headers) {
+        if (headers.isEmpty()) {
             return Collections.emptyList();
         }
 

@@ -77,16 +77,72 @@ class CompositeStringMultiMapTest {
     }
 
     @Test
+    void get_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.get("k1")).isEqualTo("additional1");
+        assertThat(headers.get("additional")).isEqualTo("additional");
+        assertThat(headers.get("k2")).isEqualTo("v2");
+        assertThat(headers.get("k3")).isEqualTo("v3");
+        assertThat(headers.get("k4")).isEqualTo("v4");
+        assertThat(headers.get("k5")).isEqualTo("v5");
+        assertThat(headers.get("k6")).isEqualTo("v6");
+        assertThat(headers.get("dup")).isEqualTo("dup1");
+        assertThat(headers.get("default")).isEqualTo("default");
+        assertThat(headers.get("not_exist")).isNull();
+        assertThat(headers.get("not_exist", "defaultValue")).isEqualTo("defaultValue");
+
+        headers.add("dup", "dup3");
+        assertThat(headers.get("dup")).isEqualTo("dup1");
+
+        headers.remove("dup");
+        assertThat(headers.get("dup")).isNull();
+
+        headers.add("dup", "dup4");
+        headers.add("dup", "dup5");
+        assertThat(headers.get("dup")).isEqualTo("dup4");
+
+        headers.remove("dup");
+        assertThat(headers.get("dup")).isNull();
+
+        headers.add("dup", "dup6");
+        headers.add("dup", "dup7");
+        assertThat(headers.get("dup")).isEqualTo("dup6");
+
+        headers.remove("additional");
+        assertThat(headers.get("additional")).isNull();
+        headers.remove("default");
+        assertThat(headers.get("default")).isNull();
+    }
+
+    @Test
     void getLast() {
-        final CompositeStringMultimap<CharSequence, AsciiString> headers
-                = new CompositeHttpHeadersBase(HttpHeaders.of(),
-                                               HttpHeaders.of("k1", "v1"),
-                                               HttpHeaders.of("k1", "v2",
-                                                              "k1", "v3"),
-                                               HttpHeaders.of("k1", "v4",
-                                                              "k1", "v5",
-                                                              "k1", "v6"),
-                                               HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(HttpHeaders.of(),
+                                             HttpHeaders.of("k1", "v1"),
+                                             HttpHeaders.of("k1", "v2",
+                                                            "k1", "v3"),
+                                             HttpHeaders.of("k1", "v4",
+                                                            "k1", "v5",
+                                                            "k1", "v6"),
+                                             HttpHeaders.of());
         assertThat(headers.getLast("k1")).isEqualTo("v6");
         assertThat(headers.getLast("not_exist")).isNull();
         assertThat(headers.getLast("not_exist", "defaultValue")).isEqualTo("defaultValue");
@@ -107,6 +163,55 @@ class CompositeStringMultiMapTest {
         headers.add("k1", "v10");
         headers.add("k1", "v11");
         assertThat(headers.getLast("k1")).isEqualTo("v11");
+    }
+
+    @Test
+    void getLast_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k1", "v2",
+                                                "k1", "v3"),
+                                 HttpHeaders.of("k1", "v4",
+                                                "k1", "v5",
+                                                "k1", "v6"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.getLast("k1")).isEqualTo("additional1");
+        assertThat(headers.getLast("additional")).isEqualTo("additional");
+        assertThat(headers.getLast("default")).isEqualTo("default");
+        assertThat(headers.getLast("k1")).isEqualTo("additional1");
+        assertThat(headers.getLast("not_exist")).isNull();
+        assertThat(headers.getLast("not_exist", "defaultValue")).isEqualTo("defaultValue");
+
+        headers.add("k1", "v7");
+        assertThat(headers.getLast("k1")).isEqualTo("v7");
+
+        headers.remove("k1");
+        assertThat(headers.getLast("k1")).isNull();
+
+        headers.add("k1", "v8");
+        headers.add("k1", "v9");
+        assertThat(headers.getLast("k1")).isEqualTo("v9");
+
+        headers.remove("k1");
+        assertThat(headers.getLast("k1")).isNull();
+
+        headers.add("k1", "v10");
+        headers.add("k1", "v11");
+        assertThat(headers.getLast("k1")).isEqualTo("v11");
+
+        headers.remove("additional");
+        assertThat(headers.getLast("additional")).isNull();
+        headers.remove("default");
+        assertThat(headers.getLast("default")).isNull();
     }
 
     @Test
@@ -132,6 +237,48 @@ class CompositeStringMultiMapTest {
         assertThat(headers.getAll("k3")).isEqualTo(ImmutableList.of("v4", "v5", "v6", "v7"));
         assertThat(headers.getAll("k4")).isEqualTo(ImmutableList.of("v8", "v9"));
         assertThat(headers.getAll("not_exist")).isEqualTo(ImmutableList.of());
+    }
+
+    @Test
+    void getAll_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1",
+                                                "k2", "v2",
+                                                "k2", "v3"),
+                                 HttpHeaders.of("k3", "v4",
+                                                "k3", "v5"),
+                                 HttpHeaders.of("k3", "v6"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.add("k3", "v7");
+        headers.add("k4", "v8");
+        headers.remove("k2");
+        headers.add("k0", "v0");
+        headers.add("k4", "v9");
+
+        assertThat(headers.getAll("k0")).isEqualTo(ImmutableList.of("v0"));
+        assertThat(headers.getAll("k1")).isEqualTo(ImmutableList.of("additional1"));
+        assertThat(headers.getAll("additional")).isEqualTo(ImmutableList.of("additional2", "additional3"));
+        assertThat(headers.getAll("default")).isEqualTo(ImmutableList.of("default2", "default3"));
+        assertThat(headers.getAll("k2")).isEmpty();
+        assertThat(headers.getAll("k3")).isEqualTo(ImmutableList.of("v4", "v5", "v6", "v7"));
+        assertThat(headers.getAll("k4")).isEqualTo(ImmutableList.of("v8", "v9"));
+        assertThat(headers.getAll("not_exist")).isEmpty();
+
+        headers.remove("additional");
+        assertThat(headers.getAll("additional")).isEmpty();
+        headers.remove("default");
+        assertThat(headers.getAll("default")).isEmpty();
     }
 
     @Test
@@ -393,9 +540,13 @@ class CompositeStringMultiMapTest {
                 HttpHeaders.of("k5", Date.from(Instant.ofEpochMilli(1000))),
                 HttpHeaders.of()
         );
+        assertThat(headers.contains("k1")).isTrue();
         assertThat(headers.contains("k1", "v1")).isTrue();
         headers.remove("k1");
+        assertThat(headers.contains("k1")).isFalse();
         headers.add("k1", "v2");
+        assertThat(headers.contains("k1")).isTrue();
+        assertThat(headers.contains("k1")).isTrue();
         assertThat(headers.contains("k1", "v1")).isFalse();
         assertThat(headers.contains("k1", "v2")).isTrue();
         assertThat(headers.containsObject("k2", "object")).isTrue();
@@ -405,6 +556,60 @@ class CompositeStringMultiMapTest {
         assertThat(headers.containsFloat("k4", 300.0f)).isTrue();
         assertThat(headers.containsDouble("k4", 400.0)).isTrue();
         assertThat(headers.containsTimeMillis("k5", 1000L)).isTrue();
+    }
+
+    @Test
+    void contains_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents = ImmutableList.of(
+                HttpHeaders.of(),
+                HttpHeaders.of("k1", "v1"),
+                HttpHeaders.of("k2", "object",
+                               "k3", "true"),
+                HttpHeaders.of("k4", "100",
+                               "k4", "200"),
+                HttpHeaders.of("k4", "300.0",
+                               "k4", "400.0"),
+                HttpHeaders.of("k5", Date.from(Instant.ofEpochMilli(1000))),
+                HttpHeaders.of()
+        );
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.contains("k1")).isTrue();
+        assertThat(headers.contains("k1", "additional1")).isTrue();
+        assertThat(headers.contains("k1", "v1")).isFalse();
+        assertThat(headers.contains("additional")).isTrue();
+        assertThat(headers.contains("additional", "additional2")).isTrue();
+        assertThat(headers.contains("additional", "additional3")).isTrue();
+        assertThat(headers.contains("default")).isTrue();
+        assertThat(headers.contains("default", "default2")).isTrue();
+        assertThat(headers.contains("default", "default3")).isTrue();
+        headers.remove("k1");
+        assertThat(headers.contains("k1")).isFalse();
+        headers.add("k1", "v2");
+        assertThat(headers.contains("k1")).isTrue();
+        assertThat(headers.contains("k1", "additional1")).isFalse();
+        assertThat(headers.contains("k1", "v1")).isFalse();
+        assertThat(headers.contains("k1", "v2")).isTrue();
+        assertThat(headers.containsObject("k2", "object")).isTrue();
+        assertThat(headers.containsBoolean("k3", true)).isTrue();
+        assertThat(headers.containsInt("k4", 100)).isTrue();
+        assertThat(headers.containsLong("k4", 200L)).isTrue();
+        assertThat(headers.containsFloat("k4", 300.0f)).isTrue();
+        assertThat(headers.containsDouble("k4", 400.0)).isTrue();
+        assertThat(headers.containsTimeMillis("k5", 1000L)).isTrue();
+
+        headers.remove("additional");
+        assertThat(headers.contains("additional")).isFalse();
+        headers.remove("default");
+        assertThat(headers.contains("default")).isFalse();
     }
 
     @Test
@@ -420,6 +625,61 @@ class CompositeStringMultiMapTest {
                                              HttpHeaders.of("dup", "dup1"),
                                              HttpHeaders.of("dup", "dup2"),
                                              HttpHeaders.of());
+        assertThat(headers.size()).isEqualTo(8);
+
+        headers.add("k1", "v1.a");
+        headers.add("k7", "v7");
+        headers.add("dup", "dup3");
+        assertThat(headers.size()).isEqualTo(11);
+
+        headers.remove("dup");
+        assertThat(headers.size()).isEqualTo(8);
+
+        headers.remove("k1");
+        headers.remove("k2");
+        headers.remove("k3");
+        assertThat(headers.size()).isEqualTo(4);
+
+        headers.remove("k4");
+        headers.remove("k5");
+        headers.remove("k6");
+        headers.remove("k7");
+        assertThat(headers.size()).isZero();
+        assertThat(headers.isEmpty()).isTrue();
+    }
+
+    @Test
+    void size_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.size()).isEqualTo(12);
+
+        headers.add("additional", "additional4");
+        headers.add("default", "default4");
+        assertThat(headers.size()).isEqualTo(14);
+
+        headers.remove("additional");
+        assertThat(headers.size()).isEqualTo(11);
+        headers.remove("default");
         assertThat(headers.size()).isEqualTo(8);
 
         headers.add("k1", "v1.a");
@@ -480,6 +740,54 @@ class CompositeStringMultiMapTest {
     }
 
     @Test
+    void isEmpty_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> empty1 =
+                new CompositeHttpHeadersBase(HttpHeaders.of());
+        assertThat(empty1.isEmpty()).isTrue();
+        assertThat(empty1.size()).isZero();
+        assertThat(empty1.get("not_exist")).isNull();
+        assertThat(empty1.names()).isEmpty();
+
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of(),
+                                 HttpHeaders.builder()
+                                            .add("k1", "v1")
+                                            .removeAndThen("k1")
+                                            .build(),
+                                 HttpHeaders.builder()
+                                            .add("k1", "v1",
+                                                 "k1", "v2")
+                                            .removeAndThen("k1")
+                                            .build(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2"),
+                                 HttpHeaders.of("k3", "v3"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> empty2 =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(empty2.isEmpty()).isFalse();
+
+        empty2.remove("additional");
+        empty2.remove("default");
+        empty2.remove("k1");
+        empty2.remove("k2");
+        empty2.remove("k3");
+        assertThat(empty2.isEmpty()).isTrue();
+        assertThat(empty2.size()).isZero();
+        assertThat(empty2.get("not_exist")).isNull();
+        assertThat(empty2.names()).isEmpty();
+    }
+
+    @Test
     void names() {
         final CompositeStringMultimap<CharSequence, AsciiString> headers =
                 new CompositeHttpHeadersBase(HttpHeaders.of(),
@@ -498,7 +806,37 @@ class CompositeStringMultiMapTest {
                 .map(AsciiString::of)
                 .collect(Collectors.toSet());
         assertThat(headers.names()).isEqualTo(expected);
-        assertThat(headers.names().size()).isEqualTo(7);
+    }
+
+    @Test
+    void names_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        final Set<AsciiString> expected = ImmutableList
+                .of("additional", "k1", "k2", "k3", "k4", "k5", "k6", "dup", "default")
+                .stream()
+                .map(AsciiString::of)
+                .collect(Collectors.toSet());
+        assertThat(headers.names()).isEqualTo(expected);
     }
 
     @Test
@@ -533,6 +871,47 @@ class CompositeStringMultiMapTest {
     }
 
     @Test
+    void names_removed_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.remove("additional");
+        headers.add("add1", "v1");
+        headers.remove("k2");
+        headers.remove("k4");
+        headers.add("add2", "v1");
+        headers.remove("k6");
+        headers.remove("dup");
+        headers.add("add3", "v1");
+        headers.remove("dup");
+
+        final Set<AsciiString> expected = ImmutableList
+                .of("add1", "add2", "add3", "k1", "k3", "k5", "default")
+                .stream()
+                .map(AsciiString::of)
+                .collect(Collectors.toSet());
+        assertThat(headers.names()).isEqualTo(expected);
+    }
+
+    @Test
     void iterator() {
         final CompositeStringMultimap<CharSequence, AsciiString> headers =
                 new CompositeHttpHeadersBase(HttpHeaders.of(),
@@ -558,9 +937,58 @@ class CompositeStringMultiMapTest {
                      new SimpleEntry<>(AsciiString.of("dup"), "dup1"),
                      new SimpleEntry<>(AsciiString.of("dup"), "dup2"))
                 .build();
-        for (int i = 0; iterator.hasNext(); i++) {
+        int i;
+        for (i = 0; iterator.hasNext(); i++) {
             assertThat(iterator.next()).isEqualTo(expected.get(i));
         }
+        assertThat(i).isEqualTo(expected.size());
+    }
+
+    @Test
+    void iterator_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        final Iterator<Entry<AsciiString, String>> iterator = headers.iterator();
+        final ImmutableList.Builder<Entry<AsciiString, String>> builder = ImmutableList.builder();
+
+        final List<Entry<AsciiString, String>> expected = builder
+                .add(new SimpleEntry<>(AsciiString.of("k1"), "additional1"),
+                     new SimpleEntry<>(AsciiString.of("additional"), "additional2"),
+                     new SimpleEntry<>(AsciiString.of("additional"), "additional3"),
+                     new SimpleEntry<>(AsciiString.of("k2"), "v2"),
+                     new SimpleEntry<>(AsciiString.of("k3"), "v3"),
+                     new SimpleEntry<>(AsciiString.of("k4"), "v4"),
+                     new SimpleEntry<>(AsciiString.of("k5"), "v5"),
+                     new SimpleEntry<>(AsciiString.of("k6"), "v6"),
+                     new SimpleEntry<>(AsciiString.of("dup"), "dup1"),
+                     new SimpleEntry<>(AsciiString.of("dup"), "dup2"),
+                     new SimpleEntry<>(AsciiString.of("default"), "default2"),
+                     new SimpleEntry<>(AsciiString.of("default"), "default3"))
+                .build();
+        int i;
+        for (i = 0; iterator.hasNext(); i++) {
+            assertThat(iterator.next()).isEqualTo(expected.get(i));
+        }
+        assertThat(i).isEqualTo(expected.size());
     }
 
     @Test
@@ -590,9 +1018,58 @@ class CompositeStringMultiMapTest {
                      new SimpleEntry<>(AsciiString.of("k5"), "v5"),
                      new SimpleEntry<>(AsciiString.of("k7"), "v7"))
                 .build();
-        for (int i = 0; iterator.hasNext(); i++) {
+        int i;
+        for (i = 0; iterator.hasNext(); i++) {
             assertThat(iterator.next()).isEqualTo(expected.get(i));
         }
+        assertThat(i).isEqualTo(expected.size());
+    }
+
+    @Test
+    void iterator_removed_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.remove("additional");
+        headers.remove("k2");
+        headers.remove("k4");
+        headers.add("k7", "v7");
+        headers.remove("k6");
+        headers.remove("dup");
+        final Iterator<Entry<AsciiString, String>> iterator = headers.iterator();
+        final ImmutableList.Builder<Entry<AsciiString, String>> builder = ImmutableList.builder();
+
+        final List<Entry<AsciiString, String>> expected = builder
+                .add(new SimpleEntry<>(AsciiString.of("k1"), "additional1"),
+                     new SimpleEntry<>(AsciiString.of("k3"), "v3"),
+                     new SimpleEntry<>(AsciiString.of("k5"), "v5"),
+                     new SimpleEntry<>(AsciiString.of("default"), "default2"),
+                     new SimpleEntry<>(AsciiString.of("default"), "default3"),
+                     new SimpleEntry<>(AsciiString.of("k7"), "v7"))
+                .build();
+        int i;
+        for (i = 0; iterator.hasNext(); i++) {
+            assertThat(iterator.next()).isEqualTo(expected.get(i));
+        }
+        assertThat(i).isEqualTo(expected.size());
     }
 
     @Test
@@ -614,6 +1091,60 @@ class CompositeStringMultiMapTest {
         for (int i = 0; valueIterator.hasNext(); i++) {
             assertThat(valueIterator.next()).isEqualTo(expected.get(i));
         }
+    }
+
+    @Test
+    void valueIterator_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("X", "v2",
+                                                "k1", "v3"),
+                                 HttpHeaders.of("X", "v4",
+                                                "k2", "v5",
+                                                "X", "v6"),
+                                 HttpHeaders.of("k2", "dup1"),
+                                 HttpHeaders.of("k2", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        Iterator<String> valueIterator = headers.valueIterator("k1");
+
+        List<String> expected = ImmutableList.of("additional1");
+        int i;
+        for (i = 0; valueIterator.hasNext(); i++) {
+            assertThat(valueIterator.next()).isEqualTo(expected.get(i));
+        }
+        assertThat(i).isEqualTo(expected.size());
+
+        valueIterator = headers.valueIterator("k2");
+        expected = ImmutableList.of("v5", "dup1", "dup2");
+        for (i = 0; valueIterator.hasNext(); i++) {
+            assertThat(valueIterator.next()).isEqualTo(expected.get(i));
+        }
+        assertThat(i).isEqualTo(expected.size());
+
+        valueIterator = headers.valueIterator("additional");
+        expected = ImmutableList.of("additional2", "additional3");
+        for (i = 0; valueIterator.hasNext(); i++) {
+            assertThat(valueIterator.next()).isEqualTo(expected.get(i));
+        }
+        assertThat(i).isEqualTo(expected.size());
+
+        valueIterator = headers.valueIterator("default");
+        expected = ImmutableList.of("default2", "default3");
+        for (i = 0; valueIterator.hasNext(); i++) {
+            assertThat(valueIterator.next()).isEqualTo(expected.get(i));
+        }
+        assertThat(i).isEqualTo(expected.size());
     }
 
     @Test
@@ -642,6 +1173,46 @@ class CompositeStringMultiMapTest {
         for (int i = 0; valueIterator.hasNext(); i++) {
             assertThat(valueIterator.next()).isEqualTo(expected.get(i));
         }
+    }
+
+    @Test
+    void valueIterator_removed_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("X", "v2",
+                                                "k1", "v3"),
+                                 HttpHeaders.of("X", "v4",
+                                                "k1", "v5",
+                                                "X", "v6"),
+                                 HttpHeaders.of("k1", "dup1"),
+                                 HttpHeaders.of("k1", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.remove("k1");
+        final Iterator<String> emptyIterator = headers.valueIterator("k1");
+        assertThat(emptyIterator.hasNext()).isFalse();
+
+        headers.add("k1", "v1");
+        headers.add("k1", "v2");
+        headers.add("k1", "v3");
+        final Iterator<String> valueIterator = headers.valueIterator("k1");
+
+        final List<String> expected = ImmutableList.of("v1", "v2", "v3");
+        int i;
+        for (i = 0; valueIterator.hasNext(); i++) {
+            assertThat(valueIterator.next()).isEqualTo(expected.get(i));
+        }
+        assertThat(i).isEqualTo(expected.size());
     }
 
     @Test
@@ -677,6 +1248,52 @@ class CompositeStringMultiMapTest {
     }
 
     @Test
+    void forEach_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.add("dup", "dup3");
+        headers.remove("k2");
+        headers.remove("k4");
+        headers.remove("k6");
+        headers.add("k7", "v7");
+        final ImmutableList.Builder<Entry<AsciiString, String>> actual = ImmutableList.builder();
+        headers.forEach((k, v) -> actual.add(new SimpleEntry<>(k, v)));
+
+        final ImmutableList.Builder<Entry<AsciiString, String>> expected = ImmutableList.builder();
+        expected.add(new SimpleEntry<>(AsciiString.of("k1"), "additional1"),
+                     new SimpleEntry<>(AsciiString.of("additional"), "additional2"),
+                     new SimpleEntry<>(AsciiString.of("additional"), "additional3"),
+                     new SimpleEntry<>(AsciiString.of("k3"), "v3"),
+                     new SimpleEntry<>(AsciiString.of("k5"), "v5"),
+                     new SimpleEntry<>(AsciiString.of("dup"), "dup1"),
+                     new SimpleEntry<>(AsciiString.of("dup"), "dup2"),
+                     new SimpleEntry<>(AsciiString.of("default"), "default2"),
+                     new SimpleEntry<>(AsciiString.of("default"), "default3"),
+                     new SimpleEntry<>(AsciiString.of("dup"), "dup3"),
+                     new SimpleEntry<>(AsciiString.of("k7"), "v7"));
+        assertThat(actual.build()).isEqualTo(expected.build());
+    }
+
+    @Test
     void forEachValue() {
         final CompositeStringMultimap<CharSequence, AsciiString> headers =
                 new CompositeHttpHeadersBase(HttpHeaders.of(),
@@ -693,6 +1310,56 @@ class CompositeStringMultiMapTest {
         headers.forEachValue("k1", builder1::add);
         final List<String> expected1 = ImmutableList.of("v1", "v3", "v5", "dup1", "dup2");
         assertThat(builder1.build()).isEqualTo(expected1);
+
+        headers.remove("k1");
+        final ImmutableList.Builder<String> empty = ImmutableList.builder();
+        headers.forEachValue("k1", empty::add);
+        assertThat(empty.build()).isEmpty();
+
+        headers.add("k1", "v1");
+        headers.add("k1", "v2");
+        headers.add("k1", "v3");
+        final ImmutableList.Builder<String> builder2 = ImmutableList.builder();
+        headers.forEachValue("k1", builder2::add);
+        final List<String> expected2 = ImmutableList.of("v1", "v2", "v3");
+        assertThat(builder2.build()).isEqualTo(expected2);
+    }
+
+    @Test
+    void forEachValue_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("X", "v2",
+                                                "k1", "v3"),
+                                 HttpHeaders.of("X", "v4",
+                                                "k1", "v5",
+                                                "X", "v6"),
+                                 HttpHeaders.of("k1", "dup1"),
+                                 HttpHeaders.of("k1", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        final ImmutableList.Builder<String> builder1 = ImmutableList.builder();
+        headers.forEachValue("k1", builder1::add);
+        final List<String> expected1 = ImmutableList.of("additional1");
+        assertThat(builder1.build()).isEqualTo(expected1);
+
+        final ImmutableList.Builder<String> additionals1 = ImmutableList.builder();
+        headers.forEachValue("additional", additionals1::add);
+        assertThat(additionals1.build()).isEqualTo(ImmutableList.of("additional2", "additional3"));
+
+        final ImmutableList.Builder<String> defaults1 = ImmutableList.builder();
+        headers.forEachValue("default", defaults1::add);
+        assertThat(defaults1.build()).isEqualTo(ImmutableList.of("default2", "default3"));
 
         headers.remove("k1");
         final ImmutableList.Builder<String> empty = ImmutableList.builder();
@@ -746,6 +1413,63 @@ class CompositeStringMultiMapTest {
     }
 
     @Test
+    void getAndRemove_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k1", "v4",
+                                                "k2", "v5",
+                                                "k3", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.getAndRemove("k1")).isEqualTo("additional1");
+        assertThat(headers.get("k1")).isNull();
+        assertThat(headers.contains("k1")).isFalse();
+        assertThat(headers.size()).isEqualTo(10);
+
+        assertThat(headers.getAndRemove("k2")).isEqualTo("v2");
+        assertThat(headers.get("k2")).isNull();
+        assertThat(headers.contains("k2")).isFalse();
+        assertThat(headers.size()).isEqualTo(8);
+
+        assertThat(headers.getAndRemove("k3")).isEqualTo("v3");
+        assertThat(headers.get("k3")).isNull();
+        assertThat(headers.contains("k3")).isFalse();
+        assertThat(headers.size()).isEqualTo(6);
+
+        assertThat(headers.getAndRemove("dup")).isEqualTo("dup1");
+        assertThat(headers.get("dup")).isNull();
+        assertThat(headers.contains("dup")).isFalse();
+        assertThat(headers.size()).isEqualTo(4);
+
+        assertThat(headers.getAndRemove("additional")).isEqualTo("additional2");
+        assertThat(headers.get("additional")).isNull();
+        assertThat(headers.contains("additional")).isFalse();
+        assertThat(headers.size()).isEqualTo(2);
+
+        assertThat(headers.getAndRemove("default")).isEqualTo("default2");
+        assertThat(headers.get("default")).isNull();
+        assertThat(headers.contains("default")).isFalse();
+        assertThat(headers.size()).isEqualTo(0);
+        assertThat(headers.isEmpty()).isTrue();
+
+        assertThat(headers.getAndRemove("k1", "defaultValue")).isEqualTo("defaultValue");
+    }
+
+    @Test
     void getAllAndRemove() {
         final CompositeStringMultimap<CharSequence, AsciiString> headers =
                 new CompositeHttpHeadersBase(HttpHeaders.of(),
@@ -776,6 +1500,64 @@ class CompositeStringMultiMapTest {
         assertThat(headers.getAllAndRemove("dup")).isEqualTo(ImmutableList.of("dup1", "dup2"));
         assertThat(headers.get("dup")).isNull();
         assertThat(headers.contains("dup")).isFalse();
+        assertThat(headers.size()).isEqualTo(0);
+        assertThat(headers.isEmpty()).isTrue();
+
+        assertThat(headers.getAllAndRemove("k1")).isEmpty();
+    }
+
+    @Test
+    void getAllAndRemove_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k1", "v4",
+                                                "k2", "v5",
+                                                "k3", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.getAllAndRemove("k1")).isEqualTo(ImmutableList.of("additional1"));
+        assertThat(headers.get("k1")).isNull();
+        assertThat(headers.contains("k1")).isFalse();
+        assertThat(headers.size()).isEqualTo(10);
+
+        assertThat(headers.getAllAndRemove("k2")).isEqualTo(ImmutableList.of("v2", "v5"));
+        assertThat(headers.get("k2")).isNull();
+        assertThat(headers.contains("k2")).isFalse();
+        assertThat(headers.size()).isEqualTo(8);
+
+        assertThat(headers.getAllAndRemove("k3")).isEqualTo(ImmutableList.of("v3", "v6"));
+        assertThat(headers.get("k3")).isNull();
+        assertThat(headers.contains("k3")).isFalse();
+        assertThat(headers.size()).isEqualTo(6);
+
+        assertThat(headers.getAllAndRemove("dup")).isEqualTo(ImmutableList.of("dup1", "dup2"));
+        assertThat(headers.get("dup")).isNull();
+        assertThat(headers.contains("dup")).isFalse();
+        assertThat(headers.size()).isEqualTo(4);
+
+        assertThat(headers.getAllAndRemove("additional"))
+                .isEqualTo(ImmutableList.of("additional2", "additional3"));
+        assertThat(headers.get("additional")).isNull();
+        assertThat(headers.contains("additional")).isFalse();
+        assertThat(headers.size()).isEqualTo(2);
+
+        assertThat(headers.getAllAndRemove("default")).isEqualTo(ImmutableList.of("default2", "default3"));
+        assertThat(headers.get("default")).isNull();
+        assertThat(headers.contains("default")).isFalse();
         assertThat(headers.size()).isEqualTo(0);
         assertThat(headers.isEmpty()).isTrue();
 
@@ -834,6 +1616,43 @@ class CompositeStringMultiMapTest {
         assertThat(headers.getAll("k7")).isEqualTo(ImmutableList.of("v7.a", "v7.b"));
         assertThat(headers.getAll("k8")).isEqualTo(ImmutableList.of("v8.a", "v8.b"));
         assertThat(headers.size()).isEqualTo(16);
+    }
+
+    @Test
+    void add_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents = ImmutableList.of(HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.add("k1", "v1.a");
+        headers.add("k1", "v1.b");
+        headers.add("k2", ImmutableList.of("v2.a", "v2.b"));
+        headers.add("k3", "v3.a", "v3.b");
+        headers.add(ImmutableList.of(new SimpleEntry<>("k4", "v4.a"), new SimpleEntry<>("k4", "v4.b")));
+        headers.addObject("k5", "v5.a");
+        headers.addObject("k5", "v5.b");
+        headers.addObject("k6", ImmutableList.of("v6.a", "v6.b"));
+        headers.addObject("k7", "v7.a", "v7.b");
+        headers.addObject(ImmutableList.of(new SimpleEntry<>("k8", "v8.a"), new SimpleEntry<>("k8", "v8.b")));
+
+        assertThat(headers.getAll("additional")).isEqualTo(ImmutableList.of("additional2", "additional3"));
+        assertThat(headers.getAll("k1")).isEqualTo(ImmutableList.of("additional1", "v1.a", "v1.b"));
+        assertThat(headers.getAll("k2")).isEqualTo(ImmutableList.of("v2.a", "v2.b"));
+        assertThat(headers.getAll("k3")).isEqualTo(ImmutableList.of("v3.a", "v3.b"));
+        assertThat(headers.getAll("k4")).isEqualTo(ImmutableList.of("v4.a", "v4.b"));
+        assertThat(headers.getAll("k5")).isEqualTo(ImmutableList.of("v5.a", "v5.b"));
+        assertThat(headers.getAll("k6")).isEqualTo(ImmutableList.of("v6.a", "v6.b"));
+        assertThat(headers.getAll("k7")).isEqualTo(ImmutableList.of("v7.a", "v7.b"));
+        assertThat(headers.getAll("k8")).isEqualTo(ImmutableList.of("v8.a", "v8.b"));
+        assertThat(headers.getAll("default")).isEqualTo(ImmutableList.of("default2", "default3"));
+        assertThat(headers.size()).isEqualTo(21);
     }
 
     @Test
@@ -898,6 +1717,64 @@ class CompositeStringMultiMapTest {
     }
 
     @Test
+    void set_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents = ImmutableList.of(HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.set("k1", "v1.a");
+        headers.set("k2", ImmutableList.of("v2.a", "v2.b"));
+        headers.set("k3", "v3.a", "v3.b");
+        headers.set(ImmutableList.of(new SimpleEntry<>("k4", "v4.a"), new SimpleEntry<>("k4", "v4.b")));
+        headers.setObject("k5", "v5.a");
+        headers.setObject("k6", ImmutableList.of("v6.a", "v6.b"));
+        headers.setObject("k7", "v7.a", "v7.b");
+        headers.setObject(ImmutableList.of(new SimpleEntry<>("k8", "v8.a"), new SimpleEntry<>("k8", "v8.b")));
+
+        assertThat(headers.getAll("additional")).isEqualTo(ImmutableList.of("additional2", "additional3"));
+        assertThat(headers.getAll("k1")).isEqualTo(ImmutableList.of("v1.a"));
+        assertThat(headers.getAll("k2")).isEqualTo(ImmutableList.of("v2.a", "v2.b"));
+        assertThat(headers.getAll("k3")).isEqualTo(ImmutableList.of("v3.a", "v3.b"));
+        assertThat(headers.getAll("k4")).isEqualTo(ImmutableList.of("v4.a", "v4.b"));
+        assertThat(headers.getAll("k5")).isEqualTo(ImmutableList.of("v5.a"));
+        assertThat(headers.getAll("k6")).isEqualTo(ImmutableList.of("v6.a", "v6.b"));
+        assertThat(headers.getAll("k7")).isEqualTo(ImmutableList.of("v7.a", "v7.b"));
+        assertThat(headers.getAll("k8")).isEqualTo(ImmutableList.of("v8.a", "v8.b"));
+        assertThat(headers.getAll("default")).isEqualTo(ImmutableList.of("default2", "default3"));
+        assertThat(headers.size()).isEqualTo(18);
+
+        headers.set("additional", "additional");
+        headers.set("k1", "v1.b");
+        headers.set("k2", ImmutableList.of("v2.c", "v2.d"));
+        headers.set("k3", "v3.c", "v3.d");
+        headers.set(ImmutableList.of(new SimpleEntry<>("k4", "v4.c"), new SimpleEntry<>("k4", "v4.d")));
+        headers.setObject("k5", "v5.b");
+        headers.setObject("k6", ImmutableList.of("v6.c", "v6.d"));
+        headers.setObject("k7", "v7.c", "v7.d");
+        headers.setObject(ImmutableList.of(new SimpleEntry<>("k8", "v8.c"), new SimpleEntry<>("k8", "v8.d")));
+        headers.set("default", "default");
+
+        assertThat(headers.getAll("additional")).isEqualTo(ImmutableList.of("additional"));
+        assertThat(headers.getAll("k1")).isEqualTo(ImmutableList.of("v1.b"));
+        assertThat(headers.getAll("k2")).isEqualTo(ImmutableList.of("v2.c", "v2.d"));
+        assertThat(headers.getAll("k3")).isEqualTo(ImmutableList.of("v3.c", "v3.d"));
+        assertThat(headers.getAll("k4")).isEqualTo(ImmutableList.of("v4.c", "v4.d"));
+        assertThat(headers.getAll("k5")).isEqualTo(ImmutableList.of("v5.b"));
+        assertThat(headers.getAll("k6")).isEqualTo(ImmutableList.of("v6.c", "v6.d"));
+        assertThat(headers.getAll("k7")).isEqualTo(ImmutableList.of("v7.c", "v7.d"));
+        assertThat(headers.getAll("k8")).isEqualTo(ImmutableList.of("v8.c", "v8.d"));
+        assertThat(headers.getAll("default")).isEqualTo(ImmutableList.of("default"));
+        assertThat(headers.size()).isEqualTo(16);
+    }
+
+    @Test
     void setIfAbsent() {
         final CompositeStringMultimap<CharSequence, AsciiString> headers =
                 new CompositeHttpHeadersBase(HttpHeaders.of(),
@@ -934,6 +1811,57 @@ class CompositeStringMultiMapTest {
         assertThat(headers.getAll("k7")).isEqualTo(ImmutableList.of("v7.a", "v7.b"));
         assertThat(headers.getAll("k8")).isEqualTo(ImmutableList.of("v8.a", "v8.b"));
         assertThat(headers.get("k9")).isEqualTo("v9");
+    }
+
+    @Test
+    void setIfAbsent_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.remove("dup");
+        headers.remove("k3");
+        headers.add("k3", "v3.a");
+        headers.setIfAbsent(ImmutableList.of(new SimpleEntry<>("dup", "dup3"),
+                                             new SimpleEntry<>("dup", "dup4"),
+                                             new SimpleEntry<>("k1", "v1.a"),
+                                             new SimpleEntry<>("k3", "v3.b"),
+                                             new SimpleEntry<>("k7", "v7.a"),
+                                             new SimpleEntry<>("k8", "v8.a"),
+                                             new SimpleEntry<>("k7", "v7.b"),
+                                             new SimpleEntry<>("k8", "v8.b"),
+                                             new SimpleEntry<>("k9", "v9")));
+
+        assertThat(headers.size()).isEqualTo(17);
+        assertThat(headers.getAll("additional")).isEqualTo(ImmutableList.of("additional2", "additional3"));
+        assertThat(headers.get("k1")).isEqualTo("additional1");
+        assertThat(headers.get("k2")).isEqualTo("v2");
+        assertThat(headers.get("k3")).isEqualTo("v3.a");
+        assertThat(headers.get("k4")).isEqualTo("v4");
+        assertThat(headers.get("k5")).isEqualTo("v5");
+        assertThat(headers.get("k6")).isEqualTo("v6");
+        assertThat(headers.getAll("dup")).isEqualTo(ImmutableList.of("dup3", "dup4"));
+        assertThat(headers.getAll("k7")).isEqualTo(ImmutableList.of("v7.a", "v7.b"));
+        assertThat(headers.getAll("k8")).isEqualTo(ImmutableList.of("v8.a", "v8.b"));
+        assertThat(headers.get("k9")).isEqualTo("v9");
+        assertThat(headers.getAll("default")).isEqualTo(ImmutableList.of("default2", "default3"));
     }
 
     @Test
@@ -998,6 +1926,61 @@ class CompositeStringMultiMapTest {
     }
 
     @Test
+    void remove_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.add("add", "add");
+        headers.remove("add");
+        assertThat(headers.remove("additional")).isTrue();
+        assertThat(headers.remove("default")).isTrue();
+        assertThat(headers.get("add")).isNull();
+        assertThat(headers.contains("add")).isFalse();
+        assertThat(headers.size()).isEqualTo(8);
+
+        assertThat(headers.remove("not_exist")).isFalse();
+        assertThat(headers.size()).isEqualTo(8);
+
+        assertThat(headers.remove("k1")).isTrue();
+        assertThat(headers.remove("k2")).isTrue();
+        assertThat(headers.remove("k3")).isTrue();
+        assertThat(headers.remove("k4")).isTrue();
+        assertThat(headers.remove("k5")).isTrue();
+        assertThat(headers.remove("k6")).isTrue();
+        assertThat(headers.size()).isEqualTo(2);
+
+        assertThat(headers.remove("dup")).isTrue();
+        assertThat(headers.isEmpty()).isTrue();
+
+        headers.add("k1", "v1");
+        headers.remove("k1");
+        assertThat(headers.isEmpty()).isTrue();
+
+        headers.add("k1", "v1");
+        headers.remove("k1");
+        headers.remove("k1");
+        assertThat(headers.isEmpty()).isTrue();
+    }
+
+    @Test
     void clear() {
         final CompositeStringMultimap<CharSequence, AsciiString> headers =
                 new CompositeHttpHeadersBase(HttpHeaders.of(),
@@ -1010,6 +1993,37 @@ class CompositeStringMultiMapTest {
                                              HttpHeaders.of("dup", "dup1"),
                                              HttpHeaders.of("dup", "dup2"),
                                              HttpHeaders.of());
+        headers.add("add", "add");
+        headers.remove("k1");
+        headers.clear();
+        assertThat(headers.isEmpty()).isTrue();
+    }
+
+    @Test
+    void clear_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        headers.add("add", "add");
+        headers.remove("k1");
         headers.clear();
         assertThat(headers.isEmpty()).isTrue();
     }
@@ -1081,6 +2095,71 @@ class CompositeStringMultiMapTest {
                                                     .add("dup", "dup1")
                                                     .add("dup", "dup2");
         assertThat(headers.equals(other4)).isTrue();
+    }
+
+    @Test
+    void equals_true_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.equals(headers)).isTrue();
+
+        final CompositeStringMultimap<CharSequence, AsciiString> other1 =
+                new CompositeHttpHeadersBase(HttpHeaders.of(),
+                                             HttpHeaders.of("k1", "additional1"),
+                                             HttpHeaders.of("additional", "additional2"),
+                                             HttpHeaders.of("additional", "additional3"),
+                                             HttpHeaders.of("k2", "v2",
+                                                            "k3", "v3"),
+                                             HttpHeaders.of("k4", "v4",
+                                                            "k5", "v5",
+                                                            "k6", "v6"),
+                                             HttpHeaders.of("dup", "dup1"),
+                                             HttpHeaders.of("dup", "dup2"),
+                                             HttpHeaders.of("default", "default2"),
+                                             HttpHeaders.of("default", "default3"),
+                                             HttpHeaders.of());
+        assertThat(headers.equals(other1)).isTrue();
+
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals2 =
+                new CompositeHttpHeadersBase(HttpHeaders.of("additional", "additional2",
+                                                            "additional", "additional3"),
+                                             HttpHeaders.of("k1", "additional1",
+                                                            "k3", "v3"));
+        final List<HttpHeaderGetters> parents2 =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k2", "v2"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults2 =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k6", "v6",
+                                                            "dup", "dup3",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> other2 =
+                new CompositeHttpHeadersBase(additionals2, parents2, defaults2);
+        assertThat(headers.equals(other2)).isTrue();
     }
 
     @Test
@@ -1281,5 +2360,46 @@ class CompositeStringMultiMapTest {
         headers.clear();
         assertThat(headers.toString()).isEqualTo("[]");
         assertThat(new CompositeHttpHeadersBase(HttpHeaders.of()).toString()).isEqualTo("[]");
+    }
+
+    @Test
+    void testToString_mergedWithAdditionalsAndDefaults() {
+        final CompositeStringMultimap<CharSequence, AsciiString> additionals =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "additional1",
+                                                            "additional", "additional2",
+                                                            "additional", "additional3"));
+        final List<HttpHeaderGetters> parents =
+                ImmutableList.of(HttpHeaders.of(),
+                                 HttpHeaders.of("k1", "v1"),
+                                 HttpHeaders.of("k2", "v2",
+                                                "k3", "v3"),
+                                 HttpHeaders.of("k4", "v4",
+                                                "k5", "v5",
+                                                "k6", "v6"),
+                                 HttpHeaders.of("dup", "dup1"),
+                                 HttpHeaders.of("dup", "dup2"),
+                                 HttpHeaders.of());
+        final CompositeStringMultimap<CharSequence, AsciiString> defaults =
+                new CompositeHttpHeadersBase(HttpHeaders.of("k1", "default1",
+                                                            "default", "default2",
+                                                            "default", "default3"));
+        final CompositeStringMultimap<CharSequence, AsciiString> headers =
+                new CompositeHttpHeadersBase(additionals, parents, defaults);
+        assertThat(headers.toString())
+                .isEqualTo("[k1=additional1, additional=additional2, additional=additional3, " +
+                           "k2=v2, k3=v3, k4=v4, k5=v5, k6=v6, dup=dup1, dup=dup2, " +
+                           "default=default2, default=default3]");
+
+        headers.remove("additional");
+        headers.remove("k2");
+        headers.remove("k4");
+        headers.add("k7", "v7");
+        headers.remove("k6");
+        headers.remove("dup");
+        headers.remove("default");
+        assertThat(headers.toString()).isEqualTo("[k1=additional1, k3=v3, k5=v5, k7=v7]");
+
+        headers.clear();
+        assertThat(headers.toString()).isEqualTo("[]");
     }
 }
