@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -286,6 +287,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private int maxRequestContainerLength;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
+    private final Map<ThriftFunction, HttpService> decoratedTHttpServices = new HashMap<>();
 
     THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
@@ -366,7 +368,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         final DecoratorAndOrder d = decorators.get(i);
                         decorator = decorator.andThen(d.decorator(dependencyInjector));
                     }
-                    thriftFunction.setDecoratedTHttpService(decorator.apply(this));
+                    decoratedTHttpServices.put(thriftFunction, decorator.apply(this));
                 }
             }
         }
@@ -374,8 +376,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.hasAttr(DECODED_REQUEST)) {
-            final DecodedRequest decodedRequest = ctx.attr(DECODED_REQUEST);
+        final DecodedRequest decodedRequest = ctx.attr(DECODED_REQUEST);
+        if (decodedRequest != null) {
             final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
             invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId,
                    decodedRequest.thriftFunction, decodedRequest.decodedReq, responseFuture);
@@ -578,7 +580,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         if (!f.declaredDecorators().isEmpty()) {
             ctx.setAttr(DECODED_REQUEST, new DecodedRequest(serializationFormat, seqId, f, decodedReq));
             try {
-                final HttpService decoratedTHttpService = f.decoratedTHttpService();
+                final HttpService decoratedTHttpService = decoratedTHttpServices.get(f);
                 assert decoratedTHttpService != null;
                 httpRes.complete(decoratedTHttpService.serve(ctx, req.toHttpRequest()));
             } catch (Exception e) {

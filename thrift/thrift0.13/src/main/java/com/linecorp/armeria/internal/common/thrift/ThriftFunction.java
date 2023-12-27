@@ -19,11 +19,13 @@ package com.linecorp.armeria.internal.common.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
@@ -39,8 +41,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.thrift.THttpService;
 
 /**
  * Provides the metadata of a Thrift service function.
@@ -66,8 +66,6 @@ public final class ThriftFunction {
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
     private final Class<?>[] declaredExceptions;
     private final List<DecoratorAndOrder> declaredDecorators;
-    @Nullable
-    private HttpService decoratedTHttpService;
 
     ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func,
                    @Nullable Object implementation) throws Exception {
@@ -218,23 +216,6 @@ public final class ThriftFunction {
      */
     public List<DecoratorAndOrder> declaredDecorators() {
         return declaredDecorators;
-    }
-
-    /**
-     * Returns the {@link THttpService} which is decorated by {@code declaredDecorators}.
-     * If {@code declaredDecorators} is empty, this returns {@code null}.
-     */
-    @Nullable
-    public HttpService decoratedTHttpService() {
-        return decoratedTHttpService;
-    }
-
-    /**
-     * Sets the given {@link HttpService} as {@code decoratedTHttpService}.
-     */
-    public void setDecoratedTHttpService(HttpService decoratedTHttpService) {
-        requireNonNull(decoratedTHttpService, "decoratedTHttpService");
-        this.decoratedTHttpService = decoratedTHttpService;
     }
 
     /**
@@ -452,5 +433,36 @@ public final class ThriftFunction {
             }
         }
         return builder.toString();
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof ThriftFunction)) {
+            return false;
+        }
+        final ThriftFunction that = (ThriftFunction) obj;
+        return Objects.equals(func, that.func) &&
+               type == that.type &&
+               Objects.equals(serviceType, that.serviceType) &&
+               Objects.equals(name, that.name) &&
+               Objects.equals(implementation, that.implementation) &&
+               Objects.equals(result, that.result) &&
+               Arrays.equals(argFields, that.argFields) &&
+               Objects.equals(successField, that.successField) &&
+               Objects.equals(exceptionFields, that.exceptionFields) &&
+               Arrays.equals(declaredExceptions, that.declaredExceptions) &&
+               Objects.equals(declaredDecorators, that.declaredDecorators);
+    }
+
+    @Override
+    public int hashCode() {
+        int result1 = Objects.hash(func, type, serviceType, name, implementation, result, successField,
+                                   exceptionFields, declaredDecorators);
+        result1 = 31 * result1 + Arrays.hashCode(argFields);
+        result1 = 31 * result1 + Arrays.hashCode(declaredExceptions);
+        return result1;
     }
 }
