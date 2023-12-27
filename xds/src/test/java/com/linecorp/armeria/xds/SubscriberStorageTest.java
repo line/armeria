@@ -18,14 +18,27 @@ package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.URI;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
+
+import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 
 class SubscriberStorageTest {
 
+    @RegisterExtension
+    static EventLoopExtension eventLoop = new EventLoopExtension();
+
     @Test
-    void registerAndUnregister() {
-        try (SubscriberStorage storage = new SubscriberStorage()) {
-            storage.register(XdsType.CLUSTER, "cluster1");
+    void registerAndUnregister() throws Exception {
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("http://a.com"), "cluster");
+        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
+             SubscriberStorage storage =
+                     new SubscriberStorage(eventLoop.get(), new WatchersStorage(), 15_000)) {
+            storage.register(XdsType.CLUSTER, "cluster1", xdsBootstrap);
             assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
             storage.unregister(XdsType.CLUSTER, "cluster1");
             assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
@@ -35,10 +48,13 @@ class SubscriberStorageTest {
 
     @Test
     void referenceCount() {
-        try (SubscriberStorage storage = new SubscriberStorage()) {
-            storage.register(XdsType.CLUSTER, "cluster1");
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("http://a.com"), "cluster");
+        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
+             SubscriberStorage storage =
+                     new SubscriberStorage(eventLoop.get(), new WatchersStorage(), 15_000)) {
+            storage.register(XdsType.CLUSTER, "cluster1", xdsBootstrap);
             assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
-            storage.register(XdsType.CLUSTER, "cluster1");
+            storage.register(XdsType.CLUSTER, "cluster1", xdsBootstrap);
             assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
 
             storage.unregister(XdsType.CLUSTER, "cluster1");

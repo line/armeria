@@ -16,15 +16,35 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.protobuf.Message;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.DiscoveryType;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 
 final class ClusterResourceParser extends ResourceParser {
 
     static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 
     private ClusterResourceParser() {}
+
+    @Override
+    ClusterResourceHolder parse(Message message) {
+        if (!(message instanceof Cluster)) {
+            throw new IllegalArgumentException("message not type of Cluster");
+        }
+        final ClusterResourceHolder holder = new ClusterResourceHolder((Cluster) message);
+        final Cluster cluster = holder.data();
+        checkArgument(cluster.getType() == DiscoveryType.EDS || cluster.getType() == DiscoveryType.STATIC,
+                      "Only cluster type EDS or STATIC is supported. Received %s.", cluster.getType());
+        if (cluster.getType() == DiscoveryType.EDS) {
+            final EdsClusterConfig eds = cluster.getEdsClusterConfig();
+            XdsConverterUtil.validateConfigSource(eds.getEdsConfig());
+        }
+        return holder;
+    }
 
     @Override
     String name(Message message) {
@@ -37,6 +57,11 @@ final class ClusterResourceParser extends ResourceParser {
     @Override
     Class<Cluster> clazz() {
         return Cluster.class;
+    }
+
+    @Override
+    boolean isFullStateOfTheWorld() {
+        return true;
     }
 
     @Override

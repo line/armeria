@@ -27,6 +27,14 @@ final class EndpointResourceParser extends ResourceParser {
     private EndpointResourceParser() {}
 
     @Override
+    EndpointResourceHolder parse(Message message) {
+        if (!(message instanceof ClusterLoadAssignment)) {
+            throw new IllegalArgumentException("message not type of ClusterLoadAssignment");
+        }
+        return new EndpointResourceHolder((ClusterLoadAssignment) message);
+    }
+
+    @Override
     String name(Message message) {
         if (!(message instanceof ClusterLoadAssignment)) {
             throw new IllegalArgumentException("message not type of ClusterLoadAssignment");
@@ -37,6 +45,11 @@ final class EndpointResourceParser extends ResourceParser {
     @Override
     Class<ClusterLoadAssignment> clazz() {
         return ClusterLoadAssignment.class;
+    }
+
+    @Override
+    boolean isFullStateOfTheWorld() {
+        return false;
     }
 
     @Override

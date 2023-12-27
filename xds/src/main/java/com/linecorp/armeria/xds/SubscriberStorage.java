@@ -24,14 +24,26 @@ import java.util.Set;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.netty.util.concurrent.EventExecutor;
+
 final class SubscriberStorage implements SafeCloseable {
 
-    // Accessed only from a single eventLoop
+    private final EventExecutor eventLoop;
+    private final long timeoutMillis;
+
     private final Map<XdsType, Map<String, XdsStreamSubscriber>> subscriberMap =
             new HashMap<>();
 
+    private final WatchersStorage watchersStorage;
+
+    SubscriberStorage(EventExecutor eventLoop, WatchersStorage watchersStorage, long timeoutMillis) {
+        this.eventLoop = eventLoop;
+        this.timeoutMillis = timeoutMillis;
+        this.watchersStorage = watchersStorage;
+    }
+
     @Nullable
-    boolean register(XdsType type, String resourceName) {
+    boolean register(XdsType type, String resourceName, XdsBootstrapImpl xdsBootstrap) {
         if (!subscriberMap.containsKey(type)) {
             subscriberMap.put(type, new HashMap<>());
         }
@@ -41,7 +53,8 @@ final class SubscriberStorage implements SafeCloseable {
             subscriber.incRef();
             return false;
         }
-        subscriber = new XdsStreamSubscriber();
+        subscriber = new XdsStreamSubscriber(type, resourceName, eventLoop, timeoutMillis, watchersStorage,
+                                               xdsBootstrap);
         subscriberMap.get(type).put(resourceName, subscriber);
         return true;
     }

@@ -16,14 +16,75 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.google.common.base.MoreObjects;
+import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 
 abstract class ResourceParser {
 
     abstract String name(Message message);
 
-    abstract Class<?> clazz();
+    abstract Class<? extends Message> clazz();
+
+    abstract ResourceHolder<?> parse(Message message);
+
+    ParsedResourcesHolder<?> parseResources(List<Any> resources) {
+        final Map<String, ResourceHolder<?>> parsedResources = new HashMap<>(resources.size());
+        final Set<String> invalidResources = new HashSet<>();
+        final List<String> errors = new ArrayList<>();
+
+        for (int i = 0; i < resources.size(); i++) {
+            final Any resource = resources.get(i);
+
+            final Message unpackedMessage;
+            try {
+                unpackedMessage = resource.unpack(clazz());
+            } catch (InvalidProtocolBufferException e) {
+                errors.add(String.format("Resource (%s: %s) cannot be unpacked to (%s) due to %s",
+                                         i, resource, clazz().getSimpleName(), e));
+                continue;
+            }
+            final String name;
+            try {
+                name = name(unpackedMessage);
+            } catch (Exception e) {
+                errors.add(String.format("Cannot determine name of (%s: %s) with type %s due to %s",
+                                         i, resource, clazz().getSimpleName(), e));
+                continue;
+            }
+
+            if (name == null) {
+                errors.add(String.format("Resource (%s: %s) cannot be processed as (%s) due to name: %s",
+                                         i, resource, clazz().getSimpleName(), name));
+                continue;
+            }
+
+            final ResourceHolder<?> resourceUpdate;
+            try {
+                resourceUpdate = parse(unpackedMessage);
+            } catch (Exception e) {
+                errors.add(String.format("Resource (%s: %s) cannot be parsed as (%s) due to %s",
+                                         i, resource, clazz().getSimpleName(), e));
+                invalidResources.add(name);
+                continue;
+            }
+
+            // Resource parsed successfully.
+            parsedResources.put(name, resourceUpdate);
+        }
+
+        return new ParsedResourcesHolder<>(parsedResources, invalidResources, errors);
+    }
+
+    abstract boolean isFullStateOfTheWorld();
 
     @Override
     public String toString() {

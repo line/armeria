@@ -16,15 +16,40 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.protobuf.Message;
 
+import io.envoyproxy.envoy.config.route.v3.Route.ActionCase;
+import io.envoyproxy.envoy.config.route.v3.RouteAction;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 final class RouteResourceParser extends ResourceParser {
 
-    static final RouteResourceParser INSTANCE = new RouteResourceParser();
+    public static final RouteResourceParser INSTANCE = new RouteResourceParser();
 
     private RouteResourceParser() {}
+
+    @Override
+    RouteResourceHolder parse(Message message) {
+        if (!(message instanceof RouteConfiguration)) {
+            throw new IllegalArgumentException("message not type of RouteConfiguration");
+        }
+        final RouteResourceHolder holder = new RouteResourceHolder((RouteConfiguration) message);
+        holder.routes().forEach(route -> {
+            checkArgument(route.getActionCase() == ActionCase.ROUTE,
+                          "Only Route ActionCase is supported. Received %s.",
+                          route.getActionCase());
+            final RouteAction routeAction = route.getRoute();
+            checkArgument(route.hasRoute(),
+                          "Route doesn't have a RouteAction. Received %s.",
+                          route.getRoute());
+            checkArgument(routeAction.hasCluster(),
+                          "RouteAction doesn't have a Cluster. Received %s.",
+                          routeAction.getCluster());
+        });
+        return holder;
+    }
 
     @Override
     String name(Message message) {
@@ -37,6 +62,11 @@ final class RouteResourceParser extends ResourceParser {
     @Override
     Class<RouteConfiguration> clazz() {
         return RouteConfiguration.class;
+    }
+
+    @Override
+    boolean isFullStateOfTheWorld() {
+        return false;
     }
 
     @Override
