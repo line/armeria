@@ -21,12 +21,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.grpc.Status;
 
 /**
- * A listener implementation which waits for the updates on the xDS resource.
- * This listener can be added to a {@link XdsBootstrap} via
- * {@link XdsBootstrap#addClusterWatcher(String, ResourceWatcher)} to listen for updates.
+ * A listener implementation which waits for the updates on a xDS resource.
  */
 @UnstableApi
-public interface ResourceWatcher<T extends ResourceHolder<?>> {
+public interface ResourceWatcher<T> {
 
     /**
      * Invoked when an unexpected error occurs while parsing a resource.

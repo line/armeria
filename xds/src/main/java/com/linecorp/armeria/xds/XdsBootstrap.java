@@ -21,9 +21,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 /**
  * A {@link XdsBootstrap} encapsulates all logic to communicate with control plane servers
@@ -33,11 +31,12 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
  * <pre>{@code
  * Bootstrap bootstrap = ...;
  * XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
- * xdsBootstrap.subscribe(type, resourceName);
- * xdsBootstrap.addEndpointWatcher(type, resourceName, watcher).
+ * ListenerRoot root = xdsBootstrap.listenerRoot("listener1");
+ * root.routeNode().addListener(...);
+ * root.close();
  * }</pre>
  * Initializing a {@link XdsBootstrap} does not consume any resources until a resource is subscribed
- * via {@link #subscribe(XdsType, String)}.
+ * via {@link #listenerRoot(String)} or its variants.
  * Note that it is important to close the {@link XdsBootstrap} after usage to avoid leaking resources.
  */
 @UnstableApi
@@ -53,51 +52,34 @@ public interface XdsBootstrap extends SafeCloseable {
     }
 
     /**
-     * Starts a watch on the provided type and resource. Once a watch is started, listeners hook to
-     * this {@link XdsBootstrap} will start receiving updates.
-     * Note that it is important that the returned {@link SafeCloseable} is called since this call
-     * can potentially create a new connection to the control plane.
+     * Represents a {@link Listener} root node of a bootstrap.
+     * Users may hook watchers to the root node to listen to events, or also
+     * start watches on other resources derived from this node.
+     * Note that this root will by default try to query the resource from the remote control plane.
      */
-    @UnstableApi
-    SafeCloseable subscribe(XdsType type, String resourceName);
+    ListenerRoot listenerRoot(String resourceName);
 
     /**
-     * Adds a watcher for {@link Listener}. Note that adding a watcher does not initiate a connection
-     * and just waits for update events. This can be useful if a user already knows
-     * a resource exists (i.e. static resources), and would just like to receive events
-     * without consuming resources.
-     * Note that the watcher callbacks are invoked from an event loop so blocking calls should be avoided.
+     * Represents a {@link Listener} root node of a bootstrap.
+     * Users may hook watchers to the root node to listen to events, or also
+     * start watches on other resources derived from this node.
+     * @param autoSubscribe if {@code true} will query the resource from the remote control plane.
      */
-    @UnstableApi
-    SafeCloseable addListenerWatcher(String resourceName, ResourceWatcher<ListenerResourceHolder> watcher);
+    ListenerRoot listenerRoot(String resourceName, boolean autoSubscribe);
 
     /**
-     * Adds a watcher for {@link RouteConfiguration}. Note that adding a watcher does not initiate a connection
-     * and just waits for update events. This can be useful if a user already knows
-     * a resource exists (i.e. static resources), and would just like to receive events
-     * without consuming resources.
-     * Note that the watcher callbacks are invoked from an event loop so blocking calls should be avoided.
+     * Represents a {@link Cluster} root node of a bootstrap.
+     * Users may hook watchers to the root node to listen to events, or also
+     * start watches on other resources derived from this node.
+     * Note that this root will by default try to query the resource from the remote control plane.
      */
-    @UnstableApi
-    SafeCloseable addRouteWatcher(String resourceName, ResourceWatcher<RouteResourceHolder> watcher);
+    ClusterRoot clusterRoot(String resourceName);
 
     /**
-     * Adds a watcher for {@link Cluster}. Note that adding a watcher does not initiate a connection
-     * and just waits for update events. This can be useful if a user already knows
-     * a resource exists (i.e. static resources), and would just like to receive events
-     * without consuming resources.
-     * Note that the watcher callbacks are invoked from an event loop so blocking calls should be avoided.
+     * Represents a {@link Cluster} root node of a bootstrap.
+     * Users may hook watchers to the root node to listen to events, or also
+     * start watches on other resources derived from this node.
+     * @param autoSubscribe if {@code true} will query the resource from the remote control plane.
      */
-    @UnstableApi
-    SafeCloseable addClusterWatcher(String resourceName, ResourceWatcher<ClusterResourceHolder> watcher);
-
-    /**
-     * Adds a watcher for {@link ClusterLoadAssignment}. Note that adding a watcher does not initiate
-     * a connection and just waits for update events. This can be useful if a user already knows
-     * a resource exists (i.e. static resources), and would just like to receive events
-     * without consuming resources.
-     * Note that the watcher callbacks are invoked from an event loop so blocking calls should be avoided.
-     */
-    @UnstableApi
-    SafeCloseable addEndpointWatcher(String resourceName, ResourceWatcher<EndpointResourceHolder> watcher);
+    ClusterRoot clusterRoot(String resourceName, boolean autoSubscribe);
 }

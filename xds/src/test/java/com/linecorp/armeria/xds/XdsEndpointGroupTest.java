@@ -56,8 +56,8 @@ public class XdsEndpointGroupTest {
     private static final String httpsClusterName = "https-cluster1";
     private static final String listenerName = "listener1";
     private static final String httpsListenerName = "https-listener1";
-    final String routeName = "route1";
-    final String httpsRouteName = "https-route1";
+    private static final String routeName = "route1";
+    private static final String httpsRouteName = "https-route1";
     private static final String bootstrapClusterName = "bootstrap-cluster";
     private static final String httpsBootstrapClusterName = "https-bootstrap-cluster";
 
@@ -124,7 +124,7 @@ public class XdsEndpointGroupTest {
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final EndpointGroup xdsEndpointGroup =
-                    XdsEndpointGroup.of(xdsBootstrap, XdsType.CLUSTER, clusterName, true);
+                    XdsEndpointGroup.of(xdsBootstrap, XdsType.CLUSTER, clusterName);
             final BlockingWebClient blockingClient = WebClient.of(SessionProtocol.HTTP, xdsEndpointGroup)
                                                               .blocking();
             assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");
@@ -143,7 +143,7 @@ public class XdsEndpointGroupTest {
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final EndpointGroup xdsEndpointGroup =
-                    XdsEndpointGroup.of(xdsBootstrap, XdsType.LISTENER, listenerName, true);
+                    XdsEndpointGroup.of(xdsBootstrap, XdsType.LISTENER, listenerName);
             final BlockingWebClient blockingClient = WebClient.of(SessionProtocol.HTTP, xdsEndpointGroup)
                                                               .blocking();
             assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");
@@ -163,7 +163,7 @@ public class XdsEndpointGroupTest {
         final Consumer<GrpcClientBuilder> customizer = cb -> cb.factory(ClientFactory.insecure());
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap, customizer)) {
             final EndpointGroup xdsEndpointGroup =
-                    XdsEndpointGroup.of(xdsBootstrap, XdsType.LISTENER, httpsListenerName, true);
+                    XdsEndpointGroup.of(xdsBootstrap, XdsType.LISTENER, httpsListenerName);
             final BlockingWebClient blockingClient = WebClient.builder(SessionProtocol.HTTPS, xdsEndpointGroup)
                                                               .factory(ClientFactory.insecure())
                                                               .build().blocking();
@@ -183,7 +183,7 @@ public class XdsEndpointGroupTest {
         try (XdsBootstrapImpl client = new XdsBootstrapImpl(XdsTestResources.bootstrap(configSource, cluster),
                                               cb -> cb.factory(ClientFactory.insecure()))) {
             final EndpointGroup xdsEndpointGroup =
-                    XdsEndpointGroup.of(client, XdsType.LISTENER, listenerName, true);
+                    XdsEndpointGroup.of(client, XdsType.LISTENER, listenerName);
             final BlockingWebClient blockingClient = WebClient.builder(SessionProtocol.HTTP, xdsEndpointGroup)
                                                               .factory(ClientFactory.insecure())
                                                               .build().blocking();

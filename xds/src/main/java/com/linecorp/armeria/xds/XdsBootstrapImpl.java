@@ -86,7 +86,6 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         node = bootstrap.hasNode() ? bootstrap.getNode() : Node.getDefaultInstance();
     }
 
-    @Override
     public SafeCloseable subscribe(XdsType type, String resourceName) {
         return startSubscribe(null, type, resourceName);
     }
@@ -163,7 +162,26 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         watchersStorage.removeNode(type, resourceName, watcher);
     }
 
-    @VisibleForTesting
+    @Override
+    public ListenerRoot listenerRoot(String resourceName) {
+        return listenerRoot(resourceName, true);
+    }
+
+    @Override
+    public ListenerRoot listenerRoot(String resourceName, boolean autoSubscribe) {
+        return new ListenerRoot(this, resourceName, autoSubscribe);
+    }
+
+    @Override
+    public ClusterRoot clusterRoot(String resourceName) {
+        return clusterRoot(resourceName, true);
+    }
+
+    @Override
+    public ClusterRoot clusterRoot(String resourceName, boolean autoSubscribe) {
+        return new ClusterRoot(this, resourceName, autoSubscribe);
+    }
+
     SafeCloseable addListener(
             XdsType type, String resourceName, ResourceWatcher<? extends ResourceHolder<?>> watcher) {
         requireNonNull(resourceName, "resourceName");
@@ -175,27 +193,53 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         return () -> eventLoop.execute(() -> watchersStorage.removeWatcher(type, resourceName, cast));
     }
 
-    @Override
-    public SafeCloseable addListenerWatcher(String resourceName,
-                                            ResourceWatcher<ListenerResourceHolder> watcher) {
+    private void removeListener(
+            XdsType type, String resourceName, ResourceWatcher<? extends ResourceHolder<?>> watcher) {
+        requireNonNull(resourceName, "resourceName");
+        requireNonNull(type, "type");
+        @SuppressWarnings("unchecked")
+        final ResourceWatcher<ResourceHolder<?>> cast =
+                (ResourceWatcher<ResourceHolder<?>>) requireNonNull(watcher, "watcher");
+        eventLoop.execute(() -> watchersStorage.removeWatcher(type, resourceName, cast));
+    }
+
+    SafeCloseable addListenerWatcher(String resourceName,
+                                     ResourceWatcher<ListenerResourceHolder> watcher) {
         return addListener(LISTENER, resourceName, watcher);
     }
 
-    @Override
-    public SafeCloseable addRouteWatcher(String resourceName, ResourceWatcher<RouteResourceHolder> watcher) {
+    void removeListenerWatcher(String resourceName,
+                               ResourceWatcher<ListenerResourceHolder> watcher) {
+        removeListener(LISTENER, resourceName, watcher);
+    }
+
+    SafeCloseable addRouteWatcher(String resourceName, ResourceWatcher<RouteResourceHolder> watcher) {
         return addListener(ROUTE, resourceName, watcher);
     }
 
-    @Override
-    public SafeCloseable addClusterWatcher(String resourceName,
-                                           ResourceWatcher<ClusterResourceHolder> watcher) {
+    void removeRouteWatcher(String resourceName,
+                            ResourceWatcher<RouteResourceHolder> watcher) {
+        removeListener(ROUTE, resourceName, watcher);
+    }
+
+    SafeCloseable addClusterWatcher(String resourceName,
+                                    ResourceWatcher<ClusterResourceHolder> watcher) {
         return addListener(CLUSTER, resourceName, watcher);
     }
 
-    @Override
-    public SafeCloseable addEndpointWatcher(String resourceName,
-                                            ResourceWatcher<EndpointResourceHolder> watcher) {
+    void removeClusterWatcher(String resourceName,
+                              ResourceWatcher<ClusterResourceHolder> watcher) {
+        removeListener(CLUSTER, resourceName, watcher);
+    }
+
+    SafeCloseable addEndpointWatcher(String resourceName,
+                                     ResourceWatcher<EndpointResourceHolder> watcher) {
         return addListener(ENDPOINT, resourceName, watcher);
+    }
+
+    void removeEndpointWatcher(String resourceName,
+                               ResourceWatcher<EndpointResourceHolder> watcher) {
+        removeListener(ENDPOINT, resourceName, watcher);
     }
 
     @Override
@@ -216,5 +260,9 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     @VisibleForTesting
     Map<ConfigSource, ConfigSourceClient> clientMap() {
         return clientMap;
+    }
+
+    EventExecutor eventLoop() {
+        return eventLoop;
     }
 }

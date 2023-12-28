@@ -19,17 +19,12 @@ package com.linecorp.armeria.xds;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.xds.XdsConverterUtil.convertEndpoints;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
@@ -51,54 +46,59 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  */
 public final class XdsEndpointGroup extends DynamicEndpointGroup {
 
-    private final SafeCloseable closeable;
-    @Nullable
-    private final SafeCloseable subscribeCloseable;
+    private final SafeCloseable config;
 
     /**
      * Creates a {@link XdsEndpointGroup} which listens to the specified {@code resourceName}.
      */
     public static EndpointGroup of(XdsBootstrap xdsBootstrap, XdsType type, String resourceName) {
-        checkArgument(type == XdsType.ENDPOINT, "Received %s but only ENDPOINT is supported.", type);
-        return of(xdsBootstrap, type, resourceName, true);
+        checkArgument(type == XdsType.LISTENER || type == XdsType.CLUSTER,
+                      "Received %s but only LISTENER is supported.", type);
+        return new XdsEndpointGroup(xdsBootstrap, type, resourceName, true);
     }
 
     /**
      * Creates a {@link XdsEndpointGroup} which listens to the specified {@code resourceName}.
-     * @param autoSubscribe whether to subscribe to the {@link XdsBootstrap} by default.
+     *
+     * @param autoSubscribe if {@code true} will query the resource from the remote control plane.
      */
-    public static EndpointGroup of(XdsBootstrap xdsBootstrap, XdsType type,
-                                   String resourceName, boolean autoSubscribe) {
+    public static EndpointGroup of(XdsBootstrap xdsBootstrap, XdsType type, String resourceName,
+                                   boolean autoSubscribe) {
+        checkArgument(type == XdsType.LISTENER || type == XdsType.CLUSTER,
+                      "Received %s but only LISTENER is supported.", type);
         return new XdsEndpointGroup(xdsBootstrap, type, resourceName, autoSubscribe);
     }
 
     @VisibleForTesting
     XdsEndpointGroup(XdsBootstrap xdsBootstrap, XdsType type, String resourceName, boolean autoSubscribe) {
-        if (autoSubscribe) {
-            subscribeCloseable = xdsBootstrap.subscribe(type, resourceName);
-        } else {
-            subscribeCloseable = null;
+        final EndpointNode endpointNode;
+        switch (type) {
+            case CLUSTER:
+                final ClusterRoot clusterConfig = xdsBootstrap.clusterRoot(resourceName, autoSubscribe);
+                endpointNode = clusterConfig.endpointNode();
+                config = clusterConfig;
+                break;
+            case LISTENER:
+                final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(resourceName, autoSubscribe);
+                endpointNode = listenerRoot.routeNode()
+                                           .clusterNode((virtualHost, route) -> true)
+                                           .endpointNode();
+                config = listenerRoot;
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported config");
         }
-        final AggregatingWatcherListener listener = new AggregatingWatcherListener() {
+        endpointNode.addListener(new ResourceWatcher<EndpointResourceHolder>() {
             @Override
-            public void onEndpointUpdate(
-                    Map<String, ClusterLoadAssignment> update) {
-                final Set<Endpoint> endpoints = new HashSet<>();
-                update.values().forEach(clusterLoadAssignment -> {
-                    endpoints.addAll(convertEndpoints(clusterLoadAssignment));
-                });
-                setEndpoints(endpoints);
+            public void onChanged(EndpointResourceHolder update) {
+                setEndpoints(convertEndpoints(update.data()));
             }
-        };
-        closeable = new AggregatingWatcher(xdsBootstrap, type, resourceName, listener);
+        });
     }
 
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
-        closeable.close();
-        if (subscribeCloseable != null) {
-            subscribeCloseable.close();
-        }
+        config.close();
         super.doCloseAsync(future);
     }
 }

@@ -20,8 +20,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A holder object for xDS resources. This is a value object which is
- * usually passed over via listener callbacks such as
- * {@link XdsBootstrap#addClusterWatcher(String, ResourceWatcher)}.
+ * usually passed over via listener callbacks in {@link ResourceWatcher}.
  * Holder objects are used to:
  * <ul>
  *     <li>Provide additional metadata.</li>

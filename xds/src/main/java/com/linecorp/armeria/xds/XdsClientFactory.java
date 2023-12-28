@@ -33,10 +33,10 @@ final class XdsClientFactory implements SafeCloseable, ResourceWatcher<ClusterRe
     private final Consumer<GrpcClientBuilder> listener;
     private final SafeCloseable clusterWatcher;
 
-    XdsClientFactory(XdsBootstrap xdsBootstrap, String clusterName,
+    XdsClientFactory(XdsBootstrapImpl xdsBootstrap, String clusterName,
                      Consumer<GrpcClientBuilder> listener) {
-        clusterWatcher = xdsBootstrap.addClusterWatcher(clusterName, this);
         endpointGroup = XdsEndpointGroup.of(xdsBootstrap, XdsType.CLUSTER, clusterName, false);
+        clusterWatcher = xdsBootstrap.addClusterWatcher(clusterName, this);
         this.listener = listener;
     }
 
