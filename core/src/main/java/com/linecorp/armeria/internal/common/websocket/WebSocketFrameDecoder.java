@@ -71,6 +71,7 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
     private final boolean allowMaskMismatch;
     private final boolean aggregateContinuation;
     private final List<WebSocketFrame> aggregatingFrames = new ArrayList<>();
+    private long aggregatingFramesLength;
     @Nullable
     private WebSocket outboundFrames;
 
@@ -297,6 +298,7 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
 
                     if (finalFragment) {
                         fragmentedFramesCount = 0;
+                        aggregatingFramesLength = 0;
                         if (aggregatingFrames.isEmpty()) {
                             out.add(decodedFrame);
                         } else {
@@ -314,6 +316,16 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
                     } else {
                         fragmentedFramesCount++;
                         if (aggregateContinuation) {
+                            aggregatingFramesLength += framePayloadLength;
+                            if (aggregatingFramesLength > maxFramePayloadLength) {
+                                throw protocolViolation(
+                                        WebSocketCloseStatus.MESSAGE_TOO_BIG,
+                                        // The message must not exceed 125 length:
+                                        // https://datatracker.ietf.org/doc/html/rfc6455/#section-5.5
+                                        "The length of aggregated frames exceeded the max frame length. " +
+                                        " aggregated length: " + aggregatingFramesLength +
+                                        ", max frame length: " + maxFramePayloadLength);
+                            }
                             aggregatingFrames.add(decodedFrame);
                         } else {
                             out.add(decodedFrame);

@@ -20,6 +20,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -30,6 +31,7 @@ import com.linecorp.armeria.client.websocket.WebSocketClient;
 import com.linecorp.armeria.client.websocket.WebSocketInboundTestHandler;
 import com.linecorp.armeria.client.websocket.WebSocketSession;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -48,6 +50,7 @@ class WebSocketServiceAggregateContinuationTest {
             final WebSocketEchoHandler handler = new WebSocketEchoHandler();
             sb.service("/aggregate", WebSocketService.builder(handler)
                                                      .aggregateContinuation(true)
+                                                     .maxFramePayloadLength(13)
                                                      .build());
             sb.service("/no_aggregate", WebSocketService.builder(handler)
                                                         .aggregateContinuation(false)
@@ -112,7 +115,26 @@ class WebSocketServiceAggregateContinuationTest {
         await().until(outbound::isComplete);
     }
 
-    static final class WebSocketEchoHandler implements WebSocketServiceHandler {
+    @Test
+    void aggregateFramesExceedMaxLength() throws InterruptedException {
+        final WebSocketClient webSocketClient = WebSocketClient.of(server.httpUri());
+        final WebSocketSession webSocketSession = webSocketClient.connect("/aggregate").join();
+
+        final WebSocketWriter outbound = webSocketSession.outbound();
+        outbound.write(WebSocketFrame.ofText("Hello", false));
+        outbound.write(WebSocketFrame.ofContinuation(" wor", false));
+        outbound.write(WebSocketFrame.ofContinuation("ld!", false));
+        outbound.write(WebSocketFrame.ofContinuation("!!", false));
+
+        final WebSocketInboundTestHandler inboundHandler = new WebSocketInboundTestHandler(
+                webSocketSession.inbound(), SessionProtocol.H2C);
+
+        final WebSocketFrame frame = inboundHandler.inboundQueue().take();
+        assertThat(frame.type()).isSameAs(WebSocketFrameType.CLOSE);
+        assertThat(((CloseWebSocketFrame) frame).status()).isSameAs(WebSocketCloseStatus.MESSAGE_TOO_BIG);
+    }
+
+        static final class WebSocketEchoHandler implements WebSocketServiceHandler {
 
         @Override
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {

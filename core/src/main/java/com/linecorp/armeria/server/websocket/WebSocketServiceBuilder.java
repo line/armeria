@@ -112,6 +112,8 @@ public final class WebSocketServiceBuilder {
      * Sets whether to aggregate the subsequent continuation frames of the incoming
      * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame into a single
      * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame.
+     * If the length of the aggregated frames exceeds the {@link #maxFramePayloadLength(int)},
+     * a close frame with the status {@link WebSocketCloseStatus#MESSAGE_TOO_BIG} is sent to the peer.
      * Note that enabling this feature may lead to increased memory usage, so use it with caution.
      */
     public WebSocketServiceBuilder aggregateContinuation(boolean aggregateContinuation) {
