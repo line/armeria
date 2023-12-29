@@ -18,6 +18,9 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +28,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Duration;
-import com.google.protobuf.Message;
 
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -91,34 +93,34 @@ class DynamicResourcesTest {
         final String listenerName = "listener_0";
         final String routeName = "local_route";
         final String clusterName = "some_service";
-        final String bootstrapClusterName = "bootstrap-cluster";
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            xdsBootstrap.startSubscribe(configSource, XdsType.LISTENER, listenerName);
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName);
 
-            final TestResourceWatcher<Message> watcher = new TestResourceWatcher<>();
-            xdsBootstrap.addListener(XdsType.LISTENER, listenerName, watcher);
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            listenerRoot.addListener(watcher);
             final Listener expectedListener =
                     cache.getSnapshot(GROUP).listeners().resources().get(listenerName);
             awaitAssert(watcher, "onChanged", expectedListener);
 
             final RouteConfiguration expectedRoute =
                     cache.getSnapshot(GROUP).routes().resources().get(routeName);
-            xdsBootstrap.addListener(XdsType.ROUTE, routeName, watcher);
+            listenerRoot.routeNode().addListener(watcher);
             awaitAssert(watcher, "onChanged", expectedRoute);
 
             final Cluster expectedCluster =
                     cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            xdsBootstrap.addListener(XdsType.CLUSTER, clusterName, watcher);
+            listenerRoot.routeNode().clusterNode((virtualHost, route) -> true)
+                        .addListener(watcher);
             awaitAssert(watcher, "onChanged", expectedCluster);
             final ClusterLoadAssignment expectedEndpoint =
                     cache.getSnapshot(GROUP).endpoints().resources().get(clusterName);
-            xdsBootstrap.addListener(XdsType.ENDPOINT, clusterName, watcher);
+            listenerRoot.routeNode().clusterNode((virtualHost, route) -> true)
+                        .endpointNode().addListener(watcher);
             awaitAssert(watcher, "onChanged", expectedEndpoint);
 
-            Thread.sleep(100);
-            assertThat(watcher.events()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 

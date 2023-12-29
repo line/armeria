@@ -27,11 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.Message;
 
 import io.grpc.Status;
 
-class TestResourceWatcher<T extends Message> implements ResourceWatcher<ResourceHolder<T>> {
+class TestResourceWatcher implements ResourceWatcher<ResourceHolder<?>> {
     private static final Logger logger = LoggerFactory.getLogger(TestResourceWatcher.class);
 
     private final Deque<List<Object>> events = new ConcurrentLinkedDeque<>();
@@ -49,7 +48,7 @@ class TestResourceWatcher<T extends Message> implements ResourceWatcher<Resource
     }
 
     @Override
-    public void onChanged(ResourceHolder<T> update) {
+    public void onChanged(ResourceHolder<?> update) {
         logger.info("onChanged: {}", update);
         events.add(ImmutableList.of("onChanged", update.data()));
     }

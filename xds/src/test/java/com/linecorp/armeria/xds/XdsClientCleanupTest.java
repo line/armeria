@@ -75,11 +75,11 @@ class XdsClientCleanupTest {
         final String clusterName = "cluster1";
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final SafeCloseable closeable = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
             await().until(() -> !clientMap.isEmpty());
 
-            closeable.close();
+            clusterRoot.close();
             await().untilAsserted(() -> assertThat(clientMap).isEmpty());
         }
     }
@@ -90,8 +90,8 @@ class XdsClientCleanupTest {
         final String clusterName = "cluster1";
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final SafeCloseable closeable1 = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
-            final SafeCloseable closeable2 = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
+            final SafeCloseable closeable1 = xdsBootstrap.clusterRoot(clusterName);
+            final SafeCloseable closeable2 = xdsBootstrap.clusterRoot(clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
             await().untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 
@@ -110,8 +110,8 @@ class XdsClientCleanupTest {
         final String clusterName = "cluster1";
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final SafeCloseable closeable1 = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
-            final SafeCloseable closeable2 = xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
+            final SafeCloseable closeable1 = xdsBootstrap.clusterRoot(clusterName);
+            final SafeCloseable closeable2 = xdsBootstrap.clusterRoot(clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
             await().untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 

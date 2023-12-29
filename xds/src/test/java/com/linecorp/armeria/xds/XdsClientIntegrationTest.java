@@ -20,13 +20,14 @@ import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
@@ -36,9 +37,8 @@ import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.controlplane.server.V3DiscoveryServer;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
-public class XdsClientIntegrationTest {
+class XdsClientIntegrationTest {
 
     private static final String GROUP = "key";
     private static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP);
@@ -73,15 +73,12 @@ public class XdsClientIntegrationTest {
 
     @Test
     void basicCase() throws Exception {
-        final String bootstrapClusterName = "bootstrap-cluster";
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
         final String clusterName = "cluster1";
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final SafeCloseable watcherCloseable = xdsBootstrap.startSubscribe(configSource, XdsType.CLUSTER,
-                                                                         clusterName);
-            final TestResourceWatcher<Cluster> watcher = new TestResourceWatcher<>();
-            xdsBootstrap.addListener(XdsType.CLUSTER, clusterName, watcher);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            clusterRoot.addListener(watcher);
 
             // Updates are propagated for the initial value
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
@@ -98,7 +95,7 @@ public class XdsClientIntegrationTest {
             awaitAssert(watcher, "onChanged", expectedCluster2);
 
             // Updates aren't propagated after the watch is removed
-            watcherCloseable.close();
+            clusterRoot.close();
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(
@@ -106,21 +103,18 @@ public class XdsClientIntegrationTest {
                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
                             ImmutableList.of(), "2"));
 
-            Thread.sleep(100);
-            assertThat(watcher.first("onChanged")).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.first("onChanged")).isEmpty());
         }
     }
 
     @Test
     void multipleResources() throws Exception {
-        final String bootstrapClusterName = "bootstrap-cluster";
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final TestResourceWatcher<Cluster> watcher = new TestResourceWatcher<>();
-            final SafeCloseable closeCluster1 =
-                    xdsBootstrap.startSubscribe(configSource, XdsType.CLUSTER, "cluster1");
-            xdsBootstrap.addListener(XdsType.CLUSTER, "cluster1", watcher);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot("cluster1");
+            clusterRoot.addListener(watcher);
 
             // Updates are propagated for the initial value
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
@@ -137,13 +131,13 @@ public class XdsClientIntegrationTest {
             final Cluster expectedCluster2 = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
             awaitAssert(watcher, "onChanged", expectedCluster2);
 
-            xdsBootstrap.startSubscribe(configSource, XdsType.CLUSTER, "cluster2");
-            xdsBootstrap.addListener(XdsType.CLUSTER, "cluster2", watcher);
+            final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot("cluster2");
+            clusterRoot2.addListener(watcher);
             final Cluster expectedCluster3 = cache.getSnapshot(GROUP).clusters().resources().get("cluster2");
             awaitAssert(watcher, "onChanged", expectedCluster3);
 
             // try removing the watcher for cluster1
-            closeCluster1.close();
+            clusterRoot.close();
             awaitAssert(watcher, "onResourceDoesNotExist", "cluster1");
 
             cache.setSnapshot(
@@ -156,45 +150,40 @@ public class XdsClientIntegrationTest {
             final Cluster expectedCluster4 = cache.getSnapshot(GROUP).clusters().resources().get("cluster2");
             awaitAssert(watcher, "onChanged", expectedCluster4);
 
-            Thread.sleep(100);
-            assertThat(watcher.events()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 
     @Test
     void initialValue() throws Exception {
-        final String bootstrapClusterName = "bootstrap-cluster";
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final TestResourceWatcher<Cluster> watcher =
-                    new TestResourceWatcher<>();
-            xdsBootstrap.startSubscribe(configSource, XdsType.CLUSTER, "cluster1");
-            xdsBootstrap.addListener(XdsType.CLUSTER, "cluster1", watcher);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            final ClusterRoot clusterRoot1 = xdsBootstrap.clusterRoot("cluster1");
+            clusterRoot1.addListener(watcher);
 
             // Updates are propagated for the initial value
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
             awaitAssert(watcher, "onChanged", expectedCluster);
 
             // add another watcher and check that the event is propagated immediately
-            xdsBootstrap.startSubscribe(configSource, XdsType.CLUSTER, "cluster1");
-            xdsBootstrap.addListener(XdsType.CLUSTER, "cluster1", watcher);
+            final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot("cluster1");
+            clusterRoot2.addListener(watcher);
             awaitAssert(watcher, "onChanged", expectedCluster);
 
-            Thread.sleep(100);
-            assertThat(watcher.events()).hasSize(0);
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 
     @Test
     void errorHandling() throws Exception {
-        final String bootstrapClusterName = "bootstrap-cluster";
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final TestResourceWatcher<Cluster> watcher = new TestResourceWatcher<>();
-            xdsBootstrap.startSubscribe(configSource, XdsType.CLUSTER, "cluster1");
-            xdsBootstrap.addListener(XdsType.CLUSTER, "cluster1", watcher);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot("cluster1");
+            clusterRoot.addListener(watcher);
 
             // Updates are propagated for the initial value
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
@@ -216,8 +205,8 @@ public class XdsClientIntegrationTest {
             final Cluster expectedCluster2 = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
             awaitAssert(watcher, "onChanged", expectedCluster2);
 
-            Thread.sleep(100);
-            assertThat(watcher.eventSize()).isEqualTo(0);
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 }

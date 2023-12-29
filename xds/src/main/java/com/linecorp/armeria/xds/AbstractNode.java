@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractNode<T> implements ResourceWatcher<T> {
@@ -54,6 +55,24 @@ abstract class AbstractNode<T> implements ResourceWatcher<T> {
         }
         for (ResourceWatcher<? super T> watcher: listeners) {
             watcher.onChanged(update);
+        }
+    }
+
+    @Override
+    public void onResourceDoesNotExist(XdsType type, String resourceName) {
+        current = null;
+        if (!whenReady.isDone()) {
+            whenReady.complete(null);
+        }
+        for (ResourceWatcher<? super T> watcher: listeners) {
+            watcher.onResourceDoesNotExist(type, resourceName);
+        }
+    }
+
+    @Override
+    public void onError(XdsType type, Status error) {
+        for (ResourceWatcher<? super T> watcher: listeners) {
+            watcher.onError(type, error);
         }
     }
 

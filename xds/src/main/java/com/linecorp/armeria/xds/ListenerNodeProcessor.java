@@ -30,13 +30,13 @@ interface ListenerNodeProcessor extends BaseNodeProcessor {
         }
         if (connectionManager.hasRouteConfig()) {
             final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
-            safeCloseables().add(xdsBootstrap().addStaticWatcher(XdsType.ROUTE.typeUrl(),
-                                                                 routeConfig.getName(), routeConfig));
+            safeCloseables().add(xdsBootstrap().addStaticNode(XdsType.ROUTE.typeUrl(),
+                                                              routeConfig.getName(), routeConfig));
         } else if (connectionManager.hasRds()) {
             final Rds rds = connectionManager.getRds();
             final String routeName = rds.getRouteConfigName();
             final ConfigSource configSource = rds.getConfigSource();
-            safeCloseables().add(xdsBootstrap().startSubscribe(configSource, XdsType.ROUTE, routeName));
+            safeCloseables().add(xdsBootstrap().subscribe(configSource, XdsType.ROUTE, routeName));
         } else {
             throw new IllegalArgumentException("ConnectionManager should have a rds or RouteConfig for (" +
                                                connectionManager + ')');

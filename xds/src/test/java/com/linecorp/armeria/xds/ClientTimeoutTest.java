@@ -73,7 +73,7 @@ class ClientTimeoutTest {
 
     @Test
     void initialTimeoutInvokesAbsent() throws Exception {
-        final TestResourceWatcher<Cluster> watcher = new TestResourceWatcher<>();
+        final TestResourceWatcher watcher = new TestResourceWatcher();
         final String bootstrapClusterName = "bootstrap-cluster";
         final String clusterName = "cluster1";
         final Duration timeoutDuration =
@@ -91,9 +91,9 @@ class ClientTimeoutTest {
                 XdsTestResources.loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
         final Cluster cluster = XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, cluster);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            xdsBootstrap.startSubscribe(null, XdsType.CLUSTER, clusterName);
-            xdsBootstrap.addListener(XdsType.CLUSTER, clusterName, watcher);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
+            clusterRoot.addListener(watcher);
 
             await().untilAsserted(
                     () -> assertThat(watcher.first("onResourceDoesNotExist")).hasValue(clusterName));
@@ -108,21 +108,19 @@ class ClientTimeoutTest {
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
             awaitAssert(watcher, "onChanged", expectedCluster);
 
-            Thread.sleep(100);
-            await().until(() -> watcher.eventSize() == 0);
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 
     @Test
     void noTimeoutIfCachedValue() throws Exception {
-        final TestResourceWatcher<Cluster> watcher = new TestResourceWatcher<>();
-        final String bootstrapClusterName = "bootstrap-cluster";
+        final TestResourceWatcher watcher = new TestResourceWatcher();
         final String clusterName = "cluster1";
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            xdsBootstrap.startSubscribe(configSource, XdsType.CLUSTER, clusterName);
-            xdsBootstrap.addListener(XdsType.CLUSTER, clusterName, watcher);
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
+            clusterRoot.addListener(watcher);
 
             cache.setSnapshot(
                     GROUP,
@@ -133,8 +131,8 @@ class ClientTimeoutTest {
             awaitAssert(watcher, "onChanged", expectedCluster);
 
             // ensure that onAbsent not triggered at the timeout
-            Thread.sleep(100);
-            await().until(() -> watcher.eventSize() == 0);
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 }

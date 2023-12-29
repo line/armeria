@@ -116,6 +116,26 @@ public final class XdsTestResources {
                 .build();
     }
 
+    public static Bootstrap bootstrap(URI uri) {
+        final String bootstrapClusterName = "bootstrap-cluster";
+        final ClusterLoadAssignment loadAssignment =
+                loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
+        final Cluster cluster = createStaticCluster(bootstrapClusterName, loadAssignment);
+        final ConfigSource configSource = basicConfigSource(bootstrapClusterName);
+        return Bootstrap
+                .newBuilder()
+                .setStaticResources(
+                        StaticResources.newBuilder()
+                                       .addAllClusters(ImmutableSet.of(cluster)))
+                .setDynamicResources(
+                        DynamicResources
+                                .newBuilder()
+                                .setCdsConfig(configSource)
+                                .setAdsConfig(configSource.getApiConfigSource())
+                )
+                .build();
+    }
+
     public static Bootstrap bootstrap(ConfigSource configSource, Cluster... cluster) {
         return Bootstrap
                 .newBuilder()

@@ -18,6 +18,9 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,7 +61,6 @@ class MultiConfigSourceTest {
         protected void configure(com.linecorp.armeria.server.ServerBuilder sb) throws Exception {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache1);
             sb.service(GrpcService.builder()
-                                  .addService(v3DiscoveryServer.getAggregatedDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getListenerDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getClusterDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getRouteDiscoveryServiceImpl())
@@ -73,33 +75,28 @@ class MultiConfigSourceTest {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache2);
             sb.service(GrpcService.builder()
                                   .addService(v3DiscoveryServer.getAggregatedDiscoveryServiceImpl())
-                                  .addService(v3DiscoveryServer.getListenerDiscoveryServiceImpl())
-                                  .addService(v3DiscoveryServer.getClusterDiscoveryServiceImpl())
-                                  .addService(v3DiscoveryServer.getRouteDiscoveryServiceImpl())
-                                  .addService(v3DiscoveryServer.getEndpointDiscoveryServiceImpl())
                                   .build());
         }
     };
 
     @BeforeEach
     void beforeEach() {
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName2);
+        final ConfigSource configSource = XdsTestResources.adsConfigSource();
         final Cluster cluster = Cluster.newBuilder()
                                        .setName("cluster1")
                                        .setType(DiscoveryType.EDS)
                                        .setEdsClusterConfig(EdsClusterConfig.newBuilder()
                                                                             .setEdsConfig(configSource))
                                        .build();
-        final Listener listener = XdsTestResources.exampleListener("listener1", "route1",
-                                                                   bootstrapClusterName1);
+        final Listener listener = XdsTestResources.exampleListener("listener1", "route1");
         final RouteConfiguration route = XdsTestResources.exampleRoute("route1", "cluster1");
         cache1.setSnapshot(
                 GROUP,
                 Snapshot.create(
                         ImmutableList.of(cluster),
                         ImmutableList.of(),
+                        ImmutableList.of(listener),
                         ImmutableList.of(),
-                        ImmutableList.of(route),
                         ImmutableList.of(),
                         "1"));
         cache2.setSnapshot(
@@ -107,53 +104,52 @@ class MultiConfigSourceTest {
                 Snapshot.create(
                         ImmutableList.of(),
                         ImmutableList.of(TestResources.createEndpoint("cluster1", "127.0.0.1", 8080)),
-                        ImmutableList.of(listener),
                         ImmutableList.of(),
+                        ImmutableList.of(route),
                         ImmutableList.of(),
                         "1"));
     }
 
     @Test
     void basicCase() throws Exception {
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName1);
         final Bootstrap bootstrap = bootstrap();
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final TestResourceWatcher<Cluster> watcher =
-                    new TestResourceWatcher<>();
-            xdsBootstrap.startSubscribe(configSource, XdsType.CLUSTER, "cluster1");
-            xdsBootstrap.addListener(XdsType.ENDPOINT, "cluster1", watcher);
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot("cluster1");
+            clusterRoot.addListener(watcher);
 
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expectedCluster =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("cluster1");
             awaitAssert(watcher, "onChanged", expectedCluster);
 
-            Thread.sleep(100);
-            assertThat(watcher.events()).hasSize(0);
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 
     @Test
     void fromListener() throws Exception {
         final Bootstrap bootstrap = bootstrap();
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final TestResourceWatcher<Cluster> watcher =
-                    new TestResourceWatcher<>();
-            xdsBootstrap.subscribe(XdsType.LISTENER, "listener1");
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener1");
 
-            xdsBootstrap.addListener(XdsType.ENDPOINT, "cluster1", watcher);
+            listenerRoot.routeNode().clusterNode((virtualHost, route) -> true)
+                        .endpointNode()
+                        .addListener(watcher);
 
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expectedCluster =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("cluster1");
             awaitAssert(watcher, "onChanged", expectedCluster);
 
-            Thread.sleep(100);
-            assertThat(watcher.events()).hasSize(0);
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 
-    private Bootstrap bootstrap() {
+    private static Bootstrap bootstrap() {
         final ClusterLoadAssignment loadAssignment1 =
                 XdsTestResources.loadAssignment(bootstrapClusterName1,
                                                 server1.httpUri().getHost(), server1.httpPort());
@@ -172,8 +168,9 @@ class MultiConfigSourceTest {
                 .setDynamicResources(
                         DynamicResources.newBuilder()
                                         .setCdsConfig(XdsTestResources.basicConfigSource(bootstrapClusterName1))
-                                        .setAdsConfig(XdsTestResources.apiConfigSource(bootstrapClusterName2,
-                                                                                       ApiType.GRPC)))
+                                        .setLdsConfig(XdsTestResources.basicConfigSource(bootstrapClusterName1))
+                                        .setAdsConfig(XdsTestResources.apiConfigSource(
+                                                bootstrapClusterName2, ApiType.AGGREGATED_GRPC)))
                 .build();
     }
 }

@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -103,12 +105,12 @@ class MissingResourceTest {
         final ApiConfigSource configSource =
                 XdsTestResources.apiConfigSource(bootstrapClusterName, ApiType.AGGREGATED_GRPC);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, null, bootstrapCluster);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
-            final TestResourceWatcher<Cluster> clusterWatcher = new TestResourceWatcher<>();
-            final TestResourceWatcher<Cluster> endpointWatcher = new TestResourceWatcher<>();
-            xdsBootstrap.addListener(XdsType.CLUSTER, clusterName, clusterWatcher);
-            xdsBootstrap.addListener(XdsType.ENDPOINT, clusterName, endpointWatcher);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
+            final TestResourceWatcher clusterWatcher = new TestResourceWatcher();
+            final TestResourceWatcher endpointWatcher = new TestResourceWatcher();
+            clusterRoot.addListener(clusterWatcher);
+            clusterRoot.endpointNode().addListener(endpointWatcher);
 
             // Updates are propagated for the initial cluster
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
@@ -132,6 +134,11 @@ class MissingResourceTest {
             // missing resource is propagated correctly
             awaitAssert(clusterWatcher, "onResourceDoesNotExist", clusterName);
             awaitAssert(endpointWatcher, "onResourceDoesNotExist", clusterName);
+
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(clusterWatcher.events()).isEmpty());
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(endpointWatcher.events()).isEmpty());
         }
     }
 
@@ -156,12 +163,12 @@ class MissingResourceTest {
         final ApiConfigSource configSource =
                 XdsTestResources.apiConfigSource(bootstrapClusterName, ApiType.AGGREGATED_GRPC);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, null, bootstrapCluster);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            xdsBootstrap.subscribe(XdsType.CLUSTER, clusterName);
-            final TestResourceWatcher<Cluster> clusterWatcher = new TestResourceWatcher<>();
-            final TestResourceWatcher<Cluster> endpointWatcher = new TestResourceWatcher<>();
-            xdsBootstrap.addListener(XdsType.CLUSTER, clusterName, clusterWatcher);
-            xdsBootstrap.addListener(XdsType.ENDPOINT, clusterName, endpointWatcher);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
+            final TestResourceWatcher clusterWatcher = new TestResourceWatcher();
+            final TestResourceWatcher endpointWatcher = new TestResourceWatcher();
+            clusterRoot.addListener(clusterWatcher);
+            clusterRoot.endpointNode().addListener(endpointWatcher);
 
             // Updates are propagated for the initial cluster
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
@@ -184,9 +191,10 @@ class MissingResourceTest {
             awaitAssert(clusterWatcher, "onResourceDoesNotExist", clusterName);
             awaitAssert(endpointWatcher, "onResourceDoesNotExist", clusterName);
 
-            Thread.sleep(100);
-            assertThat(clusterWatcher.events()).isEmpty();
-            assertThat(endpointWatcher.events()).isEmpty();
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(clusterWatcher.events()).isEmpty());
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(endpointWatcher.events()).isEmpty());
         }
     }
 

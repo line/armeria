@@ -21,14 +21,14 @@ import static org.awaitility.Awaitility.await;
 
 public final class XdsTestUtil {
 
-    static void awaitAssert(TestResourceWatcher<?> watcher, String event, Object expected) {
+    static void awaitAssert(TestResourceWatcher watcher, String event, Object expected) {
         await().untilAsserted(() -> assertThat(watcher.first(event))
                 .describedAs("Failed with %s", watcher.events())
                 .hasValue(expected));
         watcher.popFirst();
     }
 
-    static Object awaitAssert(TestResourceWatcher<?> watcher, String event) {
+    static Object awaitAssert(TestResourceWatcher watcher, String event) {
         await().untilAsserted(() -> assertThat(watcher.first(event))
                 .describedAs("Failed with %s", watcher.events())
                 .isNotEmpty());

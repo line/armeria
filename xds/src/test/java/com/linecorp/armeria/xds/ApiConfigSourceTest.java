@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.Message;
 
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -106,16 +105,16 @@ class ApiConfigSourceTest {
                         bootstrapCluster2,
                         XdsTestResources.loadAssignment(bootstrapCluster2, server2.httpUri()));
         final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, null, bootstrap1, bootstrap2);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            xdsBootstrap.subscribe(XdsType.CLUSTER, adsClusterName);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ClusterRoot root = xdsBootstrap.clusterRoot(adsClusterName);
 
-            final TestResourceWatcher<Message> watcher = new TestResourceWatcher<>();
-            xdsBootstrap.addListener(XdsType.CLUSTER, adsClusterName, watcher);
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            root.addListener(watcher);
             final Cluster expected =
                     cache1.getSnapshot(GROUP).clusters().resources().get(adsClusterName);
             awaitAssert(watcher, "onChanged", expected);
 
-            xdsBootstrap.addListener(XdsType.ENDPOINT, adsClusterName, watcher);
+            root.endpointNode().addListener(watcher);
             final ClusterLoadAssignment expected2 =
                     cache1.getSnapshot(GROUP).endpoints().resources().get(adsClusterName);
             awaitAssert(watcher, "onChanged", expected2);
@@ -137,16 +136,16 @@ class ApiConfigSourceTest {
                         XdsTestResources.loadAssignment(bootstrapCluster2, server2.httpUri()));
         final Bootstrap bootstrap = XdsTestResources.bootstrap(adsConfigSource, basicConfigSource,
                                                                bootstrap1, bootstrap2);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            xdsBootstrap.subscribe(XdsType.CLUSTER, basicClusterName);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ClusterRoot root = xdsBootstrap.clusterRoot(basicClusterName);
 
-            final TestResourceWatcher<Message> watcher = new TestResourceWatcher<>();
-            xdsBootstrap.addListener(XdsType.CLUSTER, basicClusterName, watcher);
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            root.addListener(watcher);
             final Cluster expected =
                     cache2.getSnapshot(GROUP).clusters().resources().get(basicClusterName);
             awaitAssert(watcher, "onChanged", expected);
 
-            xdsBootstrap.addListener(XdsType.ENDPOINT, basicClusterName, watcher);
+            root.endpointNode().addListener(watcher);
             final ClusterLoadAssignment expected2 =
                     cache2.getSnapshot(GROUP).endpoints().resources().get(basicClusterName);
             awaitAssert(watcher, "onChanged", expected2);
