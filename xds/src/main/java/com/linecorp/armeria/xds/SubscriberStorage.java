@@ -44,24 +44,25 @@ final class SubscriberStorage implements SafeCloseable {
     }
 
     @Nullable
-    boolean register(XdsType type, String resourceName, XdsBootstrapImpl xdsBootstrap) {
+    boolean register(XdsType type, String resourceName, XdsBootstrapImpl xdsBootstrap,
+                     ResourceWatcher<ResourceHolder<?>> watcher) {
         if (!subscriberMap.containsKey(type)) {
             subscriberMap.put(type, new HashMap<>());
         }
         XdsStreamSubscriber subscriber =
                 subscriberMap.get(type).get(resourceName);
-        if (subscriber != null) {
-            subscriber.incRef();
-            return false;
+        boolean updated = false;
+        if (subscriber == null) {
+            subscriber = new XdsStreamSubscriber(type, resourceName, eventLoop, timeoutMillis);
+            subscriberMap.get(type).put(resourceName, subscriber);
+            updated = true;
         }
-        subscriber = new XdsStreamSubscriber(type, resourceName, eventLoop, timeoutMillis, watchersStorage,
-                                               xdsBootstrap);
-        subscriberMap.get(type).put(resourceName, subscriber);
-        return true;
+        subscriber.registerWatcher(watcher);
+        return updated;
     }
 
     @Nullable
-    boolean unregister(XdsType type, String resourceName) {
+    boolean unregister(XdsType type, String resourceName, ResourceWatcher<ResourceHolder<?>> watcher) {
         if (!subscriberMap.containsKey(type)) {
             return false;
         }
@@ -70,7 +71,7 @@ final class SubscriberStorage implements SafeCloseable {
             return false;
         }
         final XdsStreamSubscriber subscriber = resourceToSubscriber.get(resourceName);
-        subscriber.decRef();
+        subscriber.unregisterWatcher(watcher);
         if (subscriber.reference() == 0) {
             resourceToSubscriber.remove(resourceName);
             subscriber.close();

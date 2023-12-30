@@ -43,6 +43,11 @@ public final class ClusterResourceHolder implements ResourceHolder<Cluster> {
     }
 
     @Override
+    public String name() {
+        return cluster.getName();
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("cluster", cluster)

@@ -116,7 +116,7 @@ class MultiConfigSourceTest {
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final TestResourceWatcher watcher = new TestResourceWatcher();
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot("cluster1");
-            clusterRoot.addListener(watcher);
+            clusterRoot.endpointNode().addListener(watcher);
 
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expectedCluster =

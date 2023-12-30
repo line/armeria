@@ -39,4 +39,9 @@ public interface ResourceHolder<T> {
      * Returns a deep copy of the data.
      */
     T data();
+
+    /**
+     * Returns the resource name.
+     */
+    String name();
 }

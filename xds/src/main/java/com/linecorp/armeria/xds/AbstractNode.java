@@ -28,6 +28,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractNode<T> implements ResourceWatcher<T> {
 
+    private final WatchersStorage watchersStorage;
     private final EventExecutor eventLoop;
     private final CompletableFuture<Void> whenReady = new CompletableFuture<>();
     private final Set<ResourceWatcher<? super T>> listeners =
@@ -35,8 +36,9 @@ abstract class AbstractNode<T> implements ResourceWatcher<T> {
     @Nullable
     private volatile T current;
 
-    AbstractNode(EventExecutor eventLoop) {
-        this.eventLoop = eventLoop;
+    AbstractNode(WatchersStorage watchersStorage) {
+        this.watchersStorage = watchersStorage;
+        eventLoop = watchersStorage().eventLoop();
     }
 
     /**
@@ -105,5 +107,13 @@ abstract class AbstractNode<T> implements ResourceWatcher<T> {
      */
     public CompletableFuture<Void> whenReady() {
         return whenReady;
+    }
+
+    final WatchersStorage watchersStorage() {
+        return watchersStorage;
+    }
+
+    final EventExecutor eventLoop() {
+        return eventLoop;
     }
 }

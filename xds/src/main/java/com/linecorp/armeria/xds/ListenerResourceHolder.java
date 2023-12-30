@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -74,26 +73,14 @@ public final class ListenerResourceHolder implements ResourceHolder<Listener> {
     }
 
     @Override
+    public String name() {
+        return listener.getName();
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("listener", listener)
                           .toString();
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (object == null || getClass() != object.getClass()) {
-            return false;
-        }
-        final ListenerResourceHolder that = (ListenerResourceHolder) object;
-        return Objects.equal(listener, that.listener);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(listener);
     }
 }

@@ -46,6 +46,7 @@ final class ConfigSourceClient implements SafeCloseable {
     private final SubscriberStorage subscriberStorage;
     private final ConfigSource configSource;
     private final Node node;
+    private final WatchersStorage watchersStorage;
 
     @Nullable
     private XdsClientFactory xdsClientFactory;
@@ -64,6 +65,7 @@ final class ConfigSourceClient implements SafeCloseable {
         this.xdsBootstrap = xdsBootstrap;
         this.clientCustomizer = clientCustomizer;
         this.eventLoop = eventLoop;
+        this.watchersStorage = watchersStorage;
         final long fetchTimeoutMillis = initialFetchTimeoutMillis(configSource);
         subscriberStorage = new SubscriberStorage(eventLoop, watchersStorage, fetchTimeoutMillis);
         handler = new DefaultResponseHandler(subscriberStorage);
@@ -81,8 +83,7 @@ final class ConfigSourceClient implements SafeCloseable {
         // just use the first grpc service for now
         final GrpcService grpcService = grpcServices.get(0);
         final EnvoyGrpc envoyGrpc = grpcService.getEnvoyGrpc();
-        xdsClientFactory = new XdsClientFactory(
-                xdsBootstrap, envoyGrpc.getClusterName(),
+        xdsClientFactory = new XdsClientFactory(watchersStorage, envoyGrpc.getClusterName(),
                 clientBuilder -> {
                     clientCustomizer.accept(clientBuilder);
 
@@ -110,14 +111,15 @@ final class ConfigSourceClient implements SafeCloseable {
         }
     }
 
-    void addSubscriber(XdsType type, String resourceName, XdsBootstrapImpl xdsBootstrap) {
-        if (subscriberStorage.register(type, resourceName, xdsBootstrap)) {
+    void addSubscriber(XdsType type, String resourceName, XdsBootstrapImpl xdsBootstrap,
+                       ResourceWatcher<ResourceHolder<?>> watcher) {
+        if (subscriberStorage.register(type, resourceName, xdsBootstrap, watcher)) {
             maybeUpdateResources(type);
         }
     }
 
-    boolean removeSubscriber(XdsType type, String resourceName) {
-        if (subscriberStorage.unregister(type, resourceName)) {
+    boolean removeSubscriber(XdsType type, String resourceName, ResourceWatcher<ResourceHolder<?>> watcher) {
+        if (subscriberStorage.unregister(type, resourceName, watcher)) {
             maybeUpdateResources(type);
         }
         return subscriberStorage.allSubscribers().isEmpty();

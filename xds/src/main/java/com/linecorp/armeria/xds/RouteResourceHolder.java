@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -52,6 +51,11 @@ public final class RouteResourceHolder implements ResourceHolder<RouteConfigurat
         return routeConfiguration;
     }
 
+    @Override
+    public String name() {
+        return routeConfiguration.getName();
+    }
+
     List<Route> routes() {
         if (routes != null) {
             return routes;
@@ -67,22 +71,5 @@ public final class RouteResourceHolder implements ResourceHolder<RouteConfigurat
         return MoreObjects.toStringHelper(this)
                           .add("routeConfiguration", routeConfiguration)
                           .toString();
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (object == null || getClass() != object.getClass()) {
-            return false;
-        }
-        final RouteResourceHolder that = (RouteResourceHolder) object;
-        return Objects.equal(routeConfiguration, that.routeConfiguration);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(routeConfiguration);
     }
 }

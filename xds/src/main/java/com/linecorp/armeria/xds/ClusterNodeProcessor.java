@@ -26,12 +26,11 @@ interface ClusterNodeProcessor extends BaseNodeProcessor {
         switch (cluster.getType()) {
             case EDS:
                 final ConfigSource configSource = cluster.getEdsClusterConfig().getEdsConfig();
-                safeCloseables().add(xdsBootstrap().subscribe(
-                        configSource, XdsType.ENDPOINT, cluster.getName()));
+                children().add(watchersStorage().subscribe(configSource, XdsType.ENDPOINT, cluster.getName()));
                 break;
             case STATIC:
-                safeCloseables().add(xdsBootstrap().addStaticNode(
-                        XdsType.ENDPOINT.typeUrl(), cluster.getName(), cluster.getLoadAssignment()));
+                children().add(watchersStorage().addStaticNode(XdsType.ENDPOINT, cluster.getName(),
+                                                               cluster.getLoadAssignment()));
                 break;
             default:
                 throw new IllegalArgumentException(

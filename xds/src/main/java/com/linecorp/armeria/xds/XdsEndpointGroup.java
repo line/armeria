@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.xds.XdsConverterUtil.convertEndpoints;
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -34,8 +34,8 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  * Provides a simple {@link EndpointGroup} which listens to a xDS cluster to select endpoints.
  * Listening to EDS can be done like the following:
  * <pre>{@code
- * XdsBootstrap xdsBootstrap = XdsBootstrap.of(...);
- * EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap, "my-cluster");
+ * XdsBootstrap watchersStorage = XdsBootstrap.of(...);
+ * EndpointGroup endpointGroup = XdsEndpointGroup.of(watchersStorage, "my-cluster");
  * WebClient client = WebClient.of(SessionProtocol.HTTP, endpointGroup);
  * }</pre>
  * Currently, all {@link SocketAddress}es of a {@link ClusterLoadAssignment} are aggregated
@@ -49,45 +49,38 @@ public final class XdsEndpointGroup extends DynamicEndpointGroup {
     private final SafeCloseable config;
 
     /**
-     * Creates a {@link XdsEndpointGroup} which listens to the specified {@code resourceName}.
+     * Creates a {@link XdsEndpointGroup} which listens to the specified listener.
      */
-    public static EndpointGroup of(XdsBootstrap xdsBootstrap, XdsType type, String resourceName) {
-        checkArgument(type == XdsType.LISTENER || type == XdsType.CLUSTER,
-                      "Received %s but only LISTENER is supported.", type);
-        return new XdsEndpointGroup(xdsBootstrap, type, resourceName, true);
+    public static EndpointGroup of(ListenerRoot listenerRoot) {
+        requireNonNull(listenerRoot, "listenerRoot");
+        return new XdsEndpointGroup(listenerRoot);
     }
 
     /**
-     * Creates a {@link XdsEndpointGroup} which listens to the specified {@code resourceName}.
-     *
-     * @param autoSubscribe if {@code true} will query the resource from the remote control plane.
+     * Creates a {@link XdsEndpointGroup} which listens to the specified cluster.
      */
-    public static EndpointGroup of(XdsBootstrap xdsBootstrap, XdsType type, String resourceName,
-                                   boolean autoSubscribe) {
-        checkArgument(type == XdsType.LISTENER || type == XdsType.CLUSTER,
-                      "Received %s but only LISTENER is supported.", type);
-        return new XdsEndpointGroup(xdsBootstrap, type, resourceName, autoSubscribe);
+    public static EndpointGroup of(ClusterRoot clusterRoot) {
+        requireNonNull(clusterRoot, "clusterRoot");
+        return new XdsEndpointGroup(clusterRoot);
+    }
+
+    XdsEndpointGroup(ListenerRoot listenerRoot) {
+        final EndpointNode endpointNode = listenerRoot.routeNode()
+                                                      .clusterNode((virtualHost, route) -> true)
+                                                      .endpointNode();
+        config = listenerRoot;
+        endpointNode.addListener(new ResourceWatcher<EndpointResourceHolder>() {
+            @Override
+            public void onChanged(EndpointResourceHolder update) {
+                setEndpoints(convertEndpoints(update.data()));
+            }
+        });
     }
 
     @VisibleForTesting
-    XdsEndpointGroup(XdsBootstrap xdsBootstrap, XdsType type, String resourceName, boolean autoSubscribe) {
-        final EndpointNode endpointNode;
-        switch (type) {
-            case CLUSTER:
-                final ClusterRoot clusterConfig = xdsBootstrap.clusterRoot(resourceName, autoSubscribe);
-                endpointNode = clusterConfig.endpointNode();
-                config = clusterConfig;
-                break;
-            case LISTENER:
-                final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(resourceName, autoSubscribe);
-                endpointNode = listenerRoot.routeNode()
-                                           .clusterNode((virtualHost, route) -> true)
-                                           .endpointNode();
-                config = listenerRoot;
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported config");
-        }
+    XdsEndpointGroup(ClusterRoot clusterRoot) {
+        final EndpointNode endpointNode = clusterRoot.endpointNode();
+        config = clusterRoot;
         endpointNode.addListener(new ResourceWatcher<EndpointResourceHolder>() {
             @Override
             public void onChanged(EndpointResourceHolder update) {

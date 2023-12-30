@@ -37,6 +37,7 @@ import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.controlplane.server.V3DiscoveryServer;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 class XdsClientCleanupTest {
 
@@ -58,10 +59,12 @@ class XdsClientCleanupTest {
 
     @BeforeEach
     void beforeEach() {
+        final ClusterLoadAssignment loadAssignment =
+                XdsTestResources.loadAssignment("cluster1", "127.0.0.1", 8080);
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(XdsTestResources.createCluster("cluster1", 0)),
+                        ImmutableList.of(XdsTestResources.createStaticCluster("cluster1", loadAssignment)),
                         ImmutableList.of(),
                         ImmutableList.of(),
                         ImmutableList.of(),
@@ -110,17 +113,17 @@ class XdsClientCleanupTest {
         final String clusterName = "cluster1";
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final SafeCloseable closeable1 = xdsBootstrap.clusterRoot(clusterName);
-            final SafeCloseable closeable2 = xdsBootstrap.clusterRoot(clusterName);
+            final ClusterRoot clusterRoot1 = xdsBootstrap.clusterRoot(clusterName);
+            final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot(clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
             await().untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 
-            closeable1.close();
-            closeable1.close();
+            clusterRoot1.close();
+            clusterRoot1.close();
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(clientMap).isNotEmpty());
 
-            closeable2.close();
+            clusterRoot2.close();
             await().untilAsserted(() -> assertThat(clientMap).isEmpty());
         }
     }

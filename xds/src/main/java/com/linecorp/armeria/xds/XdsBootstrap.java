@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link XdsBootstrap} encapsulates all logic to communicate with control plane servers
@@ -60,14 +61,6 @@ public interface XdsBootstrap extends SafeCloseable {
     ListenerRoot listenerRoot(String resourceName);
 
     /**
-     * Represents a {@link Listener} root node of a bootstrap.
-     * Users may hook watchers to the root node to listen to events, or also
-     * start watches on other resources derived from this node.
-     * @param autoSubscribe if {@code true} will query the resource from the remote control plane.
-     */
-    ListenerRoot listenerRoot(String resourceName, boolean autoSubscribe);
-
-    /**
      * Represents a {@link Cluster} root node of a bootstrap.
      * Users may hook watchers to the root node to listen to events, or also
      * start watches on other resources derived from this node.
@@ -76,10 +69,7 @@ public interface XdsBootstrap extends SafeCloseable {
     ClusterRoot clusterRoot(String resourceName);
 
     /**
-     * Represents a {@link Cluster} root node of a bootstrap.
-     * Users may hook watchers to the root node to listen to events, or also
-     * start watches on other resources derived from this node.
-     * @param autoSubscribe if {@code true} will query the resource from the remote control plane.
+     * Returns the event loop used to notify events.
      */
-    ClusterRoot clusterRoot(String resourceName, boolean autoSubscribe);
+    EventExecutor eventLoop();
 }

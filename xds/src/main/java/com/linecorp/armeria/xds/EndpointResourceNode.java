@@ -16,13 +16,17 @@
 
 package com.linecorp.armeria.xds;
 
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import static com.linecorp.armeria.xds.XdsType.ENDPOINT;
 
-final class EndpointResourceNode extends DynamicResourceNode<ClusterLoadAssignment,
-        EndpointResourceHolder> {
+import com.linecorp.armeria.common.annotation.Nullable;
 
-    EndpointResourceNode(XdsBootstrapImpl xdsBootstrap) {
-        super(xdsBootstrap);
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+
+final class EndpointResourceNode extends DynamicResourceNode<EndpointResourceHolder> {
+
+    EndpointResourceNode(@Nullable ConfigSource configSource,
+                         String resourceName, WatchersStorage watchersStorage) {
+        super(watchersStorage, configSource, ENDPOINT, resourceName);
     }
 
     @Override

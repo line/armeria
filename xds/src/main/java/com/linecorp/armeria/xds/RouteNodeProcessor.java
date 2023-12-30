@@ -29,7 +29,7 @@ interface RouteNodeProcessor extends BaseNodeProcessor {
             }
             final RouteAction routeAction = route.getRoute();
             final String cluster = routeAction.getCluster();
-            safeCloseables().add(xdsBootstrap().clusterRoot(cluster));
+            children().add(watchersStorage().subscribe(XdsType.CLUSTER, cluster));
         }
     }
 }

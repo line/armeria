@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
-import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import static com.linecorp.armeria.xds.XdsType.ROUTE;
 
-final class RouteResourceNode extends DynamicResourceNode<RouteConfiguration, RouteResourceHolder>
+import com.linecorp.armeria.common.annotation.Nullable;
+
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+
+final class RouteResourceNode extends DynamicResourceNode<RouteResourceHolder>
         implements RouteNodeProcessor {
 
-    RouteResourceNode(XdsBootstrapImpl xdsBootstrap) {
-        super(xdsBootstrap);
+    RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
+                      WatchersStorage watchersStorage) {
+        super(watchersStorage, configSource, ROUTE, resourceName);
     }
 
     @Override

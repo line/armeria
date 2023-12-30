@@ -43,6 +43,11 @@ public final class EndpointResourceHolder implements ResourceHolder<ClusterLoadA
     }
 
     @Override
+    public String name() {
+        return clusterLoadAssignment.getClusterName();
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("clusterLoadAssignment", clusterLoadAssignment)

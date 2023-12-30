@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import static com.linecorp.armeria.xds.XdsType.CLUSTER;
 
-final class ClusterResourceNode extends DynamicResourceNode<Cluster, ClusterResourceHolder>
+import com.linecorp.armeria.common.annotation.Nullable;
+
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+
+final class ClusterResourceNode extends DynamicResourceNode<ClusterResourceHolder>
         implements ClusterNodeProcessor {
 
-    ClusterResourceNode(XdsBootstrapImpl xdsBootstrap) {
-        super(xdsBootstrap);
+    ClusterResourceNode(@Nullable ConfigSource configSource,
+                        String resourceName, WatchersStorage watchersStorage) {
+        super(watchersStorage, configSource, CLUSTER, resourceName);
     }
 
     @Override

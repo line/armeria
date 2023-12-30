@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -38,27 +40,20 @@ class XdsStreamSubscriber implements SafeCloseable {
     private final long timeoutMillis;
     private final EventExecutor eventLoop;
 
-    private final WatchersStorage watchersStorage;
     @Nullable
     private ResourceHolder<?> data;
     private boolean absent;
     @Nullable
     private ScheduledFuture<?> initialAbsentFuture;
-    private final ResourceNode<ResourceHolder<?>> node;
-    private int reference;
+    private final Set<ResourceWatcher<ResourceHolder<?>>> resourceWatchers = new HashSet<>();
 
-    XdsStreamSubscriber(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis,
-                        WatchersStorage watchersStorage, XdsBootstrapImpl xdsBootstrap) {
+    XdsStreamSubscriber(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis) {
         this.type = type;
         this.resource = resource;
         this.eventLoop = eventLoop;
         this.timeoutMillis = timeoutMillis;
-        this.watchersStorage = watchersStorage;
-        node = (ResourceNode<ResourceHolder<?>>) DynamicResourceNode.from(type, xdsBootstrap);
-        watchersStorage.addNode(type, resource, node);
 
         restartTimer();
-        reference = 1;
     }
 
     void restartTimer() {
@@ -82,8 +77,6 @@ class XdsStreamSubscriber implements SafeCloseable {
     @Override
     public void close() {
         maybeCancelAbsentTimer();
-        watchersStorage.removeNode(type, resource, node);
-        node.close();
     }
 
     void onData(ResourceHolder<?> data) {
@@ -93,13 +86,14 @@ class XdsStreamSubscriber implements SafeCloseable {
         this.data = data;
         absent = false;
         if (!Objects.equals(oldData, data)) {
-            try {
-                node.onChanged(data);
-            } catch (Exception e) {
-                logger.warn("Unexpected exception while invoking {}.onChanged() with ({}, {}) for ({}).",
-                            getClass().getSimpleName(), type, resource, data, e);
+            for (ResourceWatcher<ResourceHolder<?>> watcher: resourceWatchers) {
+                try {
+                    watcher.onChanged(data);
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception while invoking {}.onChanged() with ({}, {}) for ({}).",
+                                getClass().getSimpleName(), type, resource, data, e);
+                }
             }
-            watchersStorage.notifyListeners(type, resource);
         }
     }
 
@@ -110,11 +104,13 @@ class XdsStreamSubscriber implements SafeCloseable {
 
     public void onError(Status status) {
         maybeCancelAbsentTimer();
-        try {
-            node.onError(type, status);
-        } catch (Exception e) {
-            logger.warn("Unexpected exception while invoking {}.onError() with ({}, {}) for ({}).",
-                        getClass().getSimpleName(), type, resource, status, e);
+        for (ResourceWatcher<ResourceHolder<?>> watcher: resourceWatchers) {
+            try {
+                watcher.onError(type, status);
+            } catch (Exception e) {
+                logger.warn("Unexpected exception while invoking {}.onError() with ({}, {}) for ({}).",
+                            getClass().getSimpleName(), type, resource, status, e);
+            }
         }
     }
 
@@ -124,26 +120,32 @@ class XdsStreamSubscriber implements SafeCloseable {
         if (!absent) {
             data = null;
             absent = true;
-            try {
-                node.onResourceDoesNotExist(type, resource);
-            } catch (Exception e) {
-                logger.warn("Unexpected exception while invoking {}.onResourceDoesNotExist() with ({}, {}).",
-                            getClass().getSimpleName(), type, resource, e);
+            for (ResourceWatcher<ResourceHolder<?>> watcher: resourceWatchers) {
+                try {
+                    watcher.onResourceDoesNotExist(type, resource);
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception while invoking" +
+                                " {}.onResourceDoesNotExist() with ({}, {}).",
+                                getClass().getSimpleName(), type, resource, e);
+                }
             }
-            watchersStorage.notifyListeners(type, resource);
         }
     }
 
     public int reference() {
-        return reference;
+        return resourceWatchers.size();
     }
 
-    public void incRef() {
-        reference++;
+    public void registerWatcher(ResourceWatcher<ResourceHolder<?>> watcher) {
+        resourceWatchers.add(watcher);
+        if (data != null) {
+            watcher.onChanged(data);
+        } else if (absent) {
+            watcher.onResourceDoesNotExist(type, resource);
+        }
     }
 
-    public void decRef() {
-        reference--;
-        assert reference >= 0;
+    public void unregisterWatcher(ResourceWatcher<ResourceHolder<?>> watcher) {
+        resourceWatchers.remove(watcher);
     }
 }

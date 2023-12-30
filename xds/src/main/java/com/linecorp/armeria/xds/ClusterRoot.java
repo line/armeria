@@ -29,32 +29,33 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  */
 public final class ClusterRoot extends AbstractNode<ClusterResourceHolder> implements SafeCloseable {
 
-    private final XdsBootstrapImpl xdsBootstrap;
+    private final String resourceName;
     @Nullable
-    private final SafeCloseable safeCloseable;
+    private final ResourceNode<?> node;
 
-    ClusterRoot(XdsBootstrapImpl xdsBootstrap, String resourceName, boolean autoSubscribe) {
-        super(xdsBootstrap.eventLoop());
-        this.xdsBootstrap = xdsBootstrap;
+    ClusterRoot(WatchersStorage watchersStorage, String resourceName, boolean autoSubscribe) {
+        super(watchersStorage);
+        this.resourceName = resourceName;
         if (autoSubscribe) {
-            safeCloseable = xdsBootstrap.subscribe(XdsType.CLUSTER, resourceName);
+            node = watchersStorage().subscribe(XdsType.CLUSTER, resourceName);
         } else {
-            safeCloseable = null;
+            node = null;
         }
-        xdsBootstrap.addClusterWatcher(resourceName, this);
+        watchersStorage().addWatcher(XdsType.CLUSTER, resourceName, this);
     }
 
     /**
      * Returns a node representation of the {@link ClusterLoadAssignment} contained by this listener.
      */
     public EndpointNode endpointNode() {
-        return new EndpointNode(xdsBootstrap, this);
+        return new EndpointNode(watchersStorage(), this);
     }
 
     @Override
     public void close() {
-        if (safeCloseable != null) {
-            safeCloseable.close();
+        if (node != null) {
+            node.close();
         }
+        watchersStorage().removeWatcher(XdsType.CLUSTER, resourceName, this);
     }
 }

@@ -19,17 +19,15 @@ package com.linecorp.armeria.xds;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import com.linecorp.armeria.common.util.SafeCloseable;
-
 final class StaticResourceNode<T> implements ResourceNode<ResourceHolder<T>>,
                                              ListenerNodeProcessor, RouteNodeProcessor, ClusterNodeProcessor {
 
     private final ResourceHolder<T> message;
-    private final Deque<SafeCloseable> safeCloseables = new ArrayDeque<>();
-    private final XdsBootstrapImpl xdsBootstrap;
+    private final Deque<ResourceNode<?>> children = new ArrayDeque<>();
+    private final WatchersStorage watchersStorage;
 
-    StaticResourceNode(XdsBootstrapImpl xdsBootstrap, ResourceHolder<T> message) {
-        this.xdsBootstrap = xdsBootstrap;
+    StaticResourceNode(WatchersStorage watchersStorage, ResourceHolder<T> message) {
+        this.watchersStorage = watchersStorage;
         this.message = message;
 
         switch (message.type()) {
@@ -66,18 +64,19 @@ final class StaticResourceNode<T> implements ResourceNode<ResourceHolder<T>>,
 
     @Override
     public void close() {
-        while (!safeCloseables.isEmpty()) {
-            safeCloseables.poll().close();
+        while (!children.isEmpty()) {
+            children.poll().close();
         }
+        watchersStorage.removeStaticNode(message.type(), message.name(), this);
     }
 
     @Override
-    public XdsBootstrapImpl xdsBootstrap() {
-        return xdsBootstrap;
+    public WatchersStorage watchersStorage() {
+        return watchersStorage;
     }
 
     @Override
-    public Deque<SafeCloseable> safeCloseables() {
-        return safeCloseables;
+    public Deque<ResourceNode<?>> children() {
+        return children;
     }
 }

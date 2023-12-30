@@ -99,10 +99,6 @@ class SotwXdsStreamTest {
             return responses;
         }
 
-        public List<String> getResets() {
-            return resets;
-        }
-
         public void clear() {
             responses.clear();
             resets.clear();
@@ -129,13 +125,14 @@ class SotwXdsStreamTest {
     @Test
     void basicCase() throws Exception {
         final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(GrpcClients.builder(server.httpUri()));
-        final SubscriberStorage subscriberStorage =
-                new SubscriberStorage(eventLoop.get(), new WatchersStorage(), 15_000);
-        final TestResponseHandler responseHandler = new TestResponseHandler(subscriberStorage);
-
         final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("https://a.com"), "cluster");
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
-             SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
+        final XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
+        final WatchersStorage watchersStorage = new WatchersStorage(xdsBootstrap);
+        final TestResourceWatcher watcher = new TestResourceWatcher();
+        final SubscriberStorage subscriberStorage =
+                new SubscriberStorage(eventLoop.get(), watchersStorage, 15_000);
+        final TestResponseHandler responseHandler = new TestResponseHandler(subscriberStorage);
+        try (SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
                                                       responseHandler, subscriberStorage)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
@@ -145,7 +142,7 @@ class SotwXdsStreamTest {
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
-            subscriberStorage.register(XdsType.CLUSTER, clusterName, xdsBootstrap);
+            subscriberStorage.register(XdsType.CLUSTER, clusterName, xdsBootstrap, watcher);
             responseHandler.handleReset(stream);
 
             // check if the initial cache update is done
@@ -190,19 +187,21 @@ class SotwXdsStreamTest {
     @Test
     void restart() throws Exception {
         final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(GrpcClients.builder(server.httpUri()));
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("https://a.com"), "cluster");
+        final XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
+        final WatchersStorage watchersStorage = new WatchersStorage(xdsBootstrap);
+        final TestResourceWatcher watcher = new TestResourceWatcher();
         final SubscriberStorage subscriberStorage =
-                new SubscriberStorage(eventLoop.get(), new WatchersStorage(), 15_000);
+                new SubscriberStorage(eventLoop.get(), watchersStorage, 15_000);
         final TestResponseHandler responseHandler = new TestResponseHandler(subscriberStorage);
 
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("https://a.com"), "cluster");
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
-             SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
+        try (SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
                                                       responseHandler, subscriberStorage)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
-            subscriberStorage.register(XdsType.CLUSTER, clusterName, xdsBootstrap);
+            subscriberStorage.register(XdsType.CLUSTER, clusterName, xdsBootstrap, watcher);
             stream.start();
 
             // check if the initial cache update is done
@@ -239,8 +238,12 @@ class SotwXdsStreamTest {
     @Test
     void errorHandling() throws Exception {
         final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(GrpcClients.builder(server.httpUri()));
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("https://a.com"), "cluster");
+        final XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
+        final WatchersStorage watchersStorage = new WatchersStorage(xdsBootstrap);
+        final TestResourceWatcher watcher = new TestResourceWatcher();
         final SubscriberStorage subscriberStorage =
-                new SubscriberStorage(eventLoop.get(), new WatchersStorage(), 15_000);
+                new SubscriberStorage(eventLoop.get(), watchersStorage, 15_000);
         final AtomicInteger cntRef = new AtomicInteger();
         final CountDownLatch latch = new CountDownLatch(1);
         final TestResponseHandler responseHandler = new TestResponseHandler(subscriberStorage) {
@@ -258,15 +261,13 @@ class SotwXdsStreamTest {
             }
         };
 
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("https://a.com"), "cluster");
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
-             SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
+        try (SotwXdsStream stream = new SotwXdsStream(stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(),
                                                       responseHandler, subscriberStorage)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
-            subscriberStorage.register(XdsType.CLUSTER, clusterName, xdsBootstrap);
+            subscriberStorage.register(XdsType.CLUSTER, clusterName, xdsBootstrap, watcher);
             stream.start();
 
             await().untilAtomic(cntRef, Matchers.greaterThanOrEqualTo(3));
@@ -285,8 +286,12 @@ class SotwXdsStreamTest {
     @Test
     void nackResponse() throws Exception {
         final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(GrpcClients.builder(server.httpUri()));
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("https://a.com"), "cluster");
+        final XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
+        final WatchersStorage watchersStorage = new WatchersStorage(xdsBootstrap);
+        final TestResourceWatcher watcher = new TestResourceWatcher();
         final SubscriberStorage subscriberStorage =
-                new SubscriberStorage(eventLoop.get(), new WatchersStorage(), 15_000);
+                new SubscriberStorage(eventLoop.get(), watchersStorage, 15_000);
         final AtomicBoolean ackRef = new AtomicBoolean();
         final AtomicInteger nackResponses = new AtomicInteger();
         final TestResponseHandler responseHandler = new TestResponseHandler(subscriberStorage) {
@@ -302,16 +307,14 @@ class SotwXdsStreamTest {
             }
         };
 
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("https://a.com"), "cluster");
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap);
-             SotwXdsStream stream = new SotwXdsStream(
+        try (SotwXdsStream stream = new SotwXdsStream(
                      stub, SERVER_INFO, Backoff.ofDefault(), eventLoop.get(), responseHandler,
                      subscriberStorage)) {
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(responseHandler.getResponses()).isEmpty());
 
-            subscriberStorage.register(XdsType.CLUSTER, clusterName, xdsBootstrap);
+            subscriberStorage.register(XdsType.CLUSTER, clusterName, xdsBootstrap, watcher);
             stream.start();
 
             await().untilAtomic(nackResponses, Matchers.greaterThan(2));
