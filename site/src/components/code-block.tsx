@@ -153,9 +153,8 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
     return null;
   }
 
-  const codeWithDollarPrefixRemoved = code.startsWith('$ ')
-    ? code.substring(2)
-    : code;
+  const codeToCopy =
+    props.language === 'bash' ? removeDollarPrefixes(code) : code;
   const applyHighlightStyle = (lineNumber: number) => {
     if (lineNumber !== 0 && targetLines.includes(`${lineNumber}`)) {
       return { style: lineHighlights };
@@ -172,10 +171,7 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
       {props.filename && (
         <div className={styles.filename}>{props.filename}</div>
       )}
-      <CopyToClipboard
-        text={codeWithDollarPrefixRemoved}
-        onCopy={onCopyCallback}
-      >
+      <CopyToClipboard text={codeToCopy} onCopy={onCopyCallback}>
         <Button
           className={styles.clipboardButton}
           aria-label="Copy to clipboard"
@@ -241,6 +237,13 @@ function process(code: React.ReactNode) {
   return (
     indentation !== 0 ? lines.map((line) => line.substring(indentation)) : lines
   ).join('\n');
+}
+
+function removeDollarPrefixes(code: string): string {
+  return code
+    .split('\n')
+    .map((line) => (line.startsWith('$ ') ? line.substring(2) : line))
+    .join('\n');
 }
 
 export default CodeBlock;
