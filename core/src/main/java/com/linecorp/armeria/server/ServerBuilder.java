@@ -225,6 +225,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
             ProxiedAddresses::sourceAddress;
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
+    private boolean preservePercentEncoding = false;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
     @Nullable
     private DependencyInjector dependencyInjector;
@@ -1815,6 +1816,14 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         enableDateHeader = false;
         return this;
     }
+    /**
+     * Sets the requestTarget not to decode encoded {@code "requestTarget"}.
+     */
+
+    public ServerBuilder percentEncodingPreserved() {
+        preservePercentEncoding = true;
+        return this;
+    }
 
     /**
      * Adds the default HTTP header for an {@link HttpResponse} served by the default {@link VirtualHost}.
@@ -2217,7 +2226,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, errorHandler, sslContexts,
+                enableServerHeader, enableDateHeader, preservePercentEncoding ,errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
                 unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
     }

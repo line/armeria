@@ -110,6 +110,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
+    private final boolean preservePercentEncoding;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
@@ -144,7 +145,7 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
-            boolean enableServerHeader, boolean enableDateHeader,
+            boolean enableServerHeader, boolean enableDateHeader, boolean preservePercentEncoding,
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
@@ -260,6 +261,7 @@ final class DefaultServerConfig implements ServerConfig {
 
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
+        this.preservePercentEncoding = preservePercentEncoding;
 
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
@@ -636,6 +638,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public boolean isDateHeaderEnabled() {
         return enableDateHeader;
+    }
+
+    @Override
+    public boolean isPercentEncodingPreserved() {
+        return preservePercentEncoding;
     }
 
     @Override
