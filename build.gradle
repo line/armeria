@@ -70,6 +70,8 @@ allprojects {
     tasks.withType(Test) {
         jvmArgumentProviders.add(new TestBuildDirArgumentsProvider(project.buildDir))
 
+        useJUnitPlatform()
+
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
 
