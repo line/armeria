@@ -49,7 +49,16 @@ service HttpJsonTranscodingTestService {
       get:"/v4/messages/{message_id}"
     };
   }
-
+  rpc GetMessageV5(GetMessageRequestV5) returns (Message) {
+    option (google.api.http) = {
+      get:"/v5/messages/{message_id}"
+    };
+  }
+  rpc GetMessageV6(GetMessageRequestV6) returns (Message) {
+    option (google.api.http) = {
+      get:"/v6/messages/{message_id}"
+    };
+  }
   rpc UpdateMessageV1(UpdateMessageRequestV1) returns (Message) {
     option (google.api.http) = {
       patch: "/v1/messages/{message_id}"
@@ -231,6 +240,28 @@ message GetMessageRequestV4 {
   message ParentMessage {
      string child_field = 1;
      string child_field_2 = 2;
+  }
+}
+
+message GetMessageRequestV5 {
+  string message_id = 1;
+  string query_parameter = 2 [json_name = "first_query"];
+  string query_field_1 = 3 [json_name = "second_query"];
+  ParentMessage parent_field = 4 [json_name = "parent"];
+  message ParentMessage {
+    string child_field = 1 [json_name = "first_field"];
+    string child_field_2 = 2 [json_name = "second_field"];
+  }
+}
+
+message GetMessageRequestV6 {
+  string message_id = 1;
+  string query_parameter = 2;
+  string query_field_1 = 3 [json_name = "second_query"];
+  ParentMessage parent_field = 4 [json_name = "parent"];
+  message ParentMessage {
+    string child_field = 1;
+    string child_field_2 = 2;
   }
 }
 
