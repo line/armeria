@@ -86,7 +86,7 @@ final class Bootstraps {
                                                eventLoop.getClass().getName());
         }
 
-        return getOrCreate(false, desiredProtocol, serializationFormat, sslContext);
+        return getOrCreate(true, desiredProtocol, serializationFormat, sslContext);
     }
 
     private Bootstrap getOrCreate(boolean isDomainSocket, SessionProtocol desiredProtocol,

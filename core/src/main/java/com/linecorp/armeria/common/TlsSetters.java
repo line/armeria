@@ -44,7 +44,7 @@ public interface TlsSetters {
      */
     @Deprecated
     default TlsSetters tls(File keyCertChainFile, File keyFile) {
-        return tls(TlsKeyPair.of(keyCertChainFile, keyFile));
+        return tls(TlsKeyPair.of(keyFile, keyCertChainFile));
     }
 
     /**

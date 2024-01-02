@@ -95,14 +95,12 @@ public final class CertificateUtil {
 
     public static PrivateKey toPrivateKey(File file, @Nullable String keyPassword) throws KeyException {
         requireNonNull(file, "file");
-        requireNonNull(keyPassword, "keyPassword");
         return SslContextProtectedAccessHack.privateKey(file, keyPassword);
     }
 
     public static PrivateKey toPrivateKey(InputStream keyInputStream, @Nullable String keyPassword)
             throws KeyException {
         requireNonNull(keyInputStream, "keyInputStream");
-        requireNonNull(keyPassword, "keyPassword");
         return SslContextProtectedAccessHack.privateKey(keyInputStream, keyPassword);
     }
 
