@@ -45,13 +45,13 @@ public enum HttpJsonTranscodingQueryParamMatchRule {
     ORIGINAL_FIELD,
 
     /**
-     * Uses the original field and json name
+     * Uses the original field and json name.
      * <a href="https://protobuf.dev/programming-guides/proto3/#json">json mapping</a>
      */
     ORIGINAL_FIELD_JSON_NAME,
 
     /**
-     * Uses camel case and json name
+     * Uses camel case and json name.
      */
     CAMEL_CASE_JSON_NAME
 }

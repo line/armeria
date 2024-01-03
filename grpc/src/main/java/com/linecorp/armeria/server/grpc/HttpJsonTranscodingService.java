@@ -20,7 +20,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.CAMEL_CASE_JSON_NAME;
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD_JSON_NAME;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -170,16 +172,21 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                     false, false);
                 Map<String, Field> camelCaseFields = ImmutableMap.of();
                 Map<String, Field> jsonNameFields = ImmutableMap.of();
-                if (httpJsonTranscodingOptions.queryParamMatchRules().contains(LOWER_CAMEL_CASE)) {
+
+                final Set<HttpJsonTranscodingQueryParamMatchRule> httpJsonTranscodingQueryParamMatchRules =
+                        httpJsonTranscodingOptions.queryParamMatchRules();
+                if (httpJsonTranscodingQueryParamMatchRules.contains(LOWER_CAMEL_CASE)) {
                     camelCaseFields =
                             buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
                                         true, false);
-                } else if (httpJsonTranscodingOptions.queryParamMatchRules().contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD_JSON_NAME)) {
-                    jsonNameFields = buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
-                            false, true);
-                } else if (httpJsonTranscodingOptions.queryParamMatchRules().contains(HttpJsonTranscodingQueryParamMatchRule.CAMEL_CASE_JSON_NAME)) {
-                    jsonNameFields = buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
-                            true, true);
+                } else if (httpJsonTranscodingQueryParamMatchRules.contains(ORIGINAL_FIELD_JSON_NAME)) {
+                    jsonNameFields =
+                            buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
+                                        false, true);
+                } else if (httpJsonTranscodingQueryParamMatchRules.contains(CAMEL_CASE_JSON_NAME)) {
+                    jsonNameFields =
+                            buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
+                                        true, true);
                 }
 
                 if (specs.containsKey(route)) {
@@ -190,7 +197,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final String responseBody = getResponseBody(topLevelFields, httpRule.getResponseBody());
                 int order = 0;
                 specs.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
-                                                     serviceDesc, methodDesc, originalFields, camelCaseFields, jsonNameFields,
+                                                     serviceDesc, methodDesc,
+                                                     originalFields, camelCaseFields, jsonNameFields,
                                                      pathVariables,
                                                      responseBody));
                 for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {
@@ -317,7 +325,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 fieldName = field.getJsonName();
             } else if (useCamelCaseKeys) {
                 fieldName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, field.getName());
-            } else if(useJsonNameKeys) {
+            } else if (useJsonNameKeys) {
                 fieldName = field.toProto().hasJsonName() ? field.getJsonName() : field.getName();
             } else {
                 fieldName = field.getName();
@@ -507,10 +515,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                           .contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
         useOriginalFieldJsonNameQueryParams =
                 httpJsonTranscodingOptions.queryParamMatchRules()
-                                          .contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD_JSON_NAME);
+                                          .contains(ORIGINAL_FIELD_JSON_NAME);
         useCamelCaseJsonNameQueryParams =
                 httpJsonTranscodingOptions.queryParamMatchRules()
-                                          .contains(HttpJsonTranscodingQueryParamMatchRule.CAMEL_CASE_JSON_NAME);
+                                          .contains(CAMEL_CASE_JSON_NAME);
     }
 
     @Override
