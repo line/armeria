@@ -96,13 +96,25 @@ public final class CertificateUtil {
 
     public static PrivateKey toPrivateKey(File file, @Nullable String keyPassword) throws KeyException {
         requireNonNull(file, "file");
-        return SslContextProtectedAccessHack.privateKey(file, keyPassword);
+        return MinifiedBouncyCastleProvider.call(() -> {
+            try {
+                return SslContextProtectedAccessHack.privateKey(file, keyPassword);
+            } catch (KeyException e) {
+                return Exceptions.throwUnsafely(e);
+            }
+        });
     }
 
     public static PrivateKey toPrivateKey(InputStream keyInputStream, @Nullable String keyPassword)
             throws KeyException {
         requireNonNull(keyInputStream, "keyInputStream");
-        return SslContextProtectedAccessHack.privateKey(keyInputStream, keyPassword);
+        return MinifiedBouncyCastleProvider.call(() -> {
+            try {
+                return SslContextProtectedAccessHack.privateKey(keyInputStream, keyPassword);
+            } catch (KeyException e) {
+                return Exceptions.throwUnsafely(e);
+            }
+        });
     }
 
     private static final class SslContextProtectedAccessHack extends SslContext {
@@ -116,17 +128,14 @@ public final class CertificateUtil {
         }
 
         static PrivateKey privateKey(File file, @Nullable String keyPassword) throws KeyException {
-            return MinifiedBouncyCastleProvider.call(() -> {
-                try {
-                    return SslContext.toPrivateKey(file, keyPassword);
-                } catch (Exception e) {
-                    if (e instanceof KeyException) {
-                        return Exceptions.throwUnsafely(e);
-                    }
-                    return Exceptions.throwUnsafely(
-                            new KeyException("Fail to read a private key file: " + file.getName(), e));
+            try {
+                return SslContext.toPrivateKey(file, keyPassword);
+            } catch (Exception e) {
+                if (e instanceof KeyException) {
+                    throw (KeyException) e;
                 }
-            });
+                throw new KeyException("Fail to read a private key file: " + file.getName(), e);
+            }
         }
 
         static PrivateKey privateKey(InputStream keyInputStream, @Nullable String keyPassword)
