@@ -351,8 +351,8 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
     }
 
     @Override
-    public EurekaEndpointGroupBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (EurekaEndpointGroupBuilder) super.tlsKeyPair(tlsKeyPair);
+    public EurekaEndpointGroupBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (EurekaEndpointGroupBuilder) super.tls(tlsKeyPair);
     }
 
     @Override

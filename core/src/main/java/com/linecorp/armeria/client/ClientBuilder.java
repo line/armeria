@@ -209,8 +209,8 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ClientBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (ClientBuilder) super.tlsKeyPair(tlsKeyPair);
+    public ClientBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (ClientBuilder) super.tls(tlsKeyPair);
     }
 
     @Override

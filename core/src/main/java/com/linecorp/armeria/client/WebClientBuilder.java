@@ -180,8 +180,8 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public WebClientBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (WebClientBuilder) super.tlsKeyPair(tlsKeyPair);
+    public WebClientBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (WebClientBuilder) super.tls(tlsKeyPair);
     }
 
     @Override

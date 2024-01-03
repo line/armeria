@@ -301,8 +301,8 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public WebSocketClientBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (WebSocketClientBuilder) super.tlsKeyPair(tlsKeyPair);
+    public WebSocketClientBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (WebSocketClientBuilder) super.tls(tlsKeyPair);
     }
 
     @Override

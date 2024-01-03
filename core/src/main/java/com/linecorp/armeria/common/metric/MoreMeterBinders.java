@@ -83,8 +83,8 @@ public final class MoreMeterBinders {
      * @param meterIdPrefix the prefix to use for all metrics
      */
     @UnstableApi
-    public static CloseableMeterBinder certificateMetrics(X509Certificate certificate,
-                                                          MeterIdPrefix meterIdPrefix) {
+    public static CertificateMetrics certificateMetrics(X509Certificate certificate,
+                                                        MeterIdPrefix meterIdPrefix) {
         requireNonNull(certificate, "certificate");
         return certificateMetrics(ImmutableList.of(certificate), meterIdPrefix);
     }

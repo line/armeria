@@ -303,7 +303,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * and cleartext {@code keyFile}.
      *
      * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -316,7 +316,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code keyFile} and {@code keyPassword}.
      *
      * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -329,7 +329,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code keyCertChainInputStream} and cleartext {@code keyInputStream}.
      *
      * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -342,7 +342,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code keyCertChainInputStream} and {@code keyInputStream} and {@code keyPassword}.
      *
      * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -359,7 +359,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@link PrivateKey} and {@link X509Certificate} chain.
      *
      * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -372,7 +372,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@link PrivateKey} and {@link X509Certificate} chain.
      *
      * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -385,7 +385,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code keyPassword} and {@link X509Certificate} chain.
      *
      * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -399,7 +399,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code keyPassword} and {@link X509Certificate} chain.
      *
      * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tlsKeyPair(TlsKeyPair)} instead.
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override

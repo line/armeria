@@ -454,8 +454,8 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     @Override
-    public EurekaUpdatingListenerBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (EurekaUpdatingListenerBuilder) super.tlsKeyPair(tlsKeyPair);
+    public EurekaUpdatingListenerBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (EurekaUpdatingListenerBuilder) super.tls(tlsKeyPair);
     }
 
     @Override

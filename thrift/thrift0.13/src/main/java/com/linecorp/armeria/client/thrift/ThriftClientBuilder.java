@@ -295,8 +295,8 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ThriftClientBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (ThriftClientBuilder) super.tlsKeyPair(tlsKeyPair);
+    public ThriftClientBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (ThriftClientBuilder) super.tls(tlsKeyPair);
     }
 
     @Override

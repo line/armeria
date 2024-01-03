@@ -32,7 +32,7 @@ import com.github.benmanes.caffeine.cache.Scheduler;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.CloseableMeterBinder;
+import com.linecorp.armeria.common.metric.CertificateMetrics;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -147,7 +147,7 @@ public final class TlsProviderUtil {
         final TlsProvider tlsProvider;
         final TlsKeyPair tlsKeyPair;
         final SslContextType type;
-        final CloseableMeterBinder meterBinder;
+        final CertificateMetrics meterBinder;
 
         TlsCacheContext(TlsProvider tlsProvider, TlsKeyPair tlsKeyPair, SslContextType type) {
             this.tlsProvider = tlsProvider;

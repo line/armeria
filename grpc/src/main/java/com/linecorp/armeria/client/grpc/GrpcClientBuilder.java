@@ -494,8 +494,8 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public GrpcClientBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (GrpcClientBuilder) super.tlsKeyPair(tlsKeyPair);
+    public GrpcClientBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (GrpcClientBuilder) super.tls(tlsKeyPair);
     }
 
     @Override

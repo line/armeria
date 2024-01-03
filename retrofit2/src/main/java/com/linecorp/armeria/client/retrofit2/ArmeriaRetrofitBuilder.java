@@ -361,8 +361,8 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ArmeriaRetrofitBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (ArmeriaRetrofitBuilder) super.tlsKeyPair(tlsKeyPair);
+    public ArmeriaRetrofitBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (ArmeriaRetrofitBuilder) super.tls(tlsKeyPair);
     }
 
     @Override

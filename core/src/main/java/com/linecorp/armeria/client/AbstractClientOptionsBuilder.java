@@ -278,7 +278,7 @@ public class AbstractClientOptionsBuilder {
      * mutual TLS authentication</a>.
      */
     @UnstableApi
-    public AbstractClientOptionsBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
+    public AbstractClientOptionsBuilder tls(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
         return tlsProvider(TlsProvider.of(tlsKeyPair));
     }

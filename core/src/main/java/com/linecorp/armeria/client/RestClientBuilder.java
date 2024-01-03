@@ -179,8 +179,8 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public RestClientBuilder tlsKeyPair(TlsKeyPair tlsKeyPair) {
-        return (RestClientBuilder) super.tlsKeyPair(tlsKeyPair);
+    public RestClientBuilder tls(TlsKeyPair tlsKeyPair) {
+        return (RestClientBuilder) super.tls(tlsKeyPair);
     }
 
     @Override
