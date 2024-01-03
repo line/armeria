@@ -16,29 +16,38 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
-import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
 /**
- * A holder object for a {@link RouteConfiguration}.
+ * A cluster object for a {@link RouteConfiguration}.
  */
-public final class RouteResourceHolder implements ResourceHolder<RouteConfiguration> {
+public final class RouteResourceHolder extends AbstractResourceHolder {
 
     private final RouteConfiguration routeConfiguration;
 
     @Nullable
     private List<Route> routes;
+    @Nullable
+    private final ListenerResourceHolder primer;
 
     RouteResourceHolder(RouteConfiguration routeConfiguration) {
         this.routeConfiguration = routeConfiguration;
+        primer = null;
+    }
+
+    RouteResourceHolder(RouteConfiguration routeConfiguration, ListenerResourceHolder primer) {
+        this.routeConfiguration = routeConfiguration;
+        this.primer = primer;
     }
 
     @Override
@@ -56,20 +65,44 @@ public final class RouteResourceHolder implements ResourceHolder<RouteConfigurat
         return routeConfiguration.getName();
     }
 
-    List<Route> routes() {
-        if (routes != null) {
-            return routes;
+    @Override
+    public RouteResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+        if (primer == null) {
+            return this;
         }
-        final List<VirtualHost> virtualHosts = routeConfiguration.getVirtualHostsList();
-        routes = virtualHosts.stream().flatMap(vh -> vh.getRoutesList().stream())
-                             .collect(Collectors.toList());
-        return routes;
+        checkArgument(primer instanceof ListenerResourceHolder);
+        return new RouteResourceHolder(routeConfiguration, (ListenerResourceHolder) primer);
+    }
+
+    @Override
+    @Nullable
+    public ListenerResourceHolder primer() {
+        return primer;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final RouteResourceHolder that = (RouteResourceHolder) object;
+        return Objects.equal(routeConfiguration, that.routeConfiguration) &&
+               Objects.equal(primer, that.primer);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(routeConfiguration, primer);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("routeConfiguration", routeConfiguration)
+                          .add("primer", primer)
                           .toString();
     }
 }

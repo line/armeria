@@ -19,68 +19,56 @@ package com.linecorp.armeria.xds;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.grpc.Status;
 
-abstract class DynamicResourceNode<U extends ResourceHolder<?>> implements ResourceNode<U> {
-
-    private static final Logger logger = LoggerFactory.getLogger(DynamicResourceNode.class);
+abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceHolder> {
 
     private final Deque<ResourceNode<?>> children = new ArrayDeque<>();
 
-    static ResourceNode<?> from(@Nullable ConfigSource configSource, XdsType type,
-                                String resourceName, WatchersStorage watchersStorage) {
-        if (type == XdsType.LISTENER) {
-            return new ListenerResourceNode(configSource, resourceName, watchersStorage);
-        } else if (type == XdsType.ROUTE) {
-            return new RouteResourceNode(configSource, resourceName, watchersStorage);
-        } else if (type == XdsType.CLUSTER) {
-            return new ClusterResourceNode(configSource, resourceName, watchersStorage);
-        } else if (type == XdsType.ENDPOINT) {
-            return new EndpointResourceNode(configSource, resourceName, watchersStorage);
-        } else {
-            throw new IllegalArgumentException("Unsupported type: " + type);
-        }
-    }
-
-    private final WatchersStorage watchersStorage;
+    private final XdsBootstrapImpl xdsBootstrap;
     @Nullable
     private final ConfigSource configSource;
     private final XdsType type;
     private final String resourceName;
     @Nullable
-    private U current;
+    private final ResourceHolder primer;
+    private final SnapshotWatcher<? super T> parentNode;
+    private final ResourceNodeType resourceNodeType;
+    @Nullable
+    private AbstractResourceHolder current;
     boolean initialized;
 
-    DynamicResourceNode(WatchersStorage watchersStorage, @Nullable ConfigSource configSource,
-                        XdsType type, String resourceName) {
-        this.watchersStorage = watchersStorage;
+    AbstractResourceNode(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
+                         XdsType type, String resourceName, @Nullable ResourceHolder primer,
+                         SnapshotWatcher<? super T> parentNode, ResourceNodeType resourceNodeType) {
+        this.xdsBootstrap = xdsBootstrap;
         this.configSource = configSource;
         this.type = type;
         this.resourceName = resourceName;
+        this.primer = primer;
+        this.parentNode = parentNode;
+        this.resourceNodeType = resourceNodeType;
     }
 
-    public WatchersStorage watchersStorage() {
-        return watchersStorage;
+    XdsBootstrapImpl xdsBootstrap() {
+        return xdsBootstrap;
     }
 
-    void setCurrent(@Nullable U current) {
+    void setCurrent(@Nullable AbstractResourceHolder current) {
         this.current = current;
     }
 
     @Override
-    public U current() {
+    public AbstractResourceHolder current() {
         return current;
     }
 
     @Override
     public void onError(XdsType type, Status error) {
-        logger.warn("Unexpected error while watching {}: {}.", type, error);
+        parentNode.onError(type, error);
     }
 
     @Override
@@ -92,12 +80,15 @@ abstract class DynamicResourceNode<U extends ResourceHolder<?>> implements Resou
             child.close();
         }
         children.clear();
-        watchersStorage.notifyListeners(type, resourceName);
+        parentNode.onMissing(type, resourceName);
     }
 
     @Override
-    public final void onChanged(U update) {
+    public final void onChanged(AbstractResourceHolder update) {
+        assert update.type() == type();
+
         initialized = true;
+        update = update.withPrimer(primer);
         setCurrent(update);
 
         final Deque<ResourceNode<?>> prevChildren = new ArrayDeque<>(children);
@@ -108,15 +99,9 @@ abstract class DynamicResourceNode<U extends ResourceHolder<?>> implements Resou
         for (ResourceNode<?> child: prevChildren) {
             child.close();
         }
-        watchersStorage.notifyListeners(update.type(), update.name());
     }
 
-    abstract void process(U update);
-
-    @Override
-    public boolean initialized() {
-        return initialized;
-    }
+    abstract void process(ResourceHolder update);
 
     @Override
     public void close() {
@@ -124,10 +109,35 @@ abstract class DynamicResourceNode<U extends ResourceHolder<?>> implements Resou
             child.close();
         }
         children.clear();
-        watchersStorage.unsubscribe(configSource, type, resourceName, this);
+        if (resourceNodeType == ResourceNodeType.DYNAMIC) {
+            xdsBootstrap.removeSubscriber(configSource, this);
+        }
     }
 
     public Deque<ResourceNode<?>> children() {
         return children;
+    }
+
+    SnapshotWatcher<? super T> parentNode() {
+        return parentNode;
+    }
+
+    public void onMissing(XdsType type, String resourceName) {
+        parentNode.onMissing(type, resourceName);
+    }
+
+    @Override
+    public XdsType type() {
+        return type;
+    }
+
+    @Override
+    public String name() {
+        return resourceName;
+    }
+
+    @Override
+    public ConfigSource configSource() {
+        return configSource;
     }
 }

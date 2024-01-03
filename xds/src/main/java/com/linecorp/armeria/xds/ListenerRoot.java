@@ -16,46 +16,28 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
-
 import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 /**
  * A root node representing a {@link Listener}.
  * Users may query the latest value of this resource or add a watcher to be notified of changes.
  * Note that it is important to close this resource to avoid leaking connections to the control plane server.
  */
-public final class ListenerRoot extends AbstractNode<ListenerResourceHolder> implements SafeCloseable {
+public final class ListenerRoot extends AbstractNode<ListenerSnapshot> {
 
-    private final String resourceName;
-    @Nullable
-    private final ResourceNode<?> node;
+    private final ListenerResourceNode node;
 
-    ListenerRoot(WatchersStorage watchersStorage, String resourceName, boolean autoSubscribe) {
-        super(watchersStorage);
-        this.resourceName = resourceName;
-        if (autoSubscribe) {
-            node = watchersStorage().subscribe(XdsType.LISTENER, resourceName);
-        } else {
-            node = null;
-        }
-        watchersStorage().addWatcher(XdsType.LISTENER, resourceName, this);
-    }
-
-    /**
-     * Returns a node representation of the {@link RouteConfiguration} contained by this listener.
-     */
-    public RouteNode routeNode() {
-        return new RouteNode(watchersStorage(), this);
+    ListenerRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
+        super(xdsBootstrap);
+        node = new ListenerResourceNode(null, resourceName, xdsBootstrap, null,
+                                        this, ResourceNodeType.DYNAMIC);
+        xdsBootstrap.subscribe(node);
     }
 
     @Override
     public void close() {
-        if (node != null) {
-            watchersStorage().unsubscribe(null, XdsType.LISTENER, resourceName, node);
-        }
-        watchersStorage().removeWatcher(XdsType.LISTENER, resourceName, this);
+        super.close();
+        node.close();
+        xdsBootstrap().removeSubscriber(node);
     }
 }

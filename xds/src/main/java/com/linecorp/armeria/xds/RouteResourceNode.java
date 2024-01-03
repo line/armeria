@@ -18,20 +18,86 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsType.ROUTE;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.route.v3.Route;
+import io.envoyproxy.envoy.config.route.v3.Route.ActionCase;
+import io.envoyproxy.envoy.config.route.v3.RouteAction;
+import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
-final class RouteResourceNode extends DynamicResourceNode<RouteResourceHolder>
-        implements RouteNodeProcessor {
+final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot>
+        implements SnapshotWatcher<ClusterSnapshot> {
+
+    private final List<ClusterSnapshot> clusterSnapshotList = new ArrayList<>();
+
+    private final Set<Integer> pending = new HashSet<>();
 
     RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
-                      WatchersStorage watchersStorage) {
-        super(watchersStorage, configSource, ROUTE, resourceName);
+                      XdsBootstrapImpl xdsBootstrap, @Nullable ResourceHolder primer,
+                      SnapshotWatcher<RouteSnapshot> parentNode, ResourceNodeType resourceNodeType) {
+        super(xdsBootstrap, configSource, ROUTE, resourceName, primer, parentNode, resourceNodeType);
     }
 
     @Override
-    public void process(RouteResourceHolder update) {
-        RouteNodeProcessor.super.process(update);
+    public void process(ResourceHolder update) {
+        final RouteResourceHolder holder = (RouteResourceHolder) update;
+        clusterSnapshotList.clear();
+        pending.clear();
+        final RouteConfiguration routeConfiguration = holder.data();
+        int index = 0;
+        for (VirtualHost virtualHost: routeConfiguration.getVirtualHostsList()) {
+            for (Route route: virtualHost.getRoutesList()) {
+                if (route.getActionCase() != ActionCase.ROUTE) {
+                    continue;
+                }
+                final RouteAction routeAction = route.getRoute();
+                final String cluster = routeAction.getCluster();
+
+                clusterSnapshotList.add(null);
+                pending.add(index);
+                final ClusterResourceNode node =
+                        new ClusterResourceNode(null, cluster, xdsBootstrap(),
+                                                holder, this, virtualHost, route, index++,
+                                                ResourceNodeType.DYNAMIC);
+                children().add(node);
+                xdsBootstrap().subscribe(node);
+            }
+        }
+        if (children().isEmpty()) {
+            parentNode().snapshotUpdated(new RouteSnapshot(holder, Collections.emptyList()));
+        }
+    }
+
+    @Override
+    public RouteResourceHolder current() {
+        return (RouteResourceHolder) super.current();
+    }
+
+    @Override
+    public void snapshotUpdated(ClusterSnapshot clusterSnapshot) {
+        final RouteResourceHolder current = current();
+        if (current == null) {
+            return;
+        }
+        if (!Objects.equals(current, clusterSnapshot.holder().primer())) {
+            return;
+        }
+        clusterSnapshotList.set(clusterSnapshot.index(), clusterSnapshot);
+        pending.remove(clusterSnapshot.index());
+        if (!pending.isEmpty()) {
+            return;
+        }
+        parentNode().snapshotUpdated(new RouteSnapshot(current, ImmutableList.copyOf(clusterSnapshotList)));
     }
 }

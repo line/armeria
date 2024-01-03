@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -107,24 +107,24 @@ class MissingResourceTest {
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, null, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
-            final TestResourceWatcher clusterWatcher = new TestResourceWatcher();
-            final TestResourceWatcher endpointWatcher = new TestResourceWatcher();
-            clusterRoot.addListener(clusterWatcher);
-            clusterRoot.endpointNode().addListener(endpointWatcher);
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            clusterRoot.addSnapshotWatcher(watcher);
 
             // Updates are propagated for the initial cluster
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            awaitAssert(clusterWatcher, "onChanged", expectedCluster);
+            final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
+            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+
             final ClusterLoadAssignment expectedAssignment =
                     cache.getSnapshot(GROUP).endpoints().resources().get(clusterName);
-            awaitAssert(endpointWatcher, "onChanged", expectedAssignment);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expectedAssignment);
 
             // Send another update with missing cluster
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(
                             ImmutableList.of(XdsTestResources.createCluster("cluster2")),
-                            ImmutableList.of(),
+                            ImmutableList.of(XdsTestResources.loadAssignment("cluster2", URI.create("http://a.b"))),
                             ImmutableList.of(),
                             ImmutableList.of(),
                             ImmutableList.of(),
@@ -132,13 +132,10 @@ class MissingResourceTest {
             sendAllUpdates();
 
             // missing resource is propagated correctly
-            awaitAssert(clusterWatcher, "onResourceDoesNotExist", clusterName);
-            awaitAssert(endpointWatcher, "onResourceDoesNotExist", clusterName);
+            assertThat(watcher.blockingMissing()).isEqualTo(ImmutableList.of(XdsType.CLUSTER, clusterName));
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
-                   .untilAsserted(() -> assertThat(clusterWatcher.events()).isEmpty());
-            await().pollDelay(100, TimeUnit.MILLISECONDS)
-                   .untilAsserted(() -> assertThat(endpointWatcher.events()).isEmpty());
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 
@@ -151,7 +148,7 @@ class MissingResourceTest {
                 GROUP,
                 Snapshot.create(
                         ImmutableList.of(XdsTestResources.createStaticCluster(clusterName, assignment)),
-                        ImmutableList.of(),
+                        ImmutableList.of(XdsTestResources.loadAssignment(clusterName, URI.create("http://a.b"))),
                         ImmutableList.of(),
                         ImmutableList.of(),
                         ImmutableList.of(),
@@ -165,22 +162,21 @@ class MissingResourceTest {
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, null, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
-            final TestResourceWatcher clusterWatcher = new TestResourceWatcher();
-            final TestResourceWatcher endpointWatcher = new TestResourceWatcher();
-            clusterRoot.addListener(clusterWatcher);
-            clusterRoot.endpointNode().addListener(endpointWatcher);
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            clusterRoot.addSnapshotWatcher(watcher);
 
             // Updates are propagated for the initial cluster
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            awaitAssert(clusterWatcher, "onChanged", expectedCluster);
-            awaitAssert(endpointWatcher, "onChanged", assignment);
+            final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
+            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(assignment);
 
             // Send another update with missing cluster
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(
                             ImmutableList.of(XdsTestResources.createCluster("cluster2")),
-                            ImmutableList.of(),
+                            ImmutableList.of(XdsTestResources.loadAssignment("cluster2", URI.create("http://a.b"))),
                             ImmutableList.of(),
                             ImmutableList.of(),
                             ImmutableList.of(),
@@ -188,13 +184,10 @@ class MissingResourceTest {
             sendAllUpdates();
 
             // missing resource is propagated correctly
-            awaitAssert(clusterWatcher, "onResourceDoesNotExist", clusterName);
-            awaitAssert(endpointWatcher, "onResourceDoesNotExist", clusterName);
+            assertThat(watcher.blockingMissing()).isEqualTo(ImmutableList.of(XdsType.CLUSTER, clusterName));
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
-                   .untilAsserted(() -> assertThat(clusterWatcher.events()).isEmpty());
-            await().pollDelay(100, TimeUnit.MILLISECONDS)
-                   .untilAsserted(() -> assertThat(endpointWatcher.events()).isEmpty());
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
         }
     }
 

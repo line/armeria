@@ -16,12 +16,10 @@
 
 package com.linecorp.armeria.xds;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Deque;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,10 +28,10 @@ import com.google.common.collect.ImmutableList;
 
 import io.grpc.Status;
 
-class TestResourceWatcher implements ResourceWatcher<ResourceHolder<?>> {
+class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     private static final Logger logger = LoggerFactory.getLogger(TestResourceWatcher.class);
 
-    private final Deque<List<Object>> events = new ConcurrentLinkedDeque<>();
+    private final LinkedBlockingDeque<List<Object>> events = new LinkedBlockingDeque<>();
 
     @Override
     public void onError(XdsType type, Status error) {
@@ -42,37 +40,44 @@ class TestResourceWatcher implements ResourceWatcher<ResourceHolder<?>> {
     }
 
     @Override
-    public void onResourceDoesNotExist(XdsType type, String resourceName) {
-        logger.info("onResourceDoesNotExist: {}", resourceName);
-        events.add(ImmutableList.of("onResourceDoesNotExist", resourceName));
+    public void onMissing(XdsType type, String resourceName) {
+        logger.info("onMissing: {}", resourceName);
+        events.add(ImmutableList.of("onMissing", ImmutableList.of(type, resourceName)));
     }
 
     @Override
-    public void onChanged(ResourceHolder<?> update) {
-        logger.info("onChanged: {}", update);
-        events.add(ImmutableList.of("onChanged", update.data()));
+    public void snapshotUpdated(Snapshot<?> update) {
+        logger.info("snapshotUpdated: {}", update);
+        events.add(ImmutableList.of("snapshotUpdated", update));
     }
 
-    Optional<Object> first(String type) {
-        if (events.isEmpty()) {
-            return Optional.empty();
+    List<Object> blockingMissing() {
+        return blockingFirst("onMissing", List.class);
+    }
+
+    <T> T  blockingChanged(Class<T> clazz) {
+        return blockingFirst("snapshotUpdated", clazz);
+    }
+
+    private <T> T blockingFirst(String type, Class<T> clazz) {
+        final List<Object> objects;
+        try {
+            objects = events.poll(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
-        final List<Object> objects = events.getFirst();
-        if (type.equals(objects.get(0))) {
-            return Optional.of(objects.get(1));
+        if (objects == null) {
+            logger.warn("Current event state: {}", events);
+            throw new RuntimeException("Unable to find type: " + type);
         }
-        return Optional.empty();
+        if (!type.equals(objects.get(0))) {
+            logger.warn("Current event state: {}", events);
+            throw new IllegalStateException("Unexpected event: " + objects);
+        }
+        return clazz.cast(objects.get(1));
     }
 
-    List<Object> popFirst() {
-        return requireNonNull(events.poll());
-    }
-
-    int eventSize() {
-        return events.size();
-    }
-
-    public Deque<List<Object>> events() {
+    public BlockingDeque<List<Object>> events() {
         return events;
     }
 }

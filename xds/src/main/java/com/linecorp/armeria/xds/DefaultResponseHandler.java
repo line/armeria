@@ -34,7 +34,7 @@ final class DefaultResponseHandler implements XdsResponseHandler {
     @Override
     public void handleResponse(
             ResourceParser resourceParser, DiscoveryResponse response, SotwXdsStream sender) {
-        final ParsedResourcesHolder<?> holder =
+        final ParsedResourcesHolder holder =
                 resourceParser.parseResources(response.getResourcesList());
         String errorDetail = null;
         if (holder.errors().isEmpty()) {

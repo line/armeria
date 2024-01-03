@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,6 +45,18 @@ final class XdsConverterUtil {
                                     lbEndpoint.getEndpoint().getAddress().getSocketAddress();
                             return Endpoint.of(socketAddress.getAddress(), socketAddress.getPortValue());
                         })).collect(Collectors.toList());
+    }
+
+    static List<Endpoint> convertEndpoints(Collection<ClusterLoadAssignment> clusterLoadAssignments) {
+        return clusterLoadAssignments.stream().flatMap(cla -> cla.getEndpointsList().stream().flatMap(
+                localityLbEndpoints -> localityLbEndpoints
+                        .getLbEndpointsList()
+                        .stream()
+                        .map(lbEndpoint -> {
+                            final SocketAddress socketAddress =
+                                    lbEndpoint.getEndpoint().getAddress().getSocketAddress();
+                            return Endpoint.of(socketAddress.getAddress(), socketAddress.getPortValue());
+                        }))).collect(Collectors.toList());
     }
 
     static void validateConfigSource(@Nullable ConfigSource configSource) {

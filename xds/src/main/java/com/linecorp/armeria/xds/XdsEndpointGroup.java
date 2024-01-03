@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.xds.XdsConverterUtil.convertEndpoints;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-
-import com.google.common.annotations.VisibleForTesting;
+import java.util.stream.Collectors;
 
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -46,7 +48,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  */
 public final class XdsEndpointGroup extends DynamicEndpointGroup {
 
-    private final SafeCloseable config;
+    private final SafeCloseable safeCloseable;
 
     /**
      * Creates a {@link XdsEndpointGroup} which listens to the specified listener.
@@ -56,42 +58,34 @@ public final class XdsEndpointGroup extends DynamicEndpointGroup {
         return new XdsEndpointGroup(listenerRoot);
     }
 
-    /**
-     * Creates a {@link XdsEndpointGroup} which listens to the specified cluster.
-     */
-    public static EndpointGroup of(ClusterRoot clusterRoot) {
-        requireNonNull(clusterRoot, "clusterRoot");
-        return new XdsEndpointGroup(clusterRoot);
-    }
-
     XdsEndpointGroup(ListenerRoot listenerRoot) {
-        final EndpointNode endpointNode = listenerRoot.routeNode()
-                                                      .clusterNode((virtualHost, route) -> true)
-                                                      .endpointNode();
-        config = listenerRoot;
-        endpointNode.addListener(new ResourceWatcher<EndpointResourceHolder>() {
-            @Override
-            public void onChanged(EndpointResourceHolder update) {
-                setEndpoints(convertEndpoints(update.data()));
+        final SnapshotWatcher<ListenerSnapshot> watcher = update -> {
+            final RouteSnapshot routeSnapshot = update.routeSnapshot();
+            if (routeSnapshot == null) {
+                return;
             }
-        });
+            final List<ClusterLoadAssignment> endpoints =
+                    routeSnapshot.clusterSnapshots().stream()
+                                 .map(ClusterSnapshot::endpointSnapshot)
+                                 .filter(Objects::nonNull)
+                                 .map(endpointSnapshot -> endpointSnapshot.holder().data())
+                                 .collect(Collectors.toList());
+            setEndpoints(convertEndpoints(endpoints));
+        };
+        listenerRoot.addSnapshotWatcher(watcher);
+        safeCloseable = () -> listenerRoot.removeSnapshotWatcher(watcher);
     }
 
-    @VisibleForTesting
-    XdsEndpointGroup(ClusterRoot clusterRoot) {
-        final EndpointNode endpointNode = clusterRoot.endpointNode();
-        config = clusterRoot;
-        endpointNode.addListener(new ResourceWatcher<EndpointResourceHolder>() {
-            @Override
-            public void onChanged(EndpointResourceHolder update) {
-                setEndpoints(convertEndpoints(update.data()));
-            }
-        });
+    XdsEndpointGroup(ClusterSnapshot clusterSnapshot) {
+        final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
+        checkArgument(endpointSnapshot != null, "No endpoints are defined for cluster %s", clusterSnapshot);
+        setEndpoints(convertEndpoints(clusterSnapshot.endpointSnapshot().holder().data()));
+        safeCloseable = () -> {};
     }
 
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
-        config.close();
+        safeCloseable.close();
         super.doCloseAsync(future);
     }
 }

@@ -28,9 +28,9 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 
 /**
- * A holder object for a {@link Listener}.
+ * A cluster object for a {@link Listener}.
  */
-public final class ListenerResourceHolder implements ResourceHolder<Listener> {
+public final class ListenerResourceHolder extends AbstractResourceHolder {
 
     private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
             "type.googleapis.com/" +
@@ -75,6 +75,17 @@ public final class ListenerResourceHolder implements ResourceHolder<Listener> {
     @Override
     public String name() {
         return listener.getName();
+    }
+
+    @Override
+    public ListenerResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+        return this;
+    }
+
+    @Override
+    @Nullable
+    public ResourceHolder primer() {
+        return null;
     }
 
     @Override

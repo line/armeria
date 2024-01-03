@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -79,12 +78,14 @@ class DynamicResourcesTest {
     void beforeEach() {
         final Listener listener = XdsTestResources.exampleListener("listener_0",
                                                                    "local_route", "bootstrap-cluster");
+        final RouteConfiguration routeConfiguration =
+                XdsTestResources.routeConfiguration("local_route", "some_service");
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(ImmutableList.of(exampleCluster()),
                                 ImmutableList.of(exampleEndpoint()),
                                 ImmutableList.of(listener),
-                                ImmutableList.of(XdsTestResources.exampleRoute("local_route", "some_service")),
+                                ImmutableList.of(routeConfiguration),
                                 ImmutableList.of(), "1"));
     }
 
@@ -98,26 +99,27 @@ class DynamicResourcesTest {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot(listenerName);
 
             final TestResourceWatcher watcher = new TestResourceWatcher();
-            listenerRoot.addListener(watcher);
+            listenerRoot.addSnapshotWatcher(watcher);
             final Listener expectedListener =
                     cache.getSnapshot(GROUP).listeners().resources().get(listenerName);
-            awaitAssert(watcher, "onChanged", expectedListener);
+            final ListenerSnapshot listenerSnapshot =
+                    watcher.blockingChanged(ListenerSnapshot.class);
+            assertThat(listenerSnapshot.holder().data()).isEqualTo(expectedListener);
 
             final RouteConfiguration expectedRoute =
                     cache.getSnapshot(GROUP).routes().resources().get(routeName);
-            listenerRoot.routeNode().addListener(watcher);
-            awaitAssert(watcher, "onChanged", expectedRoute);
+            final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
+            assertThat(routeSnapshot.holder().data()).isEqualTo(expectedRoute);
 
             final Cluster expectedCluster =
                     cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            listenerRoot.routeNode().clusterNode((virtualHost, route) -> true)
-                        .addListener(watcher);
-            awaitAssert(watcher, "onChanged", expectedCluster);
+            final ClusterSnapshot clusterSnapshot = routeSnapshot.clusterSnapshots().get(0);
+            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+
             final ClusterLoadAssignment expectedEndpoint =
                     cache.getSnapshot(GROUP).endpoints().resources().get(clusterName);
-            listenerRoot.routeNode().clusterNode((virtualHost, route) -> true)
-                        .endpointNode().addListener(watcher);
-            awaitAssert(watcher, "onChanged", expectedEndpoint);
+            final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
+            assertThat(endpointSnapshot.holder().data()).isEqualTo(expectedEndpoint);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());

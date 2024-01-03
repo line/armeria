@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -89,7 +88,7 @@ class MultiConfigSourceTest {
                                                                             .setEdsConfig(configSource))
                                        .build();
         final Listener listener = XdsTestResources.exampleListener("listener1", "route1");
-        final RouteConfiguration route = XdsTestResources.exampleRoute("route1", "cluster1");
+        final RouteConfiguration route = XdsTestResources.routeConfiguration("route1", "cluster1");
         cache1.setSnapshot(
                 GROUP,
                 Snapshot.create(
@@ -116,12 +115,13 @@ class MultiConfigSourceTest {
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final TestResourceWatcher watcher = new TestResourceWatcher();
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot("cluster1");
-            clusterRoot.endpointNode().addListener(watcher);
+            clusterRoot.addSnapshotWatcher(watcher);
+            final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
 
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expectedCluster =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("cluster1");
-            awaitAssert(watcher, "onChanged", expectedCluster);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expectedCluster);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -134,15 +134,14 @@ class MultiConfigSourceTest {
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final TestResourceWatcher watcher = new TestResourceWatcher();
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener1");
-
-            listenerRoot.routeNode().clusterNode((virtualHost, route) -> true)
-                        .endpointNode()
-                        .addListener(watcher);
+            listenerRoot.addSnapshotWatcher(watcher);
+            final ListenerSnapshot listenerSnapshot = watcher.blockingChanged(ListenerSnapshot.class);
 
             // Updates are propagated for the initial value
-            final ClusterLoadAssignment expectedCluster =
+            final ClusterLoadAssignment expected =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("cluster1");
-            awaitAssert(watcher, "onChanged", expectedCluster);
+            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
+                                       .get(0).endpointSnapshot().holder().data()).isEqualTo(expected);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());

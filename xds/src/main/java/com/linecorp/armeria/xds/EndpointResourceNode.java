@@ -22,15 +22,23 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
-final class EndpointResourceNode extends DynamicResourceNode<EndpointResourceHolder> {
+final class EndpointResourceNode extends AbstractResourceNode<EndpointSnapshot>
+        implements SnapshotWatcher<Snapshot<?>> {
 
     EndpointResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, WatchersStorage watchersStorage) {
-        super(watchersStorage, configSource, ENDPOINT, resourceName);
+                         String resourceName, XdsBootstrapImpl xdsBootstrap, @Nullable ResourceHolder primer,
+                         SnapshotWatcher<EndpointSnapshot> parentNode, ResourceNodeType resourceNodeType) {
+        super(xdsBootstrap, configSource, ENDPOINT, resourceName, primer, parentNode, resourceNodeType);
     }
 
     @Override
-    void process(EndpointResourceHolder update) {
-        // no-op
+    void process(ResourceHolder update) {
+        final EndpointResourceHolder holder = (EndpointResourceHolder) update;
+        parentNode().snapshotUpdated(new EndpointSnapshot(holder));
+    }
+
+    @Override
+    public void snapshotUpdated(Snapshot<?> child) {
+        throw new UnsupportedOperationException();
     }
 }

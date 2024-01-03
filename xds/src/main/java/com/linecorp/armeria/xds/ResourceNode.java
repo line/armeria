@@ -19,10 +19,17 @@ package com.linecorp.armeria.xds;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-interface ResourceNode<T extends ResourceHolder<?>> extends ResourceWatcher<T>, SafeCloseable {
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+
+interface ResourceNode<T> extends ResourceWatcher<T>, SafeCloseable {
 
     @Nullable
     T current();
 
-    boolean initialized();
+    XdsType type();
+
+    String name();
+
+    @Nullable
+    ConfigSource configSource();
 }

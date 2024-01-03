@@ -20,14 +20,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.protobuf.Message;
-
-final class ParsedResourcesHolder<T extends Message> {
-    private final Map<String, ResourceHolder<?>> parsedResources;
+final class ParsedResourcesHolder {
+    private final Map<String, AbstractResourceHolder> parsedResources;
     private final Set<String> invalidResources;
     private final List<String> errors;
 
-    ParsedResourcesHolder(Map<String, ResourceHolder<?>> parsedResources,
+    ParsedResourcesHolder(Map<String, AbstractResourceHolder> parsedResources,
                           Set<String> invalidResources,
                           List<String> errors) {
         this.parsedResources = parsedResources;
@@ -35,7 +33,7 @@ final class ParsedResourcesHolder<T extends Message> {
         this.errors = errors;
     }
 
-    Map<String, ResourceHolder<?>> parsedResources() {
+    Map<String, AbstractResourceHolder> parsedResources() {
         return parsedResources;
     }
 

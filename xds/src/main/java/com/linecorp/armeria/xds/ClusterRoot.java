@@ -16,46 +16,28 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
-
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
  * A root node representing a {@link Cluster}.
  * Users may query the latest value of this resource or add a watcher to be notified of changes.
  * Note that it is important to close this resource to avoid leaking connections to the control plane server.
  */
-public final class ClusterRoot extends AbstractNode<ClusterResourceHolder> implements SafeCloseable {
+public final class ClusterRoot extends AbstractNode<ClusterSnapshot> {
 
-    private final String resourceName;
-    @Nullable
-    private final ResourceNode<?> node;
+    private final ClusterResourceNode node;
 
-    ClusterRoot(WatchersStorage watchersStorage, String resourceName, boolean autoSubscribe) {
-        super(watchersStorage);
-        this.resourceName = resourceName;
-        if (autoSubscribe) {
-            node = watchersStorage().subscribe(XdsType.CLUSTER, resourceName);
-        } else {
-            node = null;
-        }
-        watchersStorage().addWatcher(XdsType.CLUSTER, resourceName, this);
-    }
-
-    /**
-     * Returns a node representation of the {@link ClusterLoadAssignment} contained by this listener.
-     */
-    public EndpointNode endpointNode() {
-        return new EndpointNode(watchersStorage(), this);
+    ClusterRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
+        super(xdsBootstrap);
+        node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
+                                       null, this, ResourceNodeType.DYNAMIC);
+        xdsBootstrap().subscribe(node);
     }
 
     @Override
     public void close() {
-        if (node != null) {
-            node.close();
-        }
-        watchersStorage().removeWatcher(XdsType.CLUSTER, resourceName, this);
+        super.close();
+        node.close();
+        xdsBootstrap().removeSubscriber(node);
     }
 }

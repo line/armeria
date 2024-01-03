@@ -106,8 +106,9 @@ public class XdsEndpointGroupTest {
                 XdsTestResources.exampleListener(listenerName, routeName);
         final Listener httpsListener =
                 XdsTestResources.exampleListener(httpsListenerName, httpsRouteName);
-        final RouteConfiguration httpRoute = XdsTestResources.exampleRoute(routeName, clusterName);
-        final RouteConfiguration httpsRoute = XdsTestResources.exampleRoute(httpsRouteName, httpsClusterName);
+        final RouteConfiguration httpRoute = XdsTestResources.routeConfiguration(routeName, clusterName);
+        final RouteConfiguration httpsRoute =
+                XdsTestResources.routeConfiguration(httpsRouteName, httpsClusterName);
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(
@@ -117,17 +118,6 @@ public class XdsEndpointGroupTest {
                         ImmutableList.of(httpRoute, httpsRoute),
                         ImmutableList.of(),
                         "1"));
-    }
-
-    @Test
-    void testWithCluster() {
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.clusterRoot(clusterName));
-            final BlockingWebClient blockingClient = WebClient.of(SessionProtocol.HTTP, xdsEndpointGroup)
-                                                              .blocking();
-            assertThat(blockingClient.get("/hello").contentUtf8()).isEqualTo("world");
-        }
     }
 
     @Test

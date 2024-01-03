@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds;
 
 import java.net.URI;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
@@ -267,20 +268,26 @@ public final class XdsTestResources {
                        .build();
     }
 
-    public static RouteConfiguration exampleRoute(String routeName, String clusterName) {
-        final VirtualHost virtualHost =
-                VirtualHost.newBuilder()
-                           .setName("local_service")
-                           .addDomains("*")
-                           .addRoutes(Route.newBuilder()
-                                           .setMatch(RouteMatch.newBuilder().setPrefix("/"))
-                                           .setRoute(RouteAction.newBuilder()
-                                                                .setCluster(clusterName)))
-                           .build();
-        return RouteConfiguration
-                .newBuilder()
-                .setName(routeName)
-                .addVirtualHosts(virtualHost)
-                .build();
+    public static RouteConfiguration routeConfiguration(String routeName, VirtualHost... virtualHosts) {
+        return RouteConfiguration.newBuilder()
+                                 .setName(routeName)
+                                 .addAllVirtualHosts(ImmutableList.copyOf(virtualHosts))
+                                 .build();
+    }
+
+    public static RouteConfiguration routeConfiguration(String routeName, String clusterName) {
+        return routeConfiguration(routeName, virtualHost(routeName, clusterName));
+    }
+
+    public static VirtualHost virtualHost(String name, String... clusterNames) {
+        final VirtualHost.Builder builder =
+                VirtualHost.newBuilder().setName(name).addDomains("*");
+        for (String clusterName: clusterNames) {
+            builder.addRoutes(Route.newBuilder()
+                                   .setMatch(RouteMatch.newBuilder().setPrefix("/"))
+                                   .setRoute(RouteAction.newBuilder()
+                                                        .setCluster(clusterName)));
+        }
+        return builder.build();
     }
 }

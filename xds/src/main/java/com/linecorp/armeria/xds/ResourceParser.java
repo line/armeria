@@ -37,10 +37,10 @@ abstract class ResourceParser {
 
     abstract Class<? extends Message> clazz();
 
-    abstract ResourceHolder<?> parse(Message message);
+    abstract AbstractResourceHolder parse(Message message);
 
-    ParsedResourcesHolder<?> parseResources(List<Any> resources) {
-        final Map<String, ResourceHolder<?>> parsedResources = new HashMap<>(resources.size());
+    ParsedResourcesHolder parseResources(List<Any> resources) {
+        final Map<String, AbstractResourceHolder> parsedResources = new HashMap<>(resources.size());
         final Set<String> invalidResources = new HashSet<>();
         final List<String> errors = new ArrayList<>();
 
@@ -70,7 +70,7 @@ abstract class ResourceParser {
                 continue;
             }
 
-            final ResourceHolder<?> resourceUpdate;
+            final AbstractResourceHolder resourceUpdate;
             try {
                 resourceUpdate = parse(unpackedMessage);
             } catch (Exception e) {
@@ -84,7 +84,7 @@ abstract class ResourceParser {
             parsedResources.put(name, resourceUpdate);
         }
 
-        return new ParsedResourcesHolder<>(parsedResources, invalidResources, errors);
+        return new ParsedResourcesHolder(parsedResources, invalidResources, errors);
     }
 
     abstract boolean isFullStateOfTheWorld();

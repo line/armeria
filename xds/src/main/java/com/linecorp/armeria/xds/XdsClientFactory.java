@@ -27,26 +27,19 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
-final class XdsClientFactory implements SafeCloseable, ResourceWatcher<ClusterResourceHolder> {
+final class XdsClientFactory implements SafeCloseable {
 
     private final EndpointGroup endpointGroup;
-    private final Consumer<GrpcClientBuilder> listener;
 
-    XdsClientFactory(WatchersStorage watchersStorage,
+    XdsClientFactory(BootstrapClusters bootstrapClusters,
                      String clusterName, Consumer<GrpcClientBuilder> listener) {
-        endpointGroup = XdsEndpointGroup.of(new ClusterRoot(watchersStorage, clusterName, false));
-        this.listener = listener;
-        watchersStorage.addWatcher(XdsType.CLUSTER, clusterName, this);
-    }
+        final ClusterSnapshot clusterSnapshot = bootstrapClusters.get(clusterName);
+        if (clusterSnapshot == null) {
+            throw new IllegalArgumentException("Unable to find static cluster '" + clusterName + '\'');
+        }
+        endpointGroup = new XdsEndpointGroup(clusterSnapshot);
 
-    @Override
-    public void close() {
-        endpointGroup.close();
-    }
-
-    @Override
-    public void onChanged(ClusterResourceHolder update) {
-        final Cluster cluster = update.data();
+        final Cluster cluster = clusterSnapshot.holder().data();
         UpstreamTlsContext tlsContext = null;
         if (cluster.hasTransportSocket()) {
             final String transportSocketName = cluster.getTransportSocket().getName();
@@ -62,5 +55,10 @@ final class XdsClientFactory implements SafeCloseable, ResourceWatcher<ClusterRe
                 tlsContext != null ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
         final GrpcClientBuilder builder = GrpcClients.builder(sessionProtocol, endpointGroup);
         listener.accept(builder);
+    }
+
+    @Override
+    public void close() {
+        endpointGroup.close();
     }
 }

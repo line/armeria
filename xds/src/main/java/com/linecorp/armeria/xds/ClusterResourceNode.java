@@ -17,21 +17,85 @@
 package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsType.CLUSTER;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import io.envoyproxy.envoy.config.route.v3.Route;
+import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
-final class ClusterResourceNode extends DynamicResourceNode<ClusterResourceHolder>
-        implements ClusterNodeProcessor {
+final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot>
+        implements SnapshotWatcher<EndpointSnapshot> {
+
+    @Nullable
+    private final VirtualHost virtualHost;
+    @Nullable
+    private final Route route;
+    private final int index;
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
-                        String resourceName, WatchersStorage watchersStorage) {
-        super(watchersStorage, configSource, CLUSTER, resourceName);
+                        String resourceName, XdsBootstrapImpl xdsBootstrap,
+                        @Nullable ResourceHolder primer, SnapshotWatcher<? super ClusterSnapshot> parentNode,
+                        ResourceNodeType resourceNodeType) {
+        super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentNode, resourceNodeType);
+        virtualHost = null;
+        route = null;
+        index = -1;
+    }
+
+    ClusterResourceNode(@Nullable ConfigSource configSource,
+                        String resourceName, XdsBootstrapImpl xdsBootstrap,
+                        @Nullable ResourceHolder primer, SnapshotWatcher<ClusterSnapshot> parentNode,
+                        VirtualHost virtualHost, Route route, int index, ResourceNodeType resourceNodeType) {
+        super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentNode, resourceNodeType);
+        this.virtualHost = requireNonNull(virtualHost, "virtualHost");
+        this.route = requireNonNull(route, "route");
+        this.index = index;
     }
 
     @Override
-    public void process(ClusterResourceHolder update) {
-        ClusterNodeProcessor.super.process(update);
+    public void process(ResourceHolder update) {
+        final ClusterResourceHolder holder = (ClusterResourceHolder) update;
+        final Cluster cluster = holder.data();
+        if (cluster.hasLoadAssignment()) {
+            final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
+            final EndpointResourceNode node =
+                    StaticResourceUtils.staticEndpoint(xdsBootstrap(), cluster.getName(),
+                                                       holder, this, loadAssignment);
+            children().add(node);
+        }
+        if (cluster.hasEdsClusterConfig()) {
+            final ConfigSource configSource = cluster.getEdsClusterConfig().getEdsConfig();
+            final EndpointResourceNode node =
+                    new EndpointResourceNode(configSource, cluster.getName(), xdsBootstrap(), holder,
+                                             this, ResourceNodeType.DYNAMIC);
+            children().add(node);
+            xdsBootstrap().subscribe(configSource, node);
+        }
+        if (children().isEmpty()) {
+            parentNode().snapshotUpdated(new ClusterSnapshot(holder));
+        }
+    }
+
+    @Override
+    public ClusterResourceHolder current() {
+        return (ClusterResourceHolder) super.current();
+    }
+
+    @Override
+    public void snapshotUpdated(EndpointSnapshot endpointSnapshot) {
+        final ClusterResourceHolder current = current();
+        if (current == null) {
+            return;
+        }
+        if (!Objects.equals(endpointSnapshot.holder().primer(), current)) {
+            return;
+        }
+        parentNode().snapshotUpdated(new ClusterSnapshot(current, endpointSnapshot, virtualHost, route, index));
     }
 }

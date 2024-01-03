@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Duration;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -47,12 +48,20 @@ class ClientTimeoutTest {
 
     private static final String GROUP = "key";
     private static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP);
+    private static final AtomicBoolean simulateTimeout = new AtomicBoolean();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(com.linecorp.armeria.server.ServerBuilder sb) throws Exception {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
+            sb.decorator((delegate, ctx, req) -> {
+                if (simulateTimeout.get()) {
+                    ctx.cancel();
+                    return HttpResponse.streaming();
+                }
+                return delegate.serve(ctx, req);
+            });
             sb.service(GrpcService.builder()
                                   .addService(v3DiscoveryServer.getAggregatedDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getListenerDiscoveryServiceImpl())
@@ -65,6 +74,7 @@ class ClientTimeoutTest {
 
     @BeforeEach
     void beforeEach() {
+        simulateTimeout.set(false);
         cache.setSnapshot(
                 GROUP,
                 Snapshot.create(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
@@ -73,6 +83,7 @@ class ClientTimeoutTest {
 
     @Test
     void initialTimeoutInvokesAbsent() throws Exception {
+        simulateTimeout.set(true);
         final TestResourceWatcher watcher = new TestResourceWatcher();
         final String bootstrapClusterName = "bootstrap-cluster";
         final String clusterName = "cluster1";
@@ -93,20 +104,20 @@ class ClientTimeoutTest {
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, cluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
-            clusterRoot.addListener(watcher);
+            clusterRoot.addSnapshotWatcher(watcher);
 
-            await().untilAsserted(
-                    () -> assertThat(watcher.first("onResourceDoesNotExist")).hasValue(clusterName));
-            watcher.popFirst();
+            assertThat(watcher.blockingMissing()).isEqualTo(ImmutableList.of(XdsType.CLUSTER, clusterName));
 
             // add the resource afterward
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(ImmutableList.of(TestResources.createCluster(clusterName)),
-                                    ImmutableList.of(), ImmutableList.of(),
-                                    ImmutableList.of(), ImmutableList.of(), "2"));
+                                    ImmutableList.of(XdsTestResources.loadAssignment(clusterName, URI.create("http://a.b"))),
+                                    ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "2"));
+            simulateTimeout.set(false);
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            awaitAssert(watcher, "onChanged", expectedCluster);
+            final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
+            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -120,15 +131,25 @@ class ClientTimeoutTest {
         final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
-            clusterRoot.addListener(watcher);
+            clusterRoot.addSnapshotWatcher(watcher);
+            assertThat(watcher.blockingMissing()).isEqualTo(ImmutableList.of(XdsType.CLUSTER, clusterName));
 
             cache.setSnapshot(
                     GROUP,
                     Snapshot.create(ImmutableList.of(TestResources.createCluster(clusterName)),
-                                    ImmutableList.of(), ImmutableList.of(),
+                                    ImmutableList.of(XdsTestResources.loadAssignment(clusterName, URI.create("http://a.b"))),
+                                    ImmutableList.of(),
                                     ImmutableList.of(), ImmutableList.of(), "2"));
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            awaitAssert(watcher, "onChanged", expectedCluster);
+            ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
+            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+
+            // try opening another root to verify the cached value is used
+            simulateTimeout.set(true);
+            final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot(clusterName);
+            clusterRoot2.addSnapshotWatcher(watcher);
+            clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
+            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
 
             // ensure that onAbsent not triggered at the timeout
             await().pollDelay(100, TimeUnit.MILLISECONDS)

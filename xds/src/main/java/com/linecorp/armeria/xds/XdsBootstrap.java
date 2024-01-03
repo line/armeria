@@ -33,12 +33,14 @@ import io.netty.util.concurrent.EventExecutor;
  * Bootstrap bootstrap = ...;
  * XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
  * ListenerRoot root = xdsBootstrap.listenerRoot("listener1");
- * root.routeNode().addListener(...);
+ * root.addSnapshotWatcher(...);
  * root.close();
  * }</pre>
  * Initializing a {@link XdsBootstrap} does not consume any resources until a resource is subscribed
  * via {@link #listenerRoot(String)} or its variants.
- * Note that it is important to close the {@link XdsBootstrap} after usage to avoid leaking resources.
+ * Note that it is important to close the {@link ListenerRoot} or {@link ClusterRoot}
+ * after usage to avoid leaking resources.
+ * Closing the {@link XdsBootstrap} will also close all connections and relevant resources.
  */
 @UnstableApi
 public interface XdsBootstrap extends SafeCloseable {

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsTestUtil.awaitAssert;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,15 +109,17 @@ class ApiConfigSourceTest {
             final ClusterRoot root = xdsBootstrap.clusterRoot(adsClusterName);
 
             final TestResourceWatcher watcher = new TestResourceWatcher();
-            root.addListener(watcher);
+            root.addSnapshotWatcher(watcher);
+
+            final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expected =
                     cache1.getSnapshot(GROUP).clusters().resources().get(adsClusterName);
-            awaitAssert(watcher, "onChanged", expected);
+            assertThat(clusterSnapshot.holder().data()).isEqualTo(expected);
 
-            root.endpointNode().addListener(watcher);
+            final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
             final ClusterLoadAssignment expected2 =
                     cache1.getSnapshot(GROUP).endpoints().resources().get(adsClusterName);
-            awaitAssert(watcher, "onChanged", expected2);
+            assertThat(endpointSnapshot.holder().data()).isEqualTo(expected2);
         }
     }
 
@@ -140,15 +142,16 @@ class ApiConfigSourceTest {
             final ClusterRoot root = xdsBootstrap.clusterRoot(basicClusterName);
 
             final TestResourceWatcher watcher = new TestResourceWatcher();
-            root.addListener(watcher);
+            root.addSnapshotWatcher(watcher);
+            final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expected =
                     cache2.getSnapshot(GROUP).clusters().resources().get(basicClusterName);
-            awaitAssert(watcher, "onChanged", expected);
+            assertThat(clusterSnapshot.holder().data()).isEqualTo(expected);
 
-            root.endpointNode().addListener(watcher);
             final ClusterLoadAssignment expected2 =
                     cache2.getSnapshot(GROUP).endpoints().resources().get(basicClusterName);
-            awaitAssert(watcher, "onChanged", expected2);
+            final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
+            assertThat(endpointSnapshot.holder().data()).isEqualTo(expected2);
         }
     }
 }

@@ -23,7 +23,6 @@ import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
  * Note that it is important that exceptions are not raised from the callback.
  * Otherwise, the infinite loop will break as a discovery request is not sent.
  */
-
 interface XdsResponseHandler {
 
     void handleResponse(

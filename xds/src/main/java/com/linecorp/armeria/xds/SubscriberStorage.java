@@ -23,11 +23,10 @@ import java.util.Map;
 import java.util.Set;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class SubscriberStorage implements SafeCloseable {
+final class SubscriberStorage {
 
     private final EventExecutor eventLoop;
     private final long timeoutMillis;
@@ -35,17 +34,13 @@ final class SubscriberStorage implements SafeCloseable {
     private final Map<XdsType, Map<String, XdsStreamSubscriber>> subscriberMap =
             new EnumMap<>(XdsType.class);
 
-    private final WatchersStorage watchersStorage;
-
-    SubscriberStorage(EventExecutor eventLoop, WatchersStorage watchersStorage, long timeoutMillis) {
+    SubscriberStorage(EventExecutor eventLoop, long timeoutMillis) {
         this.eventLoop = eventLoop;
         this.timeoutMillis = timeoutMillis;
-        this.watchersStorage = watchersStorage;
     }
 
     @Nullable
-    boolean register(XdsType type, String resourceName, XdsBootstrapImpl xdsBootstrap,
-                     ResourceWatcher<ResourceHolder<?>> watcher) {
+    boolean register(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
         if (!subscriberMap.containsKey(type)) {
             subscriberMap.put(type, new HashMap<>());
         }
@@ -62,7 +57,7 @@ final class SubscriberStorage implements SafeCloseable {
     }
 
     @Nullable
-    boolean unregister(XdsType type, String resourceName, ResourceWatcher<ResourceHolder<?>> watcher) {
+    boolean unregister(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
         if (!subscriberMap.containsKey(type)) {
             return false;
         }
@@ -93,10 +88,5 @@ final class SubscriberStorage implements SafeCloseable {
 
     Map<XdsType, Map<String, XdsStreamSubscriber>> allSubscribers() {
         return subscriberMap;
-    }
-
-    @Override
-    public void close() {
-        subscriberMap.clear();
     }
 }

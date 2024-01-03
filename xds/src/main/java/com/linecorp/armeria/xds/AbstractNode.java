@@ -16,104 +16,115 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.Collections;
-import java.util.IdentityHashMap;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 
-abstract class AbstractNode<T> implements ResourceWatcher<T> {
+abstract class AbstractNode<T extends Snapshot<? extends ResourceHolder>>
+        implements SnapshotWatcher<T>, SafeCloseable {
 
-    private final WatchersStorage watchersStorage;
+    private static final Logger logger = LoggerFactory.getLogger(AbstractNode.class);
+
+    private final XdsBootstrapImpl xdsBootstrap;
     private final EventExecutor eventLoop;
-    private final CompletableFuture<Void> whenReady = new CompletableFuture<>();
-    private final Set<ResourceWatcher<? super T>> listeners =
-            Collections.newSetFromMap(new IdentityHashMap<>());
     @Nullable
-    private volatile T current;
+    private T snapshot;
+    private final Set<SnapshotWatcher<? super T>> snapshotWatchers = new HashSet<>();
+    private boolean closed;
 
-    AbstractNode(WatchersStorage watchersStorage) {
-        this.watchersStorage = watchersStorage;
-        eventLoop = watchersStorage().eventLoop();
+    AbstractNode(XdsBootstrapImpl xdsBootstrap) {
+        this.xdsBootstrap = xdsBootstrap;
+        eventLoop = xdsBootstrap.eventLoop();
     }
 
-    /**
-     * Returns the latest value of this node.
-     */
-    @Nullable
-    public final T current() {
-        return current;
-    }
-
-    @Override
-    public final void onChanged(T update) {
-        current = update;
-        if (!whenReady.isDone()) {
-            whenReady.complete(null);
-        }
-        for (ResourceWatcher<? super T> watcher: listeners) {
-            watcher.onChanged(update);
-        }
-    }
-
-    @Override
-    public void onResourceDoesNotExist(XdsType type, String resourceName) {
-        current = null;
-        if (!whenReady.isDone()) {
-            whenReady.complete(null);
-        }
-        for (ResourceWatcher<? super T> watcher: listeners) {
-            watcher.onResourceDoesNotExist(type, resourceName);
-        }
-    }
-
-    @Override
-    public void onError(XdsType type, Status error) {
-        for (ResourceWatcher<? super T> watcher: listeners) {
-            watcher.onError(type, error);
-        }
-    }
-
-    /**
-     * Adds a listener which is notified when this node is updated.
-     */
-    public final void addListener(ResourceWatcher<? super T> listener) {
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> addListener(listener));
-            return;
-        }
-        if (listeners.add(listener) && current != null) {
-            listener.onChanged(current);
-        }
-    }
-
-    /**
-     * Removes a listener which is notified when this node is updated.
-     */
-    public final void removeListener(ResourceWatcher<? super T> listener) {
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> removeListener(listener));
-            return;
-        }
-        listeners.remove(listener);
-    }
-
-    /**
-     * Returns a {@link CompletableFuture} which is completed when the initial value is set.
-     */
-    public CompletableFuture<Void> whenReady() {
-        return whenReady;
-    }
-
-    final WatchersStorage watchersStorage() {
-        return watchersStorage;
+    final XdsBootstrapImpl xdsBootstrap() {
+        return xdsBootstrap;
     }
 
     final EventExecutor eventLoop() {
         return eventLoop;
+    }
+
+    public void addSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
+        if (!eventLoop().inEventLoop()) {
+            eventLoop().execute(() -> addSnapshotWatcher(watcher));
+            return;
+        }
+        snapshotWatchers.add(watcher);
+        if (snapshot != null) {
+            try {
+                watcher.snapshotUpdated(snapshot);
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception while invoking {}.onChanged",
+                            watcher.getClass().getSimpleName(), t);
+            }
+        }
+    }
+
+    public void removeSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
+        if (!eventLoop().inEventLoop()) {
+            eventLoop().execute(() -> removeSnapshotWatcher(watcher));
+            return;
+        }
+        snapshotWatchers.remove(watcher);
+    }
+
+    @Override
+    public void snapshotUpdated(T child) {
+        snapshot = child;
+        if (closed) {
+            return;
+        }
+        for (SnapshotWatcher<? super T> watcher: snapshotWatchers) {
+            try {
+                watcher.snapshotUpdated(snapshot);
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception while invoking {}.onChanged",
+                            watcher.getClass().getSimpleName(), t);
+            }
+        }
+    }
+
+    @Override
+    public void onMissing(XdsType type, String resourceName) {
+        if (closed) {
+            return;
+        }
+        for (SnapshotWatcher<? super T> watcher: snapshotWatchers) {
+            try {
+                watcher.onMissing(type, resourceName);
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception while invoking {}.onChanged",
+                            watcher.getClass().getSimpleName(), t);
+            }
+        }
+    }
+
+    @Override
+    public void onError(XdsType type, Status status) {
+        if (closed) {
+            return;
+        }
+        for (SnapshotWatcher<? super T> watcher: snapshotWatchers) {
+            try {
+                watcher.onError(type, status);
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception while invoking {}.onChanged",
+                            watcher.getClass().getSimpleName(), t);
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        closed = true;
     }
 }

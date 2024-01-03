@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,29 +18,27 @@ package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.grpc.Status;
+
 /**
- * A holder object for xDS resources. This is a holder object which
- * is contained by {@link Snapshot} to:
- * <ul>
- *     <li>Provide additional metadata.</li>
- *     <li>Unify unpacking child object logic.</li>
- * </ul>
+ * A watcher implementation which waits for updates on a xDS snapshot.
  */
 @UnstableApi
-public interface ResourceHolder {
+public interface SnapshotWatcher<T> {
 
     /**
-     * Returns the xDS type of the object.
+     * Invoked when a full snapshot is updated.
      */
-    XdsType type();
+    void snapshotUpdated(T child);
 
     /**
-     * Returns a deep copy of the data.
+     * Invoked when a resource is deemed not to exist. This can either be due to
+     * a timeout on a watch, or the xDS control plane explicitly signalling a resource is missing.
      */
-    Object data();
+    default void onMissing(XdsType type, String resourceName) {}
 
     /**
-     * Returns the resource name.
+     * Invoked when an unexpected error occurs while processing a resource.
      */
-    String name();
+    default void onError(XdsType type, Status status) {}
 }

@@ -16,19 +16,31 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
- * A holder object for a {@link ClusterLoadAssignment}.
+ * A cluster object for a {@link ClusterLoadAssignment}.
  */
-public final class EndpointResourceHolder implements ResourceHolder<ClusterLoadAssignment> {
+public final class EndpointResourceHolder extends AbstractResourceHolder {
 
     private final ClusterLoadAssignment clusterLoadAssignment;
+    @Nullable
+    private final ClusterResourceHolder primer;
 
     EndpointResourceHolder(ClusterLoadAssignment clusterLoadAssignment) {
+        this.clusterLoadAssignment = clusterLoadAssignment;
+        primer = null;
+    }
+
+    EndpointResourceHolder(ClusterResourceHolder primer, ClusterLoadAssignment clusterLoadAssignment) {
+        this.primer = primer;
         this.clusterLoadAssignment = clusterLoadAssignment;
     }
 
@@ -48,10 +60,18 @@ public final class EndpointResourceHolder implements ResourceHolder<ClusterLoadA
     }
 
     @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("clusterLoadAssignment", clusterLoadAssignment)
-                          .toString();
+    public EndpointResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+        if (primer == null) {
+            return this;
+        }
+        checkArgument(primer instanceof ClusterResourceHolder);
+        return new EndpointResourceHolder((ClusterResourceHolder) primer, clusterLoadAssignment);
+    }
+
+    @Override
+    @Nullable
+    public ClusterResourceHolder primer() {
+        return primer;
     }
 
     @Override
@@ -62,12 +82,21 @@ public final class EndpointResourceHolder implements ResourceHolder<ClusterLoadA
         if (object == null || getClass() != object.getClass()) {
             return false;
         }
-        final EndpointResourceHolder that = (EndpointResourceHolder) object;
-        return Objects.equal(clusterLoadAssignment, that.clusterLoadAssignment);
+        final EndpointResourceHolder holder = (EndpointResourceHolder) object;
+        return Objects.equal(clusterLoadAssignment, holder.clusterLoadAssignment) &&
+               Objects.equal(primer, holder.primer);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(clusterLoadAssignment);
+        return Objects.hashCode(clusterLoadAssignment, primer);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("clusterLoadAssignment", clusterLoadAssignment)
+                          .add("primer", primer)
+                          .toString();
     }
 }

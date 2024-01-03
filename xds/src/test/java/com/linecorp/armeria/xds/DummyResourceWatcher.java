@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.Deque;
+final class DummyResourceWatcher implements ResourceWatcher<AbstractResourceHolder> {
 
-interface BaseNodeProcessor {
-    WatchersStorage watchersStorage();
-
-    Deque<ResourceNode<?>> children();
+    @Override
+    public void onChanged(AbstractResourceHolder update) {
+    }
 }

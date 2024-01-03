@@ -16,20 +16,57 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 /**
- * A holder object for a {@link Cluster}.
+ * A cluster object for a {@link Cluster}.
  */
-public final class ClusterResourceHolder implements ResourceHolder<Cluster> {
+public final class ClusterResourceHolder extends AbstractResourceHolder {
 
     private final Cluster cluster;
+    @Nullable
+    private final RouteResourceHolder primer;
 
     ClusterResourceHolder(Cluster cluster) {
+        this(cluster, null);
+    }
+
+    ClusterResourceHolder(Cluster cluster, @Nullable RouteResourceHolder primer) {
         this.cluster = cluster;
+        this.primer = primer;
+    }
+
+    @Override
+    public ClusterResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+        if (primer == null) {
+            return this;
+        }
+        checkArgument(primer instanceof RouteResourceHolder);
+        return new ClusterResourceHolder(cluster, (RouteResourceHolder) primer);
+    }
+
+    @Nullable
+    UpstreamTlsContext upstreamTlsContext() {
+        if (cluster.hasTransportSocket()) {
+            final String transportSocketName = cluster.getTransportSocket().getName();
+            checkArgument("envoy.transport_sockets.tls".equals(transportSocketName),
+                          "Unexpected tls transport socket name '%s'", transportSocketName);
+            try {
+                return cluster.getTransportSocket().getTypedConfig()
+                              .unpack(UpstreamTlsContext.class);
+            } catch (Exception e) {
+                throw new RuntimeException("Error unpacking tls context", e);
+            }
+        }
+        return null;
     }
 
     @Override
@@ -48,10 +85,8 @@ public final class ClusterResourceHolder implements ResourceHolder<Cluster> {
     }
 
     @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("cluster", cluster)
-                          .toString();
+    public RouteResourceHolder primer() {
+        return primer;
     }
 
     @Override
@@ -63,11 +98,20 @@ public final class ClusterResourceHolder implements ResourceHolder<Cluster> {
             return false;
         }
         final ClusterResourceHolder that = (ClusterResourceHolder) object;
-        return Objects.equal(cluster, that.cluster);
+        return Objects.equal(cluster, that.cluster) && Objects.equal(
+                primer, that.primer);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(cluster);
+        return Objects.hashCode(cluster, primer);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("cluster", cluster)
+                          .add("primer", primer)
+                          .toString();
     }
 }

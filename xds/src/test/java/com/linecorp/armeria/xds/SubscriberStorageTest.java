@@ -18,14 +18,10 @@ package com.linecorp.armeria.xds;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.URI;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
-
-import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 
 class SubscriberStorageTest {
 
@@ -34,36 +30,26 @@ class SubscriberStorageTest {
 
     @Test
     void registerAndUnregister() throws Exception {
-        final TestResourceWatcher watcher = new TestResourceWatcher();
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("http://a.com"), "cluster");
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final WatchersStorage watchersStorage = new WatchersStorage(xdsBootstrap);
-            final SubscriberStorage storage =
-                    new SubscriberStorage(eventLoop.get(), watchersStorage, 15_000);
-            storage.register(XdsType.CLUSTER, "cluster1", xdsBootstrap, watcher);
-            assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
-            storage.unregister(XdsType.CLUSTER, "cluster1", watcher);
-            assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
-            assertThat(storage.allSubscribers()).isEmpty();
-        }
+        final DummyResourceWatcher watcher = new DummyResourceWatcher();
+        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 15_000);
+        storage.register(XdsType.CLUSTER, "cluster1", watcher);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
+        storage.unregister(XdsType.CLUSTER, "cluster1", watcher);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
+        assertThat(storage.allSubscribers()).isEmpty();
     }
 
     @Test
     void identityBasedUnregister() {
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(URI.create("http://a.com"), "cluster");
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
-            final WatchersStorage watchersStorage = new WatchersStorage(xdsBootstrap);
-            final TestResourceWatcher watcher1 = new TestResourceWatcher();
-            final SubscriberStorage storage =
-                    new SubscriberStorage(eventLoop.get(), watchersStorage, 15_000);
-            storage.register(XdsType.CLUSTER, "cluster1", xdsBootstrap, watcher1);
-            assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
-            storage.register(XdsType.CLUSTER, "cluster1", xdsBootstrap, watcher1);
-            assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
+        final DummyResourceWatcher watcher1 = new DummyResourceWatcher();
+        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 15_000);
+        storage.register(XdsType.CLUSTER, "cluster1", watcher1);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
+        storage.register(XdsType.CLUSTER, "cluster1", watcher1);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
 
-            storage.unregister(XdsType.CLUSTER, "cluster1", watcher1);
-            assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
-            assertThat(storage.allSubscribers()).isEmpty();
-        }
+        storage.unregister(XdsType.CLUSTER, "cluster1", watcher1);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
+        assertThat(storage.allSubscribers()).isEmpty();
     }
 }

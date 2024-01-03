@@ -18,20 +18,66 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsType.LISTENER;
 
+import java.util.Objects;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 
-final class ListenerResourceNode extends DynamicResourceNode<ListenerResourceHolder>
-        implements ListenerNodeProcessor {
+final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot>
+        implements SnapshotWatcher<RouteSnapshot> {
 
     ListenerResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, WatchersStorage watchersStorage) {
-        super(watchersStorage, configSource, LISTENER, resourceName);
+                         String resourceName, XdsBootstrapImpl xdsBootstrap, @Nullable ResourceHolder primer,
+                         SnapshotWatcher<ListenerSnapshot> parentNode, ResourceNodeType resourceNodeType) {
+        super(xdsBootstrap, configSource, LISTENER, resourceName, primer, parentNode, resourceNodeType);
     }
 
     @Override
-    public void process(ListenerResourceHolder update) {
-        ListenerNodeProcessor.super.process(update);
+    public void process(ResourceHolder update) {
+        final ListenerResourceHolder holder = (ListenerResourceHolder) update;
+        final HttpConnectionManager connectionManager = holder.connectionManager();
+        if (connectionManager != null) {
+            if (connectionManager.hasRouteConfig()) {
+                final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
+                final RouteResourceNode node =
+                        StaticResourceUtils.staticRoute(xdsBootstrap(), routeConfig.getName(), holder,
+                                                        this, routeConfig);
+                children().add(node);
+            }
+            if (connectionManager.hasRds()) {
+                final Rds rds = connectionManager.getRds();
+                final String routeName = rds.getRouteConfigName();
+                final ConfigSource configSource = rds.getConfigSource();
+                final RouteResourceNode routeResourceNode =
+                        new RouteResourceNode(configSource, routeName, xdsBootstrap(), holder, this,
+                                              ResourceNodeType.DYNAMIC);
+                children().add(routeResourceNode);
+                xdsBootstrap().subscribe(configSource, routeResourceNode);
+            }
+        }
+        if (children().isEmpty()) {
+            parentNode().snapshotUpdated(new ListenerSnapshot(holder, null));
+        }
+    }
+
+    @Override
+    public ListenerResourceHolder current() {
+        return (ListenerResourceHolder) super.current();
+    }
+
+    @Override
+    public void snapshotUpdated(RouteSnapshot routeSnapshot) {
+        final ListenerResourceHolder current = current();
+        if (current == null) {
+            return;
+        }
+        if (!Objects.equals(routeSnapshot.holder().primer(), current)) {
+            return;
+        }
+        parentNode().snapshotUpdated(new ListenerSnapshot(current, routeSnapshot));
     }
 }
