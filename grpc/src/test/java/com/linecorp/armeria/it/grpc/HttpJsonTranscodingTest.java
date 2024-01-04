@@ -338,22 +338,28 @@ public class HttpJsonTranscodingTest {
     static final ServerExtension server = createServer(false, false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true, false);
+    static final ServerExtension serverPreservingProtoFieldNames =
+            createServer(true, false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false, false);
+    static final ServerExtension serverCamelCaseQueryOnlyParameters =
+            createServer(false, true, false, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true, false);
+    static final ServerExtension serverCamelCaseQueryAndOriginalParameters =
+            createServer(false, true, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverJsonNameQueryOnlyParameters = createServer(false, false, false, true);
+    static final ServerExtension serverJsonNameOnlyParameters =
+            createServer(false, false, false, true);
 
     @RegisterExtension
-    static final ServerExtension serverJsonNameQueryAndOriginalParameters = createServer(false, false, true, true);
+    static final ServerExtension serverJsonNameAndOriginalParameters =
+            createServer(false, false, true, true);
 
     @RegisterExtension
-    static final ServerExtension serverJsonNameAndCamelCaseParameters = createServer(false, true, false, true);
+    static final ServerExtension serverJsonNameAndCamelCaseParameters =
+            createServer(false, true, false, true);
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
@@ -369,10 +375,10 @@ public class HttpJsonTranscodingTest {
             serverCamelCaseQueryAndOriginalParameters.blockingWebClient();
 
     private final BlockingWebClient webClientJsonNameOnlyParameters =
-            serverJsonNameQueryOnlyParameters.blockingWebClient();
+            serverJsonNameOnlyParameters.blockingWebClient();
 
     private final BlockingWebClient webClientJsonNameQueryAndOriginalParameters =
-            serverJsonNameQueryAndOriginalParameters.blockingWebClient();
+            serverJsonNameAndOriginalParameters.blockingWebClient();
 
     private final BlockingWebClient webClientJsonNameAndCamelCaseParameters =
             serverJsonNameAndCamelCaseParameters.blockingWebClient();
@@ -1033,10 +1039,10 @@ public class HttpJsonTranscodingTest {
     void shouldAcceptJsonName() {
         final QueryParams query =
                 QueryParams.builder()
-                        .add("first_query", "testQuery")
-                        .add("second_query", "testQuery2")
-                        .add("parent.first_field", "testChildField")
-                        .add("parent.second_field", "testChildField2")
+                        .add("first_query", "query")
+                        .add("second_query", "query2")
+                        .add("parent.first_field", "childField")
+                        .add("parent.second_field", "childField2")
                         .build();
 
         final JsonNode response =
@@ -1046,17 +1052,17 @@ public class HttpJsonTranscodingTest {
                         .asJson(JsonNode.class)
                         .execute()
                         .content();
-        assertThat(response.get("text").asText()).isEqualTo("1:testQuery:testQuery2:testChildField:testChildField2");
+        assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
     }
 
     @Test
     void shouldAcceptJsonNameAndOriginalParameters() {
         final QueryParams query =
                 QueryParams.builder()
-                        .add("query_parameter", "testQuery")
-                        .add("second_query", "testQuery2")
-                        .add("parent.child_field", "testChildField")
-                        .add("parent.child_field_2", "testChildField2")
+                        .add("query_parameter", "query")
+                        .add("second_query", "query2")
+                        .add("parent.child_field", "childField")
+                        .add("parent.child_field_2", "childField2")
                         .build();
 
         final JsonNode response =
@@ -1066,17 +1072,17 @@ public class HttpJsonTranscodingTest {
                         .asJson(JsonNode.class)
                         .execute()
                         .content();
-        assertThat(response.get("text").asText()).isEqualTo("1:testQuery:testQuery2:testChildField:testChildField2");
+        assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
     }
 
     @Test
     void shouldAcceptJsonNameAndCamelParameters() {
         final QueryParams query =
                 QueryParams.builder()
-                        .add("queryParameter", "testQuery")
-                        .add("second_query", "testQuery2")
-                        .add("parent.childField", "testChildField")
-                        .add("parent.childField2", "testChildField2")
+                        .add("queryParameter", "query")
+                        .add("second_query", "query2")
+                        .add("parent.childField", "childField")
+                        .add("parent.childField2", "childField2")
                         .build();
 
         final JsonNode response =
@@ -1086,7 +1092,7 @@ public class HttpJsonTranscodingTest {
                         .asJson(JsonNode.class)
                         .execute()
                         .content();
-        assertThat(response.get("text").asText()).isEqualTo("1:testQuery:testQuery2:testChildField:testChildField2");
+        assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
     }
 
     @Test
