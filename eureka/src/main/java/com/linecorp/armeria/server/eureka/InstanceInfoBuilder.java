@@ -74,6 +74,8 @@ final class InstanceInfoBuilder {
     @Nullable
     private String statusPageUrl;
     @Nullable
+    private String healthCheckUrlPath;
+    @Nullable
     private String healthCheckUrl;
     @Nullable
     private String secureHealthCheckUrl;
@@ -195,6 +197,14 @@ final class InstanceInfoBuilder {
     }
 
     /**
+     * Sets the health check path.
+     */
+    InstanceInfoBuilder healthCheckUrlPath(String healthCheckUrlPath) {
+        this.healthCheckUrlPath = requireNonNull(healthCheckUrlPath, "healthCheckUrlPath");
+        return this;
+    }
+
+    /**
      * Sets the health check URL.
      */
     InstanceInfoBuilder healthCheckUrl(String healthCheckUrl) {
@@ -241,9 +251,10 @@ final class InstanceInfoBuilder {
         final LeaseInfo leaseInfo = new LeaseInfo(renewalIntervalSeconds, leaseDurationSeconds);
         return new InstanceInfo(instanceId, appName, appGroupName, hostname, ipAddr, vipAddress,
                                 secureVipAddress, port, securePort, InstanceStatus.UP,
-                                homePageUrl, statusPageUrl, healthCheckUrl, secureHealthCheckUrl,
-                                new DataCenterInfo(dataCenterName, dataCenterMetadata),
-                                leaseInfo, metadata);
+                                homePageUrl, statusPageUrl, healthCheckUrlPath, healthCheckUrl,
+                                secureHealthCheckUrl,
+                                new DataCenterInfo(dataCenterName, dataCenterMetadata), leaseInfo,
+                                metadata);
     }
 
     private static void validateIpAddr(String ipAddr, String name) {

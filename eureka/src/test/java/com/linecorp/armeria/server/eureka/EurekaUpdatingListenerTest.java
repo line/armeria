@@ -144,21 +144,21 @@ class EurekaUpdatingListenerTest {
     @Test
     void reRegisterIfInstanceNoLongerRegistered() throws IOException {
         final EurekaUpdatingListener listener =
-            EurekaUpdatingListener.builder(eurekaServer.httpUri())
-                .instanceId(INSTANCE_ID)
-                .renewalIntervalMillis(2000)
-                .leaseDurationMillis(10000)
-                .appName(APP_NAME)
-                .build();
+                EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                                      .instanceId(INSTANCE_ID)
+                                      .renewalIntervalMillis(2000)
+                                      .leaseDurationMillis(10000)
+                                      .appName(APP_NAME)
+                                      .build();
         final int previousRegisterCount = registerCounter.get();
         final Server application = Server.builder()
-            .http(0)
-            .https(0)
-            .tlsSelfSigned()
-            .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-            .service("/health", HealthCheckService.of())
-            .serverListener(listener)
-            .build();
+                                         .http(0)
+                                         .https(0)
+                                         .tlsSelfSigned()
+                                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .service("/health", HealthCheckService.of())
+                                         .serverListener(listener)
+                                         .build();
         application.start().join();
         await().until(() -> registerContentCaptor.get() != null);
         assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 1);
@@ -250,6 +250,37 @@ class EurekaUpdatingListenerTest {
         final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
                                                            InstanceInfo.class);
         assertThat(instanceInfo.getInstanceId()).isEqualTo("myhost:" + APP_NAME + ":1");
+        application.stop().join();
+    }
+
+    @Test
+    void customHealthCheckPath() throws IOException {
+        final EurekaUpdatingListener listener =
+                EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                                      .renewalInterval(Duration.ofSeconds(2))
+                                      .leaseDuration(Duration.ofSeconds(10))
+                                      .hostname("myhost")
+                                      .healthCheckUrlPath("/custom-health")
+                                      .port(88)
+                                      .securePort(8888)
+                                      .appName(APP_NAME)
+                                      .build();
+
+        final Server application = Server.builder()
+                                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .service("/custom-health",
+                                                  (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .service("/health", HealthCheckService.of())
+                                         .serverListener(listener)
+                                         .build();
+        application.start().join();
+        await().until(() -> registerContentCaptor.get() != null);
+        final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
+                                                           InstanceInfo.class);
+        assertThat(instanceInfo.getHealthCheckUrl())
+                .isEqualTo("http://myhost:88/custom-health");
+        assertThat(instanceInfo.getSecureHealthCheckUrl())
+                .isEqualTo("https://myhost:8888/custom-health");
         application.stop().join();
     }
 }

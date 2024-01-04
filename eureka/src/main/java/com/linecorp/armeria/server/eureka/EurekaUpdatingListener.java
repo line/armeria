@@ -223,17 +223,19 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         } else {
             hostnameOrIpAddr = hostName;
         }
-        final String healthCheckUrl = healthCheckUrl(hostnameOrIpAddr, oldInfo.getHealthCheckUrl(), portWrapper,
+        final String healthCheckUrl = healthCheckUrl(hostnameOrIpAddr, oldInfo.getHealthCheckUrlPath(),
+                                                     oldInfo.getHealthCheckUrl(), portWrapper,
                                                      healthCheckService, SessionProtocol.HTTP);
         final String secureHealthCheckUrl =
-                healthCheckUrl(hostnameOrIpAddr, oldInfo.getSecureHealthCheckUrl(), securePortWrapper,
+                healthCheckUrl(hostnameOrIpAddr, oldInfo.getHealthCheckUrlPath(),
+                               oldInfo.getSecureHealthCheckUrl(), securePortWrapper,
                                healthCheckService, SessionProtocol.HTTPS);
 
         return new InstanceInfo(instanceId, appName, oldInfo.getAppGroupName(), hostName, ipAddr,
                                 vipAddress, secureVipAddress, portWrapper, securePortWrapper, InstanceStatus.UP,
-                                oldInfo.getHomePageUrl(), oldInfo.getStatusPageUrl(), healthCheckUrl,
-                                secureHealthCheckUrl, oldInfo.getDataCenterInfo(),
-                                oldInfo.getLeaseInfo(), oldInfo.getMetadata());
+                                oldInfo.getHomePageUrl(), oldInfo.getStatusPageUrl(),
+                                oldInfo.getHealthCheckUrlPath(), healthCheckUrl, secureHealthCheckUrl,
+                                oldInfo.getDataCenterInfo(), oldInfo.getLeaseInfo(), oldInfo.getMetadata());
     }
 
     private static PortWrapper portWrapper(Server server, PortWrapper oldPortWrapper,
@@ -266,7 +268,8 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     @Nullable
-    private static String healthCheckUrl(String hostnameOrIpAddr, @Nullable String oldHealthCheckUrl,
+    private static String healthCheckUrl(String hostnameOrIpAddr, @Nullable String oldHealthCheckUrlPath,
+                                         @Nullable String oldHealthCheckUrl,
                                          PortWrapper portWrapper,
                                          Optional<ServiceConfig> healthCheckService,
                                          SessionProtocol sessionProtocol) {
@@ -276,14 +279,17 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         if (!portWrapper.isEnabled() || !healthCheckService.isPresent()) {
             return null;
         }
+        final String baseURL = sessionProtocol.uriText() + "://" +
+                               hostnameOrIpAddr(hostnameOrIpAddr) + ':' + portWrapper.getPort();
+        if (oldHealthCheckUrlPath != null) {
+            return baseURL + oldHealthCheckUrlPath;
+        }
         final ServiceConfig healthCheckServiceConfig = healthCheckService.get();
         final Route route = healthCheckServiceConfig.route();
         if (route.pathType() != RoutePathType.EXACT && route.pathType() != RoutePathType.PREFIX) {
             return null;
         }
-
-        return sessionProtocol.uriText() + "://" + hostnameOrIpAddr(hostnameOrIpAddr) +
-               ':' + portWrapper.getPort() + route.paths().get(0);
+        return baseURL + route.paths().get(0);
     }
 
     private static String hostnameOrIpAddr(String hostnameOrIpAddr) {
