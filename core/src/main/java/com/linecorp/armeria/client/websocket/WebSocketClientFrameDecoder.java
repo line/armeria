@@ -25,7 +25,7 @@ final class WebSocketClientFrameDecoder extends WebSocketFrameDecoder {
 
     WebSocketClientFrameDecoder(ClientRequestContext ctx, int maxFramePayloadLength,
                                 boolean allowMaskMismatch) {
-        super(ctx, maxFramePayloadLength, allowMaskMismatch);
+        super(maxFramePayloadLength, allowMaskMismatch);
         this.ctx = ctx;
     }
 
