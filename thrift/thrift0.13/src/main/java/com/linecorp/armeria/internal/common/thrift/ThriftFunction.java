@@ -19,13 +19,10 @@ package com.linecorp.armeria.internal.common.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
@@ -36,6 +33,7 @@ import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessageType;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -383,7 +381,7 @@ public final class ThriftFunction {
     private static List<DecoratorAndOrder> getDeclaredDecorators(@Nullable Object implementation,
                                                                  String methodName) {
         if (implementation == null) {
-            return Collections.emptyList();
+            return ImmutableList.of();
         }
 
         final Class<?> implClass = implementation.getClass();
@@ -393,7 +391,7 @@ public final class ThriftFunction {
                 return DecoratorAnnotationUtil.collectDecorators(implClass, m);
             }
         }
-        return Collections.emptyList();
+        return ImmutableList.of();
     }
 
     private static String typeName(Type type, Class<?> funcClass, String methodName, String toAppend) {
@@ -433,36 +431,5 @@ public final class ThriftFunction {
             }
         }
         return builder.toString();
-    }
-
-    @Override
-    public boolean equals(@Nullable Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (!(obj instanceof ThriftFunction)) {
-            return false;
-        }
-        final ThriftFunction that = (ThriftFunction) obj;
-        return Objects.equals(func, that.func) &&
-               type == that.type &&
-               Objects.equals(serviceType, that.serviceType) &&
-               Objects.equals(name, that.name) &&
-               Objects.equals(implementation, that.implementation) &&
-               Objects.equals(result, that.result) &&
-               Arrays.equals(argFields, that.argFields) &&
-               Objects.equals(successField, that.successField) &&
-               Objects.equals(exceptionFields, that.exceptionFields) &&
-               Arrays.equals(declaredExceptions, that.declaredExceptions) &&
-               Objects.equals(declaredDecorators, that.declaredDecorators);
-    }
-
-    @Override
-    public int hashCode() {
-        int result1 = Objects.hash(func, type, serviceType, name, implementation, result, successField,
-                                   exceptionFields, declaredDecorators);
-        result1 = 31 * result1 + Arrays.hashCode(argFields);
-        result1 = 31 * result1 + Arrays.hashCode(declaredExceptions);
-        return result1;
     }
 }

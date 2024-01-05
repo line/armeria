@@ -22,8 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +44,7 @@ import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 
@@ -310,7 +310,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         // The actual requestProtocolFactories will be set when this service is added.
         requestProtocolFactories = responseProtocolFactories;
         // The actual decoratedTHttpServices will be set when this service is added.
-        decoratedTHttpServices = Collections.emptyMap();
+        decoratedTHttpServices = ImmutableMap.of();
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -362,7 +362,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         super.serviceAdded(cfg);
 
         final DependencyInjector dependencyInjector = cfg.server().config().dependencyInjector();
-        final Map<ThriftFunction, HttpService> decoratedTHttpServices = new HashMap<>();
+        final Map<ThriftFunction, HttpService> decoratedTHttpServices = new IdentityHashMap<>();
         for (ThriftServiceEntry thriftServiceEntry : entries().values()) {
             for (ThriftFunction thriftFunction : thriftServiceEntry.metadata.functions().values()) {
                 if (!thriftFunction.declaredDecorators().isEmpty()) {
