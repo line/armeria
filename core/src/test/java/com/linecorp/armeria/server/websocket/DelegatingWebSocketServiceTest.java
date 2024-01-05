@@ -73,7 +73,10 @@ class DelegatingWebSocketServiceTest {
     @Test
     void shouldReturnFallbackResponse() {
         final BlockingWebClient client = server.blockingWebClient();
-        final AggregatedHttpResponse response = client.get("/ws-or-http");
+        AggregatedHttpResponse response = client.get("/ws-or-http");
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("fallback");
+        response = client.post("/ws-or-http", "");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("fallback");
     }
