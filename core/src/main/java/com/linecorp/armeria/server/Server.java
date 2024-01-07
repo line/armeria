@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -459,6 +460,7 @@ public final class Server implements ListenableAsyncCloseable {
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
         hasWebSocketService = hasWebSocketService(config);
+        DefaultRequestTarget.setPreservedPercentEncoding(config.isPercentEncodingPreserved());
     }
 
     private static boolean hasWebSocketService(UpdatableServerConfig config) {

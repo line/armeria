@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
+import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
@@ -203,6 +204,8 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final String fragment;
     private boolean cached;
 
+    private static boolean isPreservedPercentEncoding;
+
     private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
                                  String path, String maybePathWithMatrixVariables,
                                  @Nullable String query, @Nullable String fragment) {
@@ -269,6 +272,10 @@ public final class DefaultRequestTarget implements RequestTarget {
         cached = true;
     }
 
+    public static void setPreservedPercentEncoding(boolean preservedPercentEncoding) {
+        isPreservedPercentEncoding = preservedPercentEncoding;
+    }
+
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) {
@@ -316,27 +323,27 @@ public final class DefaultRequestTarget implements RequestTarget {
         final Bytes path;
         final Bytes query;
 
-        // Split by the first '?'.
-        final int queryPos = reqTarget.indexOf('?');
-        if (queryPos >= 0) {
-            if ((path = decodePercentsAndEncodeToUtf8(
-                    reqTarget, 0, queryPos,
-                    ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
-                return null;
+            // Split by the first '?'.
+            final int queryPos = reqTarget.indexOf('?');
+            if (queryPos >= 0) {
+                if ((path = decodePercentsAndEncodeToUtf8(
+                        reqTarget, 0, queryPos,
+                        ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
+                    return null;
+                }
+                if ((query = decodePercentsAndEncodeToUtf8(
+                        reqTarget, queryPos + 1, reqTarget.length(),
+                        ComponentType.QUERY, EMPTY_BYTES, true)) == null) {
+                    return null;
+                }
+            } else {
+                if ((path = decodePercentsAndEncodeToUtf8(
+                        reqTarget, 0, reqTarget.length(),
+                        ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
+                    return null;
+                }
+                query = null;
             }
-            if ((query = decodePercentsAndEncodeToUtf8(
-                    reqTarget, queryPos + 1, reqTarget.length(),
-                    ComponentType.QUERY, EMPTY_BYTES, true)) == null) {
-                return null;
-            }
-        } else {
-            if ((path = decodePercentsAndEncodeToUtf8(
-                    reqTarget, 0, reqTarget.length(),
-                    ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
-                return null;
-            }
-            query = null;
-        }
 
         // Reject a relative path and accept an asterisk (e.g. OPTIONS * HTTP/1.1).
         if (isRelativePath(path)) {
@@ -650,8 +657,9 @@ public final class DefaultRequestTarget implements RequestTarget {
                 }
 
                 final int decoded = (digit1 << 4) | digit2;
+
                 if (type.mustPreserveEncoding(decoded) ||
-                    (!allowSemicolonInPathComponent && decoded == ';')) {
+                    (!allowSemicolonInPathComponent && decoded == ';' || isPreservedPercentEncoding)) {
                     buf.ensure(1);
                     buf.addEncoded((byte) decoded);
                     wasSlash = false;

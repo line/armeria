@@ -703,7 +703,7 @@ final class DefaultServerConfig implements ServerConfig {
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
-                    isServerHeaderEnabled(), isDateHeaderEnabled(),
+                    isServerHeaderEnabled(), isDateHeaderEnabled(), isPercentEncodingPreserved(),
                     dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis());
         }
 
@@ -726,7 +726,7 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
-            boolean serverHeaderEnabled, boolean dateHeaderEnabled,
+            boolean serverHeaderEnabled, boolean dateHeaderEnabled, boolean percentEncodingPreserved,
             @Nullable DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
             long unhandledExceptionsReportIntervalMillis) {
@@ -822,6 +822,8 @@ final class DefaultServerConfig implements ServerConfig {
         buf.append(serverHeaderEnabled ? "enabled" : "disabled");
         buf.append(", dateHeader: ");
         buf.append(dateHeaderEnabled ? "enabled" : "disabled");
+        buf.append(", percentEncoding: ");
+        buf.append(percentEncodingPreserved ? "preserved" : "decoded");
         if (dependencyInjector != null) {
             buf.append(", dependencyInjector: ");
             buf.append(dependencyInjector);
