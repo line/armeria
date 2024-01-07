@@ -28,30 +28,32 @@ public final class TextHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
      * Sets the {@link Set} which includes headers to mask before logging.
      */
     @Override
-    public TextHeadersSanitizerBuilder maskHeaders(String... headers) {
-        return (TextHeadersSanitizerBuilder) super.maskHeaders(headers);
+    public TextHeadersSanitizerBuilder maskingHeaders(CharSequence... headers) {
+        return (TextHeadersSanitizerBuilder) super.maskingHeaders(headers);
     }
 
     /**
      * Sets the {@link Set} which includes headers to mask before logging.
      */
     @Override
-    public TextHeadersSanitizerBuilder maskHeaders(Iterable<String> headers) {
-        return (TextHeadersSanitizerBuilder) super.maskHeaders(headers);
+    public TextHeadersSanitizerBuilder maskingHeaders(Iterable<? extends CharSequence> headers) {
+        return (TextHeadersSanitizerBuilder) super.maskingHeaders(headers);
     }
 
     /**
      * Sets the {@link Function} to use to mask headers before logging.
      */
     @Override
-    public TextHeadersSanitizerBuilder mask(Function<String, String> mask) {
-        return (TextHeadersSanitizerBuilder) super.mask(mask);
+    public TextHeadersSanitizerBuilder maskingFunction(Function<String, String> maskingFunction) {
+        return (TextHeadersSanitizerBuilder) super.maskingFunction(maskingFunction);
     }
 
     /**
      * Returns a newly created text {@link HeadersSanitizer} based on the properties of this builder.
      */
     public TextHeadersSanitizer build() {
-        return new TextHeadersSanitizer(maskHeaders(), mask());
+        final Set<CharSequence> maskingHeaders = maskingHeaders();
+        return new TextHeadersSanitizer(!maskingHeaders.isEmpty() ? maskingHeaders : defaultMaskingHeaders(),
+                                        maskingFunction());
     }
 }

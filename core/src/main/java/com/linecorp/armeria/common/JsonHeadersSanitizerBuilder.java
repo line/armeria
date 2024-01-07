@@ -39,24 +39,24 @@ public final class JsonHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
      * Sets the {@link Set} which includes headers to mask before logging.
      */
     @Override
-    public JsonHeadersSanitizerBuilder maskHeaders(String... headers) {
-        return (JsonHeadersSanitizerBuilder) super.maskHeaders(headers);
+    public JsonHeadersSanitizerBuilder maskingHeaders(CharSequence... headers) {
+        return (JsonHeadersSanitizerBuilder) super.maskingHeaders(headers);
     }
 
     /**
      * Sets the {@link Set} which includes headers to mask before logging.
      */
     @Override
-    public JsonHeadersSanitizerBuilder maskHeaders(Iterable<String> headers) {
-        return (JsonHeadersSanitizerBuilder) super.maskHeaders(headers);
+    public JsonHeadersSanitizerBuilder maskingHeaders(Iterable<? extends CharSequence> headers) {
+        return (JsonHeadersSanitizerBuilder) super.maskingHeaders(headers);
     }
 
     /**
      * Sets the {@link Function} to use to mask headers before logging.
      */
     @Override
-    public JsonHeadersSanitizerBuilder mask(Function<String, String> mask) {
-        return (JsonHeadersSanitizerBuilder) super.mask(mask);
+    public JsonHeadersSanitizerBuilder maskingFunction(Function<String, String> maskingFunction) {
+        return (JsonHeadersSanitizerBuilder) super.maskingFunction(maskingFunction);
     }
 
     /**
@@ -74,6 +74,9 @@ public final class JsonHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
         final ObjectMapper objectMapper = this.objectMapper != null ?
                                           this.objectMapper : JacksonUtil.newDefaultObjectMapper();
 
-        return new JsonHeadersSanitizer(maskHeaders(), mask(), objectMapper);
+        final Set<CharSequence> maskingHeaders = maskingHeaders();
+        return new JsonHeadersSanitizer(
+                !maskingHeaders.isEmpty() ? maskingHeaders : defaultMaskingHeaders(), maskingFunction(),
+                objectMapper);
     }
 }

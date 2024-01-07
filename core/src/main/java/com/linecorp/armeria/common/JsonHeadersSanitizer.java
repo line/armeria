@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -32,26 +36,34 @@ import io.netty.util.AsciiString;
 public final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
 
     static final HeadersSanitizer<JsonNode> INSTANCE = new JsonHeadersSanitizerBuilder().build();
-    private final Set<String> maskHeaders;
-    private final Function<String, String> mask;
+    private final Set<CharSequence> maskingHeaders;
+    private final Function<String, String> maskingFunction;
     private final ObjectMapper objectMapper;
 
-    JsonHeadersSanitizer(Set<String> maskHeaders, Function<String, String> mask, ObjectMapper objectMapper) {
-        this.maskHeaders = maskHeaders;
-        this.mask = mask;
+    JsonHeadersSanitizer(Set<CharSequence> maskingHeaders, Function<String, String> maskingFunction,
+                         ObjectMapper objectMapper) {
+        this.maskingHeaders = maskingHeaders;
+        this.maskingFunction = maskingFunction;
         this.objectMapper = objectMapper;
     }
 
     @Override
     public JsonNode apply(RequestContext requestContext, HttpHeaders headers) {
         final ObjectNode result = objectMapper.createObjectNode();
-        for (Map.Entry<AsciiString, String> e : headers) {
-            final String header = e.getKey().toString();
-            if (maskHeaders.contains(header)) {
-                result.put(header, mask.apply(e.getValue()));
-            } else {
-                result.put(header, e.getValue());
-            }
+        final Map<String, List<String>> headersWithValuesAsList = new HashMap<>();
+        for (Map.Entry<AsciiString, String> entry : headers) {
+            final String header = entry.getKey().toString().toLowerCase();
+            final String value = maskingHeaders.contains(header) ? maskingFunction.apply(entry.getValue())
+                                                                 : entry.getValue();
+            headersWithValuesAsList.computeIfAbsent(header, k -> new ArrayList<>()).add(value);
+        }
+
+        final Set<Entry<String, List<String>>> entries = headersWithValuesAsList.entrySet();
+        for (Map.Entry<String, List<String>> entry : entries) {
+            final String header = entry.getKey();
+            final List<String> values = entry.getValue();
+
+            result.put(header, values.size() > 1 ? values.toString() : values.get(0));
         }
 
         return result;

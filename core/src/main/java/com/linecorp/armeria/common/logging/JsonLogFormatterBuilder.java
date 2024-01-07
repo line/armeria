@@ -24,6 +24,7 @@ import java.util.function.BiFunction;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.common.HeadersSanitizer;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -113,8 +114,8 @@ public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<J
         final BiFunction<? super RequestContext, Object, JsonNode> defaultContentSanitizer =
                 defaultSanitizer(objectMapper);
         return new JsonLogFormatter(
-                firstNonNull(requestHeadersSanitizer(), defaultHeadersSanitizer),
-                firstNonNull(responseHeadersSanitizer(), defaultHeadersSanitizer),
+                firstNonNull(requestHeadersSanitizer(), HeadersSanitizer.ofJson()),
+                firstNonNull(responseHeadersSanitizer(), HeadersSanitizer.ofJson()),
                 firstNonNull(requestTrailersSanitizer(), defaultHeadersSanitizer),
                 firstNonNull(responseTrailersSanitizer(), defaultHeadersSanitizer),
                 firstNonNull(requestContentSanitizer(), defaultContentSanitizer),

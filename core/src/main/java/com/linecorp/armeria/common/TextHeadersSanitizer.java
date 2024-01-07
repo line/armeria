@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -29,13 +32,13 @@ public final class TextHeadersSanitizer implements HeadersSanitizer<String> {
 
     static final HeadersSanitizer<String> INSTANCE = new TextHeadersSanitizerBuilder().build();
 
-    private final Set<String> maskHeaders;
+    private final Set<CharSequence> maskingHeaders;
 
-    private final Function<String, String> mask;
+    private final Function<String, String> maskingFunction;
 
-    TextHeadersSanitizer(Set<String> maskHeaders, Function<String, String> mask) {
-        this.maskHeaders = maskHeaders;
-        this.mask = mask;
+    TextHeadersSanitizer(Set<CharSequence> maskingHeaders, Function<String, String> maskingFunction) {
+        this.maskingHeaders = maskingHeaders;
+        this.maskingFunction = maskingFunction;
     }
 
     @Override
@@ -51,13 +54,21 @@ public final class TextHeadersSanitizer implements HeadersSanitizer<String> {
             sb.append('[');
         }
 
-        for (Map.Entry<AsciiString, String> e : headers) {
-            final String header = e.getKey().toString();
-            if (maskHeaders.contains(header)) {
-                sb.append(header).append('=').append(mask.apply(e.getValue())).append(", ");
-            } else {
-                sb.append(header).append('=').append(e.getValue()).append(", ");
-            }
+        final Map<String, List<String>> headersWithValuesAsList = new HashMap<>();
+        for (Map.Entry<AsciiString, String> entry : headers) {
+            final String header = entry.getKey().toString().toLowerCase();
+            final String value = maskingHeaders.contains(header) ? maskingFunction.apply(entry.getValue())
+                                                                 : entry.getValue();
+            headersWithValuesAsList.computeIfAbsent(header, k -> new ArrayList<>()).add(value);
+        }
+
+        final Set<Map.Entry<String, List<String>>> entries = headersWithValuesAsList.entrySet();
+        for (Map.Entry<String, List<String>> entry : entries) {
+            final String header = entry.getKey();
+            final List<String> values = entry.getValue();
+
+            sb.append(header).append('=')
+              .append(values.size() > 1 ? values.toString() : values.get(0)).append(", ");
         }
 
         sb.setCharAt(sb.length() - 2, ']');
