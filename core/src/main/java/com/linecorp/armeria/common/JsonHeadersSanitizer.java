@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -50,7 +51,7 @@ public final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
     @Override
     public JsonNode apply(RequestContext requestContext, HttpHeaders headers) {
         final ObjectNode result = objectMapper.createObjectNode();
-        final Map<String, List<String>> headersWithValuesAsList = new HashMap<>();
+        final Map<String, List<String>> headersWithValuesAsList = new LinkedHashMap<>();
         for (Map.Entry<AsciiString, String> entry : headers) {
             final String header = entry.getKey().toString().toLowerCase();
             final String value = maskingHeaders.contains(header) ? maskingFunction.apply(entry.getValue())
