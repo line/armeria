@@ -97,6 +97,8 @@ includeWithFlags ':jetty10',                             'java11', 'publish', 'r
 project(':jetty10').projectDir = file('jetty/jetty10')
 includeWithFlags ':jetty11',                             'java11', 'publish', 'relocate'
 project(':jetty11').projectDir = file('jetty/jetty11')
+includeWithFlags ':jetty12',                             'java17', 'publish', 'relocate'
+project(':jetty12').projectDir = file('jetty/jetty12')
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
