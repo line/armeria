@@ -125,6 +125,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequestVersionSpe
         return HttpMethod.valueOf(req.method().name());
     }
 
+    // This method exists only for Spring 5 and 6.0.x compatibility.
     public String getMethodValue() {
         return req.method().name();
     }
