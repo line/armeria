@@ -322,27 +322,27 @@ public final class DefaultRequestTarget implements RequestTarget {
         final Bytes path;
         final Bytes query;
 
-            // Split by the first '?'.
-            final int queryPos = reqTarget.indexOf('?');
-            if (queryPos >= 0) {
-                if ((path = decodePercentsAndEncodeToUtf8(
-                        reqTarget, 0, queryPos,
-                        ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
-                    return null;
-                }
-                if ((query = decodePercentsAndEncodeToUtf8(
-                        reqTarget, queryPos + 1, reqTarget.length(),
-                        ComponentType.QUERY, EMPTY_BYTES, true)) == null) {
-                    return null;
-                }
-            } else {
-                if ((path = decodePercentsAndEncodeToUtf8(
-                        reqTarget, 0, reqTarget.length(),
-                        ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
-                    return null;
-                }
-                query = null;
+        // Split by the first '?'.
+        final int queryPos = reqTarget.indexOf('?');
+        if (queryPos >= 0) {
+            if ((path = decodePercentsAndEncodeToUtf8(
+                    reqTarget, 0, queryPos,
+                    ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
+                return null;
             }
+            if ((query = decodePercentsAndEncodeToUtf8(
+                    reqTarget, queryPos + 1, reqTarget.length(),
+                    ComponentType.QUERY, EMPTY_BYTES, true)) == null) {
+                return null;
+            }
+        } else {
+            if ((path = decodePercentsAndEncodeToUtf8(
+                    reqTarget, 0, reqTarget.length(),
+                    ComponentType.SERVER_PATH, null, allowSemicolonInPathComponent)) == null) {
+                return null;
+            }
+            query = null;
+        }
 
         // Reject a relative path and accept an asterisk (e.g. OPTIONS * HTTP/1.1).
         if (isRelativePath(path)) {
