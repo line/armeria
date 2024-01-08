@@ -239,25 +239,17 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
      */
     private WebSocketUpgradeResult upgradeHttp2(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (!ctx.sessionProtocol().isExplicitHttp2()) {
-            final HttpResponse fallbackResponse;
-            if (fallbackService != null) {
-                fallbackResponse = fallbackService.serve(ctx, req);
-            } else {
-                fallbackResponse = HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
-            }
+            final HttpResponse fallbackResponse =
+                    failOrFallback(ctx, req, () -> HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED));
             return WebSocketUpgradeResult.ofFailure(fallbackResponse);
         }
         final RequestHeaders headers = req.headers();
         if (!isHttp2WebSocketUpgradeRequest(headers)) {
             logger.trace("RequestHeaders does not contain headers for WebSocket upgrade. headers: {}", headers);
-            final HttpResponse fallbackResponse;
-            if (fallbackService != null) {
-                fallbackResponse = fallbackService.serve(ctx, req);
-            } else {
-                fallbackResponse = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
-                                                   "The upgrade header must contain:\n" +
-                                                   "  :protocol = websocket");
-            }
+            final HttpResponse fallbackResponse = failOrFallback(ctx, req, () -> HttpResponse.of(
+                    HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                    "The upgrade header must contain:\n" +
+                    "  :protocol = websocket"));
             return WebSocketUpgradeResult.ofFailure(fallbackResponse);
         }
 
@@ -272,15 +264,6 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         }
 
         return WebSocketUpgradeResult.ofSuccess();
-    }
-
-    private HttpResponse maybeFallbackResponse(ServiceRequestContext ctx, HttpRequest req,
-                                               Supplier<HttpResponse> invalidResponse) throws Exception {
-        if (fallbackService != null) {
-            return fallbackService.serve(ctx, req);
-        } else {
-            return invalidResponse.get();
-        }
     }
 
     @Nullable
