@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
-import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
