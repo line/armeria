@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.websocket;
+package com.linecorp.armeria.internal.server.websocket;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.generateSecWebSocketAccept;
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
@@ -49,6 +49,11 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.websocket.WebSocketProtocolHandler;
+import com.linecorp.armeria.server.websocket.WebSocketService;
+import com.linecorp.armeria.server.websocket.WebSocketServiceBuilder;
+import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
+import com.linecorp.armeria.server.websocket.WebSocketUpgradeResult;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
@@ -60,7 +65,7 @@ import io.netty.util.AttributeKey;
  * This service has a few different default values for {@link ServiceConfig} from a normal {@link HttpService}
  * because of the nature of WebSocket. See {@link WebSocketServiceBuilder} for more information.
  */
-final class DefaultWebSocketService implements WebSocketService, WebSocketProtocolHandler {
+public final class DefaultWebSocketService implements WebSocketService, WebSocketProtocolHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultWebSocketService.class);
 
@@ -89,9 +94,10 @@ final class DefaultWebSocketService implements WebSocketService, WebSocketProtoc
     private final Set<String> allowedOrigins;
     private final boolean allowAnyOrigin;
 
-    DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
-                            int maxFramePayloadLength, boolean allowMaskMismatch,
-                            Set<String> subprotocols, Set<String> allowedOrigins, boolean allowAnyOrigin) {
+    public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
+                                   int maxFramePayloadLength, boolean allowMaskMismatch,
+                                   Set<String> subprotocols, Set<String> allowedOrigins,
+                                   boolean allowAnyOrigin) {
         this.handler = handler;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;

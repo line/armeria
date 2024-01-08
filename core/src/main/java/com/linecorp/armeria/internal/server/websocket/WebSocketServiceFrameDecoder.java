@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.websocket;
+package com.linecorp.armeria.internal.server.websocket;
 
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.Request;
