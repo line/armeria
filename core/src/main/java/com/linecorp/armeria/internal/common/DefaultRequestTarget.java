@@ -659,7 +659,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                 final int decoded = (digit1 << 4) | digit2;
 
                 if (type.mustPreserveEncoding(decoded) ||
-                    (!allowSemicolonInPathComponent && decoded == ';' || isPreservedPercentEncoding)) {
+                    (!allowSemicolonInPathComponent && decoded == ';' ) || isPreservedPercentEncoding) {
                     buf.ensure(1);
                     buf.addEncoded((byte) decoded);
                     wasSlash = false;

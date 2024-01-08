@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Strings.emptyToNull;
 import static com.linecorp.armeria.internal.common.DefaultRequestTarget.removeMatrixVariables;
+import static com.linecorp.armeria.internal.common.DefaultRequestTarget.setPreservedPercentEncoding;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -339,6 +340,15 @@ class DefaultRequestTargetTest {
 
     @ParameterizedTest
     @EnumSource(Mode.class)
+    void shouldNotNormalizePlusSignWhenPreservePercentEncoding(Mode mode) {
+        setPreservedPercentEncoding(true);
+        assertAccepted(parse(mode, "/+?a+b=c+d"), "/+", "a+b=c+d");
+        assertAccepted(parse(mode, "/%2b?a%2bb=c%2bd"), "/%2B", "a%2Bb=c%2Bd");
+        setPreservedPercentEncoding(false);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Mode.class)
     void shouldNormalizeAmpersand(Mode mode) {
         assertAccepted(parse(mode, "/&?a=1&a=2&b=3"), "/&", "a=1&a=2&b=3");
         assertAccepted(parse(mode, "/%26?a=1%26a=2&b=3"), "/&", "a=1%26a=2&b=3");
@@ -402,14 +412,43 @@ class DefaultRequestTargetTest {
     }
 
     @Test
-    void serverShouldHandleReservedCharacters() {
+    void serverNotShouldHandleReservedCharactersWhenPreservePercentEncoding() {
+        setPreservedPercentEncoding(true);
         assertAccepted(forServer("/#/:@!$&'()*+,=?a=/#/:[]@!$&'()*+,="),
                        "/%23/:@!$&'()*+,=",
                        "a=/%23/:[]@!$&'()*+,=");
         assertAccepted(forServer("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
                                  "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
-                       "/%23%2F:@!$&'()*+,%3B=%3F",
+                       "/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
                        "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
+        setPreservedPercentEncoding(false);
+    }
+
+    @Test
+    void serverShouldHandleReservedCharacters() {
+        assertAccepted(forServer("/#/:@!$&'()*+,=?a=/#/:[]@!$&'()*+,="),
+                "/%23/:@!$&'()*+,=",
+                "a=/%23/:[]@!$&'()*+,=");
+        assertAccepted(forServer("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
+                        "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
+                "/%23%2F:@!$&'()*+,%3B=%3F",
+                "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
+    }
+
+    @Test
+    void clientNotShouldHandleReservedCharactersWhenPreservePercentEncoding() {
+        setPreservedPercentEncoding(true);
+        assertAccepted(forClient("/:@!$&'()*+,;=?a=/:[]@!$&'()*+,;=#/:@!$&'()*+,;="),
+                "/:@!$&'()*+,;=",
+                "a=/:[]@!$&'()*+,;=",
+                "/:@!$&'()*+,;=");
+        assertAccepted(forClient("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
+                        "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
+                        "#%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
+                "/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
+                "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
+                "%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
+        setPreservedPercentEncoding(false);
     }
 
     @Test

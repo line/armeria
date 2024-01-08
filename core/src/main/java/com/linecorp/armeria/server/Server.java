@@ -147,6 +147,7 @@ public final class Server implements ListenableAsyncCloseable {
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
         hasWebSocketService = hasWebSocketService(config);
+        DefaultRequestTarget.setPreservedPercentEncoding(config.isPercentEncodingPreserved());
     }
 
     /**
@@ -460,7 +461,6 @@ public final class Server implements ListenableAsyncCloseable {
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
         hasWebSocketService = hasWebSocketService(config);
-        DefaultRequestTarget.setPreservedPercentEncoding(config.isPercentEncodingPreserved());
     }
 
     private static boolean hasWebSocketService(UpdatableServerConfig config) {
