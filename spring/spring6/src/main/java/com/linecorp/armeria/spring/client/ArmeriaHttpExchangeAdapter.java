@@ -55,14 +55,20 @@ import reactor.core.publisher.Mono;
 public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchangeAdapter {
 
     public static ArmeriaHttpExchangeAdapter of(WebClient webClient) {
-        return new ArmeriaHttpExchangeAdapter(webClient);
+        return of(webClient, ExchangeStrategies.withDefaults());
+    }
+
+    public static ArmeriaHttpExchangeAdapter of(WebClient webClient, ExchangeStrategies exchangeStrategies) {
+        return new ArmeriaHttpExchangeAdapter(webClient, exchangeStrategies);
     }
 
     private final WebClient webClient;
     private final UriBuilderFactory uriBuilderFactory;
+    private final ExchangeStrategies exchangeStrategies;
 
-    private ArmeriaHttpExchangeAdapter(WebClient webClient) {
+    private ArmeriaHttpExchangeAdapter(WebClient webClient, ExchangeStrategies exchangeStrategies) {
         this.webClient = webClient;
+        this.exchangeStrategies = exchangeStrategies;
         final URI baseUri = webClient.uri();
         if (Clients.isUndefinedUri(baseUri)) {
             uriBuilderFactory = new DefaultUriBuilderFactory();
@@ -153,17 +159,16 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
         final Mono<HttpResponse> response = Mono.fromFuture(request.future());
 
         return toClientRequest(requestValues, uri)
-                .writeTo(request, ExchangeStrategies.withDefaults())
+                .writeTo(request, exchangeStrategies)
                 .then(response)
                 .flatMap(ArmeriaHttpExchangeAdapter::toClientResponse);
     }
 
     private static <T> ClientRequest toClientRequest(HttpRequestValues requestValues, URI uri) {
-        final ClientRequest.Builder builder = ClientRequest.create(requestValues.getHttpMethod(),
-                                                                   uri);
-        builder.headers(headers -> headers.addAll(requestValues.getHeaders()));
-        builder.cookies(cookies -> cookies.addAll(requestValues.getCookies()));
-        builder.attributes(attributes -> attributes.putAll(requestValues.getAttributes()));
+        final ClientRequest.Builder builder =
+                ClientRequest.create(requestValues.getHttpMethod(), uri)
+                             .headers(headers -> headers.addAll(requestValues.getHeaders()))
+                             .cookies(cookies -> cookies.addAll(requestValues.getCookies()));
 
         final Object bodyValue = requestValues.getBodyValue();
         if (bodyValue != null) {

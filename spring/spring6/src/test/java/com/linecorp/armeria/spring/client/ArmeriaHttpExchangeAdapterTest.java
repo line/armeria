@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -56,13 +57,14 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseBuilder;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.mock.MockWebServerExtension;
-import com.linecorp.armeria.testing.junit5.server.mock.RecordedRequest;
 
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -75,7 +77,12 @@ class ArmeriaHttpExchangeAdapterTest {
     static MockWebServerExtension server = new MockWebServerExtension();
 
     @RegisterExtension
-    static MockWebServerExtension anotherServer = new MockWebServerExtension();
+    static MockWebServerExtension anotherServer = new MockWebServerExtension() {
+        @Override
+        protected void configureServer(ServerBuilder sb) throws Exception {
+            sb.decorator(LoggingService.newDecorator());
+        }
+    };
 
     @Test
     void greeting() {
@@ -89,48 +96,48 @@ class ArmeriaHttpExchangeAdapterTest {
                     .verify(Duration.ofSeconds(5));
     }
 
+    // gh-29624
     @Test
-        // gh-29624
     void uri() throws Exception {
-        String expectedBody = "hello";
+        final String expectedBody = "hello";
         prepareResponse(response -> response.status(200).content(expectedBody));
 
-        URI dynamicUri = this.server.httpUri().resolve("/greeting/123");
-        String actualBody = initService().getGreetingById(dynamicUri, "456");
+        final URI dynamicUri = server.httpUri().resolve("/greeting/123");
+        final String actualBody = initService().getGreetingById(dynamicUri, "456");
 
         assertThat(actualBody).isEqualTo(expectedBody);
-        assertThat(this.server.takeRequest().context().uri()).isEqualTo(dynamicUri);
+        assertThat(server.takeRequest().context().uri()).isEqualTo(dynamicUri);
     }
 
     @Test
     void formData() throws Exception {
         prepareResponse(response -> response.status(201));
 
-        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        final MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.add("param1", "value 1");
         map.add("param2", "value 2");
 
         initService().postForm(map);
 
-        AggregatedHttpRequest request = this.server.takeRequest().request();
+        final AggregatedHttpRequest request = server.takeRequest().request();
         assertThat(request.headers().get("Content-Type"))
                 .isEqualTo("application/x-www-form-urlencoded;charset=UTF-8");
-        assertThat(request.content()).isEqualTo("param1=value+1&param2=value+2");
+        assertThat(request.contentUtf8()).isEqualTo("param1=value+1&param2=value+2");
     }
 
+    // gh-30342
     @Test
-        // gh-30342
     void multipart() throws InterruptedException {
         prepareResponse(response -> response.status(201));
-        String fileName = "testFileName";
-        String originalFileName = "originalTestFileName";
-        MultipartFile file =
+        final String fileName = "testFileName";
+        final String originalFileName = "originalTestFileName";
+        final MultipartFile file =
                 new MockMultipartFile(fileName, originalFileName,
                                       MediaType.APPLICATION_JSON_VALUE, "test".getBytes());
 
         initService().postMultipart(file, "test2");
 
-        AggregatedHttpRequest request = this.server.takeRequest().request();
+        final AggregatedHttpRequest request = server.takeRequest().request();
         assertThat(request.headers().get("Content-Type")).startsWith("multipart/form-data;boundary=");
         assertThat(request.contentUtf8())
                 .containsSubsequence(
@@ -142,48 +149,54 @@ class ArmeriaHttpExchangeAdapterTest {
 
     @Test
     void uriBuilderFactory() throws Exception {
-        String ignoredResponseBody = "hello";
+        final String ignoredResponseBody = "hello";
         prepareResponse(response -> response.status(200).content(ignoredResponseBody));
-        UriBuilderFactory factory = new DefaultUriBuilderFactory(
+        final UriBuilderFactory factory = new DefaultUriBuilderFactory(
                 anotherServer.httpUri().resolve("/").toString());
 
-        HttpResponse.builder()
-                            .status(Http)
-        anotherServer.enqueue()response.setHeader("Content-Type", "text/plain").setBody(ANOTHER_SERVER_RESPONSE_BODY);
+        final String responseBody = "Hello Spring 2!";
+        prepareAnotherResponse(response -> response.ok()
+                                                   .header("Content-Type", "text/plain")
+                                                   .content(responseBody));
 
-        String actualBody = initService().getWithUriBuilderFactory(factory);
+        // Unlike the original test, we need a non-baseURI client to use a custom UriBuilderFactory.
+        final String actualBody = initService(WebClient.of()).getWithUriBuilderFactory(factory);
 
-        assertThat(actualBody).isEqualTo(ANOTHER_SERVER_RESPONSE_BODY);
-        assertThat(this.anotherServer.takeRequest().getPath()).isEqualTo("/greeting");
-        assertThat(this.server.getRequestCount()).isE
-        assertThat(actualBody).isEqualTo(ANOTHER_SERqualTo(0);
+        assertThat(actualBody).isEqualTo(responseBody);
+        assertThat(anotherServer.takeRequest().context().path()).isEqualTo("/greeting");
+        assertThat(server.takeRequest(1, TimeUnit.SECONDS)).isNull();
     }
 
     @Test
     void uriBuilderFactoryWithPathVariableAndRequestParam() throws Exception {
-        String ignoredResponseBody = "hello";
-        prepareResponse(response -> response.setResponseCode(200).setBody(ignoredResponseBody));
-        UriBuilderFactory factory = new DefaultUriBuilderFactory(this.anotherServer.url("/").toString());
+        final UriBuilderFactory factory = new DefaultUriBuilderFactory(
+                anotherServer.httpUri().resolve("/").toString());
 
-        String actualBody = initService().getWithUriBuilderFactory(factory, "123", "test");
+        final String responseBody = "Hello Spring over Armeria!";
+        prepareAnotherResponse(response -> response.ok()
+                                                   .header("Content-Type", "text/plain")
+                                                   .content(responseBody));
+        // Unlike the original test, we need a non-baseURI client to use a custom UriBuilderFactory.
+        final String actualBody = initService(WebClient.of()).getWithUriBuilderFactory(factory, "123", "test");
 
-        assertThat(actualBody).isEqualTo(ANOTHER_SERVER_RESPONSE_BODY);
-        assertThat(this.anotherServer.takeRequest().getPath()).isEqualTo("/greeting/123?param=test");
-        assertThat(this.server.getRequestCount()).isEqualTo(0);
+        assertThat(actualBody).isEqualTo(responseBody);
+        assertThat(anotherServer.takeRequest().request().path()).isEqualTo("/greeting/123?param=test");
+        assertThat(server.takeRequest(1, TimeUnit.SECONDS)).isNull();
     }
+
 
     @Test
     void ignoredUriBuilderFactory() throws Exception {
-        String expectedResponseBody = "hello";
-        prepareResponse(response -> response.setResponseCode(200).setBody(expectedResponseBody));
-        URI dynamicUri = this.server.url("/greeting/123").uri();
-        UriBuilderFactory factory = new DefaultUriBuilderFactory(this.anotherServer.url("/").toString());
+        final String expectedResponseBody = "hello";
+        prepareResponse(response -> response.status(200).content(expectedResponseBody));
+        final URI dynamicUri = server.httpUri().resolve("/greeting/123");
+        final UriBuilderFactory factory = new DefaultUriBuilderFactory(anotherServer.httpUri().resolve("/").toString());
 
-        String actualBody = initService().getWithIgnoredUriBuilderFactory(dynamicUri, factory);
+        final String actualBody = initService().getWithIgnoredUriBuilderFactory(dynamicUri, factory);
 
         assertThat(actualBody).isEqualTo(expectedResponseBody);
-        assertThat(this.server.takeRequest().getRequestUrl().uri()).isEqualTo(dynamicUri);
-        assertThat(this.anotherServer.getRequestCount()).isEqualTo(0);
+        assertThat(server.takeRequest().request().uri()).isEqualTo(dynamicUri);
+        assertThat(server.takeRequest(1, TimeUnit.SECONDS)).isNull();
     }
 
     private static void prepareResponse(Consumer<HttpResponseBuilder> consumer) {
@@ -192,8 +205,18 @@ class ArmeriaHttpExchangeAdapterTest {
         server.enqueue(builder.build());
     }
 
+    private static void prepareAnotherResponse(Consumer<HttpResponseBuilder> consumer) {
+        final HttpResponseBuilder builder = HttpResponse.builder();
+        consumer.accept(builder);
+        anotherServer.enqueue(builder.build());
+    }
+
     private static Service initService() {
-        final ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(server.webClient());
+        return initService(server.webClient());
+    }
+
+    private static Service initService(WebClient webClient) {
+        final ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(webClient);
         return HttpServiceProxyFactory.builderFor(adapter).build().createClient(Service.class);
     }
 
