@@ -1175,11 +1175,11 @@ module = "org.slf4j:slf4j-api"
 version.ref = "slf4j2"
 javadocs = "https://www.javadoc.io/doc/org.slf4j/slf4j-api/2.0.7/"
 
-[libraries.spring6-aop]
-module = "org.springframework:spring-aop"
-version.ref = "spring6"
 [libraries.spring6-context]
 module = "org.springframework:spring-context"
+version.ref = "spring6"
+[libraries.spring6-test]
+module = "org.springframework:spring-test"
 version.ref = "spring6"
 [libraries.spring6-web]
 module = "org.springframework:spring-web"
