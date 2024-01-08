@@ -412,19 +412,6 @@ class DefaultRequestTargetTest {
     }
 
     @Test
-    void serverNotShouldHandleReservedCharactersWhenPreservePercentEncoding() {
-        setPreservedPercentEncoding(true);
-        assertAccepted(forServer("/#/:@!$&'()*+,=?a=/#/:[]@!$&'()*+,="),
-                       "/%23/:@!$&'()*+,=",
-                       "a=/%23/:[]@!$&'()*+,=");
-        assertAccepted(forServer("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
-                                 "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
-                       "/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
-                       "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
-        setPreservedPercentEncoding(false);
-    }
-
-    @Test
     void serverShouldHandleReservedCharacters() {
         assertAccepted(forServer("/#/:@!$&'()*+,=?a=/#/:[]@!$&'()*+,="),
                 "/%23/:@!$&'()*+,=",
@@ -433,6 +420,33 @@ class DefaultRequestTargetTest {
                         "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
                 "/%23%2F:@!$&'()*+,%3B=%3F",
                 "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
+    }
+
+    @Test
+    void serverNotShouldHandleReservedCharactersWhenPreservePercentEncoding() {
+        setPreservedPercentEncoding(true);
+        assertAccepted(forServer("/#/:@!$&'()*+,=?a=/#/:[]@!$&'()*+,="),
+                "/%23/:@!$&'()*+,=",
+                "a=/%23/:[]@!$&'()*+,=");
+        assertAccepted(forServer("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
+                        "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
+                "/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
+                "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
+        setPreservedPercentEncoding(false);
+    }
+
+    @Test
+    void clientShouldHandleReservedCharacters() {
+        assertAccepted(forClient("/:@!$&'()*+,;=?a=/:[]@!$&'()*+,;=#/:@!$&'()*+,;="),
+                       "/:@!$&'()*+,;=",
+                       "a=/:[]@!$&'()*+,;=",
+                       "/:@!$&'()*+,;=");
+        assertAccepted(forClient("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
+                                 "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
+                                 "#%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
+                       "/%23%2F:@!$&'()*+,;=%3F",
+                       "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
+                       "%23%2F:@!$&'()*+,;=%3F");
     }
 
     @Test
@@ -449,20 +463,6 @@ class DefaultRequestTargetTest {
                 "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
                 "%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
         setPreservedPercentEncoding(false);
-    }
-
-    @Test
-    void clientShouldHandleReservedCharacters() {
-        assertAccepted(forClient("/:@!$&'()*+,;=?a=/:[]@!$&'()*+,;=#/:@!$&'()*+,;="),
-                       "/:@!$&'()*+,;=",
-                       "a=/:[]@!$&'()*+,;=",
-                       "/:@!$&'()*+,;=");
-        assertAccepted(forClient("/%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
-                                 "?a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F" +
-                                 "#%23%2F%3A%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F"),
-                       "/%23%2F:@!$&'()*+,;=%3F",
-                       "a=%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F",
-                       "%23%2F:@!$&'()*+,;=%3F");
     }
 
     @ParameterizedTest
