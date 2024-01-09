@@ -320,8 +320,6 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
                             if (aggregatingFramesLength > maxFramePayloadLength) {
                                 throw protocolViolation(
                                         WebSocketCloseStatus.MESSAGE_TOO_BIG,
-                                        // The message must not exceed 125 length:
-                                        // https://datatracker.ietf.org/doc/html/rfc6455/#section-5.5
                                         "The length of aggregated frames exceeded the max frame length. " +
                                         " aggregated length: " + aggregatingFramesLength +
                                         ", max frame length: " + maxFramePayloadLength);
