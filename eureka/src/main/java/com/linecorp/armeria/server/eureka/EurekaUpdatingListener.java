@@ -131,6 +131,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     private final EurekaWebClient client;
+    private final InstanceInfo initialInstanceInfo;
     private InstanceInfo instanceInfo;
     @Nullable
     private volatile ScheduledFuture<?> heartBeatFuture;
@@ -144,12 +145,13 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
      */
     EurekaUpdatingListener(EurekaWebClient client, InstanceInfo instanceInfo) {
         this.client = client;
-        this.instanceInfo = instanceInfo;
+        this.initialInstanceInfo = instanceInfo;
     }
 
     @Override
     public void serverStarted(Server server) throws Exception {
-        this.instanceInfo = fillAndCreateNewInfo(instanceInfo, server);
+        this.instanceInfo = fillAndCreateNewInfo(initialInstanceInfo, server);
+        this.appName = instanceInfo.getAppName();
         register(instanceInfo);
     }
 
@@ -187,10 +189,10 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                                              TimeUnit.SECONDS);
     }
 
-    private InstanceInfo fillAndCreateNewInfo(InstanceInfo oldInfo, Server server) {
+    private static InstanceInfo fillAndCreateNewInfo(InstanceInfo oldInfo, Server server) {
         final String defaultHostname = server.defaultHostname();
         final String hostName = oldInfo.getHostName() != null ? oldInfo.getHostName() : defaultHostname;
-        appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : hostName;
+        final String appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : hostName;
 
         final Inet4Address defaultInet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
         final String defaultIpAddr = defaultInet4Address != null ? defaultInet4Address.getHostAddress()
@@ -233,9 +235,9 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
         return new InstanceInfo(instanceId, appName, oldInfo.getAppGroupName(), hostName, ipAddr,
                                 vipAddress, secureVipAddress, portWrapper, securePortWrapper, InstanceStatus.UP,
-                                oldInfo.getHomePageUrl(), oldInfo.getStatusPageUrl(),
-                                oldInfo.getHealthCheckUrlPath(), healthCheckUrl, secureHealthCheckUrl,
-                                oldInfo.getDataCenterInfo(), oldInfo.getLeaseInfo(), oldInfo.getMetadata());
+                                oldInfo.getHomePageUrl(), oldInfo.getStatusPageUrl(), healthCheckUrl,
+                                secureHealthCheckUrl, oldInfo.getDataCenterInfo(),
+                                oldInfo.getLeaseInfo(), oldInfo.getMetadata());
     }
 
     private static PortWrapper portWrapper(Server server, PortWrapper oldPortWrapper,
