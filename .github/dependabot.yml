@@ -34,5 +34,4 @@ updates:
       directory: "/"
       schedule:
         interval: "monthly"
-        timezone: "Asia/Seoul"
         versioning-strategy: increase
