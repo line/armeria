@@ -23,6 +23,7 @@ import static com.linecorp.armeria.client.grpc.GrpcClientOptions.DECOMPRESSOR_RE
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.EXCEPTION_HANDLER;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.INTERCEPTORS;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS;
@@ -390,7 +391,7 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
 
         final List<ClientInterceptor> clientInterceptors = interceptors.build();
         if (!clientInterceptors.isEmpty()) {
-            option(GrpcClientOptions.INTERCEPTORS.newValue(clientInterceptors));
+            option(INTERCEPTORS.newValue(clientInterceptors));
         }
         if (exceptionHandler != null) {
             option(EXCEPTION_HANDLER.newValue(exceptionHandler));
