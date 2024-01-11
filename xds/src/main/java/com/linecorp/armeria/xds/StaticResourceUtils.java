@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
+
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -26,36 +28,36 @@ final class StaticResourceUtils {
 
     static RouteResourceNode staticRoute(XdsBootstrapImpl xdsBootstrap, String resourceName,
                                          @Nullable ListenerResourceHolder primer,
-                                         SnapshotWatcher<RouteSnapshot> parentNode,
+                                         SnapshotWatcher<RouteSnapshot> parentWatcher,
                                          Message message) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.ROUTE);
         final AbstractResourceHolder parsed = resourceParser.parse(message);
         final RouteResourceNode node = new RouteResourceNode(null, resourceName, xdsBootstrap, primer,
-                                                             parentNode, ResourceNodeType.STATIC);
+                                                             parentWatcher, STATIC);
         node.onChanged(parsed);
         return node;
     }
 
     static ClusterResourceNode staticCluster(XdsBootstrapImpl xdsBootstrap, String resourceName,
                                              @Nullable ResourceHolder primer,
-                                             SnapshotWatcher<? super ClusterSnapshot> parentNode,
+                                             SnapshotWatcher<? super ClusterSnapshot> parentWatcher,
                                              Message message) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.CLUSTER);
         final AbstractResourceHolder parsed = resourceParser.parse(message);
         final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
-                                                                 primer, parentNode, ResourceNodeType.STATIC);
+                                                                 primer, parentWatcher, STATIC);
         node.onChanged(parsed);
         return node;
     }
 
     static EndpointResourceNode staticEndpoint(XdsBootstrapImpl xdsBootstrap, String resourceName,
                                                @Nullable ResourceHolder primer,
-                                               SnapshotWatcher<EndpointSnapshot> parentNode,
+                                               SnapshotWatcher<EndpointSnapshot> parentWatcher,
                                                Message message) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.ENDPOINT);
         final AbstractResourceHolder parsed = resourceParser.parse(message);
         final EndpointResourceNode node = new EndpointResourceNode(null, resourceName, xdsBootstrap,
-                                                                   primer, parentNode, ResourceNodeType.STATIC);
+                                                                   primer, parentWatcher, STATIC);
         node.onChanged(parsed);
         return node;
     }

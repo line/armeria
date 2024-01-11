@@ -35,7 +35,7 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
     private final String resourceName;
     @Nullable
     private final ResourceHolder primer;
-    private final SnapshotWatcher<? super T> parentNode;
+    private final SnapshotWatcher<? super T> parentWatcher;
     private final ResourceNodeType resourceNodeType;
     @Nullable
     private AbstractResourceHolder current;
@@ -43,13 +43,13 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
 
     AbstractResourceNode(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
                          XdsType type, String resourceName, @Nullable ResourceHolder primer,
-                         SnapshotWatcher<? super T> parentNode, ResourceNodeType resourceNodeType) {
+                         SnapshotWatcher<? super T> parentWatcher, ResourceNodeType resourceNodeType) {
         this.xdsBootstrap = xdsBootstrap;
         this.configSource = configSource;
         this.type = type;
         this.resourceName = resourceName;
         this.primer = primer;
-        this.parentNode = parentNode;
+        this.parentWatcher = parentWatcher;
         this.resourceNodeType = resourceNodeType;
     }
 
@@ -68,7 +68,7 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
 
     @Override
     public void onError(XdsType type, Status error) {
-        parentNode.onError(type, error);
+        parentWatcher.onError(type, error);
     }
 
     @Override
@@ -80,7 +80,7 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
             child.close();
         }
         children.clear();
-        parentNode.onMissing(type, resourceName);
+        parentWatcher.onMissing(type, resourceName);
     }
 
     @Override
@@ -118,12 +118,12 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
         return children;
     }
 
-    SnapshotWatcher<? super T> parentNode() {
-        return parentNode;
+    SnapshotWatcher<? super T> parentWatcher() {
+        return parentWatcher;
     }
 
     public void onMissing(XdsType type, String resourceName) {
-        parentNode.onMissing(type, resourceName);
+        parentWatcher.onMissing(type, resourceName);
     }
 
     @Override

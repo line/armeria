@@ -28,9 +28,9 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
+import io.grpc.Status;
 
-final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot>
-        implements SnapshotWatcher<EndpointSnapshot> {
+final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot> {
 
     @Nullable
     private final VirtualHost virtualHost;
@@ -40,9 +40,9 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot>
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
                         String resourceName, XdsBootstrapImpl xdsBootstrap,
-                        @Nullable ResourceHolder primer, SnapshotWatcher<? super ClusterSnapshot> parentNode,
+                        @Nullable ResourceHolder primer, SnapshotWatcher<? super ClusterSnapshot> parentWatcher,
                         ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentNode, resourceNodeType);
+        super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentWatcher, resourceNodeType);
         virtualHost = null;
         route = null;
         index = -1;
@@ -50,9 +50,9 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot>
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
                         String resourceName, XdsBootstrapImpl xdsBootstrap,
-                        @Nullable ResourceHolder primer, SnapshotWatcher<ClusterSnapshot> parentNode,
+                        @Nullable ResourceHolder primer, SnapshotWatcher<ClusterSnapshot> parentWatcher,
                         VirtualHost virtualHost, Route route, int index, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentNode, resourceNodeType);
+        super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentWatcher, resourceNodeType);
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.route = requireNonNull(route, "route");
         this.index = index;
@@ -66,19 +66,19 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot>
             final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
             final EndpointResourceNode node =
                     StaticResourceUtils.staticEndpoint(xdsBootstrap(), cluster.getName(),
-                                                       holder, this, loadAssignment);
+                                                       holder, new EndpointSnapshotWatcher(), loadAssignment);
             children().add(node);
         }
         if (cluster.hasEdsClusterConfig()) {
             final ConfigSource configSource = cluster.getEdsClusterConfig().getEdsConfig();
             final EndpointResourceNode node =
                     new EndpointResourceNode(configSource, cluster.getName(), xdsBootstrap(), holder,
-                                             this, ResourceNodeType.DYNAMIC);
+                                             new EndpointSnapshotWatcher(), ResourceNodeType.DYNAMIC);
             children().add(node);
             xdsBootstrap().subscribe(configSource, node);
         }
         if (children().isEmpty()) {
-            parentNode().snapshotUpdated(new ClusterSnapshot(holder));
+            parentWatcher().snapshotUpdated(new ClusterSnapshot(holder));
         }
     }
 
@@ -87,15 +87,28 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot>
         return (ClusterResourceHolder) super.current();
     }
 
-    @Override
-    public void snapshotUpdated(EndpointSnapshot newSnapshot) {
-        final ClusterResourceHolder current = current();
-        if (current == null) {
-            return;
+    private class EndpointSnapshotWatcher implements SnapshotWatcher<EndpointSnapshot> {
+        @Override
+        public void snapshotUpdated(EndpointSnapshot newSnapshot) {
+            final ClusterResourceHolder current = current();
+            if (current == null) {
+                return;
+            }
+            if (!Objects.equals(newSnapshot.holder().primer(), current)) {
+                return;
+            }
+            parentWatcher().snapshotUpdated(
+                    new ClusterSnapshot(current, newSnapshot, virtualHost, route, index));
         }
-        if (!Objects.equals(newSnapshot.holder().primer(), current)) {
-            return;
+
+        @Override
+        public void onError(XdsType type, Status status) {
+            parentWatcher().onError(type, status);
         }
-        parentNode().snapshotUpdated(new ClusterSnapshot(current, newSnapshot, virtualHost, route, index));
+
+        @Override
+        public void onMissing(XdsType type, String resourceName) {
+            parentWatcher().onMissing(type, resourceName);
+        }
     }
 }
