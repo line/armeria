@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
@@ -42,7 +42,7 @@ abstract class ResourceParser {
     ParsedResourcesHolder parseResources(List<Any> resources) {
         final Map<String, AbstractResourceHolder> parsedResources = new HashMap<>(resources.size());
         final Set<String> invalidResources = new HashSet<>();
-        final List<String> errors = new ArrayList<>();
+        final ImmutableList.Builder<String> errors = ImmutableList.builder();
 
         for (int i = 0; i < resources.size(); i++) {
             final Any resource = resources.get(i);
@@ -65,8 +65,8 @@ abstract class ResourceParser {
             }
 
             if (name == null) {
-                errors.add(String.format("Resource (%s: %s) cannot be processed as (%s) due to name: %s",
-                                         i, resource, clazz().getSimpleName(), name));
+                errors.add(String.format("Resource (%s: %s) cannot be processed as (%s) due to null name",
+                                         i, resource, clazz().getSimpleName()));
                 continue;
             }
 
@@ -84,7 +84,7 @@ abstract class ResourceParser {
             parsedResources.put(name, resourceUpdate);
         }
 
-        return new ParsedResourcesHolder(parsedResources, invalidResources, errors);
+        return new ParsedResourcesHolder(parsedResources, invalidResources, errors.build());
     }
 
     abstract boolean isFullStateOfTheWorld();

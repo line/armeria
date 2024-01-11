@@ -47,9 +47,9 @@ final class BootstrapClusters implements SnapshotWatcher<Snapshot<?>> {
     }
 
     @Override
-    public void snapshotUpdated(Snapshot<?> child) {
-        assert child instanceof ClusterSnapshot;
-        final ClusterSnapshot clusterSnapshot = (ClusterSnapshot) child;
+    public void snapshotUpdated(Snapshot<?> newSnapshot) {
+        assert newSnapshot instanceof ClusterSnapshot;
+        final ClusterSnapshot clusterSnapshot = (ClusterSnapshot) newSnapshot;
         clusterSnapshots.put(clusterSnapshot.holder().name(), clusterSnapshot);
     }
 

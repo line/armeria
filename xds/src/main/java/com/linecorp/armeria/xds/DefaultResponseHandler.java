@@ -26,6 +26,7 @@ import io.grpc.Status;
 final class DefaultResponseHandler implements XdsResponseHandler {
 
     private final SubscriberStorage storage;
+    private static final Joiner errorMessageJoiner = Joiner.on('\n');
 
     DefaultResponseHandler(SubscriberStorage storage) {
         this.storage = storage;
@@ -40,7 +41,7 @@ final class DefaultResponseHandler implements XdsResponseHandler {
         if (holder.errors().isEmpty()) {
             sender.ackResponse(resourceParser.type(), response.getVersionInfo(), response.getNonce());
         } else {
-            errorDetail = Joiner.on('\n').join(holder.errors());
+            errorDetail = errorMessageJoiner.join(holder.errors());
             sender.nackResponse(resourceParser.type(), response.getNonce(), errorDetail);
         }
 

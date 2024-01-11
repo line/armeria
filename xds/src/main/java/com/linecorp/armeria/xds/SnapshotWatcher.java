@@ -29,7 +29,7 @@ public interface SnapshotWatcher<T> {
     /**
      * Invoked when a full snapshot is updated.
      */
-    void snapshotUpdated(T child);
+    void snapshotUpdated(T newSnapshot);
 
     /**
      * Invoked when a resource is deemed not to exist. This can either be due to

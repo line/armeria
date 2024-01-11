@@ -23,7 +23,7 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
  * Users may query the latest value of this resource or add a watcher to be notified of changes.
  * Note that it is important to close this resource to avoid leaking connections to the control plane server.
  */
-public final class ListenerRoot extends AbstractNode<ListenerSnapshot> {
+public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
     private final ListenerResourceNode node;
 
@@ -38,6 +38,5 @@ public final class ListenerRoot extends AbstractNode<ListenerSnapshot> {
     public void close() {
         super.close();
         node.close();
-        xdsBootstrap().removeSubscriber(node);
     }
 }

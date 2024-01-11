@@ -22,5 +22,6 @@ abstract class AbstractResourceHolder implements ResourceHolder {
 
     abstract AbstractResourceHolder withPrimer(@Nullable ResourceHolder primer);
 
+    @Nullable
     abstract ResourceHolder primer();
 }

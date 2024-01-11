@@ -18,5 +18,5 @@ package com.linecorp.armeria.xds;
 
 enum ResourceNodeType {
     DYNAMIC,
-    STATIC;
+    STATIC
 }

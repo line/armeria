@@ -88,14 +88,14 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot>
     }
 
     @Override
-    public void snapshotUpdated(EndpointSnapshot endpointSnapshot) {
+    public void snapshotUpdated(EndpointSnapshot newSnapshot) {
         final ClusterResourceHolder current = current();
         if (current == null) {
             return;
         }
-        if (!Objects.equals(endpointSnapshot.holder().primer(), current)) {
+        if (!Objects.equals(newSnapshot.holder().primer(), current)) {
             return;
         }
-        parentNode().snapshotUpdated(new ClusterSnapshot(current, endpointSnapshot, virtualHost, route, index));
+        parentNode().snapshotUpdated(new ClusterSnapshot(current, newSnapshot, virtualHost, route, index));
     }
 }

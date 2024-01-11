@@ -93,6 +93,8 @@ final class ConfigSourceClient implements SafeCloseable {
         final SessionProtocol sessionProtocol =
                 tlsContext != null ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
         final GrpcClientBuilder builder = GrpcClients.builder(sessionProtocol, endpointGroup);
+        builder.responseTimeout(java.time.Duration.ZERO);
+        builder.maxResponseLength(0);
         clientCustomizer.accept(builder);
 
         if (ads) {

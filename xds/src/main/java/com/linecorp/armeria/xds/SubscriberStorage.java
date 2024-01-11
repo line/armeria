@@ -39,7 +39,6 @@ final class SubscriberStorage {
         this.timeoutMillis = timeoutMillis;
     }
 
-    @Nullable
     boolean register(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
         if (!subscriberMap.containsKey(type)) {
             subscriberMap.put(type, new HashMap<>());

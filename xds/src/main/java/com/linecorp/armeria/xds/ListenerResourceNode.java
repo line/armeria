@@ -70,14 +70,14 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot>
     }
 
     @Override
-    public void snapshotUpdated(RouteSnapshot routeSnapshot) {
+    public void snapshotUpdated(RouteSnapshot newSnapshot) {
         final ListenerResourceHolder current = current();
         if (current == null) {
             return;
         }
-        if (!Objects.equals(routeSnapshot.holder().primer(), current)) {
+        if (!Objects.equals(newSnapshot.holder().primer(), current)) {
             return;
         }
-        parentNode().snapshotUpdated(new ListenerSnapshot(current, routeSnapshot));
+        parentNode().snapshotUpdated(new ListenerSnapshot(current, newSnapshot));
     }
 }

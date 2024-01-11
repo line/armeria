@@ -57,7 +57,7 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
         return xdsBootstrap;
     }
 
-    void setCurrent(@Nullable AbstractResourceHolder current) {
+    private void setCurrent(@Nullable AbstractResourceHolder current) {
         this.current = current;
     }
 
@@ -110,11 +110,11 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
         }
         children.clear();
         if (resourceNodeType == ResourceNodeType.DYNAMIC) {
-            xdsBootstrap.removeSubscriber(configSource, this);
+            xdsBootstrap.unsubscribe(configSource, this);
         }
     }
 
-    public Deque<ResourceNode<?>> children() {
+    Deque<ResourceNode<?>> children() {
         return children;
     }
 

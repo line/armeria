@@ -23,7 +23,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
  * Users may query the latest value of this resource or add a watcher to be notified of changes.
  * Note that it is important to close this resource to avoid leaking connections to the control plane server.
  */
-public final class ClusterRoot extends AbstractNode<ClusterSnapshot> {
+public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
 
     private final ClusterResourceNode node;
 
@@ -38,6 +38,5 @@ public final class ClusterRoot extends AbstractNode<ClusterSnapshot> {
     public void close() {
         super.close();
         node.close();
-        xdsBootstrap().removeSubscriber(node);
     }
 }

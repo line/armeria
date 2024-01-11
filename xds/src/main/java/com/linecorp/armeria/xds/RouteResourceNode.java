@@ -85,16 +85,16 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot>
     }
 
     @Override
-    public void snapshotUpdated(ClusterSnapshot clusterSnapshot) {
+    public void snapshotUpdated(ClusterSnapshot newSnapshot) {
         final RouteResourceHolder current = current();
         if (current == null) {
             return;
         }
-        if (!Objects.equals(current, clusterSnapshot.holder().primer())) {
+        if (!Objects.equals(current, newSnapshot.holder().primer())) {
             return;
         }
-        clusterSnapshotList.set(clusterSnapshot.index(), clusterSnapshot);
-        pending.remove(clusterSnapshot.index());
+        clusterSnapshotList.set(newSnapshot.index(), newSnapshot);
+        pending.remove(newSnapshot.index());
         if (!pending.isEmpty()) {
             return;
         }

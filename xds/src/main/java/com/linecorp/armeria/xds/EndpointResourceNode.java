@@ -38,7 +38,7 @@ final class EndpointResourceNode extends AbstractResourceNode<EndpointSnapshot>
     }
 
     @Override
-    public void snapshotUpdated(Snapshot<?> child) {
+    public void snapshotUpdated(Snapshot<?> newSnapshot) {
         throw new UnsupportedOperationException();
     }
 }

@@ -46,9 +46,9 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     }
 
     @Override
-    public void snapshotUpdated(Snapshot<?> update) {
-        logger.info("snapshotUpdated: {}", update);
-        events.add(ImmutableList.of("snapshotUpdated", update));
+    public void snapshotUpdated(Snapshot<?> newSnapshot) {
+        logger.info("snapshotUpdated: {}", newSnapshot);
+        events.add(ImmutableList.of("snapshotUpdated", newSnapshot));
     }
 
     List<Object> blockingMissing() {

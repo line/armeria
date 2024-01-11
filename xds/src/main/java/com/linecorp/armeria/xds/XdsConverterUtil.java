@@ -48,15 +48,9 @@ final class XdsConverterUtil {
     }
 
     static List<Endpoint> convertEndpoints(Collection<ClusterLoadAssignment> clusterLoadAssignments) {
-        return clusterLoadAssignments.stream().flatMap(cla -> cla.getEndpointsList().stream().flatMap(
-                localityLbEndpoints -> localityLbEndpoints
-                        .getLbEndpointsList()
-                        .stream()
-                        .map(lbEndpoint -> {
-                            final SocketAddress socketAddress =
-                                    lbEndpoint.getEndpoint().getAddress().getSocketAddress();
-                            return Endpoint.of(socketAddress.getAddress(), socketAddress.getPortValue());
-                        }))).collect(Collectors.toList());
+        return clusterLoadAssignments.stream()
+                                     .flatMap(cla -> convertEndpoints(cla).stream())
+                                     .collect(Collectors.toList());
     }
 
     static void validateConfigSource(@Nullable ConfigSource configSource) {

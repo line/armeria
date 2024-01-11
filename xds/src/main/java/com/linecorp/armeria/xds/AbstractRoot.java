@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,10 +31,10 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 
-abstract class AbstractNode<T extends Snapshot<? extends ResourceHolder>>
+abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         implements SnapshotWatcher<T>, SafeCloseable {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractNode.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractRoot.class);
 
     private final XdsBootstrapImpl xdsBootstrap;
     private final EventExecutor eventLoop;
@@ -40,7 +43,7 @@ abstract class AbstractNode<T extends Snapshot<? extends ResourceHolder>>
     private final Set<SnapshotWatcher<? super T>> snapshotWatchers = new HashSet<>();
     private boolean closed;
 
-    AbstractNode(XdsBootstrapImpl xdsBootstrap) {
+    AbstractRoot(XdsBootstrapImpl xdsBootstrap) {
         this.xdsBootstrap = xdsBootstrap;
         eventLoop = xdsBootstrap.eventLoop();
     }
@@ -54,6 +57,9 @@ abstract class AbstractNode<T extends Snapshot<? extends ResourceHolder>>
     }
 
     public void addSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
+        requireNonNull(watcher, "watcher");
+        checkState(!closed, "Watcher %s can't be registered since %s is already closed.",
+                   watcher, getClass().getSimpleName());
         if (!eventLoop().inEventLoop()) {
             eventLoop().execute(() -> addSnapshotWatcher(watcher));
             return;
@@ -70,6 +76,9 @@ abstract class AbstractNode<T extends Snapshot<? extends ResourceHolder>>
     }
 
     public void removeSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
+        requireNonNull(watcher, "watcher");
+        checkState(!closed, "Watcher %s can't be removed since %s is already closed.",
+                   watcher, getClass().getSimpleName());
         if (!eventLoop().inEventLoop()) {
             eventLoop().execute(() -> removeSnapshotWatcher(watcher));
             return;
@@ -78,8 +87,8 @@ abstract class AbstractNode<T extends Snapshot<? extends ResourceHolder>>
     }
 
     @Override
-    public void snapshotUpdated(T child) {
-        snapshot = child;
+    public void snapshotUpdated(T newSnapshot) {
+        snapshot = newSnapshot;
         if (closed) {
             return;
         }

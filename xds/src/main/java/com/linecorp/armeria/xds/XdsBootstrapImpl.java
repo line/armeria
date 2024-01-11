@@ -79,13 +79,9 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         client.addSubscriber(type, resourceName, watcher);
     }
 
-    void removeSubscriber(ResourceNode<AbstractResourceHolder> node) {
-        removeSubscriber(null, node);
-    }
-
-    void removeSubscriber(@Nullable ConfigSource configSource, ResourceNode<AbstractResourceHolder> node) {
+    void unsubscribe(@Nullable ConfigSource configSource, ResourceNode<AbstractResourceHolder> node) {
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> removeSubscriber(configSource, node));
+            eventLoop.execute(() -> unsubscribe(configSource, node));
             return;
         }
         final XdsType type = node.type();
@@ -93,7 +89,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         final ConfigSource mappedConfigSource =
                 bootstrapApiConfigs.remapConfigSource(type, configSource, resourceName);
         final ConfigSourceClient client = clientMap.get(mappedConfigSource);
-        if (client.removeSubscriber(type, resourceName, node)) {
+        if (client != null && client.removeSubscriber(type, resourceName, node)) {
             client.close();
             clientMap.remove(mappedConfigSource);
         }
