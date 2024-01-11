@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.client.grpc.NullCallCredentials;
 import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
+import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallCredentials;
@@ -45,6 +46,7 @@ import io.grpc.Codec;
 import io.grpc.Compressor;
 import io.grpc.DecompressorRegistry;
 import io.grpc.ServiceDescriptor;
+import io.grpc.Status;
 
 /**
  * {@link ClientOption}s to control gRPC-specific behavior.
@@ -167,11 +169,12 @@ public final class GrpcClientOptions {
             ClientOption.define("GRPC_CLIENT_CALL_CREDENTIALS", NullCallCredentials.INSTANCE);
 
     /**
-     * Sets the {@link CallCredentials} that carries credential data that will be propagated to the server
-     * via request metadata.
+     * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
+     * to a gRPC {@link Status}.
      */
     public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
-            ClientOption.define("EXCEPTION_HANDLER", (ctx, cause, metadata) -> null);
+            ClientOption.define("EXCEPTION_HANDLER",
+                                (ctx, cause, metadata) -> GrpcStatus.fromThrowable(cause));
 
     private GrpcClientOptions() {}
 }
