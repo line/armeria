@@ -38,6 +38,10 @@ testing {
                     }
                 }
             }
+
+            dependencies {
+                runtimeOnly(libs.junit.testng.engine)
+            }
         }
     }
 }

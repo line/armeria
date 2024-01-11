@@ -35,7 +35,6 @@ mrJarVersions.each { version->
         testClassesDirs = sourceSets."java${version}Test".output.classesDirs
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
-        useJUnitPlatform()
         project.ext.configureCommonTestSettings(it)
         enabled = project.ext.testJavaVersion >= targetJavaVersion
     }
@@ -223,6 +222,9 @@ if (rootProject.findProperty('flakyTests') != 'true') {
                         classpath += project.files(configurations.shadedJarTestRuntime.resolve())
                     }
                 }
+            }
+            dependencies {
+                runtimeOnly libs.junit.testng.engine
             }
         }
     }
