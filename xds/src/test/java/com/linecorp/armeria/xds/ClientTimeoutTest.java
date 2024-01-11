@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -53,7 +54,7 @@ class ClientTimeoutTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(com.linecorp.armeria.server.ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) throws Exception {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
             sb.decorator((delegate, ctx, req) -> {
                 if (simulateTimeout.get()) {
@@ -84,24 +85,9 @@ class ClientTimeoutTest {
     @Test
     void initialTimeoutInvokesAbsent() throws Exception {
         simulateTimeout.set(true);
-        final TestResourceWatcher watcher = new TestResourceWatcher();
-        final String bootstrapClusterName = "bootstrap-cluster";
         final String clusterName = "cluster1";
-        final Duration timeoutDuration =
-                Duration.newBuilder()
-                        .setNanos((int) TimeUnit.MILLISECONDS.toNanos(100))
-                        .build();
-        final ConfigSource configSource =
-                ConfigSource.newBuilder()
-                            .setApiConfigSource(XdsTestResources.apiConfigSource(bootstrapClusterName,
-                                                                                 ApiType.GRPC))
-                            .setInitialFetchTimeout(timeoutDuration)
-                            .build();
-        final URI uri = server.httpUri();
-        final ClusterLoadAssignment loadAssignment =
-                XdsTestResources.loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
-        final Cluster cluster = XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, cluster);
+        final TestResourceWatcher watcher = new TestResourceWatcher();
+        final Bootstrap bootstrap = bootstrapWithTimeout(100);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             clusterRoot.addSnapshotWatcher(watcher);
@@ -124,11 +110,32 @@ class ClientTimeoutTest {
         }
     }
 
+    private static Bootstrap bootstrapWithTimeout(long timeoutMillis) {
+        final String bootstrapClusterName = "bootstrap-cluster";
+        final Duration timeoutDuration =
+                Duration.newBuilder()
+                        .setNanos((int) TimeUnit.MILLISECONDS.toNanos(timeoutMillis))
+                        .build();
+        final ConfigSource configSource =
+                ConfigSource.newBuilder()
+                            .setApiConfigSource(XdsTestResources.apiConfigSource(bootstrapClusterName,
+                                                                                 ApiType.GRPC))
+                            .setInitialFetchTimeout(timeoutDuration)
+                            .build();
+        final URI uri = server.httpUri();
+        final ClusterLoadAssignment loadAssignment =
+                XdsTestResources.loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
+        final Cluster cluster = XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, cluster);
+        return bootstrap;
+    }
+
     @Test
     void noTimeoutIfCachedValue() throws Exception {
         final TestResourceWatcher watcher = new TestResourceWatcher();
         final String clusterName = "cluster1";
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
+        simulateTimeout.set(true);
+        final Bootstrap bootstrap = bootstrapWithTimeout(100);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             clusterRoot.addSnapshotWatcher(watcher);
@@ -140,6 +147,7 @@ class ClientTimeoutTest {
                                     ImmutableList.of(XdsTestResources.loadAssignment(clusterName, URI.create("http://a.b"))),
                                     ImmutableList.of(),
                                     ImmutableList.of(), ImmutableList.of(), "2"));
+            simulateTimeout.set(false);
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
             ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
