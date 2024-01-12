@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package jetty;
+package com.linecorp.armeria.server.jetty;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,11 +25,10 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Handler.Singleton;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.SessionIdManager;
-import org.eclipse.jetty.server.handler.HandlerWrapper;
 
 import com.google.common.collect.ImmutableList;
 
@@ -91,8 +90,8 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
     }
 
     @Override
-    public JettyServiceBuilder handlerWrapper(HandlerWrapper handlerWrapper) {
-        return (JettyServiceBuilder) super.handlerWrapper(handlerWrapper);
+    public JettyServiceBuilder insertHandler(Singleton handler) {
+        return (JettyServiceBuilder) super.insertHandler(handler);
     }
 
     @Override
@@ -103,17 +102,6 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
     @Override
     public JettyServiceBuilder requestLog(RequestLog requestLog) {
         return (JettyServiceBuilder) super.requestLog(requestLog);
-    }
-
-    @Override
-    public JettyServiceBuilder sessionIdManager(SessionIdManager sessionIdManager) {
-        return (JettyServiceBuilder) super.sessionIdManager(sessionIdManager);
-    }
-
-    @Override
-    public JettyServiceBuilder sessionIdManagerFactory(
-            Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory) {
-        return (JettyServiceBuilder) super.sessionIdManagerFactory(sessionIdManagerFactory);
     }
 
     @Override
@@ -131,11 +119,6 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         return (JettyServiceBuilder) super.customizer(customizer);
     }
 
-    @Override
-    public JettyServiceBuilder configurator(Consumer<? super Server> configurator) {
-        return (JettyServiceBuilder) super.configurator(configurator);
-    }
-
     /**
      * Returns a newly-created {@link JettyService} based on the properties of this builder.
      */
@@ -147,11 +130,9 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         final Long stopTimeoutMillis = this.stopTimeoutMillis;
         final Handler handler = this.handler;
         final RequestLog requestLog = this.requestLog;
-        final Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory =
-                this.sessionIdManagerFactory;
         final Map<String, Object> attrs = this.attrs.build();
         final List<Bean> beans = this.beans.build();
-        final List<HandlerWrapper> handlerWrappers = this.handlerWrappers.build();
+        final List<Singleton> handlerWrappers = this.handlerWrappers.build();
         final List<EventListener> eventListeners = this.eventListeners.build();
         final List<Consumer<? super Server>> customizers = this.customizers.build();
 
@@ -185,9 +166,6 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
                     }
                     if (requestLog != null) {
                         server.setRequestLog(requestLog);
-                    }
-                    if (sessionIdManagerFactory != null) {
-                        server.setSessionIdManager(sessionIdManagerFactory.apply(server));
                     }
 
                     handlerWrappers.forEach(server::insertHandler);

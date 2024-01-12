@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,19 +14,17 @@
  * under the License.
  */
 
-package jetty;
+package com.linecorp.armeria.server.jetty;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Handler.Singleton;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.SessionIdManager;
-import org.eclipse.jetty.server.handler.HandlerWrapper;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +38,7 @@ public abstract class AbstractJettyServiceBuilder {
 
     final ImmutableMap.Builder<String, Object> attrs = ImmutableMap.builder();
     final ImmutableList.Builder<Bean> beans = ImmutableList.builder();
-    final ImmutableList.Builder<HandlerWrapper> handlerWrappers = ImmutableList.builder();
+    final ImmutableList.Builder<Singleton> handlerWrappers = ImmutableList.builder();
     final ImmutableList.Builder<Consumer<? super Server>> customizers = ImmutableList.builder();
 
     @Nullable
@@ -53,8 +51,6 @@ public abstract class AbstractJettyServiceBuilder {
     Handler handler;
     @Nullable
     RequestLog requestLog;
-    @Nullable
-    Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
     @Nullable
     Long stopTimeoutMillis;
     boolean tlsReverseDnsLookup;
@@ -130,12 +126,12 @@ public abstract class AbstractJettyServiceBuilder {
     }
 
     /**
-     * Adds the specified {@link HandlerWrapper} to the Jetty {@link Server}.
+     * Adds the specified {@link Handler.Wrapper} to the Jetty {@link Server}.
      *
-     * @see Server#insertHandler(HandlerWrapper)
+     * @see Server#insertHandler(Singleton)
      */
-    public AbstractJettyServiceBuilder handlerWrapper(HandlerWrapper handlerWrapper) {
-        handlerWrappers.add(requireNonNull(handlerWrapper, "handlerWrapper"));
+    public AbstractJettyServiceBuilder insertHandler(Singleton handler) {
+        handlerWrappers.add(requireNonNull(handler, "handler"));
         return this;
     }
 
@@ -154,31 +150,6 @@ public abstract class AbstractJettyServiceBuilder {
      */
     public AbstractJettyServiceBuilder requestLog(RequestLog requestLog) {
         this.requestLog = requireNonNull(requestLog, "requestLog");
-        return this;
-    }
-
-    /**
-     * Sets the {@link SessionIdManager} of the Jetty {@link Server}. This method is a shortcut for:
-     * <pre>{@code
-     * sessionIdManagerFactory(server -> sessionIdManager);
-     * }</pre>
-     *
-     * @see Server#setSessionIdManager(SessionIdManager)
-     */
-    public AbstractJettyServiceBuilder sessionIdManager(SessionIdManager sessionIdManager) {
-        requireNonNull(sessionIdManager, "sessionIdManager");
-        return sessionIdManagerFactory(server -> sessionIdManager);
-    }
-
-    /**
-     * Sets the factory that creates a new instance of {@link SessionIdManager} for the Jetty {@link Server}.
-     *
-     * @see Server#setSessionIdManager(SessionIdManager)
-     */
-    public AbstractJettyServiceBuilder sessionIdManagerFactory(
-            Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory) {
-        requireNonNull(sessionIdManagerFactory, "sessionIdManagerFactory");
-        this.sessionIdManagerFactory = sessionIdManagerFactory;
         return this;
     }
 
@@ -213,17 +184,6 @@ public abstract class AbstractJettyServiceBuilder {
     public AbstractJettyServiceBuilder customizer(Consumer<? super Server> customizer) {
         customizers.add(requireNonNull(customizer, "customizer"));
         return this;
-    }
-
-    /**
-     * Adds a {@link Consumer} that performs additional configuration operations against
-     * the Jetty {@link Server} created by a {@link JettyService}.
-     *
-     * @deprecated Use {@link #customizer(Consumer)}.
-     */
-    @Deprecated
-    public AbstractJettyServiceBuilder configurator(Consumer<? super Server> configurator) {
-        return customizer(requireNonNull(configurator, "configurator"));
     }
 
     static final class Bean {

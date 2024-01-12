@@ -643,6 +643,22 @@ version.ref = "jetty12"
 [libraries.jetty12-session]
 module = "org.eclipse.jetty:jetty-sssion"
 version.ref = "jetty12"
+[libraries.jetty12-ee10-apache-jsp]
+module = "org.eclipse.jetty.ee10:jetty-ee10-apache-jsp"
+version.ref = "jetty12"
+[libraries.jetty12-ee10-glassfish-jstl]
+module = "org.eclipse.jetty.ee10:jetty-ee10-glassfish-jstl"
+version.ref = "jetty12"
+# jetty-ee10-webapp for testing interoperability with other servers.
+[libraries.jetty12-ee10-annotations]
+module = "org.eclipse.jetty.ee10:jetty-ee10-annotations"
+version.ref = "jetty12"
+[libraries.jetty12-ee10-webapp]
+module = "org.eclipse.jetty.ee10:jetty-ee10-webapp"
+version.ref = "jetty12"
+[libraries.jetty12-ee10-servlet]
+module = "org.eclipse.jetty.ee10:jetty-ee10-servlet"
+version.ref = "jetty12"
 
 [libraries.jetty93-annotations]
 module = "org.eclipse.jetty:jetty-annotations"

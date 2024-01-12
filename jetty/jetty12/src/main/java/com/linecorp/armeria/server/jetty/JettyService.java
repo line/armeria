@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package jetty;
+package com.linecorp.armeria.server.jetty;
 
 import static com.linecorp.armeria.internal.common.util.MappedPathUtil.mappedPath;
 import static java.util.Objects.requireNonNull;
@@ -33,16 +33,16 @@ import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http.MetaData;
+import org.eclipse.jetty.http.MetaData.Response;
+import org.eclipse.jetty.io.Content.Chunk;
 import org.eclipse.jetty.io.EndPoint;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpChannel;
-import org.eclipse.jetty.server.HttpChannelOverHttp;
 import org.eclipse.jetty.server.HttpConfiguration;
-import org.eclipse.jetty.server.HttpConnection;
-import org.eclipse.jetty.server.HttpInput.Content;
-import org.eclipse.jetty.server.HttpInput.EofContent;
+import org.eclipse.jetty.server.HttpStream;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.internal.HttpConnection;
 import org.eclipse.jetty.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -242,17 +242,23 @@ public final class JettyService implements HttpService {
                         new ArmeriaHttpConnection(httpConfiguration, connector, endPoint,
                                                   false, ctx, res, aReq.content());
                 final HttpChannel httpChannel = httpConnection.getHttpChannel();
-
+                final MetaData.Request requestMetadata =
+                        toRequestMetadata(ctx, aReq, httpConnection, mappedPath);
+                final HttpStream httpStream =
+                        httpConnection.newHttpStream(requestMetadata.getMethod(), mappedPath,
+                                                     requestMetadata.getHttpVersion());
                 // Armeria has its own timeout mechanism. Disable Jetty's timeout scheduler
                 // and abort the Jetty transport when Armeria request is timed out.
-                httpChannel.getState().setTimeout(0);
+                httpStream.setIdleTimeout(0);
+                httpChannel.setHttpStream(httpStream);
+                final Runnable handler = httpChannel.onRequest(requestMetadata);
+
                 ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-                    httpChannel.abort(cancellationCause);
+                    httpChannel.onFailure(cancellationCause);
                     return null;
                 });
 
                 final Request jReq = httpChannel.getRequest();
-                fillRequest(ctx, aReq, jReq, mappedPath);
                 final SSLSession sslSession = ctx.sslSession();
                 final boolean needsReverseDnsLookup;
                 if (sslSession != null) {
@@ -274,7 +280,7 @@ public final class JettyService implements HttpService {
 
                     // Let Jetty handle the request.
                     try {
-                        httpChannel.handle();
+                        handler.run();
                     } catch (Throwable t) {
                         logger.warn("{} Failed to handle a request:", ctx, t);
                     }
@@ -293,23 +299,8 @@ public final class JettyService implements HttpService {
         return ExchangeType.RESPONSE_STREAMING;
     }
 
-    private static void fillRequest(
-            ServiceRequestContext ctx, AggregatedHttpRequest aReq, Request jReq, String mappedPath) {
-        DispatcherTypeUtil.setRequestType(jReq);
-        jReq.setAsyncSupported(true, null);
-        jReq.setSecure(ctx.sessionProtocol().isTls());
-        jReq.setMetaData(toRequestMetadata(ctx, aReq, mappedPath));
-        final HttpHeaders trailers = aReq.trailers();
-        if (!trailers.isEmpty()) {
-            final HttpField[] httpFields = trailers.stream()
-                                                   .map(e -> new HttpField(e.getKey().toString(), e.getValue()))
-                                                   .toArray(HttpField[]::new);
-            jReq.setTrailerHttpFields(HttpFields.from(httpFields));
-        }
-    }
-
     private static MetaData.Request toRequestMetadata(ServiceRequestContext ctx, AggregatedHttpRequest aReq,
-                                                      String mappedPath) {
+                                                      ArmeriaHttpConnection httpConnection, String mappedPath) {
         // Construct the HttpURI
         final StringBuilder uriBuf = new StringBuilder();
         final RequestHeaders aHeaders = aReq.headers();
@@ -340,18 +331,27 @@ public final class JettyService implements HttpService {
         }).filter(Objects::nonNull).toArray(HttpField[]::new);
         final HttpFields jHeaders = HttpFields.from(fields);
 
+        final Supplier<HttpFields> jTrailersSupplier;
+        if (!aReq.trailers().isEmpty()) {
+            final HttpField[] httpFields = aReq.trailers().stream()
+                                               .map(e -> new HttpField(e.getKey().toString(), e.getValue()))
+                                               .toArray(HttpField[]::new);
+            final HttpFields jTrailers = HttpFields.from(httpFields);
+            jTrailersSupplier = () -> jTrailers;
+        } else {
+            jTrailersSupplier = null;
+        }
+
         return new MetaData.Request(aHeaders.method().name(), uri,
-                                    ctx.sessionProtocol().isMultiplex() ? HttpVersion.HTTP_2
-                                                                        : HttpVersion.HTTP_1_1,
-                                    jHeaders, aReq.content().length());
+                                    httpConnection.getHttpVersion(),
+                                    jHeaders, aReq.content().length(), jTrailersSupplier);
     }
 
     private static final class ArmeriaHttpConnection extends HttpConnection {
 
-        private static final EofContent EOF_CONTENT = new EofContent();
-
         private final ServiceRequestContext ctx;
         private final HttpResponseWriter res;
+        private final EndPoint endPoint;
         @Nullable
         private HttpData content;
 
@@ -361,16 +361,22 @@ public final class JettyService implements HttpService {
                               EndPoint endPoint, boolean recordComplianceViolations,
                               ServiceRequestContext ctx, HttpResponseWriter res, HttpData content) {
             super(config, connector, endPoint, recordComplianceViolations);
+            this.endPoint = endPoint;
             this.ctx = ctx;
             this.res = res;
             this.content = content;
         }
 
         @Override
-        protected HttpChannelOverHttp newHttpChannel() {
-            return new HttpChannelOverHttp(this, getConnector(), getHttpConfiguration(), getEndPoint(), this) {
+        public HttpVersion getHttpVersion() {
+            return ctx.sessionProtocol().isMultiplex() ? HttpVersion.HTTP_2 : HttpVersion.HTTP_1_1;
+        }
+
+        @Override
+        public HttpStreamOverHTTP1 newHttpStream(String method, String uri, HttpVersion version) {
+            return new HttpStreamOverHTTP1(method, uri, version) {
                 @Override
-                public Content produceContent() {
+                public Chunk read() {
                     if (content != null && !content.isEmpty()) {
                         final ByteBuf buf = content.byteBuf();
                         final ByteBuffer nioBuf;
@@ -380,119 +386,113 @@ public final class JettyService implements HttpService {
                             nioBuf = ByteBuffer.wrap(content.array());
                         }
                         content = null;
-                        return new Content(nioBuf);
+                        return Chunk.from(nioBuf, true);
                     }
-                    return EOF_CONTENT;
-                }
-            };
-        }
-
-        @Override
-        public void send(MetaData.Request unused, MetaData.@Nullable Response response,
-                         @Nullable ByteBuffer content, boolean lastContent, Callback callback) {
-            if (ctx.isTimedOut()) {
-                // Silently discard the write request in case of timeout to match the behavior of Jetty.
-                callback.succeeded();
-                return;
-            }
-
-            try {
-                if (response != null) {
-                    this.response = response;
-                    write(toResponseHeaders(response));
+                    return Chunk.EOF;
                 }
 
-                final int length = content != null ? content.remaining() : 0;
-                if (ctx.request().headers().method() != HttpMethod.HEAD && length != 0) {
-                    final HttpData data;
-                    if (content.hasArray()) {
-                        final int from = content.arrayOffset() + content.position();
-                        content.position(content.position() + length);
-                        data = HttpData.wrap(Arrays.copyOfRange(content.array(), from, from + length));
-                    } else {
-                        final byte[] buf = new byte[length];
-                        content.get(buf);
-                        data = HttpData.wrap(buf);
+                @Override
+                public void send(MetaData.Request request, Response response, boolean lastContent,
+                                 ByteBuffer content,
+                                 Callback callback) {
+                    if (ctx.isTimedOut()) {
+                        // Silently discard the write request in case of timeout to match the behavior of Jetty.
+                        callback.succeeded();
+                        return;
                     }
 
-                    if (lastContent) {
-                        final HttpHeaders trailers = toResponseTrailers(response);
-                        if (trailers != null) {
-                            write(data);
-                            write(trailers);
-                        } else {
-                            write(data.withEndOfStream());
+                    try {
+                        if (response != null) {
+                            ArmeriaHttpConnection.this.response = response;
+                            write(toResponseHeaders(response));
                         }
-                        res.close();
-                    } else {
-                        write(data);
+
+                        final int length = content != null ? content.remaining() : 0;
+                        if (ctx.request().headers().method() != HttpMethod.HEAD && length != 0) {
+                            final HttpData data;
+                            if (content.hasArray()) {
+                                final int from = content.arrayOffset() + content.position();
+                                content.position(content.position() + length);
+                                data = HttpData.wrap(Arrays.copyOfRange(content.array(), from, from + length));
+                            } else {
+                                final byte[] buf = new byte[length];
+                                content.get(buf);
+                                data = HttpData.wrap(buf);
+                            }
+
+                            if (lastContent) {
+                                final HttpHeaders trailers = toResponseTrailers(response);
+                                if (trailers != null) {
+                                    write(data);
+                                    write(trailers);
+                                } else {
+                                    write(data.withEndOfStream());
+                                }
+                                res.close();
+                            } else {
+                                write(data);
+                            }
+                        } else if (lastContent) {
+                            final HttpHeaders trailers = toResponseTrailers(response);
+                            if (trailers != null) {
+                                write(trailers);
+                            }
+                            res.close();
+                        }
+
+                        callback.succeeded();
+                    } catch (Throwable cause) {
+                        callback.failed(cause);
                     }
-                } else if (lastContent) {
-                    final HttpHeaders trailers = toResponseTrailers(response);
-                    if (trailers != null) {
-                        write(trailers);
-                    }
+                }
+
+                @SuppressWarnings("ResultOfMethodCallIgnored")
+                private void write(HttpObject o) {
+                    res.tryWrite(o);
+                }
+
+                @Override
+                public void failed(Throwable x) {
+                    res.abort(x);
+                }
+
+                @Override
+                public void succeeded() {
                     res.close();
                 }
 
-                callback.succeeded();
-            } catch (Throwable cause) {
-                callback.failed(cause);
-            }
-        }
-
-        @SuppressWarnings("ResultOfMethodCallIgnored")
-        private void write(HttpObject o) {
-            res.tryWrite(o);
-        }
-
-        private static ResponseHeaders toResponseHeaders(MetaData.Response info) {
-            final ResponseHeadersBuilder headers = ResponseHeaders.builder();
-            headers.status(info.getStatus());
-            info.getFields().forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
-            return headers.build();
-        }
-
-        @Nullable
-        private HttpHeaders toResponseTrailers(MetaData.@Nullable Response info) {
-            if (info == null) {
-                info = response;
-                if (info == null) {
-                    return null;
+                private static ResponseHeaders toResponseHeaders(MetaData.Response info) {
+                    final ResponseHeadersBuilder headers = ResponseHeaders.builder();
+                    headers.status(info.getStatus());
+                    info.getHttpFields().forEach(
+                            e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
+                    return headers.build();
                 }
-            }
 
-            final Supplier<HttpFields> trailerSupplier = info.getTrailerSupplier();
-            if (trailerSupplier == null) {
-                return null;
-            }
+                @Nullable
+                private HttpHeaders toResponseTrailers(MetaData.@Nullable Response info) {
+                    if (info == null) {
+                        info = response;
+                        if (info == null) {
+                            return null;
+                        }
+                    }
 
-            final HttpFields fields = trailerSupplier.get();
-            if (fields == null || fields.size() == 0) {
-                return null;
-            }
+                    final Supplier<HttpFields> trailersSupplier = info.getTrailersSupplier();
+                    if (trailersSupplier == null) {
+                        return null;
+                    }
 
-            final HttpHeadersBuilder headers = HttpHeaders.builder();
-            fields.forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
-            return headers.build();
-        }
+                    final HttpFields fields = trailersSupplier.get();
+                    if (fields == null || fields.size() == 0) {
+                        return null;
+                    }
 
-        @Override
-        public boolean isPushSupported() {
-            return false;
-        }
-
-        @Override
-        public void push(MetaData.Request request) {}
-
-        @Override
-        public void onCompleted() {
-            res.close();
-        }
-
-        @Override
-        public void abort(Throwable failure) {
-            res.close(failure);
+                    final HttpHeadersBuilder headers = HttpHeaders.builder();
+                    fields.forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
+                    return headers.build();
+                }
+            };
         }
     }
 

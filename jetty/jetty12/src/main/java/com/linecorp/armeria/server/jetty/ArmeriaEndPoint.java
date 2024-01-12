@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,11 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.server.jetty;
 
-/**
- * Embedded <a href="https://www.eclipse.org/jetty/">Jetty</a> service.
- */
-@NonNullByDefault
-package jetty;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+final class ArmeriaEndPoint extends AbstractArmeriaEndPoint {
+
+    ArmeriaEndPoint(ServiceRequestContext ctx, @Nullable String hostname) {
+        super(ctx, hostname);
+    }
+
+    @Override
+    public void close(Throwable cause) {
+        close0(cause);
+    }
+
+    @Override
+    public void onClose(Throwable cause) {
+        onClose0(cause);
+    }
+}

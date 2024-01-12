@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,10 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package jetty;
+package com.linecorp.armeria.server.jetty;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -65,15 +66,21 @@ abstract class AbstractArmeriaEndPoint implements EndPoint {
         return ctx.log().partial().requestStartTimeMillis();
     }
 
+    @Deprecated
     @Override
     public InetSocketAddress getLocalAddress() {
+        return (InetSocketAddress) getLocalSocketAddress();
+    }
+
+    @Override
+    public SocketAddress getLocalSocketAddress() {
         final InetSocketAddress localAddress = this.localAddress;
         if (localAddress != null) {
             return localAddress;
         }
 
-        // Add the hostname string given by Jetty to the local address so that
-        // Jetty's ServletRequest.getLocalName() implementation returns the configured hostname.
+        // In Jetty 12, ServletRequest.getLocalName() implementation no longer uses `InetAddress.getHostName()`
+        // so the configured hostname may not be exposed as the local name.
         try {
             final InetSocketAddress armeriaLocalAddr  = ctx.localAddress();
             final InetSocketAddress jettyLocalAddr = new InetSocketAddress(InetAddress.getByAddress(
