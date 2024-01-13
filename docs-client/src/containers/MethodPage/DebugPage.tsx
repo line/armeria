@@ -280,9 +280,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
         validateJsonObject(additionalHeaders, 'headers');
       }
 
-      const headers =
-        (additionalHeaders && JSON.parse(additionalHeaders)) || {};
-
       // window.location.origin may have compatibility issue
       // https://developer.mozilla.org/en-US/docs/Web/API/Window/location#Browser_compatibility
       const host =
@@ -327,22 +324,28 @@ const DebugPage: React.FunctionComponent<Props> = ({
         escapeSingleQuote(requestBody),
       );
 
-      headers['content-type'] = transport.getDebugMimeType();
+      const headers = new Headers();
+      headers.set('content-type', transport.getDebugMimeType());
       if (process.env.WEBPACK_DEV === 'true') {
-        headers[docServiceDebug] = 'true';
+        headers.set(docServiceDebug, 'true');
       }
       if (serviceType === ServiceType.GRAPHQL) {
-        headers.Accept = 'application/json';
+        headers.set('accept', 'application/json');
+      }
+      if (additionalHeaders) {
+        const entries = Object.entries(JSON.parse(additionalHeaders));
+        entries.forEach(([key, value]) => {
+          headers.set(key, String(value));
+        });
       }
 
-      const headerOptions = Object.keys(headers)
-        .map((name) => {
-          return `-H '${name}: ${headers[name]}'`;
-        })
-        .join(' ');
+      const headerOptions: string[] = [];
+      headers.forEach((value, key) => {
+        headerOptions.push(`-H '${key}: ${value}'`);
+      });
 
       const curlCommand =
-        `curl -X${httpMethod} ${headerOptions} ${uri}` +
+          `curl -X${httpMethod} ${headerOptions.join(' ')} ${uri}` +
         `${useRequestBody ? ` -d '${body}'` : ''}`;
 
       copyTextToClipboard(curlCommand);
