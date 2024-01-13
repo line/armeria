@@ -345,7 +345,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       });
 
       const curlCommand =
-          `curl -X${httpMethod} ${headerOptions.join(' ')} ${uri}` +
+        `curl -X${httpMethod} ${headerOptions.join(' ')} ${uri}` +
         `${useRequestBody ? ` -d '${body}'` : ''}`;
 
       copyTextToClipboard(curlCommand);
