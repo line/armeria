@@ -56,8 +56,8 @@ class JettyServiceTlsReverseDnsLookupTest extends WebAppContainerMutualTlsTest {
 
     @Override
     protected String expectedRemoteHost() {
-        // In Jetty 12, `ServletRequest.getRemoteHost()` no longer perform the reverse name lookup for the
-        // address.
+        // In Jetty 12, `ServletApiRequest.getRemoteHost()` no longer performs the reverse name lookup for the
+        // remote address.
         return super.expectedRemoteHost();
     }
 }

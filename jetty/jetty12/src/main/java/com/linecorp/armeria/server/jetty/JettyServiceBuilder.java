@@ -25,7 +25,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.Handler.Singleton;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
@@ -90,7 +89,7 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
     }
 
     @Override
-    public JettyServiceBuilder insertHandler(Singleton handler) {
+    public JettyServiceBuilder insertHandler(Handler.Singleton handler) {
         return (JettyServiceBuilder) super.insertHandler(handler);
     }
 
@@ -132,7 +131,7 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         final RequestLog requestLog = this.requestLog;
         final Map<String, Object> attrs = this.attrs.build();
         final List<Bean> beans = this.beans.build();
-        final List<Singleton> handlerWrappers = this.handlerWrappers.build();
+        final List<Handler.Singleton> handlerWrappers = this.handlerWrappers.build();
         final List<EventListener> eventListeners = this.eventListeners.build();
         final List<Consumer<? super Server>> customizers = this.customizers.build();
 
@@ -197,6 +196,6 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
                 JettyService.logger.warn("Failed to destroy an embedded Jetty: {}", server, e);
             }
         };
-        return new JettyService(hostname, tlsReverseDnsLookup, serverFactory, postStopTask);
+        return new JettyService(hostname, serverFactory, postStopTask);
     }
 }

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.jetty;
 
 import static com.linecorp.armeria.internal.common.util.MappedPathUtil.mappedPath;
-import static java.util.Objects.requireNonNull;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -103,22 +102,7 @@ public final class JettyService implements HttpService {
      * @param hostname the default hostname, or {@code null} to use Armeria's default virtual host name.
      */
     public static JettyService of(Server jettyServer, @Nullable String hostname) {
-        return of(jettyServer, hostname, false);
-    }
-
-    /**
-     * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
-     *
-     * @param jettyServer the Jetty {@link Server}
-     * @param hostname the default hostname, or {@code null} to use Armeria's default virtual host name.
-     * @param tlsReverseDnsLookup whether perform reverse DNS lookup for the remote IP address on a TLS
-     *                            connection. See {@link JettyServiceBuilder#tlsReverseDnsLookup(boolean)}
-     *                            for more information.
-     */
-    public static JettyService of(Server jettyServer, @Nullable String hostname, boolean tlsReverseDnsLookup) {
-        requireNonNull(jettyServer, "jettyServer");
-        return new JettyService(hostname, tlsReverseDnsLookup, blockingTaskExecutor -> jettyServer,
-                                unused -> { /* unused */ });
+        return of(jettyServer, hostname);
     }
 
     /**
@@ -130,7 +114,6 @@ public final class JettyService implements HttpService {
 
     @Nullable
     private final String hostname;
-    private final boolean tlsReverseDnsLookup;
     private final Function<BlockingTaskExecutor, Server> serverFactory;
     private final Consumer<Server> postStopTask;
 
@@ -145,11 +128,9 @@ public final class JettyService implements HttpService {
     private boolean startedServer;
 
     JettyService(@Nullable String hostname,
-                 boolean tlsReverseDnsLookup,
                  Function<BlockingTaskExecutor, Server> serverFactory,
                  Consumer<Server> postStopTask) {
         this.hostname = hostname;
-        this.tlsReverseDnsLookup = tlsReverseDnsLookup;
         this.serverFactory = serverFactory;
         this.postStopTask = postStopTask;
         configurator = new Configurator();
@@ -260,24 +241,11 @@ public final class JettyService implements HttpService {
 
                 final Request jReq = httpChannel.getRequest();
                 final SSLSession sslSession = ctx.sslSession();
-                final boolean needsReverseDnsLookup;
                 if (sslSession != null) {
-                    needsReverseDnsLookup = tlsReverseDnsLookup;
                     ServletTlsAttributes.fill(sslSession, jReq::setAttribute);
-                } else {
-                    needsReverseDnsLookup = false;
                 }
 
                 ctx.blockingTaskExecutor().execute(() -> {
-                    // Perform a reverse DNS lookup if needed.
-                    if (needsReverseDnsLookup) {
-                        try {
-                            ctx.remoteAddress().getHostName();
-                        } catch (Throwable t) {
-                            logger.warn("{} Failed to perform a reverse DNS lookup:", ctx, t);
-                        }
-                    }
-
                     // Let Jetty handle the request.
                     try {
                         handler.run();
@@ -351,7 +319,6 @@ public final class JettyService implements HttpService {
 
         private final ServiceRequestContext ctx;
         private final HttpResponseWriter res;
-        private final EndPoint endPoint;
         @Nullable
         private HttpData content;
 
@@ -361,7 +328,6 @@ public final class JettyService implements HttpService {
                               EndPoint endPoint, boolean recordComplianceViolations,
                               ServiceRequestContext ctx, HttpResponseWriter res, HttpData content) {
             super(config, connector, endPoint, recordComplianceViolations);
-            this.endPoint = endPoint;
             this.ctx = ctx;
             this.res = res;
             this.content = content;

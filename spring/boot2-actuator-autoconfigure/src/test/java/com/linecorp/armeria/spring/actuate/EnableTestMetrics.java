@@ -13,24 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.jetty;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.ServiceRequestContext;
+package com.linecorp.armeria.spring.actuate;
 
-final class ArmeriaEndPoint extends AbstractArmeriaEndPoint {
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    ArmeriaEndPoint(ServiceRequestContext ctx, @Nullable String hostname) {
-        super(ctx, hostname);
-    }
+import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 
-    @Override
-    public void close(Throwable cause) {
-        close0(cause);
-    }
-
-    @Override
-    public void onClose(Throwable cause) {
-        onClose0(cause);
-    }
-}
+/**
+ * Enables test metrics for Spring Boot 2.
+ */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@AutoConfigureMetrics
+@Inherited
+@interface EnableTestMetrics {}
