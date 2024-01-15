@@ -73,9 +73,9 @@ class ArmeriaWebClientTest {
             @ResponseStatus(HttpStatus.CONFLICT)
             Mono<Void> conflict() {
                 ensureInContextAwareEventLoop();
-                // The result type should be wrapped with Mono, Flux, Publisher or CompletableFuture so that
-                // the request is executed in the context-aware event loop. Otherwise, the request is executed in
-                // the blocking task executor of Spring WebFlux.
+                // In Spring 6.1, the result type should be wrapped with Mono, Flux, Publisher or
+                // CompletableFuture so that the request is executed in the context-aware event loop.
+                // Otherwise, the request is executed in the blocking task executor of Spring WebFlux.
                 // https://github.com/spring-projects/spring-framework/blob/0c42965fc36f19868fbba382b2e03ed172087438/spring-webflux/src/main/java/org/springframework/web/reactive/result/method/annotation/RequestMappingHandlerAdapter.java#L264-L266
                 return Mono.empty();
             }
