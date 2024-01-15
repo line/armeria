@@ -42,7 +42,7 @@ public class HelloConfiguration {
     @Bean
     public JettyService jettyService(ServletWebServerApplicationContext applicationContext) {
         final JettyWebServer jettyWebServer = jettyServer(applicationContext);
-        return JettyService.of(jettyWebServer.getServer(), null, false);
+        return JettyService.of(jettyWebServer.getServer(), null);
     }
 
     /**

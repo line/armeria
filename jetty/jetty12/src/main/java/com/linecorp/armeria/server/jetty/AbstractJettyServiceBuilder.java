@@ -38,7 +38,7 @@ public abstract class AbstractJettyServiceBuilder {
 
     final ImmutableMap.Builder<String, Object> attrs = ImmutableMap.builder();
     final ImmutableList.Builder<Bean> beans = ImmutableList.builder();
-    final ImmutableList.Builder<Singleton> handlerWrappers = ImmutableList.builder();
+    final ImmutableList.Builder<Handler.Singleton> handlerWrappers = ImmutableList.builder();
     final ImmutableList.Builder<Consumer<? super Server>> customizers = ImmutableList.builder();
 
     @Nullable
@@ -130,7 +130,7 @@ public abstract class AbstractJettyServiceBuilder {
      *
      * @see Server#insertHandler(Singleton)
      */
-    public AbstractJettyServiceBuilder insertHandler(Singleton handler) {
+    public AbstractJettyServiceBuilder insertHandler(Handler.Singleton handler) {
         handlerWrappers.add(requireNonNull(handler, "handler"));
         return this;
     }

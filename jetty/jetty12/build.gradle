@@ -1,6 +1,5 @@
 dependencies {
     api libs.jetty12.server
-//    api libs.jetty12.session
 
     // Can't exclude slf4j 1.x because the core module uses it as an api configuration.
     // If this becomes problem, we will refactor the core more and exclude the slf4j 1.x dependency.

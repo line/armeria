@@ -102,7 +102,7 @@ public final class JettyService implements HttpService {
      * @param hostname the default hostname, or {@code null} to use Armeria's default virtual host name.
      */
     public static JettyService of(Server jettyServer, @Nullable String hostname) {
-        return of(jettyServer, hostname);
+        return new JettyService(hostname, blockingTaskExecutor -> jettyServer, unused -> { /* unused */ });
     }
 
     /**

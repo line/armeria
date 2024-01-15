@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.spring.jetty;
 
+import org.eclipse.jetty.ee10.webapp.WebAppContext;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.Loader;
-import org.eclipse.jetty.webapp.WebAppContext;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
