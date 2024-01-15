@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 
 /**
  * The listener interface for receiving {@link CircuitBreaker} events.
@@ -116,7 +117,18 @@ public interface CircuitBreakerListener {
      * </table>
      */
     static CircuitBreakerListener metricCollecting(MeterRegistry registry, String name) {
-        return new MetricCollectingCircuitBreakerListener(registry, name);
+        return new MetricCollectingCircuitBreakerListener(
+                registry, name, new MetricCollectingCircuitBreakerListener.MetricTagBuilder.NameTag());
+    }
+
+    static CircuitBreakerListener metricCollectingWithTags(MeterRegistry registry, String name, Tags tags) {
+        return new MetricCollectingCircuitBreakerListener(
+                registry, name, new MetricCollectingCircuitBreakerListener.MetricTagBuilder.CustomTags(tags));
+    }
+
+    static CircuitBreakerListener metricCollectingWithNameAndTags(MeterRegistry registry, String name, Tags tags) {
+        return new MetricCollectingCircuitBreakerListener(
+                registry, name, new MetricCollectingCircuitBreakerListener.MetricTagBuilder.NameWithCustomTags(tags));
     }
 
     /**

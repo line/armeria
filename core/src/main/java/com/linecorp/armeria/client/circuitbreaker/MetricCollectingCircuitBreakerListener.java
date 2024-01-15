@@ -23,6 +23,7 @@ import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 
 /**
  * A {@link CircuitBreakerListener} which exports the status of {@link CircuitBreaker}s to
@@ -36,12 +37,53 @@ final class MetricCollectingCircuitBreakerListener implements CircuitBreakerList
     private final MeterRegistry registry;
     private final String name;
 
+    public interface MetricTagBuilder {
+        Tags build(String circuitBreakerName);
+
+        class NameTag implements MetricTagBuilder {
+            @Override
+            public Tags build(String circuitBreakerName) {
+                return Tags.of("name", circuitBreakerName);
+            }
+        }
+
+        class CustomTags implements MetricTagBuilder {
+            private final Tags tags;
+
+            public CustomTags(Tags tags) {
+                this.tags = tags;
+            }
+
+            @Override
+            public Tags build(String circuitBreakerName) {
+                return tags;
+            }
+        }
+
+        class NameWithCustomTags implements MetricTagBuilder {
+            private final Tags tags;
+
+            public NameWithCustomTags(Tags tags) {
+                this.tags = tags;
+            }
+
+            @Override
+            public Tags build(String circuitBreakerName) {
+                return new NameTag().build(circuitBreakerName).and(tags);
+            }
+        }
+    }
+
+    private final MetricTagBuilder metricTagBuilder;
+
     /**
      * Creates a new instance with the specified {@link Meter} name.
      */
-    MetricCollectingCircuitBreakerListener(MeterRegistry registry, String name) {
+    MetricCollectingCircuitBreakerListener(MeterRegistry registry, String name,
+                                           MetricTagBuilder metricTagBuilder) {
         this.registry = requireNonNull(registry, "registry");
         this.name = requireNonNull(name, "name");
+        this.metricTagBuilder = requireNonNull(metricTagBuilder, "metricTagBuilder");
     }
 
     @Override
@@ -60,7 +102,7 @@ final class MetricCollectingCircuitBreakerListener implements CircuitBreakerList
     }
 
     private CircuitBreakerMetrics metricsOf(String circuitBreakerName) {
-        final MeterIdPrefix idPrefix = new MeterIdPrefix(name, "name", circuitBreakerName);
+        final MeterIdPrefix idPrefix = new MeterIdPrefix(name, metricTagBuilder.build(circuitBreakerName));
         return MicrometerUtil.register(registry, idPrefix,
                                        CircuitBreakerMetrics.class,
                                        CircuitBreakerMetrics::new);
