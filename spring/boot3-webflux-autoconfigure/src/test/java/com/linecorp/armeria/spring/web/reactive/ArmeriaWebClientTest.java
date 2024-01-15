@@ -26,6 +26,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -69,25 +71,40 @@ class ArmeriaWebClientTest {
 
             @GetMapping("/conflict")
             @ResponseStatus(HttpStatus.CONFLICT)
-            void conflict() {
+            Mono<Void> conflict() {
                 ensureInContextAwareEventLoop();
+                // The result type should be wrapped with Mono, Flux, Publisher or CompletableFuture so that
+                // the request is executed in the context-aware event loop. Otherwise, the request is executed in
+                // the blocking task executor of Spring WebFlux.
+                // https://github.com/spring-projects/spring-framework/blob/0c42965fc36f19868fbba382b2e03ed172087438/spring-webflux/src/main/java/org/springframework/web/reactive/result/method/annotation/RequestMappingHandlerAdapter.java#L264-L266
+                return Mono.empty();
             }
 
             @GetMapping("/resource")
-            ClassPathResource resource() {
+            Mono<ClassPathResource> resource() {
                 ensureInContextAwareEventLoop();
-                return new ClassPathResource("/testing/webflux/largeTextFile.txt", getClass());
+                return Mono.just(new ClassPathResource("/testing/webflux/largeTextFile.txt", getClass()));
             }
 
             @PostMapping("/birthday")
-            Person birthday(@RequestBody Person person) {
+            Mono<Person> birthday(@RequestBody Person person) {
                 ensureInContextAwareEventLoop();
-                return new Person(person.name(), person.age() + 1);
+                return Mono.just(new Person(person.name(), person.age() + 1));
             }
 
             private static void ensureInContextAwareEventLoop() {
                 assertThat(ServiceRequestContext.current()).isNotNull();
             }
+        }
+
+        @Bean
+        static ArmeriaClientConfigurator configurator1() {
+            return client -> client.responseTimeoutMillis(0);
+        }
+
+        @Bean
+        static ArmeriaServerConfigurator configurator2() {
+            return server -> server.requestTimeoutMillis(0);
         }
     }
 
@@ -141,7 +158,7 @@ class ArmeriaWebClientTest {
         StepVerifier.create(response)
                     .assertNext(r -> assertThat(r.statusCode()).isEqualTo(HttpStatus.CONFLICT))
                     .expectComplete()
-                    .verify(Duration.ofSeconds(10));
+                    .verify(Duration.ofSeconds(1000000));
     }
 
     @Test

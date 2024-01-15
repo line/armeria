@@ -64,6 +64,9 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequestVersionSpe
         this.req = req;
 
         body = Flux.from(req).cast(HttpData.class).map(factoryWrapper::toDataBuffer)
+                   .doOnNext(dataBuffer -> {
+                       System.out.println("dataBuffer = " + dataBuffer);
+                   })
                    // Guarantee that the context is accessible from a controller method
                    // when a user specify @RequestBody in order to convert a request body into an object.
                    .publishOn(Schedulers.fromExecutor(ctx.eventLoop()));
