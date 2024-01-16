@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -34,7 +34,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class XdsBootstrapImpl implements XdsBootstrap {
     private final EventExecutor eventLoop;
 
-    private final Map<ConfigSource, ConfigSourceClient> clientMap = new ConcurrentHashMap<>();
+    private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
 
     private final BootstrapApiConfigs bootstrapApiConfigs;
     private final BootstrapClusters bootstrapClusters;
@@ -67,16 +67,16 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     }
 
     private void subscribe0(ConfigSource configSource, XdsType type, String resourceName,
-                            ResourceWatcher<AbstractResourceHolder> watcher) {
+                            ResourceNode<AbstractResourceHolder> node) {
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> subscribe0(configSource, type, resourceName, watcher));
+            eventLoop.execute(() -> subscribe0(configSource, type, resourceName, node));
             return;
         }
         final ConfigSourceClient client = clientMap.computeIfAbsent(
                 configSource, ignored -> new ConfigSourceClient(
                         configSource, eventLoop, bootstrapNode,
                         configClientCustomizer, bootstrapClusters));
-        client.addSubscriber(type, resourceName, watcher);
+        client.addSubscriber(type, resourceName, node);
     }
 
     void unsubscribe(@Nullable ConfigSource configSource, ResourceNode<AbstractResourceHolder> node) {
@@ -111,7 +111,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
             eventLoop.execute(this::close);
             return;
         }
-        clientMap().values().forEach(ConfigSourceClient::close);
+        clientMap.values().forEach(ConfigSourceClient::close);
         clientMap.clear();
     }
 

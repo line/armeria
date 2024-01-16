@@ -37,6 +37,7 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot> {
     @Nullable
     private final Route route;
     private final int index;
+    private final EndpointSnapshotWatcher snapshotWatcher = new EndpointSnapshotWatcher();
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
                         String resourceName, XdsBootstrapImpl xdsBootstrap,
@@ -61,19 +62,18 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot> {
     @Override
     public void process(ResourceHolder update) {
         final ClusterResourceHolder holder = (ClusterResourceHolder) update;
-        final Cluster cluster = holder.data();
+        final Cluster cluster = holder.resource();
         if (cluster.hasLoadAssignment()) {
             final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
             final EndpointResourceNode node =
                     StaticResourceUtils.staticEndpoint(xdsBootstrap(), cluster.getName(),
-                                                       holder, new EndpointSnapshotWatcher(), loadAssignment);
+                                                       holder, snapshotWatcher, loadAssignment);
             children().add(node);
-        }
-        if (cluster.hasEdsClusterConfig()) {
+        } else if (cluster.hasEdsClusterConfig()) {
             final ConfigSource configSource = cluster.getEdsClusterConfig().getEdsConfig();
             final EndpointResourceNode node =
                     new EndpointResourceNode(configSource, cluster.getName(), xdsBootstrap(), holder,
-                                             new EndpointSnapshotWatcher(), ResourceNodeType.DYNAMIC);
+                                             snapshotWatcher, ResourceNodeType.DYNAMIC);
             children().add(node);
             xdsBootstrap().subscribe(configSource, node);
         }

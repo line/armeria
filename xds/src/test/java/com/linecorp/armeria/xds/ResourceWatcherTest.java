@@ -92,13 +92,13 @@ class ResourceWatcherTest {
             ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             // the initial endpoint is fetched
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(resourceName);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
 
             final ClusterLoadAssignment expectedEndpoints = cache.getSnapshot(GROUP)
                                                                  .endpoints()
                                                                  .resources()
                                                                  .get(resourceName);
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expectedEndpoints);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(expectedEndpoints);
 
             // update the cache
             final ClusterLoadAssignment assignment =
@@ -116,7 +116,7 @@ class ResourceWatcherTest {
                                                                   .endpoints()
                                                                   .resources()
                                                                   .get(resourceName);
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expectedEndpoints2);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(expectedEndpoints2);
         }
     }
 
@@ -131,10 +131,10 @@ class ResourceWatcherTest {
             ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             // the initial endpoint is fetched
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(resourceName);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
 
             final ClusterLoadAssignment expected = expectedCluster.getLoadAssignment();
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expected);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(expected);
 
             // update the cache
             final Cluster cluster1 = TestResources.createCluster("cluster1");
@@ -152,7 +152,7 @@ class ResourceWatcherTest {
             final ClusterLoadAssignment expected2 = cache.getSnapshot(GROUP)
                                                          .clusters().resources().get(resourceName)
                                                          .getLoadAssignment();
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expected2);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(expected2);
         }
     }
 
@@ -175,10 +175,10 @@ class ResourceWatcherTest {
             ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             // the initial endpoint is fetched
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(resourceName);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
 
             final ClusterLoadAssignment expected = expectedCluster.getLoadAssignment();
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expected);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(expected);
 
             // update the cache
             final Cluster cluster = TestResources.createCluster(resourceName, "127.0.0.2",
@@ -193,7 +193,7 @@ class ResourceWatcherTest {
             final ClusterLoadAssignment expected2 = cache.getSnapshot(GROUP)
                                                          .clusters().resources().get(resourceName)
                                                          .getLoadAssignment();
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expected2);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(expected2);
         }
     }
 }

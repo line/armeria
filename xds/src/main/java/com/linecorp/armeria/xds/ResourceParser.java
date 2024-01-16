@@ -16,14 +16,12 @@
 
 package com.linecorp.armeria.xds;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
@@ -40,8 +38,8 @@ abstract class ResourceParser {
     abstract AbstractResourceHolder parse(Message message);
 
     ParsedResourcesHolder parseResources(List<Any> resources) {
-        final Map<String, AbstractResourceHolder> parsedResources = new HashMap<>(resources.size());
-        final Set<String> invalidResources = new HashSet<>();
+        final ImmutableMap.Builder<String, AbstractResourceHolder> parsedResources = ImmutableMap.builder();
+        final ImmutableSet.Builder<String> invalidResources = ImmutableSet.builder();
         final ImmutableList.Builder<String> errors = ImmutableList.builder();
 
         for (int i = 0; i < resources.size(); i++) {
@@ -84,7 +82,7 @@ abstract class ResourceParser {
             parsedResources.put(name, resourceUpdate);
         }
 
-        return new ParsedResourcesHolder(parsedResources, invalidResources, errors.build());
+        return new ParsedResourcesHolder(parsedResources.build(), invalidResources.build(), errors.build());
     }
 
     abstract boolean isFullStateOfTheWorld();

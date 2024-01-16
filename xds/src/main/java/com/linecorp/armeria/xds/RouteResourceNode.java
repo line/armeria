@@ -42,6 +42,7 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
     private final List<ClusterSnapshot> clusterSnapshotList = new ArrayList<>();
 
     private final Set<Integer> pending = new HashSet<>();
+    private final ClusterSnapshotWatcher snapshotWatcher = new ClusterSnapshotWatcher();
 
     RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
                       XdsBootstrapImpl xdsBootstrap, @Nullable ResourceHolder primer,
@@ -54,7 +55,7 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
         final RouteResourceHolder holder = (RouteResourceHolder) update;
         clusterSnapshotList.clear();
         pending.clear();
-        final RouteConfiguration routeConfiguration = holder.data();
+        final RouteConfiguration routeConfiguration = holder.resource();
         int index = 0;
         for (VirtualHost virtualHost: routeConfiguration.getVirtualHostsList()) {
             for (Route route: virtualHost.getRoutesList()) {
@@ -64,11 +65,13 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
                 final RouteAction routeAction = route.getRoute();
                 final String cluster = routeAction.getCluster();
 
+                // add a dummy element to the index list so that we can call List.set later
+                // without incurring an IndexOutOfBoundException when a snapshot is updated
                 clusterSnapshotList.add(null);
                 pending.add(index);
                 final ClusterResourceNode node =
                         new ClusterResourceNode(null, cluster, xdsBootstrap(),
-                                                holder, new ClusterSnapshotWatcher(), virtualHost, route,
+                                                holder, snapshotWatcher, virtualHost, route,
                                                 index++, ResourceNodeType.DYNAMIC);
                 children().add(node);
                 xdsBootstrap().subscribe(node);
@@ -97,6 +100,7 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
             }
             clusterSnapshotList.set(newSnapshot.index(), newSnapshot);
             pending.remove(newSnapshot.index());
+            // checks if all clusters for the route have reported a snapshot
             if (!pending.isEmpty()) {
                 return;
             }

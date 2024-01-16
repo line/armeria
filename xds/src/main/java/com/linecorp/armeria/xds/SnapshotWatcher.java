@@ -24,6 +24,7 @@ import io.grpc.Status;
  * A watcher implementation which waits for updates on a xDS snapshot.
  */
 @UnstableApi
+@FunctionalInterface
 public interface SnapshotWatcher<T> {
 
     /**

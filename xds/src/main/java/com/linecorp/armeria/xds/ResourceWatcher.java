@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds;
 
 import io.grpc.Status;
 
+@FunctionalInterface
 interface ResourceWatcher<T> {
 
     default void onError(XdsType type, Status error) {}

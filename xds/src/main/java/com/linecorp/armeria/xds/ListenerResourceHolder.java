@@ -63,7 +63,7 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public Listener data() {
+    public Listener resource() {
         return listener;
     }
 

@@ -40,8 +40,7 @@ final class BootstrapClusters implements SnapshotWatcher<Snapshot<?>> {
                               "Only fully static configurations are allowed for bootstrap clusters. " +
                               "Violating cluster is %s", cluster);
                 // no need to clean this cluster up since it is fully static
-                StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), null,
-                                                  this, cluster);
+                StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), this, cluster);
             }
         }
     }

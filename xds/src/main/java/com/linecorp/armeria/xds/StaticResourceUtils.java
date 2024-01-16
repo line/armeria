@@ -20,14 +20,12 @@ import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 
 import com.google.protobuf.Message;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
 final class StaticResourceUtils {
 
     private StaticResourceUtils() {}
 
     static RouteResourceNode staticRoute(XdsBootstrapImpl xdsBootstrap, String resourceName,
-                                         @Nullable ListenerResourceHolder primer,
+                                         ListenerResourceHolder primer,
                                          SnapshotWatcher<RouteSnapshot> parentWatcher,
                                          Message message) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.ROUTE);
@@ -39,19 +37,18 @@ final class StaticResourceUtils {
     }
 
     static ClusterResourceNode staticCluster(XdsBootstrapImpl xdsBootstrap, String resourceName,
-                                             @Nullable ResourceHolder primer,
                                              SnapshotWatcher<? super ClusterSnapshot> parentWatcher,
                                              Message message) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.CLUSTER);
         final AbstractResourceHolder parsed = resourceParser.parse(message);
         final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
-                                                                 primer, parentWatcher, STATIC);
+                                                                 null, parentWatcher, STATIC);
         node.onChanged(parsed);
         return node;
     }
 
     static EndpointResourceNode staticEndpoint(XdsBootstrapImpl xdsBootstrap, String resourceName,
-                                               @Nullable ResourceHolder primer,
+                                               ResourceHolder primer,
                                                SnapshotWatcher<EndpointSnapshot> parentWatcher,
                                                Message message) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.ENDPOINT);

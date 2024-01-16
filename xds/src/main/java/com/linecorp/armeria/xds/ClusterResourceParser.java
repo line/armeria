@@ -33,8 +33,8 @@ final class ClusterResourceParser extends ResourceParser {
         if (!(message instanceof Cluster)) {
             throw new IllegalArgumentException("message not type of Cluster");
         }
-        final ClusterResourceHolder holder = new ClusterResourceHolder((Cluster) message);
-        final Cluster cluster = holder.data();
+        final Cluster cluster = (Cluster) message;
+        final ClusterResourceHolder holder = new ClusterResourceHolder(cluster);
         if (cluster.hasEdsClusterConfig()) {
             final EdsClusterConfig eds = cluster.getEdsClusterConfig();
             XdsConverterUtil.validateConfigSource(eds.getEdsConfig());

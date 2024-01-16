@@ -103,7 +103,7 @@ class ClientTimeoutTest {
             simulateTimeout.set(false);
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
             final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -150,14 +150,14 @@ class ClientTimeoutTest {
             simulateTimeout.set(false);
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
             ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
 
             // try opening another root to verify the cached value is used
             simulateTimeout.set(true);
             final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot(clusterName);
             clusterRoot2.addSnapshotWatcher(watcher);
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
 
             // ensure that onAbsent not triggered at the timeout
             await().pollDelay(100, TimeUnit.MILLISECONDS)

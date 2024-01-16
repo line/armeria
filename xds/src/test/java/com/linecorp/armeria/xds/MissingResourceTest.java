@@ -113,11 +113,11 @@ class MissingResourceTest {
             // Updates are propagated for the initial cluster
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
             final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
 
             final ClusterLoadAssignment expectedAssignment =
                     cache.getSnapshot(GROUP).endpoints().resources().get(clusterName);
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expectedAssignment);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(expectedAssignment);
 
             // Send another update with missing cluster
             cache.setSnapshot(
@@ -168,8 +168,8 @@ class MissingResourceTest {
             // Updates are propagated for the initial cluster
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
             final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expectedCluster);
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(assignment);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(assignment);
 
             // Send another update with missing cluster
             cache.setSnapshot(

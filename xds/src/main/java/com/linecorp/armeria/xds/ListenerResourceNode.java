@@ -30,6 +30,8 @@ import io.grpc.Status;
 
 final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot> {
 
+    private final RouteResourceWatcher snapshotWatcher = new RouteResourceWatcher();
+
     ListenerResourceNode(@Nullable ConfigSource configSource,
                          String resourceName, XdsBootstrapImpl xdsBootstrap, @Nullable ResourceHolder primer,
                          SnapshotWatcher<ListenerSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
@@ -45,7 +47,7 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot> 
                 final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
                 final RouteResourceNode node =
                         StaticResourceUtils.staticRoute(xdsBootstrap(), routeConfig.getName(), holder,
-                                                        new RouteResourceWatcher(), routeConfig);
+                                                        snapshotWatcher, routeConfig);
                 children().add(node);
             }
             if (connectionManager.hasRds()) {
@@ -54,7 +56,7 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot> 
                 final ConfigSource configSource = rds.getConfigSource();
                 final RouteResourceNode routeResourceNode =
                         new RouteResourceNode(configSource, routeName, xdsBootstrap(), holder,
-                                              new RouteResourceWatcher(), ResourceNodeType.DYNAMIC);
+                                              snapshotWatcher, ResourceNodeType.DYNAMIC);
                 children().add(routeResourceNode);
                 xdsBootstrap().subscribe(configSource, routeResourceNode);
             }

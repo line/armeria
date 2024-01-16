@@ -27,6 +27,4 @@ interface XdsResponseHandler {
 
     void handleResponse(
             ResourceParser resourceParser, DiscoveryResponse value, SotwXdsStream sender);
-
-    void handleReset(XdsStream sender);
 }

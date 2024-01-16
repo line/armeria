@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
 import io.netty.util.concurrent.EventExecutor;
 
 final class SubscriberStorage {
@@ -39,12 +37,12 @@ final class SubscriberStorage {
         this.timeoutMillis = timeoutMillis;
     }
 
+    /**
+     * Returns {@code true} if a new subscriber is added.
+     */
     boolean register(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
-        if (!subscriberMap.containsKey(type)) {
-            subscriberMap.put(type, new HashMap<>());
-        }
         XdsStreamSubscriber subscriber =
-                subscriberMap.get(type).get(resourceName);
+                subscriberMap.computeIfAbsent(type, key -> new HashMap<>()).get(resourceName);
         boolean updated = false;
         if (subscriber == null) {
             subscriber = new XdsStreamSubscriber(type, resourceName, eventLoop, timeoutMillis);
@@ -55,7 +53,9 @@ final class SubscriberStorage {
         return updated;
     }
 
-    @Nullable
+    /**
+     * Returns {@code true} if a subscriber is removed.
+     */
     boolean unregister(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
         if (!subscriberMap.containsKey(type)) {
             return false;
@@ -66,7 +66,7 @@ final class SubscriberStorage {
         }
         final XdsStreamSubscriber subscriber = resourceToSubscriber.get(resourceName);
         subscriber.unregisterWatcher(watcher);
-        if (subscriber.reference() == 0) {
+        if (subscriber.isEmpty()) {
             resourceToSubscriber.remove(resourceName);
             subscriber.close();
             if (resourceToSubscriber.isEmpty()) {

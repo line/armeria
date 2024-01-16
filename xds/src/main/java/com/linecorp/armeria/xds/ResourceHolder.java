@@ -35,9 +35,9 @@ public interface ResourceHolder {
     XdsType type();
 
     /**
-     * Returns a deep copy of the data.
+     * Returns the resource.
      */
-    Object data();
+    Object resource();
 
     /**
      * Returns the resource name.

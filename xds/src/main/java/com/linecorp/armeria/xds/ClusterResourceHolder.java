@@ -75,7 +75,7 @@ public final class ClusterResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public Cluster data() {
+    public Cluster resource() {
         return cluster;
     }
 

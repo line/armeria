@@ -29,7 +29,6 @@ import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
@@ -43,17 +42,10 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ConfigSourceClient implements SafeCloseable {
 
-    private final Consumer<GrpcClientBuilder> clientCustomizer;
-    private final EventExecutor eventLoop;
-    private final XdsResponseHandler handler;
     private final SubscriberStorage subscriberStorage;
-    private final Node node;
-    private final ClusterSnapshot clusterSnapshot;
     private final EndpointGroup endpointGroup;
 
-    @Nullable
-    private XdsStream stream;
-    boolean closed;
+    private final XdsStream stream;
 
     ConfigSourceClient(ConfigSource configSource,
                        EventExecutor eventLoop,
@@ -61,13 +53,9 @@ final class ConfigSourceClient implements SafeCloseable {
                        BootstrapClusters bootstrapClusters) {
         checkArgument(configSource.hasApiConfigSource(),
                       "No api config source available in %s", configSource);
-        final ApiType apiType = configSource.getApiConfigSource().getApiType();
-        this.clientCustomizer = clientCustomizer;
-        this.eventLoop = eventLoop;
         final long fetchTimeoutMillis = initialFetchTimeoutMillis(configSource);
         subscriberStorage = new SubscriberStorage(eventLoop, fetchTimeoutMillis);
-        handler = new DefaultResponseHandler(subscriberStorage);
-        this.node = node;
+        final XdsResponseHandler handler = new DefaultResponseHandler(subscriberStorage);
 
         // TODO: @jrhee17 revisit using multiple grpcServices once TLS per endpoint is supported
         final ApiConfigSource apiConfigSource = configSource.getApiConfigSource();
@@ -77,18 +65,9 @@ final class ConfigSourceClient implements SafeCloseable {
         final String clusterName = envoyGrpc.getClusterName();
         final ClusterSnapshot clusterSnapshot = bootstrapClusters.get(clusterName);
         checkArgument(clusterSnapshot != null, "Unable to find static cluster '%s'", clusterName);
-        this.clusterSnapshot = clusterSnapshot;
+
         endpointGroup = new XdsEndpointGroup(clusterSnapshot);
-
-        // Initialization is rescheduled to avoid recursive updates to XdsBootstrap#clientMap.
-        eventLoop.execute(() -> maybeStart(apiType == ApiType.AGGREGATED_GRPC));
-    }
-
-    void maybeStart(boolean ads) {
-        if (closed || stream != null) {
-            return;
-        }
-
+        final boolean ads = apiConfigSource.getApiType() == ApiType.AGGREGATED_GRPC;
         final UpstreamTlsContext tlsContext = clusterSnapshot.holder().upstreamTlsContext();
         final SessionProtocol sessionProtocol =
                 tlsContext != null ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
@@ -99,21 +78,16 @@ final class ConfigSourceClient implements SafeCloseable {
 
         if (ads) {
             final SotwDiscoveryStub stub = SotwDiscoveryStub.ads(builder);
-            stream = new SotwXdsStream(stub, node,
-                                       Backoff.ofDefault(),
+            stream = new SotwXdsStream(stub, node, Backoff.ofDefault(),
                                        eventLoop, handler, subscriberStorage);
         } else {
-            stream = new CompositeXdsStream(builder, node,
-                                            Backoff.ofDefault(),
+            stream = new CompositeXdsStream(builder, node, Backoff.ofDefault(),
                                             eventLoop, handler, subscriberStorage);
         }
-        stream.start();
     }
 
     void maybeUpdateResources(XdsType type) {
-        if (stream != null) {
-            stream.resourcesUpdated(type);
-        }
+        stream.resourcesUpdated(type);
     }
 
     void addSubscriber(XdsType type, String resourceName,
@@ -133,10 +107,7 @@ final class ConfigSourceClient implements SafeCloseable {
 
     @Override
     public void close() {
-        closed = true;
-        if (stream != null) {
-            stream.close();
-        }
+        stream.close();
         endpointGroup.close();
     }
 
@@ -146,6 +117,8 @@ final class ConfigSourceClient implements SafeCloseable {
         }
         final Duration timeoutDuration = configSource.getInitialFetchTimeout();
         final Instant instant = Instant.ofEpochSecond(timeoutDuration.getSeconds(), timeoutDuration.getNanos());
-        return instant.toEpochMilli();
+        final long epochMilli = instant.toEpochMilli();
+        checkArgument(epochMilli >= 0, "Invalid invalidFetchTimeout received: (%s) >= 0", timeoutDuration);
+        return epochMilli;
     }
 }

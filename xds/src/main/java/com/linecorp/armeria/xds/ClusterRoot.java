@@ -28,15 +28,19 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
     private final ClusterResourceNode node;
 
     ClusterRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
-        super(xdsBootstrap);
+        super(xdsBootstrap.eventLoop());
         node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
                                        null, this, ResourceNodeType.DYNAMIC);
-        xdsBootstrap().subscribe(node);
+        xdsBootstrap.subscribe(node);
     }
 
     @Override
     public void close() {
         super.close();
+        if (!eventLoop().inEventLoop()) {
+            eventLoop().execute(this::close);
+            return;
+        }
         node.close();
     }
 }

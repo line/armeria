@@ -50,7 +50,7 @@ public final class EndpointResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public ClusterLoadAssignment data() {
+    public ClusterLoadAssignment resource() {
         return clusterLoadAssignment;
     }
 

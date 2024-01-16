@@ -114,12 +114,12 @@ class ApiConfigSourceTest {
             final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expected =
                     cache1.getSnapshot(GROUP).clusters().resources().get(adsClusterName);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expected);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expected);
 
             final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
             final ClusterLoadAssignment expected2 =
                     cache1.getSnapshot(GROUP).endpoints().resources().get(adsClusterName);
-            assertThat(endpointSnapshot.holder().data()).isEqualTo(expected2);
+            assertThat(endpointSnapshot.holder().resource()).isEqualTo(expected2);
         }
     }
 
@@ -146,12 +146,12 @@ class ApiConfigSourceTest {
             final ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expected =
                     cache2.getSnapshot(GROUP).clusters().resources().get(basicClusterName);
-            assertThat(clusterSnapshot.holder().data()).isEqualTo(expected);
+            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expected);
 
             final ClusterLoadAssignment expected2 =
                     cache2.getSnapshot(GROUP).endpoints().resources().get(basicClusterName);
             final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-            assertThat(endpointSnapshot.holder().data()).isEqualTo(expected2);
+            assertThat(endpointSnapshot.holder().resource()).isEqualTo(expected2);
         }
     }
 }

@@ -121,7 +121,7 @@ class MultiConfigSourceTest {
             // Updates are propagated for the initial value
             final ClusterLoadAssignment expectedCluster =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("cluster1");
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource()).isEqualTo(expectedCluster);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -141,7 +141,7 @@ class MultiConfigSourceTest {
             final ClusterLoadAssignment expected =
                     cache2.getSnapshot(GROUP).endpoints().resources().get("cluster1");
             assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
-                                       .get(0).endpointSnapshot().holder().data()).isEqualTo(expected);
+                                       .get(0).endpointSnapshot().holder().resource()).isEqualTo(expected);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());

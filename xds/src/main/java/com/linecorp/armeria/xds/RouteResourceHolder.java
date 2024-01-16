@@ -56,7 +56,7 @@ public final class RouteResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public RouteConfiguration data() {
+    public RouteConfiguration resource() {
         return routeConfiguration;
     }
 

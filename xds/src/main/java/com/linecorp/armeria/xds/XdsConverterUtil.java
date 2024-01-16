@@ -22,6 +22,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -43,7 +45,13 @@ final class XdsConverterUtil {
                         .map(lbEndpoint -> {
                             final SocketAddress socketAddress =
                                     lbEndpoint.getEndpoint().getAddress().getSocketAddress();
-                            return Endpoint.of(socketAddress.getAddress(), socketAddress.getPortValue());
+                            final String hostname = lbEndpoint.getEndpoint().getHostname();
+                            if (!Strings.isNullOrEmpty(hostname)) {
+                                return Endpoint.of(hostname, socketAddress.getPortValue())
+                                               .withIpAddr(socketAddress.getAddress());
+                            } else {
+                                return Endpoint.of(socketAddress.getAddress(), socketAddress.getPortValue());
+                            }
                         })).collect(Collectors.toList());
     }
 

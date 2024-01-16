@@ -195,7 +195,7 @@ class AggregatingNodeTest {
             await().untilAsserted(() -> assertThat(snapshotRef).isNotEmpty());
 
             final ListenerSnapshot listenerSnapshot = snapshotRef.removeFirst();
-            assertThat(listenerSnapshot.holder().data())
+            assertThat(listenerSnapshot.holder().resource())
                     .isEqualTo(cache.getSnapshot(GROUP).listeners().resources().get(listenerName));
             assertThat(listenerSnapshot.routeSnapshot()).isNull();
             await().pollDelay(100, TimeUnit.MILLISECONDS)
@@ -207,15 +207,15 @@ class AggregatingNodeTest {
         final Snapshot snapshot = cache.getSnapshot(GROUP);
 
         // verify cluster
-        assertThat(clusterSnapshot.holder().data())
+        assertThat(clusterSnapshot.holder().resource())
                 .isEqualTo(snapshot.clusters().resources().get(clusterName));
 
         // verify endpoint
-        if (clusterSnapshot.holder().data().getType() == DiscoveryType.STATIC) {
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data())
+        if (clusterSnapshot.holder().resource().getType() == DiscoveryType.STATIC) {
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource())
                     .isEqualTo(snapshot.clusters().resources().get(clusterName).getLoadAssignment());
         } else {
-            assertThat(clusterSnapshot.endpointSnapshot().holder().data())
+            assertThat(clusterSnapshot.endpointSnapshot().holder().resource())
                     .isEqualTo(snapshot.endpoints().resources().get(clusterName));
         }
     }
@@ -223,14 +223,14 @@ class AggregatingNodeTest {
     private static void assertListenerSnapshot(ListenerSnapshot listenerSnapshot, String listenerName) {
         final Snapshot snapshot = cache.getSnapshot(GROUP);
         // verify listener
-        assertThat(listenerSnapshot.holder().data())
+        assertThat(listenerSnapshot.holder().resource())
                 .isEqualTo(snapshot.listeners().resources().get(listenerName));
 
         // verify route
         final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
-        final String routeName = routeSnapshot.holder().data().getName();
+        final String routeName = routeSnapshot.holder().resource().getName();
         final RouteConfiguration snapshotRouteConfiuration = snapshot.routes().resources().get(routeName);
-        assertThat(routeSnapshot.holder().data()).isEqualTo(snapshotRouteConfiuration);
+        assertThat(routeSnapshot.holder().resource()).isEqualTo(snapshotRouteConfiuration);
 
         int i = 0;
         for (Entry<VirtualHost, List<ClusterSnapshot>> e : routeSnapshot.virtualHostMap().entrySet()) {
@@ -240,11 +240,11 @@ class AggregatingNodeTest {
             for (int j = 0; j < clusterSnapshots.size(); j++) {
                 final ClusterSnapshot clusterSnapshot = clusterSnapshots.get(j);
                 assertThat(clusterSnapshot.route()).isEqualTo(snapshotVirtualHost.getRoutes(j));
-                final String clusterName = clusterSnapshot.holder().data().getName();
-                assertThat(clusterSnapshot.holder().data())
+                final String clusterName = clusterSnapshot.holder().resource().getName();
+                assertThat(clusterSnapshot.holder().resource())
                         .isEqualTo(snapshot.clusters().resources().get(clusterName));
                 final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-                assertThat(endpointSnapshot.holder().data())
+                assertThat(endpointSnapshot.holder().resource())
                         .isEqualTo(snapshot.endpoints().resources().get(clusterName));
             }
         }

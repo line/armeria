@@ -39,7 +39,6 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
     private final ResourceNodeType resourceNodeType;
     @Nullable
     private AbstractResourceHolder current;
-    boolean initialized;
 
     AbstractResourceNode(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
                          XdsType type, String resourceName, @Nullable ResourceHolder primer,
@@ -73,7 +72,6 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
 
     @Override
     public void onResourceDoesNotExist(XdsType type, String resourceName) {
-        initialized = true;
         setCurrent(null);
 
         for (ResourceNode<?> child: children) {
@@ -87,7 +85,6 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
     public final void onChanged(AbstractResourceHolder update) {
         assert update.type() == type();
 
-        initialized = true;
         update = update.withPrimer(primer);
         setCurrent(update);
 
@@ -120,10 +117,6 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
 
     SnapshotWatcher<? super T> parentWatcher() {
         return parentWatcher;
-    }
-
-    public void onMissing(XdsType type, String resourceName) {
-        parentWatcher.onMissing(type, resourceName);
     }
 
     @Override

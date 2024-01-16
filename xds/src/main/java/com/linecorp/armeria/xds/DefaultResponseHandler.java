@@ -66,7 +66,7 @@ final class DefaultResponseHandler implements XdsResponseHandler {
             if (holder.invalidResources().contains(resourceName)) {
                 // The resource is missing. Reuse the cached resource if possible.
                 if (subscriber.data() == null) {
-                    // No cached data. Notify the watchers of an invalid update.
+                    // No cached resource. Notify the watchers of an invalid update.
                     subscriber.onError(Status.UNAVAILABLE.withDescription(errorDetail));
                 }
                 continue;
@@ -77,10 +77,5 @@ final class DefaultResponseHandler implements XdsResponseHandler {
             // the same xDS server that the ResourceSubscriber is subscribed to.
             subscriber.onAbsent();
         }
-    }
-
-    @Override
-    public void handleReset(XdsStream sender) {
-        storage.allSubscribers().keySet().forEach(sender::resourcesUpdated);
     }
 }

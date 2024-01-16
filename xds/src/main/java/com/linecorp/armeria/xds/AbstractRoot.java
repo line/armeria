@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,27 +36,23 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         implements SnapshotWatcher<T>, SafeCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractRoot.class);
-
-    private final XdsBootstrapImpl xdsBootstrap;
     private final EventExecutor eventLoop;
     @Nullable
     private T snapshot;
     private final Set<SnapshotWatcher<? super T>> snapshotWatchers = new HashSet<>();
-    private boolean closed;
+    private volatile boolean closed;
 
-    AbstractRoot(XdsBootstrapImpl xdsBootstrap) {
-        this.xdsBootstrap = xdsBootstrap;
-        eventLoop = xdsBootstrap.eventLoop();
-    }
-
-    final XdsBootstrapImpl xdsBootstrap() {
-        return xdsBootstrap;
+    AbstractRoot(EventExecutor eventLoop) {
+        this.eventLoop = eventLoop;
     }
 
     final EventExecutor eventLoop() {
         return eventLoop;
     }
 
+    /**
+     * Adds a watcher which waits for a snapshot update.
+     */
     public void addSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
         requireNonNull(watcher, "watcher");
         checkState(!closed, "Watcher %s can't be registered since %s is already closed.",
@@ -75,6 +72,9 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         }
     }
 
+    /**
+     * Removes a watcher which waits for a snapshot update.
+     */
     public void removeSnapshotWatcher(SnapshotWatcher<? super T> watcher) {
         requireNonNull(watcher, "watcher");
         checkState(!closed, "Watcher %s can't be removed since %s is already closed.",
@@ -88,18 +88,12 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
 
     @Override
     public void snapshotUpdated(T newSnapshot) {
-        snapshot = newSnapshot;
         if (closed) {
             return;
         }
-        for (SnapshotWatcher<? super T> watcher: snapshotWatchers) {
-            try {
-                watcher.snapshotUpdated(snapshot);
-            } catch (Throwable t) {
-                logger.warn("Unexpected exception while invoking {}.onChanged",
-                            watcher.getClass().getSimpleName(), t);
-            }
-        }
+        assert eventLoop.inEventLoop();
+        snapshot = newSnapshot;
+        notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(snapshot));
     }
 
     @Override
@@ -107,14 +101,7 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         if (closed) {
             return;
         }
-        for (SnapshotWatcher<? super T> watcher: snapshotWatchers) {
-            try {
-                watcher.onMissing(type, resourceName);
-            } catch (Throwable t) {
-                logger.warn("Unexpected exception while invoking {}.onChanged",
-                            watcher.getClass().getSimpleName(), t);
-            }
-        }
+        notifyWatchers("onMissing", watcher -> watcher.onMissing(type, resourceName));
     }
 
     @Override
@@ -122,12 +109,16 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         if (closed) {
             return;
         }
+        notifyWatchers("onError", watcher -> watcher.onError(type, status));
+    }
+
+    private void notifyWatchers(String methodName, Consumer<SnapshotWatcher<? super T>> consumer) {
         for (SnapshotWatcher<? super T> watcher: snapshotWatchers) {
             try {
-                watcher.onError(type, status);
+                consumer.accept(watcher);
             } catch (Throwable t) {
-                logger.warn("Unexpected exception while invoking {}.onChanged",
-                            watcher.getClass().getSimpleName(), t);
+                logger.warn("Unexpected exception while invoking {}.{}",
+                            watcher.getClass().getSimpleName(), methodName, t);
             }
         }
     }

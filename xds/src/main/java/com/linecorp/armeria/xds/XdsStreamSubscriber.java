@@ -98,11 +98,11 @@ class XdsStreamSubscriber implements SafeCloseable {
     }
 
     @Nullable
-    public ResourceHolder data() {
+    ResourceHolder data() {
         return data;
     }
 
-    public void onError(Status status) {
+    void onError(Status status) {
         maybeCancelAbsentTimer();
         for (ResourceWatcher<AbstractResourceHolder> watcher: resourceWatchers) {
             try {
@@ -114,7 +114,7 @@ class XdsStreamSubscriber implements SafeCloseable {
         }
     }
 
-    public void onAbsent() {
+    void onAbsent() {
         maybeCancelAbsentTimer();
 
         if (!absent) {
@@ -132,11 +132,11 @@ class XdsStreamSubscriber implements SafeCloseable {
         }
     }
 
-    public int reference() {
-        return resourceWatchers.size();
+    boolean isEmpty() {
+        return resourceWatchers.isEmpty();
     }
 
-    public void registerWatcher(ResourceWatcher<AbstractResourceHolder> watcher) {
+    void registerWatcher(ResourceWatcher<AbstractResourceHolder> watcher) {
         resourceWatchers.add(watcher);
         if (data != null) {
             watcher.onChanged(data);
@@ -145,7 +145,7 @@ class XdsStreamSubscriber implements SafeCloseable {
         }
     }
 
-    public void unregisterWatcher(ResourceWatcher<AbstractResourceHolder> watcher) {
+    void unregisterWatcher(ResourceWatcher<AbstractResourceHolder> watcher) {
         resourceWatchers.remove(watcher);
     }
 }
