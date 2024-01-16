@@ -31,6 +31,8 @@ import io.micrometer.core.instrument.Tags;
  *
  * @see CircuitBreakerListener#metricCollecting(MeterRegistry)
  * @see CircuitBreakerListener#metricCollecting(MeterRegistry, String)
+ * @see CircuitBreakerListener#metricCollectingWithTags(MeterRegistry, String, Tags)
+ * @see CircuitBreakerListener#metricCollectingWithNameAndTags(MeterRegistry, String, Tags)
  */
 final class MetricCollectingCircuitBreakerListener implements CircuitBreakerListener {
 
@@ -50,7 +52,7 @@ final class MetricCollectingCircuitBreakerListener implements CircuitBreakerList
         class CustomTags implements MetricTagBuilder {
             private final Tags tags;
 
-            public CustomTags(Tags tags) {
+            CustomTags(Tags tags) {
                 this.tags = tags;
             }
 
@@ -63,7 +65,7 @@ final class MetricCollectingCircuitBreakerListener implements CircuitBreakerList
         class NameWithCustomTags implements MetricTagBuilder {
             private final Tags tags;
 
-            public NameWithCustomTags(Tags tags) {
+            NameWithCustomTags(Tags tags) {
                 this.tags = tags;
             }
 
