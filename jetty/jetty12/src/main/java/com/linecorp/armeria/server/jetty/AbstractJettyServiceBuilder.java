@@ -53,7 +53,6 @@ public abstract class AbstractJettyServiceBuilder {
     RequestLog requestLog;
     @Nullable
     Long stopTimeoutMillis;
-    boolean tlsReverseDnsLookup;
 
     AbstractJettyServiceBuilder() {}
 
@@ -160,20 +159,6 @@ public abstract class AbstractJettyServiceBuilder {
      */
     public AbstractJettyServiceBuilder stopTimeoutMillis(long stopTimeoutMillis) {
         this.stopTimeoutMillis = stopTimeoutMillis;
-        return this;
-    }
-
-    /**
-     * Sets whether Jetty has to perform reverse DNS lookup for the remote IP address on a TLS connection.
-     * By default, this flag is disabled because it is known to cause performance issues when the DNS server
-     * is not responsive enough. However, you might want to take the risk and enable it if you want the same
-     * behavior with Jetty 9.3 when mTLS is enabled.
-     *
-     * @see <a href="https://github.com/eclipse/jetty.project/issues/1235">Jetty issue #1235</a>
-     * @see <a href="https://github.com/eclipse/jetty.project/commit/de7c146bd741307cd924a9dcef386d516e75b1e9">Jetty commit de7c146</a>
-     */
-    public AbstractJettyServiceBuilder tlsReverseDnsLookup(boolean tlsReverseDnsLookup) {
-        this.tlsReverseDnsLookup = tlsReverseDnsLookup;
         return this;
     }
 

@@ -109,11 +109,6 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
     }
 
     @Override
-    public JettyServiceBuilder tlsReverseDnsLookup(boolean tlsReverseDnsLookup) {
-        return (JettyServiceBuilder) super.tlsReverseDnsLookup(tlsReverseDnsLookup);
-    }
-
-    @Override
     public JettyServiceBuilder customizer(Consumer<? super Server> customizer) {
         return (JettyServiceBuilder) super.customizer(customizer);
     }
