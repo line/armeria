@@ -123,8 +123,6 @@ import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import java.io.File;
-import java.util.stream.Collectors;
 import javax.net.ssl.*;
 import java.security.cert.X509Certificate;
 
@@ -140,16 +138,10 @@ class GrpcClientTest {
     private static final AtomicReference<HttpHeaders> CLIENT_HEADERS_CAPTURE = new AtomicReference<>();
     private static final AtomicReference<HttpHeaders> SERVER_TRAILERS_CAPTURE = new AtomicReference<>();
 
-//    private static final String CLIENT_KEY_STORE = "/Users/lincong.li/universe/common/rpc/testing/resources/test_client_keystore.jks";
-//    private static final String CLIENT_TRUST_STORE = "/Users/lincong.li/universe/common/rpc/testing/resources/test_client_truststore.jks";
-//    private static final String SERVER_KEY_STORE = "/Users/lincong.li/universe/common/rpc/testing/resources/test_server_keystore.jks";
-//    private static final String SERVER_TRUST_STORE = "/Users/lincong.li/universe/common/rpc/testing/resources/test_server_truststore.jks";
-//    private static final String PASSWORD = "changeit";
-
-    private static final String CLIENT_KEY_STORE = "/Users/lincong.li/Desktop/test_jks/client_keystore.jks";
-    private static final String CLIENT_TRUST_STORE = "/Users/lincong.li/Desktop/test_jks/client_truststore.jks";
-    private static final String SERVER_KEY_STORE = "/Users/lincong.li/Desktop/test_jks/server_keystore.jks";
-    private static final String SERVER_TRUST_STORE = "/Users/lincong.li/Desktop/test_jks/server_truststore.jks";
+    private static final String CLIENT_KEY_STORE = "/test_jks/client_keystore.jks";
+    private static final String CLIENT_TRUST_STORE = "/test_jks/client_truststore.jks";
+    private static final String SERVER_KEY_STORE = "/test_jks/server_keystore.jks";
+    private static final String SERVER_TRUST_STORE = "/test_jks/server_truststore.jks";
     private static final String PASSWORD = "123456";
 
     @RegisterExtension
@@ -171,7 +163,6 @@ class GrpcClientTest {
             sb.idleTimeoutMillis(0);
             sb.http(0);
             sb.https(0);
-//            sb.tlsSelfSigned();
             sb.tlsAllowUnsafeCiphers();
             sb.tls(keyManagerFactory);
             sb.tlsCustomizer(sslCtxBuilder -> {
@@ -184,7 +175,6 @@ class GrpcClientTest {
                     throw new RuntimeException(e);
                 }
                 sslCtxBuilder.trustManager(trustManagerFactory);
-//                sslCtxBuilder.clientAuth(ClientAuth.REQUIRE);
                 sslCtxBuilder.protocols(Collections.singleton("TLSv1.2"));
                 sslCtxBuilder.ciphers(Arrays.asList(
                         "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
@@ -226,7 +216,7 @@ class GrpcClientTest {
                                                     trailers.put(
                                                             Metadata.Key.of("testAscii", Metadata.ASCII_STRING_MARSHALLER),
                                                             createLargeString(50000)
-//                                                            "abc" // This response header value does not trigger the issue.
+                                                            //  "abc" // This response header value does not trigger the issue.
                                                     );
                                                     super.close(status, trailers);
                                                 }
@@ -269,7 +259,6 @@ class GrpcClientTest {
         };
 
         final URI uri = server.httpsUri(GrpcSerializationFormats.PROTO);
-//        final URI uriWithTLS = new URI();
         blockingStub = GrpcClients.builder(uri)
                                   .maxResponseLength(MAX_MESSAGE_SIZE)
                                   .factory(buildClientFactory())
@@ -284,8 +273,6 @@ class GrpcClientTest {
         return ClientFactory.builder()
                 .tlsAllowUnsafeCiphers()
                 .tlsCustomizer(sslCtxBuilder -> {
-
-
                     KeyManagerFactory keyManagerFactory = null;
                     try {
                         keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
@@ -301,7 +288,7 @@ class GrpcClientTest {
                     sslCtxBuilder.keyManager(keyManagerFactory);
 
                     KeyStore trustStore = createJks(CLIENT_TRUST_STORE, PASSWORD);
-                    TrustManagerFactory trustManagerFactory = null;
+                    TrustManagerFactory trustManagerFactory;
                     try {
                         TrustManagerFactory defaultTrustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                         trustManagerFactory = new DisableHostnameVerificationTrustManagerFactory(
@@ -340,26 +327,8 @@ class GrpcClientTest {
     private static KeyStore createJks(String path, String password) {
         try {
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            keyStore.load(null, null);
-
-            String[] allPaths = path.split(",");
-            List<String> allPathsList = Arrays.asList(allPaths);
-            List<String> jksFiles = allPathsList.stream().filter(s -> s.endsWith(".jks")).collect(Collectors.toList());
-
-            if (jksFiles.size() > 1) {
-                throw new IllegalArgumentException("Can only have max 1 JKS file (can only merge PEMs): " + path);
-            }
-
-            // Add up to 1 JKS file. Ignore absent files for backwards compatibility.
-            jksFiles.stream().filter(file -> new File(file).exists()).forEach(file -> {
-                try {
-                    keyStore.load(new FileInputStream(file), password.toCharArray());
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
+            keyStore.load(GrpcClientTest.class.getResourceAsStream(path), password.toCharArray());
             return keyStore;
-
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
