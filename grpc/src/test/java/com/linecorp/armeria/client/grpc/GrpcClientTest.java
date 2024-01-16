@@ -27,11 +27,13 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import java.io.FileInputStream;
+import java.net.Socket;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -41,6 +43,8 @@ import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -119,6 +123,10 @@ import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import java.io.File;
+import java.util.stream.Collectors;
+import javax.net.ssl.*;
+import java.security.cert.X509Certificate;
 
 class GrpcClientTest {
 
@@ -132,16 +140,72 @@ class GrpcClientTest {
     private static final AtomicReference<HttpHeaders> CLIENT_HEADERS_CAPTURE = new AtomicReference<>();
     private static final AtomicReference<HttpHeaders> SERVER_TRAILERS_CAPTURE = new AtomicReference<>();
 
+//    private static final String CLIENT_KEY_STORE = "/Users/lincong.li/universe/common/rpc/testing/resources/test_client_keystore.jks";
+//    private static final String CLIENT_TRUST_STORE = "/Users/lincong.li/universe/common/rpc/testing/resources/test_client_truststore.jks";
+//    private static final String SERVER_KEY_STORE = "/Users/lincong.li/universe/common/rpc/testing/resources/test_server_keystore.jks";
+//    private static final String SERVER_TRUST_STORE = "/Users/lincong.li/universe/common/rpc/testing/resources/test_server_truststore.jks";
+//    private static final String PASSWORD = "changeit";
+
+    private static final String CLIENT_KEY_STORE = "/Users/lincong.li/Desktop/test_jks/client_keystore.jks";
+    private static final String CLIENT_TRUST_STORE = "/Users/lincong.li/Desktop/test_jks/client_truststore.jks";
+    private static final String SERVER_KEY_STORE = "/Users/lincong.li/Desktop/test_jks/server_keystore.jks";
+    private static final String SERVER_TRUST_STORE = "/Users/lincong.li/Desktop/test_jks/server_truststore.jks";
+    private static final String PASSWORD = "123456";
+
     @RegisterExtension
     public static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+
+            KeyManagerFactory keyManagerFactory = null;
+            try {
+                keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                KeyStore keyStore = createJks(SERVER_KEY_STORE, PASSWORD);
+                keyManagerFactory.init(keyStore, PASSWORD.toCharArray());
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+
             sb.workerGroup(1);
             sb.maxRequestLength(MAX_MESSAGE_SIZE);
             sb.idleTimeoutMillis(0);
             sb.http(0);
             sb.https(0);
-            sb.tlsSelfSigned();
+//            sb.tlsSelfSigned();
+            sb.tlsAllowUnsafeCiphers();
+            sb.tls(keyManagerFactory);
+            sb.tlsCustomizer(sslCtxBuilder -> {
+                KeyStore trustStore = createJks(SERVER_TRUST_STORE, PASSWORD);
+                TrustManagerFactory trustManagerFactory = null;
+                try {
+                    trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                    trustManagerFactory.init(trustStore);
+                } catch (Throwable e) {
+                    throw new RuntimeException(e);
+                }
+                sslCtxBuilder.trustManager(trustManagerFactory);
+//                sslCtxBuilder.clientAuth(ClientAuth.REQUIRE);
+                sslCtxBuilder.protocols(Collections.singleton("TLSv1.2"));
+                sslCtxBuilder.ciphers(Arrays.asList(
+                        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                        "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+                        "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384",
+                        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+                        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
+                        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+                        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+                        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
+                        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+                        "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256",
+                        "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256",
+                        "TLS_EMPTY_RENEGOTIATION_INFO_SCSV"
+                ), SupportedCipherSuiteFilter.INSTANCE);
+            });
+
+            sb.http2MaxHeaderListSize(96 * 1024);
 
             final ServerServiceDefinition interceptService =
                     ServerInterceptors.intercept(
@@ -159,7 +223,11 @@ class GrpcClientTest {
                                             new SimpleForwardingServerCall<REQ, RESP>(call) {
                                                 @Override
                                                 public void close(Status status, Metadata trailers) {
-                                                    trailers.merge(requestHeaders);
+                                                    trailers.put(
+                                                            Metadata.Key.of("testAscii", Metadata.ASCII_STRING_MARSHALLER),
+                                                            createLargeString(50000)
+//                                                            "abc" // This response header value does not trigger the issue.
+                                                    );
                                                     super.close(status, trailers);
                                                 }
                                             }, requestHeaders);
@@ -180,6 +248,14 @@ class GrpcClientTest {
         }
     };
 
+    private static String createLargeString(int len) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < len; i++) {
+            sb.append("Z");
+        }
+        return sb.toString();
+    }
+
     private final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
     private TestServiceBlockingStub blockingStub;
     private TestServiceStub asyncStub;
@@ -192,14 +268,231 @@ class GrpcClientTest {
             return delegate.execute(ctx, req);
         };
 
-        final URI uri = server.httpUri(GrpcSerializationFormats.PROTO);
+        final URI uri = server.httpsUri(GrpcSerializationFormats.PROTO);
+//        final URI uriWithTLS = new URI();
         blockingStub = GrpcClients.builder(uri)
                                   .maxResponseLength(MAX_MESSAGE_SIZE)
+                                  .factory(buildClientFactory())
                                   .decorator(requestLogRecorder)
                                   .build(TestServiceBlockingStub.class);
         asyncStub = GrpcClients.builder(uri.getScheme(), server.httpEndpoint())
                                .decorator(requestLogRecorder)
                                .build(TestServiceStub.class);
+    }
+
+    private ClientFactory buildClientFactory() {
+        return ClientFactory.builder()
+                .tlsAllowUnsafeCiphers()
+                .tlsCustomizer(sslCtxBuilder -> {
+
+
+                    KeyManagerFactory keyManagerFactory = null;
+                    try {
+                        keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                    } catch (NoSuchAlgorithmException e) {
+                        throw new RuntimeException(e);
+                    }
+                    KeyStore keyStore = createJks(CLIENT_KEY_STORE, PASSWORD);
+                    try {
+                        keyManagerFactory.init(keyStore, PASSWORD.toCharArray());
+                    } catch (Throwable e) {
+                        throw new RuntimeException(e);
+                    }
+                    sslCtxBuilder.keyManager(keyManagerFactory);
+
+                    KeyStore trustStore = createJks(CLIENT_TRUST_STORE, PASSWORD);
+                    TrustManagerFactory trustManagerFactory = null;
+                    try {
+                        TrustManagerFactory defaultTrustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                        trustManagerFactory = new DisableHostnameVerificationTrustManagerFactory(
+                                defaultTrustManagerFactory,
+                                defaultTrustManagerFactory.getProvider(),
+                                defaultTrustManagerFactory.getAlgorithm()
+                        );
+                        trustManagerFactory.init(trustStore);
+                    } catch (Throwable e) {
+                        throw new RuntimeException(e);
+                    }
+                    sslCtxBuilder.trustManager(trustManagerFactory);
+                    sslCtxBuilder.protocols(Collections.singleton("TLSv1.2"));
+                    sslCtxBuilder.ciphers(Arrays.asList(
+                            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                            "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                            "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                            "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+                            "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384",
+                            "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+                            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
+                            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+                            "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+                            "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
+                            "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+                            "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256",
+                            "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256",
+                            "TLS_EMPTY_RENEGOTIATION_INFO_SCSV"
+                    ), SupportedCipherSuiteFilter.INSTANCE);
+                })
+                .http2MaxHeaderListSize(96 * 1024)
+                .build();
+    }
+
+    private static KeyStore createJks(String path, String password) {
+        try {
+            KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keyStore.load(null, null);
+
+            String[] allPaths = path.split(",");
+            List<String> allPathsList = Arrays.asList(allPaths);
+            List<String> jksFiles = allPathsList.stream().filter(s -> s.endsWith(".jks")).collect(Collectors.toList());
+
+            if (jksFiles.size() > 1) {
+                throw new IllegalArgumentException("Can only have max 1 JKS file (can only merge PEMs): " + path);
+            }
+
+            // Add up to 1 JKS file. Ignore absent files for backwards compatibility.
+            jksFiles.stream().filter(file -> new File(file).exists()).forEach(file -> {
+                try {
+                    keyStore.load(new FileInputStream(file), password.toCharArray());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            return keyStore;
+
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    class DisableHostnameVerificationTrustManagerFactory extends TrustManagerFactory {
+
+        public DisableHostnameVerificationTrustManagerFactory(TrustManagerFactory factory, Provider provider, String algorithm) {
+            super(new MyTrustManagerFactorySpi(factory), provider, algorithm);
+        }
+    }
+
+    class MyTrustManagerFactorySpi extends TrustManagerFactorySpi {
+
+        private final TrustManagerFactory _impl;
+
+        public MyTrustManagerFactorySpi(TrustManagerFactory impl) {
+            _impl = impl;
+        }
+
+        @Override
+        public void engineInit(ManagerFactoryParameters spec) {
+            try {
+                _impl.init(spec);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public void engineInit(KeyStore ks) {
+            try {
+                _impl.init(ks);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public TrustManager[] engineGetTrustManagers() {
+            return Arrays.stream(_impl.getTrustManagers())
+                    .map(tm -> {
+                        if (tm instanceof X509ExtendedTrustManager) {
+                            X509ExtendedTrustManager tmi = (X509ExtendedTrustManager) tm;
+                            return new X509ExtendedTrustManager() {
+                                @Override
+                                public void checkClientTrusted(
+                                        X509Certificate[] chain,
+                                        String authType,
+                                        Socket socket) {
+                                    try {
+                                        tmi.checkClientTrusted(chain, authType, socket);
+                                    } catch (Throwable e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+
+                                @Override
+                                public void checkClientTrusted(
+                                        X509Certificate[] chain,
+                                        String authType) {
+                                    try {
+                                        tmi.checkClientTrusted(chain, authType);
+                                    } catch (Throwable e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+
+                                @Override
+                                public void checkClientTrusted(
+                                        X509Certificate[] chain,
+                                        String authType,
+                                        SSLEngine engine) {
+                                    try {
+                                        tmi.checkClientTrusted(chain, authType, engine);
+                                    } catch (Throwable e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+
+                                @Override
+                                public X509Certificate[] getAcceptedIssuers() {
+                                    return tmi.getAcceptedIssuers();
+                                }
+
+                                @Override
+                                public void checkServerTrusted(
+                                        X509Certificate[] chain,
+                                        String authType,
+                                        Socket socket) {
+                                    try {
+                                        tmi.checkServerTrusted(chain, authType, socket);
+                                    } catch (Throwable e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+
+                                @Override
+                                public void checkServerTrusted(
+                                        X509Certificate[] chain,
+                                        String authType) {
+                                    try {
+                                        tmi.checkServerTrusted(chain, authType);
+                                    } catch (Throwable e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+
+                                @Override
+                                public void checkServerTrusted(
+                                        X509Certificate[] chain,
+                                        String authType,
+                                        SSLEngine engine) {
+                                    // SSLEngine instance is created per connection,
+                                    // For each instance, checkServerTrusted will only be called during the initial ssl handshake.
+                                    // In that sense, modify engine in checkServerTrusted is thread safe.
+                                    javax.net.ssl.SSLParameters para = engine.getSSLParameters();
+                                    para.setEndpointIdentificationAlgorithm("");
+                                    // getSSLParameters returns a copy of SSLParameters
+                                    engine.setSSLParameters(para);
+                                    try {
+                                        tmi.checkServerTrusted(chain, authType, engine);
+                                    } catch (Throwable e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            };
+                        } else {
+                            return tm;
+                        }
+                    })
+                    .toArray(TrustManager[]::new);
+            }
     }
 
     @AfterEach
@@ -209,7 +502,7 @@ class GrpcClientTest {
     }
 
     @Test
-    void emptyUnary() throws Exception {
+    void reproFrameLengthExceededMaximumIssue() throws Exception {
         assertThat(blockingStub.emptyCall(EMPTY)).isEqualTo(EMPTY);
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(EMPTY);
