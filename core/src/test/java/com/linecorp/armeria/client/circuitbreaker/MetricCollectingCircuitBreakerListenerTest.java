@@ -24,11 +24,12 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 
 class MetricCollectingCircuitBreakerListenerTest {
 
     @Test
-    void test() throws Exception {
+    void nameTag() throws Exception {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final CircuitBreakerListener l = CircuitBreakerListener.metricCollecting(registry, "foo");
 
@@ -76,5 +77,109 @@ class MetricCollectingCircuitBreakerListenerTest {
         l.onRequestRejected(cb.name());
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("foo.rejected.requests#count{name=bar}", 1.0);
+    }
+
+    @Test
+    void customTags() throws Exception {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final CircuitBreakerListener l = CircuitBreakerListener.metricCollectingWithTags(
+                registry, "foo", Tags.of("baz", "qux", "quux", "corge"));
+
+        // Note: We only use the name of the circuit breaker.
+        final CircuitBreaker cb = CircuitBreaker.builder("bar").build();
+
+        // Trigger the first event so that the metric group is registered.
+        l.onEventCountUpdated(cb.name(), EventCount.of(1, 2));
+
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,quux=corge}", 1.0)
+                .containsEntry("foo.requests#value{baz=qux,quux=corge,result=success}", 1.0)
+                .containsEntry("foo.requests#value{baz=qux,quux=corge,result=failure}", 2.0)
+                .containsEntry("foo.transitions#count{baz=qux,quux=corge,state=CLOSED}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,quux=corge,state=OPEN}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,quux=corge,state=HALF_OPEN}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,quux=corge,state=FORCED_OPEN}", 0.0)
+                .containsEntry("foo.rejected.requests#count{baz=qux,quux=corge}", 0.0);
+
+        // Transit to CLOSED.
+        l.onStateChanged(cb.name(), CircuitState.CLOSED);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,quux=corge}", 1.0)
+                .containsEntry("foo.transitions#count{baz=qux,quux=corge,state=CLOSED}", 1.0);
+
+        // Transit to OPEN.
+        l.onStateChanged(cb.name(), CircuitState.OPEN);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,quux=corge}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,quux=corge,state=OPEN}", 1.0);
+
+        // Transit to HALF_OPEN.
+        l.onStateChanged(cb.name(), CircuitState.HALF_OPEN);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,quux=corge}", 0.5)
+                .containsEntry("foo.transitions#count{baz=qux,quux=corge,state=HALF_OPEN}", 1.0);
+
+        // Transit to FORCED_OPEN.
+        l.onStateChanged(cb.name(), CircuitState.FORCED_OPEN);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,quux=corge}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,quux=corge,state=FORCED_OPEN}", 1.0);
+
+        // Reject a request.
+        l.onRequestRejected(cb.name());
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.rejected.requests#count{baz=qux,quux=corge}", 1.0);
+    }
+
+    @Test
+    void nameWithCustomTags() throws Exception {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final CircuitBreakerListener l = CircuitBreakerListener.metricCollectingWithNameAndTags(
+                registry, "foo", Tags.of("baz", "qux", "quux", "corge"));
+
+        // Note: We only use the name of the circuit breaker.
+        final CircuitBreaker cb = CircuitBreaker.builder("bar").build();
+
+        // Trigger the first event so that the metric group is registered.
+        l.onEventCountUpdated(cb.name(), EventCount.of(1, 2));
+
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,name=bar,quux=corge}", 1.0)
+                .containsEntry("foo.requests#value{baz=qux,name=bar,quux=corge,result=success}", 1.0)
+                .containsEntry("foo.requests#value{baz=qux,name=bar,quux=corge,result=failure}", 2.0)
+                .containsEntry("foo.transitions#count{baz=qux,name=bar,quux=corge,state=CLOSED}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,name=bar,quux=corge,state=OPEN}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,name=bar,quux=corge,state=HALF_OPEN}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,name=bar,quux=corge,state=FORCED_OPEN}", 0.0)
+                .containsEntry("foo.rejected.requests#count{baz=qux,name=bar,quux=corge}", 0.0);
+
+        // Transit to CLOSED.
+        l.onStateChanged(cb.name(), CircuitState.CLOSED);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,name=bar,quux=corge}", 1.0)
+                .containsEntry("foo.transitions#count{baz=qux,name=bar,quux=corge,state=CLOSED}", 1.0);
+
+        // Transit to OPEN.
+        l.onStateChanged(cb.name(), CircuitState.OPEN);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,name=bar,quux=corge}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,name=bar,quux=corge,state=OPEN}", 1.0);
+
+        // Transit to HALF_OPEN.
+        l.onStateChanged(cb.name(), CircuitState.HALF_OPEN);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,name=bar,quux=corge}", 0.5)
+                .containsEntry("foo.transitions#count{baz=qux,name=bar,quux=corge,state=HALF_OPEN}", 1.0);
+
+        // Transit to FORCED_OPEN.
+        l.onStateChanged(cb.name(), CircuitState.FORCED_OPEN);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.state#value{baz=qux,name=bar,quux=corge}", 0.0)
+                .containsEntry("foo.transitions#count{baz=qux,name=bar,quux=corge,state=FORCED_OPEN}", 1.0);
+
+        // Reject a request.
+        l.onRequestRejected(cb.name());
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.rejected.requests#count{baz=qux,name=bar,quux=corge}", 1.0);
     }
 }
