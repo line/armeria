@@ -459,7 +459,7 @@ class CancellationSchedulerTest {
         scheduler.finishNow(throwable);
 
         await().untilAsserted(() -> assertThat(scheduler.state()).isEqualTo(State.FINISHED));
-        assertThat(scheduler.whenCancelling()).isNotDone();
+        assertThat(scheduler.whenCancelling()).isCompleted();
         assertThat(scheduler.whenCancelled()).isCompleted();
         assertThat(scheduler.cause()).isSameAs(throwable);
     }
@@ -478,7 +478,7 @@ class CancellationSchedulerTest {
         scheduler.finishNow();
 
         await().untilAsserted(() -> assertThat(scheduler.state()).isEqualTo(State.FINISHED));
-        assertThat(scheduler.whenCancelling()).isNotDone();
+        assertThat(scheduler.whenCancelling()).isCompleted();
         assertThat(scheduler.whenCancelled()).isCompleted();
         if (server) {
             assertThat(scheduler.cause()).isInstanceOf(RequestTimeoutException.class);

@@ -138,6 +138,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (isFinished()) {
             assert cause != null;
             task.run(cause);
+            return;
         }
         if (this.task != null) {
             // just replace the task, there is already a pending timeout schedule running
@@ -343,14 +344,11 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             eventLoop.execute(() -> finishNow(cause));
             return;
         }
-        if (state == State.INIT) {
-            state = State.FINISHED;
-            this.cause = mapThrowable(server, cause);
-            ((CancellationFuture) whenCancelled()).doComplete(cause);
-        } else if (isInitialized()) {
+        if (isInitialized()) {
             finishNow0(cause);
         } else {
-            addPendingTask(() -> finishNow0(cause));
+            start(noopCancellationTask, 0);
+            finishNow0(cause);
         }
     }
 
@@ -509,10 +507,22 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     private void invokeTask(@Nullable Throwable cause) {
-        assert eventLoop != null && eventLoop.inEventLoop();
-        assert state != State.FINISHING && state != State.FINISHED;
+        if (task == null) {
+            return;
+        }
 
-        cause = mapThrowable(server, cause);
+        if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+            // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
+            cause = cause.getCause();
+        }
+
+        if (cause == null) {
+            if (server) {
+                cause = RequestTimeoutException.get();
+            } else {
+                cause = ResponseTimeoutException.get();
+            }
+        }
 
         // Set FINISHING to preclude executing other timeout operations from the callbacks of `whenCancelling()`
         state = State.FINISHING;
@@ -528,22 +538,6 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
         this.cause = cause;
         ((CancellationFuture) whenCancelled()).doComplete(cause);
-    }
-
-    private static Throwable mapThrowable(boolean server, @Nullable Throwable cause) {
-        if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
-            // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
-            cause = cause.getCause();
-        }
-
-        if (cause == null) {
-            if (server) {
-                cause = RequestTimeoutException.get();
-            } else {
-                cause = ResponseTimeoutException.get();
-            }
-        }
-        return cause;
     }
 
     @VisibleForTesting
