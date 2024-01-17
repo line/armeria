@@ -51,7 +51,14 @@ public final class JavaGrpcClientStubFactory implements GrpcClientStubFactory {
             final Method getServiceDescriptorMethod = enclosingClass.getDeclaredMethod("getServiceDescriptor");
             return (ServiceDescriptor) getServiceDescriptorMethod.invoke(null);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            return null;
+            Throwable t = e;
+            if (e instanceof InvocationTargetException) {
+                final Throwable targetException = ((InvocationTargetException) e).getTargetException();
+                if (targetException != null) {
+                    t = targetException;
+                }
+            }
+            throw new ServiceDescriptorResolutionException(t);
         }
     }
 

@@ -42,7 +42,14 @@ public final class ScalaPbGrpcClientStubFactory implements GrpcClientStubFactory
             final Method method = stubClass.getDeclaredMethod("SERVICE");
             return (ServiceDescriptor) method.invoke(null);
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            return null;
+            Throwable t = e;
+            if (e instanceof InvocationTargetException) {
+                final Throwable targetException = ((InvocationTargetException) e).getTargetException();
+                if (targetException != null) {
+                    t = targetException;
+                }
+            }
+            throw new ServiceDescriptorResolutionException(t);
         }
     }
 

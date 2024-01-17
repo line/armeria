@@ -40,19 +40,20 @@ public final class KotlinGrpcClientStubFactory implements GrpcClientStubFactory 
     public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
         if (clientType.getName().endsWith("CoroutineStub")) {
             final Annotation annotation = stubForAnnotation(clientType);
+            final Method getServiceDescriptor;
+            final Class<?> generatedStub;
             try {
                 final Method valueMethod = annotation.annotationType().getDeclaredMethod("value", null);
-                final Class<?> generatedStub = generatedStub(annotation, valueMethod);
-                final Method getServiceDescriptor =
-                        generatedStub.getDeclaredMethod("getServiceDescriptor", null);
-                try {
-                    return (ServiceDescriptor) getServiceDescriptor.invoke(generatedStub);
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    throw new IllegalStateException(
-                            "Could not invoke getServiceDescriptor on a gRPC Kotlin client stub.");
-                }
+                generatedStub = generatedStub(annotation, valueMethod);
+                getServiceDescriptor = generatedStub.getDeclaredMethod("getServiceDescriptor", null);
             } catch (NoSuchMethodException e) {
-                throw new IllegalStateException("Could not find value getter on StubFor annotation.");
+                throw new IllegalStateException("Could not find value getter on StubFor annotation.", e);
+            }
+            try {
+                return (ServiceDescriptor) getServiceDescriptor.invoke(generatedStub);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new IllegalStateException(
+                        "Could not invoke getServiceDescriptor on a gRPC Kotlin client stub.", e);
             }
         }
 
