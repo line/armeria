@@ -199,7 +199,8 @@ public interface HttpFile {
             }
 
             return builder(f.toPath());
-        } else if ("jar".equals(url.getProtocol()) && url.getPath().startsWith("file:") ||
+        } else if ("jar".equals(url.getProtocol()) &&
+                   (url.getPath().startsWith("file:") || url.getPath().startsWith("nested:")) ||
                    "jrt".equals(url.getProtocol()) ||
                    "bundle".equals(url.getProtocol())) {
             return new ClassPathHttpFileBuilder(url);

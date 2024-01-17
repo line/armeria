@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ServerCacheControl;
+import com.linecorp.armeria.server.file.HttpFileBuilder.ClassPathHttpFileBuilder;
 
 class HttpFileTest {
 
@@ -95,6 +98,25 @@ class HttpFileTest {
             "(must start with 'file:', 'jar:file', 'jrt:' or 'bundle:')";
         assertThatThrownBy(() -> HttpFile.builder(url)).isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining(exMsg);
+    }
+
+    private static class NestedJarURLStreamHandler extends URLStreamHandler {
+        @Override
+        protected URLConnection openConnection(URL u) {
+            throw new UnsupportedOperationException("mocked");
+        }
+    }
+
+    @Test
+    void createFromNestedUrl() throws Exception {
+        // Define a Spring Boot 3 nested URL
+        final String nestedURL = "jar:nested:/root/exec.jar/!BOOT-INF/lib/nested.jar!/foo.js";
+
+        // Construct the URL directly because it isn't a built-in type
+        final URL url = new URL(null, nestedURL, new NestedJarURLStreamHandler());
+
+        // Ensure it is detected as a classpath resource
+        assertThat(HttpFile.builder(url)).isInstanceOf(ClassPathHttpFileBuilder.class);
     }
 
     @Test
