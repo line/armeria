@@ -343,7 +343,11 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             eventLoop.execute(() -> finishNow(cause));
             return;
         }
-        if (isInitialized()) {
+        if (state == State.INIT) {
+            state = State.FINISHED;
+            this.cause = mapThrowable(server, cause);
+            ((CancellationFuture) whenCancelled()).doComplete(cause);
+        } else if (isInitialized()) {
             finishNow0(cause);
         } else {
             addPendingTask(() -> finishNow0(cause));

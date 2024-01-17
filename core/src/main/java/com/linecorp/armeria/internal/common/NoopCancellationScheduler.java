@@ -111,6 +111,6 @@ final class NoopCancellationScheduler implements CancellationScheduler {
 
     @Override
     public boolean isInitialized() {
-        return false;
+        return true;
     }
 }

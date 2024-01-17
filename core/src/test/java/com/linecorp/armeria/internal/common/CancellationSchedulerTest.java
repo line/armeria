@@ -321,7 +321,7 @@ class CancellationSchedulerTest {
         }
 
         eventExecutor.execute(() -> {
-            final DefaultCancellationScheduler scheduler = new DefaultCancellationScheduler(0);
+            final DefaultCancellationScheduler scheduler = new DefaultCancellationScheduler(0, server);
             final CancellationTask task = new CancellationTask() {
                 @Override
                 public boolean canSchedule() {
@@ -418,8 +418,10 @@ class CancellationSchedulerTest {
             scheduler.initAndStart(eventExecutor, noopTask, MILLISECONDS.toNanos(100));
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
 
-            scheduler.initAndStart(eventExecutor, noopTask, MILLISECONDS.toNanos(1000));
-            assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
+            assertThatThrownBy(() -> scheduler.initAndStart(eventExecutor, noopTask,
+                                                            MILLISECONDS.toNanos(1000)))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("Can't init() more than once");
             completed.set(true);
         });
 
