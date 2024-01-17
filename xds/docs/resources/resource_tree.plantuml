@@ -1,0 +1,21 @@
+@startuml resourceTree
+
+object Listener1
+object Listener2
+object Route1
+object Route2
+object Cluster1
+object Cluster2
+object Endpoint1
+object Endpoint2
+
+Listener1 --> Route1
+Listener1 --> Route2
+
+Route1 --> Cluster1
+Route1 --> Cluster2
+
+Cluster1 --> Endpoint1
+Cluster1 --> Endpoint2
+
+@enduml

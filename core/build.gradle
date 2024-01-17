@@ -35,7 +35,6 @@ mrJarVersions.each { version->
         testClassesDirs = sourceSets."java${version}Test".output.classesDirs
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
-        useJUnitPlatform()
         project.ext.configureCommonTestSettings(it)
         enabled = project.ext.testJavaVersion >= targetJavaVersion
     }
@@ -186,7 +185,7 @@ testing.suites {
 
                 project.ext.configureCommonTestSettings(it)
 
-                dependsOn(tasks.shadedTestClasses)
+                dependsOn(tasks.copyShadedTestClasses)
                 // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
                 maxHeapSize = '64m'
 
@@ -202,7 +201,6 @@ testing.suites {
         }
     }
 }
-tasks.shadedTest.finalizedBy testing.suites.testStreaming
 tasks.check.dependsOn testing.suites.testStreaming
 
 // Run the test cases based on reactive-streams-tck only with non-flaky mode
@@ -216,7 +214,7 @@ if (rootProject.findProperty('flakyTests') != 'true') {
 
                     project.ext.configureCommonTestSettings(it)
                     include '/com/linecorp/armeria/**/common/**'
-                    dependsOn tasks.shadedTestClasses
+                    dependsOn tasks.copyShadedTestClasses
                     scanForTestClasses = false
                     testClassesDirs = tasks.shadedTest.testClassesDirs
                     classpath = testClassesDirs
@@ -225,9 +223,11 @@ if (rootProject.findProperty('flakyTests') != 'true') {
                     }
                 }
             }
+            dependencies {
+                runtimeOnly libs.junit.testng.engine
+            }
         }
     }
-    tasks.shadedTest.finalizedBy testing.suites.testNg
     tasks.check.dependsOn testing.suites.testNg
 }
 
