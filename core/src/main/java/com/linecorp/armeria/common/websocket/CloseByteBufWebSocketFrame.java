@@ -98,13 +98,10 @@ final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements 
         }
 
         final int index = data.readerIndex();
-        data.readerIndex(index + 2);
-        if (!data.isReadable()) {
-            // According to the RFC-6455, the close frame MAY contain a body.
-            // The reader index is required to be reset even if the data is empty.
-            data.readerIndex(index);
+        if (index + 2 >= data.writerIndex()) { // No reasonPhrase
             return null;
         }
+        data.readerIndex(index + 2);
         final String reasonPhrase = data.toString(StandardCharsets.UTF_8);
         data.readerIndex(index);
         return reasonPhrase;
