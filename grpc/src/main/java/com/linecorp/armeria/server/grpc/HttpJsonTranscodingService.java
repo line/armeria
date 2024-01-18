@@ -172,7 +172,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 if (httpJsonTranscodingOptions.queryParamMatchRules().contains(LOWER_CAMEL_CASE)) {
                     camelCaseFields =
                             buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
-                                    true);
+                                        true);
                 } else {
                     camelCaseFields = ImmutableMap.of();
                 }
@@ -185,8 +185,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final String responseBody = getResponseBody(topLevelFields, httpRule.getResponseBody());
                 int order = 0;
                 specs.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
-                                                     serviceDesc, methodDesc,
-                                                     originalFields, camelCaseFields,
+                                                     serviceDesc, methodDesc, originalFields, camelCaseFields,
                                                      pathVariables,
                                                      responseBody));
                 for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {

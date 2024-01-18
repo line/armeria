@@ -326,16 +326,13 @@ public class HttpJsonTranscodingTest {
     static final ServerExtension server = createServer(false, false, true);
 
     @RegisterExtension
-    static final ServerExtension serverPreservingProtoFieldNames =
-            createServer(true, false, true);
+    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryOnlyParameters =
-            createServer(false, true, false);
+    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryAndOriginalParameters =
-            createServer(false, true, true);
+    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true);
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
