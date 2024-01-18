@@ -42,16 +42,5 @@ public enum HttpJsonTranscodingQueryParamMatchRule {
     /**
      * Uses the original fields in .proto files to match {@link QueryParams} of an {@link HttpRequest}.
      */
-    ORIGINAL_FIELD,
-
-    /**
-     * Uses the original field and json name.
-     * <a href="https://protobuf.dev/programming-guides/proto3/#json">json mapping</a>
-     */
-    ORIGINAL_FIELD_JSON_NAME,
-
-    /**
-     * Uses camel case and json name.
-     */
-    CAMEL_CASE_JSON_NAME
+    ORIGINAL_FIELD
 }
