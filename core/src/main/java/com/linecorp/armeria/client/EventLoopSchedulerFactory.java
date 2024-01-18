@@ -9,7 +9,7 @@ import java.util.function.ToIntFunction;
 public interface EventLoopSchedulerFactory {
     EventLoopScheduler newScheduler(EventLoopGroup eventLoopGroup,
                                     List<ToIntFunction<Endpoint>> maxNumEventLoopFunctions,
-                                    int maxNumEventLoopsFunctions,
+                                    int maxNumEventLoopsPerEndpoint,
                                     int maxNumEventLoopsPerHttp1Endpoint,
                                     long idleTimeOutMillis);
 }
