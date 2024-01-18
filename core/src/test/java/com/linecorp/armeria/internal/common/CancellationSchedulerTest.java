@@ -448,7 +448,6 @@ class CancellationSchedulerTest {
     void immediateFinishTriggersCompletion() {
         final DefaultCancellationScheduler scheduler = new DefaultCancellationScheduler(0);
         scheduler.init(eventExecutor);
-        await().untilAsserted(() -> assertThat(scheduler.eventLoop()).isNotNull());
 
         final Throwable throwable = new Throwable();
 
@@ -469,7 +468,6 @@ class CancellationSchedulerTest {
         final DefaultCancellationScheduler scheduler = new DefaultCancellationScheduler(0, server);
 
         scheduler.init(eventExecutor);
-        await().untilAsserted(() -> assertThat(scheduler.eventLoop()).isNotNull());
 
         assertThat(scheduler.whenCancelling()).isNotCompleted();
         assertThat(scheduler.state()).isEqualTo(State.INIT);

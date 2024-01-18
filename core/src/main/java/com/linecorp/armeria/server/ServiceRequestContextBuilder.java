@@ -232,7 +232,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         if (timedOut()) {
             requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
-            requestCancellationScheduler = CancellationScheduler.of(0, true);
+            requestCancellationScheduler = CancellationScheduler.ofServer(0);
             requestCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
         }
 

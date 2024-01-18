@@ -177,7 +177,7 @@ public final class DefaultServiceRequestContext
             this.requestCancellationScheduler = requestCancellationScheduler;
         } else {
             this.requestCancellationScheduler =
-                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()), true);
+                    CancellationScheduler.ofServer(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
             this.requestCancellationScheduler.init(eventLoop());
         }
         this.sslSession = sslSession;

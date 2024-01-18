@@ -108,9 +108,4 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     public CompletableFuture<Void> whenTimedOut() {
         return VOID_FUTURE;
     }
-
-    @Override
-    public boolean isInitialized() {
-        return true;
-    }
 }

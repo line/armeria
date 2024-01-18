@@ -114,7 +114,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         if (timedOut()) {
             responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
-            responseCancellationScheduler = CancellationScheduler.of(0, false);
+            responseCancellationScheduler = CancellationScheduler.ofClient(0);
             responseCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
         }
 

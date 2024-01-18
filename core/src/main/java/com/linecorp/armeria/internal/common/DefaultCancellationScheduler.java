@@ -39,7 +39,6 @@ import com.linecorp.armeria.server.RequestTimeoutException;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
-@SuppressWarnings("UnstableApiUsage")
 final class DefaultCancellationScheduler implements CancellationScheduler {
 
     private static final AtomicReferenceFieldUpdater<DefaultCancellationScheduler, CancellationFuture>
@@ -141,7 +140,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             return;
         }
         if (this.task != null) {
-            // just replace the task, there is already a pending timeout schedule running
+            // just replace the task
             this.task = task;
             return;
         }
@@ -456,8 +455,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
     }
 
-    @VisibleForTesting
-    public boolean isInitialized() {
+    private boolean isInitialized() {
         return pendingTask == noopPendingTask && eventLoop != null;
     }
 
@@ -542,12 +540,6 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         return state;
     }
 
-    @Nullable
-    @VisibleForTesting
-    EventExecutor eventLoop() {
-        return eventLoop;
-    }
-
     private static class CancellationFuture extends UnmodifiableFuture<Throwable> {
         @Override
         protected void doComplete(@Nullable Throwable cause) {
@@ -562,9 +554,8 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     private static CancellationScheduler finished0(boolean server) {
-        final CancellationScheduler cancellationScheduler = CancellationScheduler.of(0, server);
-        cancellationScheduler
-                .initAndStart(ImmediateEventExecutor.INSTANCE, noopCancellationTask);
+        final CancellationScheduler cancellationScheduler = new DefaultCancellationScheduler(0, server);
+        cancellationScheduler.initAndStart(ImmediateEventExecutor.INSTANCE, noopCancellationTask);
         cancellationScheduler.finishNow();
         return cancellationScheduler;
     }

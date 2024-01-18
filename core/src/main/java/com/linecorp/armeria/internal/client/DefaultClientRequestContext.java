@@ -229,7 +229,7 @@ public final class DefaultClientRequestContext
               getAttributes(root), options.contextHook());
         assert (eventLoop == null && responseCancellationScheduler == null) ||
                (eventLoop != null && responseCancellationScheduler != null)
-                : "'eventLoop' and 'responseCancellationScheduler' should either be both null or non-null";
+                : "'eventLoop' and 'responseCancellationScheduler' should be both null or non-null";
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -244,7 +244,8 @@ public final class DefaultClientRequestContext
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
-                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis), false);
+                    CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+            // the cancellationScheduler is not initialized here since the eventLoop is guaranteed to be null
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -522,7 +523,7 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
-                CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()), false);
+                CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
