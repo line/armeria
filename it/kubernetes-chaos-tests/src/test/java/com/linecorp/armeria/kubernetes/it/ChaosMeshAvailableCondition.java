@@ -31,7 +31,7 @@ final class ChaosMeshAvailableCondition {
 
     static boolean isRunning() {
         try (KubernetesClient client = new KubernetesClientBuilder().build()) {
-            assertThat(client.getHttpClient().getClass().getName()).isEqualTo("ArmeriaHttpClient");
+            assertThat(client.getHttpClient().getClass().getSimpleName()).isEqualTo("ArmeriaHttpClient");
             final Namespace namespace = client.namespaces().withName("chaos-mesh").get();
             return "Active".equals(namespace.getStatus().getPhase());
         } catch (Exception cause) {
