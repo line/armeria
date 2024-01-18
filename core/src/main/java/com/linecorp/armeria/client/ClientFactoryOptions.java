@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2019 LINE Corporation
  *
@@ -51,20 +52,19 @@ import io.netty.resolver.AddressResolverGroup;
  * A set of {@link ClientFactoryOption}s and their respective values.
  */
 public final class ClientFactoryOptions
-    extends AbstractOptions<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> {
+        extends AbstractOptions<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> {
 
   /**
    * The worker {@link EventLoopGroup}.
    */
-  public static final ClientFactoryOption<EventLoopGroup> WORKER_GROUP = ClientFactoryOption.define("WORKER_GROUP",
-      CommonPools.workerGroup());
+  public static final ClientFactoryOption<EventLoopGroup> WORKER_GROUP =
+          ClientFactoryOption.define("WORKER_GROUP", CommonPools.workerGroup());
 
   /**
-   * Whether to shut down the worker {@link EventLoopGroup} when the
-   * {@link ClientFactory} is closed.
+   * Whether to shut down the worker {@link EventLoopGroup} when the {@link ClientFactory} is closed.
    */
-  public static final ClientFactoryOption<Boolean> SHUTDOWN_WORKER_GROUP_ON_CLOSE = ClientFactoryOption
-      .define("SHUTDOWN_WORKER_GROUP_ON_CLOSE", false);
+  public static final ClientFactoryOption<Boolean> SHUTDOWN_WORKER_GROUP_ON_CLOSE =
+          ClientFactoryOption.define("SHUTDOWN_WORKER_GROUP_ON_CLOSE", false);
 
   /**
    * The factory that creates an {@link EventLoopScheduler} which is responsible
@@ -74,8 +74,8 @@ public final class ClientFactoryOptions
    * Use the Custom_EVENT_LOOP_SCHEDULER_FACTORY instead.
    */
   @Deprecated
-  public static final ClientFactoryOption<Function<? super EventLoopGroup, ? extends EventLoopScheduler>> EVENT_LOOP_SCHEDULER_FACTORY = ClientFactoryOption
-      .define(
+  public static final ClientFactoryOption<Function<? super EventLoopGroup, ? extends EventLoopScheduler>>
+          EVENT_LOOP_SCHEDULER_FACTORY = ClientFactoryOption.define(
           "EVENT_LOOP_SCHEDULER_FACTORY",
           eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, ImmutableList.of()));
 
@@ -85,155 +85,132 @@ public final class ClientFactoryOptions
    * {@link EventLoop} to handle a connection to the specified {@link Endpoint}.
    */
   public static final ClientFactoryOption<EventLoopSchedulerFactory> CUSTOM_EVENT_LOOP_SCHEDULER_FACTORY = ClientFactoryOption
-      .define("EVENT_LOOP_SCHEDULER_FACTORY",
-          (eventLoopGroup,
-              maxNumEventLoopFunctions,
-              maxNumEventLoopsPerEndpoint,
-              maxNumEventLoopsPerHttp1Endpoint,
-              idleTimeOutMillis) -> {
-            return new DefaultEventLoopScheduler(eventLoopGroup,
-                maxNumEventLoopsPerEndpoint,
-                maxNumEventLoopsPerHttp1Endpoint,
-                maxNumEventLoopFunctions);
-          });
+          .define("EVENT_LOOP_SCHEDULER_FACTORY",
+                  (eventLoopGroup,
+                   maxNumEventLoopFunctions,
+                   maxNumEventLoopsPerEndpoint,
+                   maxNumEventLoopsPerHttp1Endpoint,
+                   idleTimeOutMillis) -> {
+                    return new DefaultEventLoopScheduler(eventLoopGroup,
+                            maxNumEventLoopsPerEndpoint,
+                            maxNumEventLoopsPerHttp1Endpoint,
+                            maxNumEventLoopFunctions);
+                  });
 
   /**
-   * The {@link Consumer} which can arbitrarily configure the
-   * {@link SslContextBuilder} that will be
+   * The {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
    * applied to the SSL session.
    */
-  public static final ClientFactoryOption<Consumer<? super SslContextBuilder>> TLS_CUSTOMIZER = ClientFactoryOption
-      .define("TLS_CUSTOMIZER", b -> {
-        /* no-op */ });
+  public static final ClientFactoryOption<Consumer<? super SslContextBuilder>> TLS_CUSTOMIZER =
+          ClientFactoryOption.define("TLS_CUSTOMIZER", b -> { /* no-op */ });
 
   /**
    * Whether to allow the bad cipher suites listed in
-   * <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for
-   * TLS handshake.
+   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
    *
-   * <p>
-   * Note that enabling this option increases the security risk of your
-   * connection.
-   * Use it only when you must communicate with a legacy system that does not
-   * support
+   * <p>Note that enabling this option increases the security risk of your connection.
+   * Use it only when you must communicate with a legacy system that does not support
    * secure cipher suites.
-   * See
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section
-   * 9.2.2, RFC7540</a> for
+   * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
    * more information.
    *
-   * @deprecated It's not recommended to enable this option. Use it only when you
-   *             have no other way to
+   * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
    *             communicate with an insecure peer than this.
    */
   @Deprecated
-  public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS = ClientFactoryOption
-      .define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
+  public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
+          ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
 
   /**
-   * The factory that creates an {@link AddressResolverGroup} which resolves
-   * remote addresses into
+   * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
    * {@link InetSocketAddress}es.
    */
-  public static final ClientFactoryOption<Function<? super EventLoopGroup, ? extends AddressResolverGroup<? extends InetSocketAddress>>> ADDRESS_RESOLVER_GROUP_FACTORY = ClientFactoryOption
-      .define("ADDRESS_RESOLVER_GROUP_FACTORY",
-          eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup));
+  public static final ClientFactoryOption<Function<? super EventLoopGroup,
+          ? extends AddressResolverGroup<? extends InetSocketAddress>>> ADDRESS_RESOLVER_GROUP_FACTORY =
+          ClientFactoryOption.define("ADDRESS_RESOLVER_GROUP_FACTORY",
+                  eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup));
 
   /**
-   * The HTTP/2
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial
-   * connection flow-control
+   * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
    * window size</a>.
    */
-  public static final ClientFactoryOption<Integer> HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = ClientFactoryOption.define(
-      "HTTP2_INITIAL_CONNECTION_WINDOW_SIZE",
-      Flags.defaultHttp2InitialConnectionWindowSize());
+  public static final ClientFactoryOption<Integer> HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
+          ClientFactoryOption.define("HTTP2_INITIAL_CONNECTION_WINDOW_SIZE",
+                  Flags.defaultHttp2InitialConnectionWindowSize());
 
   /**
-   * The <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+   * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
    * for HTTP/2 stream-level flow control.
    */
-  public static final ClientFactoryOption<Integer> HTTP2_INITIAL_STREAM_WINDOW_SIZE = ClientFactoryOption.define(
-      "HTTP2_INITIAL_STREAM_WINDOW_SIZE",
-      Flags.defaultHttp2InitialStreamWindowSize());
+  public static final ClientFactoryOption<Integer> HTTP2_INITIAL_STREAM_WINDOW_SIZE =
+          ClientFactoryOption.define("HTTP2_INITIAL_STREAM_WINDOW_SIZE",
+                  Flags.defaultHttp2InitialStreamWindowSize());
 
   /**
-   * The <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
-   * that indicates the size of the largest frame payload that this client is
-   * willing to receive.
+   * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+   * that indicates the size of the largest frame payload that this client is willing to receive.
    */
-  public static final ClientFactoryOption<Integer> HTTP2_MAX_FRAME_SIZE = ClientFactoryOption
-      .define("HTTP2_MAX_FRAME_SIZE", Flags.defaultHttp2MaxFrameSize());
+  public static final ClientFactoryOption<Integer> HTTP2_MAX_FRAME_SIZE =
+          ClientFactoryOption.define("HTTP2_MAX_FRAME_SIZE", Flags.defaultHttp2MaxFrameSize());
 
   /**
-   * The HTTP/2 <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
-   * that indicates the maximum size of header list that the client is prepared to
-   * accept, in octets.
+   * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+   * that indicates the maximum size of header list that the client is prepared to accept, in octets.
    */
-  public static final ClientFactoryOption<Long> HTTP2_MAX_HEADER_LIST_SIZE = ClientFactoryOption
-      .define("HTTP2_MAX_HEADER_LIST_SIZE", Flags.defaultHttp2MaxHeaderListSize());
+  public static final ClientFactoryOption<Long> HTTP2_MAX_HEADER_LIST_SIZE =
+          ClientFactoryOption.define("HTTP2_MAX_HEADER_LIST_SIZE", Flags.defaultHttp2MaxHeaderListSize());
 
   /**
    * The maximum length of an HTTP/1 response initial line.
    */
-  public static final ClientFactoryOption<Integer> HTTP1_MAX_INITIAL_LINE_LENGTH = ClientFactoryOption.define(
-      "HTTP1_MAX_INITIAL_LINE_LENGTH",
-      Flags.defaultHttp1MaxInitialLineLength());
+  public static final ClientFactoryOption<Integer> HTTP1_MAX_INITIAL_LINE_LENGTH =
+          ClientFactoryOption.define("HTTP1_MAX_INITIAL_LINE_LENGTH",
+                  Flags.defaultHttp1MaxInitialLineLength());
 
   /**
    * The maximum length of all headers in an HTTP/1 response.
    */
-  public static final ClientFactoryOption<Integer> HTTP1_MAX_HEADER_SIZE = ClientFactoryOption
-      .define("HTTP1_MAX_HEADER_SIZE", Flags.defaultHttp1MaxHeaderSize());
+  public static final ClientFactoryOption<Integer> HTTP1_MAX_HEADER_SIZE =
+          ClientFactoryOption.define("HTTP1_MAX_HEADER_SIZE", Flags.defaultHttp1MaxHeaderSize());
 
   /**
    * The maximum length of each chunk in an HTTP/1 response content.
    */
-  public static final ClientFactoryOption<Integer> HTTP1_MAX_CHUNK_SIZE = ClientFactoryOption
-      .define("HTTP1_MAX_CHUNK_SIZE", Flags.defaultHttp1MaxChunkSize());
+  public static final ClientFactoryOption<Integer> HTTP1_MAX_CHUNK_SIZE =
+          ClientFactoryOption.define("HTTP1_MAX_CHUNK_SIZE", Flags.defaultHttp1MaxChunkSize());
 
   /**
    * The idle timeout of a socket connection in milliseconds.
    */
-  public static final ClientFactoryOption<Long> IDLE_TIMEOUT_MILLIS = ClientFactoryOption.define("IDLE_TIMEOUT_MILLIS",
-      Flags.defaultClientIdleTimeoutMillis());
+  public static final ClientFactoryOption<Long> IDLE_TIMEOUT_MILLIS =
+          ClientFactoryOption.define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
   /**
-   * If the idle timeout is reset when an HTTP/2 PING frame or the response of
-   * {@code "OPTIONS * HTTP/1.1"}
+   * If the idle timeout is reset when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"}
    * is received.
    */
   @UnstableApi
-  public static final ClientFactoryOption<Boolean> KEEP_ALIVE_ON_PING = ClientFactoryOption.define("KEEP_ALIVE_ON_PING",
-      Flags.defaultClientKeepAliveOnPing());
+  public static final ClientFactoryOption<Boolean> KEEP_ALIVE_ON_PING =
+          ClientFactoryOption.define("KEEP_ALIVE_ON_PING", Flags.defaultClientKeepAliveOnPing());
 
   /**
    * The PING interval in milliseconds.
    * When neither read nor write was performed for the specified period of time,
-   * a
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a>
-   * frame is sent for HTTP/2
-   * or an <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a>
-   * request with
+   * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
+   * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
    * an asterisk ("*") is sent for HTTP/1.
    */
-  public static final ClientFactoryOption<Long> PING_INTERVAL_MILLIS = ClientFactoryOption
-      .define("PING_INTERVAL_MILLIS", Flags.defaultPingIntervalMillis());
+  public static final ClientFactoryOption<Long> PING_INTERVAL_MILLIS =
+          ClientFactoryOption.define("PING_INTERVAL_MILLIS", Flags.defaultPingIntervalMillis());
 
   /**
    * The client-side max age of a connection for keep-alive in milliseconds.
-   * If the value is greater than {@code 0}, a connection is disconnected after
-   * the specified
+   * If the value is greater than {@code 0}, a connection is disconnected after the specified
    * amount of time since the connection was established.
    * This option is disabled by default, which means unlimited.
    */
-  public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS = ClientFactoryOption
-      .define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
+  public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
+          ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
 
   private static long clampedDefaultMaxClientConnectionAge() {
     final long connectionAgeMillis = Flags.defaultMaxClientConnectionAgeMillis();
@@ -244,122 +221,111 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * The client-side maximum allowed number of requests that can be sent through
-   * one connection.
+   * The client-side maximum allowed number of requests that can be sent through one connection.
    * This option is disabled by default, which means unlimited.
    */
-  public static final ClientFactoryOption<Integer> MAX_NUM_REQUESTS_PER_CONNECTION = ClientFactoryOption.define(
-      "MAX_NUM_REQUESTS_PER_CONNECTION",
-      Flags.defaultMaxClientNumRequestsPerConnection());
+  public static final ClientFactoryOption<Integer> MAX_NUM_REQUESTS_PER_CONNECTION =
+          ClientFactoryOption.define("MAX_NUM_REQUESTS_PER_CONNECTION",
+                  Flags.defaultMaxClientNumRequestsPerConnection());
 
   /**
-   * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request
-   * to negotiate
+   * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
    * the protocol version of a cleartext HTTP connection.
    */
-  public static final ClientFactoryOption<Boolean> USE_HTTP2_PREFACE = ClientFactoryOption.define("USE_HTTP2_PREFACE",
-      Flags.defaultUseHttp2Preface());
+  public static final ClientFactoryOption<Boolean> USE_HTTP2_PREFACE =
+          ClientFactoryOption.define("USE_HTTP2_PREFACE", Flags.defaultUseHttp2Preface());
 
   /**
-   * Whether to use HTTP/1.1 instead of HTTP/2. If enabled, the client will not
-   * attempt to upgrade to
+   * Whether to use HTTP/1.1 instead of HTTP/2. If enabled, the client will not attempt to upgrade to
    * HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
    */
   @UnstableApi
-  public static final ClientFactoryOption<Boolean> PREFER_HTTP1 = ClientFactoryOption.define("PREFER_HTTP1",
-      Flags.defaultPreferHttp1());
+  public static final ClientFactoryOption<Boolean> PREFER_HTTP1 =
+          ClientFactoryOption.define("PREFER_HTTP1", Flags.defaultPreferHttp1());
 
   /**
-   * Whether to use HTTP/2 without ALPN. This is useful if you want to communicate
-   * with an HTTP/2
+   * Whether to use HTTP/2 without ALPN. This is useful if you want to communicate with an HTTP/2
    * server over TLS but the server does not support ALPN.
    */
   @UnstableApi
-  public static final ClientFactoryOption<Boolean> USE_HTTP2_WITHOUT_ALPN = ClientFactoryOption
-      .define("USE_HTTP2_WITHOUT_ALPN", Flags.defaultUseHttp2WithoutAlpn());
+  public static final ClientFactoryOption<Boolean> USE_HTTP2_WITHOUT_ALPN =
+          ClientFactoryOption.define("USE_HTTP2_WITHOUT_ALPN", Flags.defaultUseHttp2WithoutAlpn());
 
   /**
-   * Whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP
-   * pipelining</a> for
+   * Whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
    * HTTP/1 connections.
    */
-  public static final ClientFactoryOption<Boolean> USE_HTTP1_PIPELINING = ClientFactoryOption
-      .define("USE_HTTP1_PIPELINING", Flags.defaultUseHttp1Pipelining());
+  public static final ClientFactoryOption<Boolean> USE_HTTP1_PIPELINING =
+          ClientFactoryOption.define("USE_HTTP1_PIPELINING", Flags.defaultUseHttp1Pipelining());
 
   /**
    * The listener which is notified on a connection pool event.
    */
-  public static final ClientFactoryOption<ConnectionPoolListener> CONNECTION_POOL_LISTENER = ClientFactoryOption
-      .define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
+  public static final ClientFactoryOption<ConnectionPoolListener> CONNECTION_POOL_LISTENER =
+          ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
   /**
    * The {@link MeterRegistry} which collects various stats.
    */
-  public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY = ClientFactoryOption.define("METER_REGISTRY",
-      Flags.meterRegistry());
+  public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
+          ClientFactoryOption.define("METER_REGISTRY", Flags.meterRegistry());
 
   /**
-   * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to
-   * be used.
+   * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
    */
-  public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR = ClientFactoryOption
-      .define("PROXY_CONFIG_SELECTOR", ProxyConfigSelector.of(ProxyConfig.direct()));
+  public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR =
+          ClientFactoryOption.define("PROXY_CONFIG_SELECTOR", ProxyConfigSelector.of(ProxyConfig.direct()));
 
   /**
-   * The {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name
-   * into
+   * The {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
    * another HTTP/1 header name.
    */
-  public static final ClientFactoryOption<Http1HeaderNaming> HTTP1_HEADER_NAMING = ClientFactoryOption
-      .define("HTTP1_HEADER_NAMING", Http1HeaderNaming.ofDefault());
+  public static final ClientFactoryOption<Http1HeaderNaming> HTTP1_HEADER_NAMING =
+          ClientFactoryOption.define("HTTP1_HEADER_NAMING", Http1HeaderNaming.ofDefault());
 
   /**
-   * The {@link ChannelOption}s of the sockets created by the
-   * {@link ClientFactory}.
+   * The {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
    */
-  public static final ClientFactoryOption<Map<ChannelOption<?>, Object>> CHANNEL_OPTIONS = ClientFactoryOption
-      .define("CHANNEL_OPTIONS", ImmutableMap.of(), newOptions -> {
-        for (ChannelOption<?> channelOption : ChannelUtil.prohibitedOptions()) {
-          checkArgument(!newOptions.containsKey(channelOption),
-              "prohibited channel option: %s", channelOption);
-        }
-        return newOptions;
-      }, (oldValue, newValue) -> {
-        final Map<ChannelOption<?>, Object> newOptions = newValue.value();
-        if (newOptions.isEmpty()) {
-          return oldValue;
-        }
-        final Map<ChannelOption<?>, Object> oldOptions = oldValue.value();
-        if (oldOptions.isEmpty()) {
-          return newValue;
-        }
-        final ImmutableMap.Builder<ChannelOption<?>, Object> builder = ImmutableMap
-            .builderWithExpectedSize(oldOptions.size() + newOptions.size());
-        oldOptions.forEach((key, value) -> {
-          if (!newOptions.containsKey(key)) {
-            builder.put(key, value);
-          }
-        });
-        builder.putAll(newOptions);
-        return newValue.option().newValue(builder.build());
-      });
+  public static final ClientFactoryOption<Map<ChannelOption<?>, Object>> CHANNEL_OPTIONS =
+          ClientFactoryOption.define("CHANNEL_OPTIONS", ImmutableMap.of(), newOptions -> {
+            for (ChannelOption<?> channelOption : ChannelUtil.prohibitedOptions()) {
+              checkArgument(!newOptions.containsKey(channelOption),
+                      "prohibited channel option: %s", channelOption);
+            }
+            return newOptions;
+          }, (oldValue, newValue) -> {
+            final Map<ChannelOption<?>, Object> newOptions = newValue.value();
+            if (newOptions.isEmpty()) {
+              return oldValue;
+            }
+            final Map<ChannelOption<?>, Object> oldOptions = oldValue.value();
+            if (oldOptions.isEmpty()) {
+              return newValue;
+            }
+            final ImmutableMap.Builder<ChannelOption<?>, Object> builder =
+                    ImmutableMap.builderWithExpectedSize(oldOptions.size() + newOptions.size());
+            oldOptions.forEach((key, value) -> {
+              if (!newOptions.containsKey(key)) {
+                builder.put(key, value);
+              }
+            });
+            builder.putAll(newOptions);
+            return newValue.option().newValue(builder.build());
+          });
 
   /**
    * The {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
-   * This customizer is run right before
-   * {@link ChannelPipeline#connect(SocketAddress)}
+   * This customizer is run right before {@link ChannelPipeline#connect(SocketAddress)}
    * is invoked by Armeria. This customizer is no-op by default.
    *
-   * <p>
-   * Note that usage of this customizer is an advanced
+   * <p>Note that usage of this customizer is an advanced
    * feature and may produce unintended side effects, including complete
    * breakdown. It is not recommended if you are not familiar with
    * Armeria and Netty internals.
    */
   @UnstableApi
-  public static final ClientFactoryOption<Consumer<? super ChannelPipeline>> CHANNEL_PIPELINE_CUSTOMIZER = ClientFactoryOption
-      .define("CHANNEL_PIPELINE_CUSTOMIZER", v -> {
-        /* no-op */ });
+  public static final ClientFactoryOption<Consumer<? super ChannelPipeline>> CHANNEL_PIPELINE_CUSTOMIZER =
+          ClientFactoryOption.define("CHANNEL_PIPELINE_CUSTOMIZER", v -> { /* no-op */ });
 
   private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions(ImmutableList.of());
 
@@ -371,8 +337,7 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the {@link ClientFactoryOptions} with the specified
-   * {@link ClientFactoryOptionValue}s.
+   * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
    */
   public static ClientFactoryOptions of(ClientFactoryOptionValue<?>... values) {
     requireNonNull(values, "values");
@@ -383,8 +348,7 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the {@link ClientFactoryOptions} with the specified
-   * {@link ClientFactoryOptionValue}s.
+   * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
    */
   public static ClientFactoryOptions of(Iterable<? extends ClientFactoryOptionValue<?>> values) {
     requireNonNull(values, "values");
@@ -395,13 +359,12 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Merges the specified {@link ClientFactoryOptions} and
-   * {@link ClientFactoryOptionValue}s.
+   * Merges the specified {@link ClientFactoryOptions} and {@link ClientFactoryOptionValue}s.
    *
    * @return the merged {@link ClientFactoryOptions}
    */
   public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-      ClientFactoryOptionValue<?>... additionalValues) {
+                                        ClientFactoryOptionValue<?>... additionalValues) {
     requireNonNull(baseOptions, "baseOptions");
     requireNonNull(additionalValues, "additionalValues");
     if (additionalValues.length == 0) {
@@ -411,13 +374,12 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Merges the specified {@link ClientFactoryOptions} and
-   * {@link ClientFactoryOptionValue}s.
+   * Merges the specified {@link ClientFactoryOptions} and {@link ClientFactoryOptionValue}s.
    *
    * @return the merged {@link ClientFactoryOptions}
    */
   public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
-      Iterable<? extends ClientFactoryOptionValue<?>> additionalValues) {
+                                        Iterable<? extends ClientFactoryOptionValue<?>> additionalValues) {
     requireNonNull(baseOptions, "baseOptions");
     requireNonNull(additionalValues, "additionalValues");
     return new ClientFactoryOptions(baseOptions, additionalValues);
@@ -428,7 +390,7 @@ public final class ClientFactoryOptions
   }
 
   private ClientFactoryOptions(ClientFactoryOptions baseOptions,
-      Iterable<? extends ClientFactoryOptionValue<?>> additionalValues) {
+                               Iterable<? extends ClientFactoryOptionValue<?>> additionalValues) {
 
     super(baseOptions, additionalValues);
   }
@@ -449,8 +411,7 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the factory that creates an {@link EventLoopScheduler} which is
-   * responsible for assigning an
+   * Returns the factory that creates an {@link EventLoopScheduler} which is responsible for assigning an
    * {@link EventLoop} to handle a connection to the specified {@link Endpoint}.
    */
   public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
@@ -458,16 +419,14 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the {@link ChannelOption}s of the sockets created by the
-   * {@link ClientFactory}.
+   * Returns the {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
    */
   public Map<ChannelOption<?>, Object> channelOptions() {
     return get(CHANNEL_OPTIONS);
   }
 
   /**
-   * Returns the {@link Consumer} which can arbitrarily configure the
-   * {@link SslContextBuilder} that will be
+   * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
    * applied to the SSL session.
    */
   public Consumer<? super SslContextBuilder> tlsCustomizer() {
@@ -475,19 +434,17 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the factory that creates an {@link AddressResolverGroup} which
-   * resolves remote addresses into
+   * Returns the factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
    * {@link InetSocketAddress}es.
    */
-  public Function<? super EventLoopGroup, ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
+  public Function<? super EventLoopGroup,
+          ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
 
     return get(ADDRESS_RESOLVER_GROUP_FACTORY);
   }
 
   /**
-   * Returns the HTTP/2
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial
-   * connection
+   * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection
    * flow-control window size</a>.
    */
   public int http2InitialConnectionWindowSize() {
@@ -495,8 +452,7 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+   * Returns the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
    * for HTTP/2 stream-level flow control.
    */
   public int http2InitialStreamWindowSize() {
@@ -504,20 +460,16 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
-   * that indicates the size of the largest frame payload that this client is
-   * willing to receive.
+   * Returns the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+   * that indicates the size of the largest frame payload that this client is willing to receive.
    */
   public int http2MaxFrameSize() {
     return get(HTTP2_MAX_FRAME_SIZE);
   }
 
   /**
-   * Returns the HTTP/2
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">
-   * SETTINGS_MAX_HEADER_LIST_SIZE</a> that indicates the maximum size of header
-   * list
+   * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">
+   * SETTINGS_MAX_HEADER_LIST_SIZE</a> that indicates the maximum size of header list
    * that the client is prepared to accept, in octets.
    */
   public long http2MaxHeaderListSize() {
@@ -553,8 +505,7 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns whether to keep connection alive when an HTTP/2 PING frame or the
-   * response of
+   * Returns whether to keep connection alive when an HTTP/2 PING frame or the response of
    * {@code "OPTIONS * HTTP/1.1"} is received.
    */
   @UnstableApi
@@ -565,12 +516,8 @@ public final class ClientFactoryOptions
   /**
    * Returns the PING interval in milliseconds.
    * When neither read nor write was performed for the specified period of time,
-   * a
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a>
-   * frame is sent for HTTP/2
-   * or an <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a>
-   * request with
+   * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
+   * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
    * an asterisk ("*") is sent for HTTP/1.
    */
   public long pingIntervalMillis() {
@@ -578,10 +525,8 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the client-side max age of a connection for keep-alive in
-   * milliseconds.
-   * If the value is greater than {@code 0}, a connection is disconnected after
-   * the specified
+   * Returns the client-side max age of a connection for keep-alive in milliseconds.
+   * If the value is greater than {@code 0}, a connection is disconnected after the specified
    * amount of the time since the connection was established.
    */
   public long maxConnectionAgeMillis() {
@@ -589,16 +534,14 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns the client-side maximum allowed number of requests that can be sent
-   * through one connection.
+   * Returns the client-side maximum allowed number of requests that can be sent through one connection.
    */
   public int maxNumRequestsPerConnection() {
     return get(MAX_NUM_REQUESTS_PER_CONNECTION);
   }
 
   /**
-   * Returns whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade
-   * request to negotiate
+   * Returns whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
    * the protocol version of a cleartext HTTP connection.
    */
   public boolean useHttp2Preface() {
@@ -606,10 +549,8 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns whether to use HTTP/1.1 instead of HTTP/2 . If {@code true}, the
-   * client will not attempt to
-   * upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and
-   * {@link SessionProtocol#HTTPS}.
+   * Returns whether to use HTTP/1.1 instead of HTTP/2 . If {@code true}, the client will not attempt to
+   * upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
    */
   @UnstableApi
   public boolean preferHttp1() {
@@ -625,9 +566,7 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * Returns whether to use
-   * <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a>
-   * for
+   * Returns whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
    * HTTP/1 connections.
    */
   public boolean useHttp1Pipelining() {
@@ -649,18 +588,15 @@ public final class ClientFactoryOptions
   }
 
   /**
-   * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to
-   * be used.
+   * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
    */
   public ProxyConfigSelector proxyConfigSelector() {
     return get(PROXY_CONFIG_SELECTOR);
   }
 
   /**
-   * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2
-   * header name into
-   * another header name. This is useful when communicating with a legacy system
-   * that only supports
+   * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+   * another header name. This is useful when communicating with a legacy system that only supports
    * case-sensitive HTTP/1 headers.
    */
   public Http1HeaderNaming http1HeaderNaming() {
@@ -669,19 +605,12 @@ public final class ClientFactoryOptions
 
   /**
    * Returns whether to allow the bad cipher suites listed in
-   * <a href=
-   * "https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for
-   * TLS handshake.
+   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
    *
-   * <p>
-   * Note that enabling this option increases the security risk of your
-   * connection.
-   * Use it only when you must communicate with a legacy system that does not
-   * support
+   * <p>Note that enabling this option increases the security risk of your connection.
+   * Use it only when you must communicate with a legacy system that does not support
    * secure cipher suites.
-   * See
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section
-   * 9.2.2, RFC7540</a> for
+   * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
    * more information.
    */
   public boolean tlsAllowUnsafeCiphers() {
@@ -690,12 +619,10 @@ public final class ClientFactoryOptions
 
   /**
    * The {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
-   * This customizer is run right before
-   * {@link ChannelPipeline#connect(SocketAddress)}
+   * This customizer is run right before {@link ChannelPipeline#connect(SocketAddress)}
    * is invoked by Armeria. This customizer is no-op by default.
    *
-   * <p>
-   * Note that usage of this customizer is an advanced
+   * <p>Note that usage of this customizer is an advanced
    * feature and may produce unintended side effects, including complete
    * breakdown. It is not recommended if you are not familiar with
    * Armeria and Netty internals.
