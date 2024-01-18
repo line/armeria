@@ -115,7 +115,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
             responseCancellationScheduler = CancellationScheduler.of(0, false);
-            responseCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask, 0);
+            responseCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(

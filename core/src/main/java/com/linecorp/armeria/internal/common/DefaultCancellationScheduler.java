@@ -115,12 +115,12 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
      * Initializes this {@link DefaultCancellationScheduler}.
      */
     @Override
-    public void initAndStart(EventExecutor eventLoop, CancellationTask task, long timeoutNanos) {
+    public void initAndStart(EventExecutor eventLoop, CancellationTask task) {
         init(eventLoop);
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> start(task, timeoutNanos));
+            eventLoop.execute(() -> start(task));
         } else {
-            start(task, timeoutNanos);
+            start(task);
         }
     }
 
@@ -132,7 +132,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
-    public void start(CancellationTask task, long timeoutNanos) {
+    public void start(CancellationTask task) {
         assert eventLoop != null;
         assert eventLoop.inEventLoop();
         if (isFinished()) {
@@ -146,14 +146,11 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             return;
         }
         this.task = task;
-        if (timeoutNanos > 0) {
-            this.timeoutNanos = timeoutNanos;
-        }
         startTimeNanos = System.nanoTime();
-        if (this.timeoutNanos != 0) {
+        if (timeoutNanos != 0) {
             state = State.SCHEDULED;
             scheduledFuture =
-                    eventLoop.schedule(() -> invokeTask(null), this.timeoutNanos, NANOSECONDS);
+                    eventLoop.schedule(() -> invokeTask(null), timeoutNanos, NANOSECONDS);
         } else {
             state = State.INACTIVE;
         }
@@ -347,7 +344,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (isInitialized()) {
             finishNow0(cause);
         } else {
-            start(noopCancellationTask, 0);
+            start(noopCancellationTask);
             finishNow0(cause);
         }
     }
@@ -567,7 +564,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private static CancellationScheduler finished0(boolean server) {
         final CancellationScheduler cancellationScheduler = CancellationScheduler.of(0, server);
         cancellationScheduler
-                .initAndStart(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0);
+                .initAndStart(ImmediateEventExecutor.INSTANCE, noopCancellationTask);
         cancellationScheduler.finishNow();
         return cancellationScheduler;
     }

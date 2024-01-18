@@ -233,7 +233,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
             requestCancellationScheduler = CancellationScheduler.of(0, true);
-            requestCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask, 0);
+            requestCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
         }
 
         // Build the context with the properties set by a user and the fake objects.

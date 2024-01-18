@@ -291,8 +291,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         if (ctxExtension != null) {
             final CancellationScheduler responseCancellationScheduler =
                     ctxExtension.responseCancellationScheduler();
-            responseCancellationScheduler.start(newCancellationTask(),
-                                                TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+            responseCancellationScheduler.start(newCancellationTask());
         }
     }
 
