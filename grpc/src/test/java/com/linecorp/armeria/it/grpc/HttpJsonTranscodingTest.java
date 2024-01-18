@@ -100,6 +100,8 @@ import testing.grpc.Transcoding.GetMessageRequestV2;
 import testing.grpc.Transcoding.GetMessageRequestV2.SubMessage;
 import testing.grpc.Transcoding.GetMessageRequestV3;
 import testing.grpc.Transcoding.GetMessageRequestV4;
+import testing.grpc.Transcoding.GetMessageRequestV5;
+import testing.grpc.Transcoding.GetMessageRequestV6;
 import testing.grpc.Transcoding.Message;
 import testing.grpc.Transcoding.MessageType;
 import testing.grpc.Transcoding.Recursive;
@@ -144,6 +146,28 @@ public class HttpJsonTranscodingTest {
                                 request.getQueryParameter() + ':' +
                                 request.getParentField().getChildField() + ':' +
                                 request.getParentField().getChildField2();
+            responseObserver.onNext(Message.newBuilder().setText(text).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void getMessageV5(GetMessageRequestV5 request, StreamObserver<Message> responseObserver) {
+            final String text = request.getMessageId() + ':' +
+                    request.getQueryParameter() + ':' +
+                    request.getQueryField1() + ':' +
+                    request.getParentField().getChildField() + ':' +
+                    request.getParentField().getChildField2();
+            responseObserver.onNext(Message.newBuilder().setText(text).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void getMessageV6(GetMessageRequestV6 request, StreamObserver<Message> responseObserver) {
+            final String text = request.getMessageId() + ':' +
+                    request.getQueryParameter() + ':' +
+                    request.getQueryField1() + ':' +
+                    request.getParentField().getChildField() + ':' +
+                    request.getParentField().getChildField2();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
@@ -311,16 +335,31 @@ public class HttpJsonTranscodingTest {
     }
 
     @RegisterExtension
-    static final ServerExtension server = createServer(false, false, true);
+    static final ServerExtension server = createServer(false, false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true);
+    static final ServerExtension serverPreservingProtoFieldNames =
+            createServer(true, false, true, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false);
+    static final ServerExtension serverCamelCaseQueryOnlyParameters =
+            createServer(false, true, false, false);
 
     @RegisterExtension
-    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true);
+    static final ServerExtension serverCamelCaseQueryAndOriginalParameters =
+            createServer(false, true, true, false);
+
+    @RegisterExtension
+    static final ServerExtension serverJsonNameOnlyParameters =
+            createServer(false, false, false, true);
+
+    @RegisterExtension
+    static final ServerExtension serverJsonNameAndOriginalParameters =
+            createServer(false, false, true, true);
+
+    @RegisterExtension
+    static final ServerExtension serverJsonNameAndCamelCaseParameters =
+            createServer(false, true, false, true);
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
@@ -335,15 +374,30 @@ public class HttpJsonTranscodingTest {
     private final BlockingWebClient webClientCamelCaseQueryAndOriginalParameters =
             serverCamelCaseQueryAndOriginalParameters.blockingWebClient();
 
+    private final BlockingWebClient webClientJsonNameOnlyParameters =
+            serverJsonNameOnlyParameters.blockingWebClient();
+
+    private final BlockingWebClient webClientJsonNameQueryAndOriginalParameters =
+            serverJsonNameAndOriginalParameters.blockingWebClient();
+
+    private final BlockingWebClient webClientJsonNameAndCamelCaseParameters =
+            serverJsonNameAndCamelCaseParameters.blockingWebClient();
+
     static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams,
-                                        boolean protoFieldNameQueryParams) {
+                                        boolean protoFieldNameQueryParams, boolean jsonNameQueryParams) {
         final ImmutableList.Builder<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
                 ImmutableList.builder();
-        if (camelCaseQueryParams) {
+        if (camelCaseQueryParams && !jsonNameQueryParams) {
             queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
         }
         if (protoFieldNameQueryParams) {
             queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+        }
+        if (jsonNameQueryParams && camelCaseQueryParams) {
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.CAMEL_CASE_JSON_NAME);
+        }
+        if (jsonNameQueryParams && !camelCaseQueryParams) {
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD_JSON_NAME);
         }
         final HttpJsonTranscodingOptions options =
                 HttpJsonTranscodingOptions.builder()
@@ -979,6 +1033,66 @@ public class HttpJsonTranscodingTest {
                                                             .execute()
                                                             .content();
         assertThat(response2.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+    }
+
+    @Test
+    void shouldAcceptJsonName() {
+        final QueryParams query =
+                QueryParams.builder()
+                        .add("first_query", "query")
+                        .add("second_query", "query2")
+                        .add("parent.first_field", "childField")
+                        .add("parent.second_field", "childField2")
+                        .build();
+
+        final JsonNode response =
+                webClientJsonNameOnlyParameters.prepare()
+                        .get("/v5/messages/1")
+                        .queryParams(query)
+                        .asJson(JsonNode.class)
+                        .execute()
+                        .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
+    }
+
+    @Test
+    void shouldAcceptJsonNameAndOriginalParameters() {
+        final QueryParams query =
+                QueryParams.builder()
+                        .add("query_parameter", "query")
+                        .add("second_query", "query2")
+                        .add("parent.child_field", "childField")
+                        .add("parent.child_field_2", "childField2")
+                        .build();
+
+        final JsonNode response =
+                webClientJsonNameQueryAndOriginalParameters.prepare()
+                        .get("/v6/messages/1")
+                        .queryParams(query)
+                        .asJson(JsonNode.class)
+                        .execute()
+                        .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
+    }
+
+    @Test
+    void shouldAcceptJsonNameAndCamelParameters() {
+        final QueryParams query =
+                QueryParams.builder()
+                        .add("queryParameter", "query")
+                        .add("second_query", "query2")
+                        .add("parent.childField", "childField")
+                        .add("parent.childField2", "childField2")
+                        .build();
+
+        final JsonNode response =
+                webClientJsonNameAndCamelCaseParameters.prepare()
+                        .get("/v6/messages/1")
+                        .queryParams(query)
+                        .asJson(JsonNode.class)
+                        .execute()
+                        .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
     }
 
     @Test
