@@ -206,7 +206,7 @@ public interface HttpFile {
             return new ClassPathHttpFileBuilder(url);
         }
         throw new IllegalArgumentException("Unsupported URL: " + url + " (must start with " +
-                                           "'file:', 'jar:file', 'jrt:' or 'bundle:')");
+                                           "'file:', 'jar:file', 'jar:nested', 'jrt:' or 'bundle:')");
     }
 
     /**
