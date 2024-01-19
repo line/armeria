@@ -20,6 +20,10 @@ import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 
 import com.google.protobuf.Message;
 
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+
 final class StaticResourceUtils {
 
     private StaticResourceUtils() {}
@@ -27,9 +31,9 @@ final class StaticResourceUtils {
     static RouteResourceNode staticRoute(XdsBootstrapImpl xdsBootstrap, String resourceName,
                                          ListenerResourceHolder primer,
                                          SnapshotWatcher<RouteSnapshot> parentWatcher,
-                                         Message message) {
+                                         RouteConfiguration routeConfiguration) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.ROUTE);
-        final AbstractResourceHolder parsed = resourceParser.parse(message);
+        final AbstractResourceHolder parsed = resourceParser.parse(routeConfiguration);
         final RouteResourceNode node = new RouteResourceNode(null, resourceName, xdsBootstrap, primer,
                                                              parentWatcher, STATIC);
         node.onChanged(parsed);
@@ -38,9 +42,9 @@ final class StaticResourceUtils {
 
     static ClusterResourceNode staticCluster(XdsBootstrapImpl xdsBootstrap, String resourceName,
                                              SnapshotWatcher<? super ClusterSnapshot> parentWatcher,
-                                             Message message) {
+                                             Cluster cluster) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.CLUSTER);
-        final AbstractResourceHolder parsed = resourceParser.parse(message);
+        final AbstractResourceHolder parsed = resourceParser.parse(cluster);
         final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
                                                                  null, parentWatcher, STATIC);
         node.onChanged(parsed);
@@ -50,9 +54,9 @@ final class StaticResourceUtils {
     static EndpointResourceNode staticEndpoint(XdsBootstrapImpl xdsBootstrap, String resourceName,
                                                ResourceHolder primer,
                                                SnapshotWatcher<EndpointSnapshot> parentWatcher,
-                                               Message message) {
+                                               ClusterLoadAssignment clusterLoadAssignment) {
         final ResourceParser resourceParser = XdsResourceParserUtil.fromType(XdsType.ENDPOINT);
-        final AbstractResourceHolder parsed = resourceParser.parse(message);
+        final AbstractResourceHolder parsed = resourceParser.parse(clusterLoadAssignment);
         final EndpointResourceNode node = new EndpointResourceNode(null, resourceName, xdsBootstrap,
                                                                    primer, parentWatcher, STATIC);
         node.onChanged(parsed);
