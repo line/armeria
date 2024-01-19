@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.kubernetes;
 
+import org.junit.jupiter.api.Disabled;
+
 import io.fabric8.kubernetes.client.http.AbstractHttpPostTest;
 import io.fabric8.kubernetes.client.http.HttpClient;
 
@@ -23,5 +25,10 @@ class ArmeriaHttpPostTest extends AbstractHttpPostTest {
     @Override
     protected HttpClient.Factory getHttpClientFactory() {
         return new ArmeriaHttpClientFactory();
+    }
+
+    @Disabled("Armeria does not support 'Expect: 100-Continue'")
+    @Override
+    public void expectContinue() throws Exception {
     }
 }
