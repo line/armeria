@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpData;
 
 import io.fabric8.kubernetes.client.http.AsyncBody;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 final class AsyncBodySubscriber implements Subscriber<HttpData>, AsyncBody {
     private final AsyncBody.Consumer<List<ByteBuffer>> consumer;
@@ -57,11 +58,12 @@ final class AsyncBodySubscriber implements Subscriber<HttpData>, AsyncBody {
             if (byteBuf.nioBufferCount() == 1) {
                 buffer = byteBuf.nioBuffer();
             } else {
-                buffer = ByteBuffer.wrap(byteBuf.array());
+
+                buffer = ByteBuffer.wrap(ByteBufUtil.getBytes(byteBuf));
             }
             consumer.consume(ImmutableList.of(buffer), this);
         } catch (Exception e) {
-            subscription.thenAccept(Subscription::cancel);
+            subscription.join().cancel();
             done.completeExceptionally(e);
         } finally {
             item.close();

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.kubernetes;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -26,6 +24,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.websocket.WebSocketWriter;
 
 import io.fabric8.kubernetes.client.http.WebSocket;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufAllocator;
 
 final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
     private final WebSocketWriter writer;
@@ -57,7 +57,9 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
     @Override
     public boolean send(ByteBuffer buffer) {
         // 'buffer' may be mutated by the caller, so we need to copy it.
-        final ByteBuf data = Unpooled.copiedBuffer(buffer);
+        final ByteBufAllocator alloc = ClientRequestContext.mapCurrent(RequestContext::alloc,
+                                                                       () -> ByteBufAllocator.DEFAULT);
+        final ByteBuf data = alloc.buffer(buffer.remaining()).writeBytes(buffer.duplicate());
         final int dataLength = data.readableBytes();
         pending.addAndGet(dataLength);
         final boolean success = writer.tryWrite(WebSocketFrame.ofPooledBinary(data));
@@ -74,7 +76,11 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
         if (!writer.isOpen()) {
             return false;
         }
-        writer.close(WebSocketCloseStatus.valueOf(code), firstNonNull(reason, "Closing"));
+        if (reason == null) {
+            writer.close(WebSocketCloseStatus.valueOf(code));
+        } else {
+            writer.close(WebSocketCloseStatus.valueOf(code), reason);
+        }
         return true;
     }
 
@@ -93,8 +99,8 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
     @Override
     public void onSubscribe(Subscription s) {
         inboundSubscription = s;
-        request();
         listener.onOpen(this);
+        request();
     }
 
     @Override
@@ -149,7 +155,7 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
                 size += b.length;
             }
             final ByteBuffer buffer = ByteBuffer.allocate(size);
-            for (;;) {
+            for (; ; ) {
                 final byte[] binary = binaryBuffer.poll();
                 if (binary == null) {
                     break;

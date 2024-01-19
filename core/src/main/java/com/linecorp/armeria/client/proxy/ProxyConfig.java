@@ -147,8 +147,10 @@ public abstract class ProxyConfig {
                                              HttpHeaders headers, boolean useTls) {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new ConnectProxyConfig(proxyAddress, requireNonNull(username, "username"),
-                                      requireNonNull(password, "password"), headers, useTls);
+        requireNonNull(username, "username");
+        requireNonNull(password, "password");
+        requireNonNull(headers, "headers");
+        return new ConnectProxyConfig(proxyAddress, username, password, headers, useTls);
     }
 
     /**

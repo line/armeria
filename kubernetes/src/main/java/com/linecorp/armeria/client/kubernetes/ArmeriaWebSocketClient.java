@@ -83,9 +83,10 @@ final class ArmeriaWebSocketClient implements SafeCloseable {
                                                  WebSocket.Listener listener) {
         final StandardHttpRequest request = webSocketRequest.asHttpRequest();
         HttpHeaders wsHeaders = HttpHeaders.of();
-        if (!request.headers().isEmpty() || !Strings.isNullOrEmpty(webSocketRequest.getSubprotocol())) {
+        final Map<String, List<String>> headers = request.headers();
+        if (!headers.isEmpty() || !Strings.isNullOrEmpty(webSocketRequest.getSubprotocol())) {
             final HttpHeadersBuilder headersBuilder = HttpHeaders.builder();
-            request.headers().forEach(headersBuilder::add);
+            headers.forEach(headersBuilder::add);
 
             if (!Strings.isNullOrEmpty(webSocketRequest.getSubprotocol())) {
                 headersBuilder.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, webSocketRequest.getSubprotocol());
@@ -124,6 +125,7 @@ final class ArmeriaWebSocketClient implements SafeCloseable {
 
     @Override
     public void close() {
+        final WebSocketClient webSocketClient = this.webSocketClient;
         if (webSocketClient != null) {
             webSocketClient.options().factory().close();
         }

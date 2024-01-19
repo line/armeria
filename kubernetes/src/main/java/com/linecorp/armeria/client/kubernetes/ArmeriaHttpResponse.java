@@ -16,14 +16,15 @@
 
 package com.linecorp.armeria.client.kubernetes;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.fabric8.kubernetes.client.http.AsyncBody;
 import io.fabric8.kubernetes.client.http.HttpRequest;
@@ -34,6 +35,9 @@ final class ArmeriaHttpResponse implements HttpResponse<AsyncBody> {
 
     private final ResponseHeaders responseHeaders;
     private final AsyncBody body;
+
+    @Nullable
+    private Map<String, List<String>> headers;
 
     ArmeriaHttpResponse(ResponseHeaders responseHeaders, AsyncBody body) {
         this.responseHeaders = responseHeaders;
@@ -72,11 +76,16 @@ final class ArmeriaHttpResponse implements HttpResponse<AsyncBody> {
 
     @Override
     public Map<String, List<String>> headers() {
-        final Map<String, List<String>> headers = new HashMap<>();
-        for (AsciiString name : responseHeaders.names()) {
-            headers.put(name.toString(), responseHeaders.getAll(name));
+        if (headers != null) {
+            return headers;
         }
-        return headers;
+
+        final ImmutableMap.Builder<String, List<String>> headersBuilder =
+                ImmutableMap.builderWithExpectedSize(responseHeaders.size());
+        for (AsciiString name : responseHeaders.names()) {
+            headersBuilder.put(name.toString(), responseHeaders.getAll(name));
+        }
+        return headers = headersBuilder.build();
     }
 
     @Override

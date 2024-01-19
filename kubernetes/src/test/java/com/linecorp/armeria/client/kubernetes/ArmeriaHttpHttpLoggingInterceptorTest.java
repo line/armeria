@@ -20,8 +20,8 @@ import io.fabric8.kubernetes.client.http.HttpClient;
 
 @SuppressWarnings("JUnitTestCaseWithNoTests")
 class ArmeriaHttpHttpLoggingInterceptorTest extends AbstractHttpLoggingInterceptorTest {
-  @Override
-  protected HttpClient.Factory getHttpClientFactory() {
-    return new ArmeriaHttpClientFactory();
-  }
+    @Override
+    protected HttpClient.Factory getHttpClientFactory() {
+        return new ArmeriaHttpClientFactory();
+    }
 }

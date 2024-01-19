@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 
 import io.fabric8.kubernetes.client.http.StandardHttpClientBuilder;
 import io.fabric8.kubernetes.client.http.TlsVersion;
@@ -60,10 +61,13 @@ final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
         clientBuilder.factory(clientFactory(false));
 
         if (LoggerFactory.getLogger(ArmeriaHttpClient.class).isTraceEnabled()) {
-            clientBuilder.decorator(LoggingClient.builder()
-                                                 .requestLogLevel(LogLevel.TRACE)
+            final LogWriter logWriter = LogWriter.builder()
                                                  .logger(ArmeriaHttpClient.class.getName())
+                                                 .requestLogLevel(LogLevel.TRACE)
                                                  .successfulResponseLogLevel(LogLevel.TRACE)
+                                                 .build();
+            clientBuilder.decorator(LoggingClient.builder()
+                                                 .logWriter(logWriter)
                                                  .newDecorator());
             // 16 KiB should be enough for most of the cases.
             clientBuilder.decorator(ContentPreviewingClient.newDecorator(16 * 1024));
@@ -114,7 +118,7 @@ final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
             });
         }
 
-        ProxyConfig proxyConfig = ProxyConfig.direct();
+        ProxyConfig proxyConfig = null;
         if (proxyAddress != null) {
             switch (proxyType) {
                 case HTTP:
@@ -134,7 +138,9 @@ final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
                     break;
             }
         }
-        factoryBuilderHolder.get().proxyConfig(proxyConfig);
+        if (proxyConfig != null) {
+            factoryBuilderHolder.get().proxyConfig(proxyConfig);
+        }
 
         return factoryBuilderHolder.maybeBuild();
     }

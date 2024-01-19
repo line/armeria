@@ -27,7 +27,6 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestBuilder;
@@ -104,7 +103,8 @@ final class ArmeriaHttpClient
                            .path(request.uri().toString());
 
         if (request.isExpectContinue()) {
-            requestBuilder.header(HttpHeaderNames.EXPECT, "100-continue");
+            // Set `Expect: 100-continue` header to the request headers when it is supported by Armeria.
+            // https://github.com/line/armeria/issues/5394
         }
 
         for (Map.Entry<String, List<String>> entry : request.headers().entrySet()) {
@@ -140,7 +140,7 @@ final class ArmeriaHttpClient
                         (StandardHttpRequest.InputStreamBodyContent) body;
                 requestBuilder.content(contentType, StreamMessage.of(bodyContent.getContent()));
             } else {
-                throw new AssertionError("Unsupported body content");
+                throw new IllegalArgumentException("Unsupported body content");
             }
         }
         return requestBuilder.build();
