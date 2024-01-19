@@ -163,9 +163,15 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
     }
 
     static final class NonExistentHttpFileBuilder extends HttpFileBuilder {
+        private final String path;
+
+        public NonExistentHttpFileBuilder(String path) {
+            this.path = requireNonNull(path, "path");
+        }
+
         @Override
         public HttpFile build() {
-            return HttpFile.nonExistent();
+            return HttpFile.nonExistent(path);
         }
     }
 

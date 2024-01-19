@@ -74,9 +74,6 @@ public final class FileService extends AbstractHttpService {
 
     private static final Splitter COMMA_SPLITTER = Splitter.on(',');
 
-    private static final UnmodifiableFuture<HttpFile> NON_EXISTENT_FILE_FUTURE =
-            UnmodifiableFuture.completedFuture(HttpFile.nonExistent());
-
     /**
      * Returns a new {@link FileService} for the specified {@code rootDir} in an O/S file system.
      */
@@ -238,12 +235,12 @@ public final class FileService extends AbstractHttpService {
                     // Auto-generate directory listing if enabled.
                     final Executor readExecutor = ctx.blockingTaskExecutor();
                     if (!config.autoIndex()) {
-                        return NON_EXISTENT_FILE_FUTURE;
+                        return UnmodifiableFuture.completedFuture(HttpFile.nonExistent(decodedMappedPath));
                     }
 
                     return config.vfs().canList(readExecutor, decodedMappedPath).thenCompose(canList -> {
                         if (!canList) {
-                            return NON_EXISTENT_FILE_FUTURE;
+                            return UnmodifiableFuture.completedFuture(HttpFile.nonExistent(decodedMappedPath));
                         }
 
                         return config.vfs().list(readExecutor, decodedMappedPath).thenApply(listing -> {
@@ -284,7 +281,7 @@ public final class FileService extends AbstractHttpService {
                             return HttpFile.ofRedirect(locationBuilder.toString());
                         }
                     } else {
-                        return HttpFile.nonExistent();
+                        return HttpFile.nonExistent(decodedMappedPath);
                     }
                 });
             }

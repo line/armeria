@@ -75,6 +75,25 @@ public class CachingHttpFileTest {
     }
 
     /**
+     * If a path is added to a non-existent file, it will be included in content.
+     */
+    @Test
+    public void nonExistentFileWithPath() throws Exception {
+        final String path = "/index.html";
+        final HttpFile cached = HttpFile.ofCached(HttpFile.nonExistent(path), Integer.MAX_VALUE);
+        assertThat(cached.readAttributes(executor).join()).isNull();
+        assertThat(cached.readHeaders(executor).join()).isNull();
+        assertThat(cached.read(executor, alloc).join()).isNull();
+        assertThat(cached.aggregate(executor).join()).isSameAs(AggregatedHttpFile.nonExistent());
+        assertThat(cached.aggregateWithPooledObjects(executor, alloc).join())
+                .isSameAs(AggregatedHttpFile.nonExistent());
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(cached.asService().serve(ctx, ctx.request()).aggregate().join().contentUtf8())
+                .contains(path);
+    }
+
+    /**
      * Makes sure a regular file is handled as expected, including proper cache invalidation.
      */
     @Test

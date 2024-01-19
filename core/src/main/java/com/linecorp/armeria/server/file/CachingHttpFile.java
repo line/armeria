@@ -90,7 +90,7 @@ final class CachingHttpFile implements HttpFile {
             if (uncachedAttrs == null) {
                 // Non-existent file. Invalidate the cache just in case it existed before.
                 cachedFile = null;
-                return HttpFile.nonExistent();
+                return file;
             }
 
             if (uncachedAttrs.length() > maxCachingLength) {
