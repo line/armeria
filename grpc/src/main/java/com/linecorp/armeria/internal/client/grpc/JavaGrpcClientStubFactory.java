@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Channel;
 import io.grpc.ServiceDescriptor;
@@ -51,14 +52,7 @@ public final class JavaGrpcClientStubFactory implements GrpcClientStubFactory {
             final Method getServiceDescriptorMethod = enclosingClass.getDeclaredMethod("getServiceDescriptor");
             return (ServiceDescriptor) getServiceDescriptorMethod.invoke(null);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            Throwable t = e;
-            if (e instanceof InvocationTargetException) {
-                final Throwable targetException = ((InvocationTargetException) e).getTargetException();
-                if (targetException != null) {
-                    t = targetException;
-                }
-            }
-            throw new ServiceDescriptorResolutionException(getClass().getSimpleName(), t);
+            throw new ServiceDescriptorResolutionException(getClass().getSimpleName(), Exceptions.peel(e));
         }
     }
 

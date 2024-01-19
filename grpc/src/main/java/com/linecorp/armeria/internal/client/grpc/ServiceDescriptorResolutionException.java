@@ -37,4 +37,9 @@ public final class ServiceDescriptorResolutionException extends RuntimeException
     public String factorySimpleName() {
         return factorySimpleName;
     }
+
+    @Override
+    public String toString() {
+        return factorySimpleName + '=' + getCause().toString();
+    }
 }

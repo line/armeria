@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.BindableService;
 import io.grpc.Channel;
@@ -47,12 +48,12 @@ public final class KotlinGrpcClientStubFactory implements GrpcClientStubFactory 
                 generatedStub = generatedStub(annotation, valueMethod);
                 getServiceDescriptor = generatedStub.getDeclaredMethod("getServiceDescriptor", null);
             } catch (NoSuchMethodException e) {
-                throw new IllegalStateException("Could not find value getter on StubFor annotation.", e);
+                throw new IllegalArgumentException("Could not find value getter on StubFor annotation.", e);
             }
             try {
                 return (ServiceDescriptor) getServiceDescriptor.invoke(generatedStub);
             } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new IllegalStateException(
+                throw new IllegalArgumentException(
                         "Could not invoke getServiceDescriptor on a gRPC Kotlin client stub.", e);
             }
         }
@@ -67,12 +68,13 @@ public final class KotlinGrpcClientStubFactory implements GrpcClientStubFactory 
                     BindableService.class.getPackage().getName() + ".kotlin.StubFor");
             final Annotation annotation = clientType.getAnnotation(annotationClass);
             if (annotation == null) {
-                throw new IllegalStateException(
+                throw new IllegalArgumentException(
                         "Could not find StubFor annotation on a gRPC Kotlin client stub.");
             }
             return annotation;
         } catch (ClassNotFoundException e) {
-            throw new IllegalStateException("Could not find StubFor annotation on a gRPC Kotlin client stub.");
+            throw new IllegalArgumentException(
+                    "Could not find StubFor annotation on a gRPC Kotlin client stub.", e);
         }
     }
 
@@ -80,7 +82,8 @@ public final class KotlinGrpcClientStubFactory implements GrpcClientStubFactory 
         try {
             return (Class<?>) valueMethod.invoke(annotation, null);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException("Could not find a gRPC Kotlin generated client stub.");
+            throw new IllegalArgumentException(
+                    "Could not find a gRPC Kotlin generated client stub.", Exceptions.peel(e));
         }
     }
 
