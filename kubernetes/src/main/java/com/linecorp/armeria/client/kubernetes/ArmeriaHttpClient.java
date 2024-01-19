@@ -45,7 +45,7 @@ import io.fabric8.kubernetes.client.http.WebSocketResponse;
 /**
  * Armeria based implementation of {@link StandardHttpClient}.
  */
-public final class ArmeriaHttpClient
+final class ArmeriaHttpClient
         extends StandardHttpClient<ArmeriaHttpClient, ArmeriaHttpClientFactory, ArmeriaHttpClientBuilder> {
 
     private final WebClient webClient;
