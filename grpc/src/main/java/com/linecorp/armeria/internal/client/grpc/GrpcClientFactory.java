@@ -21,8 +21,8 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -110,7 +110,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         GrpcClientStubFactory clientStubFactory = options.get(GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY);
         ServiceDescriptor serviceDescriptor = null;
 
-        final ArrayList<Throwable> exceptions = new ArrayList<>();
+        final Map<String, Throwable> exceptions = new HashMap<>();
         if (clientStubFactory == NullGrpcClientStubFactory.INSTANCE) {
             for (GrpcClientStubFactory stubFactory : clientStubFactories) {
                 try {
@@ -120,7 +120,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                         break;
                     }
                 } catch (ServiceDescriptorResolutionException e) {
-                    exceptions.add(e.getCause());
+                    exceptions.put(e.factorySimpleName(), e.getCause());
                 }
             }
         } else {

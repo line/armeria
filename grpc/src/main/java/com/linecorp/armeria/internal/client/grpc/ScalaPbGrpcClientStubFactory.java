@@ -49,7 +49,7 @@ public final class ScalaPbGrpcClientStubFactory implements GrpcClientStubFactory
                     t = targetException;
                 }
             }
-            throw new ServiceDescriptorResolutionException(t);
+            throw new ServiceDescriptorResolutionException(getClass().getSimpleName(), t);
         }
     }
 

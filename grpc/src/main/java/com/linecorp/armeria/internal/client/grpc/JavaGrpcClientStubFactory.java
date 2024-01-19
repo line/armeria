@@ -58,7 +58,7 @@ public final class JavaGrpcClientStubFactory implements GrpcClientStubFactory {
                     t = targetException;
                 }
             }
-            throw new ServiceDescriptorResolutionException(t);
+            throw new ServiceDescriptorResolutionException(getClass().getSimpleName(), t);
         }
     }
 

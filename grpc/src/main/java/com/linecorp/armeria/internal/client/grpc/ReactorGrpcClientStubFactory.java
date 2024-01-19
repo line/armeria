@@ -52,7 +52,7 @@ public final class ReactorGrpcClientStubFactory implements GrpcClientStubFactory
                     t = targetException;
                 }
             }
-            throw new ServiceDescriptorResolutionException(t);
+            throw new ServiceDescriptorResolutionException(getClass().getSimpleName(), t);
         }
     }
 
